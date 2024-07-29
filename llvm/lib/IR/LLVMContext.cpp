@@ -118,6 +118,13 @@ void LLVMContext::addModule(Module *M) {
 
 void LLVMContext::removeModule(Module *M) {
   pImpl->OwnedModules.erase(M);
+  pImpl->MachineFunctionNums.erase(M);
+}
+
+unsigned LLVMContext::generateMachineFunctionNum(Function &F) {
+  Module *M = F.getParent();
+  assert(pImpl->OwnedModules.contains(M) && "Unexpected module!");
+  return pImpl->MachineFunctionNums[M]++;
 }
 
 //===----------------------------------------------------------------------===//
@@ -382,4 +389,20 @@ void LLVMContext::setOpaquePointers(bool Enable) const {
 
 bool LLVMContext::supportsTypedPointers() const {
   return false;
+}
+
+StringRef LLVMContext::getDefaultTargetCPU() {
+  return pImpl->DefaultTargetCPU;
+}
+
+void LLVMContext::setDefaultTargetCPU(StringRef CPU) {
+  pImpl->DefaultTargetCPU = CPU;
+}
+
+StringRef LLVMContext::getDefaultTargetFeatures() {
+  return pImpl->DefaultTargetFeatures;
+}
+
+void LLVMContext::setDefaultTargetFeatures(StringRef Features) {
+  pImpl->DefaultTargetFeatures = Features;
 }

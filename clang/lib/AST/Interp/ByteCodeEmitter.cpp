@@ -27,10 +27,18 @@ using namespace clang::interp;
 /// Similar information is available via ASTContext::BuiltinInfo,
 /// but that is not correct for our use cases.
 static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type;
+  return BuiltinID == Builtin::BI__builtin_classify_type ||
+         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         BuiltinID == Builtin::BI__builtin_constant_p;
 }
 
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+
+  // Manually created functions that haven't been assigned proper
+  // parameters yet.
+  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
+    return nullptr;
+
   bool IsLambdaStaticInvoker = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
       MD && MD->isLambdaStaticInvoker()) {
@@ -82,15 +90,22 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isImplicitObjectMemberFunction() && !IsLambdaStaticInvoker) {
-      HasThisPointer = true;
-      ParamTypes.push_back(PT_Ptr);
-      ParamOffsets.push_back(ParamOffset);
-      ParamOffset += align(primSize(PT_Ptr));
+    if (!IsLambdaStaticInvoker) {
+      HasThisPointer = MD->isInstance();
+      if (MD->isImplicitObjectMemberFunction()) {
+        ParamTypes.push_back(PT_Ptr);
+        ParamOffsets.push_back(ParamOffset);
+        ParamOffset += align(primSize(PT_Ptr));
+      }
     }
 
     // Set up lambda capture to closure record field mapping.
     if (isLambdaCallOperator(MD)) {
+      // The parent record needs to be complete, we need to know about all
+      // the lambda captures.
+      if (!MD->getParent()->isCompleteDefinition())
+        return nullptr;
+
       const Record *R = P.getOrCreateRecord(MD->getParent());
       llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
       FieldDecl *LTC;
@@ -145,7 +160,8 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
-  if (!FuncDecl->isDefined()) {
+  if (!FuncDecl->isDefined() ||
+      (FuncDecl->willHaveBody() && !FuncDecl->hasBody())) {
     Func->setDefined(false);
     return Func;
   }

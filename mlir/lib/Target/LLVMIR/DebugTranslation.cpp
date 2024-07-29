@@ -83,6 +83,13 @@ llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
   return nullptr;
 }
 
+llvm::DIExpression *
+DebugTranslation::getExpressionAttrOrNull(DIExpressionAttr attr) {
+  if (!attr)
+    return nullptr;
+  return translateExpression(attr);
+}
+
 llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
   if (!stringAttr || stringAttr.empty())
     return nullptr;
@@ -156,7 +163,13 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       llvm::MDNode::get(llvmCtx, elements),
-      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
+      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr,
+      /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
+      /*Discriminator=*/nullptr,
+      getExpressionAttrOrNull(attr.getDataLocation()),
+      getExpressionAttrOrNull(attr.getAssociated()),
+      getExpressionAttrOrNull(attr.getAllocated()),
+      getExpressionAttrOrNull(attr.getRank()));
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
@@ -165,8 +178,17 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, /*PtrAuthData=*/std::nullopt,
+      attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
       /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
+}
+
+llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
+  return llvm::DIStringType::get(
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+      translate(attr.getStringLength()),
+      getExpressionAttrOrNull(attr.getStringLengthExp()),
+      getExpressionAttrOrNull(attr.getStringLocationExp()),
+      attr.getSizeInBits(), attr.getAlignInBits(), attr.getEncoding());
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
@@ -197,13 +219,17 @@ llvm::DILocalScope *DebugTranslation::translateImpl(DILocalScopeAttr attr) {
   return cast<llvm::DILocalScope>(translate(DINodeAttr(attr)));
 }
 
+llvm::DIVariable *DebugTranslation::translateImpl(DIVariableAttr attr) {
+  return cast<llvm::DIVariable>(translate(DINodeAttr(attr)));
+}
+
 llvm::DILocalVariable *
 DebugTranslation::translateImpl(DILocalVariableAttr attr) {
   return llvm::DILocalVariable::get(
       llvmCtx, translate(attr.getScope()), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getType()),
-      attr.getArg(),
-      /*Flags=*/llvm::DINode::FlagZero, attr.getAlignInBits(),
+      attr.getArg(), static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      attr.getAlignInBits(),
       /*Annotations=*/nullptr);
 }
 
@@ -301,11 +327,27 @@ llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
 }
 
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
-  auto getMetadataOrNull = [&](IntegerAttr attr) -> llvm::Metadata * {
+  auto getMetadataOrNull = [&](Attribute attr) -> llvm::Metadata * {
     if (!attr)
       return nullptr;
-    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
-        llvm::Type::getInt64Ty(llvmCtx), attr.getInt()));
+
+    llvm::Metadata *metadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
+            .Case([&](IntegerAttr intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+                  llvm::Type::getInt64Ty(llvmCtx), intAttr.getInt()));
+            })
+            .Case([&](LLVM::DIExpressionAttr expr) {
+              return translateExpression(expr);
+            })
+            .Case([&](LLVM::DILocalVariableAttr local) {
+              return translate(local);
+            })
+            .Case<>([&](LLVM::DIGlobalVariableAttr global) {
+              return translate(global);
+            })
+            .Default([&](Attribute attr) { return nullptr; });
+    return metadata;
   };
   return llvm::DISubrange::get(llvmCtx, getMetadataOrNull(attr.getCount()),
                                getMetadataOrNull(attr.getLowerBound()),
@@ -348,8 +390,8 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
                      DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
                      DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
                      DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                     DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                     DISubroutineTypeAttr>(
+                     DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
+                     DISubrangeAttr, DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
   if (node && !node->isTemporary())
@@ -406,6 +448,15 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
+    // If the caller scope is not translatable, the overall callsite cannot be
+    // represented in LLVM (the callee scope may not match the parent function).
+    if (!callerLoc) {
+      // If there is an inlinedAt scope (an outer caller), skip to that
+      // directly. Otherwise, cannot translate.
+      if (!inlinedAt)
+        return nullptr;
+      callerLoc = inlinedAt;
+    }
     llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
     // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)

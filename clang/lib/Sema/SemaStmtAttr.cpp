@@ -16,6 +16,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/StringExtras.h"
@@ -109,9 +110,16 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
   } else if (PragmaName == "unroll") {
     // #pragma unroll N
-    if (ValueExpr)
-      SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
-    else
+    if (ValueExpr) {
+      if (!ValueExpr->isValueDependent()) {
+        auto Value = ValueExpr->EvaluateKnownConstInt(S.getASTContext());
+        if (Value.isZero() || Value.isOne())
+          SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
+        else
+          SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+      } else
+        SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+    } else
       SetHints(LoopHintAttr::Unroll, LoopHintAttr::Enable);
   } else if (PragmaName == "nounroll_and_jam") {
     SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Disable);
@@ -142,7 +150,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
              "Attribute must have a valid value expression or argument.");
-      if (ValueExpr && S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
+      if (ValueExpr && S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
+                                           /*AllowZero=*/false))
         return nullptr;
       if (StateLoc && StateLoc->Ident && StateLoc->Ident->isStr("scalable"))
         State = LoopHintAttr::ScalableWidth;
@@ -152,7 +161,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::UnrollCount ||
                Option == LoopHintAttr::PipelineInitiationInterval) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
-      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
+      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
+                              /*AllowZero=*/false))
         return nullptr;
       State = LoopHintAttr::Numeric;
     } else if (Option == LoopHintAttr::Vectorize ||
@@ -276,7 +286,7 @@ bool Sema::CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
 static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   NoInlineAttr NIA(S.Context, A);
-  if (!NIA.isClangNoInline()) {
+  if (!NIA.isStmtNoInline()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::noinline]]";
     return nullptr;
@@ -575,6 +585,39 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) OpenCLUnrollHintAttr(S.Context, A, UnrollFactor);
 }
 
+static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+
+  if (A.getSemanticSpelling() == HLSLLoopHintAttr::Spelling::Microsoft_loop &&
+      !A.checkAtMostNumArgs(S, 0))
+    return nullptr;
+
+  unsigned UnrollFactor = 0;
+  if (A.getNumArgs() == 1) {
+
+    if (A.isArgIdent(0)) {
+      S.Diag(A.getLoc(), diag::err_attribute_argument_type)
+          << A << AANT_ArgumentIntegerConstant << A.getRange();
+      return nullptr;
+    }
+
+    Expr *E = A.getArgAsExpr(0);
+
+    if (S.CheckLoopHintExpr(E, St->getBeginLoc(),
+                            /*AllowZero=*/false))
+      return nullptr;
+
+    std::optional<llvm::APSInt> ArgVal = E->getIntegerConstantExpr(S.Context);
+    // CheckLoopHintExpr handles non int const cases
+    assert(ArgVal != std::nullopt && "ArgVal should be an integer constant.");
+    int Val = ArgVal->getSExtValue();
+    // CheckLoopHintExpr handles negative and zero cases
+    assert(Val > 0 && "Val should be a positive integer greater than zero.");
+    UnrollFactor = static_cast<unsigned>(Val);
+  }
+  return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -609,6 +652,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
+  case ParsedAttr::AT_HLSLLoopHint:
+    return handleHLSLLoopHintAttr(S, St, A, Range);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
@@ -656,11 +701,17 @@ bool Sema::CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs) {
 ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   if (A.getNumArgs() != 1 || !A.getArgAsExpr(0)) {
-    Diag(A.getLoc(), diag::err_assume_attr_args) << A.getAttrName() << Range;
+    Diag(A.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << A.getAttrName() << 1 << Range;
     return ExprError();
   }
 
   auto *Assumption = A.getArgAsExpr(0);
+
+  if (DiagnoseUnexpandedParameterPack(Assumption)) {
+    return ExprError();
+  }
+
   if (Assumption->getDependence() == ExprDependence::None) {
     ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);
     if (Res.isInvalid())
@@ -668,7 +719,8 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
     Assumption = Res.get();
   }
 
-  if (!getLangOpts().CPlusPlus23)
+  if (!getLangOpts().CPlusPlus23 &&
+      A.getSyntax() == AttributeCommonInfo::AS_CXX11)
     Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
 
   return Assumption;

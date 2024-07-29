@@ -38,6 +38,7 @@ namespace format {
   /* l_brace of a block that is not the body of a (e.g. loop) statement. */    \
   TYPE(BlockLBrace)                                                            \
   TYPE(BracedListLBrace)                                                       \
+  TYPE(CaseLabelArrow)                                                         \
   /* The colon at the end of a case label. */                                  \
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
@@ -76,6 +77,7 @@ namespace format {
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
+  TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
@@ -100,6 +102,7 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
@@ -148,6 +151,8 @@ namespace format {
   TYPE(StructLBrace)                                                           \
   TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
+  TYPE(SwitchExpressionLabel)                                                  \
+  TYPE(SwitchExpressionLBrace)                                                 \
   TYPE(TableGenBangOperator)                                                   \
   TYPE(TableGenCondOperator)                                                   \
   TYPE(TableGenCondOperatorColon)                                              \
@@ -664,12 +669,16 @@ public:
     return Tok.isObjCAtKeyword(Kind);
   }
 
+  bool isAccessSpecifierKeyword() const {
+    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private);
+  }
+
   bool isAccessSpecifier(bool ColonRequired = true) const {
-    if (!isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private))
+    if (!isAccessSpecifierKeyword())
       return false;
     if (!ColonRequired)
       return true;
-    const auto NextNonComment = getNextNonComment();
+    const auto *NextNonComment = getNextNonComment();
     return NextNonComment && NextNonComment->is(tok::colon);
   }
 
@@ -681,12 +690,8 @@ public:
            isAttribute();
   }
 
-  /// Determine whether the token is a simple-type-specifier.
-  [[nodiscard]] bool isSimpleTypeSpecifier() const;
-
-  [[nodiscard]] bool isTypeName(bool IsCpp) const;
-
-  [[nodiscard]] bool isTypeOrIdentifier(bool IsCpp) const;
+  [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
+  [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -726,6 +731,29 @@ public:
 
   bool isPointerOrReference() const {
     return isOneOf(tok::star, tok::amp, tok::ampamp);
+  }
+
+  bool isCppAlternativeOperatorKeyword() const {
+    assert(!TokenText.empty());
+    if (!isalpha(TokenText[0]))
+      return false;
+
+    switch (Tok.getKind()) {
+    case tok::ampamp:
+    case tok::ampequal:
+    case tok::amp:
+    case tok::pipe:
+    case tok::tilde:
+    case tok::exclaim:
+    case tok::exclaimequal:
+    case tok::pipepipe:
+    case tok::pipeequal:
+    case tok::caret:
+    case tok::caretequal:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isUnaryOperator() const {
@@ -1623,10 +1651,10 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_then;
 
   /// Returns \c true if \p Tok is a keyword or an identifier.
-  bool isWordLike(const FormatToken &Tok) const {
+  bool isWordLike(const FormatToken &Tok, bool IsVerilog = true) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
     return Tok.Tok.getIdentifierInfo() &&
-           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
+           (!IsVerilog || !isVerilogKeywordSymbol(Tok));
   }
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
@@ -1634,10 +1662,12 @@ struct AdditionalKeywords {
   /// If \c AcceptIdentifierName is true, returns true not only for keywords,
   // but also for IdentifierName tokens (aka pseudo-keywords), such as
   // ``yield``.
-  bool IsJavaScriptIdentifier(const FormatToken &Tok,
+  bool isJavaScriptIdentifier(const FormatToken &Tok,
                               bool AcceptIdentifierName = true) const {
     // Based on the list of JavaScript & TypeScript keywords here:
     // https://github.com/microsoft/TypeScript/blob/main/src/compiler/scanner.ts#L74
+    if (Tok.isAccessSpecifierKeyword())
+      return false;
     switch (Tok.Tok.getKind()) {
     case tok::kw_break:
     case tok::kw_case:
@@ -1657,9 +1687,6 @@ struct AdditionalKeywords {
     case tok::kw_import:
     case tok::kw_module:
     case tok::kw_new:
-    case tok::kw_private:
-    case tok::kw_protected:
-    case tok::kw_public:
     case tok::kw_return:
     case tok::kw_static:
     case tok::kw_switch:
@@ -1702,6 +1729,8 @@ struct AdditionalKeywords {
   /// Returns \c true if \p Tok is a C# keyword, returns
   /// \c false if it is a anything else.
   bool isCSharpKeyword(const FormatToken &Tok) const {
+    if (Tok.isAccessSpecifierKeyword())
+      return true;
     switch (Tok.Tok.getKind()) {
     case tok::kw_bool:
     case tok::kw_break:
@@ -1728,9 +1757,6 @@ struct AdditionalKeywords {
     case tok::kw_namespace:
     case tok::kw_new:
     case tok::kw_operator:
-    case tok::kw_private:
-    case tok::kw_protected:
-    case tok::kw_public:
     case tok::kw_return:
     case tok::kw_short:
     case tok::kw_sizeof:
@@ -1753,6 +1779,10 @@ struct AdditionalKeywords {
              CSharpExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
                  CSharpExtraKeywords.end();
     }
+  }
+
+  bool isVerilogKeywordSymbol(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
   }
 
   bool isVerilogWordOperator(const FormatToken &Tok) const {

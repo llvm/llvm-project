@@ -1,4 +1,5 @@
-; REQUIRES: shell
+; This test uses symlinks.
+; UNSUPPORTED: system-windows
 
 ; RUN: rm -rf %t && mkdir %t
 

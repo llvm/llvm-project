@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -27,60 +28,18 @@ namespace fir {
 // Number of elements in an array does not determine where it is allocated.
 static constexpr std::size_t unlimitedArraySize = ~static_cast<std::size_t>(0);
 
-namespace {
-struct MemoryAllocationOptions {
-  // Always move dynamic array allocations to the heap. This may result in more
-  // heap fragmentation, so may impact performance negatively.
-  bool dynamicArrayOnHeap = false;
-
-  // Number of elements in array threshold for moving to heap. In environments
-  // with limited stack size, moving large arrays to the heap can avoid running
-  // out of stack space.
-  std::size_t maxStackArraySize = unlimitedArraySize;
-};
-
-class ReturnAnalysis {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReturnAnalysis)
-
-  ReturnAnalysis(mlir::Operation *op) {
-    if (auto func = mlir::dyn_cast<mlir::func::FuncOp>(op))
-      for (mlir::Block &block : func)
-        for (mlir::Operation &i : block)
-          if (mlir::isa<mlir::func::ReturnOp>(i)) {
-            returnMap[op].push_back(&i);
-            break;
-          }
-  }
-
-  llvm::SmallVector<mlir::Operation *> getReturns(mlir::Operation *func) const {
-    auto iter = returnMap.find(func);
-    if (iter != returnMap.end())
-      return iter->second;
-    return {};
-  }
-
-private:
-  llvm::DenseMap<mlir::Operation *, llvm::SmallVector<mlir::Operation *>>
-      returnMap;
-};
-} // namespace
-
 /// Return `true` if this allocation is to remain on the stack (`fir.alloca`).
 /// Otherwise the allocation should be moved to the heap (`fir.allocmem`).
-static inline bool keepStackAllocation(fir::AllocaOp alloca, mlir::Block *entry,
-                                       const MemoryAllocationOptions &options) {
-  // Limitation: only arrays allocated on the stack in the entry block are
-  // considered for now.
-  // TODO: Generalize the algorithm and placement of the freemem nodes.
-  if (alloca->getBlock() != entry)
-    return true;
-  if (auto seqTy = alloca.getInType().dyn_cast<fir::SequenceType>()) {
-    if (fir::hasDynamicSize(seqTy)) {
-      // Move all arrays with runtime determined size to the heap.
-      if (options.dynamicArrayOnHeap)
-        return false;
-    } else {
+static inline bool
+keepStackAllocation(fir::AllocaOp alloca,
+                    const fir::MemoryAllocationOptOptions &options) {
+  // Move all arrays and character with runtime determined size to the heap.
+  if (options.dynamicArrayOnHeap && alloca.isDynamic())
+    return false;
+  // TODO: use data layout to reason in terms of byte size to cover all "big"
+  // entities, which may be scalar derived types.
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(alloca.getInType())) {
+    if (!fir::hasDynamicSize(seqTy)) {
       std::int64_t numberOfElements = 1;
       for (std::int64_t i : seqTy.getShape()) {
         numberOfElements *= i;
@@ -92,8 +51,6 @@ static inline bool keepStackAllocation(fir::AllocaOp alloca, mlir::Block *entry,
       // the heap.
       if (static_cast<std::size_t>(numberOfElements) >
           options.maxStackArraySize) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "memory allocation opt: found " << alloca << '\n');
         return false;
       }
     }
@@ -101,49 +58,30 @@ static inline bool keepStackAllocation(fir::AllocaOp alloca, mlir::Block *entry,
   return true;
 }
 
-namespace {
-class AllocaOpConversion : public mlir::OpRewritePattern<fir::AllocaOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
+static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
+                               bool deallocPointsDominateAlloc) {
+  mlir::Type varTy = alloca.getInType();
+  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
+    if (opt)
+      return *opt;
+    return {};
+  };
+  llvm::StringRef uniqName = unpackName(alloca.getUniqName());
+  llvm::StringRef bindcName = unpackName(alloca.getBindcName());
+  auto heap = builder.create<fir::AllocMemOp>(alloca.getLoc(), varTy, uniqName,
+                                              bindcName, alloca.getTypeparams(),
+                                              alloca.getShape());
+  LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: replaced " << alloca
+                          << " with " << heap << '\n');
+  return heap;
+}
 
-  AllocaOpConversion(mlir::MLIRContext *ctx,
-                     llvm::ArrayRef<mlir::Operation *> rets)
-      : OpRewritePattern(ctx), returnOps(rets) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::AllocaOp alloca,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto loc = alloca.getLoc();
-    mlir::Type varTy = alloca.getInType();
-    auto unpackName =
-        [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-      if (opt)
-        return *opt;
-      return {};
-    };
-    auto uniqName = unpackName(alloca.getUniqName());
-    auto bindcName = unpackName(alloca.getBindcName());
-    auto heap = rewriter.create<fir::AllocMemOp>(
-        loc, varTy, uniqName, bindcName, alloca.getTypeparams(),
-        alloca.getShape());
-    auto insPt = rewriter.saveInsertionPoint();
-    for (mlir::Operation *retOp : returnOps) {
-      rewriter.setInsertionPoint(retOp);
-      [[maybe_unused]] auto free = rewriter.create<fir::FreeMemOp>(loc, heap);
-      LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: add free " << free
-                              << " for " << heap << '\n');
-    }
-    rewriter.restoreInsertionPoint(insPt);
-    rewriter.replaceOpWithNewOp<fir::ConvertOp>(
-        alloca, fir::ReferenceType::get(varTy), heap);
-    LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: replaced " << alloca
-                            << " with " << heap << '\n');
-    return mlir::success();
-  }
-
-private:
-  llvm::ArrayRef<mlir::Operation *> returnOps;
-};
+static void genFreemem(mlir::Location loc, mlir::OpBuilder &builder,
+                       mlir::Value allocmem) {
+  [[maybe_unused]] auto free = builder.create<fir::FreeMemOp>(loc, allocmem);
+  LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: add free " << free
+                          << " for " << allocmem << '\n');
+}
 
 /// This pass can reclassify memory allocations (fir.alloca, fir.allocmem) based
 /// on heuristics and settings. The intention is to allow better performance and
@@ -154,6 +92,7 @@ private:
 ///      make it a heap allocation.
 ///   2. If a stack allocation is an array with a runtime evaluated size make
 ///      it a heap allocation.
+namespace {
 class MemoryAllocationOpt
     : public fir::impl::MemoryAllocationOptBase<MemoryAllocationOpt> {
 public:
@@ -167,6 +106,9 @@ public:
     // Set options with default values. (See Passes.td.)
     options = {dynOnHeap, maxStackSize};
   }
+
+  MemoryAllocationOpt(const fir::MemoryAllocationOptOptions &options)
+      : options{options} {}
 
   /// Override `options` if command-line options have been set.
   inline void useCommandLineOptions() {
@@ -191,35 +133,20 @@ public:
     // If func is a declaration, skip it.
     if (func.empty())
       return;
-
-    const auto &analysis = getAnalysis<ReturnAnalysis>();
-
-    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
-                           mlir::func::FuncDialect>();
-    target.addDynamicallyLegalOp<fir::AllocaOp>([&](fir::AllocaOp alloca) {
-      return keepStackAllocation(alloca, &func.front(), options);
-    });
-
-    llvm::SmallVector<mlir::Operation *> returnOps = analysis.getReturns(func);
-    patterns.insert<AllocaOpConversion>(context, returnOps);
-    if (mlir::failed(
-            mlir::applyPartialConversion(func, target, std::move(patterns)))) {
-      mlir::emitError(func.getLoc(),
-                      "error in memory allocation optimization\n");
-      signalPassFailure();
-    }
+    auto tryReplacing = [&](fir::AllocaOp alloca) {
+      bool res = !keepStackAllocation(alloca, options);
+      if (res) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "memory allocation opt: found " << alloca << '\n');
+      }
+      return res;
+    };
+    mlir::IRRewriter rewriter(context);
+    fir::replaceAllocas(rewriter, func.getOperation(), tryReplacing,
+                        genAllocmem, genFreemem);
   }
 
 private:
-  MemoryAllocationOptions options;
+  fir::MemoryAllocationOptOptions options;
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> fir::createMemoryAllocationPass() {
-  return std::make_unique<MemoryAllocationOpt>();
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize) {
-  return std::make_unique<MemoryAllocationOpt>(dynOnHeap, maxStackSize);
-}

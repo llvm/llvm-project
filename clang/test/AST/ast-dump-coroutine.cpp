@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -std=c++20 \
-// RUN:    -fsyntax-only -ast-dump -ast-dump-filter test | FileCheck %s
+// RUN:    -ast-dump -ast-dump-filter test | FileCheck %s
 
 #include "Inputs/std-coroutine.h"
 

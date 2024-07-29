@@ -13,7 +13,7 @@
 
 // CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [6 x i64] [i64 4, i64 16, i64 4, i64 4, i64 0, i64 4]
 // 64 = 0x40 = OMP_MAP_RETURN_PARAM
-// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [6 x i64] [i64 67, i64 67, i64 3, i64 67, i64 67, i64 67]
+// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [6 x i64] [i64 67, i64 115, i64 51, i64 67, i64 67, i64 67]
 // CHECK-DAG: [[SIZES2:@.+]] = private unnamed_addr constant [6 x i64] [i64 0, i64 4, i64 16, i64 4, i64 4, i64 0]
 // 0 = OMP_MAP_NONE
 // 281474976710720 = 0x1000000000040 = OMP_MAP_MEMBER_OF | OMP_MAP_RETURN_PARAM
@@ -54,11 +54,9 @@ int main() {
 // CHECK: [[SIZES:%.+]] = alloca [6 x i64],
 // CHECK: [[VLA_ADDR:%.+]] = alloca float, i64 %{{.+}},
 // CHECK: [[PTR:%.+]] = load ptr, ptr [[PTR_ADDR]],
-// CHECK-NEXT: [[P4:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8
-// CHECK-NEXT: [[ARR_IDX:%.+]] = getelementptr inbounds float, ptr [[P4]], i64 3
+// CHECK-NEXT: [[ARR_IDX:%.+]] = getelementptr inbounds float, ptr [[PTR]], i64 3
 // CHECK: [[P5:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8
-// CHECK-NEXT: [[P6:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8
-// CHECK-NEXT: [[ARR_IDX1:%.+]] = getelementptr inbounds float, ptr [[P6]], i64 0
+// CHECK-NEXT: [[ARR_IDX1:%.+]] = getelementptr inbounds float, ptr [[P5]], i64 0
 // CHECK: [[P7:%.+]] = load ptr, ptr [[REF_ADDR]],
 // CHECK-NEXT: [[REF:%.+]] = load ptr, ptr [[REF_ADDR]],
 // CHECK-NEXT: [[ARR_IDX2:%.+]] = getelementptr inbounds [4 x float], ptr [[ARR_ADDR]], i64 0, i64 0
@@ -70,11 +68,11 @@ int main() {
 // CHECK: [[PTR0:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i32 0, i32 0
 // CHECK: store ptr [[A_ADDR]], ptr [[PTR0]],
 // CHECK: [[BPTR1:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BPTRS]], i32 0, i32 1
-// CHECK: store ptr [[PTR]], ptr [[BPTR1]],
+// CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR1]],
 // CHECK: [[PTR1:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i32 0, i32 1
 // CHECK: store ptr [[ARR_IDX]], ptr [[PTR1]],
 // CHECK: [[BPTR2:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BPTRS]], i32 0, i32 2
-// CHECK: store ptr [[P5]], ptr [[BPTR2]],
+// CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR2]],
 // CHECK: [[PTR2:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i32 0, i32 2
 // CHECK: store ptr [[ARR_IDX1]], ptr [[PTR2]],
 // CHECK: [[BPTR3:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BPTRS]], i32 0, i32 3

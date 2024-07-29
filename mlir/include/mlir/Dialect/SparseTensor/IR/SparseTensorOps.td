@@ -15,6 +15,8 @@ include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 
 //===----------------------------------------------------------------------===//
 // Base class.
@@ -27,9 +29,7 @@ class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
 // Sparse Tensor Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
-    Arguments<(ins AnyType:$source)>,
-    Results<(outs AnySparseTensor:$result)> {
+def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]> {
   string summary = "Materializes a new sparse tensor from given source";
   string description = [{
     Materializes a sparse tensor with contents taken from an opaque pointer
@@ -51,15 +51,14 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
     sparse_tensor.new %source : !Source to tensor<1024x1024xf64, #CSR>
     ```
   }];
+
+  let arguments = (ins AnyType:$source);
+  let results = (outs AnySparseTensor:$result);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
-def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
-    Arguments<(ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
-                   TensorOf<[AnyType]>:$values)>,
-    Results<(outs AnySparseTensor: $result)> {
+def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]> {
   let summary = "Returns a sparse tensor assembled from the given levels and values";
-
   let description = [{
     Assembles the per-level position and coordinate arrays together with
     the values arrays into a sparse tensor. The order and types of the
@@ -93,6 +92,9 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     ```
   }];
 
+  let arguments = (ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
+                   TensorOf<[AnyType]>:$values);
+  let results = (outs AnySparseTensor: $result);
   let assemblyFormat =
     "` ` `(` $levels       `)` `,` $values attr-dict `:`"
     "    `(` type($levels) `)` `,` type($values) `to` type($result)";
@@ -100,16 +102,8 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVariadicResultSize]>,
-    Arguments<(ins AnySparseTensor:$tensor,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
-                   TensorOf<[AnyType]>:$out_values)>,
-    Results<(outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  TensorOf<[AnyType]>:$ret_values,
-                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
-                  AnyIndexingScalarLike:$val_len)> {
+def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVariadicResultSize]> {
   let summary = "Copies the levels and values of the given sparse tensor";
-
   let description = [{
     The disassemble operation is the inverse of `sparse_tensor::assemble`.
     It copies the per-level position and coordinate arrays together with
@@ -143,6 +137,13 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
     ```
   }];
 
+  let arguments = (ins AnySparseTensor:$tensor,
+                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
+                   TensorOf<[AnyType]>:$out_values);
+  let results = (outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
+                  TensorOf<[AnyType]>:$ret_values,
+                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
+                  AnyIndexingScalarLike:$val_len);
   let assemblyFormat =
     "$tensor attr-dict `:` type($tensor)"
     "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
@@ -154,9 +155,7 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [Pure, StageWithSortSparseOpInterface]>,
-    Arguments<(ins AnyTensor:$source)>,
-    Results<(outs AnyTensor:$dest)> {
+  [Pure, StageWithSortSparseOpInterface]> {
   string summary = "Converts between different tensor types";
   string description = [{
     Converts one sparse or dense tensor type to another tensor type. The rank
@@ -197,20 +196,22 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
 
+  let arguments = (ins AnyTensor:$source);
+  let results = (outs AnyTensor:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+
   let extraClassDeclaration = [{
      // Whether the convert can be done by a single step or it would require
      // an extra sort. Inherited from StageWithSortSparseOpInterface.
      bool needsExtraSort();
   }];
 
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
 }
 
-def SparseTensor_ReinterpretMapOp : SparseTensor_Op<"reinterpret_map", [NoMemoryEffect]>,
-    Arguments<(ins AnySparseTensor:$source)>,
-    Results<(outs AnySparseTensor:$dest)> {
+def SparseTensor_ReinterpretMapOp : SparseTensor_Op<"reinterpret_map",
+    [NoMemoryEffect]> {
   let summary = "Reinterprets the dimension/level maps of the source tensor";
   let description = [{
     Reinterprets the dimension-to-level and level-to-dimension map specified in
@@ -248,19 +249,20 @@ def SparseTensor_ReinterpretMapOp : SparseTensor_Op<"reinterpret_map", [NoMemory
     ```
     }];
 
+  let arguments = (ins AnySparseTensor:$source);
+  let results = (outs AnySparseTensor:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+
   let builders = [
     OpBuilder<(ins "SparseTensorEncodingAttr":$dstEnc, "Value":$source)>
   ];
 
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
 }
 
 def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions",
-      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
-    Arguments<(ins AnySparseTensor:$tensor, LevelAttr:$level)>,
-    Results<(outs AnyNon0RankedMemRef:$result)> {
+      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Extracts the `level`-th positions array of the `tensor`";
   let description = [{
     Returns the positions array of the tensor's storage at the given
@@ -280,14 +282,16 @@ def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions",
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor, LevelAttr:$level);
+  let results = (outs AnyNon0RankedMemRef:$result);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+
   let hasVerifier = 1;
 }
 
 def SparseTensor_ToCoordinatesOp : SparseTensor_Op<"coordinates",
-      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
-    Arguments<(ins AnySparseTensor:$tensor, LevelAttr:$level)>,
-    Results<(outs AnyNon0RankedMemRef:$result)> {
+      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Extracts the `level`-th coordinates array of the `tensor`";
   let description = [{
     Returns the coordinates array of the tensor's storage at the given
@@ -307,14 +311,16 @@ def SparseTensor_ToCoordinatesOp : SparseTensor_Op<"coordinates",
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor, LevelAttr:$level);
+  let results = (outs AnyNon0RankedMemRef:$result);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+
   let hasVerifier = 1;
 }
 
 def SparseTensor_ToCoordinatesBufferOp : SparseTensor_Op<"coordinates_buffer",
-      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
-    Arguments<(ins AnySparseTensor:$tensor)>,
-    Results<(outs AnyNon0RankedMemRef:$result)> {
+      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Extracts the linear coordinates array from a tensor";
   let description = [{
     Returns the linear coordinates array for a sparse tensor with
@@ -339,14 +345,16 @@ def SparseTensor_ToCoordinatesBufferOp : SparseTensor_Op<"coordinates_buffer",
        : tensor<64x64xf64, #COO> to memref<?xindex>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor);
+  let results = (outs AnyNon0RankedMemRef:$result);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+
   let hasVerifier = 1;
 }
 
 def SparseTensor_ToValuesOp : SparseTensor_Op<"values",
-      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
-    Arguments<(ins AnySparseTensor:$tensor)>,
-    Results<(outs AnyNon0RankedMemRef:$result)> {
+      [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Extracts numerical values array from a tensor";
   let description = [{
     Returns the values array of the sparse storage format for the given
@@ -365,13 +373,15 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values",
     %1 = sparse_tensor.values %0 : tensor<64x64xf64, #CSR> to memref<?xf64>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor);
+  let results = (outs AnyNon0RankedMemRef:$result);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+
   let hasVerifier = 1;
 }
 
-def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]>,
-    Arguments<(ins AnySparseTensor:$tensor)>,
-    Results<(outs Index:$result)> {
+def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]> {
   let summary = "Returns the number of entries that are stored in the tensor.";
   let description = [{
     Returns the number of entries that are stored in the given sparse tensor.
@@ -385,14 +395,14 @@ def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]
     %noe = sparse_tensor.number_of_entries %tensor : tensor<64x64xf64, #CSR>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor);
+  let results = (outs Index:$result);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
 def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
-                                 [Pure, StageWithSortSparseOpInterface]>,
-    Arguments<(ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension)>,
-    Results<(outs AnyRankedTensor:$result)> {
-
+      [Pure, StageWithSortSparseOpInterface]> {
   let summary = "Concatenates a list of tensors into a single tensor.";
   let description = [{
      Concatenates a list input tensors and the output tensor with the same
@@ -418,13 +428,14 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
      bool needsExtraSort();
   }];
 
+  let arguments = (ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension);
+  let results = (outs AnyRankedTensor:$result);
   let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
+
   let hasVerifier = 1;
 }
 
-def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]>,
-    Arguments<(ins AnySparseTensorSlice:$slice, IndexAttr:$dim)>,
-    Results<(outs Index:$offset)> {
+def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]> {
   let summary = "Extracts the offset of the sparse tensor slice at the given dimension";
   let description = [{
     Extracts the offset of the sparse tensor slice at the given dimension.
@@ -445,13 +456,15 @@ def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]>,
     // %2 = %v2
     ```
   }];
+
+  let arguments = (ins AnySparseTensorSlice:$slice, IndexAttr:$dim);
+  let results = (outs Index:$offset);
   let assemblyFormat = "$slice `at` $dim attr-dict `:` type($slice)";
+
   let hasVerifier = 1;
 }
 
-def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
-    Arguments<(ins AnySparseTensorSlice:$slice, IndexAttr:$dim)>,
-    Results<(outs Index:$stride)> {
+def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]> {
   let summary = "Extracts the stride of the sparse tensor slice at the given dimension";
   let description = [{
     Extracts the stride of the sparse tensor slice at the given dimension.
@@ -473,7 +486,11 @@ def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
 
     ```
   }];
+
+  let arguments = (ins AnySparseTensorSlice:$slice, IndexAttr:$dim);
+  let results = (outs Index:$stride);
   let assemblyFormat = "$slice `at` $dim attr-dict `:` type($slice)";
+
   let hasVerifier = 1;
 }
 
@@ -482,9 +499,7 @@ def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.init",
-  [Pure]>,
-    Arguments<(ins Optional<SparseTensorStorageSpecifier>:$source)>,
-    Results<(outs SparseTensorStorageSpecifier:$result)> {
+      [Pure]> {
   let summary = "";
   let description = [{
     Returns an initial storage specifier value.  A storage specifier
@@ -515,6 +530,10 @@ def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.ini
     ```
   }];
 
+  let arguments = (ins Optional<SparseTensorStorageSpecifier>:$source);
+  let results = (outs SparseTensorStorageSpecifier:$result);
+  let assemblyFormat = "attr-dict (`with` $source^)? `:` (`from` qualified(type($source))^ `to`)?"
+                                                        " qualified(type($result))";
   let builders = [
     OpBuilder<(ins "Type":$result),
     [{
@@ -522,15 +541,10 @@ def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.ini
     }]>
   ];
 
-  let assemblyFormat = "attr-dict (`with` $source^)? `:` (`from` qualified(type($source))^ `to`)?"
-                                                        " qualified(type($result))";
+
 }
 
-def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get", [Pure]>,
-    Arguments<(ins SparseTensorStorageSpecifier:$specifier,
-                   SparseTensorStorageSpecifierKindAttr:$specifierKind,
-                   OptionalAttr<LevelAttr>:$level)>,
-    Results<(outs Index:$result)> {
+def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get", [Pure]> {
   let summary = "";
   let description = [{
     Returns the requested field of the given storage_specifier.
@@ -543,19 +557,19 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
     ```
   }];
 
+  let arguments = (ins SparseTensorStorageSpecifier:$specifier,
+                   SparseTensorStorageSpecifierKindAttr:$specifierKind,
+                   OptionalAttr<LevelAttr>:$level);
+  let results = (outs Index:$result);
   let assemblyFormat = "$specifier $specifierKind (`at` $level^)? attr-dict"
                        "`:` qualified(type($specifier))";
+
   let hasVerifier = 1;
   let hasFolder = 1;
 }
 
 def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set",
-    [Pure, AllTypesMatch<["result", "specifier"]>]>,
-    Arguments<(ins SparseTensorStorageSpecifier:$specifier,
-                   SparseTensorStorageSpecifierKindAttr:$specifierKind,
-                   OptionalAttr<LevelAttr>:$level,
-                   Index:$value)>,
-    Results<(outs SparseTensorStorageSpecifier:$result)> {
+    [Pure, AllTypesMatch<["result", "specifier"]>]> {
   let summary = "";
   let description = [{
     Set the field of the storage specifier to the given input value. Returns
@@ -568,8 +582,15 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
        : !sparse_tensor.storage_specifier<#COO>
     ```
   }];
+
+  let arguments = (ins SparseTensorStorageSpecifier:$specifier,
+                   SparseTensorStorageSpecifierKindAttr:$specifierKind,
+                   OptionalAttr<LevelAttr>:$level,
+                   Index:$value);
+  let results = (outs SparseTensorStorageSpecifier:$result);
   let assemblyFormat = "$specifier $specifierKind (`at` $level^)? `with` $value"
                        " attr-dict `:` qualified(type($result))";
+
   let hasVerifier = 1;
 }
 
@@ -577,9 +598,7 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 // Sparse Tensor Coordinate Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMemoryEffect]>,
-    Arguments<(ins AnySparseTensor:$source, Index:$index)>,
-    Results<(outs Index:$result)> {
+def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMemoryEffect]> {
   let summary = "level index operation";
   let description = [{
     The `sparse_tensor.lvl` behaves similar to `tensor.dim` operation.
@@ -615,9 +634,9 @@ def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMe
     ```
   }];
 
-  let assemblyFormat = [{
-    attr-dict $source `,` $index `:` type($source)
-  }];
+  let arguments = (ins AnySparseTensor:$source, Index:$index);
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict $source `,` $index `:` type($source) ";
 
   let builders = [
     OpBuilder<(ins "Value":$source, "int64_t":$index)>
@@ -635,11 +654,7 @@ def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMe
   let hasFolder = 1;
 }
 
-def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
-    Arguments<(ins Variadic<Index>:$in_crds,
-                   SparseTensorCrdTransDirectionAttr:$direction,
-                   SparseTensorEncodingAttr:$encoder)>,
-    Results<(outs Variadic<Index>:$out_crds)> {
+def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]> {
   string summary = "Performs coordinate translation between level and dimension coordinate space.";
   string description = [{
     Performs coordinate translation between level and dimension coordinate space according
@@ -652,7 +667,13 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
                        : index, index, index, index
     ```
   }];
+
+  let arguments = (ins Variadic<Index>:$in_crds,
+                   SparseTensorCrdTransDirectionAttr:$direction,
+                   SparseTensorEncodingAttr:$encoder);
+  let results = (outs Variadic<Index>:$out_crds);
   let assemblyFormat = "$direction `[` $in_crds `]` `as` $encoder attr-dict `:` type($out_crds)";
+
   let hasVerifier = 1;
   let hasFolder = 1;
 }
@@ -669,13 +690,7 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     [TypesMatchWith<"value type matches element type of inBuffer",
                     "inBuffer", "value",
                     "::llvm::cast<ShapedType>($_self).getElementType()">,
-     AllTypesMatch<["inBuffer", "outBuffer"]>]>,
-    Arguments<(ins Index:$curSize,
-               StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
-               AnyType:$value, Optional<Index>:$n,
-               UnitAttr:$inbounds)>,
-    Results<(outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer,
-             Index:$newSize)>  {
+     AllTypesMatch<["inBuffer", "outBuffer"]>]> {
   string summary = "Pushes a value to the back of a given buffer";
   string description = [{
     Pushes `value` to the end of the given sparse tensor storage buffer
@@ -719,6 +734,13 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
        : xindex, memref<?xf64>, f64
     ```
   }];
+
+  let arguments = (ins Index:$curSize,
+                       StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
+                       AnyType:$value, Optional<Index>:$n,
+                       UnitAttr:$inbounds);
+  let results = (outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer,
+                      Index:$newSize);
   let assemblyFormat = "(`inbounds` $inbounds^)? $curSize `,` $inBuffer"
                        " `,` $value (`,` $n^ )?  attr-dict `:`"
                        " type($curSize) `,` type($inBuffer) `,`"
@@ -732,12 +754,7 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
   let hasVerifier = 1;
 }
 
-def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
-    Arguments<(ins AnySparseTensor:$tensor)>,
-    Results<(outs AnyStridedMemRefOfRank<1>:$values,
-                  StridedMemRefRankOf<[I1],[1]>:$filled,
-                  StridedMemRefRankOf<[Index],[1]>:$added,
-                  Index:$count)> {
+def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []> {
   string summary = "Expands an access pattern for insertion";
   string description = [{
     Performs an access pattern expansion for the innermost levels of the
@@ -771,19 +788,19 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
       : tensor<4x4xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>
     ```
   }];
+
+
+  let arguments = (ins AnySparseTensor:$tensor);
+  let results = (outs AnyStridedMemRefOfRank<1>:$values,
+                      StridedMemRefRankOf<[I1],[1]>:$filled,
+                      StridedMemRefRankOf<[Index],[1]>:$added,
+                      Index:$count);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($values)"
                        " `,` type($filled) `,` type($added)";
 }
 
 def SparseTensor_CompressOp : SparseTensor_Op<"compress",
-    [AllTypesMatch<["tensor", "result"]>]>,
-    Arguments<(ins AnyStridedMemRefOfRank<1>:$values,
-                   StridedMemRefRankOf<[I1],[1]>:$filled,
-                   StridedMemRefRankOf<[Index],[1]>:$added,
-                   Index:$count,
-                   AnySparseTensor:$tensor,
-                   Variadic<Index>:$lvlCoords)>,
-    Results<(outs AnySparseTensor:$result)> {
+    [AllTypesMatch<["tensor", "result"]>]> {
   string summary = "Compressed an access pattern for insertion";
   string description = [{
     Finishes a single access pattern expansion by moving inserted elements
@@ -807,6 +824,14 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress",
       : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<4x4xf64, #CSR>
     ```
   }];
+
+  let arguments = (ins AnyStridedMemRefOfRank<1>:$values,
+                   StridedMemRefRankOf<[I1],[1]>:$filled,
+                   StridedMemRefRankOf<[Index],[1]>:$added,
+                   Index:$count,
+                   AnySparseTensor:$tensor,
+                   Variadic<Index>:$lvlCoords);
+  let results = (outs AnySparseTensor:$result);
   let assemblyFormat = "$values `,` $filled `,` $added `,` $count"
                        " `into` $tensor `[` $lvlCoords `]` attr-dict"
                        " `:` type($values) `,` type($filled) `,` type($added)"
@@ -814,9 +839,7 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress",
   let hasVerifier = 1;
 }
 
-def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
-    Arguments<(ins AnySparseTensor:$tensor, UnitAttr:$hasInserts)>,
-    Results<(outs AnyTensor:$result)> {
+def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]> {
   let summary =
     "Rematerializes tensor from underlying sparse storage format";
   let description = [{
@@ -845,11 +868,13 @@ def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
     %1 = sparse_tensor.load %0 hasInserts : tensor<16x32xf32, #CSR>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor, UnitAttr:$hasInserts);
+  let results = (outs AnyTensor:$result);
   let assemblyFormat = "$tensor (`hasInserts` $hasInserts^)? attr-dict `:` type($tensor)";
 }
 
-def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
-    Arguments<(ins AnySparseTensor:$tensor, AnyType:$dest)> {
+def SparseTensor_OutOp : SparseTensor_Op<"out", []> {
   string summary = "Outputs a sparse tensor to the given destination";
   string description = [{
     Outputs the contents of a sparse tensor to the destination defined by an
@@ -868,6 +893,8 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
     sparse_tensor.out %t, %dest : tensor<1024x1024xf64, #CSR>, !Dest
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor, AnyType:$dest);
   let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
 }
 
@@ -875,11 +902,7 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 // Sparse Tensor Sorting/Ordering Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_SortOp : SparseTensor_Op<"sort">,
-    Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
-               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
-               AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
-               SparseTensorSortKindAttr:$algorithm)>  {
+def SparseTensor_SortOp : SparseTensor_Op<"sort"> {
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
@@ -904,16 +927,18 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort">,
     ```
   }];
 
+  let arguments = (ins Index:$n,
+                       StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
+                       Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
+                       AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
+                       SparseTensorSortKindAttr:$algorithm);
   let assemblyFormat = "$algorithm $n"
                        "`,`$xy (`jointly` $ys^)? attr-dict"
                        "`:` type($xy) (`jointly` type($ys)^)?";
   let hasVerifier = 1;
 }
 
-def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
-    Arguments<(ins AnySparseTensor: $input_coo,
-                   SparseTensorSortKindAttr:$algorithm)>,
-    Results<(outs AnySparseTensor: $result_coo)> {
+def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]> {
   let summary = "Reorder the input COO such that it has the the same order as "
                 "the output COO";
   let description = [{
@@ -933,6 +958,9 @@ def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
     ```
   }];
 
+  let arguments = (ins AnySparseTensor: $input_coo,
+                       SparseTensorSortKindAttr:$algorithm);
+  let results = (outs AnySparseTensor: $result_coo);
   let assemblyFormat = "$algorithm $input_coo attr-dict"
                        "`:` type($input_coo) `to` type($result_coo)";
 
@@ -944,9 +972,7 @@ def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
 // Sparse Tensor Syntax Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]>,
-    Arguments<(ins AnyType:$x, AnyType:$y, UnitAttr:$left_identity, UnitAttr:$right_identity)>,
-    Results<(outs AnyType:$output)> {
+def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]> {
   let summary = "Binary set operation utilized within linalg.generic";
   let description = [{
       Defines a computation within a `linalg.generic` operation that takes two
@@ -1054,18 +1080,24 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]>,
   }];
 
   let regions = (region AnyRegion:$overlapRegion, AnyRegion:$leftRegion, AnyRegion:$rightRegion);
+  let arguments = (ins AnyType:$x, AnyType:$y, UnitAttr:$left_identity, UnitAttr:$right_identity);
+  let results = (outs AnyType:$output);
   let assemblyFormat = [{
         $x `,` $y `:` attr-dict type($x) `,` type($y) `to` type($output) `\n`
         `overlap` `=` $overlapRegion `\n`
         `left` `=` (`identity` $left_identity^):($leftRegion)? `\n`
         `right` `=` (`identity` $right_identity^):($rightRegion)?
   }];
+
   let hasVerifier = 1;
 }
 
-def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]>,
-    Arguments<(ins AnyType:$x)>,
-    Results<(outs AnyType:$output)> {
+def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]> {
+
+  let arguments = (ins AnyType:$x);
+
+  let results = (outs AnyType:$output);
+
   let summary = "Unary set operation utilized within linalg.generic";
   let description = [{
       Defines a computation with a `linalg.generic` operation that takes a single
@@ -1162,9 +1194,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [Pure, SameOperandsAndResultType]>,
-    Arguments<(ins AnyType:$x, AnyType:$y, AnyType:$identity)>,
-    Results<(outs AnyType:$output)> {
+def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [Pure, SameOperandsAndResultType]> {
   let summary = "Custom reduction operation utilized within linalg.generic";
   let description = [{
       Defines a computation with a `linalg.generic` operation that takes two
@@ -1208,16 +1238,14 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [Pure, SameOperandsAndResu
   }];
 
   let regions = (region SizedRegion<1>:$region);
+  let arguments = (ins AnyType:$x, AnyType:$y, AnyType:$identity);
+  let results = (outs AnyType:$output);
+  let assemblyFormat = "$x `,` $y `,` $identity attr-dict `:` type($output) $region";
 
-  let assemblyFormat = [{
-         $x `,` $y `,` $identity attr-dict `:` type($output) $region
-  }];
   let hasVerifier = 1;
 }
 
-def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResultType]>,
-    Arguments<(ins AnyType:$x)>,
-    Results<(outs AnyType:$output)> {
+def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResultType]> {
   let summary = "Select operation utilized within linalg.generic";
   let description = [{
       Defines an evaluation within a `linalg.generic` operation that takes a single
@@ -1269,16 +1297,16 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
   }];
 
   let regions = (region SizedRegion<1>:$region);
-  let assemblyFormat = [{
-         $x attr-dict `:` type($x) $region
-  }];
+  let arguments = (ins AnyType:$x);
+  let results = (outs AnyType:$output);
+  let assemblyFormat = "$x attr-dict `:` type($x) $region";
+
   let hasVerifier = 1;
 }
 
 def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
     ParentOneOf<["BinaryOp", "UnaryOp", "ReduceOp", "SelectOp",
-                 "ForeachOp"]>]>,
-    Arguments<(ins Variadic<AnyType>:$results)> {
+                 "ForeachOp", "IterateOp"]>]> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
       Yields a value from within a `binary`, `unary`, `reduce`,
@@ -1319,17 +1347,12 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
      }
   }];
 
-  let assemblyFormat = [{
-        $results attr-dict `:` type($results)
-  }];
+  let arguments = (ins Variadic<AnyType>:$results);
+  let assemblyFormat = "$results attr-dict `:` type($results)";
 }
 
 def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
-    [SingleBlockImplicitTerminator<"YieldOp">]>,
-     Arguments<(ins AnyTensor:$tensor,
-                    Variadic<AnyType>:$initArgs,
-                    OptionalAttr<AffineMapAttr>:$order)>,
-     Results<(outs Variadic<AnyType>:$results)> {
+    [SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Iterates over elements in a tensor";
   let description = [{
      Iterates over stored elements in a tensor (which are typically, but not always,
@@ -1424,6 +1447,10 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
   ];
 
   let regions = (region SizedRegion<1>:$region);
+  let arguments = (ins AnyTensor:$tensor,
+                       Variadic<AnyType>:$initArgs,
+                       OptionalAttr<AffineMapAttr>:$order);
+  let results = (outs Variadic<AnyType>:$results);
   let assemblyFormat = "`in` $tensor (`init``(`$initArgs^`)`)? attr-dict"
                        "    `:` type($tensor) (`,` type($initArgs)^)?"
                        "  (`->` type($results)^)?  `do` $region";
@@ -1436,13 +1463,6 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
 
 def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
     [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
-
-  let arguments = (ins AnySparseTensor:$tensor,
-                       Optional<AnySparseIterator>:$parentIter,
-                       LevelAttr:$loLvl, LevelAttr:$hiLvl);
-
-  let results = (outs AnySparseIterSpace:$resultSpace);
-
   let summary = "Extracts an iteration space from a sparse tensor between certain levels";
   let description = [{
       Extracts a `!sparse_tensor.iter_space` from a sparse tensor between
@@ -1458,7 +1478,7 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       the returned iteration space covers. `hiLvl - loLvl` defines the dimension of the
       iteration space.
 
-      The type of returned the value is automatically inferred to
+      The type of returned the value is must be
       `!sparse_tensor.iter_space<#INPUT_ENCODING, lvls = $loLvl to $hiLvl>`.
       The returned iteration space can then be iterated over by
       `sparse_tensor.iterate` operations to visit every stored element
@@ -1469,9 +1489,14 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       // Extracts a 1-D iteration space from a COO tensor at level 1.
       %space = sparse_tensor.iteration.extract_space %sp at %it1 lvls = 1
         : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+       ->!sparse_tensor.iter_space<#COO, lvls = 1>
       ```
   }];
 
+  let arguments = (ins AnySparseTensor:$tensor,
+                       Optional<AnySparseIterator>:$parentIter,
+                       LevelAttr:$loLvl, LevelAttr:$hiLvl);
+  let results = (outs AnySparseIterSpace:$extractedSpace);
 
   let extraClassDeclaration = [{
     std::pair<Level, Level> getLvlRange() {
@@ -1481,21 +1506,149 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       return getHiLvl() - getLoLvl();
     }
     ArrayRef<::mlir::sparse_tensor::LevelType> getSpaceLvlTypes() {
-      return getResultSpace().getType().getLvlTypes();
+      return getExtractedSpace().getType().getLvlTypes();
+    }
+  }];
+
+  let builders = [
+    // Construct a 1-D iteration space.
+    OpBuilder<(ins "Value":$tensor, "Value":$parentIter,
+                   "sparse_tensor::Level":$loLvl),
+    [{
+      build($_builder, $_state, tensor, parentIter, loLvl, loLvl + 1);
+    }]>,
+    // Construct a 1-D root iteration space
+    OpBuilder<(ins "Value":$tensor),
+    [{
+      build($_builder, $_state, tensor, nullptr, 0);
+    }]>
+  ];
+
+  let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
+                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)? "
+                       "`->` qualified(type($extractedSpace))";
+
+  let hasVerifier = 1;
+}
+
+def IterateOp : SparseTensor_Op<"iterate",
+    [RecursiveMemoryEffects, RecursivelySpeculatable,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface,
+      ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
+       "getYieldedValuesMutable"]>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface,
+      ["getEntrySuccessorOperands"]>,
+     SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">]> {
+
+  let summary = "Iterates over a sparse iteration space";
+  let description = [{
+      The `sparse_tensor.iterate` operation represents a loop (nest) over
+      the provided iteration space extracted from a specific sparse tensor.
+      The operation defines an SSA value for a sparse iterator that points
+      to the current stored element in the sparse tensor and SSA values
+      for coordinates of the stored element. The coordinates are always
+      converted to `index` type despite of the underlying sparse tensor
+      storage. When coordinates are not used, the SSA values can be skipped
+      by `_` symbols, which usually leads to simpler generated code after
+      sparsification. For example:
+
+      ```mlir
+      // The coordinate for level 0 is not used when iterating over a 2-D
+      // iteration space.
+      %sparse_tensor.iterate %iterator in %space at(_, %crd_1)
+        : !sparse_tensor.iter_space<#CSR, lvls = 0 to 2>
+      ```
+
+      `sparse_tensor.iterate` can also operate on loop-carried variables.
+      It returns the final values after loop termination.
+      The initial values of the variables are passed as additional SSA operands
+      to the iterator SSA value and used coordinate SSA values mentioned
+      above. The operation region has an argument for the iterator, variadic
+      arguments for specified (used) coordiates and followed by one argument
+      for each loop-carried variable, representing the value of the variable
+      at the current iteration.
+      The body region must contain exactly one block that terminates with
+      `sparse_tensor.yield`.
+
+      The results of an `sparse_tensor.iterate` hold the final values after
+      the last iteration. If the `sparse_tensor.iterate` defines any values,
+      a yield must be explicitly present.
+      The number and types of the `sparse_tensor.iterate` results must match
+      the initial values in the iter_args binding and the yield operands.
+
+
+      A nested `sparse_tensor.iterate` example that prints all the coordinates
+      stored in the sparse input:
+
+      ```mlir
+      func.func @nested_iterate(%sp : tensor<4x8xf32, #COO>) {
+        // Iterates over the first level of %sp
+        %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0
+            : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0 to 1>
+        %r1 = sparse_tensor.iterate %it1 in %l1 at (%coord0)
+            : !sparse_tensor.iter_space<#COO, lvls = 0 to 1>  {
+          // Iterates over the second level of %sp
+          %l2 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 1
+              : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0 to 1>
+             -> !sparse_tensor.iter_space<#COO, lvls = 1 to 2>
+          %r2 = sparse_tensor.iterate %it2 in %l2 at (coord1)
+              : !sparse_tensor.iter_space<#COO, lvls = 1 to 2>  {
+             vector.print %coord0 : index
+             vector.print %coord1 : index
+          }
+        }
+      }
+
+      ```
+  }];
+
+  let arguments = (ins AnySparseIterSpace:$iterSpace,
+                       Variadic<AnyType>:$initArgs,
+                       LevelSetAttr:$crdUsedLvls);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs)>,
+    OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs, "LevelSet" :$crdUsedLvls)>
+  ];
+
+  let extraClassDeclaration = [{
+    unsigned getSpaceDim() {
+      return getIterSpace().getType().getSpaceDim();
+    }
+    BlockArgument getIterator() {
+      return getRegion().getArguments().front();
+    }
+    std::optional<BlockArgument> getLvlCrd(Level lvl) {
+      if (getCrdUsedLvls()[lvl]) {
+        uint64_t mask = (static_cast<uint64_t>(0x01u) << lvl) - 1;
+        return getCrds()[llvm::popcount(mask & getCrdUsedLvls())];
+      }
+      return std::nullopt;
+    }
+    Block::BlockArgListType getCrds() {
+      // The first block argument is iterator, the remaining arguments are
+      // referenced coordinates.
+      return getRegion().getArguments().slice(1, getCrdUsedLvls().count());
+    }
+    unsigned getNumRegionIterArgs() {
+      return getRegion().getArguments().size() - 1 - getCrdUsedLvls().count();
     }
   }];
 
   let hasVerifier = 1;
-  let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
-                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)?";
+  let hasRegionVerifier = 1;
+  let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Debugging and Test-Only Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_PrintOp : SparseTensor_Op<"print">,
-    Arguments<(ins AnySparseTensor:$tensor)> {
+def SparseTensor_PrintOp : SparseTensor_Op<"print"> {
   string summary = "Prints a sparse tensor (for testing and debugging)";
   string description = [{
     Prints the individual components of a sparse tensors (the positions,
@@ -1509,6 +1662,8 @@ def SparseTensor_PrintOp : SparseTensor_Op<"print">,
     sparse_tensor.print %tensor : tensor<1024x1024xf64, #CSR>
     ```
   }];
+
+  let arguments = (ins AnySparseTensor:$tensor);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 

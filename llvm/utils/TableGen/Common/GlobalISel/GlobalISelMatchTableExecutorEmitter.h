@@ -182,10 +182,6 @@ public:
   /// Emit additional content in emitExecutorImpl
   virtual void emitAdditionalImpl(raw_ostream &OS) {}
 
-  /// Emit additional content in emitTemporariesDecl.
-  virtual void emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                             StringRef Indent) {}
-
   /// Emit additional content in emitTemporariesInit.
   virtual void emitAdditionalTemporariesInit(raw_ostream &OS) {}
 

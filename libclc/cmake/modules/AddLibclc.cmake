@@ -12,8 +12,8 @@
 # * DEPENDENCIES <string> ...
 #     List of extra dependencies to inject
 #
-# Depends on the libclc::clang and libclc::llvm-as targets for compiling and
-# assembling, respectively.
+# Depends on the clang, llvm-as, and llvm-link targets for compiling,
+# assembling, and linking, respectively.
 function(compile_to_bc)
   cmake_parse_arguments(ARG
     ""
@@ -39,9 +39,13 @@ function(compile_to_bc)
     set( TARGET_ARG "-target" ${ARG_TRIPLE} )
   endif()
 
+  # Ensure the directory we are told to output to exists
+  get_filename_component( ARG_OUTPUT_DIR ${ARG_OUTPUT} DIRECTORY )
+  file( MAKE_DIRECTORY ${ARG_OUTPUT_DIR} )
+
   add_custom_command(
     OUTPUT ${ARG_OUTPUT}${TMP_SUFFIX}
-    COMMAND libclc::clang
+    COMMAND ${clang_exe}
       ${TARGET_ARG}
       ${PP_OPTS}
       ${ARG_EXTRA_OPTS}
@@ -54,7 +58,7 @@ function(compile_to_bc)
       -x cl
       ${ARG_INPUT}
     DEPENDS
-      libclc::clang
+      ${clang_target}
       ${ARG_INPUT}
       ${ARG_DEPENDENCIES}
     DEPFILE ${ARG_OUTPUT}.d
@@ -63,8 +67,8 @@ function(compile_to_bc)
   if( ${FILE_EXT} STREQUAL ".ll" )
     add_custom_command(
       OUTPUT ${ARG_OUTPUT}
-      COMMAND libclc::llvm-as -o ${ARG_OUTPUT} ${ARG_OUTPUT}${TMP_SUFFIX}
-      DEPENDS libclc::llvm-as ${ARG_OUTPUT}${TMP_SUFFIX}
+      COMMAND ${llvm-as_exe} -o ${ARG_OUTPUT} ${ARG_OUTPUT}${TMP_SUFFIX}
+      DEPENDS ${llvm-as_target} ${ARG_OUTPUT}${TMP_SUFFIX}
     )
   endif()
 endfunction()
@@ -76,22 +80,42 @@ endfunction()
 #     Custom target to create
 # * INPUT <string> ...
 #     List of bytecode files to link together
+# * DEPENDENCIES <string> ...
+#     List of extra dependencies to inject
 function(link_bc)
   cmake_parse_arguments(ARG
     ""
     "TARGET"
-    "INPUTS"
+    "INPUTS;DEPENDENCIES"
     ${ARGN}
   )
 
+  set( LINK_INPUT_ARG ${ARG_INPUTS} )
+  if( WIN32 OR CYGWIN )
+    # Create a response file in case the number of inputs exceeds command-line
+    # character limits on certain platforms.
+    file( TO_CMAKE_PATH ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.rsp RSP_FILE )
+    # Turn it into a space-separate list of input files
+    list( JOIN ARG_INPUTS " " RSP_INPUT )
+    file( WRITE ${RSP_FILE} ${RSP_INPUT} )
+    # Ensure that if this file is removed, we re-run CMake
+    set_property( DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+      ${RSP_FILE}
+    )
+    set( LINK_INPUT_ARG "@${RSP_FILE}" )
+  endif()
+
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
-    COMMAND libclc::llvm-link -o ${ARG_TARGET}.bc ${ARG_INPUTS}
-    DEPENDS libclc::llvm-link ${ARG_INPUTS}
+    COMMAND ${llvm-link_exe} -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
   add_custom_target( ${ARG_TARGET} ALL DEPENDS ${ARG_TARGET}.bc )
-  set_target_properties( ${ARG_TARGET} PROPERTIES TARGET_FILE ${ARG_TARGET}.bc )
+  set_target_properties( ${ARG_TARGET} PROPERTIES
+    TARGET_FILE ${ARG_TARGET}.bc
+    FOLDER "libclc/Device IR/Linking"
+  )
 endfunction()
 
 # Decomposes and returns variables based on a libclc triple and architecture

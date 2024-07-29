@@ -1,5 +1,5 @@
-# Checks that symbols are allocated in correct sections, and that empty
-# fragments are not allocated at all.
+## Checks that symbols are allocated in correct sections, and that empty
+## fragments are not allocated at all.
 
 # REQUIRES: x86_64-linux
 

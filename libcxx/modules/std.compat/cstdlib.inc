@@ -8,65 +8,65 @@
 //===----------------------------------------------------------------------===//
 
 export {
-  using ::div_t;
-  using ::ldiv_t;
-  using ::lldiv_t;
-  using ::size_t;
+  using ::div_t _LIBCPP_USING_IF_EXISTS;
+  using ::ldiv_t _LIBCPP_USING_IF_EXISTS;
+  using ::lldiv_t _LIBCPP_USING_IF_EXISTS;
+  using ::size_t _LIBCPP_USING_IF_EXISTS;
 
   // [support.start.term], start and termination
-  using ::_Exit;
-  using ::abort;
+  using ::_Exit _LIBCPP_USING_IF_EXISTS;
+  using ::abort _LIBCPP_USING_IF_EXISTS;
   using ::at_quick_exit _LIBCPP_USING_IF_EXISTS;
-  using ::atexit;
-  using ::exit;
+  using ::atexit _LIBCPP_USING_IF_EXISTS;
+  using ::exit _LIBCPP_USING_IF_EXISTS;
   using ::quick_exit _LIBCPP_USING_IF_EXISTS;
 
-  using ::getenv;
-  using ::system;
+  using ::getenv _LIBCPP_USING_IF_EXISTS;
+  using ::system _LIBCPP_USING_IF_EXISTS;
 
   // [c.malloc], C library memory allocation
-  using ::aligned_alloc;
-  using ::calloc;
-  using ::free;
-  using ::malloc;
-  using ::realloc;
+  using ::aligned_alloc _LIBCPP_USING_IF_EXISTS;
+  using ::calloc _LIBCPP_USING_IF_EXISTS;
+  using ::free _LIBCPP_USING_IF_EXISTS;
+  using ::malloc _LIBCPP_USING_IF_EXISTS;
+  using ::realloc _LIBCPP_USING_IF_EXISTS;
 
-  using ::atof;
-  using ::atoi;
-  using ::atol;
-  using ::atoll;
-  using ::strtod;
-  using ::strtof;
-  using ::strtol;
-  using ::strtold;
-  using ::strtoll;
-  using ::strtoul;
-  using ::strtoull;
+  using ::atof _LIBCPP_USING_IF_EXISTS;
+  using ::atoi _LIBCPP_USING_IF_EXISTS;
+  using ::atol _LIBCPP_USING_IF_EXISTS;
+  using ::atoll _LIBCPP_USING_IF_EXISTS;
+  using ::strtod _LIBCPP_USING_IF_EXISTS;
+  using ::strtof _LIBCPP_USING_IF_EXISTS;
+  using ::strtol _LIBCPP_USING_IF_EXISTS;
+  using ::strtold _LIBCPP_USING_IF_EXISTS;
+  using ::strtoll _LIBCPP_USING_IF_EXISTS;
+  using ::strtoul _LIBCPP_USING_IF_EXISTS;
+  using ::strtoull _LIBCPP_USING_IF_EXISTS;
 
   // [c.mb.wcs], multibyte / wide string and character conversion functions
-  using ::mblen;
+  using ::mblen _LIBCPP_USING_IF_EXISTS;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  using ::mbstowcs;
-  using ::mbtowc;
-  using ::wcstombs;
-  using ::wctomb;
+  using ::mbstowcs _LIBCPP_USING_IF_EXISTS;
+  using ::mbtowc _LIBCPP_USING_IF_EXISTS;
+  using ::wcstombs _LIBCPP_USING_IF_EXISTS;
+  using ::wctomb _LIBCPP_USING_IF_EXISTS;
 #endif
   // [alg.c.library], C standard library algorithms
-  using ::bsearch;
-  using ::qsort;
+  using ::bsearch _LIBCPP_USING_IF_EXISTS;
+  using ::qsort _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.rand], low-quality random number generation
-  using ::rand;
-  using ::srand;
+  using ::rand _LIBCPP_USING_IF_EXISTS;
+  using ::srand _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.abs], absolute values
-  using ::abs;
+  using ::abs _LIBCPP_USING_IF_EXISTS;
 
-  using ::labs;
-  using ::llabs;
+  using ::labs _LIBCPP_USING_IF_EXISTS;
+  using ::llabs _LIBCPP_USING_IF_EXISTS;
 
-  using ::div;
-  using ::ldiv;
-  using ::lldiv;
+  using ::div _LIBCPP_USING_IF_EXISTS;
+  using ::ldiv _LIBCPP_USING_IF_EXISTS;
+  using ::lldiv _LIBCPP_USING_IF_EXISTS;
 
 } // export

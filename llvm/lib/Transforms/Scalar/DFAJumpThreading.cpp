@@ -131,7 +131,7 @@ public:
   explicit operator bool() const { return SI && SIUse; }
 };
 
-void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
+void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<SelectInstToUnfold> *NewSIsToUnfold,
             std::vector<BasicBlock *> *NewBBs);
 
@@ -142,22 +142,21 @@ public:
       : AC(AC), DT(DT), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
+  bool LoopInfoBroken;
 
 private:
   void
   unfoldSelectInstrs(DominatorTree *DT,
                      const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-    SmallVector<SelectInstToUnfold, 4> Stack;
-    for (SelectInstToUnfold SIToUnfold : SelectInsts)
-      Stack.push_back(SIToUnfold);
+    SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
       SelectInstToUnfold SIToUnfold = Stack.pop_back_val();
 
       std::vector<SelectInstToUnfold> NewSIsToUnfold;
       std::vector<BasicBlock *> NewBBs;
-      unfold(&DTU, SIToUnfold, &NewSIsToUnfold, &NewBBs);
+      unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
       for (const SelectInstToUnfold &NewSIToUnfold : NewSIsToUnfold)
@@ -201,7 +200,7 @@ void createBasicBlockAndSinkSelectInst(
 /// created basic blocks into \p NewBBs.
 ///
 /// TODO: merge it with CodeGenPrepare::optimizeSelectInst() if possible.
-void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
+void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<SelectInstToUnfold> *NewSIsToUnfold,
             std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
@@ -306,6 +305,12 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
   BranchInst::Create(TT, FT, SI->getCondition(), StartBlock);
   DTU->applyUpdates({{DominatorTree::Insert, StartBlock, TT},
                      {DominatorTree::Insert, StartBlock, FT}});
+
+  // Preserve loop info
+  if (Loop *L = LI->getLoopFor(SI->getParent())) {
+    for (BasicBlock *NewBB : *NewBBs)
+      L->addBasicBlockToLoop(NewBB, *LI);
+  }
 
   // The select is now dead.
   assert(SI->use_empty() && "Select must be dead now");
@@ -522,9 +527,10 @@ private:
 };
 
 struct AllSwitchPaths {
-  AllSwitchPaths(const MainSwitch *MSwitch, OptimizationRemarkEmitter *ORE)
-      : Switch(MSwitch->getInstr()), SwitchBlock(Switch->getParent()),
-        ORE(ORE) {}
+  AllSwitchPaths(const MainSwitch *MSwitch, OptimizationRemarkEmitter *ORE,
+                 LoopInfo *LI)
+      : Switch(MSwitch->getInstr()), SwitchBlock(Switch->getParent()), ORE(ORE),
+        LI(LI) {}
 
   std::vector<ThreadingPath> &getThreadingPaths() { return TPaths; }
   unsigned getNumThreadingPaths() { return TPaths.size(); }
@@ -545,7 +551,7 @@ struct AllSwitchPaths {
       return;
     }
 
-    for (PathType Path : LoopPaths) {
+    for (const PathType &Path : LoopPaths) {
       ThreadingPath TPath;
 
       const BasicBlock *PrevBB = Path.back();
@@ -595,6 +601,12 @@ private:
     }
 
     Visited.insert(BB);
+
+    // Stop if we have reached the BB out of loop, since its successors have no
+    // impact on the DFA.
+    // TODO: Do we need to stop exploring if BB is the outer loop of the switch?
+    if (!LI->getLoopFor(BB))
+      return Res;
 
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
@@ -737,6 +749,7 @@ private:
   BasicBlock *SwitchBlock;
   OptimizationRemarkEmitter *ORE;
   std::vector<ThreadingPath> TPaths;
+  LoopInfo *LI;
 };
 
 struct TransformDFA {
@@ -812,7 +825,8 @@ private:
         return false;
       }
 
-      if (Metrics.convergent) {
+      // FIXME: Allow jump threading with controlled convergence.
+      if (Metrics.Convergence != ConvergenceKind::None) {
         LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, contains "
                           << "convergent instructions.\n");
         ORE->emit([&]() {
@@ -1283,6 +1297,7 @@ bool DFAJumpThreading::run(Function &F) {
 
   SmallVector<AllSwitchPaths, 2> ThreadableLoops;
   bool MadeChanges = false;
+  LoopInfoBroken = false;
 
   for (BasicBlock &BB : F) {
     auto *SI = dyn_cast<SwitchInst>(BB.getTerminator());
@@ -1304,7 +1319,7 @@ bool DFAJumpThreading::run(Function &F) {
     if (!Switch.getSelectInsts().empty())
       MadeChanges = true;
 
-    AllSwitchPaths SwitchPaths(&Switch, ORE);
+    AllSwitchPaths SwitchPaths(&Switch, ORE, LI);
     SwitchPaths.run();
 
     if (SwitchPaths.getNumThreadingPaths() > 0) {
@@ -1315,9 +1330,14 @@ bool DFAJumpThreading::run(Function &F) {
       // strict requirement but it can cause buggy behavior if there is an
       // overlap of blocks in different opportunities. There is a lot of room to
       // experiment with catching more opportunities here.
+      // NOTE: To release this contraint, we must handle LoopInfo invalidation
       break;
     }
   }
+
+#ifdef NDEBUG
+  LI->verify(*DT);
+#endif
 
   SmallPtrSet<const Value *, 32> EphValues;
   if (ThreadableLoops.size() > 0)
@@ -1327,6 +1347,7 @@ bool DFAJumpThreading::run(Function &F) {
     TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
     Transform.run();
     MadeChanges = true;
+    LoopInfoBroken = true;
   }
 
 #ifdef EXPENSIVE_CHECKS
@@ -1347,11 +1368,13 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   OptimizationRemarkEmitter ORE(&F);
-
-  if (!DFAJumpThreading(&AC, &DT, &LI, &TTI, &ORE).run(F))
+  DFAJumpThreading ThreadImpl(&AC, &DT, &LI, &TTI, &ORE);
+  if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  if (!ThreadImpl.LoopInfoBroken)
+    PA.preserve<LoopAnalysis>();
   return PA;
 }

@@ -212,7 +212,7 @@ private:
     struct C Capture;
   };
 
-  InitializedEntity() {};
+  InitializedEntity() {}
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
@@ -603,7 +603,7 @@ private:
     /// Normal context
     IC_Normal,
 
-    /// Normal context, but allows explicit conversion functionss
+    /// Normal context, but allows explicit conversion functions
     IC_ExplicitConvs,
 
     /// Implicit context (value initialization)
@@ -1134,7 +1134,7 @@ private:
   OverloadingResult FailedOverloadResult;
 
   /// The candidate set created when initialization failed.
-  std::unique_ptr<OverloadCandidateSet> FailedCandidateSet;
+  OverloadCandidateSet FailedCandidateSet;
 
   /// The incomplete type that caused a failure.
   QualType FailedIncompleteType;
@@ -1403,9 +1403,7 @@ public:
   /// Retrieve a reference to the candidate set when overload
   /// resolution fails.
   OverloadCandidateSet &getFailedCandidateSet() {
-    assert(FailedCandidateSet &&
-           "this should have been allocated in the constructor!");
-    return *FailedCandidateSet;
+    return FailedCandidateSet;
   }
 
   /// Get the overloading result, for when the initialization

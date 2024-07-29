@@ -13,17 +13,19 @@
 #include "src/fenv/fesetround.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
+#include "excepts.h"
+
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
+
+TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
 
-  int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
-                   FE_UNDERFLOW};
-
-  for (int e : excepts) {
+  for (int e : EXCEPTS) {
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     // Save the cleared environment.
@@ -39,7 +41,7 @@ TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
   }
 }
 
-TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
+TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
@@ -71,7 +73,7 @@ TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
 }
 
 #ifdef _WIN32
-TEST(LlvmLibcFenvTest, Windows_Set_Get_Test) {
+TEST_F(LlvmLibcFEnvTest, Windows_Set_Get_Test) {
   // If a valid fenv_t is written, then reading it back out should be identical.
   fenv_t setEnv = {0x7e00053e, 0x0f00000f};
   fenv_t getEnv;

@@ -58,6 +58,10 @@ static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
 
 namespace {
 
+// Including the generated SSE2AVX compression tables.
+#define GET_X86_SSE2AVX_TABLE
+#include "X86GenInstrMapping.inc"
+
 static const char OpPrecedence[] = {
     0,  // IC_OR
     1,  // IC_XOR
@@ -88,15 +92,17 @@ class X86AsmParser : public MCTargetAsmParser {
   bool Code16GCC;
   unsigned ForcedDataPrefix = 0;
 
-  enum VEXEncoding {
-    VEXEncoding_Default,
-    VEXEncoding_VEX,
-    VEXEncoding_VEX2,
-    VEXEncoding_VEX3,
-    VEXEncoding_EVEX,
+  enum OpcodePrefix {
+    OpcodePrefix_Default,
+    OpcodePrefix_REX,
+    OpcodePrefix_REX2,
+    OpcodePrefix_VEX,
+    OpcodePrefix_VEX2,
+    OpcodePrefix_VEX3,
+    OpcodePrefix_EVEX,
   };
 
-  VEXEncoding ForcedVEXEncoding = VEXEncoding_Default;
+  OpcodePrefix ForcedOpcodePrefix = OpcodePrefix_Default;
 
   enum DispEncoding {
     DispEncoding_Default,
@@ -473,7 +479,9 @@ private:
     unsigned getLength() const { return CurType.Length; }
     int64_t getImm() { return Imm + IC.execute(); }
     bool isValidEndState() const {
-      return State == IES_RBRAC || State == IES_INTEGER;
+      return State == IES_RBRAC || State == IES_RPAREN ||
+             State == IES_INTEGER || State == IES_REGISTER ||
+             State == IES_OFFSET;
     }
 
     // Is the intel expression appended after an operand index.
@@ -1197,12 +1205,11 @@ private:
   bool ErrorMissingFeature(SMLoc IDLoc, const FeatureBitset &MissingFeatures,
                            bool MatchingInlineAsm);
 
-  bool MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode, MCInst &Inst,
                                   OperandVector &Operands, MCStreamer &Out,
-                                  uint64_t &ErrorInfo,
-                                  bool MatchingInlineAsm);
+                                  uint64_t &ErrorInfo, bool MatchingInlineAsm);
 
-  bool MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode, MCInst &Inst,
                                     OperandVector &Operands, MCStreamer &Out,
                                     uint64_t &ErrorInfo,
                                     bool MatchingInlineAsm);
@@ -1802,7 +1809,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
                                            bool &ParseError, SMLoc &End) {
   // A named operator should be either lower or upper case, but not a mix...
   // except in MASM, which uses full case-insensitivity.
-  if (Name.compare(Name.lower()) && Name.compare(Name.upper()) &&
+  if (Name != Name.lower() && Name != Name.upper() &&
       !getParser().isParsingMasm())
     return false;
   if (Name.equals_insensitive("not")) {
@@ -1896,9 +1903,6 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       return Error(Tok.getLoc(), "unknown token in expression");
     case AsmToken::Error:
       return Error(getLexer().getErrLoc(), getLexer().getErr());
-      break;
-    case AsmToken::EndOfStatement:
-      Done = true;
       break;
     case AsmToken::Real:
       // DotOperator: [ebx].0
@@ -2296,7 +2300,7 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
     Operands.push_back(X86Operand::CreateImm(RndModeOp, Start, End));
     return false;
   }
-  if(Tok.getIdentifier().equals("sae")){
+  if (Tok.getIdentifier() == "sae") {
     Parser.Lex();  // Eat the sae
     if (!getLexer().is(AsmToken::RCurly))
       return Error(Tok.getLoc(), "Expected } at this point");
@@ -2317,7 +2321,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
     return Error(Tok.getLoc(), "Expected { at this point");
   Parser.Lex(); // Eat "{"
   Tok = Parser.getTok();
-  if (Tok.getIdentifier() != "dfv")
+  if (Tok.getIdentifier().lower() != "dfv")
     return Error(Tok.getLoc(), "Expected dfv at this point");
   Parser.Lex(); // Eat "dfv"
   Tok = Parser.getTok();
@@ -2337,7 +2341,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   unsigned CFlags = 0;
   for (unsigned I = 0; I < 4; ++I) {
     Tok = Parser.getTok();
-    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier())
+    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier().lower())
                          .Case("of", 0x8)
                          .Case("sf", 0x4)
                          .Case("zf", 0x2)
@@ -2567,7 +2571,7 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
     .Default(0);
   if (Size) {
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
-    if (!(Tok.getString().equals("PTR") || Tok.getString().equals("ptr")))
+    if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
@@ -3186,7 +3190,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   InstInfo = &Info;
 
   // Reset the forced VEX encoding.
-  ForcedVEXEncoding = VEXEncoding_Default;
+  ForcedOpcodePrefix = OpcodePrefix_Default;
   ForcedDispEncoding = DispEncoding_Default;
   UseApxExtendedReg = false;
   ForcedNoFlag = false;
@@ -3202,14 +3206,18 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
 
-      if (Prefix == "vex")
-        ForcedVEXEncoding = VEXEncoding_VEX;
+      if (Prefix == "rex")
+        ForcedOpcodePrefix = OpcodePrefix_REX;
+      else if (Prefix == "rex2")
+        ForcedOpcodePrefix = OpcodePrefix_REX2;
+      else if (Prefix == "vex")
+        ForcedOpcodePrefix = OpcodePrefix_VEX;
       else if (Prefix == "vex2")
-        ForcedVEXEncoding = VEXEncoding_VEX2;
+        ForcedOpcodePrefix = OpcodePrefix_VEX2;
       else if (Prefix == "vex3")
-        ForcedVEXEncoding = VEXEncoding_VEX3;
+        ForcedOpcodePrefix = OpcodePrefix_VEX3;
       else if (Prefix == "evex")
-        ForcedVEXEncoding = VEXEncoding_EVEX;
+        ForcedOpcodePrefix = OpcodePrefix_EVEX;
       else if (Prefix == "disp8")
         ForcedDispEncoding = DispEncoding_Disp8;
       else if (Prefix == "disp32")
@@ -3235,15 +3243,15 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // Parse MASM style pseudo prefixes.
     if (isParsingMSInlineAsm()) {
       if (Name.equals_insensitive("vex"))
-        ForcedVEXEncoding = VEXEncoding_VEX;
+        ForcedOpcodePrefix = OpcodePrefix_VEX;
       else if (Name.equals_insensitive("vex2"))
-        ForcedVEXEncoding = VEXEncoding_VEX2;
+        ForcedOpcodePrefix = OpcodePrefix_VEX2;
       else if (Name.equals_insensitive("vex3"))
-        ForcedVEXEncoding = VEXEncoding_VEX3;
+        ForcedOpcodePrefix = OpcodePrefix_VEX3;
       else if (Name.equals_insensitive("evex"))
-        ForcedVEXEncoding = VEXEncoding_EVEX;
+        ForcedOpcodePrefix = OpcodePrefix_EVEX;
 
-      if (ForcedVEXEncoding != VEXEncoding_Default) {
+      if (ForcedOpcodePrefix != OpcodePrefix_Default) {
         if (getLexer().isNot(AsmToken::Identifier))
           return Error(Parser.getTok().getLoc(), "Expected identifier");
         // FIXME: The mnemonic won't match correctly if its not in lower case.
@@ -3740,8 +3748,28 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
+static bool convertSSEToAVX(MCInst &Inst) {
+  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
+  unsigned Opcode = Inst.getOpcode();
+  const auto I = llvm::lower_bound(Table, Opcode);
+  if (I == Table.end() || I->OldOpc != Opcode)
+    return false;
+
+  Inst.setOpcode(I->NewOpc);
+  // AVX variant of BLENDVPD/BLENDVPS/PBLENDVB instructions has more
+  // operand compare to SSE variant, which is added below
+  if (X86::isBLENDVPD(Opcode) || X86::isBLENDVPS(Opcode) ||
+      X86::isPBLENDVB(Opcode))
+    Inst.addOperand(Inst.getOperand(2));
+
+  return true;
+}
+
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  if (ForcedVEXEncoding != VEXEncoding_VEX3 &&
+  if (MCOptions.X86Sse2Avx && convertSSEToAVX(Inst))
+    return true;
+
+  if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
 
@@ -3802,7 +3830,7 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     //    VFMULCPHZrr   Dest, Src1, Src2
     //    VFMULCPHZrrk  Dest, Dest, Mask, Src1, Src2
     //    VFMULCPHZrrkz Dest, Mask, Src1, Src2
-    for (unsigned i = TSFlags & X86II::EVEX_K ? 2 : 1;
+    for (unsigned i = ((TSFlags & X86II::EVEX_K) ? 2 : 1);
          i < Inst.getNumOperands(); i++)
       if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
         return Warning(Ops[0]->getStartLoc(), "Destination register should be "
@@ -3844,6 +3872,14 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
                                               "registers should be distinct");
     }
+  } else if (isTCMMIMFP16PS(Opcode) || isTCMMRLFP16PS(Opcode) ||
+             isTDPBF16PS(Opcode) || isTDPFP16PS(Opcode) || isTDPBSSD(Opcode) ||
+             isTDPBSUD(Opcode) || isTDPBUSD(Opcode) || isTDPBUUD(Opcode)) {
+    unsigned SrcDest = Inst.getOperand(0).getReg();
+    unsigned Src1 = Inst.getOperand(2).getReg();
+    unsigned Src2 = Inst.getOperand(3).getReg();
+    if (SrcDest == Src1 || SrcDest == Src2 || Src1 == Src2)
+      return Error(Ops[0]->getStartLoc(), "all tmm registers must be distinct");
   }
 
   // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to
@@ -4002,15 +4038,59 @@ void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
     applyLVILoadHardeningMitigation(Inst, Out);
 }
 
+static unsigned getPrefixes(OperandVector &Operands) {
+  unsigned Result = 0;
+  X86Operand &Prefix = static_cast<X86Operand &>(*Operands.back());
+  if (Prefix.isPrefix()) {
+    Result = Prefix.getPrefix();
+    Operands.pop_back();
+  }
+  return Result;
+}
+
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
-  if (isParsingIntelSyntax())
-    return MatchAndEmitIntelInstruction(IDLoc, Opcode, Operands, Out, ErrorInfo,
-                                        MatchingInlineAsm);
-  return MatchAndEmitATTInstruction(IDLoc, Opcode, Operands, Out, ErrorInfo,
-                                    MatchingInlineAsm);
+  assert(!Operands.empty() && "Unexpect empty operand list!");
+  assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
+
+  // First, handle aliases that expand to multiple instructions.
+  MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
+                    Out, MatchingInlineAsm);
+  unsigned Prefixes = getPrefixes(Operands);
+
+  MCInst Inst;
+
+  // If REX/REX2/VEX/EVEX encoding is forced, we need to pass the USE_* flag to
+  // the encoder and printer.
+  if (ForcedOpcodePrefix == OpcodePrefix_REX)
+    Prefixes |= X86::IP_USE_REX;
+  else if (ForcedOpcodePrefix == OpcodePrefix_REX2)
+    Prefixes |= X86::IP_USE_REX2;
+  else if (ForcedOpcodePrefix == OpcodePrefix_VEX)
+    Prefixes |= X86::IP_USE_VEX;
+  else if (ForcedOpcodePrefix == OpcodePrefix_VEX2)
+    Prefixes |= X86::IP_USE_VEX2;
+  else if (ForcedOpcodePrefix == OpcodePrefix_VEX3)
+    Prefixes |= X86::IP_USE_VEX3;
+  else if (ForcedOpcodePrefix == OpcodePrefix_EVEX)
+    Prefixes |= X86::IP_USE_EVEX;
+
+  // Set encoded flags for {disp8} and {disp32}.
+  if (ForcedDispEncoding == DispEncoding_Disp8)
+    Prefixes |= X86::IP_USE_DISP8;
+  else if (ForcedDispEncoding == DispEncoding_Disp32)
+    Prefixes |= X86::IP_USE_DISP32;
+
+  if (Prefixes)
+    Inst.setFlags(Prefixes);
+
+  return isParsingIntelSyntax()
+             ? matchAndEmitIntelInstruction(IDLoc, Opcode, Inst, Operands, Out,
+                                            ErrorInfo, MatchingInlineAsm)
+             : matchAndEmitATTInstruction(IDLoc, Opcode, Inst, Operands, Out,
+                                          ErrorInfo, MatchingInlineAsm);
 }
 
 void X86AsmParser::MatchFPUWaitAlias(SMLoc IDLoc, X86Operand &Op,
@@ -4053,82 +4133,50 @@ bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc,
   return Error(IDLoc, OS.str(), SMRange(), MatchingInlineAsm);
 }
 
-static unsigned getPrefixes(OperandVector &Operands) {
-  unsigned Result = 0;
-  X86Operand &Prefix = static_cast<X86Operand &>(*Operands.back());
-  if (Prefix.isPrefix()) {
-    Result = Prefix.getPrefix();
-    Operands.pop_back();
-  }
-  return Result;
-}
-
 unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &MCID = MII.get(Opc);
+  uint64_t TSFlags = MCID.TSFlags;
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
     return Match_Unsupported;
-  if (ForcedNoFlag == !(MCID.TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
+  if (ForcedNoFlag == !(TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
     return Match_Unsupported;
 
-  if (ForcedVEXEncoding == VEXEncoding_EVEX &&
-      (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)
-    return Match_Unsupported;
+  switch (ForcedOpcodePrefix) {
+  case OpcodePrefix_Default:
+    break;
+  case OpcodePrefix_REX:
+  case OpcodePrefix_REX2:
+    if (TSFlags & X86II::EncodingMask)
+      return Match_Unsupported;
+    break;
+  case OpcodePrefix_VEX:
+  case OpcodePrefix_VEX2:
+  case OpcodePrefix_VEX3:
+    if ((TSFlags & X86II::EncodingMask) != X86II::VEX)
+      return Match_Unsupported;
+    break;
+  case OpcodePrefix_EVEX:
+    if ((TSFlags & X86II::EncodingMask) != X86II::EVEX)
+      return Match_Unsupported;
+    break;
+  }
 
-  if ((ForcedVEXEncoding == VEXEncoding_VEX ||
-       ForcedVEXEncoding == VEXEncoding_VEX2 ||
-       ForcedVEXEncoding == VEXEncoding_VEX3) &&
-      (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
-    return Match_Unsupported;
-
-  if ((MCID.TSFlags & X86II::ExplicitOpPrefixMask) ==
-          X86II::ExplicitVEXPrefix &&
-      (ForcedVEXEncoding != VEXEncoding_VEX &&
-       ForcedVEXEncoding != VEXEncoding_VEX2 &&
-       ForcedVEXEncoding != VEXEncoding_VEX3))
+  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix &&
+      (ForcedOpcodePrefix != OpcodePrefix_VEX &&
+       ForcedOpcodePrefix != OpcodePrefix_VEX2 &&
+       ForcedOpcodePrefix != OpcodePrefix_VEX3))
     return Match_Unsupported;
 
   return Match_Success;
 }
 
-bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
-                                              OperandVector &Operands,
-                                              MCStreamer &Out,
-                                              uint64_t &ErrorInfo,
-                                              bool MatchingInlineAsm) {
-  assert(!Operands.empty() && "Unexpect empty operand list!");
-  assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
-  SMRange EmptyRange = std::nullopt;
-
-  // First, handle aliases that expand to multiple instructions.
-  MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
-                    Out, MatchingInlineAsm);
+bool X86AsmParser::matchAndEmitATTInstruction(
+    SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
+    MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  unsigned Prefixes = getPrefixes(Operands);
-
-  MCInst Inst;
-
-  // If VEX/EVEX encoding is forced, we need to pass the USE_* flag to the
-  // encoder and printer.
-  if (ForcedVEXEncoding == VEXEncoding_VEX)
-    Prefixes |= X86::IP_USE_VEX;
-  else if (ForcedVEXEncoding == VEXEncoding_VEX2)
-    Prefixes |= X86::IP_USE_VEX2;
-  else if (ForcedVEXEncoding == VEXEncoding_VEX3)
-    Prefixes |= X86::IP_USE_VEX3;
-  else if (ForcedVEXEncoding == VEXEncoding_EVEX)
-    Prefixes |= X86::IP_USE_EVEX;
-
-  // Set encoded flags for {disp8} and {disp32}.
-  if (ForcedDispEncoding == DispEncoding_Disp8)
-    Prefixes |= X86::IP_USE_DISP8;
-  else if (ForcedDispEncoding == DispEncoding_Disp32)
-    Prefixes |= X86::IP_USE_DISP32;
-
-  if (Prefixes)
-    Inst.setFlags(Prefixes);
-
+  SMRange EmptyRange = std::nullopt;
   // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
   // when matching the instruction.
   if (ForcedDataPrefix == X86::Is32Bit)
@@ -4350,44 +4398,11 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   return true;
 }
 
-bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
-                                                OperandVector &Operands,
-                                                MCStreamer &Out,
-                                                uint64_t &ErrorInfo,
-                                                bool MatchingInlineAsm) {
-  assert(!Operands.empty() && "Unexpect empty operand list!");
-  assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
-  StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
-  SMRange EmptyRange = std::nullopt;
-  StringRef Base = (static_cast<X86Operand &>(*Operands[0])).getToken();
-  unsigned Prefixes = getPrefixes(Operands);
-
-  // First, handle aliases that expand to multiple instructions.
-  MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands, Out, MatchingInlineAsm);
+bool X86AsmParser::matchAndEmitIntelInstruction(
+    SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
+    MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-
-  MCInst Inst;
-
-  // If VEX/EVEX encoding is forced, we need to pass the USE_* flag to the
-  // encoder and printer.
-  if (ForcedVEXEncoding == VEXEncoding_VEX)
-    Prefixes |= X86::IP_USE_VEX;
-  else if (ForcedVEXEncoding == VEXEncoding_VEX2)
-    Prefixes |= X86::IP_USE_VEX2;
-  else if (ForcedVEXEncoding == VEXEncoding_VEX3)
-    Prefixes |= X86::IP_USE_VEX3;
-  else if (ForcedVEXEncoding == VEXEncoding_EVEX)
-    Prefixes |= X86::IP_USE_EVEX;
-
-  // Set encoded flags for {disp8} and {disp32}.
-  if (ForcedDispEncoding == DispEncoding_Disp8)
-    Prefixes |= X86::IP_USE_DISP8;
-  else if (ForcedDispEncoding == DispEncoding_Disp32)
-    Prefixes |= X86::IP_USE_DISP32;
-
-  if (Prefixes)
-    Inst.setFlags(Prefixes);
-
+  SMRange EmptyRange = std::nullopt;
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
   for (const auto &Op : Operands) {
@@ -4402,6 +4417,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   // Allow some instructions to have implicitly pointer-sized operands.  This is
   // compatible with gas.
+  StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
   if (UnsizedMemOp) {
     static const char *const PtrSizedInstrs[] = {"call", "jmp", "push"};
     for (const char *Instr : PtrSizedInstrs) {
@@ -4415,6 +4431,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   SmallVector<unsigned, 8> Match;
   FeatureBitset ErrorInfoMissingFeatures;
   FeatureBitset MissingFeatures;
+  StringRef Base = (static_cast<X86Operand &>(*Operands[0])).getToken();
 
   // If unsized push has immediate operand we should default the default pointer
   // size for the size.

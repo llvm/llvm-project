@@ -112,6 +112,8 @@ cc_test(
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -172,6 +174,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
         "//llvm:CodeGen",
         "//llvm:CodeGenTypes",
         "//llvm:Core",
@@ -362,6 +365,7 @@ cc_test(
     ) + [
         "Support/KnownBitsTest.h",
     ],
+    features = ["-layering_check"],
     shard_count = 20,
     deps = [
         "//llvm:Analysis",
@@ -616,6 +620,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:BitReader",
         "//llvm:Core",
         "//llvm:Coverage",
         "//llvm:DebugInfo",
@@ -807,6 +812,32 @@ cc_test(
         "//llvm:X86CodeGen",
         "//llvm:X86UtilsAndDesc",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "llvm_mca_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "tools/llvm-mca/*.cpp",
+            "tools/llvm-mca/*.h",
+            "tools/llvm-mca/X86/*.cpp",
+            "tools/llvm-mca/X86/*.h",
+        ],
+        allow_empty = False,
+    ),
+    includes = ["tools/llvm-mca"],
+    deps = [
+        "//llvm:MC",
+        "//llvm:MCA",
+        "//llvm:MCAApplication",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:X86CodeGen",
+        "//llvm:X86UtilsAndDesc",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

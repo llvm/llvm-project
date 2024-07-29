@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-objc-root-class -ast-dump -ast-dump-filter test %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-objc-root-class -ast-dump -ast-dump-filter test %s | FileCheck %s
 
 #pragma clang attribute push (__attribute__((annotate("test"))), apply_to = any(objc_interface, objc_protocol, objc_property, field, objc_method, variable))
 #pragma clang attribute push (__attribute__((objc_subclassing_restricted)), apply_to = objc_interface)

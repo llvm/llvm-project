@@ -12,9 +12,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -139,9 +137,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -215,9 +211,7 @@ define void @copy_stride4(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], [[TMP7]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -297,9 +291,7 @@ define void @simple_gather_scatter(ptr noalias %dst, ptr noalias %src, ptr noali
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -376,9 +368,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -451,9 +441,7 @@ define void @cond_uniform_load(ptr noalias %dst, ptr noalias readonly %src, ptr 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -480,11 +468,10 @@ define void @cond_uniform_load(ptr noalias %dst, ptr noalias readonly %src, ptr 
 ; CHECK-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[BROADCAST_SPLAT]], i32 4, <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = or <vscale x 4 x i1> [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[PREDPHI]], ptr [[TMP19]], i32 4, <vscale x 4 x i1> [[TMP18]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[PREDPHI]], ptr [[TMP19]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP21]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
@@ -551,9 +538,7 @@ define void @uniform_store(ptr noalias %dst, ptr noalias readonly %src, i64 %n) 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -623,9 +608,7 @@ define void @simple_fdiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -703,9 +686,7 @@ define void @simple_idiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

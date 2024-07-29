@@ -61,12 +61,10 @@ jobs:
         ]
         cc: [  'clang-19' ]
         cxx: [ 'clang++-19' ]
-        clang_tidy: [ 'ON' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -74,7 +72,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -102,20 +99,16 @@ jobs:
         ]
         cc: [ 'clang-19' ]
         cxx: [ 'clang++-19' ]
-        clang_tidy: [ 'ON' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
           - config: 'generic-cxx23'
             cc: 'clang-17'
             cxx: 'clang++-17'
-            clang_tidy: 'OFF'
           - config: 'generic-cxx26'
             cc: 'clang-18'
             cxx: 'clang++-18'
-            clang_tidy: 'ON'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -123,7 +116,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
@@ -188,7 +180,6 @@ jobs:
         env:
           CC: clang-19
           CXX: clang++-19
-          ENABLE_CLANG_TIDY: "OFF"
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -218,16 +209,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          choco install -y ninja wget
+          choco install -y ninja
           pip install psutil
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=17.0.6
+          choco install -y llvm --version=18.1.6 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240606/llvm-mingw-20240606-ucrt-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw

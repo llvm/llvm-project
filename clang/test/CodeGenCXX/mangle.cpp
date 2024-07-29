@@ -1032,10 +1032,6 @@ namespace test51 {
   template <typename T>
   decltype(S1<T>().~S1<T>(), S1<T>().~S1<T>()) fun4() {};
   template <typename T>
-  decltype(S1<int>().~S1<T>()) fun5(){};
-  template <template <typename T> class U>
-  decltype(S1<int>().~U<int>()) fun6(){};
-  template <typename T>
   decltype(E().E::~T()) fun7() {}
   template <template <typename> class U>
   decltype(X<int>::Y().U<int>::Y::~Y()) fun8() {}
@@ -1047,10 +1043,6 @@ namespace test51 {
   // CHECK-LABEL: @_ZN6test514fun3I2S1IiEiEEDTcldtcvS1_IT0_E_EdnT_EEv
   template void fun4<int>();
   // CHECK-LABEL: @_ZN6test514fun4IiEEDTcmcldtcv2S1IT_E_Edn2S1IS2_EEcldtcvS3__Edn2S1IS2_EEEv
-  template void fun5<int>();
-  // CHECK-LABEL: @_ZN6test514fun5IiEEDTcldtcv2S1IiE_Edn2S1IT_EEEv
-  template void fun6<S1>();
-  // CHECK-LABEL: @_ZN6test514fun6I2S1EEDTcldtcvS1_IiE_EdnT_IiEEEv
   template void fun7<E>();
   // CHECK-LABEL: @_ZN6test514fun7INS_1EEEEDTcldtcvS1__Esr1EEdnT_EEv
   template void fun8<X>();

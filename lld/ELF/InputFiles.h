@@ -39,9 +39,6 @@ namespace elf {
 class InputSection;
 class Symbol;
 
-// If --reproduce is specified, all input files are written to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> tar;
-
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
@@ -299,8 +296,7 @@ private:
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
-                                   uint32_t info);
+  InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
                                        StringRef name);
 

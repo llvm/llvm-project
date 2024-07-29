@@ -7,6 +7,16 @@
         addc %g2, %g1, %g3
 
         ! V8:      error: invalid instruction mnemonic
+        ! V8-NEXT: addc %g2, 1, %g3
+        ! V9:      addx %g2, 1, %g3              ! encoding: [0x86,0x40,0xa0,0x01]
+        addc %g2, 1, %g3
+
+        ! V8:      error: invalid instruction mnemonic
+        ! V8-NEXT: addc 1, %g2, %g3
+        ! V9:      addx %g2, 1, %g3              ! encoding: [0x86,0x40,0xa0,0x01]
+        addc 1, %g2, %g3
+
+        ! V8:      error: invalid instruction mnemonic
         ! V8-NEXT: addccc %g1, %g2, %g3
         ! V9:      addxcc %g1, %g2, %g3            ! encoding: [0x86,0xc0,0x40,0x02]
         addccc %g1, %g2, %g3
@@ -492,6 +502,10 @@
         wr %i0, %i1, %ccr
         ! V9: wr %i0, 1, %ccr           ! encoding: [0x85,0x86,0x20,0x01]
         wr %i0, 1, %ccr
+        ! V9: wr %i0, 1, %asr20         ! encoding: [0xa9,0x86,0x20,0x01]
+        wr %i0, 1, %set_softint
+        ! V9: wr %i0, 1, %asr21         ! encoding: [0xab,0x86,0x20,0x01]
+        wr %i0, 1, %clear_softint
 
         ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
         stw %o1, [%o0]
@@ -525,13 +539,143 @@
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], 1
-        ! V9: prefetch  [%i1+3968], 1  ! encoding: [0xc3,0x6e,0x6f,0x80]
+        ! V9: prefetch  [%i1+3968], #one_read  ! encoding: [0xc3,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], 1
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_reads
+        ! V9: prefetch  [%i1+3968], #n_reads  ! encoding: [0xc1,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #n_reads
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_read
+        ! V9: prefetch  [%i1+3968], #one_read  ! encoding: [0xc3,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #one_read
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_writes
+        ! V9: prefetch  [%i1+3968], #n_writes  ! encoding: [0xc5,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #n_writes
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_write
+        ! V9: prefetch  [%i1+3968], #one_write  ! encoding: [0xc7,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #one_write
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #page
+        ! V9: prefetch  [%i1+3968], #page  ! encoding: [0xc9,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #page
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #unified
+        ! V9: prefetch  [%i1+3968], #unified  ! encoding: [0xe3,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #unified
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_reads_strong
+        ! V9: prefetch  [%i1+3968], #n_reads_strong  ! encoding: [0xe9,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #n_reads_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_read_strong
+        ! V9: prefetch  [%i1+3968], #one_read_strong  ! encoding: [0xeb,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #one_read_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_writes_strong
+        ! V9: prefetch  [%i1+3968], #n_writes_strong  ! encoding: [0xed,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #n_writes_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_write_strong
+        ! V9: prefetch  [%i1+3968], #one_write_strong  ! encoding: [0xef,0x6e,0x6f,0x80]
+        prefetch  [ %i1 + 0xf80 ], #one_write_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], 1
-        ! V9: prefetch  [%i1+%i2], 1  ! encoding: [0xc3,0x6e,0x40,0x1a]
+        ! V9: prefetch  [%i1+%i2], #one_read  ! encoding: [0xc3,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], 1
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_reads
+        ! V9: prefetch  [%i1+%i2], #n_reads  ! encoding: [0xc1,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #n_reads
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_read
+        ! V9: prefetch  [%i1+%i2], #one_read  ! encoding: [0xc3,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #one_read
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_writes
+        ! V9: prefetch  [%i1+%i2], #n_writes  ! encoding: [0xc5,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #n_writes
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_write
+        ! V9: prefetch  [%i1+%i2], #one_write  ! encoding: [0xc7,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #one_write
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #page
+        ! V9: prefetch  [%i1+%i2], #page  ! encoding: [0xc9,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #page
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #unified
+        ! V9: prefetch  [%i1+%i2], #unified  ! encoding: [0xe3,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #unified
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_reads_strong
+        ! V9: prefetch  [%i1+%i2], #n_reads_strong  ! encoding: [0xe9,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #n_reads_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_read_strong
+        ! V9: prefetch  [%i1+%i2], #one_read_strong  ! encoding: [0xeb,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #one_read_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_writes_strong
+        ! V9: prefetch  [%i1+%i2], #n_writes_strong  ! encoding: [0xed,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #n_writes_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_write_strong
+        ! V9: prefetch  [%i1+%i2], #one_write_strong  ! encoding: [0xef,0x6e,0x40,0x1a]
+        prefetch  [ %i1 + %i2 ], #one_write_strong
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetcha  [ %i1 + 0xf80 ] %asi, 1
+        ! V9: prefetcha [%i1+3968] %asi, #one_read    ! encoding: [0xc3,0xee,0x6f,0x80]
+        prefetcha  [ %i1 + 0xf80 ] %asi, 1
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetcha  [ %i1 + 0xf80 ] %asi, #one_read
+        ! V9: prefetcha [%i1+3968] %asi, #one_read    ! encoding: [0xc3,0xee,0x6f,0x80]
+        prefetcha  [ %i1 + 0xf80 ] %asi, #one_read
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetcha  [ %i1 + %i2 ] #ASI_SNF, 1
+        ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
+        prefetcha  [ %i1 + %i2 ] #ASI_SNF, 1
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetcha  [ %i1 + %i2 ] #ASI_SNF, #one_read
+        ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
+        prefetcha  [ %i1 + %i2 ] #ASI_SNF, #one_read
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetcha  [ %i1 + %i2 ] 131, 1
+        ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
+        prefetcha  [ %i1 + %i2 ] 131, 1
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: prefetcha  [ %i1 + %i2 ] 131, #one_read
+        ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
+        prefetcha  [ %i1 + %i2 ] 131, #one_read
 
         ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: done

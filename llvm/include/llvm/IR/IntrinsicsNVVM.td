@@ -1003,6 +1003,8 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_rsqrt_approx_ftz_f : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  def int_nvvm_rsqrt_approx_ftz_d : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_d">,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   def int_nvvm_rsqrt_approx_f : ClangBuiltin<"__nvvm_rsqrt_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
   def int_nvvm_rsqrt_approx_d : ClangBuiltin<"__nvvm_rsqrt_approx_d">,
@@ -1527,30 +1529,30 @@ def int_nvvm_mbarrier_pending_count :
 // pointer's alignment.
 def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.i">;
 def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.f">;
 def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldu.global.p">;
 
 // Generated within nvvm. Use for ldg on sm_35 or later.  Second arg is the
 // pointer's alignment.
 def int_nvvm_ldg_global_i : Intrinsic<[llvm_anyint_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.i">;
 def int_nvvm_ldg_global_f : Intrinsic<[llvm_anyfloat_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.f">;
 def int_nvvm_ldg_global_p : Intrinsic<[llvm_anyptr_ty],
   [llvm_anyptr_ty, llvm_i32_ty],
-  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>],
+  [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillReturn, NoCapture<ArgIndex<0>>],
   "llvm.nvvm.ldg.global.p">;
 
 // Use for generic pointers
@@ -1593,6 +1595,12 @@ def int_nvvm_ptr_gen_to_param: Intrinsic<[llvm_anyptr_ty],
                                      [llvm_anyptr_ty],
                                    [IntrNoMem, IntrSpeculatable, IntrNoCallback],
                                    "llvm.nvvm.ptr.gen.to.param">;
+
+// sm70+, PTX7.7+
+def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                                     [llvm_anyptr_ty],
+                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
+                                   "llvm.nvvm.ptr.param.to.gen">;
 
 // Move intrinsics, used in nvvm internally
 

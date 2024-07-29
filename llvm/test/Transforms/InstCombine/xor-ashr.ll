@@ -63,15 +63,15 @@ define <4 x i8> @testv4i16i8(<4 x i16> %add) {
   ret <4 x i8> %x
 }
 
-define <4 x i8> @testv4i16i8_undef(<4 x i16> %add) {
-; CHECK-LABEL: @testv4i16i8_undef(
+define <4 x i8> @testv4i16i8_poison(<4 x i16> %add) {
+; CHECK-LABEL: @testv4i16i8_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[ADD:%.*]], <i16 -1, i16 -1, i16 -1, i16 -1>
-; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 27, i8 27, i8 undef, i8 27>, <4 x i8> <i8 -28, i8 -28, i8 undef, i8 -28>
+; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> <i8 27, i8 27, i8 poison, i8 27>, <4 x i8> <i8 -28, i8 -28, i8 poison, i8 -28>
 ; CHECK-NEXT:    ret <4 x i8> [[X]]
 ;
-  %sh = ashr <4 x i16> %add, <i16 15, i16 undef, i16 15, i16 15>
+  %sh = ashr <4 x i16> %add, <i16 15, i16 poison, i16 15, i16 15>
   %t = trunc <4 x i16> %sh to <4 x i8>
-  %x = xor <4 x i8> %t, <i8 27, i8 27, i8 undef, i8 27>
+  %x = xor <4 x i8> %t, <i8 27, i8 27, i8 poison, i8 27>
   ret <4 x i8> %x
 }
 

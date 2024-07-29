@@ -113,7 +113,11 @@ static T PickFP(const llvm::fltSemantics *Sem, T IEEEHalfVal, T IEEESingleVal,
 
 static void DefineFloatMacros(MacroBuilder &Builder, StringRef Prefix,
                               const llvm::fltSemantics *Sem, StringRef Ext) {
-  const char *DenormMin, *Epsilon, *Max, *Min;
+  const char *DenormMin, *NormMax, *Epsilon, *Max, *Min;
+  NormMax = PickFP(Sem, "6.5504e+4", "3.40282347e+38",
+                   "1.7976931348623157e+308", "1.18973149535723176502e+4932",
+                   "8.98846567431157953864652595394501e+307",
+                   "1.18973149535723176508575932662800702e+4932");
   DenormMin = PickFP(Sem, "5.9604644775390625e-8", "1.40129846e-45",
                      "4.9406564584124654e-324", "3.64519953188247460253e-4951",
                      "4.94065645841246544176568792868221e-324",
@@ -144,6 +148,7 @@ static void DefineFloatMacros(MacroBuilder &Builder, StringRef Prefix,
   DefPrefix += "_";
 
   Builder.defineMacro(DefPrefix + "DENORM_MIN__", Twine(DenormMin)+Ext);
+  Builder.defineMacro(DefPrefix + "NORM_MAX__", Twine(NormMax)+Ext);
   Builder.defineMacro(DefPrefix + "HAS_DENORM__");
   Builder.defineMacro(DefPrefix + "DIG__", Twine(Digits));
   Builder.defineMacro(DefPrefix + "DECIMAL_DIG__", Twine(DecimalDigits));
@@ -389,8 +394,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                         Twine((unsigned)LangOpts.getHLSLVersion()));
 
     if (LangOpts.NativeHalfType)
-      Builder.defineMacro("__HLSL_ENABLE_16_BIT",
-                          Twine((unsigned)LangOpts.getHLSLVersion()));
+      Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
     // "enums" for shader stages
@@ -433,7 +437,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      [C++] Whether __STDC__ is predefined and if so, what its value is,
   //      are implementation-defined.
   // (Removed in C++20.)
-  if (!LangOpts.MSVCCompat && !LangOpts.TraditionalCPP)
+  if ((!LangOpts.MSVCCompat || LangOpts.MSVCEnableStdcMacro) &&
+      !LangOpts.TraditionalCPP)
     Builder.defineMacro("__STDC__");
   //   -- __STDC_HOSTED__
   //      The integer literal 1 if the implementation is a hosted
@@ -448,7 +453,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      value is, are implementation-defined.
   // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
-    if (LangOpts.C23)
+    if (LangOpts.C2y)
+      Builder.defineMacro("__STDC_VERSION__", "202400L");
+    else if (LangOpts.C23)
       Builder.defineMacro("__STDC_VERSION__", "202311L");
     else if (LangOpts.C17)
       Builder.defineMacro("__STDC_VERSION__", "201710L");
@@ -507,6 +514,14 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // and 32-bit character literals.
   Builder.defineMacro("__STDC_UTF_16__", "1");
   Builder.defineMacro("__STDC_UTF_32__", "1");
+
+  // __has_embed definitions
+  Builder.defineMacro("__STDC_EMBED_NOT_FOUND__",
+                      llvm::itostr(static_cast<int>(EmbedResult::NotFound)));
+  Builder.defineMacro("__STDC_EMBED_FOUND__",
+                      llvm::itostr(static_cast<int>(EmbedResult::Found)));
+  Builder.defineMacro("__STDC_EMBED_EMPTY__",
+                      llvm::itostr(static_cast<int>(EmbedResult::Empty)));
 
   if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
@@ -704,7 +719,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nested_namespace_definitions", "201411L");
     Builder.defineMacro("__cpp_variadic_using", "201611L");
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
-    Builder.defineMacro("__cpp_structured_bindings", "201606L");
+    Builder.defineMacro("__cpp_structured_bindings", "202403L");
     Builder.defineMacro("__cpp_nontype_template_args",
                         "201411L"); // (not latest)
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
@@ -926,6 +941,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
+  if (TI.getTriple().isWindowsGNUEnvironment()) {
+    // Set ABI defining macros for libstdc++ for MinGW, where the
+    // default in libstdc++ differs from the defaults for this target.
+    Builder.defineMacro("__GXX_TYPEINFO_EQUALITY_INLINE", "0");
+  }
+
   if (LangOpts.ObjC) {
     if (LangOpts.ObjCRuntime.isNonFragile()) {
       Builder.defineMacro("__OBJC2__");
@@ -1007,6 +1028,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   else if (LangOpts.hasDWARFExceptions() &&
            (TI.getTriple().isThumb() || TI.getTriple().isARM()))
     Builder.defineMacro("__ARM_DWARF_EH__");
+  else if (LangOpts.hasWasmExceptions() && TI.getTriple().isWasm())
+    Builder.defineMacro("__WASM_EXCEPTIONS__");
 
   if (LangOpts.Deprecated)
     Builder.defineMacro("__DEPRECATED");
@@ -1147,6 +1170,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
+  if (LangOpts.C23)
+    DefineType("__CHAR8_TYPE__", TI.UnsignedChar, Builder);
   DefineType("__CHAR16_TYPE__", TI.getChar16Type(), Builder);
   DefineType("__CHAR32_TYPE__", TI.getChar32Type(), Builder);
 
@@ -1293,7 +1318,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (!LangOpts.MathErrno)
     Builder.defineMacro("__NO_MATH_ERRNO__");
 
-  if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
+  if (LangOpts.FastMath || (LangOpts.NoHonorInfs && LangOpts.NoHonorNaNs))
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");
   else
     Builder.defineMacro("__FINITE_MATH_ONLY__", "0");
@@ -1309,6 +1334,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
   }
 
+  // GCC defines these macros in both C and C++ modes despite them being needed
+  // mostly for STL implementations in C++.
+  auto [Destructive, Constructive] = TI.hardwareInterferenceSizes();
+  Builder.defineMacro("__GCC_DESTRUCTIVE_SIZE", Twine(Destructive));
+  Builder.defineMacro("__GCC_CONSTRUCTIVE_SIZE", Twine(Constructive));
+  // We need to use push_macro to allow users to redefine these macros from the
+  // command line with -D and not issue a -Wmacro-redefined warning.
+  Builder.append("#pragma push_macro(\"__GCC_DESTRUCTIVE_SIZE\")");
+  Builder.append("#pragma push_macro(\"__GCC_CONSTRUCTIVE_SIZE\")");
+
   auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \
@@ -1316,8 +1351,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       getLockFreeValue(TI.get##Type##Width(), TI));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
-    if (LangOpts.Char8)
-      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char); // Treat char8_t like char.
+    // char8_t has the same representation / width as unsigned
+    // char in C++ and is a typedef for unsigned char in C23
+    if (LangOpts.Char8 || LangOpts.C23)
+      DEFINE_LOCK_FREE_MACRO(CHAR8_T, Char);
     DEFINE_LOCK_FREE_MACRO(CHAR16_T, Char16);
     DEFINE_LOCK_FREE_MACRO(CHAR32_T, Char32);
     DEFINE_LOCK_FREE_MACRO(WCHAR_T, WChar);

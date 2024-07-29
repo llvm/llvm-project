@@ -4,8 +4,6 @@
 ! RUN: %flang -o %t -c %s
 ! RUN: not %flang -o %t.exe %t %t.c-object 2>&1
 
-! RUN: %flang -fno-fortran-main -o %t.exe %t %t.c-object 2>&1
-
 ! TODO: potentially add further checks to ensure that proper
 !       linker error messages are detected and checked via
 !       FileCheck.

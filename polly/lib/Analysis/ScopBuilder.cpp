@@ -2715,9 +2715,10 @@ void ScopBuilder::addUserContext() {
     if (NameContext != NameUserContext) {
       std::string SpaceStr = stringFromIslObj(Space, "null");
       errs() << "Error: the name of dimension " << i
-             << " provided in -polly-context " << "is '" << NameUserContext
-             << "', but the name in the computed " << "context is '"
-             << NameContext << "'. Due to this name mismatch, "
+             << " provided in -polly-context "
+             << "is '" << NameUserContext << "', but the name in the computed "
+             << "context is '" << NameContext
+             << "'. Due to this name mismatch, "
              << "the -polly-context option is ignored. Please provide "
              << "the context in the parameter space: " << SpaceStr << ".\n";
       return;
@@ -2767,7 +2768,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
   AccessRelation = AccessRelation.intersect_domain(Stmt.getDomain());
   isl::set SafeToLoad;
 
-  auto &DL = scop->getFunction().getParent()->getDataLayout();
+  auto &DL = scop->getFunction().getDataLayout();
   if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getType(),
                                   LI->getAlign(), DL)) {
     SafeToLoad = isl::set::universe(AccessRelation.get_space().range());
@@ -2813,7 +2814,7 @@ bool ScopBuilder::canAlwaysBeHoisted(MemoryAccess *MA,
                                      bool MAInvalidCtxIsEmpty,
                                      bool NonHoistableCtxIsEmpty) {
   LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
-  const DataLayout &DL = LInst->getParent()->getModule()->getDataLayout();
+  const DataLayout &DL = LInst->getDataLayout();
   if (PollyAllowDereferenceOfAllFunctionParams &&
       isAParameter(LInst->getPointerOperand(), scop->getFunction()))
     return true;

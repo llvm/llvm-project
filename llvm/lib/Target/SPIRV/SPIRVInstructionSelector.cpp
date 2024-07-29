@@ -170,6 +170,15 @@ private:
   bool selectFCmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
 
+  bool selectFmix(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
+
+  bool selectFrac(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
+
+  bool selectRsqrt(Register ResVReg, const SPIRVType *ResType,
+                   MachineInstr &I) const;
+
   void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
                    int OpIdx) const;
   void renderFImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -290,14 +299,18 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   // If it's not a GMIR instruction, we've selected it already.
   if (!isPreISelGenericOpcode(Opcode)) {
     if (Opcode == SPIRV::ASSIGN_TYPE) { // These pseudos aren't needed any more.
-      auto *Def = MRI->getVRegDef(I.getOperand(1).getReg());
+      Register DstReg = I.getOperand(0).getReg();
+      Register SrcReg = I.getOperand(1).getReg();
+      auto *Def = MRI->getVRegDef(SrcReg);
       if (isTypeFoldingSupported(Def->getOpcode())) {
+        if (MRI->getType(DstReg).isPointer())
+          MRI->setType(DstReg, LLT::scalar(32));
         bool Res = selectImpl(I, *CoverageInfo);
         assert(Res || Def->getOpcode() == TargetOpcode::G_CONSTANT);
         if (Res)
           return Res;
       }
-      MRI->replaceRegWith(I.getOperand(1).getReg(), I.getOperand(0).getReg());
+      MRI->replaceRegWith(SrcReg, DstReg);
       I.removeFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
@@ -460,6 +473,20 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::cos, GL::Cos);
   case TargetOpcode::G_FSIN:
     return selectExtInst(ResVReg, ResType, I, CL::sin, GL::Sin);
+  case TargetOpcode::G_FTAN:
+    return selectExtInst(ResVReg, ResType, I, CL::tan, GL::Tan);
+  case TargetOpcode::G_FACOS:
+    return selectExtInst(ResVReg, ResType, I, CL::acos, GL::Acos);
+  case TargetOpcode::G_FASIN:
+    return selectExtInst(ResVReg, ResType, I, CL::asin, GL::Asin);
+  case TargetOpcode::G_FATAN:
+    return selectExtInst(ResVReg, ResType, I, CL::atan, GL::Atan);
+  case TargetOpcode::G_FCOSH:
+    return selectExtInst(ResVReg, ResType, I, CL::cosh, GL::Cosh);
+  case TargetOpcode::G_FSINH:
+    return selectExtInst(ResVReg, ResType, I, CL::sinh, GL::Sinh);
+  case TargetOpcode::G_FTANH:
+    return selectExtInst(ResVReg, ResType, I, CL::tanh, GL::Tanh);
 
   case TargetOpcode::G_FSQRT:
     return selectExtInst(ResVReg, ResType, I, CL::sqrt, GL::Sqrt);
@@ -485,6 +512,15 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::s_mul_hi);
   case TargetOpcode::G_UMULH:
     return selectExtInst(ResVReg, ResType, I, CL::u_mul_hi);
+
+  case TargetOpcode::G_SADDSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::s_add_sat);
+  case TargetOpcode::G_UADDSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::u_add_sat);
+  case TargetOpcode::G_SSUBSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::s_sub_sat);
+  case TargetOpcode::G_USUBSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::u_sub_sat);
 
   case TargetOpcode::G_SEXT:
     return selectExt(ResVReg, ResType, I, true);
@@ -639,6 +675,37 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I,
                                           unsigned Opcode) const {
+  if (STI.isOpenCLEnv() && I.getOperand(1).isReg()) {
+    Register SrcReg = I.getOperand(1).getReg();
+    bool IsGV = false;
+    for (MachineRegisterInfo::def_instr_iterator DefIt =
+             MRI->def_instr_begin(SrcReg);
+         DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
+      if ((*DefIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+        IsGV = true;
+        break;
+      }
+    }
+    if (IsGV) {
+      uint32_t SpecOpcode = 0;
+      switch (Opcode) {
+      case SPIRV::OpConvertPtrToU:
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::ConvertPtrToU);
+        break;
+      case SPIRV::OpConvertUToPtr:
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::ConvertUToPtr);
+        break;
+      }
+      if (SpecOpcode)
+        return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpSpecConstantOp))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addImm(SpecOpcode)
+            .addUse(SrcReg)
+            .constrainAllUses(TII, TRI, RBI);
+    }
+  }
   return selectUnOpWithSrc(ResVReg, ResType, I, I.getOperand(1).getReg(),
                            Opcode);
 }
@@ -782,7 +849,7 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
     SPIRVType *ValTy = GR.getOrCreateSPIRVIntegerType(8, I, TII);
     SPIRVType *ArrTy = GR.getOrCreateSPIRVArrayType(ValTy, Num, I, TII);
-    Register Const = GR.getOrCreateConsIntArray(Val, I, ArrTy, TII);
+    Register Const = GR.getOrCreateConstIntArray(Val, Num, I, ArrTy, TII);
     SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
         ArrTy, I, TII, SPIRV::StorageClass::UniformConstant);
     // TODO: check if we have such GV, add init, use buildGlobalVariable.
@@ -1037,7 +1104,11 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 
   // don't generate a cast between identical storage classes
   if (SrcSC == DstSC)
-    return true;
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(SrcPtr)
+        .constrainAllUses(TII, TRI, RBI);
 
   // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
@@ -1049,7 +1120,7 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   if (isGenericCastablePtr(SrcSC) && isGenericCastablePtr(DstSC)) {
     Register Tmp = MRI->createVirtualRegister(&SPIRV::IDRegClass);
     SPIRVType *GenericPtrTy = GR.getOrCreateSPIRVPointerType(
-        SrcPtrTy, I, TII, SPIRV::StorageClass::Generic);
+        GR.getPointeeType(SrcPtrTy), I, TII, SPIRV::StorageClass::Generic);
     MachineBasicBlock &BB = *I.getParent();
     const DebugLoc &DL = I.getDebugLoc();
     bool Success = BuildMI(BB, I, DL, TII.get(SPIRV::OpPtrCastToGeneric))
@@ -1072,10 +1143,13 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   if (SrcSC == SPIRV::StorageClass::CrossWorkgroup && isUSMStorageClass(DstSC))
     return selectUnOp(ResVReg, ResType, I,
                       SPIRV::OpCrossWorkgroupCastToPtrINTEL);
+  if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::Generic)
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
+  if (SrcSC == SPIRV::StorageClass::Generic && isUSMStorageClass(DstSC))
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
 
-  // TODO Should this case just be disallowed completely?
-  // We're casting 2 other arbitrary address spaces, so have to bitcast.
-  return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
+  // Bitcast for pointers requires that the address spaces must match
+  return false;
 }
 
 static unsigned getFCmpOpcode(unsigned PredNum) {
@@ -1238,6 +1312,61 @@ bool SPIRVInstructionSelector::selectAny(Register ResVReg,
   return selectAnyOrAll(ResVReg, ResType, I, SPIRV::OpAny);
 }
 
+bool SPIRVInstructionSelector::selectFmix(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 5);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  assert(I.getOperand(4).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::FMix)
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .addUse(I.getOperand(4).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectFrac(Register ResVReg,
+                                           const SPIRVType *ResType,
+                                           MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Fract)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectRsqrt(Register ResVReg,
+                                           const SPIRVType *ResType,
+                                           MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::InverseSqrt)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -1336,20 +1465,50 @@ static unsigned getArrayComponentCount(MachineRegisterInfo *MRI,
 }
 
 // Return true if the type represents a constant register
-static bool isConstReg(MachineRegisterInfo *MRI, SPIRVType *OpDef) {
+static bool isConstReg(MachineRegisterInfo *MRI, SPIRVType *OpDef,
+                       SmallPtrSet<SPIRVType *, 4> &Visited) {
   if (OpDef->getOpcode() == SPIRV::ASSIGN_TYPE &&
       OpDef->getOperand(1).isReg()) {
     if (SPIRVType *RefDef = MRI->getVRegDef(OpDef->getOperand(1).getReg()))
       OpDef = RefDef;
   }
-  return OpDef->getOpcode() == TargetOpcode::G_CONSTANT ||
-         OpDef->getOpcode() == TargetOpcode::G_FCONSTANT;
+
+  if (Visited.contains(OpDef))
+    return true;
+  Visited.insert(OpDef);
+
+  unsigned Opcode = OpDef->getOpcode();
+  switch (Opcode) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
+    return true;
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+    return cast<GIntrinsic>(*OpDef).getIntrinsicID() ==
+           Intrinsic::spv_const_composite;
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    for (unsigned i = OpDef->getNumExplicitDefs(); i < OpDef->getNumOperands();
+         i++) {
+      SPIRVType *OpNestedDef =
+          OpDef->getOperand(i).isReg()
+              ? MRI->getVRegDef(OpDef->getOperand(i).getReg())
+              : nullptr;
+      if (OpNestedDef && !isConstReg(MRI, OpNestedDef, Visited))
+        return false;
+    }
+    return true;
+  }
+  }
+  return false;
 }
 
 // Return true if the virtual register represents a constant
 static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
+  SmallPtrSet<SPIRVType *, 4> Visited;
   if (SPIRVType *OpDef = MRI->getVRegDef(OpReg))
-    return isConstReg(MRI, OpDef);
+    return isConstReg(MRI, OpDef, Visited);
   return false;
 }
 
@@ -1559,8 +1718,18 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
 bool SPIRVInstructionSelector::selectExt(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I, bool IsSigned) const {
-  if (GR.isScalarOrVectorOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool))
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool))
     return selectSelect(ResVReg, ResType, I, IsSigned);
+
+  SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  if (SrcType == ResType)
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(SrcReg)
+        .constrainAllUses(TII, TRI, RBI);
+
   unsigned Opcode = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectUnOp(ResVReg, ResType, I, Opcode);
 }
@@ -1594,11 +1763,16 @@ bool SPIRVInstructionSelector::selectIntToBool(Register IntReg,
 bool SPIRVInstructionSelector::selectTrunc(Register ResVReg,
                                            const SPIRVType *ResType,
                                            MachineInstr &I) const {
-  if (GR.isScalarOrVectorOfType(ResVReg, SPIRV::OpTypeBool)) {
-    Register IntReg = I.getOperand(1).getReg();
-    const SPIRVType *ArgType = GR.getSPIRVTypeForVReg(IntReg);
+  Register IntReg = I.getOperand(1).getReg();
+  const SPIRVType *ArgType = GR.getSPIRVTypeForVReg(IntReg);
+  if (GR.isScalarOrVectorOfType(ResVReg, SPIRV::OpTypeBool))
     return selectIntToBool(IntReg, ResVReg, I, ArgType, ResType);
-  }
+  if (ArgType == ResType)
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(IntReg)
+        .constrainAllUses(TII, TRI, RBI);
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
   unsigned Opcode = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectUnOp(ResVReg, ResType, I, Opcode);
@@ -1648,15 +1822,18 @@ bool SPIRVInstructionSelector::selectOpUndef(Register ResVReg,
 static bool isImm(const MachineOperand &MO, MachineRegisterInfo *MRI) {
   assert(MO.isReg());
   const SPIRVType *TypeInst = MRI->getVRegDef(MO.getReg());
-  if (TypeInst->getOpcode() != SPIRV::ASSIGN_TYPE)
-    return false;
-  assert(TypeInst->getOperand(1).isReg());
-  MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
-  return ImmInst->getOpcode() == TargetOpcode::G_CONSTANT;
+  if (TypeInst->getOpcode() == SPIRV::ASSIGN_TYPE) {
+    assert(TypeInst->getOperand(1).isReg());
+    MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
+    return ImmInst->getOpcode() == TargetOpcode::G_CONSTANT;
+  }
+  return TypeInst->getOpcode() == SPIRV::OpConstantI;
 }
 
 static int64_t foldImm(const MachineOperand &MO, MachineRegisterInfo *MRI) {
   const SPIRVType *TypeInst = MRI->getVRegDef(MO.getReg());
+  if (TypeInst->getOpcode() == SPIRV::OpConstantI)
+    return TypeInst->getOperand(2).getImm();
   MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
   assert(ImmInst->getOpcode() == TargetOpcode::G_CONSTANT);
   return ImmInst->getOperand(1).getCImm()->getZExtValue();
@@ -1758,8 +1935,10 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     Register OpReg = I.getOperand(i).getReg();
     SPIRVType *OpDefine = MRI->getVRegDef(OpReg);
     SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpReg);
-    if (!OpDefine || !OpType || isConstReg(MRI, OpDefine) ||
-        OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
+    SmallPtrSet<SPIRVType *, 4> Visited;
+    if (!OpDefine || !OpType || isConstReg(MRI, OpDefine, Visited) ||
+        OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
+        GR.isAggregateType(OpType)) {
       // The case of G_ADDRSPACE_CAST inside spv_const_composite() is processed
       // by selectAddrSpaceCast()
       CompositeArgs.push_back(OpReg);
@@ -1898,6 +2077,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
     return selectAny(ResVReg, ResType, I);
+  case Intrinsic::spv_lerp:
+    return selectFmix(ResVReg, ResType, I);
+  case Intrinsic::spv_frac:
+    return selectFrac(ResVReg, ResType, I);
+  case Intrinsic::spv_rsqrt:
+    return selectRsqrt(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
@@ -2027,7 +2212,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   // FIXME: don't use MachineIRBuilder here, replace it with BuildMI.
   MachineIRBuilder MIRBuilder(I);
   const GlobalValue *GV = I.getOperand(1).getGlobal();
-  Type *GVType = GR.getDeducedGlobalValueType(GV);
+  Type *GVType = toTypedPointer(GR.getDeducedGlobalValueType(GV));
   SPIRVType *PointerBaseType;
   if (GVType->isArrayTy()) {
     SPIRVType *ArrayElementType =

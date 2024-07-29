@@ -35,10 +35,11 @@ CONCRETE_RECORD(GlobalVariableTemplateSpecializationRecord,
 CONCRETE_RECORD(GlobalVariableTemplatePartialSpecializationRecord,
                 GlobalVariableRecord,
                 RK_GlobalVariableTemplatePartialSpecialization)
+ABSTRACT_RECORD(TagRecord, APIRecord)
 CONCRETE_RECORD(EnumConstantRecord, APIRecord, RK_EnumConstant)
-CONCRETE_RECORD(EnumRecord, APIRecord, RK_Enum)
+CONCRETE_RECORD(EnumRecord, TagRecord, RK_Enum)
 ABSTRACT_RECORD(RecordFieldRecord, APIRecord)
-ABSTRACT_RECORD(RecordRecord, APIRecord)
+ABSTRACT_RECORD(RecordRecord, TagRecord)
 CONCRETE_RECORD(StructFieldRecord, RecordFieldRecord, RK_StructField)
 CONCRETE_RECORD(StructRecord, APIRecord, RK_Struct)
 CONCRETE_RECORD(UnionFieldRecord, RecordFieldRecord, RK_UnionField)
@@ -99,5 +100,16 @@ RECORD_CONTEXT(ClassTemplateSpecializationRecord,
                RK_ClassTemplateSpecialization)
 RECORD_CONTEXT(ClassTemplatePartialSpecializationRecord,
                RK_ClassTemplatePartialSpecialization)
+RECORD_CONTEXT(StructFieldRecord, RK_StructField)
+RECORD_CONTEXT(UnionFieldRecord, RK_UnionField)
+RECORD_CONTEXT(CXXFieldRecord, RK_CXXField)
+RECORD_CONTEXT(StaticFieldRecord, RK_StaticField)
+RECORD_CONTEXT(CXXFieldTemplateRecord, RK_CXXFieldTemplate)
+RECORD_CONTEXT(GlobalVariableRecord, RK_GlobalVariable)
+RECORD_CONTEXT(GlobalVariableTemplateRecord, RK_GlobalVariableTemplate)
+RECORD_CONTEXT(GlobalVariableTemplateSpecializationRecord,
+               RK_GlobalVariableTemplateSpecialization)
+RECORD_CONTEXT(GlobalVariableTemplatePartialSpecializationRecord,
+               RK_GlobalVariableTemplatePartialSpecialization)
 
 #undef RECORD_CONTEXT

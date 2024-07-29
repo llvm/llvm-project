@@ -104,7 +104,7 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
     return true;
 
   StringRef FName = II->getName();
-  if (FName.equals(Name))
+  if (FName == Name)
     return true;
 
   if (FName.starts_with("__inline") && FName.contains(Name))

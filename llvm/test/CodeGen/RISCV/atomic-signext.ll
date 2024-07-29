@@ -3,13 +3,13 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS %s
-; RUN: llc -mtriple=riscv32 -mattr=+a,+zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS %s
 
 define signext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
@@ -362,7 +362,7 @@ define signext i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32IA-NEXT:    not a3, a3
 ; RV32IA-NEXT:    andi a1, a1, 255
 ; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a3, a1
+; RV32IA-NEXT:    or a1, a1, a3
 ; RV32IA-NEXT:    amoand.w a1, a1, (a2)
 ; RV32IA-NEXT:    srl a0, a1, a0
 ; RV32IA-NEXT:    slli a0, a0, 24
@@ -390,7 +390,7 @@ define signext i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-NEXT:    not a3, a3
 ; RV64IA-NEXT:    andi a1, a1, 255
 ; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a3, a1
+; RV64IA-NEXT:    or a1, a1, a3
 ; RV64IA-NEXT:    amoand.w a1, a1, (a2)
 ; RV64IA-NEXT:    srlw a0, a1, a0
 ; RV64IA-NEXT:    slli a0, a0, 56
@@ -1403,7 +1403,7 @@ define signext i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV32IA-NEXT:    not a4, a4
 ; RV32IA-NEXT:    and a1, a1, a3
 ; RV32IA-NEXT:    sll a1, a1, a0
-; RV32IA-NEXT:    or a1, a4, a1
+; RV32IA-NEXT:    or a1, a1, a4
 ; RV32IA-NEXT:    amoand.w a1, a1, (a2)
 ; RV32IA-NEXT:    srl a0, a1, a0
 ; RV32IA-NEXT:    slli a0, a0, 16
@@ -1432,7 +1432,7 @@ define signext i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    not a4, a4
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    sllw a1, a1, a0
-; RV64IA-NEXT:    or a1, a4, a1
+; RV64IA-NEXT:    or a1, a1, a4
 ; RV64IA-NEXT:    amoand.w a1, a1, (a2)
 ; RV64IA-NEXT:    srlw a0, a1, a0
 ; RV64IA-NEXT:    slli a0, a0, 48

@@ -10,11 +10,15 @@
 #include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -54,6 +58,40 @@ void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<emitc::YieldOp>(loc);
 }
 
+bool mlir::emitc::isSupportedEmitCType(Type type) {
+  if (llvm::isa<emitc::OpaqueType>(type))
+    return true;
+  if (auto ptrType = llvm::dyn_cast<emitc::PointerType>(type))
+    return isSupportedEmitCType(ptrType.getPointee());
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(type)) {
+    auto elemType = arrayType.getElementType();
+    return !llvm::isa<emitc::ArrayType>(elemType) &&
+           isSupportedEmitCType(elemType);
+  }
+  if (type.isIndex() || emitc::isPointerWideType(type))
+    return true;
+  if (llvm::isa<IntegerType>(type))
+    return isSupportedIntegerType(type);
+  if (llvm::isa<FloatType>(type))
+    return isSupportedFloatType(type);
+  if (auto tensorType = llvm::dyn_cast<TensorType>(type)) {
+    if (!tensorType.hasStaticShape()) {
+      return false;
+    }
+    auto elemType = tensorType.getElementType();
+    if (llvm::isa<emitc::ArrayType>(elemType)) {
+      return false;
+    }
+    return isSupportedEmitCType(elemType);
+  }
+  if (auto tupleType = llvm::dyn_cast<TupleType>(type)) {
+    return llvm::all_of(tupleType.getTypes(), [](Type type) {
+      return !llvm::isa<emitc::ArrayType>(type) && isSupportedEmitCType(type);
+    });
+  }
+  return false;
+}
+
 bool mlir::emitc::isSupportedIntegerType(Type type) {
   if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
     switch (intType.getWidth()) {
@@ -72,7 +110,7 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
   return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
-         isSupportedIntegerType(type);
+         isSupportedIntegerType(type) || isPointerWideType(type);
 }
 
 bool mlir::emitc::isSupportedFloatType(Type type) {
@@ -86,6 +124,11 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
     }
   }
   return false;
+}
+
+bool mlir::emitc::isPointerWideType(Type type) {
+  return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
+      type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -103,6 +146,9 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 
   Type resultType = op->getResult(0).getType();
   Type attrType = cast<TypedAttr>(value).getType();
+
+  if (isPointerWideType(resultType) && attrType.isIndex())
+    return success();
 
   if (resultType != attrType)
     return op->emitOpError()
@@ -122,13 +168,13 @@ LogicalResult AddOp::verify() {
   Type lhsType = getLhs().getType();
   Type rhsType = getRhs().getType();
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType))
     return emitOpError("requires that at most one operand is a pointer");
 
-  if ((lhsType.isa<emitc::PointerType>() &&
-       !rhsType.isa<IntegerType, emitc::OpaqueType>()) ||
-      (rhsType.isa<emitc::PointerType>() &&
-       !lhsType.isa<IntegerType, emitc::OpaqueType>()))
+  if ((isa<emitc::PointerType>(lhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(rhsType)) ||
+      (isa<emitc::PointerType>(rhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(lhsType)))
     return emitOpError("requires that one operand is an integer or of opaque "
                        "type if the other is a pointer");
 
@@ -167,9 +213,11 @@ LogicalResult emitc::AssignOp::verify() {
   Value variable = getVar();
   Operation *variableDef = variable.getDefiningOp();
   if (!variableDef ||
-      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
+      !llvm::isa<emitc::GetGlobalOp, emitc::MemberOp, emitc::MemberOfPtrOp,
+                 emitc::SubscriptOp, emitc::VariableOp>(variableDef))
     return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable or subscript";
+                         << ") to be a get_global, member, member of pointer, "
+                            "subscript or variable";
 
   Value value = getValue();
   if (variable.getType() != value.getType())
@@ -188,14 +236,15 @@ LogicalResult emitc::AssignOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
-  return ((llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(input)) &&
-          (llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(output)));
+  return (
+      (emitc::isIntegerIndexOrOpaqueType(input) ||
+       emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
+      (emitc::isIntegerIndexOrOpaqueType(output) ||
+       emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOpaqueOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::CallOpaqueOp::verify() {
@@ -740,16 +789,16 @@ LogicalResult SubOp::verify() {
   Type rhsType = getRhs().getType();
   Type resultType = getResult().getType();
 
-  if (rhsType.isa<emitc::PointerType>() && !lhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(rhsType) && !isa<emitc::PointerType>(lhsType))
     return emitOpError("rhs can only be a pointer if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() &&
-      !rhsType.isa<IntegerType, emitc::OpaqueType, emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) &&
+      !isa<IntegerType, emitc::OpaqueType, emitc::PointerType>(rhsType))
     return emitOpError("requires that rhs is an integer, pointer or of opaque "
                        "type if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>() &&
-      !resultType.isa<IntegerType, emitc::OpaqueType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
+      !isa<IntegerType, emitc::OpaqueType>(resultType))
     return emitOpError("requires that the result is an integer or of opaque "
                        "type if lhs and rhs are pointers");
   return success();
@@ -842,13 +891,6 @@ LogicalResult emitc::SubscriptOp::verify() {
   // or types of index operands.
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-// TableGen'd op method definitions
-//===----------------------------------------------------------------------===//
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // EmitC Enums
@@ -949,3 +991,114 @@ LogicalResult mlir::emitc::OpaqueType::verify(
   }
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+static void printEmitCGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
+                                                  TypeAttr type,
+                                                  Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForGlobal(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                      Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForGlobal(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
+LogicalResult GlobalOp::verify() {
+  if (!isSupportedEmitCType(getType())) {
+    return emitOpError("expected valid emitc type");
+  }
+  if (getInitialValue().has_value()) {
+    Attribute initValue = getInitialValue().value();
+    // Check that the type of the initial value is compatible with the type of
+    // the global variable.
+    if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
+      auto arrayType = llvm::dyn_cast<ArrayType>(getType());
+      if (!arrayType)
+        return emitOpError("expected array type, but got ") << getType();
+
+      Type initType = elementsAttr.getType();
+      Type tensorType = getInitializerTypeForGlobal(getType());
+      if (initType != tensorType) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << initType;
+      }
+    } else if (auto intAttr = dyn_cast<IntegerAttr>(initValue)) {
+      if (intAttr.getType() != getType()) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << intAttr.getType();
+      }
+    } else if (auto floatAttr = dyn_cast<FloatAttr>(initValue)) {
+      if (floatAttr.getType() != getType()) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << floatAttr.getType();
+      }
+    } else if (!isa<emitc::OpaqueAttr>(initValue)) {
+      return emitOpError("initial value should be a integer, float, elements "
+                         "or opaque attribute, but got ")
+             << initValue;
+    }
+  }
+  if (getStaticSpecifier() && getExternSpecifier()) {
+    return emitOpError("cannot have both static and extern specifiers");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the type matches the type of the global variable.
+  auto global =
+      symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!global)
+    return emitOpError("'")
+           << getName() << "' does not reference a valid emitc.global";
+
+  Type resultType = getResult().getType();
+  if (global.getType() != resultType)
+    return emitOpError("result type ")
+           << resultType << " does not match type " << global.getType()
+           << " of the global @" << getName();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"

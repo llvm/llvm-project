@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cstdint>
 
 namespace llvm {
@@ -439,6 +440,18 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 /// the end of the given BasicBlock. Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlock *BB);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the given edge and the callback ShouldReplace returns true. Returns the
+/// number of replacements made.
+unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Edge,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the end of the given BasicBlock and the callback ShouldReplace returns true.
+/// Returns the number of replacements made.
+unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
 
 /// Return true if this call calls a gc leaf function.
 ///
@@ -477,6 +490,10 @@ void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 /// Given a constant, create a debug information expression.
 DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                                        Type &Ty);
+
+/// Remap the operands of the debug records attached to \p Inst, and the
+/// operands of \p Inst itself if it's a debug intrinsic.
+void remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst);
 
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching

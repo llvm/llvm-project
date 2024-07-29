@@ -75,6 +75,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/X.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -90,6 +91,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/end/end.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -129,6 +131,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/X.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -143,6 +146,7 @@ module X { header "X.h" }
 // CHECK-NEXT:         "[[PREFIX]]/end/end.h",
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

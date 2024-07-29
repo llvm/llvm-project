@@ -261,7 +261,12 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
               cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
-  if (abi && !abi->CodeAddressIsValid(cursor_sp->start_pc)) {
+
+  // Invalid code addresses should not appear on the stack *unless* we're
+  // directly below a trap handler frame (in this case, the invalid address is
+  // likely the cause of the trap).
+  if (abi && !abi->CodeAddressIsValid(cursor_sp->start_pc) &&
+      !prev_frame->reg_ctx_lldb_sp->IsTrapHandlerFrame()) {
     // If the RegisterContextUnwind has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.

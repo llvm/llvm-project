@@ -65,9 +65,9 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 1024 )
     // CHECK-NEXT: lvl = ( 1024 )
-    // CHECK-NEXT: pos[0] : ( 0, 4,
-    // CHECK-NEXT: crd[0] : ( 0, 1, 3, 1023,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4,
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 3, 1023 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %5 : tensor<1024xf32, #SparseVector>
@@ -86,9 +86,9 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 1024 )
     // CHECK-NEXT: lvl = ( 1024 )
-    // CHECK-NEXT: pos[0] : ( 0, 8,
-    // CHECK-NEXT: crd[0] : ( 0, 3, 6, 9, 12, 15, 18, 21,
-    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1,
+    // CHECK-NEXT: pos[0] : ( 0, 8 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 6, 9, 12, 15, 18, 21 )
+    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %8 : tensor<1024xf32, #SparseVector>

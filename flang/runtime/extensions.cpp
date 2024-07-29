@@ -23,6 +23,12 @@
 #include <thread>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+#include <synchapi.h>
+
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   int error{ctime_s(buffer, bufsize, &cur_time)};
@@ -43,9 +49,9 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 }
 #endif
 
-#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-// System is posix-compliant and has getlogin_r
-#include <unistd.h>
+#ifndef _WIN32
+// posix-compliant and has getlogin_r and F_OK
+#include <unistd.h> 
 #endif
 
 extern "C" {
@@ -136,7 +142,11 @@ void RTNAME(Sleep)(std::int64_t seconds) {
   if (seconds < 1) {
     return;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(seconds));
+#if _WIN32
+  Sleep(seconds * 1000);
+#else
+  sleep(seconds);
+#endif
 }
 
 // TODO: not supported on Windows

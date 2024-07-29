@@ -37,7 +37,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <utility>
 
 namespace clang {
@@ -202,6 +201,9 @@ class Sema;
     /// HLSL non-decaying array rvalue cast.
     ICK_HLSL_Array_RValue,
 
+    // HLSL vector splat from scalar or boolean type.
+    ICK_HLSL_Vector_Splat,
+
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };
@@ -214,14 +216,26 @@ class Sema;
     /// Exact Match
     ICR_Exact_Match = 0,
 
+    /// HLSL Scalar Widening
+    ICR_HLSL_Scalar_Widening,
+
     /// Promotion
     ICR_Promotion,
+
+    /// HLSL Scalar Widening with promotion
+    ICR_HLSL_Scalar_Widening_Promotion,
+
+    /// HLSL Matching Dimension Reduction
+    ICR_HLSL_Dimension_Reduction,
 
     /// Conversion
     ICR_Conversion,
 
     /// OpenCL Scalar Widening
     ICR_OCL_Scalar_Widening,
+
+    /// HLSL Scalar Widening with conversion
+    ICR_HLSL_Scalar_Widening_Conversion,
 
     /// Complex <-> Real conversion
     ICR_Complex_Real_Conversion,
@@ -234,10 +248,20 @@ class Sema;
 
     /// Conversion not allowed by the C standard, but that we accept as an
     /// extension anyway.
-    ICR_C_Conversion_Extension
+    ICR_C_Conversion_Extension,
+
+    /// HLSL Dimension reduction with promotion
+    ICR_HLSL_Dimension_Reduction_Promotion,
+
+    /// HLSL Dimension reduction with conversion
+    ICR_HLSL_Dimension_Reduction_Conversion,
   };
 
   ImplicitConversionRank GetConversionRank(ImplicitConversionKind Kind);
+
+  ImplicitConversionRank
+  GetDimensionConversionRank(ImplicitConversionRank Base,
+                             ImplicitConversionKind Dimension);
 
   /// NarrowingKind - The kind of narrowing conversion being performed by a
   /// standard conversion sequence according to C++11 [dcl.init.list]p7.
@@ -278,11 +302,10 @@ class Sema;
     /// pointer-to-member conversion, or boolean conversion.
     ImplicitConversionKind Second : 8;
 
-    /// Element - Between the second and third conversion a vector or matrix
-    /// element conversion may occur. If this is not ICK_Identity this
-    /// conversion is applied element-wise to each element in the vector or
-    /// matrix.
-    ImplicitConversionKind Element : 8;
+    /// Dimension - Between the second and third conversion a vector or matrix
+    /// dimension conversion may occur. If this is not ICK_Identity this
+    /// conversion truncates the vector or matrix, or extends a scalar.
+    ImplicitConversionKind Dimension : 8;
 
     /// Third - The third conversion can be a qualification conversion
     /// or a function conversion.
@@ -380,7 +403,7 @@ class Sema;
     void setAsIdentityConversion();
 
     bool isIdentityConversion() const {
-      return Second == ICK_Identity && Element == ICK_Identity &&
+      return Second == ICK_Identity && Dimension == ICK_Identity &&
              Third == ICK_Identity;
     }
 
@@ -875,8 +898,7 @@ class Sema;
     ConversionFixItGenerator Fix;
 
     /// Viable - True to indicate that this overload candidate is viable.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Viable : 1;
+    bool Viable : 1;
 
     /// Whether this candidate is the best viable function, or tied for being
     /// the best viable function.
@@ -885,14 +907,12 @@ class Sema;
     /// was part of the ambiguity kernel: the minimal non-empty set of viable
     /// candidates such that all elements of the ambiguity kernel are better
     /// than all viable candidates not in the ambiguity kernel.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Best : 1;
+    bool Best : 1;
 
     /// IsSurrogate - True to indicate that this candidate is a
     /// surrogate for a conversion to a function pointer or reference
     /// (C++ [over.call.object]).
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsSurrogate : 1;
+    bool IsSurrogate : 1;
 
     /// IgnoreObjectArgument - True to indicate that the first
     /// argument's conversion, which for this function represents the
@@ -901,20 +921,20 @@ class Sema;
     /// implicit object argument is just a placeholder) or a
     /// non-static member function when the call doesn't have an
     /// object argument.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IgnoreObjectArgument : 1;
+    bool IgnoreObjectArgument : 1;
+
+    bool TookAddressOfOverload : 1;
 
     /// True if the candidate was found using ADL.
-    LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
-    unsigned IsADLCandidate : 1;
+    CallExpr::ADLCallKind IsADLCandidate : 1;
 
     /// Whether this is a rewritten candidate, and if so, of what kind?
     LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
 
     /// FailureKind - The reason why this candidate is not viable.
-    LLVM_PREFERRED_TYPE(OverloadFailureKind)
-    unsigned FailureKind : 5;
+    /// Actually an OverloadFailureKind.
+    unsigned char FailureKind;
 
     /// The number of call arguments that were explicitly provided,
     /// to be used while performing partial ordering of function templates.
@@ -978,8 +998,8 @@ class Sema;
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
-        : IsSurrogate(false),
-          IsADLCandidate(static_cast<unsigned>(CallExpr::NotADL)),
+        : IsSurrogate(false), IgnoreObjectArgument(false),
+          TookAddressOfOverload(false), IsADLCandidate(CallExpr::NotADL),
           RewriteKind(CRK_None) {}
   };
 
@@ -1007,6 +1027,10 @@ class Sema;
       /// Initialization of an object of class type by constructor,
       /// using either a parenthesized or braced list of arguments.
       CSK_InitByConstructor,
+
+      /// C++ [over.match.call.general]
+      /// Resolve a call through the address of an overload set.
+      CSK_AddressOfOverloadSet,
     };
 
     /// Information about operator rewrites to consider when adding operator
@@ -1078,15 +1102,50 @@ class Sema;
     };
 
   private:
-    SmallVector<OverloadCandidate, 4> Candidates;
-    llvm::SmallPtrSet<uintptr_t, 4> Functions;
+    SmallVector<OverloadCandidate, 16> Candidates;
+    llvm::SmallPtrSet<uintptr_t, 16> Functions;
+
+    // Allocator for ConversionSequenceLists. We store the first few of these
+    // inline to avoid allocation for small sets.
+    llvm::BumpPtrAllocator SlabAllocator;
 
     SourceLocation Loc;
     CandidateSetKind Kind;
     OperatorRewriteInfo RewriteInfo;
 
+    constexpr static unsigned NumInlineBytes =
+        24 * sizeof(ImplicitConversionSequence);
+    unsigned NumInlineBytesUsed = 0;
+    alignas(void *) char InlineSpace[NumInlineBytes];
+
     // Address space of the object being constructed.
     LangAS DestAS = LangAS::Default;
+
+    /// If we have space, allocates from inline storage. Otherwise, allocates
+    /// from the slab allocator.
+    /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
+    /// instead.
+    /// FIXME: Now that this only allocates ImplicitConversionSequences, do we
+    /// want to un-generalize this?
+    template <typename T>
+    T *slabAllocate(unsigned N) {
+      // It's simpler if this doesn't need to consider alignment.
+      static_assert(alignof(T) == alignof(void *),
+                    "Only works for pointer-aligned types.");
+      static_assert(std::is_trivial<T>::value ||
+                        std::is_same<ImplicitConversionSequence, T>::value,
+                    "Add destruction logic to OverloadCandidateSet::clear().");
+
+      unsigned NBytes = sizeof(T) * N;
+      if (NBytes > NumInlineBytes - NumInlineBytesUsed)
+        return SlabAllocator.Allocate<T>(N);
+      char *FreeSpaceStart = InlineSpace + NumInlineBytesUsed;
+      assert(uintptr_t(FreeSpaceStart) % alignof(void *) == 0 &&
+             "Misaligned storage!");
+
+      NumInlineBytesUsed += NBytes;
+      return reinterpret_cast<T *>(FreeSpaceStart);
+    }
 
     void destroyCandidates();
 
@@ -1136,7 +1195,12 @@ class Sema;
     ConversionSequenceList
     allocateConversionSequences(unsigned NumConversions) {
       ImplicitConversionSequence *Conversions =
-          new ImplicitConversionSequence[NumConversions];
+          slabAllocate<ImplicitConversionSequence>(NumConversions);
+
+      // Construct the new objects.
+      for (unsigned I = 0; I != NumConversions; ++I)
+        new (&Conversions[I]) ImplicitConversionSequence();
+
       return ConversionSequenceList(Conversions, NumConversions);
     }
 

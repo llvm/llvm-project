@@ -80,8 +80,7 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   return Declares;
 }
 
-template <typename IntrinsicT, DbgVariableRecord::LocationType Type =
-                                   DbgVariableRecord::LocationType::Any>
+template <typename IntrinsicT, bool DbgAssignAndValuesOnly>
 static void
 findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
                   SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
@@ -114,8 +113,7 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
     // Get DbgVariableRecords that use this as a single value.
     if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
       for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers()) {
-        if (Type == DbgVariableRecord::LocationType::Any ||
-            DVR->getType() == Type)
+        if (!DbgAssignAndValuesOnly || DVR->isDbgValue() || DVR->isDbgAssign())
           if (EncounteredDbgVariableRecords.insert(DVR).second)
             DbgVariableRecords->push_back(DVR);
       }
@@ -130,8 +128,7 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
         continue;
       DIArgList *DI = cast<DIArgList>(AL);
       for (DbgVariableRecord *DVR : DI->getAllDbgVariableRecordUsers())
-        if (Type == DbgVariableRecord::LocationType::Any ||
-            DVR->getType() == Type)
+        if (!DbgAssignAndValuesOnly || DVR->isDbgValue() || DVR->isDbgAssign())
           if (EncounteredDbgVariableRecords.insert(DVR).second)
             DbgVariableRecords->push_back(DVR);
     }
@@ -141,14 +138,14 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
 void llvm::findDbgValues(
     SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
     SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
-  findDbgIntrinsics<DbgValueInst, DbgVariableRecord::LocationType::Value>(
+  findDbgIntrinsics<DbgValueInst, /*DbgAssignAndValuesOnly=*/true>(
       DbgValues, V, DbgVariableRecords);
 }
 
 void llvm::findDbgUsers(
     SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers, Value *V,
     SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
-  findDbgIntrinsics<DbgVariableIntrinsic, DbgVariableRecord::LocationType::Any>(
+  findDbgIntrinsics<DbgVariableIntrinsic, /*DbgAssignAndValuesOnly=*/false>(
       DbgUsers, V, DbgVariableRecords);
 }
 
@@ -1665,29 +1662,6 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
       unwrapDI<MDNode>(Decl), nullptr, AlignInBits));
 }
 
-LLVMDbgRecordRef
-LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
-                                 LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
-                                 LLVMMetadataRef DL, LLVMValueRef Instr) {
-  return LLVMDIBuilderInsertDeclareRecordBefore(Builder, Storage, VarInfo, Expr,
-                                                DL, Instr);
-}
-LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicBefore(
-    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
-      unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-      unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-      unwrap<Instruction>(Instr));
-  // This assert will fail if the module is in the new debug info format.
-  // This function should only be called if the module is in the old
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<Instruction *>(DbgInst) &&
-         "Function unexpectedly in new debug info format");
-  return wrap(cast<Instruction *>(DbgInst));
-}
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
@@ -1705,28 +1679,6 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
-LLVMDbgRecordRef
-LLVMDIBuilderInsertDeclareAtEnd(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
-                                LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
-                                LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  return LLVMDIBuilderInsertDeclareRecordAtEnd(Builder, Storage, VarInfo, Expr,
-                                               DL, Block);
-}
-LLVMValueRef LLVMDIBuilderInsertDeclareIntrinsicAtEnd(
-    LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
-      unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
-      unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
-  // This assert will fail if the module is in the new debug info format.
-  // This function should only be called if the module is in the old
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<Instruction *>(DbgInst) &&
-         "Function unexpectedly in new debug info format");
-  return wrap(cast<Instruction *>(DbgInst));
-}
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
@@ -1743,27 +1695,6 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
-LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueBefore(
-    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
-  return LLVMDIBuilderInsertDbgValueRecordBefore(Builder, Val, VarInfo, Expr,
-                                                 DebugLoc, Instr);
-}
-LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicBefore(
-    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
-      unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
-      unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
-  // This assert will fail if the module is in the new debug info format.
-  // This function should only be called if the module is in the old
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<Instruction *>(DbgInst) &&
-         "Function unexpectedly in new debug info format");
-  return wrap(cast<Instruction *>(DbgInst));
-}
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
@@ -1780,27 +1711,6 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
-LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueAtEnd(
-    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
-  return LLVMDIBuilderInsertDbgValueRecordAtEnd(Builder, Val, VarInfo, Expr,
-                                                DebugLoc, Block);
-}
-LLVMValueRef LLVMDIBuilderInsertDbgValueIntrinsicAtEnd(
-    LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
-    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
-      unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
-      unwrap<DILocation>(DebugLoc), unwrap(Block));
-  // This assert will fail if the module is in the new debug info format.
-  // This function should only be called if the module is in the old
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<Instruction *>(DbgInst) &&
-         "Function unexpectedly in new debug info format");
-  return wrap(cast<Instruction *>(DbgInst));
-}
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
@@ -1954,170 +1864,42 @@ void at::deleteAll(Function *F) {
     DVR->eraseFromParent();
 }
 
-/// Get the FragmentInfo for the variable if it exists, otherwise return a
-/// FragmentInfo that covers the entire variable if the variable size is
-/// known, otherwise return a zero-sized fragment.
-static DIExpression::FragmentInfo
-getFragmentOrEntireVariable(const DbgVariableRecord *DVR) {
-  DIExpression::FragmentInfo VariableSlice(0, 0);
-  // Get the fragment or variable size, or zero.
-  if (auto Sz = DVR->getFragmentSizeInBits())
-    VariableSlice.SizeInBits = *Sz;
-  if (auto Frag = DVR->getExpression()->getFragmentInfo())
-    VariableSlice.OffsetInBits = Frag->OffsetInBits;
-  return VariableSlice;
-}
-
-static DIExpression::FragmentInfo
-getFragmentOrEntireVariable(const DbgVariableIntrinsic *DVI) {
-  DIExpression::FragmentInfo VariableSlice(0, 0);
-  // Get the fragment or variable size, or zero.
-  if (auto Sz = DVI->getFragmentSizeInBits())
-    VariableSlice.SizeInBits = *Sz;
-  if (auto Frag = DVI->getExpression()->getFragmentInfo())
-    VariableSlice.OffsetInBits = Frag->OffsetInBits;
-  return VariableSlice;
-}
+/// FIXME: Remove this wrapper function and call
+/// DIExpression::calculateFragmentIntersect directly.
 template <typename T>
 bool calculateFragmentIntersectImpl(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const T *AssignRecord,
     std::optional<DIExpression::FragmentInfo> &Result) {
-  // There are multiple offsets at play in this function, so let's break it
-  // down. Starting with how variables may be stored in allocas:
-  //
-  //   1 Simplest case: variable is alloca sized and starts at offset 0.
-  //   2 Variable is larger than the alloca: the alloca holds just a part of it.
-  //   3 Variable is smaller than the alloca: the alloca may hold multiple
-  //   variables.
-  //
-  // Imagine we have a store to the entire alloca. In case (3) the store
-  // affects bits outside of the bounds of each variable. In case (2), where
-  // the alloca holds the Xth bit to the Yth bit of a variable, the
-  // zero-offset store doesn't represent an assignment at offset zero to the
-  // variable. It is an assignment to offset X.
-  //
-  // # Example 1
-  // Obviously, not all stores are alloca-sized and have zero offset. Imagine
-  // the lower 32 bits of this store are dead and are going to be DSEd:
-  //
-  //    store i64 %v, ptr %dest, !DIAssignID !1
-  //    dbg.assign(..., !DIExpression(fragment, 128, 32), !1, %dest,
-  //               !DIExpression(DW_OP_plus_uconst, 4))
-  //
-  // Goal: Given our dead bits at offset:0 size:32 for the store, determine the
-  // part of the variable, which fits in the fragment expressed by the
-  // dbg.assign, that has been killed, if any.
-  //
-  //     calculateFragmentIntersect(..., SliceOffsetInBits=0,
-  //                 SliceSizeInBits=32, Dest=%dest, Assign=dbg.assign)
-  //
-  // Drawing the store (s) in memory followed by the shortened version ($),
-  // then the dbg.assign (d), with the fragment information on a seperate scale
-  // underneath:
-  //
-  // Memory
-  // offset
-  //   from
-  //   dest 0      63
-  //        |      |
-  //       s[######] - Original stores 64 bits to Dest.
-  //       $----[##] - DSE says the lower 32 bits are dead, to be removed.
-  //       d    [##] - Assign's address-modifying expression adds 4 bytes to
-  //       dest.
-  // Variable   |  |
-  // Fragment   128|
-  //  Offsets      159
-  //
-  // The answer is achieved in a few steps:
-  // 1. Add the fragment offset to the store offset:
-  //      SliceOffsetInBits:0 + VarFrag.OffsetInBits:128 = 128
-  //
-  // 2. Subtract the address-modifying expression offset plus difference
-  //    between d.address and dest:
-  //      128 - (expression_offset:32 + (d.address - dest):0) = 96
-  //
-  // 3. That offset along with the store size (32) represents the bits of the
-  //    variable that'd be affected by the store. Call it SliceOfVariable.
-  //    Intersect that with Assign's fragment info:
-  //      SliceOfVariable ∩ Assign_fragment = none
-  //
-  // In this case: none of the dead bits of the store affect Assign.
-  //
-  // # Example 2
-  // Similar example with the same goal. This time the upper 16 bits
-  // of the store are going to be DSE'd.
-  //
-  //    store i64 %v, ptr %dest, !DIAssignID !1
-  //    dbg.assign(..., !DIExpression(fragment, 128, 32), !1, %dest,
-  //               !DIExpression(DW_OP_plus_uconst, 4))
-  //
-  //     calculateFragmentIntersect(..., SliceOffsetInBits=48,
-  //                 SliceSizeInBits=16, Dest=%dest, Assign=dbg.assign)
-  //
-  // Memory
-  // offset
-  //   from
-  //   dest 0      63
-  //        |      |
-  //       s[######] - Original stores 64 bits to Dest.
-  //       $[####]-- - DSE says the upper 16 bits are dead, to be removed.
-  //       d    [##] - Assign's address-modifying expression adds 4 bytes to
-  //       dest.
-  // Variable   |  |
-  // Fragment   128|
-  //  Offsets      159
-  //
-  // Using the same steps in the first example:
-  // 1. SliceOffsetInBits:48 + VarFrag.OffsetInBits:128 = 176
-  // 2. 176 - (expression_offset:32 + (d.address - dest):0) = 144
-  // 3. SliceOfVariable offset = 144, size = 16:
-  //      SliceOfVariable ∩ Assign_fragment = (offset: 144, size: 16)
-  // SliceOfVariable tells us the bits of the variable described by Assign that
-  // are affected by the DSE.
+  // No overlap if this DbgRecord describes a killed location.
   if (AssignRecord->isKillAddress())
     return false;
 
-  DIExpression::FragmentInfo VarFrag =
-      getFragmentOrEntireVariable(AssignRecord);
-  if (VarFrag.SizeInBits == 0)
-    return false; // Variable size is unknown.
-
-  // Calculate the difference between Dest and the dbg.assign address +
-  // address-modifying expression.
-  int64_t PointerOffsetInBits;
+  int64_t AddrOffsetInBits;
   {
-    auto DestOffsetInBytes =
-        AssignRecord->getAddress()->getPointerOffsetFrom(Dest, DL);
-    if (!DestOffsetInBytes)
-      return false; // Can't calculate difference in addresses.
-
-    int64_t ExprOffsetInBytes;
-    if (!AssignRecord->getAddressExpression()->extractIfOffset(
-            ExprOffsetInBytes))
+    int64_t AddrOffsetInBytes;
+    SmallVector<uint64_t> PostOffsetOps; //< Unused.
+    // Bail if we can't find a constant offset (or none) in the expression.
+    if (!AssignRecord->getAddressExpression()->extractLeadingOffset(
+            AddrOffsetInBytes, PostOffsetOps))
       return false;
-
-    int64_t PointerOffsetInBytes = *DestOffsetInBytes + ExprOffsetInBytes;
-    PointerOffsetInBits = PointerOffsetInBytes * 8;
+    AddrOffsetInBits = AddrOffsetInBytes * 8;
   }
 
-  // Adjust the slice offset so that we go from describing the a slice
-  // of memory to a slice of the variable.
-  int64_t NewOffsetInBits =
-      SliceOffsetInBits + VarFrag.OffsetInBits - PointerOffsetInBits;
-  if (NewOffsetInBits < 0)
-    return false; // Fragment offsets can only be positive.
-  DIExpression::FragmentInfo SliceOfVariable(SliceSizeInBits, NewOffsetInBits);
-  // Intersect the variable slice with AssignRecord's fragment to trim it down
-  // to size.
-  DIExpression::FragmentInfo TrimmedSliceOfVariable =
-      DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);
-  if (TrimmedSliceOfVariable == VarFrag)
-    Result = std::nullopt;
-  else
-    Result = TrimmedSliceOfVariable;
-  return true;
+  Value *Addr = AssignRecord->getAddress();
+  // FIXME: It may not always be zero.
+  int64_t BitExtractOffsetInBits = 0;
+  DIExpression::FragmentInfo VarFrag =
+      AssignRecord->getFragmentOrEntireVariable();
+
+  int64_t OffsetFromLocationInBits; //< Unused.
+  return DIExpression::calculateFragmentIntersect(
+      DL, Dest, SliceOffsetInBits, SliceSizeInBits, Addr, AddrOffsetInBits,
+      BitExtractOffsetInBits, VarFrag, Result, OffsetFromLocationInBits);
 }
+
+/// FIXME: Remove this wrapper function and call
+/// DIExpression::calculateFragmentIntersect directly.
 bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
@@ -2125,12 +1907,39 @@ bool at::calculateFragmentIntersect(
   return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
                                         SliceSizeInBits, DbgAssign, Result);
 }
+
+/// FIXME: Remove this wrapper function and call
+/// DIExpression::calculateFragmentIntersect directly.
 bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
     std::optional<DIExpression::FragmentInfo> &Result) {
   return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
                                         SliceSizeInBits, DVRAssign, Result);
+}
+
+/// Update inlined instructions' DIAssignID metadata. We need to do this
+/// otherwise a function inlined more than once into the same function
+/// will cause DIAssignID to be shared by many instructions.
+void at::remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map,
+                       Instruction &I) {
+  auto GetNewID = [&Map](Metadata *Old) {
+    DIAssignID *OldID = cast<DIAssignID>(Old);
+    if (DIAssignID *NewID = Map.lookup(OldID))
+      return NewID;
+    DIAssignID *NewID = DIAssignID::getDistinct(OldID->getContext());
+    Map[OldID] = NewID;
+    return NewID;
+  };
+  // If we find a DIAssignID attachment or use, replace it with a new version.
+  for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+    if (DVR.isDbgAssign())
+      DVR.setAssignId(GetNewID(DVR.getAssignID()));
+  }
+  if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
+    I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
+  else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
+    DAI->setAssignId(GetNewID(DAI->getAssignID()));
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
@@ -2337,7 +2146,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
     return /*Changed*/ false;
 
   bool Changed = false;
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.

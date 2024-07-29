@@ -43,7 +43,7 @@ important ones are:
   debuggers, like GDB or DBX.
 
 The approach used by the LLVM implementation is to use a small set of
-:ref:`intrinsic functions <format_common_intrinsics>` to define a mapping
+:ref:`debug records <debug_records>` to define a mapping
 between LLVM program objects and the source-level objects.  The description of
 the source-level program is maintained in LLVM metadata in an
 :ref:`implementation-defined format <ccxx_frontend>` (the C/C++ front-end
@@ -169,124 +169,26 @@ Debug information descriptors are `specialized metadata nodes
 
 There are two models for defining the values of source variables at different
 states of the program and tracking these values through optimization and code
-generation: :ref:`intrinsic function calls <format_common_intrinsics>`, the
-current default, and :ref:`debug records <debug_records>`, which are a new
-non-instruction-based model
-(for an explanation of how this works and why it is desirable, see the
-`RemoveDIs <RemoveDIsDebugInfo.html>`_ document). Each module must use one or
-the other; they may never be mixed within an IR module. To enable writing debug
-records instead of intrinsic calls, use the flag
-``--write-experimental-debuginfo``.
-
-.. _format_common_intrinsics:
-
-Debugger intrinsic functions
-----------------------------
-
-LLVM uses several intrinsic functions (name prefixed with "``llvm.dbg``") to
-track source local variables through optimization and code generation.
-
-``llvm.dbg.declare``
-^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: llvm
-
-  void @llvm.dbg.declare(metadata, metadata, metadata)
-
-This intrinsic provides information about a local element (e.g., variable).
-The first argument is metadata holding the address of variable, typically a
-static alloca in the function entry block.  The second argument is a
-`local variable <LangRef.html#dilocalvariable>`_ containing a description of
-the variable.  The third argument is a `complex expression
-<LangRef.html#diexpression>`_.  An `llvm.dbg.declare` intrinsic describes the
-*address* of a source variable.
-
-.. code-block:: text
-
-    %i.addr = alloca i32, align 4
-    call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !1,
-                                metadata !DIExpression()), !dbg !2
-    !1 = !DILocalVariable(name: "i", ...) ; int i
-    !2 = !DILocation(...)
-    ...
-    %buffer = alloca [256 x i8], align 8
-    ; The address of i is buffer+64.
-    call void @llvm.dbg.declare(metadata [256 x i8]* %buffer, metadata !3,
-                               metadata !DIExpression(DW_OP_plus, 64)), !dbg !4
-    !3 = !DILocalVariable(name: "i", ...) ; int i
-    !4 = !DILocation(...)
-
-A frontend should generate exactly one call to ``llvm.dbg.declare`` at the point
-of declaration of a source variable. Optimization passes that fully promote the
-variable from memory to SSA values will replace this call with possibly multiple
-calls to `llvm.dbg.value`. Passes that delete stores are effectively partial
-promotion, and they will insert a mix of calls to ``llvm.dbg.value`` to track
-the source variable value when it is available. After optimization, there may be
-multiple calls to ``llvm.dbg.declare`` describing the program points where the
-variables lives in memory. All calls for the same concrete source variable must
-agree on the memory location.
-
-
-``llvm.dbg.value``
-^^^^^^^^^^^^^^^^^^
-
-.. code-block:: llvm
-
-  void @llvm.dbg.value(metadata, metadata, metadata)
-
-This intrinsic provides information when a user source variable is set to a new
-value.  The first argument is the new value (wrapped as metadata).  The second
-argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
-description of the variable.  The third argument is a `complex expression
-<LangRef.html#diexpression>`_.
-
-An `llvm.dbg.value` intrinsic describes the *value* of a source variable
-directly, not its address.  Note that the value operand of this intrinsic may
-be indirect (i.e, a pointer to the source variable), provided that interpreting
-the complex expression derives the direct value.
-
-``llvm.dbg.assign``
-^^^^^^^^^^^^^^^^^^^
-.. toctree::
-   :hidden:
-
-   AssignmentTracking
-
-.. code-block:: llvm
-
-  void @llvm.dbg.assign(Value *Value,
-                        DIExpression *ValueExpression,
-                        DILocalVariable *Variable,
-                        DIAssignID *ID,
-                        Value *Address,
-                        DIExpression *AddressExpression)
-
-This intrinsic marks the position in IR where a source assignment occurred. It
-encodes the value of the variable. It references the store, if any, that
-performs the assignment, and the destination address.
-
-The first three arguments are the same as for an ``llvm.dbg.value``. The fourth
-argument is a ``DIAssignID`` used to reference a store. The fifth is the
-destination of the store (wrapped as metadata), and the sixth is a `complex
-expression <LangRef.html#diexpression>`_ that modifies it.
-
-The formal LLVM-IR signature is:
-
-.. code-block:: llvm
-
-  void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
-
-
-See :doc:`AssignmentTracking` for more info.
+generation: :ref:`debug records <debug_records>`, the current default, and
+:ref:`intrinsic function calls <format_common_intrinsics>`, which are
+non-default but currently supported for backwards compatibility - though these
+two models must never be mixed within an IR module. For an explanation of why
+we changed to the new model, how it works, and guidance on how to update old
+code or IR to use debug records, see the `RemoveDIs <RemoveDIsDebugInfo.html>`_
+document.
 
 .. _debug_records:
 
 Debug Records
 ----------------------------
 
-LLVM also has an alternative to intrinsic functions, debug records, which
-function similarly but are not instructions. The basic syntax for debug records
-is:
+Debug records define the value that a source variable has during execution of
+the program; they appear interleaved with instructions, although they are not
+instructions themselves and have no effect on the code generated by the
+compiler.
+
+LLVM uses several types of debug records to define source variables. The
+common syntax for these records is:
 
 .. code-block:: llvm
 
@@ -294,17 +196,9 @@ is:
   ; Using the intrinsic model, the above is equivalent to:
   call void llvm.dbg.<kind>([metadata <arg>, ]*), !dbg <DILocation>
 
-A debug intrinsic function can be converted to a debug record with the
-following steps:
-
-1. Add an extra level of indentation.
-2. Replace everything prior to the intrinsic kind (declare/value/assign) with
-   ``#dbg_``.
-3. Remove the leading ``metadata`` from the intrinsic's arguments.
-4. Transfer the ``!dbg`` attachment to be an argument, dropping the leading
-   ``!dbg``.
-
-For each kind of intrinsic function, there is an equivalent debug record.
+Debug records are always printed with an extra level of indentation compared
+to instructions, and always have the prefix `#dbg_` and a list of
+comma-separated arguments in parentheses, as with a `call`.
 
 ``#dbg_declare``
 ^^^^^^^^^^^^^^^^
@@ -313,7 +207,40 @@ For each kind of intrinsic function, there is an equivalent debug record.
 
     #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
 
-Equivalent to the ``llvm.dbg.declare`` intrinsic.
+This record provides information about a local element (e.g., variable).
+The first argument is an SSA value corresponding to a variable address, and is
+typically a static alloca in the function entry block.  The second argument is a
+`local variable <LangRef.html#dilocalvariable>`_ containing a description of
+the variable.  The third argument is a `complex expression
+<LangRef.html#diexpression>`_. The fourth argument is a `source location
+<LangRef.html#dilocation>`_. A ``#dbg_declare`` record describes the
+*address* of a source variable.
+
+.. code-block:: llvm
+
+    %i.addr = alloca i32, align 4
+      #dbg_declare(ptr %i.addr, !1, !DIExpression(), !2)
+    ; ...
+    !1 = !DILocalVariable(name: "i", ...) ; int i
+    !2 = !DILocation(...)
+    ; ...
+    %buffer = alloca [256 x i8], align 8
+    ; The address of i is buffer+64.
+      #dbg_declare(ptr %buffer, !3, !DIExpression(DW_OP_plus, 64), !4)
+    ; ...
+    !3 = !DILocalVariable(name: "i", ...) ; int i
+    !4 = !DILocation(...)
+
+A frontend should generate exactly one ``#dbg_declare`` record at the point
+of declaration of a source variable. Optimization passes that fully promote the
+variable from memory to SSA values will replace this record with possibly
+multiple ``#dbg_value``` records. Passes that delete stores are effectively
+partial promotion, and they will insert a mix of ``#dbg_value`` records to
+track the source variable value when it is available. After optimization, there
+may be multiple ``#dbg_declare`` records describing the program points where
+the variables lives in memory. All calls for the same concrete source variable
+must agree on the memory location.
+
 
 ``#dbg_value``
 ^^^^^^^^^^^^^^
@@ -322,17 +249,108 @@ Equivalent to the ``llvm.dbg.declare`` intrinsic.
 
     #dbg_value([Value|DIArgList|MDNode], DILocalVariable, DIExpression, DILocation)
 
-Equivalent to the ``llvm.dbg.value`` intrinsic.
+This record provides information when a user source variable is set to a new
+value.  The first argument is the new value. The second argument is a `local
+variable <LangRef.html#dilocalvariable>`_ containing a description of the
+variable.  The third argument is a `complex expression
+<LangRef.html#diexpression>`_. The fourth argument is a `source location
+<LangRef.html#dilocation>`_.
+
+A ``#dbg_value`` record describes the *value* of a source variable
+directly, not its address.  Note that the value operand of this intrinsic may
+be indirect (i.e, a pointer to the source variable), provided that interpreting
+the complex expression derives the direct value.
 
 ``#dbg_assign``
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :hidden:
+
+   AssignmentTracking
 
 .. code-block:: llvm
 
-    #dbg_assign([Value|DIArgList|MDNode], DILocalVariable, DIExpression,
-                DIAssignID, [Value|MDNode], DIExpression, DILocation)
+  #dbg_assign( [Value|DIArgList|MDNode] Value,
+               DILocalVariable Variable,
+               DIExpression ValueExpression,
+               DIAssignID ID,
+               [Value|MDNode] Address,
+               DIExpression AddressExpression,
+               DILocation SourceLocation )
 
-Equivalent to the ``llvm.dbg.assign`` intrinsic.
+This record marks the position in IR where a source assignment occurred. It
+encodes the value of the variable. It references the store, if any, that
+performs the assignment, and the destination address.
+
+The first three arguments are the same as for a ``#dbg_value``. The fourth
+argument is a ``DIAssignID`` used to reference a store. The fifth is the
+destination of the store, the sixth is a `complex
+expression <LangRef.html#diexpression>`_ that modfies it, and the seventh is a
+`source location <LangRef.html#dilocation>`_.
+
+See :doc:`AssignmentTracking` for more info.
+
+Debugger intrinsic functions
+----------------------------
+
+.. _format_common_intrinsics:
+
+In intrinsic-mode, LLVM uses several intrinsic functions (name prefixed with "``llvm.dbg``") to
+track source local variables through optimization and code generation. These
+intrinsic functions each correspond to one of the debug records above, with a
+few syntactic differences: each argument to a debugger intrinsic must be wrapped
+as metadata, meaning it must be prefixed with ``metadata``, and the
+``DILocation`` argument in each record must be a metadata attachment to the
+call instruction, meaning it appears after the argument list with the prefix
+``!dbg``.
+
+``llvm.dbg.declare``
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+  void @llvm.dbg.declare(metadata, metadata, metadata)
+
+This intrinsic is equivalent to ``#dbg_declare``:
+
+.. code-block:: llvm
+
+      #dbg_declare(i32* %i.addr, !1, !DIExpression(), !2)
+    call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !1,
+                                metadata !DIExpression()), !dbg !2
+
+``llvm.dbg.value``
+^^^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+  void @llvm.dbg.value(metadata, metadata, metadata)
+
+This intrinsic is equivalent to ``#dbg_value``:
+
+.. code-block:: llvm
+
+      #dbg_value(i32 %i, !1, !DIExpression(), !2)
+    call void @llvm.dbg.value(metadata i32 %i, metadata !1,
+                              metadata !DIExpression()), !dbg !2
+
+``llvm.dbg.assign``
+^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+  void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+
+This intrinsic is equivalent to ``#dbg_assign``:
+
+.. code-block:: llvm
+
+      #dbg_assign(i32 %i, !1, !DIExpression(), !2, 
+                  ptr %i.addr, !DIExpression(), !3)
+    call void @llvm.dbg.assign(
+      metadata i32 %i, metadata !1, metadata !DIExpression(), metadata !2,
+      metadata ptr %i.addr, metadata !DIExpression(), metadata !3), !dbg !3
+
 
 Object lifetimes and scoping
 ============================
@@ -371,11 +389,11 @@ Compiled to LLVM, this function would be represented like this:
     %X = alloca i32, align 4
     %Y = alloca i32, align 4
     %Z = alloca i32, align 4
-    call void @llvm.dbg.declare(metadata i32* %X, metadata !11, metadata !13), !dbg !14
+      #dbg_declare(ptr %X, !11, !DIExpression(), !14)
     store i32 21, i32* %X, align 4, !dbg !14
-    call void @llvm.dbg.declare(metadata i32* %Y, metadata !15, metadata !13), !dbg !16
+      #dbg_declare(ptr %Y, !15, !DIExpression(), !16)
     store i32 22, i32* %Y, align 4, !dbg !16
-    call void @llvm.dbg.declare(metadata i32* %Z, metadata !17, metadata !13), !dbg !19
+      #dbg_declare(ptr %Z, !17, !DIExpression(), !19)
     store i32 23, i32* %Z, align 4, !dbg !19
     %0 = load i32, i32* %X, align 4, !dbg !20
     store i32 %0, i32* %Z, align 4, !dbg !21
@@ -383,9 +401,6 @@ Compiled to LLVM, this function would be represented like this:
     store i32 %1, i32* %X, align 4, !dbg !23
     ret void, !dbg !24
   }
-
-  ; Function Attrs: nounwind readnone
-  declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
   attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone }
@@ -407,33 +422,32 @@ Compiled to LLVM, this function would be represented like this:
   !10 = !{!"clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)"}
   !11 = !DILocalVariable(name: "X", scope: !4, file: !1, line: 2, type: !12)
   !12 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-  !13 = !DIExpression()
-  !14 = !DILocation(line: 2, column: 9, scope: !4)
-  !15 = !DILocalVariable(name: "Y", scope: !4, file: !1, line: 3, type: !12)
-  !16 = !DILocation(line: 3, column: 9, scope: !4)
-  !17 = !DILocalVariable(name: "Z", scope: !18, file: !1, line: 5, type: !12)
-  !18 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
-  !19 = !DILocation(line: 5, column: 11, scope: !18)
-  !20 = !DILocation(line: 6, column: 11, scope: !18)
-  !21 = !DILocation(line: 6, column: 9, scope: !18)
-  !22 = !DILocation(line: 8, column: 9, scope: !4)
-  !23 = !DILocation(line: 8, column: 7, scope: !4)
-  !24 = !DILocation(line: 9, column: 3, scope: !4)
+  !13 = !DILocation(line: 2, column: 9, scope: !4)
+  !14 = !DILocalVariable(name: "Y", scope: !4, file: !1, line: 3, type: !12)
+  !15 = !DILocation(line: 3, column: 9, scope: !4)
+  !16 = !DILocalVariable(name: "Z", scope: !18, file: !1, line: 5, type: !12)
+  !17 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
+  !18 = !DILocation(line: 5, column: 11, scope: !18)
+  !29 = !DILocation(line: 6, column: 11, scope: !18)
+  !20 = !DILocation(line: 6, column: 9, scope: !18)
+  !21 = !DILocation(line: 8, column: 9, scope: !4)
+  !22 = !DILocation(line: 8, column: 7, scope: !4)
+  !23 = !DILocation(line: 9, column: 3, scope: !4)
 
 
 This example illustrates a few important details about LLVM debugging
-information.  In particular, it shows how the ``llvm.dbg.declare`` intrinsic and
+information.  In particular, it shows how the ``#dbg_declare`` record and
 location information, which are attached to an instruction, are applied
 together to allow a debugger to analyze the relationship between statements,
 variable definitions, and the code used to implement the function.
 
 .. code-block:: llvm
 
-  call void @llvm.dbg.declare(metadata i32* %X, metadata !11, metadata !13), !dbg !14
+    #dbg_declare(ptr %X, !11, !DIExpression(), !14)
     ; [debug line = 2:7] [debug variable = X]
 
-The first intrinsic ``%llvm.dbg.declare`` encodes debugging information for the
-variable ``X``.  The metadata ``!dbg !14`` attached to the intrinsic provides
+The first record ``#dbg_declare`` encodes debugging information for the
+variable ``X``.  The location ``!14`` at the end of the record provides
 scope information for the variable ``X``.
 
 .. code-block:: text
@@ -446,18 +460,18 @@ scope information for the variable ``X``.
 Here ``!14`` is metadata providing `location information
 <LangRef.html#dilocation>`_.  In this example, scope is encoded by ``!4``, a
 `subprogram descriptor <LangRef.html#disubprogram>`_.  This way the location
-information attached to the intrinsics indicates that the variable ``X`` is
+information parameter to the records indicates that the variable ``X`` is
 declared at line number 2 at a function level scope in function ``foo``.
 
 Now lets take another example.
 
 .. code-block:: llvm
 
-  call void @llvm.dbg.declare(metadata i32* %Z, metadata !17, metadata !13), !dbg !19
+    #dbg_declare(ptr %Z, !17, !DIExpression(), !19)
     ; [debug line = 5:9] [debug variable = Z]
 
-The third intrinsic ``%llvm.dbg.declare`` encodes debugging information for
-variable ``Z``.  The metadata ``!dbg !19`` attached to the intrinsic provides
+The third record ``#dbg_declare`` encodes debugging information for
+variable ``Z``.  The metadata ``!19`` at the end of the record provides
 scope information for the variable ``Z``.
 
 .. code-block:: text
@@ -479,18 +493,18 @@ In the example above, every variable assignment uniquely corresponds to a
 memory store to the variable's position on the stack. However in heavily
 optimized code LLVM promotes most variables into SSA values, which can
 eventually be placed in physical registers or memory locations. To track SSA
-values through compilation, when objects are promoted to SSA values an
-``llvm.dbg.value`` intrinsic is created for each assignment, recording the
-variable's new location. Compared with the ``llvm.dbg.declare`` intrinsic:
+values through compilation, when objects are promoted to SSA values a
+``#dbg_value`` record is created for each assignment, recording the
+variable's new location. Compared with the ``#dbg_declare`` record:
 
-* A dbg.value terminates the effect of any preceding dbg.values for (any
+* A #dbg_value terminates the effect of any preceding #dbg_values for (any
   overlapping fragments of) the specified variable.
-* The dbg.value's position in the IR defines where in the instruction stream
+* The #dbg_value's position in the IR defines where in the instruction stream
   the variable's value changes.
 * Operands can be constants, indicating the variable is assigned a
   constant value.
 
-Care must be taken to update ``llvm.dbg.value`` intrinsics when optimization
+Care must be taken to update ``#dbg_value`` records when optimization
 passes alter or move instructions and blocks -- the developer could observe such
 changes reflected in the value of variables when debugging the program. For any
 execution of the optimized program, the set of variable values presented to the
@@ -501,7 +515,7 @@ damaging their understanding of the optimized program and undermining their
 trust in the debugger.
 
 Sometimes perfectly preserving variable locations is not possible, often when a
-redundant calculation is optimized out. In such cases, a ``llvm.dbg.value``
+redundant calculation is optimized out. In such cases, a ``#dbg_value``
 with operand ``poison`` should be used, to terminate earlier variable locations
 and let the debugger present ``optimized out`` to the developer. Withholding
 these potentially stale variable values from the developer diminishes the
@@ -514,26 +528,26 @@ To illustrate some potential issues, consider the following example:
 
   define i32 @foo(i32 %bar, i1 %cond) {
   entry:
-    call @llvm.dbg.value(metadata i32 0, metadata !1, metadata !2)
+      #dbg_value(i32 0, !1, !DIExpression(), !4)
     br i1 %cond, label %truebr, label %falsebr
   truebr:
     %tval = add i32 %bar, 1
-    call @llvm.dbg.value(metadata i32 %tval, metadata !1, metadata !2)
+      #dbg_value(i32 %tval, !1, !DIExpression(), !4)
     %g1 = call i32 @gazonk()
     br label %exit
   falsebr:
     %fval = add i32 %bar, 2
-    call @llvm.dbg.value(metadata i32 %fval, metadata !1, metadata !2)
+      #dbg_value(i32 %fval, !1, !DIExpression(), !4)
     %g2 = call i32 @gazonk()
     br label %exit
   exit:
     %merge = phi [ %tval, %truebr ], [ %fval, %falsebr ]
     %g = phi [ %g1, %truebr ], [ %g2, %falsebr ]
-    call @llvm.dbg.value(metadata i32 %merge, metadata !1, metadata !2)
-    call @llvm.dbg.value(metadata i32 %g, metadata !3, metadata !2)
+      #dbg_value(i32 %merge, !1, !DIExpression(), !4)
+      #dbg_value(i32 %g, !3, !DIExpression(), !4)
     %plusten = add i32 %merge, 10
     %toret = add i32 %plusten, %g
-    call @llvm.dbg.value(metadata i32 %toret, metadata !1, metadata !2)
+      #dbg_value(i32 %toret, !1, !DIExpression(), !4)
     ret i32 %toret
   }
 
@@ -551,48 +565,48 @@ perhaps, be optimized into the following code:
     ret i32 %toret
   }
 
-What ``llvm.dbg.value`` intrinsics should be placed to represent the original variable
+What ``#dbg_value`` records should be placed to represent the original variable
 locations in this code? Unfortunately the second, third and fourth
-dbg.values for ``!1`` in the source function have had their operands
+#dbg_values for ``!1`` in the source function have had their operands
 (%tval, %fval, %merge) optimized out. Assuming we cannot recover them, we
-might consider this placement of dbg.values:
+might consider this placement of #dbg_values:
 
 .. code-block:: llvm
 
   define i32 @foo(i32 %bar, i1 %cond) {
   entry:
-    call @llvm.dbg.value(metadata i32 0, metadata !1, metadata !2)
+      #dbg_value(i32 0, !1, !DIExpression(), !4)
     %g = call i32 @gazonk()
-    call @llvm.dbg.value(metadata i32 %g, metadata !3, metadata !2)
+      #dbg_value(i32 %g, !3, !DIExpression(), !4)
     %addoper = select i1 %cond, i32 11, i32 12
     %plusten = add i32 %bar, %addoper
     %toret = add i32 %plusten, %g
-    call @llvm.dbg.value(metadata i32 %toret, metadata !1, metadata !2)
+      #dbg_value(i32 %toret, !1, !DIExpression(), !4)
     ret i32 %toret
   }
 
 However, this will cause ``!3`` to have the return value of ``@gazonk()`` at
 the same time as ``!1`` has the constant value zero -- a pair of assignments
 that never occurred in the unoptimized program. To avoid this, we must terminate
-the range that ``!1`` has the constant value assignment by inserting a poison
-dbg.value before the dbg.value for ``!3``:
+the range that ``!1`` has the constant value assignment by inserting an poison
+#dbg_value before the #dbg_value for ``!3``:
 
 .. code-block:: llvm
 
   define i32 @foo(i32 %bar, i1 %cond) {
   entry:
-    call @llvm.dbg.value(metadata i32 0, metadata !1, metadata !2)
+      #dbg_value(i32 0, !1, !DIExpression(), !2)
     %g = call i32 @gazonk()
-    call @llvm.dbg.value(metadata i32 poison, metadata !1, metadata !2)
-    call @llvm.dbg.value(metadata i32 %g, metadata !3, metadata !2)
+      #dbg_value(i32 poison, !1, !DIExpression(), !2)
+      #dbg_value(i32 %g, !3, !DIExpression(), !2)
     %addoper = select i1 %cond, i32 11, i32 12
     %plusten = add i32 %bar, %addoper
     %toret = add i32 %plusten, %g
-    call @llvm.dbg.value(metadata i32 %toret, metadata !1, metadata !2)
+      #dbg_value(i32 %toret, !1, !DIExpression(), !2)
     ret i32 %toret
   }
 
-There are a few other dbg.value configurations that mean it terminates
+There are a few other #dbg_value configurations that mean it terminates
 dominating location definitions without adding a new location. The complete
 list is:
 
@@ -602,16 +616,16 @@ list is:
 * There are no location operands (empty ``DIArgList``) and the ``DIExpression``
   is empty.
 
-This class of dbg.value that kills variable locations is called a "kill
-dbg.value" or "kill location", and for legacy reasons the term "undef
-dbg.value" may be used in existing code. The ``DbgVariableIntrinsic`` methods
+This class of #dbg_value that kills variable locations is called a "kill
+#dbg_value" or "kill location", and for legacy reasons the term "undef
+#dbg_value" may be used in existing code. The ``DbgVariableIntrinsic`` methods
 ``isKillLocation`` and ``setKillLocation`` should be used where possible rather
-than inspecting location operands directly to check or set whether a dbg.value
+than inspecting location operands directly to check or set whether a #dbg_value
 is a kill location.
 
-In general, if any dbg.value has its operand optimized out and cannot be
-recovered, then a kill dbg.value is necessary to terminate earlier variable
-locations. Additional kill dbg.values may be necessary when the debugger can
+In general, if any #dbg_value has its operand optimized out and cannot be
+recovered, then a kill #dbg_value is necessary to terminate earlier variable
+locations. Additional kill #dbg_values may be necessary when the debugger can
 observe re-ordering of assignments.
 
 How variable location metadata is transformed during CodeGen
@@ -622,9 +636,9 @@ ultimately producing a mapping between source-level information and
 instruction ranges. This
 is relatively straightforwards for line number information, as mapping
 instructions to line numbers is a simple association. For variable locations
-however the story is more complex. As each ``llvm.dbg.value`` intrinsic
+however the story is more complex. As each ``#dbg_value`` record
 represents a source-level assignment of a value to a source variable, the
-variable location intrinsics effectively embed a small imperative program
+debug records effectively embed a small imperative program
 within the LLVM IR. By the end of CodeGen, this becomes a mapping from each
 variable to their machine locations over ranges of instructions.
 From IR to object emission, the major transformations which affect variable
@@ -639,7 +653,7 @@ significantly change the ordering of the program, and occurs in a number of
 different passes.
 
 Some variable locations are not transformed during CodeGen. Stack locations
-specified by ``llvm.dbg.declare`` are valid and unchanging for the entire
+specified by ``#dbg_declare`` are valid and unchanging for the entire
 duration of the function, and are recorded in a simple MachineFunction table.
 Location changes in the prologue and epilogue of a function are also ignored:
 frame setup and destruction may take several instructions, require a
@@ -668,11 +682,11 @@ otherwise transformed into a non-register, the variable location becomes
 unavailable.
 
 Locations that are unavailable are treated as if they have been optimized out:
-in IR the location would be assigned ``undef`` by a debug intrinsic, and in MIR
+in IR the location would be assigned ``undef`` by a debug record, and in MIR
 the equivalent location is used.
 
 After MIR locations are assigned to each variable, machine pseudo-instructions
-corresponding to each ``llvm.dbg.value`` intrinsic are inserted. There are two
+corresponding to each ``#dbg_value`` record are inserted. There are two
 forms of this type of instruction.
 
 The first form, ``DBG_VALUE``, appears thus:
@@ -684,14 +698,14 @@ The first form, ``DBG_VALUE``, appears thus:
 And has the following operands:
  * The first operand can record the variable location as a register,
    a frame index, an immediate, or the base address register if the original
-   debug intrinsic referred to memory. ``$noreg`` indicates the variable
-   location is undefined, equivalent to an ``undef`` dbg.value operand.
+   debug record referred to memory. ``$noreg`` indicates the variable
+   location is undefined, equivalent to an ``undef`` #dbg_value operand.
  * The type of the second operand indicates whether the variable location is
    directly referred to by the DBG_VALUE, or whether it is indirect. The
    ``$noreg`` register signifies the former, an immediate operand (0) the
    latter.
- * Operand 3 is the Variable field of the original debug intrinsic.
- * Operand 4 is the Expression field of the original debug intrinsic.
+ * Operand 3 is the Variable field of the original debug record.
+ * Operand 4 is the Expression field of the original debug record.
 
 The second form, ``DBG_VALUE_LIST``, appears thus:
 
@@ -700,8 +714,8 @@ The second form, ``DBG_VALUE_LIST``, appears thus:
   DBG_VALUE_LIST !123, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %1, %2
 
 And has the following operands:
- * The first operand is the Variable field of the original debug intrinsic.
- * The second operand is the Expression field of the original debug intrinsic.
+ * The first operand is the Variable field of the original debug record.
+ * The second operand is the Expression field of the original debug record.
  * Any number of operands, from the 3rd onwards, record a sequence of variable
    location operands, which may take any of the same values as the first
    operand of the ``DBG_VALUE`` instruction above. These variable location
@@ -710,7 +724,7 @@ And has the following operands:
    <LangRef.html#diexpression>`_.
 
 The position at which the DBG_VALUEs are inserted should correspond to the
-positions of their matching ``llvm.dbg.value`` intrinsics in the IR block.  As
+positions of their matching ``#dbg_value`` records in the IR block.  As
 with optimization, LLVM aims to preserve the order in which variable
 assignments occurred in the source program. However SelectionDAG performs some
 instruction scheduling, which can reorder assignments (discussed below).
@@ -724,20 +738,20 @@ the following example:
 
   define i32 @foo(i32* %addr) {
   entry:
-    call void @llvm.dbg.value(metadata i32 0, metadata !3, metadata !DIExpression()), !dbg !5
+      #dbg_value(i32 0, !3, !DIExpression(), !5)
     br label %bb1, !dbg !5
 
   bb1:                                              ; preds = %bb1, %entry
     %bar.0 = phi i32 [ 0, %entry ], [ %add, %bb1 ]
-    call void @llvm.dbg.value(metadata i32 %bar.0, metadata !3, metadata !DIExpression()), !dbg !5
+      #dbg_value(i32 %bar.0, !3, !DIExpression(), !5)
     %addr1 = getelementptr i32, i32 *%addr, i32 1, !dbg !5
-    call void @llvm.dbg.value(metadata i32 *%addr1, metadata !3, metadata !DIExpression()), !dbg !5
+      #dbg_value(i32 *%addr1, !3, !DIExpression(), !5)
     %loaded1 = load i32, i32* %addr1, !dbg !5
     %addr2 = getelementptr i32, i32 *%addr, i32 %bar.0, !dbg !5
-    call void @llvm.dbg.value(metadata i32 *%addr2, metadata !3, metadata !DIExpression()), !dbg !5
+      #dbg_value(i32 *%addr2, !3, !DIExpression(), !5)
     %loaded2 = load i32, i32* %addr2, !dbg !5
     %add = add i32 %bar.0, 1, !dbg !5
-    call void @llvm.dbg.value(metadata i32 %add, metadata !3, metadata !DIExpression()), !dbg !5
+      #dbg_value(i32 %add, !3, !DIExpression(), !5)
     %added = add i32 %loaded1, %loaded2
     %cond = icmp ult i32 %added, %bar.0, !dbg !5
     br i1 %cond, label %bb1, label %bb2, !dbg !5
@@ -779,12 +793,12 @@ If one compiles this IR with ``llc -o - -start-after=codegen-prepare -stop-after
     $eax = COPY %8, debug-location !5
     RET 0, $eax, debug-location !5
 
-Observe first that there is a DBG_VALUE instruction for every ``llvm.dbg.value``
-intrinsic in the source IR, ensuring no source level assignments go missing.
+Observe first that there is a DBG_VALUE instruction for every ``#dbg_value``
+record in the source IR, ensuring no source level assignments go missing.
 Then consider the different ways in which variable locations have been recorded:
 
-* For the first dbg.value an immediate operand is used to record a zero value.
-* The dbg.value of the PHI instruction leads to a DBG_VALUE of virtual register
+* For the first #dbg_value an immediate operand is used to record a zero value.
+* The #dbg_value of the PHI instruction leads to a DBG_VALUE of virtual register
   ``%0``.
 * The first GEP has its effect folded into the first load instruction
   (as a 4-byte offset), but the variable location is salvaged by folding
@@ -792,7 +806,7 @@ Then consider the different ways in which variable locations have been recorded:
 * The second GEP is also folded into the corresponding load. However, it is
   insufficiently simple to be salvaged, and is emitted as a ``$noreg``
   DBG_VALUE, indicating that the variable takes on an undefined location.
-* The final dbg.value has its Value placed in virtual register ``%1``.
+* The final #dbg_value has its Value placed in virtual register ``%1``.
 
 Instruction Scheduling
 ----------------------
@@ -899,14 +913,14 @@ presents several difficulties:
     br label %exit, !dbg !26
 
   truebr:
-    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
-    call void @llvm.dbg.value(metadata i32 1, metadata !23, metadata !DIExpression()), !dbg !24
+      #dbg_value(i32 %input, !30, !DIExpression(), !24)
+      #dbg_value(i32 1, !23, !DIExpression(), !24)
     %value1 = add i32 %input, 1
     br label %bb1
 
   falsebr:
-    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
-    call void @llvm.dbg.value(metadata i32 2, metadata !23, metadata !DIExpression()), !dbg !24
+      #dbg_value(i32 %input, !30, !DIExpression(), !24)
+      #dbg_value(i32 2, !23, !DIExpression(), !24)
     %value2 = add i32 %input, 2
     br label %bb1
 
@@ -920,13 +934,13 @@ Here the difficulties are:
 * The value of the ``!23`` variable merges into ``%bb1``, but there is no PHI
   node
 
-As mentioned above, the ``llvm.dbg.value`` intrinsics essentially form an
-imperative program embedded in the IR, with each intrinsic defining a variable
+As mentioned above, the ``#dbg_value`` records essentially form an
+imperative program embedded in the IR, with each record defining a variable
 location. This *could* be converted to an SSA form by mem2reg, in the same way
 that it uses use-def chains to identify control flow merges and insert phi
 nodes for IR Values. However, because debug variable locations are defined for
 every machine instruction, in effect every IR instruction uses every variable
-location, which would lead to a large number of debugging intrinsics being
+location, which would lead to a large number of debugging records being
 generated.
 
 Examining the example above, variable ``!30`` is assigned ``%input`` on both
@@ -935,8 +949,8 @@ constant values on either path. Where control flow merges in ``%bb1`` we would
 want ``!30`` to keep its location (``%input``), but ``!23`` to become undefined
 as we cannot determine at runtime what value it should have in %bb1 without
 inserting a PHI node. mem2reg does not insert the PHI node to avoid changing
-codegen when debugging is enabled, and does not insert the other dbg.values
-to avoid adding very large numbers of intrinsics.
+codegen when debugging is enabled, and does not insert the other #dbg_values
+to avoid adding very large numbers of records.
 
 Instead, LiveDebugValues determines variable locations when control
 flow merges. A dataflow analysis is used to propagate locations between blocks:

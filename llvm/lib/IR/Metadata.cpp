@@ -1195,12 +1195,11 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
          "first operand should be a non-null MDString");
   StringRef AProfName = AMDS->getString();
   StringRef BProfName = BMDS->getString();
-  if (AProfName.equals("branch_weights") &&
-      BProfName.equals("branch_weights")) {
-    ConstantInt *AInstrWeight =
-        mdconst::dyn_extract<ConstantInt>(A->getOperand(1));
-    ConstantInt *BInstrWeight =
-        mdconst::dyn_extract<ConstantInt>(B->getOperand(1));
+  if (AProfName == "branch_weights" && BProfName == "branch_weights") {
+    ConstantInt *AInstrWeight = mdconst::dyn_extract<ConstantInt>(
+        A->getOperand(getBranchWeightOffset(A)));
+    ConstantInt *BInstrWeight = mdconst::dyn_extract<ConstantInt>(
+        B->getOperand(getBranchWeightOffset(B)));
     assert(AInstrWeight && BInstrWeight && "verified by LLVM verifier");
     return MDNode::get(Ctx,
                        {MDHelper.createString("branch_weights"),
@@ -1288,12 +1287,12 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
     return A;
 
   // First, walk both lists in order of the lower boundary of each interval.
-  // At each step, try to merge the new interval to the last one we adedd.
+  // At each step, try to merge the new interval to the last one we added.
   SmallVector<ConstantInt *, 4> EndPoints;
-  int AI = 0;
-  int BI = 0;
-  int AN = A->getNumOperands() / 2;
-  int BN = B->getNumOperands() / 2;
+  unsigned AI = 0;
+  unsigned BI = 0;
+  unsigned AN = A->getNumOperands() / 2;
+  unsigned BN = B->getNumOperands() / 2;
   while (AI < AN && BI < BN) {
     ConstantInt *ALow = mdconst::extract<ConstantInt>(A->getOperand(2 * AI));
     ConstantInt *BLow = mdconst::extract<ConstantInt>(B->getOperand(2 * BI));
@@ -1591,7 +1590,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 4> KnownSet;
+  SmallSet<unsigned, 32> KnownSet;
   KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
 
   // A DIAssignID attachment is debug metadata, don't drop it.

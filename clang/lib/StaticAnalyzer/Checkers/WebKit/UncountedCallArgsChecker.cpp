@@ -53,6 +53,13 @@ public:
       bool shouldVisitTemplateInstantiations() const { return true; }
       bool shouldVisitImplicitCode() const { return false; }
 
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
+        if (isRefType(safeGetName(Decl)))
+          return true;
+        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(
+            Decl);
+      }
+
       bool VisitCallExpr(const CallExpr *CE) {
         Checker->visitCallExpr(CE);
         return true;
@@ -119,29 +126,30 @@ public:
   }
 
   bool isPtrOriginSafe(const Expr *Arg) const {
-    std::pair<const clang::Expr *, bool> ArgOrigin =
-        tryToFindPtrOrigin(Arg, true);
-
-    // Temporary ref-counted object created as part of the call argument
-    // would outlive the call.
-    if (ArgOrigin.second)
-      return true;
-
-    if (isa<CXXNullPtrLiteralExpr>(ArgOrigin.first)) {
-      // foo(nullptr)
-      return true;
-    }
-    if (isa<IntegerLiteral>(ArgOrigin.first)) {
-      // FIXME: Check the value.
-      // foo(NULL)
-      return true;
-    }
-
-    return isASafeCallArg(ArgOrigin.first);
+    return tryToFindPtrOrigin(Arg, /*StopAtFirstRefCountedObj=*/true,
+                              [](const clang::Expr *ArgOrigin, bool IsSafe) {
+                                if (IsSafe)
+                                  return true;
+                                if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
+                                  // foo(nullptr)
+                                  return true;
+                                }
+                                if (isa<IntegerLiteral>(ArgOrigin)) {
+                                  // FIXME: Check the value.
+                                  // foo(NULL)
+                                  return true;
+                                }
+                                if (isASafeCallArg(ArgOrigin))
+                                  return true;
+                                return false;
+                              });
   }
 
   bool shouldSkipCall(const CallExpr *CE) const {
     const auto *Callee = CE->getDirectCallee();
+
+    if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
+      return true;
 
     if (Callee && TFA.isTrivial(Callee))
       return true;
@@ -220,10 +228,17 @@ public:
     return NamespaceName == "WTF" &&
            (MethodName == "find" || MethodName == "findIf" ||
             MethodName == "reverseFind" || MethodName == "reverseFindIf" ||
-            MethodName == "get" || MethodName == "inlineGet" ||
-            MethodName == "contains" || MethodName == "containsIf") &&
+            MethodName == "findIgnoringASCIICase" || MethodName == "get" ||
+            MethodName == "inlineGet" || MethodName == "contains" ||
+            MethodName == "containsIf" ||
+            MethodName == "containsIgnoringASCIICase" ||
+            MethodName == "startsWith" || MethodName == "endsWith" ||
+            MethodName == "startsWithIgnoringASCIICase" ||
+            MethodName == "endsWithIgnoringASCIICase" ||
+            MethodName == "substring") &&
            (ClsName.ends_with("Vector") || ClsName.ends_with("Set") ||
-            ClsName.ends_with("Map"));
+            ClsName.ends_with("Map") || ClsName == "StringImpl" ||
+            ClsName.ends_with("String"));
   }
 
   void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {

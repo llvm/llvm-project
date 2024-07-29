@@ -60,8 +60,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -119,7 +119,7 @@ private:
 char ARCOptAddrMode::ID = 0;
 INITIALIZE_PASS_BEGIN(ARCOptAddrMode, OPTADDRMODE_NAME, OPTADDRMODE_DESC, false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ARCOptAddrMode, OPTADDRMODE_NAME, OPTADDRMODE_DESC, false,
                     false)
 
@@ -508,7 +508,7 @@ bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   AST = &MF.getSubtarget<ARCSubtarget>();
   AII = AST->getInstrInfo();
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   bool Changed = false;
   for (auto &MBB : MF)

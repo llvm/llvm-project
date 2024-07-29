@@ -32,29 +32,37 @@ namespace omp {
 
 struct AlignedClauseOps {
   llvm::SmallVector<Value> alignedVars;
-  llvm::SmallVector<Attribute> alignmentAttrs;
+  llvm::SmallVector<Attribute> alignments;
 };
 
 struct AllocateClauseOps {
-  llvm::SmallVector<Value> allocatorVars, allocateVars;
+  llvm::SmallVector<Value> allocateVars, allocatorVars;
 };
 
-struct CollapseClauseOps {
-  llvm::SmallVector<Value> loopLBVar, loopUBVar, loopStepVar;
+struct CancelDirectiveNameClauseOps {
+  ClauseCancellationConstructTypeAttr cancelDirective;
 };
 
 struct CopyprivateClauseOps {
   llvm::SmallVector<Value> copyprivateVars;
-  llvm::SmallVector<Attribute> copyprivateFuncs;
+  llvm::SmallVector<Attribute> copyprivateSyms;
+};
+
+struct CriticalNameClauseOps {
+  /// This field has a generic name because it's mirroring the `sym_name`
+  /// argument of the `OpenMP_CriticalNameClause` tablegen definition. That one
+  /// can't be renamed to anything more specific because the `sym_name` name is
+  /// a requirement of the `Symbol` MLIR trait associated with that clause.
+  StringAttr symName;
 };
 
 struct DependClauseOps {
-  llvm::SmallVector<Attribute> dependTypeAttrs;
+  llvm::SmallVector<Attribute> dependKinds;
   llvm::SmallVector<Value> dependVars;
 };
 
 struct DeviceClauseOps {
-  Value deviceVar;
+  Value device;
 };
 
 struct DeviceTypeClauseOps {
@@ -63,29 +71,34 @@ struct DeviceTypeClauseOps {
 };
 
 struct DistScheduleClauseOps {
-  UnitAttr distScheduleStaticAttr;
-  Value distScheduleChunkSizeVar;
+  UnitAttr distScheduleStatic;
+  Value distScheduleChunkSize;
 };
 
 struct DoacrossClauseOps {
-  llvm::SmallVector<Value> doacrossVectorVars;
-  ClauseDependAttr doacrossDependTypeAttr;
-  IntegerAttr doacrossNumLoopsAttr;
+  ClauseDependAttr doacrossDependType;
+  IntegerAttr doacrossNumLoops;
+  llvm::SmallVector<Value> doacrossDependVars;
+};
+
+struct FilterClauseOps {
+  Value filteredThreadId;
 };
 
 struct FinalClauseOps {
-  Value finalVar;
+  Value final;
 };
 
 struct GrainsizeClauseOps {
-  Value grainsizeVar;
+  Value grainsize;
 };
 
 struct HasDeviceAddrClauseOps {
   llvm::SmallVector<Value> hasDeviceAddrVars;
 };
+
 struct HintClauseOps {
-  IntegerAttr hintAttr;
+  IntegerAttr hint;
 };
 
 struct IfClauseOps {
@@ -94,7 +107,8 @@ struct IfClauseOps {
 
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
-  llvm::SmallVector<Attribute> inReductionDeclSymbols;
+  llvm::SmallVector<bool> inReductionByref;
+  llvm::SmallVector<Attribute> inReductionSyms;
 };
 
 struct IsDevicePtrClauseOps {
@@ -106,7 +120,8 @@ struct LinearClauseOps {
 };
 
 struct LoopRelatedOps {
-  UnitAttr loopInclusiveAttr;
+  llvm::SmallVector<Value> loopLowerBounds, loopUpperBounds, loopSteps;
+  UnitAttr loopInclusive;
 };
 
 struct MapClauseOps {
@@ -114,15 +129,11 @@ struct MapClauseOps {
 };
 
 struct MergeableClauseOps {
-  UnitAttr mergeableAttr;
-};
-
-struct NameClauseOps {
-  StringAttr nameAttr;
+  UnitAttr mergeable;
 };
 
 struct NogroupClauseOps {
-  UnitAttr nogroupAttr;
+  UnitAttr nogroup;
 };
 
 struct NontemporalClauseOps {
@@ -130,35 +141,36 @@ struct NontemporalClauseOps {
 };
 
 struct NowaitClauseOps {
-  UnitAttr nowaitAttr;
+  UnitAttr nowait;
 };
 
 struct NumTasksClauseOps {
-  Value numTasksVar;
+  Value numTasks;
 };
 
 struct NumTeamsClauseOps {
-  Value numTeamsLowerVar, numTeamsUpperVar;
+  Value numTeamsLower, numTeamsUpper;
 };
 
 struct NumThreadsClauseOps {
-  Value numThreadsVar;
+  Value numThreads;
 };
 
 struct OrderClauseOps {
-  ClauseOrderKindAttr orderAttr;
+  ClauseOrderKindAttr order;
+  OrderModifierAttr orderMod;
 };
 
 struct OrderedClauseOps {
-  IntegerAttr orderedAttr;
+  IntegerAttr ordered;
 };
 
 struct ParallelizationLevelClauseOps {
-  UnitAttr parLevelSimdAttr;
+  UnitAttr parLevelSimd;
 };
 
 struct PriorityClauseOps {
-  Value priorityVar;
+  Value priority;
 };
 
 struct PrivateClauseOps {
@@ -168,49 +180,54 @@ struct PrivateClauseOps {
   llvm::SmallVector<Value> privateVars;
   // The list of symbols referring to delayed privatizer ops (i.e. `omp.private`
   // ops).
-  llvm::SmallVector<Attribute> privatizers;
+  llvm::SmallVector<Attribute> privateSyms;
 };
 
 struct ProcBindClauseOps {
-  ClauseProcBindKindAttr procBindKindAttr;
+  ClauseProcBindKindAttr procBindKind;
 };
 
 struct ReductionClauseOps {
   llvm::SmallVector<Value> reductionVars;
-  llvm::SmallVector<Attribute> reductionDeclSymbols;
-  UnitAttr reductionByRefAttr;
+  llvm::SmallVector<bool> reductionByref;
+  llvm::SmallVector<Attribute> reductionSyms;
 };
 
 struct SafelenClauseOps {
-  IntegerAttr safelenAttr;
+  IntegerAttr safelen;
 };
 
 struct ScheduleClauseOps {
-  ClauseScheduleKindAttr scheduleValAttr;
-  ScheduleModifierAttr scheduleModAttr;
-  Value scheduleChunkVar;
-  UnitAttr scheduleSimdAttr;
+  ClauseScheduleKindAttr scheduleKind;
+  Value scheduleChunk;
+  ScheduleModifierAttr scheduleMod;
+  UnitAttr scheduleSimd;
 };
 
 struct SimdlenClauseOps {
-  IntegerAttr simdlenAttr;
+  IntegerAttr simdlen;
 };
 
 struct TaskReductionClauseOps {
   llvm::SmallVector<Value> taskReductionVars;
-  llvm::SmallVector<Attribute> taskReductionDeclSymbols;
+  llvm::SmallVector<bool> taskReductionByref;
+  llvm::SmallVector<Attribute> taskReductionSyms;
 };
 
 struct ThreadLimitClauseOps {
-  Value threadLimitVar;
+  Value threadLimit;
 };
 
 struct UntiedClauseOps {
-  UnitAttr untiedAttr;
+  UnitAttr untied;
 };
 
-struct UseDeviceClauseOps {
-  llvm::SmallVector<Value> useDevicePtrVars, useDeviceAddrVars;
+struct UseDeviceAddrClauseOps {
+  llvm::SmallVector<Value> useDeviceAddrVars;
+};
+
+struct UseDevicePtrClauseOps {
+  llvm::SmallVector<Value> useDevicePtrVars;
 };
 
 //===----------------------------------------------------------------------===//
@@ -225,81 +242,84 @@ template <typename... Mixins>
 struct Clauses : public Mixins... {};
 } // namespace detail
 
-using CriticalClauseOps = detail::Clauses<HintClauseOps, NameClauseOps>;
+using CancelOperands =
+    detail::Clauses<CancelDirectiveNameClauseOps, IfClauseOps>;
+
+using CancellationPointOperands = detail::Clauses<CancelDirectiveNameClauseOps>;
+
+using CriticalDeclareOperands =
+    detail::Clauses<CriticalNameClauseOps, HintClauseOps>;
 
 // TODO `indirect` clause.
-using DeclareTargetClauseOps = detail::Clauses<DeviceTypeClauseOps>;
+using DeclareTargetOperands = detail::Clauses<DeviceTypeClauseOps>;
 
-using DistributeClauseOps =
+using DistributeOperands =
     detail::Clauses<AllocateClauseOps, DistScheduleClauseOps, OrderClauseOps,
                     PrivateClauseOps>;
 
-using LoopNestClauseOps = detail::Clauses<CollapseClauseOps, LoopRelatedOps>;
+using LoopNestOperands = detail::Clauses<LoopRelatedOps>;
 
-// TODO `filter` clause.
-using MaskedClauseOps = detail::Clauses<>;
+using MaskedOperands = detail::Clauses<FilterClauseOps>;
 
-using OrderedOpClauseOps = detail::Clauses<DoacrossClauseOps>;
+using OrderedOperands = detail::Clauses<DoacrossClauseOps>;
 
-using OrderedRegionClauseOps = detail::Clauses<ParallelizationLevelClauseOps>;
+using OrderedRegionOperands = detail::Clauses<ParallelizationLevelClauseOps>;
 
-using ParallelClauseOps =
+using ParallelOperands =
     detail::Clauses<AllocateClauseOps, IfClauseOps, NumThreadsClauseOps,
                     PrivateClauseOps, ProcBindClauseOps, ReductionClauseOps>;
 
-using SectionsClauseOps = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
-                                          PrivateClauseOps, ReductionClauseOps>;
+using SectionsOperands = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
+                                         PrivateClauseOps, ReductionClauseOps>;
 
-// TODO `linear` clause.
-using SimdLoopClauseOps =
-    detail::Clauses<AlignedClauseOps, CollapseClauseOps, IfClauseOps,
-                    LoopRelatedOps, NontemporalClauseOps, OrderClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, SafelenClauseOps,
-                    SimdlenClauseOps>;
+using SimdOperands =
+    detail::Clauses<AlignedClauseOps, IfClauseOps, LinearClauseOps,
+                    NontemporalClauseOps, OrderClauseOps, PrivateClauseOps,
+                    ReductionClauseOps, SafelenClauseOps, SimdlenClauseOps>;
 
-using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
-                                        NowaitClauseOps, PrivateClauseOps>;
+using SingleOperands = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
+                                       NowaitClauseOps, PrivateClauseOps>;
 
 // TODO `defaultmap`, `uses_allocators` clauses.
-using TargetClauseOps =
+using TargetOperands =
     detail::Clauses<AllocateClauseOps, DependClauseOps, DeviceClauseOps,
                     HasDeviceAddrClauseOps, IfClauseOps, InReductionClauseOps,
                     IsDevicePtrClauseOps, MapClauseOps, NowaitClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
+                    PrivateClauseOps, ThreadLimitClauseOps>;
 
-using TargetDataClauseOps = detail::Clauses<DeviceClauseOps, IfClauseOps,
-                                            MapClauseOps, UseDeviceClauseOps>;
+using TargetDataOperands =
+    detail::Clauses<DeviceClauseOps, IfClauseOps, MapClauseOps,
+                    UseDeviceAddrClauseOps, UseDevicePtrClauseOps>;
 
-using TargetEnterExitUpdateDataClauseOps =
+using TargetEnterExitUpdateDataOperands =
     detail::Clauses<DependClauseOps, DeviceClauseOps, IfClauseOps, MapClauseOps,
                     NowaitClauseOps>;
 
 // TODO `affinity`, `detach` clauses.
-using TaskClauseOps =
+using TaskOperands =
     detail::Clauses<AllocateClauseOps, DependClauseOps, FinalClauseOps,
                     IfClauseOps, InReductionClauseOps, MergeableClauseOps,
                     PriorityClauseOps, PrivateClauseOps, UntiedClauseOps>;
 
-using TaskgroupClauseOps =
+using TaskgroupOperands =
     detail::Clauses<AllocateClauseOps, TaskReductionClauseOps>;
 
-using TaskloopClauseOps =
+using TaskloopOperands =
     detail::Clauses<AllocateClauseOps, FinalClauseOps, GrainsizeClauseOps,
                     IfClauseOps, InReductionClauseOps, MergeableClauseOps,
                     NogroupClauseOps, NumTasksClauseOps, PriorityClauseOps,
                     PrivateClauseOps, ReductionClauseOps, UntiedClauseOps>;
 
-using TaskwaitClauseOps = detail::Clauses<DependClauseOps, NowaitClauseOps>;
+using TaskwaitOperands = detail::Clauses<DependClauseOps, NowaitClauseOps>;
 
-using TeamsClauseOps =
+using TeamsOperands =
     detail::Clauses<AllocateClauseOps, IfClauseOps, NumTeamsClauseOps,
                     PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
 
-using WsloopClauseOps =
-    detail::Clauses<AllocateClauseOps, CollapseClauseOps, LinearClauseOps,
-                    LoopRelatedOps, NowaitClauseOps, OrderClauseOps,
-                    OrderedClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    ScheduleClauseOps>;
+using WsloopOperands =
+    detail::Clauses<AllocateClauseOps, LinearClauseOps, NowaitClauseOps,
+                    OrderClauseOps, OrderedClauseOps, PrivateClauseOps,
+                    ReductionClauseOps, ScheduleClauseOps>;
 
 } // namespace omp
 } // namespace mlir

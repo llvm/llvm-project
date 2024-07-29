@@ -134,8 +134,8 @@ transform::ApplyNVGPUToNVVMConversionPatternsOp::verifyTypeConverter(
 
 void transform::CreateAsyncGroupsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTarget(), effects);
-  transform::producesHandle(getResult(), effects);
+  transform::consumesHandle(getTargetMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -651,7 +651,7 @@ private:
 template <typename ApplyFn, typename ReduceFn>
 static void foreachIndividualVectorElement(Value vector, ApplyFn applyFn,
                                            ReduceFn reduceFn) {
-  VectorType vectorType = vector.getType().cast<VectorType>();
+  VectorType vectorType = cast<VectorType>(vector.getType());
   auto vectorShape = vectorType.getShape();
   auto strides = computeStrides(vectorShape);
   for (int64_t idx = 0, e = vectorShape[0] * strides[0]; idx < e; ++idx) {
@@ -779,11 +779,11 @@ FailureOr<Operation *> MmaSyncBuilder::buildMmaSync(LinalgOp linalgOp) {
   Value lhsMemRef = linalgOp.getDpsInputOperand(0)->get();
   Value rhsMemRef = linalgOp.getDpsInputOperand(1)->get();
   Value resMemRef = linalgOp.getDpsInitOperand(0)->get();
-  assert(lhsMemRef.getType().cast<MemRefType>().getRank() == 2 &&
+  assert(cast<MemRefType>(lhsMemRef.getType()).getRank() == 2 &&
          "expected lhs to be a 2D memref");
-  assert(rhsMemRef.getType().cast<MemRefType>().getRank() == 2 &&
+  assert(cast<MemRefType>(rhsMemRef.getType()).getRank() == 2 &&
          "expected rhs to be a 2D memref");
-  assert(resMemRef.getType().cast<MemRefType>().getRank() == 2 &&
+  assert(cast<MemRefType>(resMemRef.getType()).getRank() == 2 &&
          "expected res to be a 2D memref");
 
   int64_t m = cast<MemRefType>(lhsMemRef.getType()).getShape()[0];

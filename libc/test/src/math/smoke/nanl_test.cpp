@@ -8,6 +8,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/nanl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include <signal.h>
@@ -22,7 +23,7 @@
 #error "Unknown long double type"
 #endif
 
-class LlvmLibcNanlTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcNanlTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using StorageType = LIBC_NAMESPACE::fputil::FPBits<long double>::StorageType;
 
@@ -69,7 +70,7 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
   run_test("123 ", expected);
 }
 
-#ifndef LIBC_HAVE_ADDRESS_SANITIZER
+#if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcNanlTest, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(SIGSEGV));
 }

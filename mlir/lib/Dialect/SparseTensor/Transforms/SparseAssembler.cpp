@@ -42,7 +42,7 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
           if (kind == SparseTensorFieldKind::PosMemRef ||
               kind == SparseTensorFieldKind::CrdMemRef ||
               kind == SparseTensorFieldKind::ValMemRef) {
-            auto rtp = t.cast<ShapedType>();
+            auto rtp = cast<ShapedType>(t);
             if (!directOut) {
               rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
               if (extraTypes)
@@ -97,7 +97,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
             mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
           toVals.push_back(mem);
         } else {
-          ShapedType rtp = t.cast<ShapedType>();
+          ShapedType rtp = cast<ShapedType>(t);
           rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
           inputs.push_back(extraVals[extra++]);
           retTypes.push_back(rtp);

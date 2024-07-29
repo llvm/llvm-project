@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -verify -fms-extensions
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -fms-extensions -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -fms-extensions -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated -fms-extensions
-// RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated %s -fms-extensions -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated %s -fms-extensions -emit-llvm -o - | FileCheck %s
 
 // expected-no-diagnostics
 // ref-no-diagnostics
@@ -31,3 +31,8 @@ constexpr bool assume() {
   return true;
 }
 static_assert(assume(), "");
+
+void test_builtin_os_log(void *buf, int i, const char *data) {
+  constexpr int len = __builtin_os_log_format_buffer_size("%d %{public}s %{private}.16P", i, data, data);
+  static_assert(len > 0, "Expect len > 0");
+}

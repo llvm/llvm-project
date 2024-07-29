@@ -248,3 +248,41 @@ namespace ns2_capture_this_byval {
   constexpr auto L = S{5}.f(S{10});
   static_assert(L(S{100}) == 115, "");
 } // end test_captures_1::ns2_capture_this_byval
+
+namespace CaptureDefaults {
+  struct S {
+    int x;
+  };
+
+  constexpr auto f = [x = S{10}]() {
+      return x.x;
+  };
+  static_assert(f() == 10, "");
+
+  constexpr auto f2 = [x = 3]() {
+      return x;
+  };
+  static_assert(f2() == 3, "");
+}
+
+constexpr auto t4 = ([x=42]() consteval { return x; }());
+static_assert(t4 == 42, "");
+
+namespace InvalidCapture {
+
+  int &f(int *p);
+  char &f(...);
+  void g() {
+    int n = -1;   // both-note {{declared here}}
+    [=] {
+      int arr[n]; // both-warning {{variable length arrays in C++ are a Clang extension}} \
+                     both-note {{read of non-const variable 'n' is not allowed in a constant expression}}
+    } ();
+  }
+}
+
+constexpr int fn() {
+  int Capture = 42;
+  return [=]() constexpr { return Capture; }();
+}
+static_assert(fn() == 42, "");

@@ -142,8 +142,9 @@ attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
-; GCN-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
-; GCN-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
+; SDAG-NEXT:     '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
+; GISEL-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01cb{{$}}
+; GCN-NEXT:      '0x2e13 (COMPUTE_PGM_RSRC2)': 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x10{{$}}
@@ -156,10 +157,10 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .backend_stack_size: 0x10{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; SDAG-NEXT:        .sgpr_count:     0x25{{$}}
-; GISEL-NEXT:        .sgpr_count:     0x26{{$}}
+; GISEL-NEXT:        .sgpr_count:     0x27{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; SDAG-NEXT:        .vgpr_count:     0x3{{$}}
-; GISEL-NEXT:        .vgpr_count:     0x4{{$}}
+; GISEL-NEXT:        .vgpr_count:     0x5{{$}}
 ; GCN-NEXT:      multiple_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x24{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}

@@ -33,6 +33,7 @@
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: CoroEarlyPass
+; CHECK-O-NEXT: Running pass: EntryExitInstrumenterPass
 ; CHECK-O-NEXT: Running pass: LowerExpectIntrinsicPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running analysis: TargetIRAnalysis
@@ -43,8 +44,8 @@
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Running pass: SampleProfileLoaderPass
-; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass

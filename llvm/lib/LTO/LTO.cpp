@@ -30,6 +30,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
@@ -64,6 +65,8 @@ using namespace lto;
 using namespace object;
 
 #define DEBUG_TYPE "lto"
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
 
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
@@ -114,12 +117,15 @@ void llvm::computeLTOCacheKey(
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
     support::endian::write32le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 4});
+    Hasher.update(Data);
   };
   auto AddUint64 = [&](uint64_t I) {
     uint8_t Data[8];
     support::endian::write64le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 8});
+    Hasher.update(Data);
+  };
+  auto AddUint8 = [&](const uint8_t I) {
+    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
   };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
@@ -156,19 +162,17 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
+  // TODO: `ExportList` is determined by `ImportList`. Since `ImportList` is
+  // used to compute cache key, we could omit hashing `ExportList` here.
   std::vector<uint64_t> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &VI : ExportList) {
-    auto GUID = VI.getGUID();
-    ExportsGUID.push_back(GUID);
-  }
+  for (const auto &VI : ExportList)
+    ExportsGUID.push_back(VI.getGUID());
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (uint64_t GUID : ExportsGUID) {
-    // The export list can impact the internalization, be conservative here
+  for (auto GUID : ExportsGUID)
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
-  }
 
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is
@@ -199,13 +203,21 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
+  std::vector<std::pair<uint64_t, uint8_t>> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-    for (auto &Fn : Entry.getFunctions())
-      AddUint64(Fn);
+
+    ImportedGUIDs.clear();
+    for (auto &[Fn, ImportType] : Entry.getFunctions())
+      ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
+    llvm::sort(ImportedGUIDs);
+    for (auto &[GUID, Type] : ImportedGUIDs) {
+      AddUint64(GUID);
+      AddUint8(Type);
+    }
   }
 
   // Include the hash for the resolved ODR.
@@ -275,9 +287,9 @@ void llvm::computeLTOCacheKey(
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
   for (const ImportModule &ImpM : ImportModulesVector)
-    for (auto &ImpF : ImpM.getFunctions()) {
+    for (auto &[GUID, UnusedImportType] : ImpM.getFunctions()) {
       GlobalValueSummary *S =
-          Index.findSummaryInModule(ImpF, ImpM.getIdentifier());
+          Index.findSummaryInModule(GUID, ImpM.getIdentifier());
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.
@@ -1346,14 +1358,12 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-
-ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
-  return ArrayRef(libcallRoutineNames);
+SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  SmallVector<const char *> LibcallSymbols;
+  copy_if(Libcalls.getLibcallNames(), std::back_inserter(LibcallSymbols),
+          [](const char *Name) { return Name; });
+  return LibcallSymbols;
 }
 
 /// This class defines the interface to the ThinLTO backend.
@@ -1389,15 +1399,20 @@ public:
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    GVSummaryPtrSet DeclarationSummaries;
+
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex,
+                                     DeclarationSummaries);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
+
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                     &DeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",

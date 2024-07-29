@@ -14,10 +14,10 @@ amdpal.pipelines:
       - 0x123456789abcdef0
       - 0xfedcba9876543210
     .registers:      
-      0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0
-      0x2c0b (SPI_SHADER_PGM_RSRC2_PS): 0x42000000
-      0xa1b3 (SPI_PS_INPUT_ENA): 0x1
-      0xa1b4 (SPI_PS_INPUT_ADDR): 0x1
+      '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)': 0
+      '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x42000000
+      '0xa1b3 (SPI_PS_INPUT_ENA)': 0x1
+      '0xa1b4 (SPI_PS_INPUT_ADDR)': 0x1
 ...
 	.end_amdgpu_pal_metadata
 
@@ -34,10 +34,10 @@ amdpal.pipelines:
 // ASM:       - 0x123456789abcdef0
 // ASM:       - 0xfedcba9876543210
 // ASM:     .registers:      
-// ASM:       0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0
-// ASM:       0x2c0b (SPI_SHADER_PGM_RSRC2_PS): 0x42000000
-// ASM:       0xa1b3 (SPI_PS_INPUT_ENA): 0x1
-// ASM:       0xa1b4 (SPI_PS_INPUT_ADDR): 0x1
+// ASM:       '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)': 0
+// ASM:       '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x42000000
+// ASM:       '0xa1b3 (SPI_PS_INPUT_ENA)': 0x1
+// ASM:       '0xa1b4 (SPI_PS_INPUT_ADDR)': 0x1
 // ASM: ...
 // ASM: 	.end_amdgpu_pal_metadata
 

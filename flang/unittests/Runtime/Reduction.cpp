@@ -647,23 +647,24 @@ static std::int32_t IMultiply(const std::int32_t *x, const std::int32_t *y) {
 TEST(Reductions, ReduceInt4) {
   auto intVector{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{4}, std::vector<std::int32_t>{1, 2, 3, 4})};
-  EXPECT_EQ(RTNAME(ReduceInteger4)(*intVector, IAdd, __FILE__, __LINE__), 10);
   EXPECT_EQ(
-      RTNAME(ReduceInteger4)(*intVector, IMultiply, __FILE__, __LINE__), 24);
+      RTNAME(ReduceInteger4Ref)(*intVector, IAdd, __FILE__, __LINE__), 10);
+  EXPECT_EQ(
+      RTNAME(ReduceInteger4Ref)(*intVector, IMultiply, __FILE__, __LINE__), 24);
 }
 TEST(Reductions, ReduceInt4Dim) {
   auto intMatrix{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{2, 2}, std::vector<std::int32_t>{1, 2, 3, 4})};
   StaticDescriptor<1, true> statDesc;
   Descriptor &sums{statDesc.descriptor()};
-  RTNAME(ReduceInteger4Dim)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 1);
+  RTNAME(ReduceInteger4DimRef)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 1);
   EXPECT_EQ(sums.rank(), 1);
   EXPECT_EQ(sums.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(sums.GetDimension(0).Extent(), 2);
   EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(0), 3);
   EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(1), 7);
   sums.Destroy();
-  RTNAME(ReduceInteger4Dim)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 2);
+  RTNAME(ReduceInteger4DimRef)(sums, *intMatrix, IAdd, __FILE__, __LINE__, 2);
   EXPECT_EQ(sums.rank(), 1);
   EXPECT_EQ(sums.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(sums.GetDimension(0).Extent(), 2);

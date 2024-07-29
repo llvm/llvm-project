@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Clang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -166,6 +167,10 @@ if(CLANG_ENABLE_LIBXML2)
 endif()
 
 if(CLANG_ENABLE_CIR)
+  if (CLANG_BUILT_STANDALONE)
+    message(FATAL_ERROR
+      "ClangIR is not yet supported in the standalone build.")
+  endif()
   if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
     message(FATAL_ERROR
       "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
@@ -345,10 +350,9 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 
-  check_cxx_compiler_flag("-Werror -Wnested-anon-types" CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG)
-  if( CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG )
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
-  endif()
+  endif ()
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
@@ -390,7 +394,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Installing the headers needs to depend on generating any public
   # tablegen'd headers.
   add_custom_target(clang-headers DEPENDS clang-tablegen-targets)
-  set_target_properties(clang-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(clang-headers PROPERTIES FOLDER "Clang/Resources")
   if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-clang-headers
                              DEPENDS clang-headers
@@ -398,6 +402,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   endif()
 
   add_custom_target(bash-autocomplete DEPENDS utils/bash-autocomplete.sh)
+  set_target_properties(bash-autocomplete PROPERTIES FOLDER "Clang/Misc")
   install(FILES utils/bash-autocomplete.sh
           DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
           COMPONENT bash-autocomplete)
@@ -478,7 +483,7 @@ add_custom_target(clang-tablegen-targets
   omp_gen
   ClangDriverOptions
   ${CLANG_TABLEGEN_TARGETS})
-set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Misc")
+set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Clang/Tablegenning/Targets")
 list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
 
 # Force target to be built as soon as possible. Clang modules builds depend
@@ -519,6 +524,8 @@ endif()
 
 
 if( CLANG_INCLUDE_TESTS )
+  find_package(Perl)
+
   add_subdirectory(unittests)
   list(APPEND CLANG_TEST_DEPS ClangUnitTests)
   list(APPEND CLANG_TEST_PARAMS
@@ -541,7 +548,7 @@ endif()
 
 # Custom target to install all clang libraries.
 add_custom_target(clang-libraries)
-set_target_properties(clang-libraries PROPERTIES FOLDER "Misc")
+set_target_properties(clang-libraries PROPERTIES FOLDER "Clang/Install")
 
 if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-clang-libraries
@@ -843,23 +850,17 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # Install targets have side effects, so we always want to execute them.
-    # "install" is reserved by CMake and can't be used as a step name for
-    # ExternalProject_Add_Step, so we can match against "^install-" instead of
-    # "^install" to get a tighter match. CMake's installation scripts already
-    # skip up-to-date files, so there's no behavior change if you install to the
-    # same destination multiple times.
-    if(target MATCHES "^install-")
-      set(step_always ON)
-    else()
-      set(step_always OFF)
-    endif()
 
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
-      ALWAYS ${step_always}
+      # We need to set ALWAYS to ON here, otherwise these targets won't be
+      # built on a second invocation of ninja.  The targets have their own
+      # logic to determine if they should build or not so setting ALWAYS ON
+      # here does not mean the targets will always rebuild it just means that
+      # they will check their dependenices and see if they need to be built.
+      ALWAYS ON
       EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )

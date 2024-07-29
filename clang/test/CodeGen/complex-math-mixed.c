@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O0 -triple x86_64-unknown-unknown -fsyntax-only -ast-dump | FileCheck %s --check-prefix=AST
+// RUN: %clang_cc1 %s -O0 -triple x86_64-unknown-unknown -ast-dump | FileCheck %s --check-prefix=AST
 
 // Check that for 'F _Complex + int' (F = real floating-point type), we emit an
 // implicit cast from 'int' to 'F', but NOT to 'F _Complex' (i.e. that we do

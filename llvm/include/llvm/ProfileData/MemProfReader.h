@@ -51,6 +51,12 @@ public:
     return IdToFrame;
   }
 
+  // Return a const reference to the internal Id to call stacks.
+  const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
+  getCallStacks() const {
+    return CSIdToCallStack;
+  }
+
   // Return a const reference to the internal function profile data.
   const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
   getProfileData() const {
@@ -70,20 +76,16 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    auto CallStackCallback = [&](CallStackId CSId) {
-      llvm::SmallVector<Frame> CallStack;
-      auto Iter = CSIdToCallStack.find(CSId);
-      assert(Iter != CSIdToCallStack.end());
-      for (FrameId Id : Iter->second)
-        CallStack.push_back(Callback(Id));
-      return CallStack;
-    };
+    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
+                                                             Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
         Iter->first,
-        IndexedRecord.toMemProfRecord(CallStackCallback),
+        IndexedRecord.toMemProfRecord(CSIdConv),
     };
+    if (CSIdConv.LastUnmappedId)
+      return make_error<InstrProfError>(instrprof_error::hash_mismatch);
     Iter++;
     return Error::success();
   }
@@ -135,7 +137,7 @@ class RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
-  virtual ~RawMemProfReader() override = default;
+  virtual ~RawMemProfReader() override;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);
@@ -159,7 +161,7 @@ public:
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
-  virtual Error
+  Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback) override;
 
@@ -203,8 +205,14 @@ private:
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
 
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+  readMemInfoBlocks(const char *Ptr);
+
   // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
+  // Version of raw memprof binary currently being read. Defaults to most up
+  // to date version.
+  uint64_t MemprofRawVersion = MEMPROF_RAW_VERSION;
   // The preferred load address of the executable segment.
   uint64_t PreferredTextSegmentAddress = 0;
   // The base address of the text segment in the process during profiling.

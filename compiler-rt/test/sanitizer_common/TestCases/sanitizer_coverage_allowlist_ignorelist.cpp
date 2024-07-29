@@ -27,8 +27,8 @@
 // RUN: echo 'section "__sancov_cntrs"'                                                                             >  patterns.txt
 // RUN: echo '%[0-9]\+ = load i8, ptr @__sancov_gen_' >> patterns.txt
 // RUN: echo 'store i8 %[0-9]\+, ptr @__sancov_gen_'  >> patterns.txt
-// RUN: echo '%[0-9]\+ = load i8, ptr getelementptr inbounds (\[[0-9]\+ x i8\], ptr @__sancov_gen_' >> patterns.txt
-// RUN: echo 'store i8 %[0-9]\+, ptr getelementptr inbounds (\[[0-9]\+ x i8\], ptr @__sancov_gen_'  >> patterns.txt
+// RUN: echo '%[0-9]\+ = load i8, ptr getelementptr (\[[0-9]\+ x i8\], ptr @__sancov_gen_' >> patterns.txt
+// RUN: echo 'store i8 %[0-9]\+, ptr getelementptr (\[[0-9]\+ x i8\], ptr @__sancov_gen_'  >> patterns.txt
 
 // Check indirect-calls
 // RUN: echo 'call void @__sanitizer_cov_trace_pc_indir'                                                            >> patterns.txt

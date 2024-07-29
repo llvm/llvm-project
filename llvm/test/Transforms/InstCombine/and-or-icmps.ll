@@ -952,8 +952,8 @@ define i1 @substitute_constant_or_ne_uge_commute_logical(i8 %x, i8 %y) {
 
 ; Negative test - not safe to substitute vector constant with undef element
 
-define <2 x i1> @substitute_constant_or_ne_slt_swap_vec(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec(
+define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_undef(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec_undef(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 42, i8 undef>
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i8> [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[C1]], [[C2]]
@@ -965,14 +965,29 @@ define <2 x i1> @substitute_constant_or_ne_slt_swap_vec(<2 x i8> %x, <2 x i8> %y
   ret <2 x i1> %r
 }
 
+; TODO: The poison case would be valid to fold.
+
+define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec_poison(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 42, i8 poison>
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i8> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c1 = icmp ne <2 x i8> %x, <i8 42, i8 poison>
+  %c2 = icmp slt <2 x i8> %y, %x
+  %r = or <2 x i1> %c1, %c2
+  ret <2 x i1> %r
+}
+
 define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_logical(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec_logical(
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 42, i8 undef>
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 42, i8 poison>
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i8> [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[C2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %c1 = icmp ne <2 x i8> %x, <i8 42, i8 undef>
+  %c1 = icmp ne <2 x i8> %x, <i8 42, i8 poison>
   %c2 = icmp slt <2 x i8> %y, %x
   %r = select <2 x i1> %c1, <2 x i1> <i1 true, i1 true>, <2 x i1> %c2
   ret <2 x i1> %r
@@ -2497,29 +2512,29 @@ define <2 x i1> @icmp_eq_m1_and_eq_m1(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 undef>
-  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 undef>
+  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 poison>
+  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 poison>
   %r = and <2 x i1> %rx, %ry
   ret <2 x i1> %r
 }
 
-define <2 x i1> @icmp_eq_m1_and_eq_undef_m1(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @icmp_eq_m1_and_eq_undef_m1(
+define <2 x i1> @icmp_eq_m1_and_eq_poison_m1(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_eq_m1_and_eq_poison_m1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 undef>
-  %ry = icmp eq <2 x i8> %y, <i8 undef, i8 -1>
+  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 poison>
+  %ry = icmp eq <2 x i8> %y, <i8 poison, i8 -1>
   %r = and <2 x i1> %rx, %ry
   ret <2 x i1> %r
 }
 
-define <2 x i1> @icmp_eq_undef_and_eq_m1_m2(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @icmp_eq_undef_and_eq_m1_m2(
-; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+define <2 x i1> @icmp_eq_poison_and_eq_m1_m2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_eq_poison_and_eq_m1_m2(
+; CHECK-NEXT:    ret <2 x i1> poison
 ;
-  %rx = icmp eq <2 x i8> %x, <i8 undef, i8 undef>
+  %rx = icmp eq <2 x i8> %x, <i8 poison, i8 poison>
   %ry = icmp eq <2 x i8> %y, <i8 -1, i8 -2>
   %r = and <2 x i1> %rx, %ry
   ret <2 x i1> %r
@@ -2527,13 +2542,13 @@ define <2 x i1> @icmp_eq_undef_and_eq_m1_m2(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i1> @icmp_ne_m1_and_ne_m1_fail(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_ne_m1_and_ne_m1_fail(
-; CHECK-NEXT:    [[RX:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
-; CHECK-NEXT:    [[RY:%.*]] = icmp ne <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[RX:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -1, i8 poison>
+; CHECK-NEXT:    [[RY:%.*]] = icmp ne <2 x i8> [[Y:%.*]], <i8 -1, i8 poison>
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[RX]], [[RY]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %rx = icmp ne <2 x i8> %x, <i8 -1, i8 undef>
-  %ry = icmp ne <2 x i8> %y, <i8 -1, i8 undef>
+  %rx = icmp ne <2 x i8> %x, <i8 -1, i8 poison>
+  %ry = icmp ne <2 x i8> %y, <i8 -1, i8 poison>
   %r = and <2 x i1> %rx, %ry
   ret <2 x i1> %r
 }
@@ -2541,13 +2556,13 @@ define <2 x i1> @icmp_ne_m1_and_ne_m1_fail(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i1> @icmp_eq_m1_or_eq_m1_fail(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_eq_m1_or_eq_m1_fail(
-; CHECK-NEXT:    [[RX:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
-; CHECK-NEXT:    [[RY:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[RX:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 poison>
+; CHECK-NEXT:    [[RY:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 -1, i8 poison>
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[RX]], [[RY]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 undef>
-  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 undef>
+  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 poison>
+  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 poison>
   %r = or <2 x i1> %rx, %ry
   ret <2 x i1> %r
 }
@@ -2560,7 +2575,7 @@ define <2 x i1> @icmp_ne_m1_or_ne_m1(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rx = icmp ne <2 x i8> %x, <i8 -1, i8 -1>
-  %ry = icmp ne <2 x i8> %y, <i8 -1, i8 undef>
+  %ry = icmp ne <2 x i8> %y, <i8 -1, i8 poison>
   %r = or <2 x i1> %rx, %ry
   ret <2 x i1> %r
 }
@@ -3042,9 +3057,9 @@ define i32 @icmp_slt_0_or_icmp_add_1_sge_100_i32_fail(i32 %x) {
 define i1 @logical_and_icmps1(i32 %a, i1 %other_cond) {
 ; CHECK-LABEL: @logical_and_icmps1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[A:%.*]], 10086
-; CHECK-NEXT:    [[RET2:%.*]] = select i1 [[RET1:%.*]], i1 [[CMP3]], i1 false
-; CHECK-NEXT:    ret i1 [[RET2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[A:%.*]], 10086
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OTHER_COND:%.*]], i1 [[TMP0]], i1 false
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   %cmp1 = icmp sgt i32 %a, -1
@@ -3070,9 +3085,9 @@ entry:
 define <4 x i1> @logical_and_icmps_vec1(<4 x i32> %a, <4 x i1> %other_cond) {
 ; CHECK-LABEL: @logical_and_icmps_vec1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult <4 x i32> [[A:%.*]], <i32 10086, i32 10086, i32 10086, i32 10086>
-; CHECK-NEXT:    [[RET2:%.*]] = select <4 x i1> [[RET1:%.*]], <4 x i1> [[CMP3]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    ret <4 x i1> [[RET2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i32> [[A:%.*]], <i32 10086, i32 10086, i32 10086, i32 10086>
+; CHECK-NEXT:    [[RET:%.*]] = select <4 x i1> [[OTHER_COND:%.*]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[RET]]
 ;
 entry:
   %cmp1 = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1 >
@@ -3097,4 +3112,223 @@ entry:
   %cmp2 = icmp slt i32 %a, %b
   %ret = select i1 %logical_and, i1 %cmp2, i1 false
   ret i1 %ret
+}
+
+
+define i1 @icmp_eq_or_z_or_pow2orz(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[POW2ORZ]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 0
+  %cp2 = icmp eq i8 %x, %pow2orz
+  %r = or i1 %cp2, %c0
+  ret i1 %r
+}
+
+
+define i1 @icmp_eq_or_z_or_pow2orz_logical(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz_logical(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[POW2ORZ]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 0
+  %cp2 = icmp eq i8 %x, %pow2orz
+  %r = select i1 %cp2, i1 true, i1 %c0
+  ret i1 %r
+}
+
+
+
+define i1 @icmp_eq_or_z_or_pow2orz_fail_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz_fail_multiuse(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CP2:%.*]] = icmp eq i8 [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C0]])
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[C0]], [[CP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 0
+  %cp2 = icmp eq i8 %x, %pow2orz
+  call void @use(i1 %c0)
+  %r = or i1 %c0, %cp2
+  ret i1 %r
+}
+
+
+define i1 @icmp_eq_or_z_or_pow2orz_fail_logic_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz_fail_logic_or(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CP2:%.*]] = icmp eq i8 [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C0]], i1 true, i1 [[CP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 0
+  %cp2 = icmp eq i8 %x, %pow2orz
+  %r = select i1 %c0, i1 true, i1 %cp2
+  ret i1 %r
+}
+
+
+define <2 x i1> @icmp_ne_and_z_and_pow2orz(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_ne_and_z_and_pow2orz(
+; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and <2 x i8> [[NY]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[POW2ORZ]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[TMP1]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ny = sub <2 x i8> zeroinitializer, %y
+  %pow2orz = and <2 x i8> %ny, %y
+
+  %c0 = icmp ne <2 x i8> %x, zeroinitializer
+  %cp2 = icmp ne <2 x i8> %x, %pow2orz
+  %r = and <2 x i1> %c0, %cp2
+  ret <2 x i1> %r
+}
+
+
+define i1 @icmp_ne_and_z_and_onefail(i8 %x) {
+; CHECK-LABEL: @icmp_ne_and_z_and_onefail(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %c0 = icmp ne i8 %x, 0
+  %cp2 = icmp ne i8 %x, 1
+  %cp3 = icmp ne i8 %x, 2
+  %rr = and i1 %c0, %cp2
+  %r = and i1 %rr, %cp3
+  ret i1 %r
+}
+
+define i1 @icmp_ne_and_z_and_pow2orz_fail_multiuse1(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_ne_and_z_and_pow2orz_fail_multiuse1(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CP2:%.*]] = icmp eq i8 [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C0]])
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[C0]], [[CP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 0
+  %cp2 = icmp eq i8 %x, %pow2orz
+  call void @use(i1 %c0)
+  %r = or i1 %c0, %cp2
+  ret i1 %r
+}
+
+
+define <2 x i1> @icmp_ne_and_z_and_pow2orz_fail_logic_and(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_ne_and_z_and_pow2orz_fail_logic_and(
+; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and <2 x i8> [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CP2:%.*]] = icmp ne <2 x i8> [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C0]], <2 x i1> [[CP2]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ny = sub <2 x i8> zeroinitializer, %y
+  %pow2orz = and <2 x i8> %ny, %y
+
+  %c0 = icmp ne <2 x i8> %x, zeroinitializer
+  %cp2 = icmp ne <2 x i8> %x, %pow2orz
+  %r = select <2 x i1> %c0, <2 x i1> %cp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %r
+}
+
+define i1 @icmp_eq_or_z_or_pow2orz_fail_not_pow2(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz_fail_not_pow2(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CP2:%.*]] = icmp eq i8 [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[C0]], [[CP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 1, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 0
+  %cp2 = icmp eq i8 %x, %pow2orz
+  %r = or i1 %c0, %cp2
+  ret i1 %r
+}
+
+define i1 @icmp_eq_or_z_or_pow2orz_fail_nonzero_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz_fail_nonzero_const(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CP2:%.*]] = icmp eq i8 [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[C0]], [[CP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp eq i8 %x, 1
+  %cp2 = icmp eq i8 %x, %pow2orz
+  %r = or i1 %c0, %cp2
+  ret i1 %r
+}
+
+define <2 x i1> @icmp_ne_and_z_and_pow2orz_fail_bad_pred(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_ne_and_z_and_pow2orz_fail_bad_pred(
+; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and <2 x i8> [[NY]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[POW2ORZ]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ny = sub <2 x i8> zeroinitializer, %y
+  %pow2orz = and <2 x i8> %ny, %y
+
+  %c0 = icmp eq <2 x i8> %x, zeroinitializer
+  %cp2 = icmp eq <2 x i8> %x, %pow2orz
+  %r = and <2 x i1> %c0, %cp2
+  ret <2 x i1> %r
+}
+
+define i1 @icmp_eq_or_z_or_pow2orz_fail_bad_pred2(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_or_z_or_pow2orz_fail_bad_pred2(
+; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2ORZ:%.*]] = and i8 [[NY]], [[Y]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CP2:%.*]] = icmp sge i8 [[POW2ORZ]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[C0]], [[CP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ny = sub i8 0, %y
+  %pow2orz = and i8 %ny, %y
+
+  %c0 = icmp sle i8 %x, 0
+  %cp2 = icmp sle i8 %x, %pow2orz
+  %r = or i1 %c0, %cp2
+  ret i1 %r
 }

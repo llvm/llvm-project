@@ -5,6 +5,7 @@
 
 ; Should be no changes without profile data
 ; RUN: opt < %s -passes=pgo-force-function-attrs                                  -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=NONE,CHECK
+; RUN: opt < %s -passes='default<O2>' -enable-pgo-force-function-attrs            -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=O2
 
 ; NONE-NOT: Function Attrs:
 ; OPTSIZE: Function Attrs: optsize{{$}}
@@ -36,6 +37,9 @@
 ; CHECK-NOT: Function Attrs: {{.*}}optsize
 ; CHECK-NOT: Function Attrs: {{.*}}minsize
 ; CHECK-NOT: Function Attrs: {{.*}}optnone
+
+; O2: define void @cold_attr(){{.*}} #[[ATTR:[0-9]+]]
+; O2-NOT: #[[ATTR]] = {{.*}}minsize
 
 @s = global i32 0
 

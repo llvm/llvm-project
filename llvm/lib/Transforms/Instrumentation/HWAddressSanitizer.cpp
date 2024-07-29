@@ -53,6 +53,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -293,8 +294,8 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng =
-        ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
+    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+                                                     : nullptr;
 
     initializeModule();
   }
@@ -336,13 +337,17 @@ private:
                                  unsigned AccessSizeIndex,
                                  Instruction *InsertBefore, DomTreeUpdater &DTU,
                                  LoopInfo *LI);
-  bool ignoreMemIntrinsic(MemIntrinsic *MI);
+  bool ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE, MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater &DTU,
                            LoopInfo *LI);
-  bool ignoreAccess(Instruction *Inst, Value *Ptr);
+  bool ignoreAccessWithoutRemark(Instruction *Inst, Value *Ptr);
+  bool ignoreAccess(OptimizationRemarkEmitter &ORE, Instruction *Inst,
+                    Value *Ptr);
+
   void getInterestingMemoryOperands(
-      Instruction *I, const TargetLibraryInfo &TLI,
+      OptimizationRemarkEmitter &ORE, Instruction *I,
+      const TargetLibraryInfo &TLI,
       SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
@@ -764,7 +769,8 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
   return IRB.CreateLoad(PtrTy, GlobalDynamicAddress);
 }
 
-bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
+bool HWAddressSanitizer::ignoreAccessWithoutRemark(Instruction *Inst,
+                                                   Value *Ptr) {
   // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
   Type *PtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
@@ -794,8 +800,23 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   return false;
 }
 
+bool HWAddressSanitizer::ignoreAccess(OptimizationRemarkEmitter &ORE,
+                                      Instruction *Inst, Value *Ptr) {
+  bool Ignored = ignoreAccessWithoutRemark(Inst, Ptr);
+  if (Ignored) {
+    ORE.emit(
+        [&]() { return OptimizationRemark(DEBUG_TYPE, "ignoreAccess", Inst); });
+  } else {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "ignoreAccess", Inst);
+    });
+  }
+  return Ignored;
+}
+
 void HWAddressSanitizer::getInterestingMemoryOperands(
-    Instruction *I, const TargetLibraryInfo &TLI,
+    OptimizationRemarkEmitter &ORE, Instruction *I,
+    const TargetLibraryInfo &TLI,
     SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   // Skip memory accesses inserted by another instrumentation.
   if (I->hasMetadata(LLVMContext::MD_nosanitize))
@@ -806,22 +827,22 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(I, LI->getPointerOperand()))
+    if (!ClInstrumentReads || ignoreAccess(ORE, I, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(I, SI->getPointerOperand()))
+    if (!ClInstrumentWrites || ignoreAccess(ORE, I, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(I, RMW->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(ORE, I, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), std::nullopt);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(I, XCHG->getPointerOperand()))
+    if (!ClInstrumentAtomics || ignoreAccess(ORE, I, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(),
@@ -829,7 +850,7 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
       if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
-          ignoreAccess(I, CI->getArgOperand(ArgNo)))
+          ignoreAccess(ORE, I, CI->getArgOperand(ArgNo)))
         continue;
       Type *Ty = CI->getParamByValType(ArgNo);
       Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
@@ -911,7 +932,7 @@ HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
 
   R.TagMismatchTerm = SplitBlockAndInsertIfThen(
       TagMismatch, InsertBefore, false,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   return R;
 }
@@ -930,11 +951,33 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  IRB.CreateCall(Intrinsic::getDeclaration(
-                     M, UseShortGranules
-                            ? Intrinsic::hwasan_check_memaccess_shortgranules
-                            : Intrinsic::hwasan_check_memaccess),
-                 {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+  bool useFixedShadowIntrinsic = false;
+  // The memaccess fixed shadow intrinsic is only supported on AArch64,
+  // which allows a 16-bit immediate to be left-shifted by 32.
+  // Since kShadowBaseAlignment == 32, and Linux by default will not
+  // mmap above 48-bits, practically any valid shadow offset is
+  // representable.
+  // In particular, an offset of 4TB (1024 << 32) is representable, and
+  // ought to be good enough for anybody.
+  if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
+    uint16_t offset_shifted = Mapping.Offset >> 32;
+    useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
+  }
+
+  if (useFixedShadowIntrinsic)
+    IRB.CreateCall(
+        Intrinsic::getDeclaration(
+            M, UseShortGranules
+                   ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
+                   : Intrinsic::hwasan_check_memaccess_fixedshadow),
+        {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
+         ConstantInt::get(Int64Ty, Mapping.Offset)});
+  else
+    IRB.CreateCall(Intrinsic::getDeclaration(
+                       M, UseShortGranules
+                              ? Intrinsic::hwasan_check_memaccess_shortgranules
+                              : Intrinsic::hwasan_check_memaccess),
+                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
@@ -952,7 +995,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       IRB.CreateICmpUGT(TCI.MemTag, ConstantInt::get(Int8Ty, 15));
   Instruction *CheckFailTerm = SplitBlockAndInsertIfThen(
       OutOfShortGranuleTagRange, TCI.TagMismatchTerm, !Recover,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *PtrLowBits = IRB.CreateTrunc(IRB.CreateAnd(TCI.PtrLong, 15), Int8Ty);
@@ -960,7 +1003,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       PtrLowBits, ConstantInt::get(Int8Ty, (1 << AccessSizeIndex) - 1));
   Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, TCI.MemTag);
   SplitBlockAndInsertIfThen(PtrLowBitsOOB, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
@@ -969,7 +1012,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
   Value *InlineTagMismatch = IRB.CreateICmpNE(TCI.PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckFailTerm);
@@ -1012,13 +1055,14 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
         ->setSuccessor(0, TCI.TagMismatchTerm->getParent());
 }
 
-bool HWAddressSanitizer::ignoreMemIntrinsic(MemIntrinsic *MI) {
+bool HWAddressSanitizer::ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE,
+                                            MemIntrinsic *MI) {
   if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
-    return (!ClInstrumentWrites || ignoreAccess(MTI, MTI->getDest())) &&
-           (!ClInstrumentReads || ignoreAccess(MTI, MTI->getSource()));
+    return (!ClInstrumentWrites || ignoreAccess(ORE, MTI, MTI->getDest())) &&
+           (!ClInstrumentReads || ignoreAccess(ORE, MTI, MTI->getSource()));
   }
   if (isa<MemSetInst>(MI))
-    return !ClInstrumentWrites || ignoreAccess(MI, MI->getDest());
+    return !ClInstrumentWrites || ignoreAccess(ORE, MI, MI->getDest());
   return false;
 }
 
@@ -1249,6 +1293,9 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
   // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
   //       0xFFFFPPPPPPPPPPPP
+  //
+  // FP works because in AArch64FrameLowering::getFrameIndexReference, we
+  // prefer FP-relative offsets for functions compiled with HWASan.
   FP = IRB.CreateShl(FP, 44);
   return IRB.CreateOr(PC, FP);
 }
@@ -1363,14 +1410,6 @@ bool HWAddressSanitizer::instrumentLandingPads(
   return true;
 }
 
-static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
-  return dyn_cast<DbgAssignIntrinsic>(DVI);
-}
-
-static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
-  return DVR->isDbgAssign() ? DVR : nullptr;
-}
-
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
@@ -1426,28 +1465,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
              !memtag::isLifetimeIntrinsic(User);
     });
 
-    // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-    // abstracted over whether they're intrinsic-stored or DbgVariableRecord
-    // stored.
-    auto AnnotateDbgRecord = [&](auto *DPtr) {
-      // Prepend "tag_offset, N" to the dwarf expression.
-      // Tag offset logically applies to the alloca pointer, and it makes sense
-      // to put it at the beginning of the expression.
-      SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
-                                         retagMask(N)};
-      for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
-        if (DPtr->getVariableLocationOp(LocNo) == AI)
-          DPtr->setExpression(DIExpression::appendOpsToArg(
-              DPtr->getExpression(), NewOps, LocNo));
-      if (auto *DAI = DynCastToDbgAssign(DPtr)) {
-        if (DAI->getAddress() == AI)
-          DAI->setAddressExpression(DIExpression::prependOpcodes(
-              DAI->getAddressExpression(), NewOps));
-      }
-    };
-
-    llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
-    llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
+    memtag::annotateDebugRecords(Info, retagMask(N));
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
@@ -1510,11 +1528,7 @@ static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
 
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
-  bool Skip = [&]() {
-    if (ClRandomSkipRate.getNumOccurrences()) {
-      std::bernoulli_distribution D(ClRandomSkipRate);
-      return !D(*Rng);
-    }
+  auto SkipHot = [&]() {
     if (!ClHotPercentileCutoff.getNumOccurrences())
       return false;
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -1526,7 +1540,16 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     }
     return PSI->isFunctionHotInCallGraphNthPercentile(
         ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
-  }();
+  };
+
+  auto SkipRandom = [&]() {
+    if (!ClRandomSkipRate.getNumOccurrences())
+      return false;
+    std::bernoulli_distribution D(ClRandomSkipRate);
+    return !D(*Rng);
+  };
+
+  bool Skip = SkipRandom() || SkipHot();
   emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
   return Skip;
 }
@@ -1543,6 +1566,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   NumTotalFuncs++;
+
+  OptimizationRemarkEmitter &ORE =
+      FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
@@ -1565,10 +1591,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
       LandingPadVec.push_back(&Inst);
 
-    getInterestingMemoryOperands(&Inst, TLI, OperandsToInstrument);
+    getInterestingMemoryOperands(ORE, &Inst, TLI, OperandsToInstrument);
 
     if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
-      if (!ignoreMemIntrinsic(MI))
+      if (!ignoreMemIntrinsic(ORE, MI))
         IntrinToInstrument.push_back(MI);
   }
 
@@ -1591,6 +1617,14 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   assert(!ShadowBase);
+
+  // Remove memory attributes that are about to become invalid.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  F.removeFnAttr(llvm::Attribute::Memory);
+  for (auto &A : F.args())
+    A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);

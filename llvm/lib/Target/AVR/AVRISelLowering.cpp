@@ -199,22 +199,6 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
     // improvements in how we treat 16-bit "registers" to be feasible.
   }
 
-  // Division rtlib functions (not supported), use divmod functions instead
-  setLibcallName(RTLIB::SDIV_I8, nullptr);
-  setLibcallName(RTLIB::SDIV_I16, nullptr);
-  setLibcallName(RTLIB::SDIV_I32, nullptr);
-  setLibcallName(RTLIB::UDIV_I8, nullptr);
-  setLibcallName(RTLIB::UDIV_I16, nullptr);
-  setLibcallName(RTLIB::UDIV_I32, nullptr);
-
-  // Modulus rtlib functions (not supported), use divmod functions instead
-  setLibcallName(RTLIB::SREM_I8, nullptr);
-  setLibcallName(RTLIB::SREM_I16, nullptr);
-  setLibcallName(RTLIB::SREM_I32, nullptr);
-  setLibcallName(RTLIB::UREM_I8, nullptr);
-  setLibcallName(RTLIB::UREM_I16, nullptr);
-  setLibcallName(RTLIB::UREM_I32, nullptr);
-
   // Division and modulus rtlib functions
   setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
   setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
@@ -1246,11 +1230,11 @@ static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = ArrayRef(RegList8Tiny, std::size(RegList8Tiny));
-    RegList16 = ArrayRef(RegList16Tiny, std::size(RegList16Tiny));
+    RegList8 = ArrayRef(RegList8Tiny);
+    RegList16 = ArrayRef(RegList16Tiny);
   } else {
-    RegList8 = ArrayRef(RegList8AVR, std::size(RegList8AVR));
-    RegList16 = ArrayRef(RegList16AVR, std::size(RegList16AVR));
+    RegList8 = ArrayRef(RegList8AVR);
+    RegList16 = ArrayRef(RegList16AVR);
   }
 
   unsigned NumArgs = Args.size();
@@ -1346,11 +1330,11 @@ static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = ArrayRef(RegList8Tiny, std::size(RegList8Tiny));
-    RegList16 = ArrayRef(RegList16Tiny, std::size(RegList16Tiny));
+    RegList8 = ArrayRef(RegList8Tiny);
+    RegList16 = ArrayRef(RegList16Tiny);
   } else {
-    RegList8 = ArrayRef(RegList8AVR, std::size(RegList8AVR));
-    RegList16 = ArrayRef(RegList16AVR, std::size(RegList16AVR));
+    RegList8 = ArrayRef(RegList8AVR);
+    RegList16 = ArrayRef(RegList16AVR);
   }
 
   // GCC-ABI says that the size is rounded up to the next even number,

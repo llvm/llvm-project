@@ -11,6 +11,9 @@ end
 ! Try to test that -fconvert=<value> flag results in a environment default list
 ! with the FORT_CONVERT option correctly specified.
 
+! ALL:  %0 = fir.address_of(@_QQEnvironmentDefaults.list) : !fir.ref<tuple<i32, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
+! ALL: fir.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %0)
+
 ! ALL: fir.global linkonce @_QQEnvironmentDefaults.items constant : !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>> {
 ! ALL: %[[VAL_0:.*]] = fir.undefined !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>
 ! ALL: %[[VAL_1:.*]] = fir.address_of(@[[FC_STR:.*]]) : !fir.ref<!fir.char<1,13>>
@@ -41,6 +44,3 @@ end
 ! ALL: %[[VAL_4:.*]] = fir.insert_value %[[VAL_2]], %[[VAL_3]], [1 : index] : (tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>) -> tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>
 ! ALL: fir.has_value %[[VAL_4]] : tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>
 
-! ALL: fir.global @_QQEnvironmentDefaults constant : !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>> {
-! ALL: %[[VAL_0:.*]] = fir.address_of(@_QQEnvironmentDefaults.list) : !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
-! ALL: fir.has_value %[[VAL_0]] : !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>

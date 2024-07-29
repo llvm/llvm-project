@@ -49,7 +49,13 @@ bool getNoDeprecatedWarn();
 
 bool getNoTypeCheck();
 
+bool getSaveTempLabels();
+
+bool getCrel();
+
 bool getX86RelaxRelocations();
+
+bool getX86Sse2Avx();
 
 std::string getABIName();
 

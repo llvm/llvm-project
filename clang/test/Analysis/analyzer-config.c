@@ -9,10 +9,7 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
 // CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
-// CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
-// CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
-// CHECK-NEXT: alpha.unix.Stream:Pedantic = false
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: assume-controlled-environment = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
@@ -44,6 +41,9 @@
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
+// CHECK-NEXT: crosscheck-with-z3-eqclass-timeout-threshold = 700
+// CHECK-NEXT: crosscheck-with-z3-rlimit-threshold = 400000
+// CHECK-NEXT: crosscheck-with-z3-timeout-threshold = 300
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-cpp-threshold = 8
 // CHECK-NEXT: ctu-import-threshold = 24
@@ -131,6 +131,7 @@
 // CHECK-NEXT: unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
 // CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = true
+// CHECK-NEXT: unix.Stream:Pedantic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

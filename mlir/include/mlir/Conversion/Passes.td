@@ -32,6 +32,29 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
+  let summary = "Convert to SPIR-V";
+  let description = [{
+    This is a generic pass to convert to SPIR-V.
+  }];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "vector::VectorDialect",
+  ];
+  let options = [
+    Option<"runSignatureConversion", "run-signature-conversion", "bool",
+    /*default=*/"true",
+    "Run function signature conversion to convert vector types">,
+    Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
+    /*default=*/"true",
+    "Run vector unrolling to convert vector types in function bodies">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 
@@ -478,11 +501,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
-           >,
-    Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
-               /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
-               "Annotation attribute string for GPU binary"
-               >
+          >
   ];
 
   let dependentDialects = [
@@ -506,6 +525,24 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
   }];
 
   let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// GPUToLLVMSPV
+//===----------------------------------------------------------------------===//
+
+def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleOp"> {
+  let summary =
+    "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
+  let dependentDialects = [
+    "LLVM::LLVMDialect",
+    "spirv::SPIRVDialect",
+  ];
+  let options = [
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -704,6 +741,23 @@ def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
   let options = [
     Option<"approximateLog1p", "approximate-log1p", "bool", "true",
            "Enable approximation of Log1p.">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToLibm
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
+  let summary = "Convert Math dialect to ROCDL library calls";
+  let description = [{
+    This pass converts supported Math ops to ROCDL library calls.
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "func::FuncDialect",
+    "ROCDL::ROCDLDialect",
+    "vector::VectorDialect",
   ];
 }
 
@@ -1262,7 +1316,7 @@ def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.
   }];
-  let dependentDialects = ["arm_sme::ArmSMEDialect"];
+  let dependentDialects = ["arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1285,13 +1339,18 @@ def ConvertArmSMEToSCF : Pass<"convert-arm-sme-to-scf"> {
 // ArmSMEToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertArmSMEToLLVM : Pass<"convert-arm-sme-to-llvm"> {
+def ConvertArmSMEToLLVM : InterfacePass<"convert-arm-sme-to-llvm", "FunctionOpInterface"> {
   let summary = "Lower the operations from the ArmSME dialect into the LLVM "
                 "dialect";
   let constructor = "mlir::createConvertArmSMEToLLVMPass()";
   let dependentDialects = [
     "arm_sme::ArmSMEDialect",
     "LLVM::LLVMDialect"
+  ];
+  let options = [
+    Option<"dumpTileLiveRanges", "dump-tile-live-ranges",
+           "bool", /*default=*/"false",
+           "Dump the live ranges of SME tiles (for debugging)">
   ];
 }
 

@@ -17,11 +17,11 @@ define <2 x i32> @zero_dividend_vector(<2 x i32> %A) {
   ret <2 x i32> %B
 }
 
-define <2 x i32> @zero_dividend_vector_undef_elt(<2 x i32> %A) {
-; CHECK-LABEL: @zero_dividend_vector_undef_elt(
+define <2 x i32> @zero_dividend_vector_poison_elt(<2 x i32> %A) {
+; CHECK-LABEL: @zero_dividend_vector_poison_elt(
 ; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
-  %B = sdiv <2 x i32> <i32 0, i32 undef>, %A
+  %B = sdiv <2 x i32> <i32 0, i32 poison>, %A
   ret <2 x i32> %B
 }
 
@@ -59,23 +59,23 @@ define <2 x i8> @udiv_zero_elt_vec(<2 x i8> %x) {
   ret <2 x i8> %div
 }
 
-define <2 x i8> @sdiv_undef_elt_vec(<2 x i8> %x) {
-; CHECK-LABEL: @sdiv_undef_elt_vec(
+define <2 x i8> @sdiv_poison_elt_vec(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_poison_elt_vec(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
-  %div = sdiv <2 x i8> %x, <i8 -42, i8 undef>
+  %div = sdiv <2 x i8> %x, <i8 -42, i8 poison>
   ret <2 x i8> %div
 }
 
-define <2 x i8> @udiv_undef_elt_vec(<2 x i8> %x) {
-; CHECK-LABEL: @udiv_undef_elt_vec(
+define <2 x i8> @udiv_poison_elt_vec(<2 x i8> %x) {
+; CHECK-LABEL: @udiv_poison_elt_vec(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
-  %div = udiv <2 x i8> %x, <i8 undef, i8 42>
+  %div = udiv <2 x i8> %x, <i8 poison, i8 42>
   ret <2 x i8> %div
 }
 
-; Division-by-zero is undef. UB in any vector lane means the whole op is undef.
+; Division-by-zero is poison. UB in any vector lane means the whole op is poison.
 ; Thus, we can simplify this: if any element of 'y' is 0, we can do anything.
 ; Therefore, assume that all elements of 'y' must be 1.
 

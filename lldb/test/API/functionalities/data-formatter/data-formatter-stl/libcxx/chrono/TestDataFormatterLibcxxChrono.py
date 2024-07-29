@@ -14,6 +14,7 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
+        isNotWindowsHost = lldbplatformutil.getHostPlatform() != "windows"
         self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
@@ -57,7 +58,11 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ss_neg_date_time",
             substrs=[
-                "ss_neg_date_time = date/time=-32767-01-01T00:00:00Z timestamp=-1096193779200 s"
+                (
+                    "ss_neg_date_time = date/time=-32767-01-01T00:00:00Z timestamp=-1096193779200 s"
+                    if isNotWindowsHost
+                    else "ss_neg_date_time = timestamp=-1096193779200 s"
+                )
             ],
         )
         self.expect(
@@ -68,7 +73,11 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ss_pos_date_time",
             substrs=[
-                "ss_pos_date_time = date/time=32767-12-31T23:59:59Z timestamp=971890963199 s"
+                (
+                    "ss_pos_date_time = date/time=32767-12-31T23:59:59Z timestamp=971890963199 s"
+                    if isNotWindowsHost
+                    else "ss_pos_date_time = timestamp=971890963199 s"
+                )
             ],
         )
         self.expect(
@@ -103,7 +112,13 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         )
         self.expect(
             "frame variable sd_neg_date",
-            substrs=["sd_neg_date = date=-32767-01-01Z timestamp=-12687428 days"],
+            substrs=[
+                (
+                    "sd_neg_date = date=-32767-01-01Z timestamp=-12687428 days"
+                    if isNotWindowsHost
+                    else "sd_neg_date = timestamp=-12687428 days"
+                )
+            ],
         )
         self.expect(
             "frame variable sd_neg_days",
@@ -112,7 +127,13 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
 
         self.expect(
             "frame variable sd_pos_date",
-            substrs=["sd_pos_date = date=32767-12-31Z timestamp=11248737 days"],
+            substrs=[
+                (
+                    "sd_pos_date = date=32767-12-31Z timestamp=11248737 days"
+                    if isNotWindowsHost
+                    else "sd_pos_date = timestamp=11248737 days"
+                )
+            ],
         )
         self.expect(
             "frame variable sd_pos_days",
@@ -157,7 +178,11 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ls_neg_date_time",
             substrs=[
-                "ls_neg_date_time = date/time=-32767-01-01T00:00:00 timestamp=-1096193779200 s"
+                (
+                    "ls_neg_date_time = date/time=-32767-01-01T00:00:00 timestamp=-1096193779200 s"
+                    if isNotWindowsHost
+                    else "ls_neg_date_time = timestamp=-1096193779200 s"
+                )
             ],
         )
         self.expect(
@@ -168,7 +193,11 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ls_pos_date_time",
             substrs=[
-                "ls_pos_date_time = date/time=32767-12-31T23:59:59 timestamp=971890963199 s"
+                (
+                    "ls_pos_date_time = date/time=32767-12-31T23:59:59 timestamp=971890963199 s"
+                    if isNotWindowsHost
+                    else "ls_pos_date_time = timestamp=971890963199 s"
+                )
             ],
         )
         self.expect(
@@ -207,7 +236,13 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         )
         self.expect(
             "frame variable ld_neg_date",
-            substrs=["ld_neg_date = date=-32767-01-01 timestamp=-12687428 days"],
+            substrs=[
+                (
+                    "ld_neg_date = date=-32767-01-01 timestamp=-12687428 days"
+                    if isNotWindowsHost
+                    else "ld_neg_date = timestamp=-12687428 days"
+                )
+            ],
         )
         self.expect(
             "frame variable ld_neg_days",
@@ -216,7 +251,13 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
 
         self.expect(
             "frame variable ld_pos_date",
-            substrs=["ld_pos_date = date=32767-12-31 timestamp=11248737 days"],
+            substrs=[
+                (
+                    "ld_pos_date = date=32767-12-31 timestamp=11248737 days"
+                    if isNotWindowsHost
+                    else "ld_pos_date = timestamp=11248737 days"
+                )
+            ],
         )
         self.expect(
             "frame variable ld_pos_days",

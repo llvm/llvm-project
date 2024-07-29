@@ -84,7 +84,7 @@ namespace {
 
     void PrintStmt(Stmt *S, int SubIndent) {
       IndentLevel += SubIndent;
-      if (S && isa<Expr>(S)) {
+      if (isa_and_nonnull<Expr>(S)) {
         // If this is an expr used in a stmt context, indent and newline it.
         Indent();
         Visit(S);
@@ -763,6 +763,16 @@ void StmtPrinter::VisitOMPUnrollDirective(OMPUnrollDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
+  Indent() << "#pragma omp reverse";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
+  Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
   Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);
@@ -1148,11 +1158,25 @@ void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
 
   if (!S->clauses().empty()) {
     OS << ' ';
-    OpenACCClausePrinter Printer(OS);
+    OpenACCClausePrinter Printer(OS, Policy);
     Printer.VisitClauseList(S->clauses());
   }
+  OS << '\n';
 
   PrintStmt(S->getStructuredBlock());
+}
+
+void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
+  Indent() << "#pragma acc loop";
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+
+  PrintStmt(S->getLoop());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1161,6 +1185,10 @@ void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
 
 void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
   OS << Node->getBuiltinStr() << "()";
+}
+
+void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
+  llvm::report_fatal_error("Not implemented");
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
@@ -1521,7 +1549,7 @@ void StmtPrinter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *Node) {
   OS << "]";
 }
 
-void StmtPrinter::VisitOMPArraySectionExpr(OMPArraySectionExpr *Node) {
+void StmtPrinter::VisitArraySectionExpr(ArraySectionExpr *Node) {
   PrintExpr(Node->getBase());
   OS << "[";
   if (Node->getLowerBound())
@@ -1531,7 +1559,7 @@ void StmtPrinter::VisitOMPArraySectionExpr(OMPArraySectionExpr *Node) {
     if (Node->getLength())
       PrintExpr(Node->getLength());
   }
-  if (Node->getColonLocSecond().isValid()) {
+  if (Node->isOMPArraySection() && Node->getColonLocSecond().isValid()) {
     OS << ":";
     if (Node->getStride())
       PrintExpr(Node->getStride());
@@ -1925,7 +1953,7 @@ void StmtPrinter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *Node) {
 void StmtPrinter::VisitCXXMemberCallExpr(CXXMemberCallExpr *Node) {
   // If we have a conversion operator call only print the argument.
   CXXMethodDecl *MD = Node->getMethodDecl();
-  if (MD && isa<CXXConversionDecl>(MD)) {
+  if (isa_and_nonnull<CXXConversionDecl>(MD)) {
     PrintExpr(Node->getImplicitObjectArgument());
     return;
   }

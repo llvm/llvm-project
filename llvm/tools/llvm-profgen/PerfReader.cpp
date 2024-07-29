@@ -41,6 +41,21 @@ static cl::opt<bool>
                                 "and produce context-insensitive profile."));
 cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
                                   cl::desc("Show detailed warning message."));
+cl::opt<bool>
+    LeadingIPOnly("leading-ip-only",
+                  cl::desc("Form a profile based only on sample IPs"));
+
+static cl::list<std::string> PerfEventFilter(
+    "perf-event",
+    cl::desc("Ignore samples not matching the given event names"));
+static cl::alias
+    PerfEventFilterPlural("perf-events", cl::CommaSeparated,
+                          cl::desc("Comma-delimited version of -perf-event"),
+                          cl::aliasopt(PerfEventFilter));
+
+static cl::opt<uint64_t>
+    SamplePeriod("sample-period", cl::init(1),
+                 cl::desc("The sampling period (-c) used for perf data"));
 
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -321,7 +336,7 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 
 std::unique_ptr<PerfReaderBase>
 PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
-                       std::optional<uint32_t> PIDFilter) {
+                       std::optional<int32_t> PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
   if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
@@ -331,9 +346,10 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
   }
 
   // For perf data input, we need to convert them into perf script first.
+  // If this is a kernel perf file, there is no need for retrieving PIDs.
   if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput =
-        PerfScriptReader::convertPerfDataToTrace(Binary, PerfInput, PIDFilter);
+    PerfInput = PerfScriptReader::convertPerfDataToTrace(
+        Binary, Binary->isKernel(), PerfInput, PIDFilter);
 
   assert((PerfInput.Format == PerfFormat::PerfScript) &&
          "Should be a perfscript!");
@@ -353,9 +369,9 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
 }
 
 PerfInputFile
-PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
+PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                          PerfInputFile &File,
-                                         std::optional<uint32_t> PIDFilter) {
+                                         std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFile;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
@@ -363,49 +379,64 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
     exitWithError("Perf not found.");
   }
   std::string PerfPath = *PerfExecutable;
-
   SmallString<128> PerfTraceFile;
   sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
                             PerfTraceFile, /*MakeAbsolute=*/true);
   std::string ErrorFile = std::string(PerfTraceFile) + ".err";
-  StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
-                                "-F",     "comm,pid", "-i",
-                                PerfData};
   std::optional<StringRef> Redirects[] = {std::nullopt,             // Stdin
                                           StringRef(PerfTraceFile), // Stdout
                                           StringRef(ErrorFile)};    // Stderr
-  sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
-
   PerfScriptReader::TempFileCleanups.emplace_back(PerfTraceFile);
   PerfScriptReader::TempFileCleanups.emplace_back(ErrorFile);
 
-  // Collect the PIDs
-  TraceStream TraceIt(PerfTraceFile);
   std::string PIDs;
-  std::unordered_set<uint32_t> PIDSet;
-  while (!TraceIt.isAtEoF()) {
-    MMapEvent MMap;
-    if (isMMap2Event(TraceIt.getCurrentLine()) &&
-        extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
-      auto It = PIDSet.emplace(MMap.PID);
-      if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
-        if (!PIDs.empty()) {
-          PIDs.append(",");
+  if (!SkipPID) {
+    StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
+                                  "-F",     "comm,pid", "-i",
+                                  PerfData};
+    sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
+
+    // Collect the PIDs
+    TraceStream TraceIt(PerfTraceFile);
+    std::unordered_set<int32_t> PIDSet;
+    while (!TraceIt.isAtEoF()) {
+      MMapEvent MMap;
+      if (isMMapEvent(TraceIt.getCurrentLine()) &&
+          extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
+        auto It = PIDSet.emplace(MMap.PID);
+        if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
+          if (!PIDs.empty()) {
+            PIDs.append(",");
+          }
+          PIDs.append(utostr(MMap.PID));
         }
-        PIDs.append(utostr(MMap.PID));
       }
+      TraceIt.advance();
     }
-    TraceIt.advance();
+
+    if (PIDs.empty()) {
+      exitWithError("No relevant mmap event is found in perf data.");
+    }
   }
 
-  if (PIDs.empty()) {
-    exitWithError("No relevant mmap event is found in perf data.");
-  }
+  // If filtering by events was requested, additionally request the "event"
+  // field.
+  const std::string FieldList =
+      PerfEventFilter.empty() ? "ip,brstack" : "event,ip,brstack";
 
   // Run perf script again to retrieve events for PIDs collected above
-  StringRef ScriptSampleArgs[] = {PerfPath, "script",     "--show-mmap-events",
-                                  "-F",     "ip,brstack", "--pid",
-                                  PIDs,     "-i",         PerfData};
+  SmallVector<StringRef, 8> ScriptSampleArgs;
+  ScriptSampleArgs.push_back(PerfPath);
+  ScriptSampleArgs.push_back("script");
+  ScriptSampleArgs.push_back("--show-mmap-events");
+  ScriptSampleArgs.push_back("-F");
+  ScriptSampleArgs.push_back(FieldList);
+  ScriptSampleArgs.push_back("-i");
+  ScriptSampleArgs.push_back(PerfData);
+  if (!PIDs.empty()) {
+    ScriptSampleArgs.push_back("--pid");
+    ScriptSampleArgs.push_back(PIDs);
+  }
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
   return {std::string(PerfTraceFile), PerfFormat::PerfScript,
@@ -428,7 +459,10 @@ static StringRef filename(StringRef Path, bool UseBackSlash) {
 void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   // Drop the event which doesn't belong to user-provided binary
   StringRef BinaryName = filename(Event.BinaryPath, Binary->isCOFF());
-  if (Binary->getName() != BinaryName)
+  bool IsKernel = Binary->isKernel();
+  if (!IsKernel && Binary->getName() != BinaryName)
+    return;
+  if (IsKernel && !Binary->isKernelImageName(BinaryName))
     return;
 
   // Drop the event if process does not match pid filter
@@ -441,7 +475,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     return;
   }
 
-  if (Event.Offset == Binary->getTextSegmentOffset()) {
+  if (IsKernel || Event.Offset == Binary->getTextSegmentOffset()) {
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
@@ -550,9 +584,9 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
-  // It's in FIFO order and seperated by whitespace.
+  // It's in FIFO order and separated by whitespace.
   SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().split(Records, " ", -1, false);
+  TraceIt.getCurrentLine().rtrim().split(Records, " ", -1, false);
   auto WarnInvalidLBR = [](TraceStream &TraceIt) {
     WithColor::warning() << "Invalid address in LBR record at line "
                          << TraceIt.getLineNumber() << ": "
@@ -561,14 +595,54 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
+
+  StringRef EventName;
+  // Skip a perf event name. This may or may not exist.
+  if (Records.size() > Index && Records[Index].ends_with(":")) {
+    EventName = Records[Index].ltrim().rtrim(':');
+    Index++;
+
+    if (PerfEventFilter.empty()) {
+      WithColor::warning() << "No --perf-event filter was specified, but an "
+                              "\"event\" field was found in line "
+                           << TraceIt.getLineNumber() << ": "
+                           << TraceIt.getCurrentLine() << "\n";
+    } else if (std::find(PerfEventFilter.begin(), PerfEventFilter.end(),
+                         EventName) == PerfEventFilter.end()) {
+      TraceIt.advance();
+      return false;
+    }
+
+  } else if (!PerfEventFilter.empty()) {
+    WithColor::warning() << "A --perf-event filter was specified, but no "
+                            "\"event\" field found in line "
+                         << TraceIt.getLineNumber() << ": "
+                         << TraceIt.getCurrentLine() << "\n";
+  }
+
   uint64_t LeadingAddr;
-  if (!Records.empty() && !Records[0].contains('/')) {
-    if (Records[0].getAsInteger(16, LeadingAddr)) {
+  if (Records.size() > Index && !Records[Index].contains('/')) {
+    if (Records[Index].getAsInteger(16, LeadingAddr)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
       return false;
     }
-    Index = 1;
+    Index++;
+  }
+
+  // We assume that if we saw an event name we also saw a leading addr.
+  // In other words, LeadingAddr is set if Index is 1 or 2.
+  if (LeadingIPOnly && Index > 0) {
+    // Form a profile only from the sample IP. Do not assume an LBR stack
+    // follows, and ignore it if it does.
+    uint64_t SampleIP = Binary->canonicalizeVirtualAddress(LeadingAddr);
+    bool SampleIPIsInternal = Binary->addressIsCode(SampleIP);
+    if (SampleIPIsInternal) {
+      // Form a half LBR entry where the sample IP is the destination.
+      LBRStack.emplace_back(LBREntry(SampleIP, SampleIP));
+    }
+    TraceIt.advance();
+    return !LBRStack.empty();
   }
 
   // Now extract LBR samples - note that we do not reverse the
@@ -888,6 +962,20 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
                                              uint64_t Repeat) {
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndAddress = 0;
+
+  if (LeadingIPOnly) {
+    assert(Sample->LBRStack.size() == 1 &&
+           "Expected only half LBR entries for ip-only mode");
+    const LBREntry &LBR = *(Sample->LBRStack.begin());
+    uint64_t SourceAddress = LBR.Source;
+    uint64_t TargetAddress = LBR.Target;
+    if (SourceAddress == TargetAddress &&
+        Binary->addressIsCode(TargetAddress)) {
+      Counter.recordRangeCount(SourceAddress, TargetAddress, Repeat);
+    }
+    return;
+  }
+
   for (const LBREntry &LBR : Sample->LBRStack) {
     uint64_t SourceAddress = LBR.Source;
     uint64_t TargetAddress = LBR.Target;
@@ -916,6 +1004,16 @@ void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   if (extractLBRStack(TraceIt, Sample->LBRStack)) {
     warnIfMissingMMap();
     // Record LBR only samples by aggregation
+    // If a sampling period is given we can adjust the magnitude of sample
+    // counts to estimate the absolute magnitute.
+    if (SamplePeriod.getNumOccurrences()) {
+      Count *= SamplePeriod;
+      // If counts are LBR-based, as opposed to IP-based, then the magnitude is
+      // now amplified by roughly the LBR stack size. By adjusting this down, we
+      // can produce LBR-based and IP-based profiles with comparable magnitudes.
+      if (!LeadingIPOnly && Sample->LBRStack.size() > 1)
+        Count /= (Sample->LBRStack.size() - 1);
+    }
     AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
   }
 }
@@ -950,16 +1048,23 @@ void PerfScriptReader::parseSample(TraceStream &TraceIt) {
   parseSample(TraceIt, Count);
 }
 
-bool PerfScriptReader::extractMMap2EventForBinary(ProfiledBinary *Binary,
-                                                  StringRef Line,
-                                                  MMapEvent &MMap) {
-  // Parse a line like:
+bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
+                                                 StringRef Line,
+                                                 MMapEvent &MMap) {
+  // Parse a MMap2 line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
-  constexpr static const char *const Pattern =
-      "PERF_RECORD_MMAP2 ([0-9]+)/[0-9]+: "
+  constexpr static const char *const MMap2Pattern =
+      "PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
       "(0x[a-f0-9]+|0) .*\\]: [-a-z]+ (.*)";
+  // Parse a MMap line like
+  // PERF_RECORD_MMAP -1/0: [0xffffffff81e00000(0x3e8fa000) @ \
+  //  0xffffffff81e00000]: x [kernel.kallsyms]_text
+  constexpr static const char *const MMapPattern =
+      "PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
+      "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
+      "(0x[a-f0-9]+|0)\\]: [-a-z]+ (.*)";
   // Field 0 - whole line
   // Field 1 - PID
   // Field 2 - base address
@@ -975,14 +1080,25 @@ bool PerfScriptReader::extractMMap2EventForBinary(ProfiledBinary *Binary,
     BINARY_PATH = 5
   };
 
-  Regex RegMmap2(Pattern);
+  bool R = false;
   SmallVector<StringRef, 6> Fields;
-  bool R = RegMmap2.match(Line, &Fields);
+  if (Line.contains("PERF_RECORD_MMAP2 ")) {
+    Regex RegMmap2(MMap2Pattern);
+    R = RegMmap2.match(Line, &Fields);
+  } else if (Line.contains("PERF_RECORD_MMAP ")) {
+    Regex RegMmap(MMapPattern);
+    R = RegMmap.match(Line, &Fields);
+  } else
+    llvm_unreachable("unexpected MMAP event entry");
+
   if (!R) {
     std::string WarningMsg = "Cannot parse mmap event: " + Line.str() + " \n";
     WithColor::warning() << WarningMsg;
+    return false;
   }
-  Fields[PID].getAsInteger(10, MMap.PID);
+  long long MMapPID = 0;
+  getAsSignedInteger(Fields[PID], 10, MMapPID);
+  MMap.PID = MMapPID;
   Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
   Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
   Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
@@ -993,19 +1109,22 @@ bool PerfScriptReader::extractMMap2EventForBinary(ProfiledBinary *Binary,
   }
 
   StringRef BinaryName = filename(MMap.BinaryPath, Binary->isCOFF());
+  if (Binary->isKernel()) {
+    return Binary->isKernelImageName(BinaryName);
+  }
   return Binary->getName() == BinaryName;
 }
 
-void PerfScriptReader::parseMMap2Event(TraceStream &TraceIt) {
+void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {
   MMapEvent MMap;
-  if (extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
+  if (extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
     updateBinaryAddress(MMap);
   TraceIt.advance();
 }
 
 void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
-  if (isMMap2Event(TraceIt.getCurrentLine()))
-    parseMMap2Event(TraceIt);
+  if (isMMapEvent(TraceIt.getCurrentLine()))
+    parseMMapEvent(TraceIt);
   else
     parseSample(TraceIt);
 }
@@ -1027,12 +1146,24 @@ bool PerfScriptReader::isLBRSample(StringRef Line) {
   Line.trim().split(Records, " ", 2, false);
   if (Records.size() < 2)
     return false;
+  // Check if there is an event name before the leading IP.
+  // If there is, it will be in Records[0]. To skip it, we'll re-split on
+  // Records[1], which should contain the rest of the line.
+  if (Records[0].contains(":")) {
+    // If so, consume the event name and continue processing the rest of the
+    // line.
+    StringRef IPAndLBR = Records[1].ltrim();
+    Records.clear();
+    IPAndLBR.split(Records, " ", 2, false);
+    if (Records.size() < 2)
+      return false;
+  }
   if (Records[1].starts_with("0x") && Records[1].contains('/'))
     return true;
   return false;
 }
 
-bool PerfScriptReader::isMMap2Event(StringRef Line) {
+bool PerfScriptReader::isMMapEvent(StringRef Line) {
   // Short cut to avoid string find is possible.
   if (Line.empty() || Line.size() < 50)
     return false;
@@ -1040,9 +1171,9 @@ bool PerfScriptReader::isMMap2Event(StringRef Line) {
   if (std::isdigit(Line[0]))
     return false;
 
-  // PERF_RECORD_MMAP2 does not appear at the beginning of the line
-  // for ` perf script  --show-mmap-events  -i ...`
-  return Line.contains("PERF_RECORD_MMAP2");
+  // PERF_RECORD_MMAP2 or PERF_RECORD_MMAP does not appear at the beginning of
+  // the line for ` perf script  --show-mmap-events  -i ...`
+  return Line.contains("PERF_RECORD_MMAP");
 }
 
 // The raw hybird sample is like
@@ -1117,6 +1248,18 @@ void PerfScriptReader::warnInvalidRange() {
     const PerfSample *Sample = Item.first.getPtr();
     uint64_t Count = Item.second;
     uint64_t EndAddress = 0;
+
+    if (LeadingIPOnly) {
+      assert(Sample->LBRStack.size() == 1 &&
+             "Expected only half LBR entries for ip-only mode");
+      const LBREntry &LBR = *(Sample->LBRStack.begin());
+      if (LBR.Source == LBR.Target && LBR.Source != ExternalAddr) {
+        // This is an leading-addr-only profile.
+        Ranges[{LBR.Source, LBR.Source}] += Count;
+      }
+      continue;
+    }
+
     for (const LBREntry &LBR : Sample->LBRStack) {
       uint64_t SourceAddress = LBR.Source;
       uint64_t StartAddress = LBR.Target;
@@ -1164,11 +1307,15 @@ void PerfScriptReader::warnInvalidRange() {
         !Binary->addressIsCode(EndAddress))
       continue;
 
-    if (!Binary->addressIsCode(StartAddress) ||
-        !Binary->addressIsTransfer(EndAddress)) {
-      InstNotBoundary += I.second;
-      WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
-    }
+    // IP samples can indicate activity on individual instructions rather than
+    // basic blocks/edges. In this mode, don't warn if sampled IPs aren't
+    // branches.
+    if (!LeadingIPOnly)
+      if (!Binary->addressIsCode(StartAddress) ||
+          !Binary->addressIsTransfer(EndAddress)) {
+        InstNotBoundary += I.second;
+        WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
+      }
 
     auto *FRange = Binary->findFuncRange(StartAddress);
     if (!FRange) {
@@ -1208,6 +1355,10 @@ void PerfScriptReader::warnInvalidRange() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
+  if (Binary->isKernel() && !Binary->getIsLoadedByMMap()) {
+    exitWithError(
+        "Kernel is requested, but no kernel is found in mmap events.");
+  }
 
   emitWarningSummary(NumLeafExternalFrame, NumTotalSample,
                      "of samples have leaf external frame in call stack.");

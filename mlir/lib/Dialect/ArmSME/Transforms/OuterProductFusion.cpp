@@ -86,8 +86,7 @@ static Value createInterleave2Intrinsic(RewriterBase &rewriter, Location loc,
   auto inputType = cast<VectorType>(lhs.getType());
   VectorType inputTypeX2 =
       VectorType::Builder(inputType).setDim(0, inputType.getShape()[0] * 2);
-  return rewriter.create<LLVM::experimental_vector_interleave2>(
-      loc, inputTypeX2, lhs, rhs);
+  return rewriter.create<LLVM::vector_interleave2>(loc, inputTypeX2, lhs, rhs);
 }
 
 // Fuse two 'arm_sme.outerproduct' operations that are chained via the
@@ -480,7 +479,7 @@ struct SwapVectorExtractOfArithExtend
       return rewriter.notifyMatchFailure(extractOp,
                                          "extracted type is not a vector type");
 
-    auto numScalableDims = llvm::count(resultType.getScalableDims(), true);
+    auto numScalableDims = resultType.getNumScalableDims();
     if (numScalableDims != 1)
       return rewriter.notifyMatchFailure(
           extractOp, "extracted type is not a 1-D scalable vector type");

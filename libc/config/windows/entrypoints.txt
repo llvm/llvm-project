@@ -110,6 +110,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
+    libc.src.fenv.fetestexceptflag
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
@@ -117,9 +118,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -141,6 +145,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -179,6 +184,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
     libc.src.math.fminimum_mag_numl
+    libc.src.math.fmul
     libc.src.math.fmod
     libc.src.math.fmodf
     libc.src.math.fmodl
@@ -248,6 +254,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbnf
     libc.src.math.scalbnl
     libc.src.math.sin
+    libc.src.math.sincosf
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sinhf

@@ -145,8 +145,11 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
           DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
     if (auto *msg{Say(
             "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
-      msg->Attach(std::move(*whyNot));
+      msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
+    return false;
+  } else if (evaluate::IsAssumedRank(lhs)) {
+    Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
   } else {
     return true;
@@ -223,7 +226,8 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
             foldingContext_.messages().at(), scope_, {}, rhs)}) {
       if (auto *msg{
               Say("Pointer target is not a definable variable"_warn_en_US)}) {
-        msg->Attach(std::move(*because));
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
       }
       return false;
     }
@@ -244,7 +248,8 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), foldingContext_)};
+  auto proc{
+      Procedure::Characterize(f.proc(), foldingContext_, /*emitError=*/true)};
   if (!proc) {
     return false;
   }
@@ -265,8 +270,11 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " that is a not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
-    msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not known to be contiguous"_warn_en_US;
+    if (context_.ShouldWarn(
+            common::UsageWarning::PointerToPossibleNoncontiguous)) {
+      msg =
+          "CONTIGUOUS %s is associated with the result of reference to function '%s' that is not known to be contiguous"_warn_en_US;
+    }
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
@@ -329,8 +337,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 
       } else if (!isBoundsRemapping_ &&
           !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{evaluate::GetRank(lhsType_->shape())};
-        int rhsRank{evaluate::GetRank(rhsType->shape())};
+        int lhsRank{lhsType_->Rank()};
+        int rhsRank{rhsType->Rank()};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
@@ -393,7 +401,8 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
           symbol->name());
     }
   }
-  if (auto chars{Procedure::Characterize(d, foldingContext_)}) {
+  if (auto chars{
+          Procedure::Characterize(d, foldingContext_, /*emitError=*/true)}) {
     // Disregard the elemental attribute of RHS intrinsics.
     if (symbol && symbol->GetUltimate().attrs().test(Attr::INTRINSIC)) {
       chars->attrs.reset(Procedure::Attr::Elemental);

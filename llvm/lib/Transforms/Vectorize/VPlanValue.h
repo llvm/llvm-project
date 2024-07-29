@@ -36,7 +36,6 @@ class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPWidenMemoryInstructionRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -51,7 +50,6 @@ class VPValue {
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
-  friend class VPWidenMemoryInstructionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -76,8 +74,7 @@ protected:
 
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() { return UnderlyingVal; }
-  const Value *getUnderlyingValue() const { return UnderlyingVal; }
+  Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
@@ -263,11 +260,6 @@ public:
     New->addUser(*this);
   }
 
-  void removeLastOperand() {
-    VPValue *Op = Operands.pop_back_val();
-    Op->removeUser(*this);
-  }
-
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;
   typedef iterator_range<operand_iterator> operand_range;
@@ -349,6 +341,7 @@ public:
     VPExpandSCEVSC,
     VPInstructionSC,
     VPInterleaveSC,
+    VPReductionEVLSC,
     VPReductionSC,
     VPReplicateSC,
     VPScalarCastSC,
@@ -358,7 +351,10 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
-    VPWidenMemoryInstructionSC,
+    VPWidenLoadEVLSC,
+    VPWidenLoadSC,
+    VPWidenStoreEVLSC,
+    VPWidenStoreSC,
     VPWidenSC,
     VPWidenSelectSC,
     VPBlendSC,

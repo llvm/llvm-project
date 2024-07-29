@@ -25,6 +25,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -74,23 +75,6 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
-// Whatever debug info format we parsed, we should convert to the expected debug
-// info format immediately afterwards.
-bool LLParser::finalizeDebugInfoFormat(Module *M) {
-  // We should have already returned an error if we observed both intrinsics and
-  // records in this IR.
-  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
-         "Mixed debug intrinsics/records seen without a parsing error?");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
-  } else if (M) {
-    M->setIsNewDbgInfoFormat(false);
-  }
-  return false;
-}
-
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
@@ -108,7 +92,7 @@ bool LLParser::Run(bool UpgradeDebugInfo,
   }
 
   return parseTopLevelEntities() || validateEndOfModule(UpgradeDebugInfo) ||
-         validateEndOfIndex() || finalizeDebugInfoFormat(M);
+         validateEndOfIndex();
 }
 
 bool LLParser::parseStandaloneConstantValue(Constant *&C,
@@ -138,6 +122,21 @@ bool LLParser::parseTypeAtBeginning(Type *&Ty, unsigned &Read,
   Read = End.getPointer() - Start.getPointer();
 
   return false;
+}
+
+bool LLParser::parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
+                                                const SlotMapping *Slots) {
+  restoreParsingState(Slots);
+  Lex.Lex();
+
+  Read = 0;
+  SMLoc Start = Lex.getLoc();
+  Result = nullptr;
+  bool Status = parseDIExpressionBody(Result, /*IsDistinct=*/false);
+  SMLoc End = Lex.getLoc();
+  Read = End.getPointer() - Start.getPointer();
+
+  return Status;
 }
 
 void LLParser::restoreParsingState(const SlotMapping *Slots) {
@@ -207,6 +206,18 @@ void LLParser::dropUnknownMetadataReferences() {
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
+
+  // We should have already returned an error if we observed both intrinsics and
+  // records in this IR.
+  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
+         "Mixed debug intrinsics/records seen without a parsing error?");
+  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
+    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
+  }
+
   // Handle any function attribute group forward references.
   for (const auto &RAG : ForwardRefAttrGroups) {
     Value *V = RAG.first;
@@ -326,6 +337,42 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                      ForwardRefComdats.begin()->first + "'");
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
+    if (StringRef(Name).starts_with("llvm.")) {
+      Intrinsic::ID IID = Function::lookupIntrinsicID(Name);
+      if (IID == Intrinsic::not_intrinsic)
+        // Don't do anything for unknown intrinsics.
+        continue;
+
+      // Automatically create declarations for intrinsics. Intrinsics can only
+      // be called directly, so the call function type directly determines the
+      // declaration function type.
+      //
+      // Additionally, automatically add the required mangling suffix to the
+      // intrinsic name. This means that we may replace a single forward
+      // declaration with multiple functions here.
+      for (Use &U : make_early_inc_range(Info.first->uses())) {
+        auto *CB = dyn_cast<CallBase>(U.getUser());
+        if (!CB || !CB->isCallee(&U))
+          return error(Info.second, "intrinsic can only be used as callee");
+
+        SmallVector<Type *> OverloadTys;
+        if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
+                                              OverloadTys))
+          return error(Info.second, "invalid intrinsic signature");
+
+        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+      }
+
+      Info.first->eraseFromParent();
+      ForwardRefVals.erase(Name);
+      continue;
+    }
+
+    // If incomplete IR is allowed, also add declarations for
+    // non-intrinsics.
+    if (!AllowIncompleteIR)
+      continue;
+
     auto GetCommonFunctionType = [](Value *V) -> FunctionType * {
       FunctionType *FTy = nullptr;
       for (Use &U : V->uses()) {
@@ -337,40 +384,23 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return FTy;
     };
 
-    auto GetDeclarationType = [&](StringRef Name, Value *V) -> Type * {
-      // Automatically create declarations for intrinsics. Intrinsics can only
-      // be called directly, so the call function type directly determines the
-      // declaration function type.
-      if (Name.starts_with("llvm."))
-        // Don't do anything if the intrinsic is called with different function
-        // types. This would result in a verifier error anyway.
-        return GetCommonFunctionType(V);
+    // First check whether this global is only used in calls with the same
+    // type, in which case we'll insert a function. Otherwise, fall back to
+    // using a dummy i8 type.
+    Type *Ty = GetCommonFunctionType(Info.first);
+    if (!Ty)
+      Ty = Type::getInt8Ty(Context);
 
-      if (AllowIncompleteIR) {
-        // If incomplete IR is allowed, also add declarations for
-        // non-intrinsics. First check whether this global is only used in
-        // calls with the same type, in which case we'll insert a function.
-        if (auto *Ty = GetCommonFunctionType(V))
-          return Ty;
-
-        // Otherwise, fall back to using a dummy i8 type.
-        return Type::getInt8Ty(Context);
-      }
-      return nullptr;
-    };
-
-    if (Type *Ty = GetDeclarationType(Name, Info.first)) {
-      GlobalValue *GV;
-      if (auto *FTy = dyn_cast<FunctionType>(Ty))
-        GV = Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
-      else
-        GV = new GlobalVariable(*M, Ty, /*isConstant*/ false,
-                                GlobalValue::ExternalLinkage,
-                                /*Initializer*/ nullptr, Name);
-      Info.first->replaceAllUsesWith(GV);
-      Info.first->eraseFromParent();
-      ForwardRefVals.erase(Name);
-    }
+    GlobalValue *GV;
+    if (auto *FTy = dyn_cast<FunctionType>(Ty))
+      GV = Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
+    else
+      GV = new GlobalVariable(*M, Ty, /*isConstant*/ false,
+                              GlobalValue::ExternalLinkage,
+                              /*Initializer*/ nullptr, Name);
+    Info.first->replaceAllUsesWith(GV);
+    Info.first->eraseFromParent();
+    ForwardRefVals.erase(Name);
   }
 
   if (!ForwardRefVals.empty())
@@ -419,6 +449,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   UpgradeModuleFlags(*M);
   UpgradeSectionAttributes(*M);
+
+  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
+    M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
   if (!Slots)
     return false;
@@ -1609,6 +1642,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::Range:
     return parseRangeAttr(B);
+  case Attribute::Initializes:
+    return parseInitializesAttr(B);
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -2134,6 +2169,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'aarch64_vector_pcs'
 ///   ::= 'aarch64_sve_vector_pcs'
 ///   ::= 'aarch64_sme_preservemost_from_x0'
+///   ::= 'aarch64_sme_preservemost_from_x1'
 ///   ::= 'aarch64_sme_preservemost_from_x2'
 ///   ::= 'msp430_intrcc'
 ///   ::= 'avr_intrcc'
@@ -2192,6 +2228,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_aarch64_sme_preservemost_from_x0:
     CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0;
+    break;
+  case lltok::kw_aarch64_sme_preservemost_from_x1:
+    CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1;
     break;
   case lltok::kw_aarch64_sme_preservemost_from_x2:
     CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2;
@@ -3080,6 +3119,52 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   return false;
 }
 
+/// parseInitializesAttr
+///   ::= initializes((Lo1,Hi1),(Lo2,Hi2),...)
+bool LLParser::parseInitializesAttr(AttrBuilder &B) {
+  Lex.Lex();
+
+  auto ParseAPSInt = [&](APInt &Val) {
+    if (Lex.getKind() != lltok::APSInt)
+      return tokError("expected integer");
+    Val = Lex.getAPSIntVal().extend(64);
+    Lex.Lex();
+    return false;
+  };
+
+  if (parseToken(lltok::lparen, "expected '('"))
+    return true;
+
+  SmallVector<ConstantRange, 2> RangeList;
+  // Parse each constant range.
+  do {
+    APInt Lower, Upper;
+    if (parseToken(lltok::lparen, "expected '('"))
+      return true;
+
+    if (ParseAPSInt(Lower) || parseToken(lltok::comma, "expected ','") ||
+        ParseAPSInt(Upper))
+      return true;
+
+    if (Lower == Upper)
+      return tokError("the range should not represent the full or empty set!");
+
+    if (parseToken(lltok::rparen, "expected ')'"))
+      return true;
+
+    RangeList.push_back(ConstantRange(Lower, Upper));
+  } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')'"))
+    return true;
+
+  auto CRLOrNull = ConstantRangeList::getConstantRangeList(RangeList);
+  if (!CRLOrNull.has_value())
+    return tokError("Invalid (unordered or overlapping) range list");
+  B.addInitializesAttr(*CRLOrNull);
+  return false;
+}
+
 /// parseOptionalOperandBundles
 ///    ::= /*empty*/
 ///    ::= '[' OperandBundle [, OperandBundle ]* ']'
@@ -3223,17 +3308,16 @@ bool LLParser::parseFunctionType(Type *&Result) {
     return true;
 
   // Reject names on the arguments lists.
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
-    if (!ArgList[i].Name.empty())
-      return error(ArgList[i].Loc, "argument name invalid in function type");
-    if (ArgList[i].Attrs.hasAttributes())
-      return error(ArgList[i].Loc,
-                   "argument attributes invalid in function type");
+  for (const ArgInfo &Arg : ArgList) {
+    if (!Arg.Name.empty())
+      return error(Arg.Loc, "argument name invalid in function type");
+    if (Arg.Attrs.hasAttributes())
+      return error(Arg.Loc, "argument attributes invalid in function type");
   }
 
   SmallVector<Type*, 16> ArgListTy;
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i)
-    ArgListTy.push_back(ArgList[i].Ty);
+  for (const ArgInfo &Arg : ArgList)
+    ArgListTy.push_back(Arg.Ty);
 
   Result = FunctionType::get(Result, ArgListTy, IsVarArg);
   return false;
@@ -3476,7 +3560,7 @@ LLParser::PerFunctionState::~PerFunctionState() {
     if (isa<BasicBlock>(P.second.first))
       continue;
     P.second.first->replaceAllUsesWith(
-        UndefValue::get(P.second.first->getType()));
+        PoisonValue::get(P.second.first->getType()));
     P.second.first->deleteValue();
   }
 
@@ -3484,7 +3568,7 @@ LLParser::PerFunctionState::~PerFunctionState() {
     if (isa<BasicBlock>(P.second.first))
       continue;
     P.second.first->replaceAllUsesWith(
-        UndefValue::get(P.second.first->getType()));
+        PoisonValue::get(P.second.first->getType()));
     P.second.first->deleteValue();
   }
 }
@@ -4027,6 +4111,60 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.NoCFI = true;
     return false;
   }
+  case lltok::kw_ptrauth: {
+    // ValID ::= 'ptrauth' '(' ptr @foo ',' i32 <key>
+    //                         (',' i64 <disc> (',' ptr addrdisc)? )? ')'
+    Lex.Lex();
+
+    Constant *Ptr, *Key;
+    Constant *Disc = nullptr, *AddrDisc = nullptr;
+
+    if (parseToken(lltok::lparen,
+                   "expected '(' in constant ptrauth expression") ||
+        parseGlobalTypeAndValue(Ptr) ||
+        parseToken(lltok::comma,
+                   "expected comma in constant ptrauth expression") ||
+        parseGlobalTypeAndValue(Key))
+      return true;
+    // If present, parse the optional disc/addrdisc.
+    if (EatIfPresent(lltok::comma))
+      if (parseGlobalTypeAndValue(Disc) ||
+          (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(AddrDisc)))
+        return true;
+    if (parseToken(lltok::rparen,
+                   "expected ')' in constant ptrauth expression"))
+      return true;
+
+    if (!Ptr->getType()->isPointerTy())
+      return error(ID.Loc, "constant ptrauth base pointer must be a pointer");
+
+    auto *KeyC = dyn_cast<ConstantInt>(Key);
+    if (!KeyC || KeyC->getBitWidth() != 32)
+      return error(ID.Loc, "constant ptrauth key must be i32 constant");
+
+    ConstantInt *DiscC = nullptr;
+    if (Disc) {
+      DiscC = dyn_cast<ConstantInt>(Disc);
+      if (!DiscC || DiscC->getBitWidth() != 64)
+        return error(
+            ID.Loc,
+            "constant ptrauth integer discriminator must be i64 constant");
+    } else {
+      DiscC = ConstantInt::get(Type::getInt64Ty(Context), 0);
+    }
+
+    if (AddrDisc) {
+      if (!AddrDisc->getType()->isPointerTy())
+        return error(
+            ID.Loc, "constant ptrauth address discriminator must be a pointer");
+    } else {
+      AddrDisc = ConstantPointerNull::get(PointerType::get(Context, 0));
+    }
+
+    ID.ConstantVal = ConstantPtrAuth::get(Ptr, KeyC, DiscC, AddrDisc);
+    ID.Kind = ValID::t_Constant;
+    return false;
+  }
 
   case lltok::kw_trunc:
   case lltok::kw_bitcast:
@@ -4082,6 +4220,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "lshr constexprs are no longer supported");
   case lltok::kw_ashr:
     return error(ID.Loc, "ashr constexprs are no longer supported");
+  case lltok::kw_shl:
+    return error(ID.Loc, "shl constexprs are no longer supported");
   case lltok::kw_fneg:
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
@@ -4103,43 +4243,14 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_fptosi:
     return error(ID.Loc, "fptosi constexprs are no longer supported");
   case lltok::kw_icmp:
-  case lltok::kw_fcmp: {
-    unsigned PredVal, Opc = Lex.getUIntVal();
-    Constant *Val0, *Val1;
-    Lex.Lex();
-    if (parseCmpPredicate(PredVal, Opc) ||
-        parseToken(lltok::lparen, "expected '(' in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma, "expected comma in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val1) ||
-        parseToken(lltok::rparen, "expected ')' in compare constantexpr"))
-      return true;
-
-    if (Val0->getType() != Val1->getType())
-      return error(ID.Loc, "compare operands must have the same type");
-
-    CmpInst::Predicate Pred = (CmpInst::Predicate)PredVal;
-
-    if (Opc == Instruction::FCmp) {
-      if (!Val0->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "fcmp requires floating point operands");
-      ID.ConstantVal = ConstantExpr::getFCmp(Pred, Val0, Val1);
-    } else {
-      assert(Opc == Instruction::ICmp && "Unexpected opcode for CmpInst!");
-      if (!Val0->getType()->isIntOrIntVectorTy() &&
-          !Val0->getType()->isPtrOrPtrVectorTy())
-        return error(ID.Loc, "icmp requires pointer or integer operands");
-      ID.ConstantVal = ConstantExpr::getICmp(Pred, Val0, Val1);
-    }
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
+    return error(ID.Loc, "icmp constexprs are no longer supported");
+  case lltok::kw_fcmp:
+    return error(ID.Loc, "fcmp constexprs are no longer supported");
 
   // Binary Operators.
   case lltok::kw_add:
   case lltok::kw_sub:
   case lltok::kw_mul:
-  case lltok::kw_shl:
   case lltok::kw_xor: {
     bool NUW = false;
     bool NSW = false;
@@ -4147,7 +4258,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     Constant *Val0, *Val1;
     Lex.Lex();
     if (Opc == Instruction::Add || Opc == Instruction::Sub ||
-        Opc == Instruction::Mul || Opc == Instruction::Shl) {
+        Opc == Instruction::Mul) {
       if (EatIfPresent(lltok::kw_nuw))
         NUW = true;
       if (EatIfPresent(lltok::kw_nsw)) {
@@ -4197,7 +4308,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_extractelement: {
     unsigned Opc = Lex.getUIntVal();
     SmallVector<Constant*, 16> Elts;
-    bool InBounds = false;
+    GEPNoWrapFlags NW;
     bool HasInRange = false;
     APSInt InRangeStart;
     APSInt InRangeEnd;
@@ -4205,7 +4316,17 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     Lex.Lex();
 
     if (Opc == Instruction::GetElementPtr) {
-      InBounds = EatIfPresent(lltok::kw_inbounds);
+      while (true) {
+        if (EatIfPresent(lltok::kw_inbounds))
+          NW |= GEPNoWrapFlags::inBounds();
+        else if (EatIfPresent(lltok::kw_nusw))
+          NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
+        else if (EatIfPresent(lltok::kw_nuw))
+          NW |= GEPNoWrapFlags::noUnsignedWrap();
+        else
+          break;
+      }
+
       if (EatIfPresent(lltok::kw_inrange)) {
         if (parseToken(lltok::lparen, "expected '('"))
           return true;
@@ -4284,8 +4405,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
-      ID.ConstantVal = ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices,
-                                                      InBounds, InRange);
+      ID.ConstantVal =
+          ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices, NW, InRange);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -5717,12 +5838,9 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
-/// parseDIExpression:
-///   ::= !DIExpression(0, 7, -1)
-bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  Lex.Lex();
-
+/// parseDIExpressionBody:
+///   ::= (0, 7, -1)
+bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
@@ -5763,6 +5881,16 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
 
   Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
   return false;
+}
+
+/// parseDIExpression:
+///   ::= !DIExpression(0, 7, -1)
+bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert(Lex.getStrVal() == "DIExpression" && "Expected '!DIExpression'");
+  Lex.Lex();
+
+  return parseDIExpressionBody(Result, IsDistinct);
 }
 
 /// ParseDIArgList:
@@ -6297,9 +6425,9 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   std::vector<Type*> ParamTypeList;
   SmallVector<AttributeSet, 8> Attrs;
 
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
-    ParamTypeList.push_back(ArgList[i].Ty);
-    Attrs.push_back(ArgList[i].Attrs);
+  for (const ArgInfo &Arg : ArgList) {
+    ParamTypeList.push_back(Arg.Ty);
+    Attrs.push_back(Arg.Attrs);
   }
 
   AttributeList PAL =
@@ -7123,8 +7251,8 @@ bool LLParser::parseIndirectBr(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   IndirectBrInst *IBI = IndirectBrInst::Create(Address, DestList.size());
-  for (unsigned i = 0, e = DestList.size(); i != e; ++i)
-    IBI->addDestination(DestList[i]);
+  for (BasicBlock *Dest : DestList)
+    IBI->addDestination(Dest);
   Inst = IBI;
   return false;
 }
@@ -7132,15 +7260,15 @@ bool LLParser::parseIndirectBr(Instruction *&Inst, PerFunctionState &PFS) {
 // If RetType is a non-function pointer type, then this is the short syntax
 // for the call, which means that RetType is just the return type.  Infer the
 // rest of the function argument types from the arguments that are present.
-bool LLParser::resolveFunctionType(Type *RetType,
-                                   const SmallVector<ParamInfo, 16> &ArgList,
+bool LLParser::resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                                    FunctionType *&FuncTy) {
   FuncTy = dyn_cast<FunctionType>(RetType);
   if (!FuncTy) {
     // Pull out the types of all of the arguments...
-    std::vector<Type*> ParamTypes;
-    for (unsigned i = 0, e = ArgList.size(); i != e; ++i)
-      ParamTypes.push_back(ArgList[i].V->getType());
+    SmallVector<Type *, 8> ParamTypes;
+    ParamTypes.reserve(ArgList.size());
+    for (const ParamInfo &Arg : ArgList)
+      ParamTypes.push_back(Arg.V->getType());
 
     if (!FunctionType::isValidReturnType(RetType))
       return true;
@@ -7203,19 +7331,19 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   // correctly.  Also, gather any parameter attributes.
   FunctionType::param_iterator I = Ty->param_begin();
   FunctionType::param_iterator E = Ty->param_end();
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
+  for (const ParamInfo &Arg : ArgList) {
     Type *ExpectedTy = nullptr;
     if (I != E) {
       ExpectedTy = *I++;
     } else if (!Ty->isVarArg()) {
-      return error(ArgList[i].Loc, "too many arguments specified");
+      return error(Arg.Loc, "too many arguments specified");
     }
 
-    if (ExpectedTy && ExpectedTy != ArgList[i].V->getType())
-      return error(ArgList[i].Loc, "argument is not of expected type '" +
-                                       getTypeString(ExpectedTy) + "'");
-    Args.push_back(ArgList[i].V);
-    ArgAttrs.push_back(ArgList[i].Attrs);
+    if (ExpectedTy && ExpectedTy != Arg.V->getType())
+      return error(Arg.Loc, "argument is not of expected type '" +
+                                getTypeString(ExpectedTy) + "'");
+    Args.push_back(Arg.V);
+    ArgAttrs.push_back(Arg.Attrs);
   }
 
   if (I != E)
@@ -7516,19 +7644,19 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
   // correctly.  Also, gather any parameter attributes.
   FunctionType::param_iterator I = Ty->param_begin();
   FunctionType::param_iterator E = Ty->param_end();
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
+  for (const ParamInfo &Arg : ArgList) {
     Type *ExpectedTy = nullptr;
     if (I != E) {
       ExpectedTy = *I++;
     } else if (!Ty->isVarArg()) {
-      return error(ArgList[i].Loc, "too many arguments specified");
+      return error(Arg.Loc, "too many arguments specified");
     }
 
-    if (ExpectedTy && ExpectedTy != ArgList[i].V->getType())
-      return error(ArgList[i].Loc, "argument is not of expected type '" +
-                                       getTypeString(ExpectedTy) + "'");
-    Args.push_back(ArgList[i].V);
-    ArgAttrs.push_back(ArgList[i].Attrs);
+    if (ExpectedTy && ExpectedTy != Arg.V->getType())
+      return error(Arg.Loc, "argument is not of expected type '" +
+                                getTypeString(ExpectedTy) + "'");
+    Args.push_back(Arg.V);
+    ArgAttrs.push_back(Arg.Attrs);
   }
 
   if (I != E)
@@ -7911,19 +8039,19 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   // correctly.  Also, gather any parameter attributes.
   FunctionType::param_iterator I = Ty->param_begin();
   FunctionType::param_iterator E = Ty->param_end();
-  for (unsigned i = 0, e = ArgList.size(); i != e; ++i) {
+  for (const ParamInfo &Arg : ArgList) {
     Type *ExpectedTy = nullptr;
     if (I != E) {
       ExpectedTy = *I++;
     } else if (!Ty->isVarArg()) {
-      return error(ArgList[i].Loc, "too many arguments specified");
+      return error(Arg.Loc, "too many arguments specified");
     }
 
-    if (ExpectedTy && ExpectedTy != ArgList[i].V->getType())
-      return error(ArgList[i].Loc, "argument is not of expected type '" +
-                                       getTypeString(ExpectedTy) + "'");
-    Args.push_back(ArgList[i].V);
-    Attrs.push_back(ArgList[i].Attrs);
+    if (ExpectedTy && ExpectedTy != Arg.V->getType())
+      return error(Arg.Loc, "argument is not of expected type '" +
+                                getTypeString(ExpectedTy) + "'");
+    Args.push_back(Arg.V);
+    Attrs.push_back(Arg.Attrs);
   }
 
   if (I != E)
@@ -8175,7 +8303,7 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
     return error(NewLoc, "cmpxchg operand must be a first class value");
 
   const Align DefaultAlignment(
-      PFS.getFunction().getParent()->getDataLayout().getTypeStoreSize(
+      PFS.getFunction().getDataLayout().getTypeStoreSize(
           Cmp->getType()));
 
   AtomicCmpXchgInst *CXI =
@@ -8281,13 +8409,13 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   unsigned Size =
-      PFS.getFunction().getParent()->getDataLayout().getTypeStoreSizeInBits(
+      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(
           Val->getType());
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc, "atomicrmw operand must be power-of-two byte-sized"
                          " integer");
   const Align DefaultAlignment(
-      PFS.getFunction().getParent()->getDataLayout().getTypeStoreSize(
+      PFS.getFunction().getDataLayout().getTypeStoreSize(
           Val->getType()));
   AtomicRMWInst *RMWI =
       new AtomicRMWInst(Operation, Ptr, Val,
@@ -8320,8 +8448,18 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Ptr = nullptr;
   Value *Val = nullptr;
   LocTy Loc, EltLoc;
+  GEPNoWrapFlags NW;
 
-  bool InBounds = EatIfPresent(lltok::kw_inbounds);
+  while (true) {
+    if (EatIfPresent(lltok::kw_inbounds))
+      NW |= GEPNoWrapFlags::inBounds();
+    else if (EatIfPresent(lltok::kw_nusw))
+      NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
+    else if (EatIfPresent(lltok::kw_nuw))
+      NW |= GEPNoWrapFlags::noUnsignedWrap();
+    else
+      break;
+  }
 
   Type *Ty = nullptr;
   if (parseType(Ty) ||
@@ -8374,9 +8512,9 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (!GetElementPtrInst::getIndexedType(Ty, Indices))
     return error(Loc, "invalid getelementptr indices");
-  Inst = GetElementPtrInst::Create(Ty, Ptr, Indices);
-  if (InBounds)
-    cast<GetElementPtrInst>(Inst)->setIsInBounds(true);
+  GetElementPtrInst *GEP = GetElementPtrInst::Create(Ty, Ptr, Indices);
+  Inst = GEP;
+  GEP->setNoWrapFlags(NW);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

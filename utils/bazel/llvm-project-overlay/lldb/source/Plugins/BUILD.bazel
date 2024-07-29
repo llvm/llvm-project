@@ -202,6 +202,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:IPO",
@@ -249,7 +250,12 @@ objc_library(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":PluginPlatformMacOSXObjCXXHeaders"],
+    deps = [
+        ":PluginPlatformMacOSXObjCXXHeaders",
+        "//lldb:Host",
+        "//lldb:HostMacOSXPrivateHeaders",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
@@ -264,6 +270,7 @@ cc_library(
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PlatformMacOSXProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -281,7 +288,11 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
     ] + select({
-        "@platforms//os:macos": [":PluginPlatformMacOSXObjCXX"],
+        "@platforms//os:macos": [
+            ":PluginPlatformMacOSXObjCXX",
+            ":PluginPlatformMacOSXObjCXXHeaders",
+            "//lldb:HostMacOSXPrivateHeaders",
+        ],
         "//conditions:default": [],
     }),
 )
@@ -333,6 +344,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:Object",
@@ -557,7 +569,6 @@ cc_library(
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
@@ -591,7 +602,6 @@ cc_library(
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
@@ -664,7 +674,7 @@ cc_library(
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Host",
-        "//lldb:Interpreter",
+        "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
@@ -1076,6 +1086,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
         "//llvm:Core",
         "//llvm:TargetParser",
     ],
@@ -1256,6 +1267,7 @@ cc_library(
     name = "PluginDynamicLoaderDarwinKernel",
     srcs = glob(["DynamicLoader/Darwin-Kernel/*.cpp"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":DynamicLoaderDarwinKernelProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -1264,7 +1276,6 @@ cc_library(
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1422,7 +1433,6 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1438,7 +1448,6 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1475,7 +1484,6 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1495,7 +1503,6 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1515,7 +1522,6 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1532,7 +1538,6 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1570,7 +1575,6 @@ cc_library(
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1608,7 +1612,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Headers",
-        "//lldb:Interpreter",
+        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
@@ -1629,7 +1633,6 @@ cc_library(
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1682,7 +1685,6 @@ cc_library(
         ":PluginObjectFileMachO",
         "//lldb:Breakpoint",
         "//lldb:Core",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1759,6 +1761,10 @@ cc_library(
         "//lldb:Host",
         "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1838,7 +1844,6 @@ cc_library(
     include_prefix = "Plugins",
     deps = [
         "//lldb:Core",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Utility",
         "//llvm:Support",
@@ -1960,6 +1965,7 @@ cc_library(
         ":PluginProcessMinidump",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1969,6 +1975,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2101,6 +2108,29 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginProcessLinux",
+    srcs = glob(["Process/Linux/*.cpp"]),
+    hdrs = glob(["Process/Linux/*.h"]),
+    include_prefix = "Plugins",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":PluginProcessPOSIX",
+        ":PluginProcessUtility",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
     name = "PluginScriptedProcess",
     srcs = glob(["Process/scripted/*.cpp"]),
     hdrs = glob(["Process/scripted/*.h"]),
@@ -2121,6 +2151,7 @@ cc_library(
     srcs = glob(["Process/mach-core/*.cpp"]),
     hdrs = glob(["Process/mach-core/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginDynamicLoaderMacOSXDYLD",
@@ -2196,7 +2227,6 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2243,7 +2273,6 @@ cc_library(
         "//lldb:DataFormattersHeaders",
         "//lldb:ExpressionHeaders",
         "//lldb:Headers",
-        "//lldb:Interpreter",
         "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2268,7 +2297,6 @@ cc_library(
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:Interpreter",
         "//lldb:Symbol",
         "//lldb:Target",
         "//lldb:TargetHeaders",

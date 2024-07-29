@@ -217,6 +217,10 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+; ptrauth constant
+@auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
+; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
 ;                   [unnamed_addr] alias <AliaseeTy> @<Aliasee>
@@ -1108,8 +1112,6 @@ define void @typesystem() {
   ; CHECK: %t5 = alloca x86_fp80
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
-  %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
   %t8 = alloca ptr
   ; CHECK: %t8 = alloca ptr
   %t9 = alloca <4 x i32>
@@ -1560,7 +1562,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #51
+  ; CHECK: call void @f.nobuiltin() #52
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -1984,6 +1986,8 @@ declare void @f.nosanitize_bounds() nosanitize_bounds
 declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: declare void @f.allockind() #50
 
+declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
+; CHECK: declare void @f.sanitize_numerical_stability() #51
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
@@ -2106,7 +2110,8 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #48 = { allocsize(1,0) }
 ; CHECK: attributes #49 = { nosanitize_bounds }
 ; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
-; CHECK: attributes #51 = { builtin }
+; CHECK: attributes #51 = { sanitize_numerical_stability }
+; CHECK: attributes #52 = { builtin }
 
 ;; Metadata
 

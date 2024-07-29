@@ -42,11 +42,13 @@ entry:
 
 @global2.20ptr = internal unnamed_addr global %struct.global.20ptr zeroinitializer
 
-define i1 @icmp_constexpr() {
-; CHECK-LABEL: @icmp_constexpr(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 icmp eq (ptr @global.20ptr, ptr @global2.20ptr)
+define void @other_constexpr(ptr %p) {
+; CHECK-LABEL: @other_constexpr(
+; CHECK-NEXT:    store i64 ptrtoint (ptr @global.20ptr to i64), ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 ptrtoint (ptr @global2.20ptr to i64), ptr [[P]], align 4
+; CHECK-NEXT:    ret void
 ;
-entry:
-  ret i1 icmp eq (ptr @global.20ptr, ptr @global2.20ptr)
+  store i64 ptrtoint (ptr @global.20ptr to i64), ptr %p
+  store i64 ptrtoint (ptr @global2.20ptr to i64), ptr %p
+  ret void
 }

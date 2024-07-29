@@ -37,7 +37,7 @@ class CXXPredicateCode {
   using CXXPredicateCodePool =
       DenseMap<hash_code, std::unique_ptr<CXXPredicateCode>>;
   static CXXPredicateCodePool AllCXXMatchCode;
-  static CXXPredicateCodePool AllCXXApplyCode;
+  static CXXPredicateCodePool AllCXXCustomActionCode;
 
   /// Sorts a `CXXPredicateCodePool` by their IDs and returns it.
   static std::vector<const CXXPredicateCode *>
@@ -55,16 +55,16 @@ public:
     return get(AllCXXMatchCode, std::move(Code));
   }
 
-  static const CXXPredicateCode &getApplyCode(std::string Code) {
-    return get(AllCXXApplyCode, std::move(Code));
+  static const CXXPredicateCode &getCustomActionCode(std::string Code) {
+    return get(AllCXXCustomActionCode, std::move(Code));
   }
 
   static std::vector<const CXXPredicateCode *> getAllMatchCode() {
     return getSorted(AllCXXMatchCode);
   }
 
-  static std::vector<const CXXPredicateCode *> getAllApplyCode() {
-    return getSorted(AllCXXApplyCode);
+  static std::vector<const CXXPredicateCode *> getAllCustomActionsCode() {
+    return getSorted(AllCXXCustomActionCode);
   }
 
   const std::string Code;

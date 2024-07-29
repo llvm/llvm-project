@@ -3392,6 +3392,12 @@ def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
 
 def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
 
+// Read time counter.
+def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
+  [SDNPHasChain]>;
+
+def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
+
 // The declared return value of the store-locked intrinsics is i32, but
 // the instructions actually define i1. To avoid register copies from
 // IntRegs to PredRegs and back, fold the entire pattern checking the

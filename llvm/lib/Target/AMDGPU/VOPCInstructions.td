@@ -180,6 +180,7 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.Pseudo
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let isConvergent         = ps.isConvergent;
 }
 
 class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -435,8 +436,10 @@ multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
-multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
-  VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
+let IsInvalidSingleUseConsumer = 1 in {
+  multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+    VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
+}
 
 multiclass VOPCX_F16<string opName, string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
@@ -465,8 +468,10 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
-multiclass VOPCX_I64 <string opName, string revOp = opName> :
-  VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+let IsInvalidSingleUseConsumer = 1 in {
+  multiclass VOPCX_I64 <string opName, string revOp = opName> :
+    VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+}
 
 
 //===----------------------------------------------------------------------===//
@@ -779,7 +784,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
 
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
+                     Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
 
   let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
   let HasSrc1Mods = 0;
@@ -1386,75 +1391,76 @@ multiclass VOPC_Real_Base<GFXGen Gen, bits<9> op> {
 
 multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
                                string asm_name, string pseudo_mnemonic = ""> {
-  let AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace in {
-    defvar ps32 = !cast<VOPC_Pseudo>(OpName#"_e32");
-    defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_e64");
-    def _e32#Gen.Suffix :
-      // 32 and 64 bit forms of the instruction have _e32 and _e64
-      // respectively appended to their assembly mnemonic.
-      // _e64 is printed as part of the VOPDstS64orS32 operand, whereas
-      // the destination-less 32bit forms add it to the asmString here.
-      VOPC_Real<ps32, Gen.Subtarget, asm_name#"_e32">,
-      VOPCe<op{7-0}>,
-      MnemonicAlias<!if(!empty(pseudo_mnemonic), ps32.Mnemonic,
-                        pseudo_mnemonic),
-                    asm_name, ps32.AsmVariantName>,
-      Requires<[Gen.AssemblerPredicate]>;
-    def _e64#Gen.Suffix :
-          VOP3_Real<ps64, Gen.Subtarget, asm_name>,
-          VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl>,
-          MnemonicAlias<!if(!empty(pseudo_mnemonic), ps64.Mnemonic,
-                            pseudo_mnemonic),
-                        asm_name, ps64.AsmVariantName>,
-          Requires<[Gen.AssemblerPredicate]> {
-      // Encoding used for VOPC instructions encoded as VOP3 differs from
-      // VOP3e by destination name (sdst) as VOPC doesn't have vector dst.
-      bits<8> sdst;
-      let Inst{7-0} = sdst;
-    }
+  defvar ps32 = !cast<VOPC_Pseudo>(OpName#"_e32");
+  defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_e64");
+  let AssemblerPredicate = Gen.AssemblerPredicate in {
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), ps32.Mnemonic,
+                                                     pseudo_mnemonic),
+                              asm_name, ps32.AsmVariantName>;
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), ps64.Mnemonic,
+                                                     pseudo_mnemonic),
+                              asm_name, ps64.AsmVariantName>;
 
-    defm : VOPCInstAliases<OpName, !substr(Gen.Suffix, 1), NAME, asm_name>;
+    let DecoderNamespace = Gen.DecoderNamespace in {
+      def _e32#Gen.Suffix :
+        // 32 and 64 bit forms of the instruction have _e32 and _e64
+        // respectively appended to their assembly mnemonic.
+        // _e64 is printed as part of the VOPDstS64orS32 operand, whereas
+        // the destination-less 32bit forms add it to the asmString here.
+        VOPC_Real<ps32, Gen.Subtarget, asm_name#"_e32">,
+        VOPCe<op{7-0}>;
+      def _e64#Gen.Suffix :
+            VOP3_Real_Gen<ps64, Gen, asm_name>,
+            VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl> {
+        // Encoding used for VOPC instructions encoded as VOP3 differs from
+        // VOP3e by destination name (sdst) as VOPC doesn't have vector dst.
+        bits<8> sdst;
+        let Inst{7-0} = sdst;
+      }
 
-    if ps32.Pfl.HasExtDPP then {
-      defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e32" #"_dpp");
-      defvar AsmDPP = ps32.Pfl.AsmDPP16;
-      def _e32_dpp#Gen.Suffix : VOPC_DPP16_SIMC<op{7-0}, psDPP,
-                                                Gen.Subtarget, asm_name>;
-      def _e32_dpp_w32#Gen.Suffix
-          : VOPC_DPP16<op{7-0}, psDPP, asm_name> {
-        let AsmString = asm_name # " vcc_lo, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e32_dpp_w64#Gen.Suffix
-          : VOPC_DPP16<op{7-0}, psDPP, asm_name> {
-        let AsmString = asm_name # " vcc, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
-      defvar AsmDPP8 = ps32.Pfl.AsmDPP8;
-      def _e32_dpp8#Gen.Suffix : VOPC_DPP8<op{7-0}, ps32, asm_name>;
-      def _e32_dpp8_w32#Gen.Suffix
-          : VOPC_DPP8<op{7-0}, ps32, asm_name> {
-        let AsmString = asm_name # " vcc_lo, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e32_dpp8_w64#Gen.Suffix
-          : VOPC_DPP8<op{7-0}, ps32, asm_name> {
-        let AsmString = asm_name # " vcc, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
-    }
+      defm : VOPCInstAliases<OpName, !substr(Gen.Suffix, 1), NAME, asm_name>;
 
-    if ps64.Pfl.HasExtVOP3DPP then {
-      defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e64" #"_dpp");
-      def _e64_dpp#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name>,
-                                SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget>;
-      def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name>;
-    }
-  } // End AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace
+      if ps32.Pfl.HasExtDPP then {
+        defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e32" #"_dpp");
+        defvar AsmDPP = ps32.Pfl.AsmDPP16;
+        def _e32_dpp#Gen.Suffix : VOPC_DPP16_SIMC<op{7-0}, psDPP,
+                                                  Gen.Subtarget, asm_name>;
+        def _e32_dpp_w32#Gen.Suffix
+            : VOPC_DPP16<op{7-0}, psDPP, asm_name> {
+          let AsmString = asm_name # " vcc_lo, " # AsmDPP;
+          let isAsmParserOnly = 1;
+          let WaveSizePredicate = isWave32;
+        }
+        def _e32_dpp_w64#Gen.Suffix
+            : VOPC_DPP16<op{7-0}, psDPP, asm_name> {
+          let AsmString = asm_name # " vcc, " # AsmDPP;
+          let isAsmParserOnly = 1;
+          let WaveSizePredicate = isWave64;
+        }
+        defvar AsmDPP8 = ps32.Pfl.AsmDPP8;
+        def _e32_dpp8#Gen.Suffix : VOPC_DPP8<op{7-0}, ps32, asm_name>;
+        def _e32_dpp8_w32#Gen.Suffix
+            : VOPC_DPP8<op{7-0}, ps32, asm_name> {
+          let AsmString = asm_name # " vcc_lo, " # AsmDPP8;
+          let isAsmParserOnly = 1;
+          let WaveSizePredicate = isWave32;
+        }
+        def _e32_dpp8_w64#Gen.Suffix
+            : VOPC_DPP8<op{7-0}, ps32, asm_name> {
+          let AsmString = asm_name # " vcc, " # AsmDPP8;
+          let isAsmParserOnly = 1;
+          let WaveSizePredicate = isWave64;
+        }
+      }
+
+      if ps64.Pfl.HasExtVOP3DPP then {
+        defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e64" #"_dpp");
+        def _e64_dpp#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name>,
+                                  SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget>;
+        def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name>;
+      } // end if ps64.Pfl.HasExtVOP3DPP
+    } // End DecoderNamespace
+  } // End AssemblerPredicate
 }
 
 multiclass VOPC_Real_t16<GFXGen Gen, bits<9> op, string asm_name,
@@ -1514,51 +1520,52 @@ multiclass VOPCX_Real<GFXGen Gen, bits<9> op> {
 
 multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
       string asm_name, string pseudo_mnemonic = ""> {
-  let AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace in {
-    defvar ps32 = !cast<VOPC_Pseudo>(OpName#"_nosdst_e32");
-    defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_nosdst_e64");
-    def _e32#Gen.Suffix
-        : VOPC_Real<ps32, Gen.Subtarget, asm_name>,
-          MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps32.Mnemonic),
-                            pseudo_mnemonic),
-                        asm_name, ps32.AsmVariantName>,
-          Requires<[Gen.AssemblerPredicate]>,
-          VOPCe<op{7-0}> {
-      let AsmString = asm_name # "{_e32} " # ps32.AsmOperands;
-    }
-    def _e64#Gen.Suffix
-        : VOP3_Real<ps64, Gen.Subtarget, asm_name>,
-          MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps64.Mnemonic),
-                            pseudo_mnemonic),
-                        asm_name, ps64.AsmVariantName>,
-          Requires<[Gen.AssemblerPredicate]>,
-          VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl> {
-      let Inst{7-0} = ? ; // sdst
-      let AsmString = asm_name # "{_e64} " # ps64.AsmOperands;
-    }
+  defvar ps32 = !cast<VOPC_Pseudo>(OpName#"_nosdst_e32");
+  defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_nosdst_e64");
+  let AssemblerPredicate = Gen.AssemblerPredicate in {
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps32.Mnemonic),
+                                                     pseudo_mnemonic),
+                              asm_name, ps32.AsmVariantName>;
+    def : AMDGPUMnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps64.Mnemonic),
+                                                     pseudo_mnemonic),
+                              asm_name, ps64.AsmVariantName>;
 
-    defm : VOPCXInstAliases<OpName, !substr(Gen.Suffix, 1), NAME, asm_name>;
+    let DecoderNamespace = Gen.DecoderNamespace in {
+      def _e32#Gen.Suffix
+          : VOPC_Real<ps32, Gen.Subtarget, asm_name>,
+            VOPCe<op{7-0}> {
+        let AsmString = asm_name # "{_e32} " # ps32.AsmOperands;
+      }
+      def _e64#Gen.Suffix
+          : VOP3_Real_Gen<ps64, Gen, asm_name>,
+            VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl> {
+        let Inst{7-0} = ? ; // sdst
+        let AsmString = asm_name # "{_e64} " # ps64.AsmOperands;
+      }
 
-    if ps32.Pfl.HasExtDPP then {
-      defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e32"#"_dpp");
-      def _e32_dpp#Gen.Suffix : VOPC_DPP16_SIMC<op{7-0}, psDPP,
-                                            Gen.Subtarget, asm_name>;
-      def _e32_dpp8#Gen.Suffix : VOPC_DPP8<op{7-0}, ps32, asm_name>;
-    }
-    if ps64.Pfl.HasExtVOP3DPP then {
-      defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e64"#"_dpp");
-      defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
-      def _e64_dpp#Gen.Suffix
-          : VOPC64_DPP16_NoDst<{0, op}, psDPP, asm_name>,
-            SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget> {
-        let AsmString = asm_name # "{_e64_dpp} " # AsmDPP;
+      defm : VOPCXInstAliases<OpName, !substr(Gen.Suffix, 1), NAME, asm_name>;
+
+      if ps32.Pfl.HasExtDPP then {
+        defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e32"#"_dpp");
+        def _e32_dpp#Gen.Suffix : VOPC_DPP16_SIMC<op{7-0}, psDPP,
+                                              Gen.Subtarget, asm_name>;
+        def _e32_dpp8#Gen.Suffix : VOPC_DPP8<op{7-0}, ps32, asm_name>;
       }
-      defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
-      def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_NoDst<{0, op}, ps64, asm_name> {
-        let AsmString = asm_name # "{_e64_dpp} " # AsmDPP8;
-      }
-    }
-  } // End AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace
+      if ps64.Pfl.HasExtVOP3DPP then {
+        defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e64"#"_dpp");
+        defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
+        def _e64_dpp#Gen.Suffix
+            : VOPC64_DPP16_NoDst<{0, op}, psDPP, asm_name>,
+              SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget> {
+          let AsmString = asm_name # "{_e64_dpp} " # AsmDPP;
+        }
+        defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
+        def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_NoDst<{0, op}, ps64, asm_name> {
+          let AsmString = asm_name # "{_e64_dpp} " # AsmDPP8;
+        }
+      } // End if ps64.Pfl.HasExtVOP3DPP
+    } // End DecoderNamespace
+  } // End AssemblerPredicate
 }
 
 multiclass VOPCX_Real_t16<GFXGen Gen, bits<9> op, string asm_name,

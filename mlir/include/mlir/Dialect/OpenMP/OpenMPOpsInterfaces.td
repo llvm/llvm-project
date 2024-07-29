@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OpenMP_OPS_INTERFACES
-#define OpenMP_OPS_INTERFACES
+#ifndef OPENMP_OPS_INTERFACES
+#define OPENMP_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -41,14 +41,14 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
   let cppNamespace = "::mlir::omp";
 
   let methods = [
-    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapOperands",
+    InterfaceMethod<"Get map operands", "::mlir::OperandRange", "getMapVars",
       (ins), [{
-        return $_op.getMapOperands();
+        return $_op.getMapVars();
       }]>,
       InterfaceMethod<"Get mutable map operands", "::mlir::MutableOperandRange",
-                      "getMapOperandsMutable",
+                      "getMapVarsMutable",
       (ins), [{
-        return $_op.getMapOperandsMutable();
+        return $_op.getMapVarsMutable();
       }]>,
   ];
 }
@@ -84,8 +84,8 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
       /*description=*/[{
         Tell whether the operation could be taking the role of a loop wrapper.
         That is, it has a single region with a single block in which there are
-        two operations: another wrapper or `omp.loop_nest` operation and a
-        terminator.
+        two operations: another wrapper (also taking a loop wrapper role) or
+        `omp.loop_nest` operation and a terminator.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isWrapper",
@@ -102,8 +102,14 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
 
         Operation &firstOp = *r.op_begin();
         Operation &secondOp = *(std::next(r.op_begin()));
-        return ::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp) &&
-               secondOp.hasTrait<OpTrait::IsTerminator>();
+
+        if (!secondOp.hasTrait<OpTrait::IsTerminator>())
+          return false;
+
+        if (auto wrapper = ::llvm::dyn_cast<LoopWrapperInterface>(firstOp))
+          return wrapper.isWrapper();
+
+        return ::llvm::isa<LoopNestOp>(firstOp);
       }]
     >,
     InterfaceMethod<
@@ -234,8 +240,8 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getIsTargetDevice",
       (ins), [{}], [{
         if (Attribute isTargetDevice = $_op->getAttr("omp.is_target_device"))
-          if (isTargetDevice.isa<mlir::BoolAttr>())
-           return isTargetDevice.dyn_cast<BoolAttr>().getValue();
+          if (::llvm::isa<mlir::BoolAttr>(isTargetDevice))
+           return ::llvm::dyn_cast<BoolAttr>(isTargetDevice).getValue();
         return false;
       }]>,
     InterfaceMethod<
@@ -259,7 +265,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getIsGPU",
       (ins), [{}], [{
         if (Attribute isTargetCGAttr = $_op->getAttr("omp.is_gpu"))
-          if (auto isTargetCGVal = isTargetCGAttr.dyn_cast<BoolAttr>())
+          if (auto isTargetCGVal = ::llvm::dyn_cast<BoolAttr>(isTargetCGAttr))
            return isTargetCGVal.getValue();
         return false;
       }]>,
@@ -332,7 +338,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getRequires",
       (ins), [{}], [{
         if (Attribute requiresAttr = $_op->getAttr("omp.requires"))
-          if (auto requiresVal = requiresAttr.dyn_cast<mlir::omp::ClauseRequiresAttr>())
+          if (auto requiresVal = ::llvm::dyn_cast<mlir::omp::ClauseRequiresAttr>(requiresAttr))
             return requiresVal.getValue();
         return mlir::omp::ClauseRequires::none;
       }]>,
@@ -349,4 +355,4 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   ];
 }
 
-#endif // OpenMP_OPS_INTERFACES
+#endif // OPENMP_OPS_INTERFACES

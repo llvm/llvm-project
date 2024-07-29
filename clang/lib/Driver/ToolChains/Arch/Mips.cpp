@@ -369,6 +369,9 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (mips::isFP64ADefault(Triple, CPUName)) {
     Features.push_back("+fp64");
     Features.push_back("+nooddspreg");
+  } else if (Arg *A = Args.getLastArg(options::OPT_mmsa)) {
+    if (A->getOption().matches(options::OPT_mmsa))
+      Features.push_back("+fp64");
   }
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
@@ -499,6 +502,13 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
                                options::OPT_mdouble_float))
     if (A->getOption().matches(options::OPT_msingle_float))
       UseFPXX = false;
+  // FP64 should be used for MSA.
+  if (Arg *A = Args.getLastArg(options::OPT_mmsa))
+    if (A->getOption().matches(options::OPT_mmsa))
+      UseFPXX = llvm::StringSwitch<bool>(CPUName)
+                    .Cases("mips32r2", "mips32r3", "mips32r5", false)
+                    .Cases("mips64r2", "mips64r3", "mips64r5", false)
+                    .Default(UseFPXX);
 
   return UseFPXX;
 }

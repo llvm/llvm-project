@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -37,8 +38,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 
 using namespace llvm;
@@ -83,8 +84,8 @@ public:
 
   // Returns whether Inst is compressed.
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   typedef std::tuple<unsigned, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
@@ -290,9 +291,10 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   emitNTLHint(MI);
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
-
+  }
 
   switch (MI->getOpcode()) {
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:

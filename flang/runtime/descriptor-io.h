@@ -499,8 +499,7 @@ static RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
     return false;
   }
   if (!io.get_if<IoDirectionState<DIR>>()) {
-    io.GetIoErrorHandler().Crash(
-        "DescriptorIO() called for wrong I/O direction");
+    handler.Crash("DescriptorIO() called for wrong I/O direction");
     return false;
   }
   if constexpr (DIR == Direction::Input) {

@@ -95,7 +95,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 }
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       TargetTriple(TM->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
@@ -144,7 +144,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
   for (const BasicBlock *BB : L->getBlocks()) {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     unsigned LocalGEPsSeen = 0;
 
     if (llvm::any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
@@ -292,7 +292,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
@@ -418,19 +418,19 @@ int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 // FIXME: This could use fine tuning and microbenchmarks.
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+    unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicElementSize) const {
 
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
 
-  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+  Align MinAlign = std::min(SrcAlign, DestAlign);
 
   // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
   // hardware into byte accesses. If you assume all alignments are equally
   // probable, it's more efficient on average to use short accesses for this
   // case.
-  if (MinAlign == 2)
+  if (MinAlign == Align(2))
     return Type::getInt16Ty(Context);
 
   // Not all subtargets have 128-bit DS instructions, and we currently don't
@@ -450,7 +450,7 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
 void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-    unsigned SrcAlign, unsigned DestAlign,
+    Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicCpySize) const {
   assert(RemainingBytes < 16);
 
@@ -459,9 +459,9 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+  Align MinAlign = std::min(SrcAlign, DestAlign);
 
-  if (MinAlign != 2) {
+  if (MinAlign != Align(2)) {
     Type *I64Ty = Type::getInt64Ty(Context);
     while (RemainingBytes >= 8) {
       OpsOut.push_back(I64Ty);
@@ -501,10 +501,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
                                        MemIntrinsicInfo &Info) const {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_ordered_add:
-  case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
+  case Intrinsic::amdgcn_ds_ordered_swap: {
     auto *Ordering = dyn_cast<ConstantInt>(Inst->getArgOperand(2));
     auto *Volatile = dyn_cast<ConstantInt>(Inst->getArgOperand(4));
     if (!Ordering || !Volatile)
@@ -850,7 +847,7 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
   if (Indices.size() > 1)
     return true;
 
-  const DataLayout &DL = CI->getModule()->getDataLayout();
+  const DataLayout &DL = CI->getDataLayout();
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
       TLI->ParseConstraints(DL, ST->getRegisterInfo(), *CI);
@@ -981,7 +978,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                        m_Value(Mask)))) {
     const Function *F = cast<Instruction>(V)->getFunction();
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
@@ -1019,9 +1016,6 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
 bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                             Intrinsic::ID IID) const {
   switch (IID) {
-  case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
   case Intrinsic::amdgcn_flat_atomic_fadd:
@@ -1041,21 +1035,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                     Value *NewV) const {
   auto IntrID = II->getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
-    const ConstantInt *IsVolatile = cast<ConstantInt>(II->getArgOperand(4));
-    if (!IsVolatile->isZero())
-      return nullptr;
-    Module *M = II->getParent()->getParent()->getParent();
-    Type *DestTy = II->getType();
-    Type *SrcTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
-    II->setArgOperand(0, NewV);
-    II->setCalledFunction(NewDecl);
-    return II;
-  }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
     unsigned TrueAS = IntrID == Intrinsic::amdgcn_is_shared ?
@@ -1129,31 +1108,56 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) {
+  if (!isa<FixedVectorType>(VT))
+    return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+
   Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
-  // Treat extractsubvector as single op permutation.
-  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  if (IsExtractSubvector)
-    Kind = TTI::SK_PermuteSingleSrc;
 
-  if (ST->hasVOP3PInsts()) {
-    if (cast<FixedVectorType>(VT)->getNumElements() == 2 &&
-        DL.getTypeSizeInBits(VT->getElementType()) == 16) {
+  // Larger vector widths may require additional instructions, but are
+  // typically cheaper than scalarized versions.
+  unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+  if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
+      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
+    bool HasVOP3P = ST->hasVOP3PInsts();
+    unsigned RequestedElts =
+        count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
+    if (RequestedElts == 0)
+      return 0;
+    switch (Kind) {
+    case TTI::SK_Broadcast:
+    case TTI::SK_Reverse:
+    case TTI::SK_PermuteSingleSrc: {
       // With op_sel VOP3P instructions freely can access the low half or high
-      // half of a register, so any swizzle is free.
-
-      switch (Kind) {
-      case TTI::SK_Broadcast:
-      case TTI::SK_Reverse:
-      case TTI::SK_PermuteSingleSrc:
+      // half of a register, so any swizzle of two elements is free.
+      if (HasVOP3P && NumVectorElts == 2)
         return 0;
-      default:
-        break;
-      }
+      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      // SK_Broadcast just reuses the same mask
+      unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
+      return NumPerms + NumPermMasks;
+    }
+    case TTI::SK_ExtractSubvector:
+    case TTI::SK_InsertSubvector: {
+      // Even aligned accesses are free
+      if (!(Index % 2))
+        return 0;
+      // Insert/extract subvectors only require shifts / extract code to get the
+      // relevant bits
+      return alignTo(RequestedElts, 2) / 2;
+    }
+    case TTI::SK_PermuteTwoSrc:
+    case TTI::SK_Splice:
+    case TTI::SK_Select: {
+      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      // SK_Select just reuses the same mask
+      unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
+      return NumPerms + NumPermMasks;
+    }
+
+    default:
+      break;
     }
   }
-  // Restore optimal kind.
-  if (IsExtractSubvector)
-    Kind = TTI::SK_ExtractSubvector;
 
   return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
 }

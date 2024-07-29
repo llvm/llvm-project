@@ -106,6 +106,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     # libc.src.fenv.fesetround
     # libc.src.fenv.feraiseexcept
     # libc.src.fenv.fetestexcept
+    # libc.src.fenv.fetestexceptflag
     # libc.src.fenv.feupdateenv
 
     ## Currently disabled for failing tests.
@@ -118,6 +119,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.ceill
     #libc.src.math.coshf
     #libc.src.math.cosf
+    #libc.src.math.dsqrtl
     #libc.src.math.expf
     #libc.src.math.exp2f
     #libc.src.math.expm1f
@@ -205,6 +207,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.sqrtl
     #libc.src.math.tanf
     #libc.src.math.tanhf
+    #libc.src.math.totalordermag
+    #libc.src.math.totalordermagf
+    #libc.src.math.totalordermagl
     #libc.src.math.trunc
     #libc.src.math.truncf
     #libc.src.math.truncl

@@ -67,12 +67,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     AVX2,
     AVX512F
   } SSELevel = NoSSE;
-  enum MMX3DNowEnum {
-    NoMMX3DNow,
-    MMX,
-    AMD3DNow,
-    AMD3DNowAthlon
-  } MMX3DNowLevel = NoMMX3DNow;
+  bool HasMMX = false;
   enum XOPEnum { NoXOP, SSE4A, FMA4, XOP } XOPLevel = NoXOP;
   enum AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
 
@@ -103,8 +98,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512VNNI = false;
   bool HasAVX512FP16 = false;
   bool HasAVX512BF16 = false;
-  bool HasAVX512ER = false;
-  bool HasAVX512PF = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
   bool HasAVX512BW = false;
@@ -136,7 +129,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLWB = false;
   bool HasMOVBE = false;
   bool HasPREFETCHI = false;
-  bool HasPREFETCHWT1 = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
   bool HasRetpolineExternalThunk = false;
@@ -173,7 +165,11 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasPPX = false;
   bool HasNDD = false;
   bool HasCCMP = false;
+  bool HasNF = false;
   bool HasCF = false;
+  bool HasZU = false;
+  bool HasInlineAsmUseGPR32 = false;
+  bool HasBranchHint = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;
@@ -218,7 +214,7 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("esp") || RegName.equals("rsp");
+    return RegName == "esp" || RegName == "rsp";
   }
 
   bool supportsCpuSupports() const override { return true; }
@@ -246,7 +242,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // esp and ebp are the only 32-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("esp") || RegName.equals("ebp")) {
+    if (RegName == "esp" || RegName == "ebp") {
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
@@ -347,8 +343,7 @@ public:
       return "avx512";
     if (getTriple().getArch() == llvm::Triple::x86_64 && SSELevel >= AVX)
       return "avx";
-    if (getTriple().getArch() == llvm::Triple::x86 &&
-        MMX3DNowLevel == NoMMX3DNow)
+    if (getTriple().getArch() == llvm::Triple::x86 && !HasMMX)
       return "no-mmx";
     return "";
   }
@@ -518,15 +513,6 @@ class LLVM_LIBRARY_VISIBILITY NetBSDI386TargetInfo
 public:
   NetBSDI386TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : NetBSDTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
-
-  LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    VersionTuple OsVersion = getTriple().getOSVersion();
-    // New NetBSD uses the default rounding mode.
-    if (OsVersion >= VersionTuple(6, 99, 26) || OsVersion.getMajor() == 0)
-      return X86_32TargetInfo::getFPEvalMethod();
-    // NetBSD before 6.99.26 defaults to "double" rounding.
-    return LangOptions::FPEvalMethodKind::FEM_Double;
-  }
 };
 
 class LLVM_LIBRARY_VISIBILITY OpenBSDI386TargetInfo
@@ -802,7 +788,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // rsp and rbp are the only 64-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("rsp") || RegName.equals("rbp")) {
+    if (RegName == "rsp" || RegName == "rbp") {
       // Check that the register size is 64-bit.
       HasSizeMismatch = RegSize != 64;
       return true;

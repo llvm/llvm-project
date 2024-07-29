@@ -208,7 +208,7 @@ libc++ specific options
 
 .. option:: LIBCXX_INSTALL_MODULES:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Toggle the installation of the experimental libc++ module sources.
 
@@ -399,22 +399,6 @@ libc++ Feature Options
   since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
   get accurate measurements.
 
-.. option:: LIBCXX_BENCHMARK_NATIVE_STDLIB:STRING
-
-  **Default**:: ``""``
-
-  **Values**:: ``libc++``, ``libstdc++``
-
-  Build the libc++ benchmark tests and Google Benchmark library against the
-  specified standard library on the platform. On Linux this can be used to
-  compare libc++ to libstdc++ by building the benchmark tests against both
-  standard libraries.
-
-.. option:: LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN:STRING
-
-  Use the specified GCC toolchain and standard library when building the native
-  stdlib benchmark tests.
-
 .. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
 
   **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
@@ -422,7 +406,8 @@ libc++ Feature Options
   Specify the path to a header that contains a custom implementation of the
   assertion handler that gets invoked when a hardening assertion fails. If
   provided, this header will be included by the library, replacing the
-  default assertion handler.
+  default assertion handler. If this is specified as a relative path, it
+  is assumed to be relative to ``<monorepo>/libcxx``.
 
 
 libc++ ABI Feature Options

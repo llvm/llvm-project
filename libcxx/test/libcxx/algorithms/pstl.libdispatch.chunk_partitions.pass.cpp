@@ -8,11 +8,11 @@
 
 // <algorithm>
 
-// REQUIRES: libcpp-pstl-cpu-backend-libdispatch
+// REQUIRES: libcpp-pstl-backend-libdispatch
 
 // __chunk_partitions __partition_chunks(ptrdiff_t);
 
-#include <__algorithm/pstl_backends/cpu_backends/libdispatch.h>
+#include <__pstl/backends/libdispatch.h>
 #include <cassert>
 #include <cstddef>
 

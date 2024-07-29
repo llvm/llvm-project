@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -269,7 +269,9 @@ enum OperandType : unsigned {
   OPERAND_UIMM3,
   OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM5_LSB0,
   OPERAND_UIMM6,
+  OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM8_LSB00,
@@ -279,6 +281,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM12,
+  OPERAND_UIMM16,
+  OPERAND_UIMM32,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,
@@ -372,6 +376,15 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVFPRndMode
+
+namespace RISCVVXRndMode {
+enum RoundingMode {
+  RNU = 0,
+  RNE = 1,
+  RDN = 2,
+  ROD = 3,
+};
+} // namespace RISCVVXRndMode
 
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
@@ -526,12 +539,9 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
-inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
-                                       bool IsEABI) {
+inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (IsEABI)
-    return 16;
   if (!IsRV64) {
     switch (RlistVal) {
     case RLISTENCODE::RA:
@@ -578,10 +588,10 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
 }
 
 inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
+                            int64_t StackAdjustment, bool IsRV64) {
   if (RlistVal == RLISTENCODE::INVALID_RLIST)
     return false;
-  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64, IsEABI);
+  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
   StackAdjustment -= StackAdjBase;
   if (StackAdjustment % 16 != 0)
     return false;

@@ -88,6 +88,7 @@ TEST(ConstStringTest, NullAndEmptyStates) {
   EXPECT_TRUE(!null);
   EXPECT_TRUE(null.IsEmpty());
   EXPECT_TRUE(null.IsNull());
+  EXPECT_TRUE(null.GetString().empty());
 }
 
 TEST(ConstStringTest, CompareConstString) {

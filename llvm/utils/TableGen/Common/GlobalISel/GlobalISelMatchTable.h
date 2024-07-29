@@ -473,6 +473,10 @@ protected:
   /// have succeeded.
   ActionList Actions;
 
+  /// Combiners can sometimes just run C++ code to finish matching a rule &
+  /// mutate instructions instead of relying on MatchActions. Empty if unused.
+  std::string CustomCXXAction;
+
   using DefinedInsnVariablesMap = std::map<InstructionMatcher *, unsigned>;
 
   /// A map of instruction matchers to the local variables
@@ -562,6 +566,10 @@ public:
   /// If \p ID has already been erased, returns false and GIR_EraseFromParent
   /// should NOT be emitted.
   bool tryEraseInsnID(unsigned ID) { return ErasedInsnIDs.insert(ID).second; }
+
+  void setCustomCXXAction(StringRef FnEnumName) {
+    CustomCXXAction = FnEnumName.str();
+  }
 
   // Emplaces an action of the specified Kind at the end of the action list.
   //
@@ -798,6 +806,7 @@ public:
     IPM_MemoryAlignment,
     IPM_VectorSplatImm,
     IPM_NoUse,
+    IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
     OPM_SameOperand,
@@ -1166,7 +1175,7 @@ protected:
 public:
   CmpPredicateOperandMatcher(unsigned InsnVarID, unsigned OpIdx, std::string P)
       : OperandPredicateMatcher(OPM_CmpPredicate, InsnVarID, OpIdx),
-        PredName(P) {}
+        PredName(std::move(P)) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
@@ -1683,6 +1692,28 @@ public:
   }
 };
 
+/// Generates code to check that the first result has only one use.
+class OneUsePredicateMatcher : public InstructionPredicateMatcher {
+public:
+  OneUsePredicateMatcher(unsigned InsnVarID)
+      : InstructionPredicateMatcher(IPM_OneUse, InsnVarID) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_OneUse;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B);
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckHasOneUse")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+          << MatchTable::LineBreak;
+  }
+};
+
 /// Generates code to check that a set of predicates and operands match for a
 /// particular instruction.
 ///
@@ -1883,6 +1914,10 @@ public:
   }
 
   StringRef getSymbolicName() const { return SymbolicName; }
+
+  static void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                unsigned NewInsnID, unsigned OldInsnID,
+                                unsigned OpIdx, StringRef Name);
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
@@ -2202,7 +2237,6 @@ class MatchAction {
 public:
   enum ActionKind {
     AK_DebugComment,
-    AK_CustomCXX,
     AK_BuildMI,
     AK_BuildConstantMI,
     AK_EraseInst,
@@ -2226,6 +2260,15 @@ public:
   virtual void emitActionOpcodes(MatchTable &Table,
                                  RuleMatcher &Rule) const = 0;
 
+  /// If this opcode has an overload that can call GIR_Done directly, emit that
+  /// instead of the usual opcode and return "true". Return "false" if GIR_Done
+  /// still needs to be emitted.
+  virtual bool emitActionOpcodesAndDone(MatchTable &Table,
+                                        RuleMatcher &Rule) const {
+    emitActionOpcodes(Table, Rule);
+    return false;
+  }
+
 private:
   ActionKind Kind;
 };
@@ -2246,20 +2289,6 @@ public:
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
-};
-
-class CustomCXXAction : public MatchAction {
-  std::string FnEnumName;
-
-public:
-  CustomCXXAction(StringRef FnEnumName)
-      : MatchAction(AK_CustomCXX), FnEnumName(FnEnumName.str()) {}
-
-  static bool classof(const MatchAction *A) {
-    return A->getKind() == AK_CustomCXX;
-  }
-
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Generates code to build an instruction or mutate an existing instruction
@@ -2334,13 +2363,15 @@ public:
   EraseInstAction(unsigned InsnID)
       : MatchAction(AK_EraseInst), InsnID(InsnID) {}
 
+  unsigned getInsnID() const { return InsnID; }
+
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_EraseInst;
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
-  static void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                unsigned InsnID);
+  bool emitActionOpcodesAndDone(MatchTable &Table,
+                                RuleMatcher &Rule) const override;
 };
 
 class ReplaceRegAction : public MatchAction {
@@ -2351,11 +2382,11 @@ class ReplaceRegAction : public MatchAction {
 public:
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned NewInsnId,
                    unsigned NewOpIdx)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         NewInsnId(NewInsnId), NewOpIdx(NewOpIdx) {}
 
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned TempRegID)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         TempRegID(TempRegID) {}
 
   static bool classof(const MatchAction *A) {
@@ -2381,9 +2412,14 @@ public:
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
-          << MatchTable::LineBreak;
+    if (InsnID == 0) {
+      Table << MatchTable::Opcode("GIR_RootConstrainSelectedInstOperands")
+            << MatchTable::LineBreak;
+    } else {
+      Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
+            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+            << MatchTable::LineBreak;
+    }
   }
 };
 

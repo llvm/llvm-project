@@ -88,8 +88,8 @@ class DoConcurrentBodyEnforce {
 public:
   DoConcurrentBodyEnforce(
       SemanticsContext &context, parser::CharBlock doConcurrentSourcePosition)
-      : context_{context}, doConcurrentSourcePosition_{
-                               doConcurrentSourcePosition} {}
+      : context_{context},
+        doConcurrentSourcePosition_{doConcurrentSourcePosition} {}
   std::set<parser::Label> labels() { return labels_; }
   template <typename T> bool Pre(const T &x) {
     if (const auto *expr{GetExpr(context_, x)}) {
@@ -505,7 +505,7 @@ private:
             .Say(sourceLocation,
                 "'%s' may not be used as a DO variable"_err_en_US,
                 symbol->name())
-            .Attach(std::move(*why));
+            .Attach(std::move(why->set_severity(parser::Severity::Because)));
       } else {
         const DeclTypeSpec *symType{symbol->GetType()};
         if (!symType) {
@@ -540,7 +540,8 @@ private:
     CheckDoExpression(bounds.upper);
     if (bounds.step) {
       CheckDoExpression(*bounds.step);
-      if (IsZero(*bounds.step)) {
+      if (IsZero(*bounds.step) &&
+          context_.ShouldWarn(common::UsageWarning::ZeroDoStep)) {
         context_.Say(bounds.step->thing.value().source,
             "DO step expression should not be zero"_warn_en_US);
       }
@@ -682,6 +683,60 @@ private:
     }
   }
 
+  void CheckReduce(const parser::LocalitySpec::Reduce &reduce) const {
+    const parser::ReductionOperator &reductionOperator{
+        std::get<parser::ReductionOperator>(reduce.t)};
+    // F'2023 C1132, reduction variables should have suitable intrinsic type
+    for (const parser::Name &x : std::get<std::list<parser::Name>>(reduce.t)) {
+      bool supportedIdentifier{false};
+      if (x.symbol && x.symbol->GetType()) {
+        const auto *type{x.symbol->GetType()};
+        auto typeMismatch{[&](const char *suitable_types) {
+          context_.Say(currentStatementSourcePosition_,
+              "Reduction variable '%s' ('%s') does not have a suitable type ('%s')."_err_en_US,
+              x.symbol->name(), type->AsFortran(), suitable_types);
+        }};
+        supportedIdentifier = true;
+        switch (reductionOperator.v) {
+        case parser::ReductionOperator::Operator::Plus:
+        case parser::ReductionOperator::Operator::Multiply:
+          if (!(type->IsNumeric(TypeCategory::Complex) ||
+                  type->IsNumeric(TypeCategory::Integer) ||
+                  type->IsNumeric(TypeCategory::Real))) {
+            typeMismatch("COMPLEX', 'INTEGER', or 'REAL");
+          }
+          break;
+        case parser::ReductionOperator::Operator::And:
+        case parser::ReductionOperator::Operator::Or:
+        case parser::ReductionOperator::Operator::Eqv:
+        case parser::ReductionOperator::Operator::Neqv:
+          if (type->category() != DeclTypeSpec::Category::Logical) {
+            typeMismatch("LOGICAL");
+          }
+          break;
+        case parser::ReductionOperator::Operator::Max:
+        case parser::ReductionOperator::Operator::Min:
+          if (!(type->IsNumeric(TypeCategory::Integer) ||
+                  type->IsNumeric(TypeCategory::Real))) {
+            typeMismatch("INTEGER', or 'REAL");
+          }
+          break;
+        case parser::ReductionOperator::Operator::Iand:
+        case parser::ReductionOperator::Operator::Ior:
+        case parser::ReductionOperator::Operator::Ieor:
+          if (!type->IsNumeric(TypeCategory::Integer)) {
+            typeMismatch("INTEGER");
+          }
+          break;
+        }
+      }
+      if (!supportedIdentifier) {
+        context_.Say(currentStatementSourcePosition_,
+            "Invalid identifier in REDUCE clause."_err_en_US);
+      }
+    }
+  }
+
   // C1123, concurrent limit or step expressions can't reference index-names
   void CheckConcurrentHeader(const parser::ConcurrentHeader &header) const {
     if (const auto &mask{
@@ -735,6 +790,12 @@ private:
       if (const auto &mask{
               std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)}) {
         CheckMaskDoesNotReferenceLocal(*mask, localVars);
+      }
+      for (auto &ls : localitySpecs) {
+        if (const auto *reduce{
+                std::get_if<parser::LocalitySpec::Reduce>(&ls.u)}) {
+          CheckReduce(*reduce);
+        }
       }
       CheckDefaultNoneImpliesExplicitLocality(localitySpecs, block);
     }
@@ -791,7 +852,8 @@ private:
           },
           assignment.u);
       for (const Symbol &index : indexVars) {
-        if (symbols.count(index) == 0) {
+        if (symbols.count(index) == 0 &&
+            context_.ShouldWarn(common::UsageWarning::UnusedForallIndex)) {
           context_.Say("FORALL index variable '%s' not used on left-hand side"
                        " of assignment"_warn_en_US,
               index.name());

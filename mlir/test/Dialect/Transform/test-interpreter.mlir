@@ -830,6 +830,91 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %results, %types = transform.foreach %0 : !transform.any_op -> !transform.any_value, !transform.any_param {
+    ^bb0(%op0 : !transform.any_op):
+      %result = transform.get_result %op0[0] : (!transform.any_op) -> !transform.any_value
+      %type = transform.get_type elemental %result  : (!transform.any_value) -> !transform.any_param
+      transform.yield %result, %type : !transform.any_value, !transform.any_param
+    }
+    transform.debug.emit_remark_at %results, "result selected" : !transform.any_value
+    transform.debug.emit_param_as_remark %types, "elemental types" at %0 : !transform.any_param, !transform.any_op
+
+    transform.yield
+  }
+}
+
+func.func @payload(%lhs: tensor<10x20xf16>,
+                   %rhs: tensor<20x15xf32>) -> (tensor<10x15xf64>, tensor<10x15xf32>) {
+  %cst64 = arith.constant 0.0 : f64
+  %empty64 = tensor.empty() : tensor<10x15xf64>
+  %fill64 = linalg.fill ins(%cst64 : f64) outs(%empty64 : tensor<10x15xf64>) -> tensor<10x15xf64>
+  // expected-remark @below {{result selected}}
+  // expected-note @below {{value handle points to an op result #0}}
+  // expected-remark @below {{elemental types f64, f32}}
+  %result64 = linalg.matmul ins(%lhs, %rhs: tensor<10x20xf16>, tensor<20x15xf32>)
+                         outs(%fill64: tensor<10x15xf64>) -> tensor<10x15xf64>
+
+  %cst32 = arith.constant 0.0 : f32
+  %empty32 = tensor.empty() : tensor<10x15xf32>
+  %fill32 = linalg.fill ins(%cst32 : f32) outs(%empty32 : tensor<10x15xf32>) -> tensor<10x15xf32>
+  // expected-remark @below {{result selected}}
+  // expected-note @below {{value handle points to an op result #0}}
+  // expected-remark @below {{elemental types f64, f32}}
+  %result32 = linalg.matmul ins(%lhs, %rhs: tensor<10x20xf16>, tensor<20x15xf32>)
+                           outs(%fill32: tensor<10x15xf32>) -> tensor<10x15xf32>
+
+  return %result64, %result32 : tensor<10x15xf64>, tensor<10x15xf32>
+
+}
+
+// -----
+
+func.func @two_const_ops() {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : index
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %two_ops = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %one_param = transform.param.constant 1 : i32 -> !transform.test_dialect_param
+    // expected-error @below {{prior targets' payload size (2) differs from payload size (1) of target}}
+    transform.foreach %two_ops, %one_param : !transform.any_op, !transform.test_dialect_param {
+    ^bb2(%op: !transform.any_op, %param: !transform.test_dialect_param):
+    }
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @one_const_op() {
+  %0 = arith.constant 0 : index
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %one_op = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %one_val = transform.test_produce_value_handle_to_self_operand %one_op : (!transform.any_op) -> !transform.any_value
+    %param_one = transform.param.constant 1 : i32 -> !transform.test_dialect_param
+    %param_two = transform.param.constant 2 : i32 -> !transform.test_dialect_param
+    %two_params = transform.merge_handles %param_one, %param_two : !transform.test_dialect_param
+
+    // expected-error @below {{prior targets' payload size (1) differs from payload size (2) of target}}
+    transform.foreach %one_val, %one_op, %two_params : !transform.any_value, !transform.any_op, !transform.test_dialect_param {
+    ^bb2(%val: !transform.any_value, %op: !transform.any_op, %param: !transform.test_dialect_param):
+    }
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @consume_in_foreach()
 //  CHECK-NEXT:   return
 func.func @consume_in_foreach() {

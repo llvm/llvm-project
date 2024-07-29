@@ -20,7 +20,7 @@ define ptr @fold_strchr_s1_C(i32 %C) {
 ; CHECK-LABEL: @fold_strchr_s1_C(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([2 x i8], ptr @s1, i64 0, i64 1), ptr null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds (i8, ptr @s1, i64 1), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 1
 ; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr @s1, ptr [[MEMCHR_SEL1]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]
@@ -36,7 +36,7 @@ define ptr @fold_strchr_s11_C(i32 %C) {
 ; CHECK-LABEL: @fold_strchr_s11_C(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([3 x i8], ptr @s11, i64 0, i64 2), ptr null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds (i8, ptr @s11, i64 2), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 1
 ; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr @s11, ptr [[MEMCHR_SEL1]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]
@@ -52,7 +52,7 @@ define ptr @fold_strchr_s111_C(i32 %C) {
 ; CHECK-LABEL: @fold_strchr_s111_C(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([4 x i8], ptr @s111, i64 0, i64 3), ptr null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds (i8, ptr @s111, i64 3), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 1
 ; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr @s111, ptr [[MEMCHR_SEL1]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]
@@ -96,9 +96,9 @@ define ptr @fold_strchr_s21111p1_C(i32 %C) {
 ; CHECK-LABEL: @fold_strchr_s21111p1_C(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([6 x i8], ptr @s21111, i64 0, i64 5), ptr null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds (i8, ptr @s21111, i64 5), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 1
-; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr getelementptr inbounds ([6 x i8], ptr @s21111, i64 0, i64 1), ptr [[MEMCHR_SEL1]]
+; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr getelementptr inbounds (i8, ptr @s21111, i64 1), ptr [[MEMCHR_SEL1]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]
 ;
   %ptr = getelementptr inbounds [6 x i8], ptr @s21111, i64 0, i64 1
@@ -113,7 +113,7 @@ define ptr @fold_strchr_s11102_C(i32 %C) {
 ; CHECK-LABEL: @fold_strchr_s11102_C(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([6 x i8], ptr @s11102, i64 0, i64 3), ptr null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds (i8, ptr @s11102, i64 3), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 1
 ; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr @s11102, ptr [[MEMCHR_SEL1]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]

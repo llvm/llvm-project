@@ -77,7 +77,7 @@ void test1() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
 template <class T>
@@ -161,7 +161,7 @@ void test3() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
 template <class T>
@@ -203,7 +203,7 @@ void test4() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
 template <class T>
@@ -245,7 +245,7 @@ void test5() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
 template <class T>
@@ -284,8 +284,8 @@ void test6() {
     double x_var = x_mean / d.p();
     double x_skew = (2 - d.p()) / std::sqrt((1 - d.p()));
     double x_kurtosis = 6 + sqr(d.p()) / (1 - d.p());
-    assert(std::abs((mean - x_mean) / x_mean) < 0.01);
-    assert(std::abs((var - x_var) / x_var) < 0.01);
+    assert(std::abs((mean - x_mean) / x_mean) < 0.02);
+    assert(std::abs((var - x_var) / x_var) < 0.02);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
 }

@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* The ``x86_mmx`` IR type has been removed. It will be translated to
+  the standard vector type ``<1 x i64>`` in bitcode upgrade.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -59,24 +62,25 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
-- We can define type aliases via new keyword ``deftype``.
-
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
 
 Changes to the AMDGPU Backend
 -----------------------------
 
-* Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
-
 Changes to the ARM Backend
 --------------------------
-* FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
 
 Changes to the AVR Backend
 --------------------------
@@ -99,17 +103,9 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Added full support for the experimental Zabha (Byte and
-  Halfword Atomic Memory Operations) extension.
-* Added assembler/disassembler support for the experimenatl Zalasr
-  (Load-Acquire and Store-Release) extension.
-* The names of the majority of the S-prefixed (supervisor-level) extension
-  names in the RISC-V profiles specification are now recognised.
-* Codegen support was added for the Zimop (May-Be-Operations) extension.
-* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
-* The experimental Ssqosid extension is supported.
-* Zacas is no longer experimental.
-* Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -120,6 +116,19 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `.balign N, 0x90`, `.p2align N, 0x90`, and `.align N, 0x90` in code sections
+  now fill the required alignment space with repeating `0x90` bytes, rather than
+  using optimised NOP filling. Optimised NOP filling fills the space with NOP
+  instructions of various widths, not just those that use the `0x90` byte
+  encoding. To use optimised NOP filling in a code section, leave off the
+  "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
+
+* Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -129,28 +138,11 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
-* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
-  functions for accessing the values in a blockaddress constant.
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
 
-* Added ``LLVMConstStringInContext2`` function, which better matches the C++
-  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
-
-* Added the following functions for accessing a function's prefix data:
-
-  * ``LLVMHasPrefixData``
-  * ``LLVMGetPrefixData``
-  * ``LLVMSetPrefixData``
-
-* Added the following functions for accessing a function's prologue data:
-
-  * ``LLVMHasPrologueData``
-  * ``LLVMGetPrologueData``
-  * ``LLVMSetPrologueData``
-
-* Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
-
-* Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
-  ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -163,42 +155,11 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
-* llvm-nm and llvm-objdump can now print symbol information from linked
-  WebAssembly binaries, using information from exports or the "name"
-  section for functions, globals and data segments. Symbol addresses and sizes
-  are printed as offsets in the file, allowing for binary size analysis. Wasm
-  files using reference types and GC are also supported (but also only for
-  functions, globals, and data, and only for listing symbols and names).
-
-* llvm-ar now utilizes LLVM_DEFAULT_TARGET_TRIPLE to determine the archive format
-  if it's not specified with the ``--format`` argument and cannot be inferred from
-  input files.
-
-* llvm-ar now allows specifying COFF archive format with ``--format`` argument
-  and uses it by default for COFF targets.
-
-* llvm-ranlib now supports ``-V`` as an alias for ``--version``.
-  ``-v`` (``--verbose`` in llvm-ar) has been removed.
-  (`#87661 <https://github.com/llvm/llvm-project/pull/87661>`_)
-
-* llvm-objcopy now supports ``--set-symbol-visibility`` and
-  ``--set-symbols-visibility`` options for ELF input to change the
-  visibility of symbols.
-
-* llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
-  for ELF input to skip the specified symbols when executing other options
-  that can change a symbol's name, binding or visibility.
-
-* llvm-objcopy now supports ``--compress-sections`` to compress or decompress
-  arbitrary sections not within a segment.
-  (`#85036 <https://github.com/llvm/llvm-project/pull/85036>`_.)
-
-* llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
-  on Windows using Intel VTune's SEP. For details on usage, see the `end-user
-  documentation for SPGO
-  <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
 
 Changes to LLDB
+---------------------------------
+
+Changes to BOLT
 ---------------------------------
 
 Changes to Sanitizers

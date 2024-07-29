@@ -176,13 +176,6 @@ class VectorLegalizer {
   /// truncated back to the original type.
   void PromoteFP_TO_INT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
-  /// Implements vector reduce operation promotion.
-  ///
-  /// All vector operands are promoted to a vector type with larger element
-  /// type, and the start value is promoted to a larger scalar type. Then the
-  /// result is truncated back to the original scalar type.
-  void PromoteReduction(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-
   /// Implements vector setcc operation promotion.
   ///
   /// All vector operands are promoted to a vector type with larger element
@@ -374,6 +367,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::ABS:
+  case ISD::ABDS:
+  case ISD::ABDU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
   case ISD::BSWAP:
   case ISD::BITREVERSE:
   case ISD::CTLZ:
@@ -402,6 +401,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSQRT:
   case ISD::FSIN:
   case ISD::FCOS:
+  case ISD::FTAN:
+  case ISD::FASIN:
+  case ISD::FACOS:
+  case ISD::FATAN:
+  case ISD::FSINH:
+  case ISD::FCOSH:
+  case ISD::FTANH:
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:
@@ -420,6 +426,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FFLOOR:
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
+  case ISD::FPTRUNC_ROUND:
   case ISD::FMA:
   case ISD::SIGN_EXTEND_INREG:
   case ISD::ANY_EXTEND_VECTOR_INREG:
@@ -448,6 +455,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
+  case ISD::VECTOR_COMPRESS:
+  case ISD::SCMP:
+  case ISD::UCMP:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -508,6 +518,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       Action = TLI.getCondCodeAction(CCCode, LegalizeVT.getSimpleVT());        \
       if (Action != TargetLowering::Legal)                                     \
         break;                                                                 \
+    }                                                                          \
+    /* Defer non-vector results to LegalizeDAG. */                             \
+    if (!Node->getValueType(0).isVector() &&                                   \
+        Node->getValueType(0) != MVT::Other) {                                 \
+      Action = TargetLowering::Legal;                                          \
+      break;                                                                   \
     }                                                                          \
     Action = TLI.getOperationAction(Node->getOpcode(), LegalizeVT);            \
   } break;
@@ -577,50 +593,6 @@ bool VectorLegalizer::LowerOperationWrapper(SDNode *Node,
     Results.push_back(Res.getValue(I));
 
   return true;
-}
-
-void VectorLegalizer::PromoteReduction(SDNode *Node,
-                                       SmallVectorImpl<SDValue> &Results) {
-  MVT VecVT = Node->getOperand(1).getSimpleValueType();
-  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
-  MVT ScalarVT = Node->getSimpleValueType(0);
-  MVT NewScalarVT = NewVecVT.getVectorElementType();
-
-  SDLoc DL(Node);
-  SmallVector<SDValue, 4> Operands(Node->getNumOperands());
-
-  // promote the initial value.
-  if (Node->getOperand(0).getValueType().isFloatingPoint())
-    Operands[0] =
-        DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(0));
-  else
-    Operands[0] =
-        DAG.getNode(ISD::ANY_EXTEND, DL, NewScalarVT, Node->getOperand(0));
-
-  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
-    if (Node->getOperand(j).getValueType().isVector() &&
-        !(ISD::isVPOpcode(Node->getOpcode()) &&
-          ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
-      // promote the vector operand.
-      if (Node->getOperand(j).getValueType().isFloatingPoint())
-        Operands[j] =
-            DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
-      else
-        Operands[j] =
-            DAG.getNode(ISD::ANY_EXTEND, DL, NewVecVT, Node->getOperand(j));
-    else
-      Operands[j] = Node->getOperand(j); // Skip VL operand.
-
-  SDValue Res = DAG.getNode(Node->getOpcode(), DL, NewScalarVT, Operands,
-                            Node->getFlags());
-
-  if (ScalarVT.isFloatingPoint())
-    Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
-                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  else
-    Res = DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, Res);
-
-  Results.push_back(Res);
 }
 
 void VectorLegalizer::PromoteSETCC(SDNode *Node,
@@ -706,23 +678,6 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
     PromoteFP_TO_INT(Node, Results);
-    return;
-  case ISD::VP_REDUCE_ADD:
-  case ISD::VP_REDUCE_MUL:
-  case ISD::VP_REDUCE_AND:
-  case ISD::VP_REDUCE_OR:
-  case ISD::VP_REDUCE_XOR:
-  case ISD::VP_REDUCE_SMAX:
-  case ISD::VP_REDUCE_SMIN:
-  case ISD::VP_REDUCE_UMAX:
-  case ISD::VP_REDUCE_UMIN:
-  case ISD::VP_REDUCE_FADD:
-  case ISD::VP_REDUCE_FMUL:
-  case ISD::VP_REDUCE_FMAX:
-  case ISD::VP_REDUCE_FMIN:
-  case ISD::VP_REDUCE_SEQ_FADD:
-    // Promote the operation by extending the operand.
-    PromoteReduction(Node, Results);
     return;
   case ISD::VP_SETCC:
   case ISD::SETCC:
@@ -976,6 +931,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+    if (SDValue Expanded = TLI.expandAVG(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::BITREVERSE:
     ExpandBITREVERSE(Node, Results);
     return;
@@ -1048,6 +1012,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    Results.push_back(TLI.expandFMINIMUM_FMAXIMUM(Node, DAG));
+    return;
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -1156,6 +1124,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
+  case ISD::VECTOR_COMPRESS:
+    Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
+    return;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);

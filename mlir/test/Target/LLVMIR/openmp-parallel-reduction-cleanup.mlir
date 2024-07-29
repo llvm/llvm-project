@@ -27,7 +27,7 @@
     %0 = llvm.mlir.constant(-1 : i32) : i32
     %1 = llvm.mlir.addressof @i : !llvm.ptr
     %2 = llvm.mlir.addressof @j : !llvm.ptr
-    omp.parallel byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
+    omp.parallel reduction(byref @add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, byref @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
       llvm.store %0, %arg0 : i32, !llvm.ptr
       llvm.store %0, %arg1 : i32, !llvm.ptr
       omp.terminator
@@ -55,11 +55,11 @@
 
 // Private reduction variable and its initialization.
 // CHECK: %tid.addr.local = alloca i32
-// CHECK: %[[MALLOC_I:.+]] = call ptr @malloc(i64 4)
 // CHECK: %[[PRIV_PTR_I:.+]] = alloca ptr
+// CHECK: %[[PRIV_PTR_J:.+]] = alloca ptr
+// CHECK: %[[MALLOC_I:.+]] = call ptr @malloc(i64 4)
 // CHECK: store ptr %[[MALLOC_I]], ptr %[[PRIV_PTR_I]]
 // CHECK: %[[MALLOC_J:.+]] = call ptr @malloc(i64 4)
-// CHECK: %[[PRIV_PTR_J:.+]] = alloca ptr
 // CHECK: store ptr %[[MALLOC_J]], ptr %[[PRIV_PTR_J]]
 
 // Call to the reduction function.

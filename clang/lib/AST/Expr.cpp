@@ -103,7 +103,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
       }
     } else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
-        assert(ME->getBase()->getType()->isRecordType());
+        assert(ME->getBase()->getType()->getAsRecordDecl());
         if (const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();
@@ -837,7 +837,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     typedef SmallVector<const ClassTemplateSpecializationDecl *, 8> SpecsTy;
     SpecsTy Specs;
     const DeclContext *Ctx = FD->getDeclContext();
-    while (Ctx && isa<NamedDecl>(Ctx)) {
+    while (isa_and_nonnull<NamedDecl>(Ctx)) {
       const ClassTemplateSpecializationDecl *Spec
                                = dyn_cast<ClassTemplateSpecializationDecl>(Ctx);
       if (Spec && !Spec->isExplicitSpecialization())
@@ -2044,7 +2044,7 @@ const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
   for (Field = RD->field_begin(), FieldEnd = RD->field_end();
        Field != FieldEnd; ++Field) {
     if (Ctx.hasSameUnqualifiedType(Field->getType(), OpType) &&
-        !Field->isUnnamedBitfield()) {
+        !Field->isUnnamedBitField()) {
       return *Field;
     }
   }
@@ -2371,6 +2371,17 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   }
   }
   llvm_unreachable("unhandled case");
+}
+
+EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
+                     EmbedDataStorage *Data, unsigned Begin,
+                     unsigned NumOfElements)
+    : Expr(EmbedExprClass, Ctx.IntTy, VK_PRValue, OK_Ordinary),
+      EmbedKeywordLoc(Loc), Ctx(&Ctx), Data(Data), Begin(Begin),
+      NumOfElements(NumOfElements) {
+  setDependence(ExprDependence::None);
+  FakeChildNode = IntegerLiteral::Create(
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -3067,7 +3078,7 @@ Expr *Expr::IgnoreParenCasts() {
 
 Expr *Expr::IgnoreConversionOperatorSingleStep() {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(this)) {
-    if (MCE->getMethodDecl() && isa<CXXConversionDecl>(MCE->getMethodDecl()))
+    if (isa_and_nonnull<CXXConversionDecl>(MCE->getMethodDecl()))
       return MCE->getImplicitObjectArgument();
   }
   return this;
@@ -3393,7 +3404,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
           continue;
 
         // Don't emit anonymous bitfields, they just affect layout.
-        if (Field->isUnnamedBitfield())
+        if (Field->isUnnamedBitField())
           continue;
 
         if (ElementNo < ILE->getNumInits()) {
@@ -3615,15 +3626,14 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXUuidofExprClass:
   case OpaqueValueExprClass:
   case SourceLocExprClass:
+  case EmbedExprClass:
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
+  case PackIndexingExprClass:
     // These never have a side-effect.
     return false;
 
-  case PackIndexingExprClass:
-    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
-        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(
@@ -3680,7 +3690,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ParenExprClass:
   case ArraySubscriptExprClass:
   case MatrixSubscriptExprClass:
-  case OMPArraySectionExprClass:
+  case ArraySectionExprClass:
   case OMPArrayShapingExprClass:
   case OMPIteratorExprClass:
   case MemberExprClass:
@@ -3771,10 +3781,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
   }
 
-  case CXXTypeidExprClass:
-    // typeid might throw if its subexpression is potentially-evaluated, so has
-    // side-effects in that case whether or not its subexpression does.
-    return cast<CXXTypeidExpr>(this)->isPotentiallyEvaluated();
+  case CXXTypeidExprClass: {
+    const auto *TE = cast<CXXTypeidExpr>(this);
+    if (!TE->isPotentiallyEvaluated())
+      return false;
+
+    // If this type id expression can throw because of a null pointer, that is a
+    // side-effect independent of if the operand has a side-effect
+    if (IncludePossibleEffects && TE->hasNullCheck())
+      return true;
+
+    break;
+  }
 
   case CXXConstructExprClass:
   case CXXTemporaryObjectExprClass: {
@@ -3893,9 +3911,14 @@ namespace {
     }
 
     void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E) {
-      if (E->getTemporary()->getDestructor()->isTrivial()) {
-        Inherited::VisitStmt(E);
-        return;
+      // Destructor of the temporary might be null if destructor declaration
+      // is not valid.
+      if (const CXXDestructorDecl *DtorDecl =
+              E->getTemporary()->getDestructor()) {
+        if (DtorDecl->isTrivial()) {
+          Inherited::VisitStmt(E);
+          return;
+        }
       }
 
       NonTrivial = true;
@@ -5060,9 +5083,9 @@ QualType AtomicExpr::getValueType() const {
   return T;
 }
 
-QualType OMPArraySectionExpr::getBaseOriginalType(const Expr *Base) {
+QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
   unsigned ArraySectionCount = 0;
-  while (auto *OASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParens())) {
+  while (auto *OASE = dyn_cast<ArraySectionExpr>(Base->IgnoreParens())) {
     Base = OASE->getBase();
     ++ArraySectionCount;
   }

@@ -379,8 +379,8 @@ declare <32 x double> @llvm.vp.fneg.v32f64(<32 x double>, <32 x i1>, i32)
 define <32 x double> @vfneg_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 2
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB26_2
@@ -393,8 +393,8 @@ define <32 x double> @vfneg_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v16, v16, v0.t
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.fneg.v32f64(<32 x double> %va, <32 x i1> %m, i32 %evl)

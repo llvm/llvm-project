@@ -875,8 +875,8 @@ TEST(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   LLVMContext C;
 
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *AI =
-      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                       PoisonValue::get(Int32));
   VPValue Op1;
   VPValue Op2;
   SmallVector<VPValue *, 2> Args;
@@ -895,13 +895,16 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   FunctionType *FTy = FunctionType::get(Int32, false);
-  auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+  Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
+  auto *Call = CallInst::Create(FTy, Fn);
   VPValue Op1;
   VPValue Op2;
+  VPValue CalledFn(Call->getCalledFunction());
   SmallVector<VPValue *, 2> Args;
   Args.push_back(&Op1);
   Args.push_back(&Op2);
-  VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()), false);
+  Args.push_back(&CalledFn);
+  VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -912,6 +915,7 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete Call;
+  delete Fn;
 }
 
 TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
@@ -920,7 +924,7 @@ TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
   IntegerType *Int1 = IntegerType::get(C, 1);
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *SelectI = SelectInst::Create(
-      UndefValue::get(Int1), UndefValue::get(Int32), UndefValue::get(Int32));
+      PoisonValue::get(Int1), PoisonValue::get(Int32), PoisonValue::get(Int32));
   VPValue Op1;
   VPValue Op2;
   VPValue Op3;
@@ -947,8 +951,8 @@ TEST(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   PointerType *Int32Ptr = PointerType::get(Int32, 0);
-  auto *GEP = GetElementPtrInst::Create(Int32, UndefValue::get(Int32Ptr),
-                                        UndefValue::get(Int32));
+  auto *GEP = GetElementPtrInst::Create(Int32, PoisonValue::get(Int32Ptr),
+                                        PoisonValue::get(Int32));
   VPValue Op1;
   VPValue Op2;
   SmallVector<VPValue *, 4> Args;
@@ -1010,7 +1014,7 @@ TEST(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   FunctionType *FTy = FunctionType::get(Int32, false);
-  auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+  auto *Call = CallInst::Create(FTy, PoisonValue::get(FTy));
   VPReplicateRecipe Recipe(Call, make_range(Args.begin(), Args.end()), true);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
@@ -1029,16 +1033,16 @@ TEST(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
   EXPECT_EQ(&Recipe, BaseR);
 }
 
-TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
+TEST(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
   LLVMContext C;
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   PointerType *Int32Ptr = PointerType::get(Int32, 0);
   auto *Load =
-      new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
+      new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue Addr;
   VPValue Mask;
-  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
+  VPWidenLoadRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1058,8 +1062,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   PointerType *Int32Ptr = PointerType::get(Int32, 0);
 
   {
-    auto *AI = BinaryOperator::CreateAdd(UndefValue::get(Int32),
-                                         UndefValue::get(Int32));
+    auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                         PoisonValue::get(Int32));
     VPValue Op1;
     VPValue Op2;
     SmallVector<VPValue *, 2> Args;
@@ -1074,8 +1078,9 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *SelectI = SelectInst::Create(
-        UndefValue::get(Int1), UndefValue::get(Int32), UndefValue::get(Int32));
+    auto *SelectI =
+        SelectInst::Create(PoisonValue::get(Int1), PoisonValue::get(Int32),
+                           PoisonValue::get(Int32));
     VPValue Op1;
     VPValue Op2;
     VPValue Op3;
@@ -1092,8 +1097,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *GEP = GetElementPtrInst::Create(Int32, UndefValue::get(Int32Ptr),
-                                          UndefValue::get(Int32));
+    auto *GEP = GetElementPtrInst::Create(Int32, PoisonValue::get(Int32Ptr),
+                                          PoisonValue::get(Int32));
     VPValue Op1;
     VPValue Op2;
     SmallVector<VPValue *, 4> Args;
@@ -1129,11 +1134,25 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
+    VPValue ChainOp;
+    VPValue VecOp;
+    VPValue CondOp;
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+                             &VecOp, false);
+    VPValue EVL;
+    VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
+    EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
+    EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
+    EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
+    EXPECT_FALSE(EVLRecipe.mayReadOrWriteMemory());
+  }
+
+  {
     auto *Load =
-        new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
+        new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
     VPValue Addr;
     VPValue Mask;
-    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
+    VPWidenLoadRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1142,13 +1161,12 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *Store = new StoreInst(UndefValue::get(Int32),
-                                UndefValue::get(Int32Ptr), false, Align(1));
+    auto *Store = new StoreInst(PoisonValue::get(Int32),
+                                PoisonValue::get(Int32Ptr), false, Align(1));
     VPValue Addr;
     VPValue Mask;
     VPValue StoredV;
-    VPWidenMemoryInstructionRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false,
-                                          false, {});
+    VPWidenStoreRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false, false, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1158,19 +1176,22 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 
   {
     FunctionType *FTy = FunctionType::get(Int32, false);
-    auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+    Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
+    auto *Call = CallInst::Create(FTy, Fn);
     VPValue Op1;
     VPValue Op2;
-    SmallVector<VPValue *, 2> Args;
+    VPValue CalledFn(Call->getCalledFunction());
+    SmallVector<VPValue *, 3> Args;
     Args.push_back(&Op1);
     Args.push_back(&Op2);
-    VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()),
-                             false);
+    Args.push_back(&CalledFn);
+    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
     EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
     delete Call;
+    delete Fn;
   }
 
   {
@@ -1182,11 +1203,12 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
     VPValue Op1;
     VPValue Op2;
-    SmallVector<VPValue *, 2> Args;
+    VPValue CalledFn(TheFn);
+    SmallVector<VPValue *, 3> Args;
     Args.push_back(&Op1);
     Args.push_back(&Op2);
-    VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()),
-                             false);
+    Args.push_back(&CalledFn);
+    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1235,8 +1257,8 @@ TEST(VPRecipeTest, dumpRecipeInPlan) {
   LLVMContext C;
 
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *AI =
-      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                       PoisonValue::get(Int32));
   AI->setName("a");
   SmallVector<VPValue *, 2> Args;
   VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1289,8 +1311,8 @@ TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
   LLVMContext C;
 
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *AI =
-      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                       PoisonValue::get(Int32));
   AI->setName("a");
   SmallVector<VPValue *, 2> Args;
   VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1370,8 +1392,8 @@ TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
 TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   LLVMContext C;
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *AI =
-      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                       PoisonValue::get(Int32));
   AI->setName("a");
   VPValue *ExtVPV1 = new VPValue(ConstantInt::get(Int32, 1));
   VPValue *ExtVPV2 = new VPValue(AI);
@@ -1464,6 +1486,21 @@ TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(BaseR));
 }
 
+TEST(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
+  LLVMContext C;
+
+  VPValue ChainOp;
+  VPValue VecOp;
+  VPValue CondOp;
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+                           &VecOp, false);
+  VPValue EVL;
+  VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
+  EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
+  VPRecipeBase *BaseR = &EVLRecipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+}
+
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
     new VPValue(nullptr, this);
@@ -1521,6 +1558,14 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   EXPECT_EQ(&DoubleValueDef, I1.getOperand(1)->getDefiningRecipe());
   EXPECT_EQ(&DoubleValueDef, I2.getOperand(0)->getDefiningRecipe());
   EXPECT_EQ(&DoubleValueDef, I3.getOperand(0)->getDefiningRecipe());
+}
+
+TEST(VPRecipeTest, CastToVPSingleDefRecipe) {
+  VPValue Start;
+  VPEVLBasedIVPHIRecipe R(&Start, {});
+  VPRecipeBase *B = &R;
+  EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
+  // TODO: check other VPSingleDefRecipes.
 }
 
 } // namespace

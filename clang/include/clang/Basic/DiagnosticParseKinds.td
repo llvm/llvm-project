@@ -157,9 +157,12 @@ def err_duplicate_default_assoc : Error<
   "duplicate default generic association">;
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
-def ext_generic_with_type_arg : Extension<
-  "passing a type argument as the first operand to '_Generic' is a Clang "
-  "extension">, InGroup<DiagGroup<"generic-type-extension">>;
+def ext_c2y_generic_with_type_arg : Extension<
+  "passing a type argument as the first operand to '_Generic' is a C2y "
+  "extension">, InGroup<C2y>;
+def warn_c2y_compat_generic_with_type_arg : Warning<
+  "passing a type argument as the first operand to '_Generic' is incompatible "
+  "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -477,6 +480,15 @@ def err_expected_coloncolon_after_super : Error<
 def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
+
+// C++26 structured bindings
+def ext_decl_attrs_on_binding : ExtWarn<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_compat_decl_attrs_on_binding : Warning<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 
 /// Objective-C parser diagnostics
 def err_expected_minus_or_plus : Error<
@@ -863,6 +875,8 @@ def err_empty_requires_expr : Error<
   "a requires expression must contain at least one requirement">;
 def err_requires_expr_parameter_list_ellipsis : Error<
   "varargs not allowed in requires expression">;
+def err_requires_expr_explicit_object_parameter: Error<
+  "a requires expression cannot have an explicit object parameter">;
 def err_expected_semi_requirement : Error<
   "expected ';' at end of requirement">;
 def err_requires_expr_missing_arrow : Error<
@@ -876,6 +890,10 @@ def err_requires_expr_in_simple_requirement : Error<
   "requires expression in requirement body; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
   "before the expression)">;
+def missing_template_arg_list_after_template_kw : Extension<
+  "a template argument list is expected after a name prefixed by the template "
+  "keyword">, InGroup<DiagGroup<"missing-template-arg-list-after-template-kw">>,
+  DefaultError;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
@@ -1101,10 +1119,12 @@ def err_zero_version : Error<
   "version number must have non-zero major, minor, or sub-minor version">;
 def err_availability_expected_platform : Error<
   "expected a platform name, e.g., 'macos'">;
+def err_availability_expected_environment : Error<
+  "expected an environment name, e.g., 'compute'">;
 
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<
-  "expected a related ObjectiveC class name, e.g., 'NSColor'">;
+  "expected a related Objective-C class name, e.g., 'NSColor'">;
 def err_objcbridge_related_selector_name : Error<
   "expected a class method selector with single argument, e.g., 'colorWithCGColor:'">;
 
@@ -1240,6 +1260,9 @@ def warn_pragma_intrinsic_builtin : Warning<
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
   InGroup<IgnoredPragmas>;
+// - #pragma mc_func
+def err_pragma_mc_func_not_supported :
+   Error<"#pragma mc_func is not supported">;
 // - #pragma init_seg
 def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "
@@ -1332,8 +1355,8 @@ def note_pragma_attribute_namespace_on_attribute : Note<
   "omit the namespace to add attributes to the most-recently"
   " pushed attribute group">;
 def warn_no_support_for_eval_method_source_on_m32 : Warning<
-  "Setting the floating point evaluation method to `source` on a target"
-  " without SSE is not supported.">, InGroup<Pragmas>;
+  "setting the floating point evaluation method to `source` on a target "
+  "without SSE is not supported">, InGroup<Pragmas>;
 // - #pragma __debug
 def warn_pragma_debug_dependent_argument : Warning<
   "%select{value|type}0-dependent expression passed as an argument to debug "
@@ -1427,6 +1450,9 @@ def err_omp_decl_in_declare_simd_variant : Error<
 def err_omp_sink_and_source_iteration_not_allowd: Error<" '%0 %select{sink:|source:}1' must be with '%select{omp_cur_iteration - 1|omp_cur_iteration}1'">;
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
+def err_omp_more_one_map_type : Error<"map type is already specified">;
+def note_previous_map_type_specified_here
+    : Note<"map type '%0' is previous specified here">;
 def err_omp_unknown_map_type_modifier : Error<
   "incorrect map type modifier, expected one of: 'always', 'close', 'mapper'"
   "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1">;
@@ -1434,6 +1460,8 @@ def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_map_type_modifier_missing : Error<
   "missing map type modifier">;
+def err_omp_map_modifier_specification_list : Error<
+  "empty modifier-specification-list is not allowed">;
 def err_omp_declare_simd_inbranch_notinbranch : Error<
   "unexpected '%0' clause, '%1' is specified already">;
 def err_omp_expected_clause_argument
@@ -1486,6 +1514,8 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
+def err_omp_unknown_adjust_args_op : Error<
+  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
@@ -1652,7 +1682,7 @@ def warn_ext_int_deprecated : Warning<
   "'_ExtInt' is deprecated; use '_BitInt' instead">, InGroup<DeprecatedType>;
 def ext_bit_int : Extension<
   "'_BitInt' in %select{C17 and earlier|C++}0 is a Clang extension">,
-  InGroup<DiagGroup<"bit-int-extension">>;
+  InGroup<BitIntExtension>;
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
@@ -1743,5 +1773,7 @@ def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hls
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
   InGroup<HLSLExtension>;
+def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
+def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
 
 } // end of Parser diagnostics

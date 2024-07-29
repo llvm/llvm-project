@@ -39,6 +39,11 @@ struct IntegerTypeStorage;
 struct TupleTypeStorage;
 } // namespace detail
 
+/// Type trait indicating that the type has value semantics.
+template <typename ConcreteType>
+class ValueSemantics
+    : public TypeTrait::TraitBase<ConcreteType, ValueSemantics> {};
+
 //===----------------------------------------------------------------------===//
 // FloatType
 //===----------------------------------------------------------------------===//
@@ -56,6 +61,7 @@ public:
   static FloatType getF80(MLIRContext *ctx);
   static FloatType getF128(MLIRContext *ctx);
   static FloatType getFloat8E5M2(MLIRContext *ctx);
+  static FloatType getFloat8E4M3(MLIRContext *ctx);
   static FloatType getFloat8E4M3FN(MLIRContext *ctx);
   static FloatType getFloat8E5M2FNUZ(MLIRContext *ctx);
   static FloatType getFloat8E4M3FNUZ(MLIRContext *ctx);
@@ -360,9 +366,15 @@ private:
 /// which dimensions must be kept when e.g. compute MemRef strides under
 /// rank-reducing operations. Return std::nullopt if reducedShape cannot be
 /// obtained by dropping only `1` entries in `originalShape`.
+/// If `matchDynamic` is true, then dynamic dims in `originalShape` and
+/// `reducedShape` will be considered matching with non-dynamic dims, unless
+/// the non-dynamic dim is from `originalShape` and equal to 1. For example,
+/// in ([1, 3, ?], [?, 5]), the mask would be {1, 0, 0}, since 3 and 5 will
+/// match with the corresponding dynamic dims.
 std::optional<llvm::SmallDenseSet<unsigned>>
 computeRankReductionMask(ArrayRef<int64_t> originalShape,
-                         ArrayRef<int64_t> reducedShape);
+                         ArrayRef<int64_t> reducedShape,
+                         bool matchDynamic = false);
 
 /// Enum that captures information related to verifier error conditions on
 /// slice insert/extract type of ops.
@@ -399,14 +411,18 @@ inline bool BaseMemRefType::isValidElementType(Type type) {
 }
 
 inline bool FloatType::classof(Type type) {
-  return llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-                   Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type,
-                   Float16Type, FloatTF32Type, Float32Type, Float64Type,
-                   Float80Type, Float128Type>(type);
+  return llvm::isa<
+      Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+      Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type, Float16Type,
+      FloatTF32Type, Float32Type, Float64Type, Float80Type, Float128Type>(type);
 }
 
 inline FloatType FloatType::getFloat8E5M2(MLIRContext *ctx) {
   return Float8E5M2Type::get(ctx);
+}
+
+inline FloatType FloatType::getFloat8E4M3(MLIRContext *ctx) {
+  return Float8E4M3Type::get(ctx);
 }
 
 inline FloatType FloatType::getFloat8E4M3FN(MLIRContext *ctx) {

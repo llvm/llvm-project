@@ -71,21 +71,20 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 #include "clang/AST/DeclNodes.inc"
 
 void *Decl::operator new(std::size_t Size, const ASTContext &Context,
-                         unsigned ID, std::size_t Extra) {
+                         GlobalDeclID ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
-  static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
-                "Decl won't be misaligned");
+  static_assert(sizeof(uint64_t) >= alignof(Decl), "Decl won't be misaligned");
   void *Start = Context.Allocate(Size + Extra + 8);
   void *Result = (char*)Start + 8;
 
-  unsigned *PrefixPtr = (unsigned *)Result - 2;
+  uint64_t *PrefixPtr = (uint64_t *)Result - 1;
 
-  // Zero out the first 4 bytes; this is used to store the owning module ID.
-  PrefixPtr[0] = 0;
+  *PrefixPtr = ID.getRawValue();
 
-  // Store the global declaration ID in the second 4 bytes.
-  PrefixPtr[1] = ID;
+  // We leave the upper 16 bits to store the module IDs. 48 bits should be
+  // sufficient to store a declaration ID.
+  assert(*PrefixPtr < llvm::maskTrailingOnes<uint64_t>(48));
 
   return Result;
 }
@@ -109,6 +108,29 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     return new (Buffer) Module*(ParentModule) + 1;
   }
   return ::operator new(Size + Extra, Ctx);
+}
+
+GlobalDeclID Decl::getGlobalID() const {
+  if (!isFromASTFile())
+    return GlobalDeclID();
+  // See the comments in `Decl::operator new` for details.
+  uint64_t ID = *((const uint64_t *)this - 1);
+  return GlobalDeclID(ID & llvm::maskTrailingOnes<uint64_t>(48));
+}
+
+unsigned Decl::getOwningModuleID() const {
+  if (!isFromASTFile())
+    return 0;
+
+  uint64_t ID = *((const uint64_t *)this - 1);
+  return ID >> 48;
+}
+
+void Decl::setOwningModuleID(unsigned ID) {
+  assert(isFromASTFile() && "Only works on a deserialized declaration");
+  uint64_t *IDAddress = (uint64_t *)this - 1;
+  *IDAddress &= llvm::maskTrailingOnes<uint64_t>(48);
+  *IDAddress |= (uint64_t)ID << 48;
 }
 
 Module *Decl::getOwningModuleSlow() const {
@@ -666,12 +688,29 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
-    if (Message) {
-      Message->clear();
-      llvm::raw_string_ostream Out(*Message);
-      VersionTuple VTI(A->getIntroduced());
-      Out << "introduced in " << PrettyPlatformName << ' '
-          << VTI << HintMessage;
+    IdentifierInfo *IIEnv = A->getEnvironment();
+    StringRef TargetEnv =
+        Context.getTargetInfo().getTriple().getEnvironmentName();
+    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
+        Context.getTargetInfo().getTriple().getEnvironment());
+    // Matching environment or no environment on attribute
+    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        VersionTuple VTI(A->getIntroduced());
+        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
+            << EnvName << HintMessage;
+      }
+    }
+    // Non-matching environment or no environment on target
+    else {
+      if (Message) {
+        Message->clear();
+        llvm::raw_string_ostream Out(*Message);
+        Out << "not available on " << PrettyPlatformName << " " << EnvName
+            << HintMessage;
+      }
     }
 
     return A->getStrict() ? AR_Unavailable : AR_NotYetIntroduced;
@@ -840,8 +879,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;
-    case IndirectField:
-      return IDNS_Ordinary | IDNS_Member;
 
     case Binding:
     case NonTypeTemplateParm:
@@ -879,6 +916,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_ObjCProtocol;
 
     case Field:
+    case IndirectField:
     case ObjCAtDefsField:
     case ObjCIvar:
       return IDNS_Member;
@@ -1077,7 +1115,7 @@ bool Decl::isInExportDeclContext() const {
   while (DC && !isa<ExportDecl>(DC))
     DC = DC->getLexicalParent();
 
-  return DC && isa<ExportDecl>(DC);
+  return isa_and_nonnull<ExportDecl>(DC);
 }
 
 bool Decl::isInAnotherModuleUnit() const {
@@ -1106,6 +1144,10 @@ bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
 }
 
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
@@ -1115,7 +1157,9 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (const auto *D = dyn_cast<ValueDecl>(this))
+  if (isa<BindingDecl>(this))
+    return nullptr;
+  else if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
   else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
@@ -1377,8 +1421,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
     return static_cast<TranslationUnitDecl *>(this)->getFirstDecl();
   case Decl::Namespace:
-    // The original namespace is our primary context.
-    return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
+    return static_cast<NamespaceDecl *>(this)->getFirstDecl();
 
   case Decl::ObjCMethod:
     return this;
@@ -2144,4 +2187,8 @@ DependentDiagnostic *DependentDiagnostic::Create(ASTContext &C,
   Map->FirstDiagnostic = DD;
 
   return DD;
+}
+
+unsigned DeclIDBase::getLocalDeclIndex() const {
+  return ID & llvm::maskTrailingOnes<DeclID>(32);
 }

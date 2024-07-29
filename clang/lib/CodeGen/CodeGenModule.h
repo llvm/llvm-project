@@ -24,7 +24,6 @@
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
 #include "clang/Basic/TargetInfo.h"
@@ -70,6 +69,7 @@ class Expr;
 class Stmt;
 class StringLiteral;
 class NamedDecl;
+class PointerAuthSchema;
 class ValueDecl;
 class VarDecl;
 class LangOptions;
@@ -435,7 +435,7 @@ private:
 
   // Store deferred function annotations so they can be emitted at the end with
   // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::DenseMap<StringRef, const ValueDecl *> DeferredAnnotations;
+  llvm::MapVector<StringRef, const ValueDecl *> DeferredAnnotations;
 
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
@@ -484,6 +484,14 @@ private:
 
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
+
+  // When a tail call is performed on an "undefined" symbol, on PPC without pc
+  // relative feature, the tail call is not allowed. In "EmitCall" for such
+  // tail calls, the "undefined" symbols may be forward declarations, their
+  // definitions are provided in the module after the callsites. For such tail
+  // calls, diagnose message should not be emitted.
+  llvm::SmallSetVector<std::pair<const FunctionDecl *, SourceLocation>, 4>
+      MustTailCallUndefinedGlobals;
 
   struct GlobalInitPriorityCmp {
     bool operator()(const GlobalInitData &LHS,
@@ -555,6 +563,9 @@ private:
 
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *VD) const;
   bool shouldOpportunisticallyEmitVTables();
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
@@ -608,6 +619,13 @@ private:
   // when used with -fincremental-extensions.
   std::pair<std::unique_ptr<CodeGenFunction>, const TopLevelStmtDecl *>
       GlobalTopLevelStmtBlockInFlight;
+
+  llvm::DenseMap<GlobalDecl, uint16_t> PtrAuthDiscriminatorHashes;
+
+  llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>
+      VTablePtrAuthInfos;
+  std::optional<PointerAuthQualifier>
+  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -938,11 +956,69 @@ public:
   // Return the function body address of the given function.
   llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  llvm::Constant *getRawFunctionPointer(GlobalDecl GD,
+                                        llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  llvm::Constant *getFunctionPointer(GlobalDecl GD, llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary.
+  llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
+                                     QualType FunctionType);
+
+  llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
+                                           llvm::Type *Ty = nullptr);
+
+  llvm::Constant *getMemberFunctionPointer(llvm::Constant *Pointer,
+                                           QualType FT);
+
+  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
+
+  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType FT);
+
+  CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
+
+  CGPointerAuthInfo getPointerAuthInfoForType(QualType type);
+
+  bool shouldSignPointer(const PointerAuthSchema &Schema);
+  llvm::Constant *getConstantSignedPointer(llvm::Constant *Pointer,
+                                           const PointerAuthSchema &Schema,
+                                           llvm::Constant *StorageAddress,
+                                           GlobalDecl SchemaDecl,
+                                           QualType SchemaType);
+
+  llvm::Constant *
+  getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
+                           llvm::Constant *StorageAddress,
+                           llvm::ConstantInt *OtherDiscriminator);
+
+  llvm::ConstantInt *
+  getPointerAuthOtherDiscriminator(const PointerAuthSchema &Schema,
+                                   GlobalDecl SchemaDecl, QualType SchemaType);
+
+  uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
+  std::optional<CGPointerAuthInfo>
+  getVTablePointerAuthInfo(CodeGenFunction *Context,
+                           const CXXRecordDecl *Record,
+                           llvm::Value *StorageAddress);
+
+  std::optional<PointerAuthQualifier>
+  getVTablePointerAuthentication(const CXXRecordDecl *thisClass);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
            !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1241,6 +1317,9 @@ public:
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
 
+  /// Return true iff the given type has `inreg` set.
+  bool ReturnTypeHasInReg(const CGFunctionInfo &FI);
+
   /// Return true iff the given type uses an argument slot when 'sret' is used
   /// as a return type.
   bool ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI);
@@ -1282,7 +1361,7 @@ public:
 
   void EmitTentativeDefinition(const VarDecl *D);
 
-  void EmitExternalDeclaration(const VarDecl *D);
+  void EmitExternalDeclaration(const DeclaratorDecl *D);
 
   void EmitVTable(CXXRecordDecl *Class);
 
@@ -1583,7 +1662,22 @@ public:
   void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
 
+  // Return whether structured convergence intrinsics should be generated for
+  // this target.
+  bool shouldEmitConvergenceTokens() const {
+    // TODO: this should probably become unconditional once the controlled
+    // convergence becomes the norm.
+    return getTriple().isSPIRVLogical();
+  }
+
+  void addUndefinedGlobalForTailCall(
+      std::pair<const FunctionDecl *, SourceLocation> Global) {
+    MustTailCallUndefinedGlobals.insert(Global);
+  }
+
 private:
+  bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
+
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
       bool DontDefer = false, bool IsThunk = false,
@@ -1624,6 +1718,7 @@ private:
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitExternalVarDeclaration(const VarDecl *D);
+  void EmitExternalFunctionDeclaration(const FunctionDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);

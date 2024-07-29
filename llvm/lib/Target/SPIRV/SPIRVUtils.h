@@ -59,6 +59,10 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction by "spirv.Decorations" metadata node.
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD);
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
@@ -100,16 +104,16 @@ bool isSpecialOpaqueType(const Type *Ty);
 bool isEntryPoint(const Function &F);
 
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
-Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
-  return T->getTypeID() == Type::TypedPointerTyID;
+  return T && T->getTypeID() == Type::TypedPointerTyID;
 }
 
 // True if this is an instance of PointerType.
 inline bool isUntypedPointerTy(const Type *T) {
-  return T->getTypeID() == Type::PointerTyID;
+  return T && T->getTypeID() == Type::PointerTyID;
 }
 
 // True if this is an instance of PointerType or TypedPointerType.
@@ -149,11 +153,89 @@ inline Type *reconstructFunctionType(Function *F) {
   return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
-inline Type *toTypedPointer(Type *Ty, LLVMContext &Ctx) {
+#define TYPED_PTR_TARGET_EXT_NAME "spirv.$TypedPointerType"
+inline Type *getTypedPointerWrapper(Type *ElemTy, unsigned AS) {
+  return TargetExtType::get(ElemTy->getContext(), TYPED_PTR_TARGET_EXT_NAME,
+                            {ElemTy}, {AS});
+}
+
+inline bool isTypedPointerWrapper(TargetExtType *ExtTy) {
+  return ExtTy->getName() == TYPED_PTR_TARGET_EXT_NAME &&
+         ExtTy->getNumIntParameters() == 1 &&
+         ExtTy->getNumTypeParameters() == 1;
+}
+
+inline Type *applyWrappers(Type *Ty) {
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty)) {
+    if (isTypedPointerWrapper(ExtTy))
+      return TypedPointerType::get(applyWrappers(ExtTy->getTypeParameter(0)),
+                                   ExtTy->getIntParameter(0));
+  } else if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    Type *ElemTy = VecTy->getElementType();
+    Type *NewElemTy = ElemTy->isTargetExtTy() ? applyWrappers(ElemTy) : ElemTy;
+    if (NewElemTy != ElemTy)
+      return VectorType::get(NewElemTy, VecTy->getElementCount());
+  }
+  return Ty;
+}
+
+inline Type *getPointeeType(Type *Ty) {
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    return PType->getElementType();
+  else if (auto *ExtTy = dyn_cast<TargetExtType>(Ty))
+    if (isTypedPointerWrapper(ExtTy))
+      return applyWrappers(ExtTy->getTypeParameter(0));
+  return nullptr;
+}
+
+inline bool isUntypedEquivalentToTyExt(Type *Ty1, Type *Ty2) {
+  if (!isUntypedPointerTy(Ty1) || !Ty2)
+    return false;
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty2))
+    if (isTypedPointerWrapper(ExtTy) &&
+        ExtTy->getTypeParameter(0) ==
+            IntegerType::getInt8Ty(Ty1->getContext()) &&
+        ExtTy->getIntParameter(0) == cast<PointerType>(Ty1)->getAddressSpace())
+      return true;
+  return false;
+}
+
+inline bool isEquivalentTypes(Type *Ty1, Type *Ty2) {
+  return isUntypedEquivalentToTyExt(Ty1, Ty2) ||
+         isUntypedEquivalentToTyExt(Ty2, Ty1);
+}
+
+inline Type *toTypedPointer(Type *Ty) {
+  if (Type *NewTy = applyWrappers(Ty); NewTy != Ty)
+    return NewTy;
   return isUntypedPointerTy(Ty)
-             ? TypedPointerType::get(IntegerType::getInt8Ty(Ctx),
+             ? TypedPointerType::get(IntegerType::getInt8Ty(Ty->getContext()),
                                      getPointerAddressSpace(Ty))
              : Ty;
+}
+
+inline Type *toTypedFunPointer(FunctionType *FTy) {
+  Type *OrigRetTy = FTy->getReturnType();
+  Type *RetTy = toTypedPointer(OrigRetTy);
+  bool IsUntypedPtr = false;
+  for (Type *PTy : FTy->params()) {
+    if (isUntypedPointerTy(PTy)) {
+      IsUntypedPtr = true;
+      break;
+    }
+  }
+  if (!IsUntypedPtr && RetTy == OrigRetTy)
+    return FTy;
+  SmallVector<Type *> ParamTys;
+  for (Type *PTy : FTy->params())
+    ParamTys.push_back(toTypedPointer(PTy));
+  return FunctionType::get(RetTy, ParamTys, FTy->isVarArg());
+}
+
+inline const Type *unifyPtrType(const Type *Ty) {
+  if (auto FTy = dyn_cast<FunctionType>(Ty))
+    return toTypedFunPointer(const_cast<FunctionType *>(FTy));
+  return toTypedPointer(const_cast<Type *>(Ty));
 }
 
 } // namespace llvm

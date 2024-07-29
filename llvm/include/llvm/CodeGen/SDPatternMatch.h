@@ -330,9 +330,7 @@ template <typename... Preds> struct And {
 template <typename Pred, typename... Preds>
 struct And<Pred, Preds...> : And<Preds...> {
   Pred P;
-  And(Pred &&p, Preds &&...preds)
-      : And<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {
-  }
+  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -349,8 +347,7 @@ template <typename... Preds> struct Or {
 template <typename Pred, typename... Preds>
 struct Or<Pred, Preds...> : Or<Preds...> {
   Pred P;
-  Or(Pred &&p, Preds &&...preds)
-      : Or<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {}
+  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -358,12 +355,34 @@ struct Or<Pred, Preds...> : Or<Preds...> {
   }
 };
 
-template <typename... Preds> And<Preds...> m_AllOf(Preds &&...preds) {
-  return And<Preds...>(std::forward<Preds>(preds)...);
+template <typename Pred> struct Not {
+  Pred P;
+
+  explicit Not(const Pred &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return !P.match(Ctx, N);
+  }
+};
+// Explicit deduction guide.
+template <typename Pred> Not(const Pred &P) -> Not<Pred>;
+
+/// Match if the inner pattern does NOT match.
+template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
+  return Not{P};
 }
 
-template <typename... Preds> Or<Preds...> m_AnyOf(Preds &&...preds) {
-  return Or<Preds...>(std::forward<Preds>(preds)...);
+template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
+  return And<Preds...>(preds...);
+}
+
+template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
+  return Or<Preds...>(preds...);
+}
+
+template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
+  return m_Unless(m_AnyOf(preds...));
 }
 
 // === Generic node matching ===
@@ -380,10 +399,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
     : Operands_match<OpIdx + 1, OpndPreds...> {
   OpndPred P;
 
-  Operands_match(OpndPred &&p, OpndPreds &&...preds)
-      : Operands_match<OpIdx + 1, OpndPreds...>(
-            std::forward<OpndPreds>(preds)...),
-        P(std::forward<OpndPred>(p)) {}
+  Operands_match(const OpndPred &p, const OpndPreds &...preds)
+      : Operands_match<OpIdx + 1, OpndPreds...>(preds...), P(p) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
@@ -397,9 +414,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
 };
 
 template <typename... OpndPreds>
-auto m_Node(unsigned Opcode, OpndPreds &&...preds) {
-  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(
-                                    std::forward<OpndPreds>(preds)...));
+auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
+  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(preds...));
 }
 
 /// Provide number of operands that are not chain or glue, as well as the first
@@ -430,6 +446,55 @@ template <> struct EffectiveOperands<false> {
 
   explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {}
 };
+
+// === Ternary operations ===
+template <typename T0_P, typename T1_P, typename T2_P, bool Commutable = false,
+          bool ExcludeChain = false>
+struct TernaryOpc_match {
+  unsigned Opcode;
+  T0_P Op0;
+  T1_P Op1;
+  T2_P Op2;
+
+  TernaryOpc_match(unsigned Opc, const T0_P &Op0, const T1_P &Op1,
+                   const T2_P &Op2)
+      : Opcode(Opc), Op0(Op0), Op1(Op1), Op2(Op2) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+      EffectiveOperands<ExcludeChain> EO(N);
+      assert(EO.Size == 3);
+      return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
+               Op1.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
+              (Commutable && Op0.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
+               Op1.match(Ctx, N->getOperand(EO.FirstIndex)))) &&
+             Op2.match(Ctx, N->getOperand(EO.FirstIndex + 2));
+    }
+
+    return false;
+  }
+};
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, false, false>
+m_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, false, false>(ISD::SETCC, LHS, RHS,
+                                                          CC);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, true, false>
+m_c_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, true, false>(ISD::SETCC, LHS, RHS,
+                                                         CC);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_Select(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::SELECT, Cond, T, F);
+}
 
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
@@ -616,11 +681,16 @@ inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
   return UnaryOpc_match<Opnd, true>(Opc, Op);
 }
 
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_BitReverse(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BITREVERSE, Op);
+}
+
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op);
 }
 
-template <typename Opnd> inline UnaryOpc_match<Opnd> m_SExt(const Opnd &Op) {
+template <typename Opnd> inline auto m_SExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op);
 }
 
@@ -634,34 +704,32 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
 
 /// Match a zext or identity
 /// Allows to peek through optional extensions
-template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_ZExtOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_ZExt(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+template <typename Opnd> inline auto m_ZExtOrSelf(const Opnd &Op) {
+  return m_AnyOf(m_ZExt(Op), Op);
 }
 
 /// Match a sext or identity
 /// Allows to peek through optional extensions
-template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_SExtOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_SExt(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+template <typename Opnd> inline auto m_SExtOrSelf(const Opnd &Op) {
+  return m_AnyOf(m_SExt(Op), Op);
 }
 
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_AnyExt(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(const Opnd &Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_AnyExt(Op), Op);
 }
 
 /// Match a trunc or identity
 /// Allows to peek through optional truncations
 template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(Op), Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
 }
 
 // === Constants ===
@@ -716,7 +784,17 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
 
 inline SpecificInt_match m_Zero() { return m_SpecificInt(0U); }
 inline SpecificInt_match m_One() { return m_SpecificInt(1U); }
-inline SpecificInt_match m_AllOnes() { return m_SpecificInt(~0U); }
+
+struct AllOnes_match {
+
+  AllOnes_match() = default;
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return isAllOnesOrAllOnesSplat(N);
+  }
+};
+
+inline AllOnes_match m_AllOnes() { return AllOnes_match(); }
 
 /// Match true boolean value based on the information provided by
 /// TargetLowering.
@@ -758,6 +836,39 @@ inline auto m_False() {
       m_Value()};
 }
 
+struct CondCode_match {
+  std::optional<ISD::CondCode> CCToMatch;
+  ISD::CondCode *BindCC = nullptr;
+
+  explicit CondCode_match(ISD::CondCode CC) : CCToMatch(CC) {}
+
+  explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
+      if (CCToMatch && *CCToMatch != CC->get())
+        return false;
+
+      if (BindCC)
+        *BindCC = CC->get();
+      return true;
+    }
+
+    return false;
+  }
+};
+
+/// Match any conditional code SDNode.
+inline CondCode_match m_CondCode() { return CondCode_match(nullptr); }
+/// Match any conditional code SDNode and return its ISD::CondCode value.
+inline CondCode_match m_CondCode(ISD::CondCode &CC) {
+  return CondCode_match(&CC);
+}
+/// Match a conditional code SDNode with a specific ISD::CondCode.
+inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
+  return CondCode_match(CC);
+}
+
 /// Match a negate as a sub(0, v)
 template <typename ValTy>
 inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
@@ -766,7 +877,7 @@ inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
 
 /// Match a Not as a xor(v, -1) or xor(-1, v)
 template <typename ValTy>
-inline BinaryOpc_match<ValTy, SpecificInt_match, true> m_Not(const ValTy &V) {
+inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
 }
 

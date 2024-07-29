@@ -45,6 +45,7 @@
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/AllInterfaces.h"
+#include "mlir/Dialect/Linalg/Transforms/RuntimeOpVerification.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/MLProgram/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
@@ -62,6 +63,7 @@
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialDialect.h"
+#include "mlir/Dialect/Ptr/IR/PtrDialect.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/IR/ValueBoundsOpInterfaceImpl.h"
@@ -133,6 +135,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   pdl::PDLDialect,
                   pdl_interp::PDLInterpDialect,
                   polynomial::PolynomialDialect,
+                  ptr::PtrDialect,
                   quant::QuantizationDialect,
                   ROCDL::ROCDLDialect,
                   scf::SCFDialect,
@@ -161,6 +164,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   cf::registerBufferDeallocationOpInterfaceExternalModels(registry);
   gpu::registerBufferDeallocationOpInterfaceExternalModels(registry);
   linalg::registerAllDialectInterfaceImplementations(registry);
+  linalg::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerAllocationOpInterfaceExternalModels(registry);
   memref::registerBufferViewFlowOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);

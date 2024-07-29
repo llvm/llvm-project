@@ -2,11 +2,11 @@
 
 ;; Test the ual feature which is similar to AArch64/arm64-strict-align.ll.
 
-; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s --check-prefix=LA32-ALIGNED
+; RUN: llc --mtriple=loongarch32 -mattr=+d < %s | FileCheck %s --check-prefix=LA32-ALIGNED
 ; RUN: llc --mtriple=loongarch32 --mattr=+ual < %s | FileCheck %s --check-prefix=LA32-UNALIGNED
 ; RUN: llc --mtriple=loongarch32 --mattr=-ual < %s | FileCheck %s --check-prefix=LA32-ALIGNED
 
-; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s --check-prefix=LA64-UNALIGNED
+; RUN: llc --mtriple=loongarch64 -mattr=+d < %s | FileCheck %s --check-prefix=LA64-UNALIGNED
 ; RUN: llc --mtriple=loongarch64 --mattr=+ual < %s | FileCheck %s --check-prefix=LA64-UNALIGNED
 ; RUN: llc --mtriple=loongarch64 --mattr=-ual < %s | FileCheck %s --check-prefix=LA64-ALIGNED
 

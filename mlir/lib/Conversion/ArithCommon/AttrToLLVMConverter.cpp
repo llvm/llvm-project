@@ -49,13 +49,6 @@ LLVM::IntegerOverflowFlags mlir::arith::convertArithOverflowFlagsToLLVM(
   return llvmFlags;
 }
 
-LLVM::IntegerOverflowFlagsAttr mlir::arith::convertArithOverflowAttrToLLVM(
-    arith::IntegerOverflowFlagsAttr flagsAttr) {
-  arith::IntegerOverflowFlags arithFlags = flagsAttr.getValue();
-  return LLVM::IntegerOverflowFlagsAttr::get(
-      flagsAttr.getContext(), convertArithOverflowFlagsToLLVM(arithFlags));
-}
-
 LLVM::RoundingMode
 mlir::arith::convertArithRoundingModeToLLVM(arith::RoundingMode roundingMode) {
   switch (roundingMode) {

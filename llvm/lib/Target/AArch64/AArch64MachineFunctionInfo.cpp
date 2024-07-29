@@ -38,39 +38,29 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return {true, false}; // non-leaf
   // The function should be signed in the following situations:
   // - sign-return-address=all
   // - sign-return-address=non-leaf and the functions spills the LR
-  if (!F.hasFnAttribute("sign-return-address")) {
-    const Module &M = *F.getParent();
-    if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-            M.getModuleFlag("sign-return-address"))) {
-      if (Sign->getZExtValue()) {
-        if (const auto *All = mdconst::extract_or_null<ConstantInt>(
-                M.getModuleFlag("sign-return-address-all")))
-          return {true, All->getZExtValue()};
-        return {true, false};
-      }
-    }
+  if (!F.hasFnAttribute("sign-return-address"))
     return {false, false};
-  }
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
+  if (Scope == "none")
     return {false, false};
 
-  if (Scope.equals("all"))
+  if (Scope == "all")
     return {true, true};
 
-  assert(Scope.equals("non-leaf"));
+  assert(Scope == "non-leaf");
   return {true, false};
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
+  if (F.hasFnAttribute("ptrauth-returns"))
+    return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
-    if (const auto *BKey = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("sign-return-address-with-bkey")))
-      return BKey->getZExtValue();
     if (STI.getTargetTriple().isOSWindows())
       return true;
     return false;
@@ -93,24 +83,9 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
-  // BTI/PAuthLR may be set either on the function or the module. Set Bool from
-  // either the function attribute or module attribute, depending on what is
-  // set.
-  // Note: the module attributed is numeric (0 or 1) but the function attribute
-  // is stringy ("true" or "false").
-  auto TryFnThenModule = [&](StringRef AttrName, bool &Bool) {
-    if (F.hasFnAttribute(AttrName)) {
-      const StringRef V = F.getFnAttribute(AttrName).getValueAsString();
-      assert(V.equals_insensitive("true") || V.equals_insensitive("false"));
-      Bool = V.equals_insensitive("true");
-    } else if (const auto *ModVal = mdconst::extract_or_null<ConstantInt>(
-                   F.getParent()->getModuleFlag(AttrName))) {
-      Bool = ModVal->getZExtValue();
-    }
-  };
-
-  TryFnThenModule("branch-target-enforcement", BranchTargetEnforcement);
-  TryFnThenModule("branch-protection-pauth-lr", BranchProtectionPAuthLR);
+  // BTI/PAuthLR are set on the function attribute.
+  BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
+  BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the
@@ -196,12 +171,14 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsAsyncDwarfUnwindInfo) {
     const Function &F = MF.getFunction();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
-    NeedsAsyncDwarfUnwindInfo = needsDwarfUnwindInfo(MF) &&
-                                F.getUWTableKind() == UWTableKind::Async &&
-                                !F.hasMinSize();
+    NeedsAsyncDwarfUnwindInfo =
+        needsDwarfUnwindInfo(MF) &&
+        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+         AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
 }

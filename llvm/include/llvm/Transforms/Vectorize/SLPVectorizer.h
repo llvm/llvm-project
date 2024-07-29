@@ -29,6 +29,7 @@ namespace llvm {
 class AAResults;
 class AssumptionCache;
 class BasicBlock;
+class DataLayout;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -133,11 +134,11 @@ private:
 
   /// Try to vectorize trees that start at insertvalue instructions.
   bool vectorizeInsertValueInst(InsertValueInst *IVI, BasicBlock *BB,
-                                slpvectorizer::BoUpSLP &R);
+                                slpvectorizer::BoUpSLP &R, bool MaxVFOnly);
 
   /// Try to vectorize trees that start at insertelement instructions.
   bool vectorizeInsertElementInst(InsertElementInst *IEI, BasicBlock *BB,
-                                  slpvectorizer::BoUpSLP &R);
+                                  slpvectorizer::BoUpSLP &R, bool MaxVFOnly);
 
   /// Tries to vectorize \p CmpInts. \Returns true on success.
   template <typename ItT>
@@ -153,10 +154,15 @@ private:
   /// a vectorization chain.
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
-  bool vectorizeStoreChain(ArrayRef<Value *> Chain, slpvectorizer::BoUpSLP &R,
-                           unsigned Idx, unsigned MinVF);
+  std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
+                                          slpvectorizer::BoUpSLP &R,
+                                          unsigned Idx, unsigned MinVF,
+                                          unsigned &Size);
 
-  bool vectorizeStores(ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R);
+  bool vectorizeStores(
+      ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
+      DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
+          &Visited);
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

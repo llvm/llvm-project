@@ -1,9 +1,9 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +fp-armv8 -S -o /dev/null -target-abi aapcs      -verify=fp-hard %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs-soft -verify=nofp-soft %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs      -verify=nofp-hard %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs -O1  -verify=nofp-hard,nofp-hard-opt -emit-llvm %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +fp-armv8 -S -o /dev/null -target-abi aapcs -verify=fp-hard %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs-soft -verify=nofp-soft %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs -verify=nofp-hard %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -o /dev/null -target-abi aapcs -O1 -verify=nofp-hard,nofp-hard-opt -emit-llvm %s
 // No run line needed for soft-float ABI with an FPU because that is rejected by the driver
 
 // With the hard-float ABI and a target with an FPU, FP arguments are passed in
@@ -69,6 +69,7 @@ inline void test_float_arg_inline(float a) {}
 inline void test_float_arg_inline_used(float a) {}
 // nofp-hard-opt-error@-1 {{'a' requires 'float' type support, but ABI 'aapcs' does not support it}}
 void use_inline() { test_float_arg_inline_used(1.0f); }
+// nofp-hard-error@-1 {{'use_inline' requires 'float' type support, but ABI 'aapcs' does not support it}}
 
 // The always_inline attribute causes an inline function to always be
 // code-genned, even at -O0, so we always emit the error.
@@ -76,6 +77,7 @@ __attribute((always_inline))
 inline void test_float_arg_always_inline_used(float a) {}
 // nofp-hard-error@-1 {{'a' requires 'float' type support, but ABI 'aapcs' does not support it}}
 void use_always_inline() { test_float_arg_always_inline_used(1.0f); }
+// nofp-hard-error@-1 {{'use_always_inline' requires 'float' type support, but ABI 'aapcs' does not support it}}
 
 // Floating-point expressions, global variables and local variables do not
 // affect the ABI, so are allowed. GCC does reject some uses of floating point
@@ -97,3 +99,25 @@ int test_var_double(int a) {
   d *= 6.0;
   return (int)d;
 }
+
+extern void extern_float_arg(float);
+extern float extern_float_ret(void);
+void call_extern_float_arg() { extern_float_arg(1.0f); }
+// nofp-hard-error@-1 {{'call_extern_float_arg' requires 'float' type support, but ABI 'aapcs' does not support it}}
+void call_extern_float_ret() { extern_float_ret(); }
+// nofp-hard-error@-1 {{'call_extern_float_ret' requires 'float' type support, but ABI 'aapcs' does not support it}}
+
+// Definitions of variadic functions, and calls to them which only use integer
+// argument registers, are both fine.
+void variadic(int, ...);
+void call_variadic_int() { variadic(0, 1); }
+
+// Calls to variadic functions with floating-point arguments are an error,
+// since this would require floating-point registers.
+void call_variadic_double() { variadic(0, 1.0); }
+// nofp-hard-error@-1 {{'call_variadic_double' requires 'double' type support, but ABI 'aapcs' does not support it}}
+
+// Calls through function pointers are also diagnosed.
+void (*fptr)(float);
+void call_indirect() { fptr(1.0f); }
+// nofp-hard-error@-1 {{'call_indirect' requires 'float' type support, but ABI 'aapcs' does not support it}}

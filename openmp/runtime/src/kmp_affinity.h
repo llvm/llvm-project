@@ -322,6 +322,8 @@ public:
 #include <sys/dr.h>
 #include <sys/rset.h>
 #define VMI_MAXRADS 64 // Maximum number of RADs allowed by AIX.
+#define GET_NUMBER_SMT_SETS 0x0004
+extern "C" int syssmt(int flags, int, int, int *);
 #endif
 class KMPNativeAffinity : public KMPAffinity {
   class Mask : public KMPAffinity::Mask {
@@ -844,6 +846,7 @@ public:
   int sub_ids[KMP_HW_LAST];
   bool leader;
   int os_id;
+  int original_idx;
   kmp_hw_attr_t attrs;
 
   void print() const;
@@ -902,9 +905,6 @@ class kmp_topology_t {
 
   // Compact value used during sort_compact()
   int compact;
-
-  // Insert a new topology layer after allocation
-  void _insert_layer(kmp_hw_t type, const int *ids);
 
 #if KMP_GROUP_AFFINITY
   // Insert topology information about Windows Processor groups
@@ -965,6 +965,10 @@ public:
     qsort(hw_threads, num_hw_threads, sizeof(kmp_hw_thread_t),
           kmp_hw_thread_t::compare_ids);
   }
+
+  // Insert a new topology layer after allocation
+  void insert_layer(kmp_hw_t type, const int *ids);
+
   // Check if the hardware ids are unique, if they are
   // return true, otherwise return false
   bool check_ids() const;

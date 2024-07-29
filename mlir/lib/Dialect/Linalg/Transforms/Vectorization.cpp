@@ -195,6 +195,10 @@ struct VectorizationState {
   /// Returns the canonical vector shape used to vectorize the iteration space.
   ArrayRef<int64_t> getCanonicalVecShape() const { return canonicalVecShape; }
 
+  /// Returns the vector dimensions that are scalable in the canonical vector
+  /// shape.
+  ArrayRef<bool> getScalableVecDims() const { return scalableVecDims; }
+
   /// Returns a vector type of the provided `elementType` with the canonical
   /// vector shape and the corresponding fixed/scalable dimensions bit. If
   /// `dimPermutation` is provided, the canonical vector dimensions are permuted
@@ -582,6 +586,14 @@ static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
       llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
 
+/// Check if `op` is a linalg.reduce or a linalg.generic that has at least one
+/// reduction iterator.
+static bool hasReductionIterator(LinalgOp &op) {
+  return isa<linalg::ReduceOp>(op) ||
+         (isa<linalg::GenericOp>(op) &&
+          llvm::any_of(op.getIteratorTypesArray(), isReductionIterator));
+}
+
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
 /// to all `0`; where `outputOperand` is an output operand of the LinalgOp
 /// currently being vectorized. If `dest` has null rank, build an memref.store.
@@ -694,23 +706,24 @@ static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
   auto loc = indexOp.getLoc();
   // Compute the static loop sizes of the index op.
-  auto targetShape = state.getCanonicalVecShape();
+  ArrayRef<int64_t> targetShape = state.getCanonicalVecShape();
+  auto dim = indexOp.getDim();
   // Compute a one-dimensional index vector for the index op dimension.
-  auto constantSeq =
-      llvm::to_vector(llvm::seq<int64_t>(0, targetShape[indexOp.getDim()]));
-  auto indexSteps = rewriter.create<arith::ConstantOp>(
-      loc, rewriter.getIndexVectorAttr(constantSeq));
+  auto indexVectorType =
+      VectorType::get({targetShape[dim]}, rewriter.getIndexType(),
+                      state.getScalableVecDims()[dim]);
+  auto indexSteps = rewriter.create<vector::StepOp>(loc, indexVectorType);
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
-  if (indexOp.getDim() == targetShape.size() - 1)
+  if (dim == targetShape.size() - 1)
     return VectorizationResult{VectorizationStatus::NewOp, indexSteps};
   // Otherwise permute the targetShape to move the index dimension last,
   // broadcast the one-dimensional index vector to the permuted shape, and
   // finally transpose the broadcasted index vector to undo the permutation.
   auto permPattern =
       llvm::to_vector(llvm::seq<unsigned>(0, targetShape.size()));
-  std::swap(permPattern[indexOp.getDim()], permPattern.back());
+  std::swap(permPattern[dim], permPattern.back());
   auto permMap =
       AffineMap::getPermutationMap(permPattern, linalgOp.getContext());
 
@@ -719,7 +732,7 @@ static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
       indexSteps);
   SmallVector<int64_t> transposition =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
-  std::swap(transposition.back(), transposition[indexOp.getDim()]);
+  std::swap(transposition.back(), transposition[dim]);
   auto transposeOp =
       rewriter.create<vector::TransposeOp>(loc, broadCastOp, transposition);
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
@@ -1064,19 +1077,20 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //   * for vector indices (e.g. `vector<1x1x4xindex>`) - extract the bottom
   //    (0th) element and use that.
   SmallVector<Value> transferReadIdxs;
-  auto resTrailingDim = resultType.getShape().back();
   auto zero = rewriter.create<arith::ConstantOp>(
       loc, rewriter.getI32Type(), rewriter.getZeroAttr(rewriter.getI32Type()));
   for (size_t i = 0; i < extractOp.getIndices().size(); i++) {
-    auto idx = bvm.lookup(extractOp.getIndices()[i]);
+    Value idx = bvm.lookup(extractOp.getIndices()[i]);
     if (idx.getType().isIndex()) {
       transferReadIdxs.push_back(idx);
       continue;
     }
 
     auto indexAs1dVector = rewriter.create<vector::ShapeCastOp>(
-        loc, VectorType::get({resTrailingDim}, rewriter.getIndexType()),
-        bvm.lookup(extractOp.getIndices()[i]));
+        loc,
+        VectorType::get(resultType.getShape().back(), rewriter.getIndexType(),
+                        resultType.getScalableDims().back()),
+        idx);
     transferReadIdxs.push_back(
         rewriter.create<vector::ExtractElementOp>(loc, indexAs1dVector, zero));
   }
@@ -1338,8 +1352,17 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     SmallVector<Value> indices(linalgOp.getShape(opOperand).size(), zero);
 
+    // Make sure that the in_bounds attribute corresponding to a broadcast dim
+    // is `true`
+    SmallVector<unsigned> broadcastedDims = readMap.getBroadcastDims();
+    SmallVector<bool> inBounds(readType.getRank(), false);
+
+    for (auto idx : broadcastedDims)
+      inBounds[idx] = true;
+
     Operation *read = rewriter.create<vector::TransferReadOp>(
-        loc, readType, opOperand->get(), indices, readMap);
+        loc, readType, opOperand->get(), indices, readMap,
+        ArrayRef<bool>(inBounds));
     read = state.maskOperation(rewriter, read, linalgOp, maskingMap);
     Value readValue = read->getResult(0);
 
@@ -1410,63 +1433,43 @@ static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
   return applyPermutation(destShape, tensor::getPackInverseDestPerm(packOp));
 }
 
-/// Create a TransferReadOp from `source` with static shape `readShape`. If the
-/// vector type for the read is not the same as the type of `source`, then a
-/// mask is created on the read.
-static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
-                                    Value source, ArrayRef<int64_t> readShape,
-                                    Value padValue) {
-  assert(llvm::none_of(readShape,
-                       [](int64_t s) { return s == ShapedType::kDynamic; }));
-  auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
-  assert(sourceShape.size() == readShape.size());
-  auto maskType = VectorType::get(readShape, builder.getI1Type());
-  auto vectorType = VectorType::get(readShape, padValue.getType());
-  int64_t readRank = readShape.size();
-  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-  auto transferReadOp = builder.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/source,
-      /*indices=*/SmallVector<Value>(readRank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(readRank, true));
-  if (llvm::equal(readShape, sourceShape)) {
-    return transferReadOp;
-  }
-  SmallVector<OpFoldResult> mixedSourceDims =
-      tensor::getMixedSizes(builder, loc, source);
-  Value mask =
-      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
-  return mlir::vector::maskOperation(builder, transferReadOp, mask)
-      ->getResult(0);
-}
-
 /// Given an input, the mixed destSizes, and the vector sizes for vectorization,
 /// create an empty destination tensor and create a TransferWriteOp from the
 /// input to the empty tensor. If the destination shape is not the same as the
 /// inputVectorSizes for the first rank(inputVectorSizes) dims, then create a
-/// mask for the write.
+/// mask for the write. If `useInBoundsInsteadOfMasking` is set, then update the
+/// inBounds attribute of the transfer write op instead of masking.
 static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                                            Value input,
                                            SmallVector<OpFoldResult> destSizes,
-                                           ArrayRef<int64_t> inputVectorSizes) {
+                                           ArrayRef<int64_t> inputVectorSizes,
+                                           bool useInBoundsInsteadOfMasking) {
+
   auto inputType = cast<VectorType>(input.getType());
   Value dest = builder.create<tensor::EmptyOp>(loc, destSizes,
                                                inputType.getElementType());
   int64_t rank = cast<ShapedType>(dest.getType()).getRank();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  auto destShape = cast<ShapedType>(dest.getType()).getShape();
+  SmallVector<bool> inBoundsVal(rank, true);
+  if (useInBoundsInsteadOfMasking) {
+    // Update the inBounds attribute.
+    for (unsigned i = 0; i < rank; i++)
+      inBoundsVal[i] = (destShape[i] == inputVectorSizes[i]) &&
+                       !ShapedType::isDynamic(destShape[i]);
+  }
   Operation *write = builder.create<vector::TransferWriteOp>(
       loc,
       /*vector=*/input,
       /*source=*/dest,
       /*indices=*/SmallVector<Value>(rank, zero),
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  auto destShape = cast<ShapedType>(dest.getType()).getShape();
+      /*inBounds=*/inBoundsVal);
   assert(llvm::none_of(
              destShape.drop_front(inputVectorSizes.size()),
              [](int64_t size) { return size == ShapedType::kDynamic; }) &&
          "Only dims aligned with inputVectorSizes may be dynamic");
+  if (useInBoundsInsteadOfMasking)
+    return write;
   bool needMaskForWrite = !llvm::equal(
       inputVectorSizes, destShape.take_front(inputVectorSizes.size()));
   if (needMaskForWrite) {
@@ -1482,11 +1485,10 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   return write;
 }
 
-/// Vectorize tensor::PackOp with (1) static innerTiles and (2) constant
-/// padding value into:
+/// Vectorize tensor::PackOp with (1) static innerTiles (2) constant
+/// padding value and (3) input vector sizes into:
 /// masked_transfer_read->shape_cast->transpose->transfer_write_in_bounds
 /// As in the following example:
-///
 /// %pack = tensor.pack %src inner_dims_pos = [2, 1] inner_tiles = [16, 2]
 ///     into %dst : tensor<32x8x16xf32> -> tensor<32x4x1x16x2xf32>
 ///
@@ -1505,6 +1507,10 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
 ///     %empty[%c0_0, %c0_0, %c0_0, %c0_0, %c0_0]
 ///     {in_bounds = [true, true, true, true, true]}
 ///     : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+///
+/// If the (3) input vector sizes are not provided, the vector sizes are
+/// determined by the result tensor shape. Also, we update the inBounds
+/// attribute instead of masking.
 static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
@@ -1525,6 +1531,16 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   (void)status; // prevent unused variable warning on non-assert builds.
   assert(succeeded(status) && "failed to reify result shapes");
 
+  // If the input vector sizes are not provided, then the vector sizes are
+  // determined by the result tensor shape. In case the vector sizes aren't
+  // provided, we update the inBounds attribute instead of masking.
+  bool useInBoundsInsteadOfMasking = false;
+  if (inputVectorSizes.empty()) {
+    ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
+    inputVectorSizes = resultTensorShape.take_front(packOp.getSourceRank());
+    useInBoundsInsteadOfMasking = true;
+  }
+
   // Create masked TransferReadOp.
   SmallVector<int64_t> inputShape(inputVectorSizes);
   auto innerTiles = packOp.getStaticInnerTiles();
@@ -1535,8 +1551,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                              invertPermutationVector(outerDimsPerm));
   for (auto [idx, size] : enumerate(innerTiles))
     inputShape[innerDimsPos[idx]] *= size;
-  auto maskedRead = createReadOrMaskedRead(rewriter, loc, packOp.getSource(),
-                                           inputShape, padValue);
+  auto maskedRead = vector::createReadOrMaskedRead(
+      rewriter, loc, packOp.getSource(), inputShape, padValue,
+      useInBoundsInsteadOfMasking);
 
   // Create ShapeCastOp.
   SmallVector<int64_t> destShape(inputVectorSizes);
@@ -1553,9 +1570,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
       loc, shapeCastOp.getResult(), destPermutation);
 
   // Create TransferWriteOp.
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(),
-                               reifiedReturnShapes[0], inputVectorSizes);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, transposeOp.getResult(), reifiedReturnShapes[0],
+      inputVectorSizes, /*useInBoundsInsteadOfMasking=*/false);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1565,7 +1582,10 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
 ///   vector::TransposeOp - Transpose the Source tensor
 ///   ShapeCastOp - Reshape the data based on the target.
 ///   vector::TransferWriteOp. - Write the result vector back to the destination
-///   tensor
+///   tensor.
+///   If the vector sizes are not provided:
+///   * the vector sizes are determined by the input operand and attributes,
+///   * update the inBounds attribute instead of masking.
 static LogicalResult
 vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
                           ArrayRef<int64_t> inputVectorSizes,
@@ -1578,40 +1598,65 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
 
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
-
-  SmallVector<int64_t> readMaskShape(inputVectorSizes.begin(),
-                                     inputVectorSizes.end());
-  ArrayRef<int64_t> outerDimsPerm = unpackOp.getOuterDimsPerm();
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
+  bool useInBoundsInsteadOfMasking = false;
+  ArrayRef<int64_t> outerDimsPerm = unpackOp.getOuterDimsPerm();
 
-  // ReadMask is the size of tensor used to read and apply mask. It is
+  auto destSize = unpackOp.getDestRank();
+
+  if (!inputVectorSizes.empty())
+    assert(inputVectorSizes.size() == destSize &&
+           "Incorrect number of input vector sizes");
+
+  // vectorSizes is the shape of the vector that will be used to do final
+  // write on the destination tensor. It is set like this: Let's say the
+  // source tensor is rank 'M' and the dest tensor rank 'N', where N <= M.
+  // Thus:
+  // 1. vectorSizes = sourceShape.take_front(N)
+  // 2. if outer_dims_perms is present: do that permutation on vectorSizes.
+  // 3. multiply all the locations in vectorSize pointed by innerDimPos by the
+  //    innerTiles attribute value.
+  SmallVector<int64_t> vectorSizes(inputVectorSizes);
+  if (vectorSizes.empty()) {
+    llvm::append_range(vectorSizes, sourceShape.take_front(destSize));
+    if (!outerDimsPerm.empty())
+      applyPermutationToVector(vectorSizes, outerDimsPerm);
+    for (auto [i, pos] : llvm::enumerate(innerDimPos))
+      vectorSizes[pos] *= innerTiles[i];
+
+    useInBoundsInsteadOfMasking = true;
+  }
+
+  // readVectorSizes is the size of tensor used to read and apply mask. It is
   // set like this: Let's say the vectorSize (VS) array is size 'N' and
   // the sourceShape(SS) is 'M' where M >= N and InnerTileSizes (IT) of
   // size M-N
   // Thus:
-  // - initially: ReadMaskShape = vectorInputSizes
+  // - initially: readVectorSizes = vectorInputSizes
   // - Divide all the readMaskShape locations pointed by innerDimPos
   //   by the innerTileSize attribute value.
-  // - if outer_dims_perms is present: do that permutation on readMaskShape.
+  // - if outer_dims_perms is present: do that permutation on readVectorSizes.
   // - Append the remaining shape from SS
   // E.g. let's say let's say unpackTensorType.getShape() = <8x8x32x16>
   // inner Dim Pos = [0, 1] and Inner Tiles = [32, 16], vector_sizes are [512,
   // 128] and outer_dims_perm is [1, 0] then read shape is:
-  //   ReadMaskShape(initial): [512, 128]
+  //   ReadVectorSizes(initial): [512, 128]
   //   Final Value(after innerDim Adjustment): [512/32, 128/16]
   //                                           = [16, 8]
   //   After applying outer_dims_perm: [8, 16]
   //   After appending the rest of the sourceShape: [8, 16, 32, 16]
 
+  SmallVector<int64_t> readVectorSizes(vectorSizes.begin(), vectorSizes.end());
+
   for (auto [index, size] : enumerate(innerTiles)) {
-    readMaskShape[innerDimPos[index]] =
-        llvm::divideCeil(readMaskShape[innerDimPos[index]], size);
+    readVectorSizes[innerDimPos[index]] =
+        llvm::divideCeil(readVectorSizes[innerDimPos[index]], size);
   }
   if (!outerDimsPerm.empty()) {
-    applyPermutationToVector(readMaskShape, outerDimsPerm);
+    applyPermutationToVector(readVectorSizes, outerDimsPerm);
   }
-  readMaskShape.append(sourceShape.begin() + inputVectorSizes.size(),
-                       sourceShape.end());
+  readVectorSizes.append(sourceShape.begin() + vectorSizes.size(),
+                         sourceShape.end());
 
   ReifiedRankedShapedTypeDims reifiedRetShapes;
   LogicalResult status =
@@ -1628,9 +1673,9 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
 
   // Read result, mask if necessary. If transferReadOp shape is not equal
   // to shape of source, then a mask is necessary.
-  Value readResult = createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(),
-      ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
+  Value readResult = vector::createReadOrMaskedRead(
+      rewriter, loc, unpackOp.getSource(), readVectorSizes, padValue,
+      /*useInBoundsInsteadOfMasking=*/false);
 
   PackingMetadata packMetadata;
   SmallVector<int64_t> lastDimToInsertPosPerm =
@@ -1653,15 +1698,15 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
   vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
       loc, vecCollapsedType, transposeOp->getResult(0));
 
-  // WriteMaskShape had to match the shapecast shape for dynamic sizes,
+  // writeVectorSizes had to match the shapecast shape for dynamic sizes,
   // otherwise the validator complains that the mask size is invalid.
-  SmallVector<int64_t> writeMaskShape(
+  SmallVector<int64_t> writeVectorSizes(
       unpackOp.getDestType().hasStaticShape()
-          ? inputVectorSizes
+          ? vectorSizes
           : shapeCastOp.getResultVectorType().getShape());
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, shapeCastOp.getResult(),
-                               reifiedRetShapes[0], writeMaskShape);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, shapeCastOp.getResult(), reifiedRetShapes[0],
+      writeVectorSizes, useInBoundsInsteadOfMasking);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1686,10 +1731,12 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
-  auto maskedRead = createReadOrMaskedRead(rewriter, loc, padOp.getSource(),
-                                           inputVectorSizes, padValue);
+  auto maskedRead = vector::createReadOrMaskedRead(
+      rewriter, loc, padOp.getSource(), inputVectorSizes, padValue,
+      /*useInBoundsInsteadOfMasking=*/false);
   Operation *write = createWriteOrMaskedWrite(
-      rewriter, loc, maskedRead, reifiedReturnShapes[0], inputVectorSizes);
+      rewriter, loc, maskedRead, reifiedReturnShapes[0], inputVectorSizes,
+      /*useInBoundsInsteadOfMasking=*/false);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1749,6 +1796,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   if (isa<ConvolutionOpInterface>(op.getOperation()))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
+  if (hasReductionIterator(op))
+    return reductionPreconditions(op);
+
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
   // linalg.copy ops and ops that implement ContractionOpInterface for now.
   if (!isElementwise(op) &&
@@ -1757,41 +1807,6 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
     return failure();
 
   LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");
-  return success();
-}
-
-/// Returns success if `inputVectorSizes` is a valid masking configuraion for
-/// given `shape`, i.e., it meets:
-///   1. The numbers of elements in both array are equal.
-///   2. `inputVectorSizes` does nos have dynamic dimensions.
-///   3. All the values in `inputVectorSizes` are greater than or equal to
-///      static sizes in `shape`.
-static LogicalResult
-isValidMaskedInputVector(ArrayRef<int64_t> shape,
-                         ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:");
-  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
-
-  if (inputVectorSizes.size() != shape.size()) {
-    LDBG("Input vector sizes don't match the number of loops");
-    return failure();
-  }
-  if (ShapedType::isDynamicShape(inputVectorSizes)) {
-    LDBG("Input vector sizes can't have dynamic dimensions");
-    return failure();
-  }
-  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
-                    [](std::tuple<int64_t, int64_t> sizePair) {
-                      int64_t staticSize = std::get<0>(sizePair);
-                      int64_t inputSize = std::get<1>(sizePair);
-                      return ShapedType::isDynamic(staticSize) ||
-                             staticSize <= inputSize;
-                    })) {
-    LDBG("Input vector sizes must be greater than or equal to iteration space "
-         "static sizes");
-    return failure();
-  }
   return success();
 }
 
@@ -1806,9 +1821,12 @@ vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
     LDBG("Inner-tiles must be constant: " << unpackOp << "\n");
     return failure();
   }
-  llvm::ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
-  if (!inputVectorSizes.empty() &&
-      failed(isValidMaskedInputVector(resultShape, inputVectorSizes)))
+  ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
+  bool satisfyEmptyCond = inputVectorSizes.empty() &&
+                          unpackOp.getDestType().hasStaticShape() &&
+                          unpackOp.getSourceType().hasStaticShape();
+  if (!satisfyEmptyCond &&
+      failed(vector::isValidMaskedInputVector(resultShape, inputVectorSizes)))
     return failure();
 
   return success();
@@ -1822,8 +1840,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
     return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
-      failed(isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
-                                      inputVectorSizes)))
+      failed(vector::isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
+                                              inputVectorSizes)))
     return failure();
 
   if (linalgOp.hasDynamicShape() && failed(vectorizeDynamicLinalgOpPrecondition(
@@ -1881,18 +1899,25 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   return success();
 }
 
-/// TODO: Use a matcher to check for a constant padding value.
 static LogicalResult
 vectorizePackOpPrecondition(tensor::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = packOp.getPaddingValue();
-  if (padValue && !padValue.getDefiningOp<arith::ConstantOp>()) {
+  Attribute cstAttr;
+  if (padValue && !matchPattern(padValue, m_Constant(&cstAttr))) {
     LDBG("pad value is not constant: " << packOp << "\n");
     return failure();
   }
-
   ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
-  if (failed(isValidMaskedInputVector(
+  bool satisfyEmptyCond = true;
+  if (inputVectorSizes.empty()) {
+    if (!packOp.getDestType().hasStaticShape() ||
+        !packOp.getSourceType().hasStaticShape())
+      satisfyEmptyCond = false;
+  }
+
+  if (!satisfyEmptyCond &&
+      failed(vector::isValidMaskedInputVector(
           resultTensorShape.take_front(packOp.getSourceRank()),
           inputVectorSizes)))
     return failure();
@@ -1917,7 +1942,8 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   }
 
   ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
-  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
+  if (failed(vector::isValidMaskedInputVector(resultTensorShape,
+                                              inputVectorSizes)))
     return failure();
 
   if (llvm::any_of(padOp.getLow(), [](Value v) {
@@ -1931,7 +1957,8 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   return success();
 }
 
-/// Preconditions for scalable vectors.
+/// Preconditions for scalable vectors. This is quite restrictive - it models
+/// the fact that in practice we would only make selected dimensions scalable.
 static LogicalResult
 vectorizeScalableVectorPrecondition(Operation *op,
                                     ArrayRef<int64_t> inputVectorSizes,
@@ -1939,18 +1966,98 @@ vectorizeScalableVectorPrecondition(Operation *op,
   assert(inputVectorSizes.size() == inputScalableVecDims.size() &&
          "Number of input vector sizes and scalable dims doesn't match");
 
-  if (inputVectorSizes.empty())
+  size_t numOfScalableDims =
+      llvm::count_if(inputScalableVecDims, [](bool flag) { return flag; });
+
+  if (numOfScalableDims == 0)
     return success();
 
-  bool isScalable = inputScalableVecDims.back();
-  if (!isScalable)
-    return success();
-
-  // Only element-wise and 1d depthwise conv ops supported in the presence of
-  // scalable dims.
   auto linalgOp = dyn_cast<LinalgOp>(op);
-  return success(linalgOp && (isElementwise(linalgOp) ||
-                              isa<linalg::DepthwiseConv1DNwcWcOp>(op)));
+
+  // Cond 1: There's been no need for scalable vectorisation of
+  // non-linalg Ops so far
+  if (!linalgOp)
+    return failure();
+
+  // Cond 2: There's been no need for more than 2 scalable dims so far
+  if (numOfScalableDims > 2)
+    return failure();
+
+  // Cond 3: Look at the configuration in `inputScalableVecDims` and verify that
+  // it matches one of the supported cases:
+  //  1. exactly 1 dim is scalable and that's the _last_ parallel dim
+  //  2. exactly 2 dims are scalable and those are the _last two adjacent_
+  //     parallel dims
+  //  3. exactly 1 reduction dim is scalable and that's the last (innermost) dim
+  // The 2nd restriction above means that only Matmul-like Ops are supported
+  // when 2 dims are scalable, e.g. :
+  //    * iterators = [parallel, parallel, reduction]
+  //    * scalable flags = [true, true, false]
+
+  // Find the first scalable flag
+  bool seenParalell = false;
+  auto iterators = linalgOp.getIteratorTypesArray();
+  SmallVector<bool> scalableFlags(inputScalableVecDims);
+  while (!scalableFlags.back()) {
+    seenParalell |= (iterators.back() == utils::IteratorType::parallel);
+
+    iterators.pop_back();
+    scalableFlags.pop_back();
+  }
+
+  switch (iterators.back()) {
+  case utils::IteratorType::reduction: {
+    // Check 3. above is met.
+    if (iterators.size() != inputVectorSizes.size()) {
+      LDBG("Non-trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    if (isa<linalg::MatmulOp>(op) || isa<linalg::MatmulTransposeAOp>(op)) {
+      LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
+           "is not supported\n");
+      return failure();
+    }
+    break;
+  }
+  case utils::IteratorType::parallel: {
+    // Check 1. and 2. above are met.
+    if (seenParalell) {
+      LDBG("Inner parallel dim not requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    break;
+  }
+  }
+
+  // If present, check the 2nd scalable dim. ATM, only Matmul-like Ops are
+  // supported for which expect the folowing config:
+  //    * iterators = [parallel, parallel, reduction]
+  //    * scalable flags = [true, true, false]
+  if (numOfScalableDims == 2) {
+    // Disallow below case which breaks 3. above:
+    //    * iterators = [..., parallel, reduction]
+    //    * scalable flags = [..., true, true]
+    if (iterators.back() == utils::IteratorType::reduction) {
+      LDBG("Higher dim than the trailing reduction dim requested for scalable "
+           "vectorization\n");
+      return failure();
+    }
+    scalableFlags.pop_back();
+    iterators.pop_back();
+
+    if (!scalableFlags.back() ||
+        (iterators.back() != utils::IteratorType::parallel))
+      return failure();
+  }
+
+  // Cond 4: Only the following ops are supported in the
+  // presence of scalable vectors
+  return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
+                 isa<linalg::MatmulTransposeAOp>(op) ||
+                 isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
+                 isa<linalg::MatvecOp>(op) || hasReductionIterator(linalgOp));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
@@ -2676,11 +2783,12 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   // The `masked` attribute is only valid on this padded buffer.
   // When forwarding to vector.transfer_read, the attribute must be reset
   // conservatively.
+  auto vectorType = xferOp.getVectorType();
   Value res = rewriter.create<vector::TransferReadOp>(
-      xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.getIndices(),
+      xferOp.getLoc(), vectorType, in, xferOp.getIndices(),
       xferOp.getPermutationMapAttr(), xferOp.getPadding(), xferOp.getMask(),
-      // in_bounds is explicitly reset
-      /*inBoundsAttr=*/ArrayAttr());
+      rewriter.getBoolArrayAttr(
+          SmallVector<bool>(vectorType.getRank(), false)));
 
   if (maybeFillOp)
     rewriter.eraseOp(maybeFillOp);
@@ -2734,11 +2842,12 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   // The `masked` attribute is only valid on this padded buffer.
   // When forwarding to vector.transfer_write, the attribute must be reset
   // conservatively.
+  auto vector = xferOp.getVector();
   rewriter.create<vector::TransferWriteOp>(
-      xferOp.getLoc(), xferOp.getVector(), out, xferOp.getIndices(),
+      xferOp.getLoc(), vector, out, xferOp.getIndices(),
       xferOp.getPermutationMapAttr(), xferOp.getMask(),
-      // in_bounds is explicitly reset
-      /*inBoundsAttr=*/ArrayAttr());
+      rewriter.getBoolArrayAttr(
+          SmallVector<bool>(vector.getType().getRank(), false)));
 
   rewriter.eraseOp(copyOp);
   rewriter.eraseOp(xferOp);
@@ -3234,6 +3343,11 @@ struct Conv1DGenerator
       auto maskType =
           VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
 
+      SmallVector<bool> inBounds(maskShape.size(), true);
+      auto xferOp = cast<VectorTransferOpInterface>(opToMask);
+      xferOp->setAttr(xferOp.getInBoundsAttrName(),
+                      rewriter.getBoolArrayAttr(inBounds));
+
       SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
           cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
 
@@ -3382,16 +3496,16 @@ struct Conv1DGenerator
       //  * shape_cast(broadcast(filter))
       //  * broadcast(shuffle(filter))
       // Opt for the option without shape_cast to simplify the codegen.
-      auto rhsSize = rhs.getType().cast<VectorType>().getShape()[0];
-      auto resSize = res.getType().cast<VectorType>().getShape()[1];
+      auto rhsSize = cast<VectorType>(rhs.getType()).getShape()[0];
+      auto resSize = cast<VectorType>(res.getType()).getShape()[1];
 
-      SmallVector<int64_t, 16> indicies;
+      SmallVector<int64_t, 16> indices;
       for (int i = 0; i < resSize / rhsSize; ++i) {
         for (int j = 0; j < rhsSize; ++j)
-          indicies.push_back(j);
+          indices.push_back(j);
       }
 
-      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indicies);
+      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indices);
     }
     // Broadcast the filter to match the output vector
     rhs = rewriter.create<vector::BroadcastOp>(

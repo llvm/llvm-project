@@ -60,7 +60,9 @@ tablegen("AMDGPUGenMCPseudoLowering") {
 tablegen("AMDGPUGenRegisterBank") {
   visibility = [
     ":LLVMAMDGPUCodeGen",
+    "MCTargetDesc",
     "Utils",
+    "//llvm/unittests/MC/AMDGPU:AMDGPUMCTests",
     "//llvm/unittests/Target/AMDGPU:AMDGPUTests",
   ]
   args = [ "-gen-register-bank" ]
@@ -132,10 +134,12 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAnnotateKernelFeatures.cpp",
     "AMDGPUAnnotateUniformValues.cpp",
     "AMDGPUArgumentUsageInfo.cpp",
+    "AMDGPUAsanInstrumentation.cpp",
     "AMDGPUAsmPrinter.cpp",
     "AMDGPUAtomicOptimizer.cpp",
     "AMDGPUAttributor.cpp",
     "AMDGPUCallLowering.cpp",
+    "AMDGPUCodeGenPassBuilder.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
     "AMDGPUCtorDtorLowering.cpp",
@@ -183,6 +187,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",
     "AMDGPUSetWavePriority.cpp",
+    "AMDGPUSplitModule.cpp",
     "AMDGPUSubtarget.cpp",
     "AMDGPUTargetMachine.cpp",
     "AMDGPUTargetObjectFile.cpp",
@@ -204,6 +209,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "GCNVOPDUtils.cpp",
     "R600AsmPrinter.cpp",
     "R600ClauseMergePass.cpp",
+    "R600CodeGenPassBuilder.cpp",
     "R600ControlFlowFinalizer.cpp",
     "R600EmitClauseMarkers.cpp",
     "R600ExpandSpecialInstrs.cpp",

@@ -24,7 +24,7 @@
 
 namespace llvm {
 void initializeCycleInfoWrapperPassPass(PassRegistry &);
-}
+} // namespace llvm
 
 using namespace llvm;
 
@@ -332,9 +332,9 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
     bool InitialValue = false;
     if (F->hasFnAttribute("uniform-work-group-size"))
-      InitialValue = F->getFnAttribute("uniform-work-group-size")
-                         .getValueAsString()
-                         .equals("true");
+      InitialValue =
+          F->getFnAttribute("uniform-work-group-size").getValueAsString() ==
+          "true";
 
     if (InitialValue)
       indicateOptimisticFixpoint();

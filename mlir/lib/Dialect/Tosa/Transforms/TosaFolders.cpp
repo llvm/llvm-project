@@ -20,7 +20,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallVector.h"
@@ -371,7 +370,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     auto reductionAxis = op.getAxis();
     const auto denseElementsAttr = constOp.getValue();
     const auto shapedOldElementsValues =
-        denseElementsAttr.getType().cast<ShapedType>();
+        cast<ShapedType>(denseElementsAttr.getType());
 
     if (!llvm::isa<IntegerType>(shapedOldElementsValues.getElementType()))
       return rewriter.notifyMatchFailure(

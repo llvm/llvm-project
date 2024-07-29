@@ -1,19 +1,28 @@
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
+############ Test merging multiple categories into a single category ############
 ## Create a dylib to link against(a64_file1.dylib) and merge categories in the main binary (file2_merge_a64.exe)
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file1.o a64_file1.s
 # RUN: %lld -arch arm64 a64_file1.o -o a64_file1.dylib -dylib
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file2.o a64_file2.s
 # RUN: %lld -arch arm64 -o a64_file2_no_merge.exe a64_file1.dylib a64_file2.o
+# RUN: %lld -arch arm64 -o a64_file2_no_merge_v2.exe a64_file1.dylib a64_file2.o -no_objc_category_merging
+# RUN: %lld -arch arm64 -o a64_file2_no_merge_v3.exe a64_file1.dylib a64_file2.o -objc_category_merging -no_objc_category_merging
 # RUN: %lld -arch arm64 -o a64_file2_merge.exe -objc_category_merging a64_file1.dylib a64_file2.o
 
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_no_merge.exe | FileCheck %s --check-prefixes=NO_MERGE_CATS
+# RUN: llvm-objdump --objc-meta-data --macho a64_file2_no_merge_v2.exe | FileCheck %s --check-prefixes=NO_MERGE_CATS
+# RUN: llvm-objdump --objc-meta-data --macho a64_file2_no_merge_v3.exe | FileCheck %s --check-prefixes=NO_MERGE_CATS
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge.exe | FileCheck %s --check-prefixes=MERGE_CATS
 
+############ Test merging multiple categories into the base class ############
+# RUN: %lld -arch arm64 -o a64_file2_merge_into_class.exe -objc_category_merging a64_file1.o a64_file2.o
+# RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge_into_class.exe | FileCheck %s --check-prefixes=MERGE_CATS_CLS
 
-MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
+
+MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass(Category02|Category03)
 MERGE_CATS-NEXT:              name {{.*}} Category02|Category03
 MERGE_CATS:           instanceMethods
 MERGE_CATS-NEXT:           entsize 24
@@ -88,9 +97,10 @@ MERGE_CATS-NEXT:                 name {{.*}} MyProtocol02Prop
 MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
 MERGE_CATS-NEXT:                 name {{.*}} MyProtocol03Prop
 MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
+MERGE_CATS:        __OBJC_$_CATEGORY_MyBaseClass_$_Category04
 
 
-NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
+NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass(Category02|Category03)
 NO_MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 NO_MERGE_CATS: instanceMethods
 NO_MERGE_CATS-NEXT: 24
@@ -98,6 +108,211 @@ NO_MERGE_CATS-NEXT: 2
 NO_MERGE_CATS: classMethods
 NO_MERGE_CATS-NEXT: 24
 NO_MERGE_CATS-NEXT: 2
+
+
+MERGE_CATS_CLS:        _OBJC_CLASS_$_MyBaseClass
+MERGE_CATS_CLS-NEXT:            isa {{.*}} _OBJC_METACLASS_$_MyBaseClass
+MERGE_CATS_CLS-NEXT:     superclass 0x0
+MERGE_CATS_CLS-NEXT:          cache {{.*}} __objc_empty_cache
+MERGE_CATS_CLS-NEXT:         vtable 0x0
+MERGE_CATS_CLS-NEXT:           data {{.*}} (struct class_ro_t *)
+MERGE_CATS_CLS-NEXT:                     flags 0x2 RO_ROOT
+MERGE_CATS_CLS-NEXT:             instanceStart 0
+MERGE_CATS_CLS-NEXT:              instanceSize 4
+MERGE_CATS_CLS-NEXT:                  reserved 0x0
+MERGE_CATS_CLS-NEXT:                ivarLayout 0x0
+MERGE_CATS_CLS-NEXT:                      name {{.*}} MyBaseClass
+MERGE_CATS_CLS-NEXT:               baseMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:            entsize 24
+MERGE_CATS_CLS-NEXT:              count 8
+MERGE_CATS_CLS-NEXT:               name {{.*}} class02InstanceMethod
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass(Category02) class02InstanceMethod]
+MERGE_CATS_CLS-NEXT:               name {{.*}} myProtocol02Method
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass(Category02) myProtocol02Method]
+MERGE_CATS_CLS-NEXT:               name {{.*}} class03InstanceMethod
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass(Category03) class03InstanceMethod]
+MERGE_CATS_CLS-NEXT:               name {{.*}} myProtocol03Method
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass(Category03) myProtocol03Method]
+MERGE_CATS_CLS-NEXT:               name {{.*}} baseInstanceMethod
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass baseInstanceMethod]
+MERGE_CATS_CLS-NEXT:               name {{.*}} myProtocol01Method
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass myProtocol01Method]
+MERGE_CATS_CLS-NEXT:               name {{.*}} MyProtocol01Prop
+MERGE_CATS_CLS-NEXT:              types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass MyProtocol01Prop]
+MERGE_CATS_CLS-NEXT:               name {{.*}} setMyProtocol01Prop:
+MERGE_CATS_CLS-NEXT:              types {{.*}} v20@0:8i16
+MERGE_CATS_CLS-NEXT:                imp -[MyBaseClass setMyProtocol01Prop:]
+MERGE_CATS_CLS-NEXT:             baseProtocols {{.*}}
+MERGE_CATS_CLS-NEXT:                       count 3
+MERGE_CATS_CLS-NEXT:               list[0] {{.*}} (struct protocol_t *)
+MERGE_CATS_CLS-NEXT:                   isa 0x0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol02
+MERGE_CATS_CLS-NEXT:             protocols 0x0
+MERGE_CATS_CLS-NEXT:           instanceMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:                entsize 24
+MERGE_CATS_CLS-NEXT:                  count 2
+MERGE_CATS_CLS-NEXT:                   name {{.*}} myProtocol02Method
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} MyProtocol02Prop
+MERGE_CATS_CLS-NEXT:                  types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:              classMethods 0x0 (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:       optionalInstanceMethods 0x0
+MERGE_CATS_CLS-NEXT:          optionalClassMethods 0x0
+MERGE_CATS_CLS-NEXT:            instanceProperties {{.*}}
+MERGE_CATS_CLS-NEXT:               list[1] {{.*}} (struct protocol_t *)
+MERGE_CATS_CLS-NEXT:                   isa 0x0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol03
+MERGE_CATS_CLS-NEXT:             protocols 0x0
+MERGE_CATS_CLS-NEXT:           instanceMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:                entsize 24
+MERGE_CATS_CLS-NEXT:                  count 2
+MERGE_CATS_CLS-NEXT:                   name {{.*}} myProtocol03Method
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} MyProtocol03Prop
+MERGE_CATS_CLS-NEXT:                  types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:              classMethods 0x0 (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:       optionalInstanceMethods 0x0
+MERGE_CATS_CLS-NEXT:          optionalClassMethods 0x0
+MERGE_CATS_CLS-NEXT:            instanceProperties {{.*}}
+MERGE_CATS_CLS-NEXT:               list[2] {{.*}} (struct protocol_t *)
+MERGE_CATS_CLS-NEXT:                   isa 0x0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol01
+MERGE_CATS_CLS-NEXT:             protocols 0x0
+MERGE_CATS_CLS-NEXT:           instanceMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:                entsize 24
+MERGE_CATS_CLS-NEXT:                  count 3
+MERGE_CATS_CLS-NEXT:                   name {{.*}} myProtocol01Method
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} MyProtocol01Prop
+MERGE_CATS_CLS-NEXT:                  types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} setMyProtocol01Prop:
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v20@0:8i16
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:              classMethods 0x0 (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:       optionalInstanceMethods 0x0
+MERGE_CATS_CLS-NEXT:          optionalClassMethods 0x0
+MERGE_CATS_CLS-NEXT:            instanceProperties {{.*}}
+MERGE_CATS_CLS-NEXT:                     ivars {{.*}}
+MERGE_CATS_CLS-NEXT:                     entsize 32
+MERGE_CATS_CLS-NEXT:                       count 1
+MERGE_CATS_CLS-NEXT:                offset {{.*}} 0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol01Prop
+MERGE_CATS_CLS-NEXT:                  type {{.*}} i
+MERGE_CATS_CLS-NEXT:             alignment 2
+MERGE_CATS_CLS-NEXT:                  size 4
+MERGE_CATS_CLS-NEXT:            weakIvarLayout 0x0
+MERGE_CATS_CLS-NEXT:            baseProperties {{.*}}
+MERGE_CATS_CLS-NEXT:                     entsize 16
+MERGE_CATS_CLS-NEXT:                       count 3
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol02Prop
+MERGE_CATS_CLS-NEXT:             attributes {{.*}} Ti,R,D
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol03Prop
+MERGE_CATS_CLS-NEXT:             attributes {{.*}} Ti,R,D
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol01Prop
+MERGE_CATS_CLS-NEXT:             attributes {{.*}} Ti,N,VMyProtocol01Prop
+MERGE_CATS_CLS-NEXT: Meta Class
+MERGE_CATS_CLS-NEXT:            isa {{.*}} _OBJC_METACLASS_$_MyBaseClass
+MERGE_CATS_CLS-NEXT:     superclass {{.*}} _OBJC_CLASS_$_MyBaseClass
+MERGE_CATS_CLS-NEXT:          cache {{.*}} __objc_empty_cache
+MERGE_CATS_CLS-NEXT:         vtable 0x0
+MERGE_CATS_CLS-NEXT:           data {{.*}} (struct class_ro_t *)
+MERGE_CATS_CLS-NEXT:                     flags 0x3 RO_META RO_ROOT
+MERGE_CATS_CLS-NEXT:             instanceStart 40
+MERGE_CATS_CLS-NEXT:              instanceSize 40
+MERGE_CATS_CLS-NEXT:                  reserved 0x0
+MERGE_CATS_CLS-NEXT:                ivarLayout 0x0
+MERGE_CATS_CLS-NEXT:                      name {{.*}} MyBaseClass
+MERGE_CATS_CLS-NEXT:               baseMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:            entsize 24
+MERGE_CATS_CLS-NEXT:              count 5
+MERGE_CATS_CLS-NEXT:               name {{.*}} class02ClassMethod
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp +[MyBaseClass(Category02) class02ClassMethod]
+MERGE_CATS_CLS-NEXT:               name {{.*}} MyProtocol02Prop
+MERGE_CATS_CLS-NEXT:              types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                imp +[MyBaseClass(Category02) MyProtocol02Prop]
+MERGE_CATS_CLS-NEXT:               name {{.*}} class03ClassMethod
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp +[MyBaseClass(Category03) class03ClassMethod]
+MERGE_CATS_CLS-NEXT:               name {{.*}} MyProtocol03Prop
+MERGE_CATS_CLS-NEXT:              types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                imp +[MyBaseClass(Category03) MyProtocol03Prop]
+MERGE_CATS_CLS-NEXT:               name {{.*}} baseClassMethod
+MERGE_CATS_CLS-NEXT:              types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                imp +[MyBaseClass baseClassMethod]
+MERGE_CATS_CLS-NEXT:             baseProtocols {{.*}}
+MERGE_CATS_CLS-NEXT:                       count 3
+MERGE_CATS_CLS-NEXT:               list[0] {{.*}} (struct protocol_t *)
+MERGE_CATS_CLS-NEXT:                   isa 0x0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol02
+MERGE_CATS_CLS-NEXT:             protocols 0x0
+MERGE_CATS_CLS-NEXT:           instanceMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:                entsize 24
+MERGE_CATS_CLS-NEXT:                  count 2
+MERGE_CATS_CLS-NEXT:                   name {{.*}} myProtocol02Method
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} MyProtocol02Prop
+MERGE_CATS_CLS-NEXT:                  types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:              classMethods 0x0 (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:       optionalInstanceMethods 0x0
+MERGE_CATS_CLS-NEXT:          optionalClassMethods 0x0
+MERGE_CATS_CLS-NEXT:            instanceProperties {{.*}}
+MERGE_CATS_CLS-NEXT:               list[1] {{.*}} (struct protocol_t *)
+MERGE_CATS_CLS-NEXT:                   isa 0x0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol03
+MERGE_CATS_CLS-NEXT:             protocols 0x0
+MERGE_CATS_CLS-NEXT:           instanceMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:                entsize 24
+MERGE_CATS_CLS-NEXT:                  count 2
+MERGE_CATS_CLS-NEXT:                   name {{.*}} myProtocol03Method
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} MyProtocol03Prop
+MERGE_CATS_CLS-NEXT:                  types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:              classMethods 0x0 (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:       optionalInstanceMethods 0x0
+MERGE_CATS_CLS-NEXT:          optionalClassMethods 0x0
+MERGE_CATS_CLS-NEXT:            instanceProperties {{.*}}
+MERGE_CATS_CLS-NEXT:               list[2] {{.*}} (struct protocol_t *)
+MERGE_CATS_CLS-NEXT:                   isa 0x0
+MERGE_CATS_CLS-NEXT:                  name {{.*}} MyProtocol01
+MERGE_CATS_CLS-NEXT:             protocols 0x0
+MERGE_CATS_CLS-NEXT:           instanceMethods {{.*}} (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:                entsize 24
+MERGE_CATS_CLS-NEXT:                  count 3
+MERGE_CATS_CLS-NEXT:                   name {{.*}} myProtocol01Method
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} MyProtocol01Prop
+MERGE_CATS_CLS-NEXT:                  types {{.*}} i16@0:8
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:                   name {{.*}} setMyProtocol01Prop:
+MERGE_CATS_CLS-NEXT:                  types {{.*}} v20@0:8i16
+MERGE_CATS_CLS-NEXT:                    imp 0x0
+MERGE_CATS_CLS-NEXT:              classMethods 0x0 (struct method_list_t *)
+MERGE_CATS_CLS-NEXT:       optionalInstanceMethods 0x0
+MERGE_CATS_CLS-NEXT:          optionalClassMethods 0x0
+MERGE_CATS_CLS-NEXT:            instanceProperties {{.*}}
+MERGE_CATS_CLS-NEXT:                     ivars 0x0
+MERGE_CATS_CLS-NEXT:            weakIvarLayout 0x0
+MERGE_CATS_CLS-NEXT:            baseProperties 0x0
+MERGE_CATS_CLS:        __OBJC_$_CATEGORY_MyBaseClass_$_Category04
 
 
 #--- a64_file1.s
@@ -431,6 +646,15 @@ L_OBJC_IMAGE_INFO:
 ## @dynamic MyProtocol03Prop;
 ## @end
 ##
+## // This category shouldn't be merged
+## @interface MyBaseClass(Category04)
+## + (void)load;
+## @end
+##
+## @implementation MyBaseClass(Category04)
+## + (void)load {}
+## @end
+##
 ## int main() {
 ##     return 0;
 ## }
@@ -493,6 +717,12 @@ L_OBJC_IMAGE_INFO:
 	b	_OUTLINED_FUNCTION_0
 	.cfi_endproc
                                         ; -- End function
+	.p2align	2
+"+[MyBaseClass(Category04) load]":
+	.cfi_startproc
+; %bb.0:
+	ret
+	.cfi_endproc
 	.globl	_main                           ; -- Begin function main
 	.p2align	2
 _main:                                  ; @main
@@ -746,11 +976,42 @@ __OBJC_$_CATEGORY_MyBaseClass_$_Category03:
 	.quad	0
 	.long	64                              ; 0x40
 	.space	4
+	.section	__TEXT,__objc_classname,cstring_literals
+l_OBJC_CLASS_NAME_.15:
+	.asciz	"Category04"
+	.section	__TEXT,__objc_methname,cstring_literals
+l_OBJC_METH_VAR_NAME_.16:
+	.asciz	"load"
+	.section	__DATA,__objc_const
+	.p2align	3, 0x0
+__OBJC_$_CATEGORY_CLASS_METHODS_MyBaseClass_$_Category04:
+	.long	24
+	.long	1
+	.quad	l_OBJC_METH_VAR_NAME_.16
+	.quad	l_OBJC_METH_VAR_TYPE_
+	.quad	"+[MyBaseClass(Category04) load]"
+	.p2align	3, 0x0
+__OBJC_$_CATEGORY_MyBaseClass_$_Category04:
+	.quad	l_OBJC_CLASS_NAME_.15
+	.quad	_OBJC_CLASS_$_MyBaseClass
+	.quad	0
+	.quad	__OBJC_$_CATEGORY_CLASS_METHODS_MyBaseClass_$_Category04
+	.quad	0
+	.quad	0
+	.quad	0
+	.long	64
+	.space	4
 	.section	__DATA,__objc_catlist,regular,no_dead_strip
 	.p2align	3, 0x0                          ; @"OBJC_LABEL_CATEGORY_$"
 l_OBJC_LABEL_CATEGORY_$:
 	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category02
 	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category03
+	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category04
+	.section	__DATA,__objc_nlcatlist,regular,no_dead_strip
+	.p2align	3, 0x0
+l_OBJC_LABEL_NONLAZY_CATEGORY_$:
+	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category04
+
 	.no_dead_strip	__OBJC_LABEL_PROTOCOL_$_MyProtocol02
 	.no_dead_strip	__OBJC_LABEL_PROTOCOL_$_MyProtocol03
 	.no_dead_strip	__OBJC_PROTOCOL_$_MyProtocol02

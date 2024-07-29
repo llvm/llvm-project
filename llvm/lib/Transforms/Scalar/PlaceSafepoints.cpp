@@ -60,6 +60,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -288,6 +289,8 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // with for the moment.
     legacy::FunctionPassManager FPM(F.getParent());
     bool CanAssumeCallSafepoints = enableCallSafepoints(F);
+
+    FPM.add(new TargetLibraryInfoWrapperPass(TLI));
     auto *PBS = new PlaceBackedgeSafepointsLegacyPass(CanAssumeCallSafepoints);
     FPM.add(PBS);
     FPM.run(F);
@@ -308,8 +311,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // We can sometimes end up with duplicate poll locations.  This happens if
     // a single loop is visited more than once.   The fact this happens seems
     // wrong, but it does happen for the split-backedge.ll test case.
-    PollLocations.erase(std::unique(PollLocations.begin(), PollLocations.end()),
-                        PollLocations.end());
+    PollLocations.erase(llvm::unique(PollLocations), PollLocations.end());
 
     // Insert a poll at each point the analysis pass identified
     // The poll location must be the terminator of a loop latch block.
@@ -591,7 +593,7 @@ static Instruction *findLocationForEntrySafepoint(Function &F,
 const char GCSafepointPollName[] = "gc.safepoint_poll";
 
 static bool isGCSafepointPoll(Function &F) {
-  return F.getName().equals(GCSafepointPollName);
+  return F.getName() == GCSafepointPollName;
 }
 
 /// Returns true if this function should be rewritten to include safepoint

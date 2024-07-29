@@ -58,6 +58,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
@@ -1884,7 +1885,8 @@ static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info);
+                                  EvalInfo &Info,
+                                  std::string *StringResult = nullptr);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -2041,6 +2043,7 @@ static bool IsNoOpCall(const CallExpr *E) {
   unsigned Builtin = E->getBuiltinCallee();
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
           Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
           Builtin == Builtin::BI__builtin_function_start);
 }
 
@@ -2130,7 +2133,7 @@ static bool IsWeakLValue(const LValue &Value) {
 
 static bool isZeroSized(const LValue &Value) {
   const ValueDecl *Decl = GetLValueBaseDecl(Value);
-  if (Decl && isa<VarDecl>(Decl)) {
+  if (isa_and_nonnull<VarDecl>(Decl)) {
     QualType Ty = Decl->getType();
     if (Ty->isArrayType())
       return Ty->isIncompleteType() ||
@@ -2398,6 +2401,10 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
 /// produce an appropriate diagnostic.
 static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
                              const LValue *This = nullptr) {
+  // The restriction to literal types does not exist in C++23 anymore.
+  if (Info.getLangOpts().CPlusPlus23)
+    return true;
+
   if (!E->isPRValue() || E->getType()->isLiteralType(Info.Ctx))
     return true;
 
@@ -2492,7 +2499,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       }
     }
     for (const auto *I : RD->fields()) {
-      if (I->isUnnamedBitfield())
+      if (I->isUnnamedBitField())
         continue;
 
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
@@ -2706,7 +2713,11 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
 static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
                                    QualType SrcType, QualType DestType,
                                    APFloat &Result) {
-  assert(isa<CastExpr>(E) || isa<CompoundAssignOperator>(E));
+  assert((isa<CastExpr>(E) || isa<CompoundAssignOperator>(E) ||
+          isa<ConvertVectorExpr>(E)) &&
+         "HandleFloatToFloatCast has been checked with only CastExpr, "
+         "CompoundAssignOperator and ConvertVectorExpr. Please either validate "
+         "the new expression or address the root cause of this usage.");
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
   APFloat Value = Result;
@@ -2832,6 +2843,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such
       // a shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_right;
     }
@@ -2842,15 +2855,22 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
     } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus20) {
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
       // E1 x 2^E2 module 2^N.
-      if (LHS.isNegative())
+      if (LHS.isNegative()) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
-      else if (LHS.countl_zero() < SA)
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.countl_zero() < SA) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      }
     }
     Result = LHS << SA;
     return true;
@@ -2865,6 +2885,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such a
       // shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_left;
     }
@@ -2872,9 +2894,13 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     // C++11 [expr.shift]p1: Shift width must be less than the bit width of the
     // shifted type.
     unsigned SA = (unsigned) RHS.getLimitedValue(LHS.getBitWidth()-1);
-    if (SA != RHS)
+    if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
+    }
+
     Result = LHS >> SA;
     return true;
   }
@@ -3529,7 +3555,7 @@ static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
     return false;
 
   for (auto *Field : RD->fields())
-    if (!Field->isUnnamedBitfield() &&
+    if (!Field->isUnnamedBitField() &&
         isReadByLvalueToRvalueConversion(Field->getType()))
       return true;
 
@@ -4898,7 +4924,7 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
           handleDefaultInitValue(I->getType(), Result.getStructBase(Index));
 
     for (const auto *I : RD->fields()) {
-      if (I->isUnnamedBitfield())
+      if (I->isUnnamedBitField())
         continue;
       Success &= handleDefaultInitValue(
           I->getType(), Result.getStructField(I->getFieldIndex()));
@@ -6436,7 +6462,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     // Default-initialize any fields with no explicit initializer.
     for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
       assert(FieldIt != RD->field_end() && "missing field?");
-      if (!FieldIt->isUnnamedBitfield())
+      if (!FieldIt->isUnnamedBitField())
         Success &= handleDefaultInitValue(
             FieldIt->getType(),
             Result.getStructField(FieldIt->getFieldIndex()));
@@ -6546,7 +6572,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   // Default-initialize any remaining fields.
   if (!RD->isUnion()) {
     for (; FieldIt != RD->field_end(); ++FieldIt) {
-      if (!FieldIt->isUnnamedBitfield())
+      if (!FieldIt->isUnnamedBitField())
         Success &= handleDefaultInitValue(
             FieldIt->getType(),
             Result.getStructField(FieldIt->getFieldIndex()));
@@ -6708,7 +6734,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
   // fields first and then walk them backwards.
   SmallVector<FieldDecl*, 16> Fields(RD->fields());
   for (const FieldDecl *FD : llvm::reverse(Fields)) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
 
     LValue Subobject = This;
@@ -7721,6 +7747,11 @@ public:
   }
   bool VisitExpr(const Expr *E) {
     return Error(E);
+  }
+
+  bool VisitEmbedExpr(const EmbedExpr *E) {
+    const auto It = E->begin();
+    return StmtVisitorTy::Visit(*It);
   }
 
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
@@ -9141,6 +9172,11 @@ public:
     return true;
   }
 
+  bool VisitEmbedExpr(const EmbedExpr *E) {
+    llvm::report_fatal_error("Not yet implemented for ExprConstant.cpp");
+    return true;
+  }
+
   bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E) {
     std::string ResultStr = E->ComputeName(Info.Ctx);
 
@@ -9237,9 +9273,10 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       bool HasValidResult = !Result.InvalidBase && !Result.Designator.Invalid &&
                             !Result.IsNullPtr;
       bool VoidPtrCastMaybeOK =
-          HasValidResult &&
-          Info.Ctx.hasSameUnqualifiedType(Result.Designator.getType(Info.Ctx),
-                                          E->getType()->getPointeeType());
+          Result.IsNullPtr ||
+          (HasValidResult &&
+           Info.Ctx.hasSimilarType(Result.Designator.getType(Info.Ctx),
+                                   E->getType()->getPointeeType()));
       // 1. We'll allow it in std::allocator::allocate, and anything which that
       //    calls.
       // 2. HACK 2022-03-28: Work around an issue with libstdc++'s
@@ -9320,6 +9357,13 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       Result.IsNullPtr = false;
       return true;
     } else {
+      // In rare instances, the value isn't an lvalue.
+      // For example, when the value is the difference between the addresses of
+      // two labels. We reject that as a constant expression because we can't
+      // compute a valid offset to convert into a pointer.
+      if (!Value.isLValue())
+        return false;
+
       // Cast is of an lvalue, no need to change value.
       Result.setFrom(Info.Ctx, Value);
       return true;
@@ -10220,7 +10264,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 
   for (const auto *I : RD->fields()) {
     // -- if T is a reference type, no initialization is performed.
-    if (I->isUnnamedBitfield() || I->getType()->isReferenceType())
+    if (I->isUnnamedBitField() || I->getType()->isReferenceType())
       continue;
 
     LValue Subobject = This;
@@ -10243,7 +10287,7 @@ bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
     // object's first non-static named data member is zero-initialized
     RecordDecl::field_iterator I = RD->field_begin();
-    while (I != RD->field_end() && (*I)->isUnnamedBitfield())
+    while (I != RD->field_end() && (*I)->isUnnamedBitField())
       ++I;
     if (I == RD->field_end()) {
       Result = APValue((const FieldDecl*)nullptr);
@@ -10390,7 +10434,7 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
   for (const auto *Field : RD->fields()) {
     // Anonymous bit-fields are not considered members of the class for
     // purposes of aggregate initialization.
-    if (Field->isUnnamedBitfield())
+    if (Field->isUnnamedBitField())
       continue;
 
     LValue Subobject = This;
@@ -10523,48 +10567,37 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   // Get a pointer to the first element of the array.
   Array.addArray(Info, E, ArrayType);
 
-  auto InvalidType = [&] {
-    Info.FFDiag(E, diag::note_constexpr_unsupported_layout)
-      << E->getType();
-    return false;
-  };
-
-  // FIXME: Perform the checks on the field types in SemaInit.
-  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
-  RecordDecl::field_iterator Field = Record->field_begin();
-  if (Field == Record->field_end())
-    return InvalidType();
-
-  // Start pointer.
-  if (!Field->getType()->isPointerType() ||
-      !Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
-                            ArrayType->getElementType()))
-    return InvalidType();
-
   // FIXME: What if the initializer_list type has base classes, etc?
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
-  if (++Field == Record->field_end())
-    return InvalidType();
+  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl::field_iterator Field = Record->field_begin();
+  assert(Field != Record->field_end() &&
+         Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
+                              ArrayType->getElementType()) &&
+         "Expected std::initializer_list first field to be const E *");
+  ++Field;
+  assert(Field != Record->field_end() &&
+         "Expected std::initializer_list to have two fields");
 
-  if (Field->getType()->isPointerType() &&
-      Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
-                           ArrayType->getElementType())) {
+  if (Info.Ctx.hasSameType(Field->getType(), Info.Ctx.getSizeType())) {
+    // Length.
+    Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
+  } else {
     // End pointer.
+    assert(Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
+                                ArrayType->getElementType()) &&
+           "Expected std::initializer_list second field to be const E *");
     if (!HandleLValueArrayAdjustment(Info, E, Array,
                                      ArrayType->getElementType(),
                                      ArrayType->getZExtSize()))
       return false;
     Array.moveInto(Result.getStructField(1));
-  } else if (Info.Ctx.hasSameType(Field->getType(), Info.Ctx.getSizeType()))
-    // Length.
-    Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
-  else
-    return InvalidType();
+  }
 
-  if (++Field != Record->field_end())
-    return InvalidType();
+  assert(++Field == Record->field_end() &&
+         "Expected std::initializer_list to only have two fields");
 
   return true;
 }
@@ -10709,8 +10742,11 @@ namespace {
     bool VisitUnaryImag(const UnaryOperator *E);
     bool VisitBinaryOperator(const BinaryOperator *E);
     bool VisitUnaryOperator(const UnaryOperator *E);
+    bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+    bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
+
     // FIXME: Missing: conditional operator (for GNU
-    //                 conditional select), shufflevector, ExtVectorElementExpr
+    //                 conditional select), ExtVectorElementExpr
   };
 } // end anonymous namespace
 
@@ -10961,6 +10997,122 @@ bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
   return Success(APValue(ResultElements.data(), ResultElements.size()), E);
 }
 
+static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
+                                    const Expr *E, QualType SourceTy,
+                                    QualType DestTy, APValue const &Original,
+                                    APValue &Result) {
+  if (SourceTy->isIntegerType()) {
+    if (DestTy->isRealFloatingType()) {
+      Result = APValue(APFloat(0.0));
+      return HandleIntToFloatCast(Info, E, FPO, SourceTy, Original.getInt(),
+                                  DestTy, Result.getFloat());
+    }
+    if (DestTy->isIntegerType()) {
+      Result = APValue(
+          HandleIntToIntCast(Info, E, DestTy, SourceTy, Original.getInt()));
+      return true;
+    }
+  } else if (SourceTy->isRealFloatingType()) {
+    if (DestTy->isRealFloatingType()) {
+      Result = Original;
+      return HandleFloatToFloatCast(Info, E, SourceTy, DestTy,
+                                    Result.getFloat());
+    }
+    if (DestTy->isIntegerType()) {
+      Result = APValue(APSInt());
+      return HandleFloatToIntCast(Info, E, SourceTy, Original.getFloat(),
+                                  DestTy, Result.getInt());
+    }
+  }
+
+  Info.FFDiag(E, diag::err_convertvector_constexpr_unsupported_vector_cast)
+      << SourceTy << DestTy;
+  return false;
+}
+
+bool VectorExprEvaluator::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
+  APValue Source;
+  QualType SourceVecType = E->getSrcExpr()->getType();
+  if (!EvaluateAsRValue(Info, E->getSrcExpr(), Source))
+    return false;
+
+  QualType DestTy = E->getType()->castAs<VectorType>()->getElementType();
+  QualType SourceTy = SourceVecType->castAs<VectorType>()->getElementType();
+
+  const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+
+  auto SourceLen = Source.getVectorLength();
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(SourceLen);
+  for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+    APValue Elt;
+    if (!handleVectorElementCast(Info, FPO, E, SourceTy, DestTy,
+                                 Source.getVectorElt(EltNum), Elt))
+      return false;
+    ResultElements.push_back(std::move(Elt));
+  }
+
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
+static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
+                                QualType ElemType, APValue const &VecVal1,
+                                APValue const &VecVal2, unsigned EltNum,
+                                APValue &Result) {
+  unsigned const TotalElementsInInputVector1 = VecVal1.getVectorLength();
+  unsigned const TotalElementsInInputVector2 = VecVal2.getVectorLength();
+
+  APSInt IndexVal = E->getShuffleMaskIdx(Info.Ctx, EltNum);
+  int64_t index = IndexVal.getExtValue();
+  // The spec says that -1 should be treated as undef for optimizations,
+  // but in constexpr we'd have to produce an APValue::Indeterminate,
+  // which is prohibited from being a top-level constant value. Emit a
+  // diagnostic instead.
+  if (index == -1) {
+    Info.FFDiag(
+        E, diag::err_shufflevector_minus_one_is_undefined_behavior_constexpr)
+        << EltNum;
+    return false;
+  }
+
+  if (index < 0 ||
+      index >= TotalElementsInInputVector1 + TotalElementsInInputVector2)
+    llvm_unreachable("Out of bounds shuffle index");
+
+  if (index >= TotalElementsInInputVector1)
+    Result = VecVal2.getVectorElt(index - TotalElementsInInputVector1);
+  else
+    Result = VecVal1.getVectorElt(index);
+  return true;
+}
+
+bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  APValue VecVal1;
+  const Expr *Vec1 = E->getExpr(0);
+  if (!EvaluateAsRValue(Info, Vec1, VecVal1))
+    return false;
+  APValue VecVal2;
+  const Expr *Vec2 = E->getExpr(1);
+  if (!EvaluateAsRValue(Info, Vec2, VecVal2))
+    return false;
+
+  VectorType const *DestVecTy = E->getType()->castAs<VectorType>();
+  QualType DestElTy = DestVecTy->getElementType();
+
+  auto TotalElementsInOutputVector = DestVecTy->getNumElements();
+
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(TotalElementsInOutputVector);
+  for (unsigned EltNum = 0; EltNum < TotalElementsInOutputVector; ++EltNum) {
+    APValue Elt;
+    if (!handleVectorShuffle(Info, E, DestElTy, VecVal1, VecVal2, EltNum, Elt))
+      return false;
+    ResultElements.push_back(std::move(Elt));
+  }
+
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
 //===----------------------------------------------------------------------===//
 // Array Evaluation
 //===----------------------------------------------------------------------===//
@@ -11125,8 +11277,17 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   // If the initializer might depend on the array index, run it for each
   // array element.
-  if (NumEltsToInit != NumElts && MaybeElementDependentArrayFiller(ArrayFiller))
+  if (NumEltsToInit != NumElts &&
+      MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
+  } else {
+    for (auto *Init : Args) {
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts()))
+        NumEltsToInit += EmbedS->getDataElementCount() - 1;
+    }
+    if (NumEltsToInit > NumElts)
+      NumEltsToInit = NumElts;
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
@@ -11144,15 +11305,48 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
-  for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
-    const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
-    if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
-                         Info, Subobject, Init) ||
+  auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
+    if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
+                         Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,
                                      CAT->getElementType(), 1)) {
       if (!Info.noteFailure())
         return false;
       Success = false;
+    }
+    return true;
+  };
+  unsigned ArrayIndex = 0;
+  QualType DestTy = CAT->getElementType();
+  APSInt Value(Info.Ctx.getTypeSize(DestTy), DestTy->isUnsignedIntegerType());
+  for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
+    const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
+    if (ArrayIndex >= NumEltsToInit)
+      break;
+    if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      StringLiteral *SL = EmbedS->getDataStringLiteral();
+      for (unsigned I = EmbedS->getStartingElementPos(),
+                    N = EmbedS->getDataElementCount();
+           I != EmbedS->getStartingElementPos() + N; ++I) {
+        Value = SL->getCodeUnit(I);
+        if (DestTy->isIntegerType()) {
+          Result.getArrayInitializedElt(ArrayIndex) = APValue(Value);
+        } else {
+          assert(DestTy->isFloatingType() && "unexpected type");
+          const FPOptions FPO =
+              Init->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+          APFloat FValue(0.0);
+          if (!HandleIntToFloatCast(Info, Init, FPO, EmbedS->getType(), Value,
+                                    DestTy, FValue))
+            return false;
+          Result.getArrayInitializedElt(ArrayIndex) = APValue(FValue);
+        }
+        ArrayIndex++;
+      }
+    } else {
+      if (!Eval(Init, ArrayIndex))
+        return false;
+      ++ArrayIndex;
     }
   }
 
@@ -11296,7 +11490,7 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
 
 bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
     const CXXParenListInitExpr *E) {
-  assert(dyn_cast<ConstantArrayType>(E->getType()) &&
+  assert(E->getType()->isConstantArrayType() &&
          "Expression result is not a constant array type");
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
@@ -11683,6 +11877,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -12459,6 +12655,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_expect_with_probability:
     return Visit(E->getArg(0));
 
+  case Builtin::BI__builtin_ptrauth_string_discriminator: {
+    const auto *Literal =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
+    uint64_t Result = getPointerAuthStableSipHash(Literal->getString());
+    return Success(Result, E);
+  }
+
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll: {
@@ -12758,19 +12961,35 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           Info.Ctx.getTargetInfo().getMaxAtomicInlineWidth();
       if (Size <= Info.Ctx.toCharUnitsFromBits(InlineWidthBits)) {
         if (BuiltinOp == Builtin::BI__c11_atomic_is_lock_free ||
-            Size == CharUnits::One() ||
-            E->getArg(1)->isNullPointerConstant(Info.Ctx,
-                                                Expr::NPC_NeverValueDependent))
-          // OK, we will inline appropriately-aligned operations of this size,
-          // and _Atomic(T) is appropriately-aligned.
+            Size == CharUnits::One())
           return Success(1, E);
 
-        QualType PointeeType = E->getArg(1)->IgnoreImpCasts()->getType()->
-          castAs<PointerType>()->getPointeeType();
-        if (!PointeeType->isIncompleteType() &&
-            Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
-          // OK, we will inline operations on this object.
+        // If the pointer argument can be evaluated to a compile-time constant
+        // integer (or nullptr), check if that value is appropriately aligned.
+        const Expr *PtrArg = E->getArg(1);
+        Expr::EvalResult ExprResult;
+        APSInt IntResult;
+        if (PtrArg->EvaluateAsRValue(ExprResult, Info.Ctx) &&
+            ExprResult.Val.toIntegralConstant(IntResult, PtrArg->getType(),
+                                              Info.Ctx) &&
+            IntResult.isAligned(Size.getAsAlign()))
           return Success(1, E);
+
+        // Otherwise, check if the type's alignment against Size.
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
+          // Drop the potential implicit-cast to 'const volatile void*', getting
+          // the underlying type.
+          if (ICE->getCastKind() == CK_BitCast)
+            PtrArg = ICE->getSubExpr();
+        }
+
+        if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+          QualType PointeeType = PtrTy->getPointeeType();
+          if (!PointeeType->isIncompleteType() &&
+              Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
+            // OK, we will inline operations on this object.
+            return Success(1, E);
+          }
         }
       }
     }
@@ -13847,6 +14066,12 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
                      E);
   }
 
+  case UETT_PtrAuthTypeDiscriminator: {
+    if (E->getArgumentType()->isDependentType())
+      return false;
+    return Success(
+        Info.Ctx.getPointerAuthTypeDiscriminator(E->getArgumentType()), E);
+  }
   case UETT_VecStep: {
     QualType Ty = E->getTypeOfArgument();
 
@@ -13890,8 +14115,8 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     QualType Ty = E->getTypeOfArgument();
     // If the vector has a fixed size, we can determine the number of elements
     // at compile time.
-    if (Ty->isVectorType())
-      return Success(Ty->castAs<VectorType>()->getNumElements(), E);
+    if (const auto *VT = Ty->getAs<VectorType>())
+      return Success(VT->getNumElements(), E);
 
     assert(Ty->isSizelessVectorType());
     if (Info.InConstantContext)
@@ -15002,6 +15227,104 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   llvm_unreachable("unknown cast resulting in complex value");
 }
 
+void HandleComplexComplexMul(APFloat A, APFloat B, APFloat C, APFloat D,
+                             APFloat &ResR, APFloat &ResI) {
+  // This is an implementation of complex multiplication according to the
+  // constraints laid out in C11 Annex G. The implementation uses the
+  // following naming scheme:
+  //   (a + ib) * (c + id)
+
+  APFloat AC = A * C;
+  APFloat BD = B * D;
+  APFloat AD = A * D;
+  APFloat BC = B * C;
+  ResR = AC - BD;
+  ResI = AD + BC;
+  if (ResR.isNaN() && ResI.isNaN()) {
+    bool Recalc = false;
+    if (A.isInfinity() || B.isInfinity()) {
+      A = APFloat::copySign(APFloat(A.getSemantics(), A.isInfinity() ? 1 : 0),
+                            A);
+      B = APFloat::copySign(APFloat(B.getSemantics(), B.isInfinity() ? 1 : 0),
+                            B);
+      if (C.isNaN())
+        C = APFloat::copySign(APFloat(C.getSemantics()), C);
+      if (D.isNaN())
+        D = APFloat::copySign(APFloat(D.getSemantics()), D);
+      Recalc = true;
+    }
+    if (C.isInfinity() || D.isInfinity()) {
+      C = APFloat::copySign(APFloat(C.getSemantics(), C.isInfinity() ? 1 : 0),
+                            C);
+      D = APFloat::copySign(APFloat(D.getSemantics(), D.isInfinity() ? 1 : 0),
+                            D);
+      if (A.isNaN())
+        A = APFloat::copySign(APFloat(A.getSemantics()), A);
+      if (B.isNaN())
+        B = APFloat::copySign(APFloat(B.getSemantics()), B);
+      Recalc = true;
+    }
+    if (!Recalc && (AC.isInfinity() || BD.isInfinity() || AD.isInfinity() ||
+                    BC.isInfinity())) {
+      if (A.isNaN())
+        A = APFloat::copySign(APFloat(A.getSemantics()), A);
+      if (B.isNaN())
+        B = APFloat::copySign(APFloat(B.getSemantics()), B);
+      if (C.isNaN())
+        C = APFloat::copySign(APFloat(C.getSemantics()), C);
+      if (D.isNaN())
+        D = APFloat::copySign(APFloat(D.getSemantics()), D);
+      Recalc = true;
+    }
+    if (Recalc) {
+      ResR = APFloat::getInf(A.getSemantics()) * (A * C - B * D);
+      ResI = APFloat::getInf(A.getSemantics()) * (A * D + B * C);
+    }
+  }
+}
+
+void HandleComplexComplexDiv(APFloat A, APFloat B, APFloat C, APFloat D,
+                             APFloat &ResR, APFloat &ResI) {
+  // This is an implementation of complex division according to the
+  // constraints laid out in C11 Annex G. The implementation uses the
+  // following naming scheme:
+  //   (a + ib) / (c + id)
+
+  int DenomLogB = 0;
+  APFloat MaxCD = maxnum(abs(C), abs(D));
+  if (MaxCD.isFinite()) {
+    DenomLogB = ilogb(MaxCD);
+    C = scalbn(C, -DenomLogB, APFloat::rmNearestTiesToEven);
+    D = scalbn(D, -DenomLogB, APFloat::rmNearestTiesToEven);
+  }
+  APFloat Denom = C * C + D * D;
+  ResR =
+      scalbn((A * C + B * D) / Denom, -DenomLogB, APFloat::rmNearestTiesToEven);
+  ResI =
+      scalbn((B * C - A * D) / Denom, -DenomLogB, APFloat::rmNearestTiesToEven);
+  if (ResR.isNaN() && ResI.isNaN()) {
+    if (Denom.isPosZero() && (!A.isNaN() || !B.isNaN())) {
+      ResR = APFloat::getInf(ResR.getSemantics(), C.isNegative()) * A;
+      ResI = APFloat::getInf(ResR.getSemantics(), C.isNegative()) * B;
+    } else if ((A.isInfinity() || B.isInfinity()) && C.isFinite() &&
+               D.isFinite()) {
+      A = APFloat::copySign(APFloat(A.getSemantics(), A.isInfinity() ? 1 : 0),
+                            A);
+      B = APFloat::copySign(APFloat(B.getSemantics(), B.isInfinity() ? 1 : 0),
+                            B);
+      ResR = APFloat::getInf(ResR.getSemantics()) * (A * C + B * D);
+      ResI = APFloat::getInf(ResI.getSemantics()) * (B * C - A * D);
+    } else if (MaxCD.isInfinity() && A.isFinite() && B.isFinite()) {
+      C = APFloat::copySign(APFloat(C.getSemantics(), C.isInfinity() ? 1 : 0),
+                            C);
+      D = APFloat::copySign(APFloat(D.getSemantics(), D.isInfinity() ? 1 : 0),
+                            D);
+      ResR = APFloat::getZero(ResR.getSemantics()) * (A * C + B * D);
+      ResI = APFloat::getZero(ResI.getSemantics()) * (B * C - A * D);
+    }
+  }
+}
+
 bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   if (E->isPtrMemOp() || E->isAssignmentOp() || E->getOpcode() == BO_Comma)
     return ExprEvaluatorBaseTy::VisitBinaryOperator(E);
@@ -15085,61 +15408,23 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       APFloat &ResI = Result.getComplexFloatImag();
       if (LHSReal) {
         assert(!RHSReal && "Cannot have two real operands for a complex op!");
-        ResR = A * C;
-        ResI = A * D;
+        ResR = A;
+        ResI = A;
+        // ResR = A * C;
+        // ResI = A * D;
+        if (!handleFloatFloatBinOp(Info, E, ResR, BO_Mul, C) ||
+            !handleFloatFloatBinOp(Info, E, ResI, BO_Mul, D))
+          return false;
       } else if (RHSReal) {
-        ResR = C * A;
-        ResI = C * B;
+        // ResR = C * A;
+        // ResI = C * B;
+        ResR = C;
+        ResI = C;
+        if (!handleFloatFloatBinOp(Info, E, ResR, BO_Mul, A) ||
+            !handleFloatFloatBinOp(Info, E, ResI, BO_Mul, B))
+          return false;
       } else {
-        // In the fully general case, we need to handle NaNs and infinities
-        // robustly.
-        APFloat AC = A * C;
-        APFloat BD = B * D;
-        APFloat AD = A * D;
-        APFloat BC = B * C;
-        ResR = AC - BD;
-        ResI = AD + BC;
-        if (ResR.isNaN() && ResI.isNaN()) {
-          bool Recalc = false;
-          if (A.isInfinity() || B.isInfinity()) {
-            A = APFloat::copySign(
-                APFloat(A.getSemantics(), A.isInfinity() ? 1 : 0), A);
-            B = APFloat::copySign(
-                APFloat(B.getSemantics(), B.isInfinity() ? 1 : 0), B);
-            if (C.isNaN())
-              C = APFloat::copySign(APFloat(C.getSemantics()), C);
-            if (D.isNaN())
-              D = APFloat::copySign(APFloat(D.getSemantics()), D);
-            Recalc = true;
-          }
-          if (C.isInfinity() || D.isInfinity()) {
-            C = APFloat::copySign(
-                APFloat(C.getSemantics(), C.isInfinity() ? 1 : 0), C);
-            D = APFloat::copySign(
-                APFloat(D.getSemantics(), D.isInfinity() ? 1 : 0), D);
-            if (A.isNaN())
-              A = APFloat::copySign(APFloat(A.getSemantics()), A);
-            if (B.isNaN())
-              B = APFloat::copySign(APFloat(B.getSemantics()), B);
-            Recalc = true;
-          }
-          if (!Recalc && (AC.isInfinity() || BD.isInfinity() ||
-                          AD.isInfinity() || BC.isInfinity())) {
-            if (A.isNaN())
-              A = APFloat::copySign(APFloat(A.getSemantics()), A);
-            if (B.isNaN())
-              B = APFloat::copySign(APFloat(B.getSemantics()), B);
-            if (C.isNaN())
-              C = APFloat::copySign(APFloat(C.getSemantics()), C);
-            if (D.isNaN())
-              D = APFloat::copySign(APFloat(D.getSemantics()), D);
-            Recalc = true;
-          }
-          if (Recalc) {
-            ResR = APFloat::getInf(A.getSemantics()) * (A * C - B * D);
-            ResI = APFloat::getInf(A.getSemantics()) * (A * D + B * C);
-          }
-        }
+        HandleComplexComplexMul(A, B, C, D, ResR, ResI);
       }
     } else {
       ComplexValue LHS = Result;
@@ -15165,46 +15450,19 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       APFloat &ResR = Result.getComplexFloatReal();
       APFloat &ResI = Result.getComplexFloatImag();
       if (RHSReal) {
-        ResR = A / C;
-        ResI = B / C;
+        ResR = A;
+        ResI = B;
+        // ResR = A / C;
+        // ResI = B / C;
+        if (!handleFloatFloatBinOp(Info, E, ResR, BO_Div, C) ||
+            !handleFloatFloatBinOp(Info, E, ResI, BO_Div, C))
+          return false;
       } else {
         if (LHSReal) {
           // No real optimizations we can do here, stub out with zero.
           B = APFloat::getZero(A.getSemantics());
         }
-        int DenomLogB = 0;
-        APFloat MaxCD = maxnum(abs(C), abs(D));
-        if (MaxCD.isFinite()) {
-          DenomLogB = ilogb(MaxCD);
-          C = scalbn(C, -DenomLogB, APFloat::rmNearestTiesToEven);
-          D = scalbn(D, -DenomLogB, APFloat::rmNearestTiesToEven);
-        }
-        APFloat Denom = C * C + D * D;
-        ResR = scalbn((A * C + B * D) / Denom, -DenomLogB,
-                      APFloat::rmNearestTiesToEven);
-        ResI = scalbn((B * C - A * D) / Denom, -DenomLogB,
-                      APFloat::rmNearestTiesToEven);
-        if (ResR.isNaN() && ResI.isNaN()) {
-          if (Denom.isPosZero() && (!A.isNaN() || !B.isNaN())) {
-            ResR = APFloat::getInf(ResR.getSemantics(), C.isNegative()) * A;
-            ResI = APFloat::getInf(ResR.getSemantics(), C.isNegative()) * B;
-          } else if ((A.isInfinity() || B.isInfinity()) && C.isFinite() &&
-                     D.isFinite()) {
-            A = APFloat::copySign(
-                APFloat(A.getSemantics(), A.isInfinity() ? 1 : 0), A);
-            B = APFloat::copySign(
-                APFloat(B.getSemantics(), B.isInfinity() ? 1 : 0), B);
-            ResR = APFloat::getInf(ResR.getSemantics()) * (A * C + B * D);
-            ResI = APFloat::getInf(ResI.getSemantics()) * (B * C - A * D);
-          } else if (MaxCD.isInfinity() && A.isFinite() && B.isFinite()) {
-            C = APFloat::copySign(
-                APFloat(C.getSemantics(), C.isInfinity() ? 1 : 0), C);
-            D = APFloat::copySign(
-                APFloat(D.getSemantics(), D.isInfinity() ? 1 : 0), D);
-            ResR = APFloat::getZero(ResR.getSemantics()) * (A * C + B * D);
-            ResI = APFloat::getZero(ResI.getSemantics()) * (B * C - A * D);
-          }
-        }
+        HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
       }
     } else {
       if (RHS.getComplexIntReal() == 0 && RHS.getComplexIntImag() == 0)
@@ -15642,9 +15900,12 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
 
   if (const auto *CE = dyn_cast<ConstantExpr>(Exp)) {
     if (CE->hasAPValueResult()) {
-      Result.Val = CE->getAPValueResult();
-      IsConst = true;
-      return true;
+      APValue APV = CE->getAPValueResult();
+      if (!APV.isLValue()) {
+        Result.Val = std::move(APV);
+        IsConst = true;
+        return true;
+      }
     }
 
     // The SubExpr is usually just an IntegerLiteral.
@@ -16130,7 +16391,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::StringLiteralClass:
   case Expr::ArraySubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
-  case Expr::OMPArraySectionExprClass:
+  case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::MemberExprClass:
@@ -16224,6 +16485,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SizeOfPackExprClass:
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
+  case Expr::EmbedExprClass:
     return NoDiag();
 
   case Expr::PackIndexingExprClass:
@@ -16792,7 +17054,7 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 }
 
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info) {
+                                  EvalInfo &Info, std::string *StringResult) {
   if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
     return false;
 
@@ -16819,6 +17081,8 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
         Str = Str.substr(0, Pos);
 
       Result = Str.size();
+      if (StringResult)
+        *StringResult = Str;
       return true;
     }
 
@@ -16834,10 +17098,22 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
     if (!Char.getInt()) {
       Result = Strlen;
       return true;
-    }
+    } else if (StringResult)
+      StringResult->push_back(Char.getInt().getExtValue());
     if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
       return false;
   }
+}
+
+std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+  uint64_t Result;
+  std::string StringResult;
+
+  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+    return StringResult;
+  return {};
 }
 
 bool Expr::EvaluateCharRangeAsString(std::string &Result,
@@ -16853,13 +17129,13 @@ bool Expr::EvaluateCharRangeAsString(std::string &Result,
   if (!::EvaluateInteger(SizeExpression, SizeValue, Info))
     return false;
 
-  int64_t Size = SizeValue.getExtValue();
+  uint64_t Size = SizeValue.getZExtValue();
 
   if (!::EvaluatePointer(PtrExpression, String, Info))
     return false;
 
   QualType CharTy = PtrExpression->getType()->getPointeeType();
-  for (int64_t I = 0; I < Size; ++I) {
+  for (uint64_t I = 0; I < Size; ++I) {
     APValue Char;
     if (!handleLValueToRValueConversion(Info, PtrExpression, CharTy, String,
                                         Char))

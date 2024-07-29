@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
-// RUN:     -Rpass=si-lower -munsafe-fp-atomics %s -S -emit-llvm -o - 2>&1 | \
+// RUN:     -Rpass=si-lower -munsafe-fp-atomics %s -emit-llvm -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=GFX90A-HW
 
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \

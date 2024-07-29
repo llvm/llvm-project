@@ -63,11 +63,7 @@ void getFooBar() noexcept(false);
         },
         {
           "kind": "text",
-          "spelling": "()"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
+          "spelling": "() "
         },
         {
           "kind": "keyword",
@@ -139,11 +135,7 @@ void getFooBar() noexcept(false);
         },
         {
           "kind": "text",
-          "spelling": "()"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
+          "spelling": "() "
         },
         {
           "kind": "keyword",
@@ -223,11 +215,7 @@ void getFooBar() noexcept(false);
         },
         {
           "kind": "text",
-          "spelling": "()"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
+          "spelling": "() "
         },
         {
           "kind": "keyword",

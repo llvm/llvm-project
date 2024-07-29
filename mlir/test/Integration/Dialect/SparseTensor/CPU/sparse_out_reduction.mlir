@@ -95,11 +95,11 @@ module {
     // CHECK-NEXT: nse = 2
     // CHECK-NEXT: dim = ( 3, 3 )
     // CHECK-NEXT: lvl = ( 3, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2
-    // CHECK-NEXT: crd[1] : ( 1, 2
-    // CHECK-NEXT: values : ( 7, 69
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 1, 2 )
+    // CHECK-NEXT: values : ( 7, 69 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %0 : tensor<?x?xi32, #SparseMatrix>

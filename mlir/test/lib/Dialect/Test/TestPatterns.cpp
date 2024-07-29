@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -684,6 +685,33 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Region-Block Rewrite Testing
 
+/// This pattern applies a signature conversion to a block inside a detached
+/// region.
+struct TestDetachedSignatureConversion : public ConversionPattern {
+  TestDetachedSignatureConversion(MLIRContext *ctx)
+      : ConversionPattern("test.detached_signature_conversion", /*benefit=*/1,
+                          ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op->getNumRegions() != 1)
+      return failure();
+    OperationState state(op->getLoc(), "test.legal_op_with_region", operands,
+                         op->getResultTypes(), {}, BlockRange());
+    Region *newRegion = state.addRegion();
+    rewriter.inlineRegionBefore(op->getRegion(0), *newRegion,
+                                newRegion->begin());
+    TypeConverter::SignatureConversion result(newRegion->getNumArguments());
+    for (unsigned i = 0, e = newRegion->getNumArguments(); i < e; ++i)
+      result.addInputs(i, rewriter.getF64Type());
+    rewriter.applySignatureConversion(&newRegion->front(), result);
+    Operation *newOp = rewriter.create(state);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+
 /// This pattern is a simple pattern that inlines the first region of a given
 /// operation into the parent region.
 struct TestRegionRewriteBlockMovement : public ConversionPattern {
@@ -1111,16 +1139,16 @@ struct TestLegalizePatternDriver
     TestTypeConverter converter;
     mlir::RewritePatternSet patterns(&getContext());
     populateWithGenerated(patterns);
-    patterns
-        .add<TestRegionRewriteBlockMovement, TestRegionRewriteUndo,
-             TestCreateBlock, TestCreateIllegalBlock, TestUndoBlockArgReplace,
-             TestUndoBlockErase, TestPassthroughInvalidOp, TestSplitReturnType,
-             TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
-             TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-             TestNonRootReplacement, TestBoundedRecursiveRewrite,
-             TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
-             TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-             TestUndoPropertiesModification>(&getContext());
+    patterns.add<
+        TestRegionRewriteBlockMovement, TestDetachedSignatureConversion,
+        TestRegionRewriteUndo, TestCreateBlock, TestCreateIllegalBlock,
+        TestUndoBlockArgReplace, TestUndoBlockErase, TestPassthroughInvalidOp,
+        TestSplitReturnType, TestChangeProducerTypeI32ToF32,
+        TestChangeProducerTypeF32ToF64, TestChangeProducerTypeF32ToInvalid,
+        TestUpdateConsumerType, TestNonRootReplacement,
+        TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
+        TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
+        TestUndoPropertiesModification>(&getContext());
     patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1131,6 +1159,8 @@ struct TestLegalizePatternDriver
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
                       TerminatorOp, OneRegionOp>();
+    target.addLegalOp(
+        OperationName("test.legal_op_with_region", &getContext()));
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
     target.addDynamicallyLegalOp<TestReturnOp>([](TestReturnOp op) {
@@ -1166,6 +1196,10 @@ struct TestLegalizePatternDriver
     // Mark the bound recursion operation as dynamically legal.
     target.addDynamicallyLegalOp<TestRecursiveRewriteOp>(
         [](TestRecursiveRewriteOp op) { return op.getDepth() == 0; });
+
+    // Create a dynamically legal rule that can only be legalized by folding it.
+    target.addDynamicallyLegalOp<TestOpInPlaceSelfFold>(
+        [](TestOpInPlaceSelfFold op) { return op.getFolded(); });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
@@ -1511,8 +1545,9 @@ struct TestTestSignatureConversionNoConverter
     if (failed(
             converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
       return failure();
-    rewriter.modifyOpInPlace(
-        op, [&] { rewriter.applySignatureConversion(&region, result); });
+    rewriter.modifyOpInPlace(op, [&] {
+      rewriter.applySignatureConversion(&region.front(), result);
+    });
     return success();
   }
 

@@ -288,6 +288,117 @@ entry:
   ret <2 x double> %0
 }
 
+define arm_aapcs_vfpcc <4 x float> @tan_float32_t(<4 x float> %src) {
+; CHECK-LABEL: tan_float32_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r4, d9
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov r4, r1, d8
+; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vmov s18, r5
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s17, r0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s16, r0
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
+entry:
+  %0 = call fast <4 x float> @llvm.tan.v4f32(<4 x float> %src)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @tan_float16_t(<8 x half> %src) {
+; CHECK-LABEL: tan_float16_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s16
+; CHECK-NEXT:    vmov s16, r0
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
+; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %0 = call fast <8 x half> @llvm.tan.v8f16(<8 x half> %src)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <2 x double> @tan_float64_t(<2 x double> %src) {
+; CHECK-LABEL: tan_float64_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    bl tan
+; CHECK-NEXT:    vmov r2, r3, d8
+; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl tan
+; CHECK-NEXT:    vmov d8, r0, r1
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %0 = call fast <2 x double> @llvm.tan.v2f64(<2 x double> %src)
+  ret <2 x double> %0
+}
+
 define arm_aapcs_vfpcc <4 x float> @exp_float32_t(<4 x float> %src) {
 ; CHECK-LABEL: exp_float32_t:
 ; CHECK:       @ %bb.0: @ %entry

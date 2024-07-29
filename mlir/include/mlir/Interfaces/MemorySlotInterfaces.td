@@ -40,28 +40,28 @@ def PromotableAllocationOpInterface
         Provides the default Value of this memory slot. The provided Value
         will be used as the reaching definition of loads done before any store.
         This Value must outlive the promotion and dominate all the uses of this
-        slot's pointer. The provided rewriter can be used to create the default
+        slot's pointer. The provided builder can be used to create the default
         value on the fly.
 
-        The rewriter is located at the beginning of the block where the slot
-        pointer is defined. All IR mutations must happen through the rewriter.
+        The builder is located at the beginning of the block where the slot
+        pointer is defined.
       }], "::mlir::Value", "getDefaultValue",
       (ins
         "const ::mlir::MemorySlot &":$slot,
-        "::mlir::RewriterBase &":$rewriter)
+        "::mlir::OpBuilder &":$builder)
     >,
     InterfaceMethod<[{
         Hook triggered for every new block argument added to a block.
         This will only be called for slots declared by this operation.
 
-        The rewriter is located at the beginning of the block on call. All IR
-        mutations must happen through the rewriter.
+        The builder is located at the beginning of the block on call. All IR
+        mutations must happen through the builder.
       }],
       "void", "handleBlockArgument",
       (ins
         "const ::mlir::MemorySlot &":$slot,
         "::mlir::BlockArgument":$argument,
-        "::mlir::RewriterBase &":$rewriter
+        "::mlir::OpBuilder &":$builder
       )
     >,
     InterfaceMethod<[{
@@ -69,13 +69,15 @@ def PromotableAllocationOpInterface
         also clean up the created default value if necessary.
         This will only be called for slots declared by this operation.
 
-        All IR mutations must happen through the rewriter.
+        Must return a new promotable allocation op if this operation produced
+        multiple promotable slots, nullopt otherwise.
       }],
-      "void", "handlePromotionComplete",
+      "::std::optional<::mlir::PromotableAllocationOpInterface>",
+        "handlePromotionComplete",
       (ins
-        "const ::mlir::MemorySlot &":$slot, 
+        "const ::mlir::MemorySlot &":$slot,
         "::mlir::Value":$defaultValue,
-        "::mlir::RewriterBase &":$rewriter)
+        "::mlir::OpBuilder &":$builder)
     >,
   ];
 }
@@ -119,15 +121,16 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
         The returned value must dominate all operations dominated by the storing
         operation.
 
-        If IR must be mutated to extract a concrete value being stored, mutation
-        must happen through the provided rewriter. The rewriter is located
-        immediately after the memory operation on call. No IR deletion is
-        allowed in this method. IR mutations must not introduce new uses of the
-        memory slot. Existing control flow must not be modified.
+        The builder is located immediately after the memory operation on call.
+        No IR deletion is allowed in this method. IR mutations must not
+        introduce new uses of the memory slot. Existing control flow must not
+        be modified.
       }],
       "::mlir::Value", "getStored",
       (ins "const ::mlir::MemorySlot &":$slot,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::OpBuilder &":$builder,
+           "::mlir::Value":$reachingDef,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
     InterfaceMethod<[{
         Checks that this operation can be promoted to no longer use the provided
@@ -164,15 +167,15 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
         have been done at the point of calling this method, but it will be done
         eventually.
 
-        The rewriter is located after the promotable operation on call. All IR
-        mutations must happen through the rewriter.
+        The builder is located after the promotable operation on call.
       }],
       "::mlir::DeletionKind",
       "removeBlockingUses",
       (ins "const ::mlir::MemorySlot &":$slot,
            "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
-           "::mlir::RewriterBase &":$rewriter,
-           "::mlir::Value":$reachingDefinition)
+           "::mlir::OpBuilder &":$builder,
+           "::mlir::Value":$reachingDefinition,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
   ];
 }
@@ -221,13 +224,12 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
         have been done at the point of calling this method, but it will be done
         eventually.
 
-        The rewriter is located after the promotable operation on call. All IR
-        mutations must happen through the rewriter.
+        The builder is located after the promotable operation on call.
       }],
       "::mlir::DeletionKind",
       "removeBlockingUses",
       (ins "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::OpBuilder &":$builder)
     >,
     InterfaceMethod<[{
         This method allows the promoted operation to visit the SSA values used
@@ -251,13 +253,12 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
         scheduled for removal and if `requiresReplacedValues` returned
         true.
 
-        The rewriter is located after the promotable operation on call. All IR
-        mutations must happen through the rewriter. During the transformation,
-        *no operation should be deleted*.
+        The builder is located after the promotable operation on call. During
+        the transformation, *no operation should be deleted*.
       }],
       "void", "visitReplacedValues",
       (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
-           "::mlir::RewriterBase &":$rewriter), [{}], [{ return; }]
+           "::mlir::OpBuilder &":$builder), [{}], [{ return; }]
     >,
   ];
 }
@@ -290,25 +291,29 @@ def DestructurableAllocationOpInterface
         at the end of this call. Only generates subslots for the indices found in
         `usedIndices` since all other subslots are unused.
 
-        The rewriter is located at the beginning of the block where the slot
-        pointer is defined. All IR mutations must happen through the rewriter.
+        The builder is located at the beginning of the block where the slot
+        pointer is defined.
       }],
       "::llvm::DenseMap<::mlir::Attribute, ::mlir::MemorySlot>",
       "destructure",
       (ins "const ::mlir::DestructurableMemorySlot &":$slot,
            "const ::llvm::SmallPtrSetImpl<::mlir::Attribute> &":$usedIndices,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::OpBuilder &":$builder,
+           "::mlir::SmallVectorImpl<::mlir::DestructurableAllocationOpInterface> &":
+             $newAllocators)
     >,
     InterfaceMethod<[{
         Hook triggered once the destructuring of a slot is complete, meaning the
         original slot is no longer being refered to and could be deleted.
         This will only be called for slots declared by this operation.
 
-        All IR mutations must happen through the rewriter.
+        Must return a new destructurable allocation op if this hook creates
+        a new destructurable op, nullopt otherwise.
       }],
-      "void", "handleDestructuringComplete",
+      "::std::optional<::mlir::DestructurableAllocationOpInterface>",
+      "handleDestructuringComplete",
       (ins "const ::mlir::DestructurableMemorySlot &":$slot,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::OpBuilder &":$builder)
     >,
   ];
 }
@@ -333,7 +338,7 @@ def SafeMemorySlotAccessOpInterface
 
         No IR mutation is allowed in this method.
       }],
-      "::mlir::LogicalResult",
+      "::llvm::LogicalResult",
       "ensureOnlySafeAccesses",
       (ins "const ::mlir::MemorySlot &":$slot,
            "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed,
@@ -373,15 +378,14 @@ def DestructurableAccessorOpInterface
         Rewires the use of a slot to the generated subslots, without deleting
         any operation. Returns whether the accessor should be deleted.
 
-        All IR mutations must happen through the rewriter. Deletion of
-        operations is not allowed, only the accessor can be scheduled for
-        deletion by returning the appropriate value.
+        Deletion of operations is not allowed, only the accessor can be
+        scheduled for deletion by returning the appropriate value.
       }],
       "::mlir::DeletionKind",
       "rewire",
       (ins "const ::mlir::DestructurableMemorySlot &":$slot,
            "::llvm::DenseMap<::mlir::Attribute, ::mlir::MemorySlot> &":$subslots,
-           "::mlir::RewriterBase &":$rewriter,
+           "::mlir::OpBuilder &":$builder,
            "const ::mlir::DataLayout &":$dataLayout)
     >
   ];

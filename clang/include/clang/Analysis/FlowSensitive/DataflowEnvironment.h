@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
@@ -30,9 +31,11 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -84,7 +87,7 @@ public:
     virtual ComparisonResult compare(QualType Type, const Value &Val1,
                                      const Environment &Env1, const Value &Val2,
                                      const Environment &Env2) {
-      // FIXME: Consider adding QualType to RecordValue and removing the Type
+      // FIXME: Consider adding `QualType` to `Value` and removing the `Type`
       // argument here.
       return ComparisonResult::Unknown;
     }
@@ -155,7 +158,28 @@ public:
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
   /// the state of a program.
-  explicit Environment(DataflowAnalysisContext &DACtx);
+  explicit Environment(DataflowAnalysisContext &DACtx)
+      : DACtx(&DACtx),
+        FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program, with `S` as the statement to analyze.
+  Environment(DataflowAnalysisContext &DACtx, Stmt &S) : Environment(DACtx) {
+    InitialTargetStmt = &S;
+  }
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program, with `FD` as the function to analyze.
+  ///
+  /// Requirements:
+  ///
+  ///  The function must have a body, i.e.
+  ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
+  Environment(DataflowAnalysisContext &DACtx, const FunctionDecl &FD)
+      : Environment(DACtx, *FD.getBody()) {
+    assert(FD.doesThisDeclarationHaveABody());
+    InitialTargetFunc = &FD;
+  }
 
   // Copy-constructor is private, Environments should not be copied. See fork().
   Environment &operator=(const Environment &Other) = delete;
@@ -163,24 +187,11 @@ public:
   Environment(Environment &&Other) = default;
   Environment &operator=(Environment &&Other) = default;
 
-  /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program.
-  ///
-  /// If `DeclCtx` is a function, initializes the environment with symbolic
-  /// representations of the function parameters.
-  ///
-  /// If `DeclCtx` is a non-static member function, initializes the environment
-  /// with a symbolic representation of the `this` pointee.
-  Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
-
   /// Assigns storage locations and values to all parameters, captures, global
-  /// variables, fields and functions referenced in the function currently being
-  /// analyzed.
+  /// variables, fields and functions referenced in the `Stmt` or `FunctionDecl`
+  /// passed to the constructor.
   ///
-  /// Requirements:
-  ///
-  ///  The function must have a body, i.e.
-  ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
+  /// If no `Stmt` or `FunctionDecl` was supplied, this function does nothing.
   void initialize();
 
   /// Returns a new environment that is a copy of this one.
@@ -193,7 +204,7 @@ public:
   /// forked flow condition references the original).
   Environment fork() const;
 
-  /// Creates and returns an environment to use for an inline analysis  of the
+  /// Creates and returns an environment to use for an inline analysis of the
   /// callee. Uses the storage location from each argument in the `Call` as the
   /// storage location for the corresponding parameter in the callee.
   ///
@@ -243,6 +254,21 @@ public:
   static Environment join(const Environment &EnvA, const Environment &EnvB,
                           Environment::ValueModel &Model,
                           ExprJoinBehavior ExprBehavior);
+
+  /// Returns a value that approximates both `Val1` and `Val2`, or null if no
+  /// such value can be produced.
+  ///
+  /// `Env1` and `Env2` can be used to query child values and path condition
+  /// implications of `Val1` and `Val2` respectively. The joined value will be
+  /// produced in `JoinedEnv`.
+  ///
+  /// Requirements:
+  ///
+  ///  `Val1` and `Val2` must model values of type `Type`.
+  static Value *joinValues(QualType Ty, Value *Val1, const Environment &Env1,
+                           Value *Val2, const Environment &Env2,
+                           Environment &JoinedEnv,
+                           Environment::ValueModel &Model);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
@@ -350,46 +376,51 @@ public:
   RecordStorageLocation &
   getResultObjectLocation(const Expr &RecordPRValue) const;
 
-  /// Returns the return value of the current function. This can be null if:
+  /// Returns the return value of the function currently being analyzed.
+  /// This can be null if:
   /// - The function has a void return type
   /// - No return value could be determined for the function, for example
   ///   because it calls a function without a body.
   ///
   /// Requirements:
-  ///  The current function must have a non-reference return type.
+  ///  The current analysis target must be a function and must have a
+  ///  non-reference return type.
   Value *getReturnValue() const {
     assert(getCurrentFunc() != nullptr &&
            !getCurrentFunc()->getReturnType()->isReferenceType());
     return ReturnVal;
   }
 
-  /// Returns the storage location for the reference returned by the current
-  /// function. This can be null if function doesn't return a single consistent
-  /// reference.
+  /// Returns the storage location for the reference returned by the function
+  /// currently being analyzed. This can be null if the function doesn't return
+  /// a single consistent reference.
   ///
   /// Requirements:
-  ///  The current function must have a reference return type.
+  ///  The current analysis target must be a function and must have a reference
+  ///  return type.
   StorageLocation *getReturnStorageLocation() const {
     assert(getCurrentFunc() != nullptr &&
            getCurrentFunc()->getReturnType()->isReferenceType());
     return ReturnLoc;
   }
 
-  /// Sets the return value of the current function.
+  /// Sets the return value of the function currently being analyzed.
   ///
   /// Requirements:
-  ///  The current function must have a non-reference return type.
+  ///  The current analysis target must be a function and must have a
+  ///  non-reference return type.
   void setReturnValue(Value *Val) {
     assert(getCurrentFunc() != nullptr &&
            !getCurrentFunc()->getReturnType()->isReferenceType());
     ReturnVal = Val;
   }
 
-  /// Sets the storage location for the reference returned by the current
-  /// function.
+  /// Sets the storage location for the reference returned by the function
+  /// currently being analyzed.
   ///
   /// Requirements:
-  ///  The current function must have a reference return type.
+  ///  The current analysis target must be a function and must have a reference
+  ///  return type.
   void setReturnStorageLocation(StorageLocation *Loc) {
     assert(getCurrentFunc() != nullptr &&
            getCurrentFunc()->getReturnType()->isReferenceType());
@@ -407,20 +438,15 @@ public:
   /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
-  /// If `Type` is a class, struct, or union type, creates values for all
-  /// modeled fields (including synthetic fields) and calls `setValue()` to
-  /// associate the `RecordValue` with its storage location
-  /// (`RecordValue::getLoc()`).
-  ///
   /// If `Type` is one of the following types, this function will always return
   /// a non-null pointer:
   /// - `bool`
   /// - Any integer type
-  /// - Any class, struct, or union type
   ///
   /// Requirements:
   ///
-  ///  `Type` must not be null.
+  ///  - `Type` must not be null.
+  ///  - `Type` must not be a reference type or record type.
   Value *createValue(QualType Type);
 
   /// Creates an object (i.e. a storage location with an associated value) of
@@ -452,6 +478,7 @@ public:
   /// Initializes the fields (including synthetic fields) of `Loc` with values,
   /// unless values of the field type are not supported or we hit one of the
   /// limits at which we stop producing values.
+  /// If a field already has a value, that value is preserved.
   /// If `Type` is provided, initializes only those fields that are modeled for
   /// `Type`; this is intended for use in cases where `Loc` is a derived type
   /// and we only want to initialize the fields of a base type.
@@ -461,6 +488,10 @@ public:
   }
 
   /// Assigns `Val` as the value of `Loc` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be a `RecordStorageLocation`.
   void setValue(const StorageLocation &Loc, Value &Val);
 
   /// Clears any association between `Loc` and a value in the environment.
@@ -470,20 +501,24 @@ public:
   ///
   /// Requirements:
   ///
-  ///  - `E` must be a prvalue
-  ///  - If `Val` is a `RecordValue`, its `RecordStorageLocation` must be
-  ///    `getResultObjectLocation(E)`. An exception to this is if `E` is an
-  ///    expression that originally creates a `RecordValue` (such as a
-  ///    `CXXConstructExpr` or `CallExpr`), as these establish the location of
-  ///    the result object in the first place.
+  ///  - `E` must be a prvalue.
+  ///  - `E` must not have record type.
   void setValue(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be a `RecordStorageLocation`.
   Value *getValue(const StorageLocation &Loc) const;
 
   /// Equivalent to `getValue(getStorageLocation(D))` if `D` is assigned a
   /// storage location in the environment, otherwise returns null.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must not have record type.
   Value *getValue(const ValueDecl &D) const;
 
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
@@ -622,23 +657,21 @@ public:
   /// (or the flow condition is overly constraining) or if the solver times out.
   bool allows(const Formula &) const;
 
-  /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
-  /// returns null.
-  const DeclContext *getDeclCtx() const { return CallStack.back(); }
-
   /// Returns the function currently being analyzed, or null if the code being
   /// analyzed isn't part of a function.
   const FunctionDecl *getCurrentFunc() const {
-    return dyn_cast<FunctionDecl>(getDeclCtx());
+    return CallStack.empty() ? InitialTargetFunc : CallStack.back();
   }
 
-  /// Returns the size of the call stack.
+  /// Returns the size of the call stack, not counting the initial analysis
+  /// target.
   size_t callStackSize() const { return CallStack.size(); }
 
   /// Returns whether this `Environment` can be extended to analyze the given
-  /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
-  /// given `MaxDepth`.
-  bool canDescend(unsigned MaxDepth, const DeclContext *Callee) const;
+  /// `Callee` (i.e. if `pushCall` can be used).
+  /// Recursion is not allowed. `MaxDepth` is the maximum size of the call stack
+  /// (i.e. the maximum value that `callStackSize()` may assume after the call).
+  bool canDescend(unsigned MaxDepth, const FunctionDecl *Callee) const;
 
   /// Returns the `DataflowAnalysisContext` used by the environment.
   DataflowAnalysisContext &getDataflowAnalysisContext() const { return *DACtx; }
@@ -700,12 +733,17 @@ private:
                         ArrayRef<const Expr *> Args);
 
   /// Assigns storage locations and values to all global variables, fields
-  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
-  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
+  /// and functions in `Referenced`.
+  void initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced);
 
   static PrValueToResultObject
   buildResultObjectMap(DataflowAnalysisContext *DACtx,
                        const FunctionDecl *FuncDecl,
+                       RecordStorageLocation *ThisPointeeLoc,
+                       RecordStorageLocation *LocForRecordReturnVal);
+
+  static PrValueToResultObject
+  buildResultObjectMap(DataflowAnalysisContext *DACtx, Stmt *S,
                        RecordStorageLocation *ThisPointeeLoc,
                        RecordStorageLocation *LocForRecordReturnVal);
 
@@ -717,11 +755,20 @@ private:
   // shared between environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
-  // `DeclContext` of the block being analysed if provided.
-  std::vector<const DeclContext *> CallStack;
+  // The stack of functions called from the initial analysis target.
+  std::vector<const FunctionDecl *> CallStack;
+
+  // Initial function to analyze, if a function was passed to the constructor.
+  // Null otherwise.
+  const FunctionDecl *InitialTargetFunc = nullptr;
+  // Top-level statement of the initial analysis target.
+  // If a function was passed to the constructor, this is its body.
+  // If a statement was passed to the constructor, this is that statement.
+  // Null if no analysis target was passed to the constructor.
+  Stmt *InitialTargetStmt = nullptr;
 
   // Maps from prvalues of record type to their result objects. Shared between
-  // all environments for the same function.
+  // all environments for the same analysis target.
   // FIXME: It's somewhat unsatisfactory that we have to use a `shared_ptr`
   // here, though the cost is acceptable: The overhead of a `shared_ptr` is
   // incurred when it is copied, and this happens only relatively rarely (when
@@ -730,7 +777,7 @@ private:
   std::shared_ptr<PrValueToResultObject> ResultObjectMap;
 
   // The following three member variables handle various different types of
-  // return values.
+  // return values when the current analysis target is a function.
   // - If the return type is not a reference and not a record: Value returned
   //   by the function.
   Value *ReturnVal = nullptr;
@@ -743,7 +790,7 @@ private:
   RecordStorageLocation *LocForRecordReturnVal = nullptr;
 
   // The storage location of the `this` pointee. Should only be null if the
-  // function being analyzed is only a function and not a method.
+  // analysis target is not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from declarations and glvalue expression to storage locations that are
@@ -774,12 +821,6 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
 /// member expression was written using `->`.
 RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                              const Environment &Env);
-
-/// Associates a new `RecordValue` with `Loc` and returns the new value.
-RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
-
-/// Associates a new `RecordValue` with `Expr` and returns the new value.
-RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

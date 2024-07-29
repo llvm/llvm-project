@@ -1203,11 +1203,6 @@ void FastISel::handleDbgInfo(const Instruction *II) {
 
     if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
       assert(DLR->getLabel() && "Missing label");
-      if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DLR << "\n");
-        continue;
-      }
-
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DLR->getDebugLoc(),
               TII.get(TargetOpcode::DBG_LABEL))
           .addMetadata(DLR->getLabel());
@@ -1402,12 +1397,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst *DI = cast<DbgDeclareInst>(II);
     assert(DI->getVariable() && "Missing variable");
-    if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI
-                        << " (!hasDebugInfo)\n");
-      return true;
-    }
-
     if (FuncInfo.PreprocessedDbgDeclares.contains(DI))
       return true;
 
@@ -1424,7 +1413,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     // happened (such as an optimised function being always-inlined into an
     // optnone function). We will not be using the extra information in the
     // dbg.assign in that case, just use its dbg.value fields.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);
@@ -1446,11 +1435,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::dbg_label: {
     const DbgLabelInst *DI = cast<DbgLabelInst>(II);
     assert(DI->getLabel() && "Missing label");
-    if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
-      return true;
-    }
-
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::DBG_LABEL)).addMetadata(DI->getLabel());
     return true;

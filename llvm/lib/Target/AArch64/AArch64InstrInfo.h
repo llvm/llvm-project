@@ -251,6 +251,9 @@ public:
   /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
+  /// Returns whether the physical register is FP or NEON.
+  static bool isFpOrNEON(Register Reg);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
@@ -463,11 +466,13 @@ public:
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
   SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;
@@ -572,6 +577,9 @@ private:
   bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
                           unsigned PredReg,
                           const MachineRegisterInfo *MRI) const;
+  std::optional<unsigned>
+  canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
+                      MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
 };
 
 struct UsedNZCV {
@@ -725,6 +733,7 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
   case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return PAC opcode to be used for a ptrauth sign using the given key, or its
@@ -737,6 +746,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
   case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 // struct TSFlags {

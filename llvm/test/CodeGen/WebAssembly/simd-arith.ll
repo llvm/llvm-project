@@ -11788,27 +11788,35 @@ define <4 x float> @minnum_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: minnum_intrinsic_v4f32:
 ; NO-SIMD128:         .functype minnum_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    call $push0=, fminf, $4, $8
-; NO-SIMD128-NEXT:    f32.store 12($0), $pop0
-; NO-SIMD128-NEXT:    call $push1=, fminf, $3, $7
-; NO-SIMD128-NEXT:    f32.store 8($0), $pop1
-; NO-SIMD128-NEXT:    call $push2=, fminf, $2, $6
-; NO-SIMD128-NEXT:    f32.store 4($0), $pop2
-; NO-SIMD128-NEXT:    call $push3=, fminf, $1, $5
-; NO-SIMD128-NEXT:    f32.store 0($0), $pop3
+; NO-SIMD128-NEXT:    f32.lt $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $4, $8, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.lt $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $3, $7, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.lt $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $2, $6, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.lt $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $1, $5, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: minnum_intrinsic_v4f32:
 ; NO-SIMD128-FAST:         .functype minnum_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    call $push0=, fminf, $1, $5
-; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fminf, $2, $6
-; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop1
-; NO-SIMD128-FAST-NEXT:    call $push2=, fminf, $3, $7
-; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop2
-; NO-SIMD128-FAST-NEXT:    call $push3=, fminf, $4, $8
-; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.lt $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $1, $5, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.lt $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $2, $6, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.lt $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $3, $7, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.lt $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $4, $8, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %a
@@ -11830,26 +11838,26 @@ define <4 x float> @minnum_nsz_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: minnum_nsz_intrinsic_v4f32:
 ; NO-SIMD128:         .functype minnum_nsz_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    call $push0=, fminf, $4, $8
+; NO-SIMD128-NEXT:    f32.min $push0=, $4, $8
 ; NO-SIMD128-NEXT:    f32.store 12($0), $pop0
-; NO-SIMD128-NEXT:    call $push1=, fminf, $3, $7
+; NO-SIMD128-NEXT:    f32.min $push1=, $3, $7
 ; NO-SIMD128-NEXT:    f32.store 8($0), $pop1
-; NO-SIMD128-NEXT:    call $push2=, fminf, $2, $6
+; NO-SIMD128-NEXT:    f32.min $push2=, $2, $6
 ; NO-SIMD128-NEXT:    f32.store 4($0), $pop2
-; NO-SIMD128-NEXT:    call $push3=, fminf, $1, $5
+; NO-SIMD128-NEXT:    f32.min $push3=, $1, $5
 ; NO-SIMD128-NEXT:    f32.store 0($0), $pop3
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: minnum_nsz_intrinsic_v4f32:
 ; NO-SIMD128-FAST:         .functype minnum_nsz_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    call $push0=, fminf, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.min $push0=, $1, $5
 ; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fminf, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.min $push1=, $2, $6
 ; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop1
-; NO-SIMD128-FAST-NEXT:    call $push2=, fminf, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.min $push2=, $3, $7
 ; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop2
-; NO-SIMD128-FAST-NEXT:    call $push3=, fminf, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.min $push3=, $4, $8
 ; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop3
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan nsz <4 x float> @llvm.minnum.v4f32(<4 x float> %x, <4 x float> %y)
@@ -11875,16 +11883,16 @@ define <4 x float> @fminnumv432_non_zero_intrinsic(<4 x float> %x) {
 ; NO-SIMD128:         .functype fminnumv432_non_zero_intrinsic (i32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-NEXT:    call $push1=, fminf, $4, $pop0
+; NO-SIMD128-NEXT:    f32.min $push1=, $4, $pop0
 ; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
 ; NO-SIMD128-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-NEXT:    call $push2=, fminf, $3, $pop7
+; NO-SIMD128-NEXT:    f32.min $push2=, $3, $pop7
 ; NO-SIMD128-NEXT:    f32.store 8($0), $pop2
 ; NO-SIMD128-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-NEXT:    call $push3=, fminf, $2, $pop6
+; NO-SIMD128-NEXT:    f32.min $push3=, $2, $pop6
 ; NO-SIMD128-NEXT:    f32.store 4($0), $pop3
 ; NO-SIMD128-NEXT:    f32.const $push5=, -0x1p0
-; NO-SIMD128-NEXT:    call $push4=, fminf, $1, $pop5
+; NO-SIMD128-NEXT:    f32.min $push4=, $1, $pop5
 ; NO-SIMD128-NEXT:    f32.store 0($0), $pop4
 ; NO-SIMD128-NEXT:    return
 ;
@@ -11892,16 +11900,16 @@ define <4 x float> @fminnumv432_non_zero_intrinsic(<4 x float> %x) {
 ; NO-SIMD128-FAST:         .functype fminnumv432_non_zero_intrinsic (i32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fminf, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.min $push1=, $1, $pop0
 ; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
 ; NO-SIMD128-FAST-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push2=, fminf, $2, $pop7
+; NO-SIMD128-FAST-NEXT:    f32.min $push2=, $2, $pop7
 ; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop2
 ; NO-SIMD128-FAST-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push3=, fminf, $3, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.min $push3=, $3, $pop6
 ; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop3
 ; NO-SIMD128-FAST-NEXT:    f32.const $push5=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push4=, fminf, $4, $pop5
+; NO-SIMD128-FAST-NEXT:    f32.min $push4=, $4, $pop5
 ; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop4
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> %x, <4 x float><float -1.0, float -1.0, float -1.0, float -1.0>)
@@ -11979,34 +11987,38 @@ define <4 x float> @fminnumv432_one_zero_intrinsic(<4 x float> %x) {
 ; NO-SIMD128:         .functype fminnumv432_one_zero_intrinsic (i32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-NEXT:    call $push1=, fminf, $4, $pop0
+; NO-SIMD128-NEXT:    f32.min $push1=, $4, $pop0
 ; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
-; NO-SIMD128-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-NEXT:    call $push2=, fminf, $3, $pop7
+; NO-SIMD128-NEXT:    f32.const $push9=, -0x1p0
+; NO-SIMD128-NEXT:    f32.min $push2=, $3, $pop9
 ; NO-SIMD128-NEXT:    f32.store 8($0), $pop2
 ; NO-SIMD128-NEXT:    f32.const $push3=, 0x0p0
-; NO-SIMD128-NEXT:    call $push4=, fminf, $2, $pop3
-; NO-SIMD128-NEXT:    f32.store 4($0), $pop4
-; NO-SIMD128-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-NEXT:    call $push5=, fminf, $1, $pop6
-; NO-SIMD128-NEXT:    f32.store 0($0), $pop5
+; NO-SIMD128-NEXT:    f32.const $push8=, 0x0p0
+; NO-SIMD128-NEXT:    f32.lt $push4=, $2, $pop8
+; NO-SIMD128-NEXT:    f32.select $push5=, $2, $pop3, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.const $push7=, -0x1p0
+; NO-SIMD128-NEXT:    f32.min $push6=, $1, $pop7
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop6
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: fminnumv432_one_zero_intrinsic:
 ; NO-SIMD128-FAST:         .functype fminnumv432_one_zero_intrinsic (i32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fminf, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.min $push1=, $1, $pop0
 ; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
-; NO-SIMD128-FAST-NEXT:    f32.const $push2=, 0x0p0
-; NO-SIMD128-FAST-NEXT:    call $push3=, fminf, $2, $pop2
-; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.const $push9=, -0x1p0
+; NO-SIMD128-FAST-NEXT:    f32.min $push2=, $3, $pop9
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop2
+; NO-SIMD128-FAST-NEXT:    f32.const $push3=, 0x0p0
+; NO-SIMD128-FAST-NEXT:    f32.const $push8=, 0x0p0
+; NO-SIMD128-FAST-NEXT:    f32.lt $push4=, $2, $pop8
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $2, $pop3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop5
 ; NO-SIMD128-FAST-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push4=, fminf, $3, $pop7
-; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop4
-; NO-SIMD128-FAST-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push5=, fminf, $4, $pop6
-; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.min $push6=, $4, $pop7
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop6
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> %x, <4 x float><float -1.0, float 0.0, float -1.0, float -1.0>)
   ret <4 x float> %a
@@ -12126,27 +12138,35 @@ define <4 x float> @maxnum_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: maxnum_intrinsic_v4f32:
 ; NO-SIMD128:         .functype maxnum_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    call $push0=, fmaxf, $4, $8
-; NO-SIMD128-NEXT:    f32.store 12($0), $pop0
-; NO-SIMD128-NEXT:    call $push1=, fmaxf, $3, $7
-; NO-SIMD128-NEXT:    f32.store 8($0), $pop1
-; NO-SIMD128-NEXT:    call $push2=, fmaxf, $2, $6
-; NO-SIMD128-NEXT:    f32.store 4($0), $pop2
-; NO-SIMD128-NEXT:    call $push3=, fmaxf, $1, $5
-; NO-SIMD128-NEXT:    f32.store 0($0), $pop3
+; NO-SIMD128-NEXT:    f32.gt $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $4, $8, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.gt $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $3, $7, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.gt $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $2, $6, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.gt $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $1, $5, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: maxnum_intrinsic_v4f32:
 ; NO-SIMD128-FAST:         .functype maxnum_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    call $push0=, fmaxf, $1, $5
-; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fmaxf, $2, $6
-; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop1
-; NO-SIMD128-FAST-NEXT:    call $push2=, fmaxf, $3, $7
-; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop2
-; NO-SIMD128-FAST-NEXT:    call $push3=, fmaxf, $4, $8
-; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.gt $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $1, $5, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.gt $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $2, $6, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.gt $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $3, $7, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.gt $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $4, $8, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %a
@@ -12168,26 +12188,26 @@ define <4 x float> @maxnum_nsz_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: maxnum_nsz_intrinsic_v4f32:
 ; NO-SIMD128:         .functype maxnum_nsz_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    call $push0=, fmaxf, $4, $8
+; NO-SIMD128-NEXT:    f32.max $push0=, $4, $8
 ; NO-SIMD128-NEXT:    f32.store 12($0), $pop0
-; NO-SIMD128-NEXT:    call $push1=, fmaxf, $3, $7
+; NO-SIMD128-NEXT:    f32.max $push1=, $3, $7
 ; NO-SIMD128-NEXT:    f32.store 8($0), $pop1
-; NO-SIMD128-NEXT:    call $push2=, fmaxf, $2, $6
+; NO-SIMD128-NEXT:    f32.max $push2=, $2, $6
 ; NO-SIMD128-NEXT:    f32.store 4($0), $pop2
-; NO-SIMD128-NEXT:    call $push3=, fmaxf, $1, $5
+; NO-SIMD128-NEXT:    f32.max $push3=, $1, $5
 ; NO-SIMD128-NEXT:    f32.store 0($0), $pop3
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: maxnum_nsz_intrinsic_v4f32:
 ; NO-SIMD128-FAST:         .functype maxnum_nsz_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
-; NO-SIMD128-FAST-NEXT:    call $push0=, fmaxf, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.max $push0=, $1, $5
 ; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fmaxf, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.max $push1=, $2, $6
 ; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop1
-; NO-SIMD128-FAST-NEXT:    call $push2=, fmaxf, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.max $push2=, $3, $7
 ; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop2
-; NO-SIMD128-FAST-NEXT:    call $push3=, fmaxf, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.max $push3=, $4, $8
 ; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop3
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y)
@@ -12265,34 +12285,38 @@ define <4 x float> @maxnum_one_zero_intrinsic_v4f32(<4 x float> %x, <4 x float> 
 ; NO-SIMD128:         .functype maxnum_one_zero_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-NEXT:    call $push1=, fmaxf, $4, $pop0
+; NO-SIMD128-NEXT:    f32.max $push1=, $4, $pop0
 ; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
-; NO-SIMD128-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-NEXT:    call $push2=, fmaxf, $3, $pop7
+; NO-SIMD128-NEXT:    f32.const $push9=, -0x1p0
+; NO-SIMD128-NEXT:    f32.max $push2=, $3, $pop9
 ; NO-SIMD128-NEXT:    f32.store 8($0), $pop2
 ; NO-SIMD128-NEXT:    f32.const $push3=, 0x0p0
-; NO-SIMD128-NEXT:    call $push4=, fmaxf, $2, $pop3
-; NO-SIMD128-NEXT:    f32.store 4($0), $pop4
-; NO-SIMD128-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-NEXT:    call $push5=, fmaxf, $1, $pop6
-; NO-SIMD128-NEXT:    f32.store 0($0), $pop5
+; NO-SIMD128-NEXT:    f32.const $push8=, 0x0p0
+; NO-SIMD128-NEXT:    f32.gt $push4=, $2, $pop8
+; NO-SIMD128-NEXT:    f32.select $push5=, $2, $pop3, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.const $push7=, -0x1p0
+; NO-SIMD128-NEXT:    f32.max $push6=, $1, $pop7
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop6
 ; NO-SIMD128-NEXT:    return
 ;
 ; NO-SIMD128-FAST-LABEL: maxnum_one_zero_intrinsic_v4f32:
 ; NO-SIMD128-FAST:         .functype maxnum_one_zero_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fmaxf, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.max $push1=, $1, $pop0
 ; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
-; NO-SIMD128-FAST-NEXT:    f32.const $push2=, 0x0p0
-; NO-SIMD128-FAST-NEXT:    call $push3=, fmaxf, $2, $pop2
-; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.const $push9=, -0x1p0
+; NO-SIMD128-FAST-NEXT:    f32.max $push2=, $3, $pop9
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop2
+; NO-SIMD128-FAST-NEXT:    f32.const $push3=, 0x0p0
+; NO-SIMD128-FAST-NEXT:    f32.const $push8=, 0x0p0
+; NO-SIMD128-FAST-NEXT:    f32.gt $push4=, $2, $pop8
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $2, $pop3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop5
 ; NO-SIMD128-FAST-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push4=, fmaxf, $3, $pop7
-; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop4
-; NO-SIMD128-FAST-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push5=, fmaxf, $4, $pop6
-; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.max $push6=, $4, $pop7
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop6
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float><float -1.0, float 0.0, float -1.0, float -1.0>)
   ret <4 x float> %a
@@ -12317,16 +12341,16 @@ define <4 x float> @maxnum_non_zero_intrinsic_v4f32(<4 x float> %x, <4 x float> 
 ; NO-SIMD128:         .functype maxnum_non_zero_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
 ; NO-SIMD128-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-NEXT:    call $push1=, fmaxf, $4, $pop0
+; NO-SIMD128-NEXT:    f32.max $push1=, $4, $pop0
 ; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
 ; NO-SIMD128-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-NEXT:    call $push2=, fmaxf, $3, $pop7
+; NO-SIMD128-NEXT:    f32.max $push2=, $3, $pop7
 ; NO-SIMD128-NEXT:    f32.store 8($0), $pop2
 ; NO-SIMD128-NEXT:    f32.const $push3=, 0x1p0
-; NO-SIMD128-NEXT:    call $push4=, fmaxf, $2, $pop3
+; NO-SIMD128-NEXT:    f32.max $push4=, $2, $pop3
 ; NO-SIMD128-NEXT:    f32.store 4($0), $pop4
 ; NO-SIMD128-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-NEXT:    call $push5=, fmaxf, $1, $pop6
+; NO-SIMD128-NEXT:    f32.max $push5=, $1, $pop6
 ; NO-SIMD128-NEXT:    f32.store 0($0), $pop5
 ; NO-SIMD128-NEXT:    return
 ;
@@ -12334,16 +12358,16 @@ define <4 x float> @maxnum_non_zero_intrinsic_v4f32(<4 x float> %x, <4 x float> 
 ; NO-SIMD128-FAST:         .functype maxnum_non_zero_intrinsic_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-FAST-NEXT:  # %bb.0:
 ; NO-SIMD128-FAST-NEXT:    f32.const $push0=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push1=, fmaxf, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.max $push1=, $1, $pop0
 ; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
 ; NO-SIMD128-FAST-NEXT:    f32.const $push2=, 0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push3=, fmaxf, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.max $push3=, $2, $pop2
 ; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
 ; NO-SIMD128-FAST-NEXT:    f32.const $push7=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push4=, fmaxf, $3, $pop7
+; NO-SIMD128-FAST-NEXT:    f32.max $push4=, $3, $pop7
 ; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop4
 ; NO-SIMD128-FAST-NEXT:    f32.const $push6=, -0x1p0
-; NO-SIMD128-FAST-NEXT:    call $push5=, fmaxf, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.max $push5=, $4, $pop6
 ; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop5
 ; NO-SIMD128-FAST-NEXT:    return
   %a = call nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float><float -1.0, float 1.0, float -1.0, float -1.0>)
@@ -12475,6 +12499,210 @@ define <4 x float> @pmin_v4f32(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %a
 }
 
+define <4 x float> @pmin_v4f32_fast_olt(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmin_v4f32_fast_olt:
+; SIMD128:         .functype pmin_v4f32_fast_olt (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmin $push0=, $1, $0
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmin_v4f32_fast_olt:
+; SIMD128-FAST:         .functype pmin_v4f32_fast_olt (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $1, $0
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmin_v4f32_fast_olt:
+; NO-SIMD128:         .functype pmin_v4f32_fast_olt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.lt $push0=, $8, $4
+; NO-SIMD128-NEXT:    f32.select $push1=, $8, $4, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.lt $push2=, $7, $3
+; NO-SIMD128-NEXT:    f32.select $push3=, $7, $3, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.lt $push4=, $6, $2
+; NO-SIMD128-NEXT:    f32.select $push5=, $6, $2, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.lt $push6=, $5, $1
+; NO-SIMD128-NEXT:    f32.select $push7=, $5, $1, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmin_v4f32_fast_olt:
+; NO-SIMD128-FAST:         .functype pmin_v4f32_fast_olt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.lt $push0=, $5, $1
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $5, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.lt $push2=, $6, $2
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $6, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.lt $push4=, $7, $3
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $7, $3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.lt $push6=, $8, $4
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $8, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast olt <4 x float> %y, %x
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmin_v4f32_fast_ogt(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmin_v4f32_fast_ogt:
+; SIMD128:         .functype pmin_v4f32_fast_ogt (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmin_v4f32_fast_ogt:
+; SIMD128-FAST:         .functype pmin_v4f32_fast_ogt (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmin_v4f32_fast_ogt:
+; NO-SIMD128:         .functype pmin_v4f32_fast_ogt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.gt $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $8, $4, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.gt $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $7, $3, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.gt $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $6, $2, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.gt $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $5, $1, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmin_v4f32_fast_ogt:
+; NO-SIMD128-FAST:         .functype pmin_v4f32_fast_ogt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.gt $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $5, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.gt $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $6, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.gt $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $7, $3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.gt $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $8, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast ogt <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmin_v4f32_fast_ole(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmin_v4f32_fast_ole:
+; SIMD128:         .functype pmin_v4f32_fast_ole (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmin $push0=, $1, $0
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmin_v4f32_fast_ole:
+; SIMD128-FAST:         .functype pmin_v4f32_fast_ole (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $1, $0
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmin_v4f32_fast_ole:
+; NO-SIMD128:         .functype pmin_v4f32_fast_ole (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.le $push0=, $8, $4
+; NO-SIMD128-NEXT:    f32.select $push1=, $8, $4, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.le $push2=, $7, $3
+; NO-SIMD128-NEXT:    f32.select $push3=, $7, $3, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.le $push4=, $6, $2
+; NO-SIMD128-NEXT:    f32.select $push5=, $6, $2, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.le $push6=, $5, $1
+; NO-SIMD128-NEXT:    f32.select $push7=, $5, $1, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmin_v4f32_fast_ole:
+; NO-SIMD128-FAST:         .functype pmin_v4f32_fast_ole (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.le $push0=, $5, $1
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $5, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.le $push2=, $6, $2
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $6, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.le $push4=, $7, $3
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $7, $3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.le $push6=, $8, $4
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $8, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast ole <4 x float> %y, %x
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmin_v4f32_fast_oge(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmin_v4f32_fast_oge:
+; SIMD128:         .functype pmin_v4f32_fast_oge (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmin_v4f32_fast_oge:
+; SIMD128-FAST:         .functype pmin_v4f32_fast_oge (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmin_v4f32_fast_oge:
+; NO-SIMD128:         .functype pmin_v4f32_fast_oge (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.ge $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $8, $4, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.ge $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $7, $3, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.ge $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $6, $2, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.ge $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $5, $1, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmin_v4f32_fast_oge:
+; NO-SIMD128-FAST:         .functype pmin_v4f32_fast_oge (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.ge $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $5, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.ge $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $6, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.ge $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $7, $3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.ge $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $8, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast oge <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
 define <4 x i32> @pmin_int_v4f32(<4 x i32> %x, <4 x i32> %y) {
 ; SIMD128-LABEL: pmin_int_v4f32:
 ; SIMD128:         .functype pmin_int_v4f32 (v128, v128) -> (v128)
@@ -12591,6 +12819,210 @@ define <4 x float> @pmax_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
 ; NO-SIMD128-FAST-NEXT:    return
   %c = fcmp olt <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmax_v4f32_fast_ogt(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmax_v4f32_fast_ogt:
+; SIMD128:         .functype pmax_v4f32_fast_ogt (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmax_v4f32_fast_ogt:
+; SIMD128-FAST:         .functype pmax_v4f32_fast_ogt (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmax_v4f32_fast_ogt:
+; NO-SIMD128:         .functype pmax_v4f32_fast_ogt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.gt $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $4, $8, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.gt $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $3, $7, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.gt $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $2, $6, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.gt $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $1, $5, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmax_v4f32_fast_ogt:
+; NO-SIMD128-FAST:         .functype pmax_v4f32_fast_ogt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.gt $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $1, $5, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.gt $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $2, $6, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.gt $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $3, $7, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.gt $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $4, $8, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast ogt <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmax_v4f32_fast_olt(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmax_v4f32_fast_olt:
+; SIMD128:         .functype pmax_v4f32_fast_olt (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmax_v4f32_fast_olt:
+; SIMD128-FAST:         .functype pmax_v4f32_fast_olt (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmax_v4f32_fast_olt:
+; NO-SIMD128:         .functype pmax_v4f32_fast_olt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.lt $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $8, $4, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.lt $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $7, $3, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.lt $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $6, $2, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.lt $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $5, $1, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmax_v4f32_fast_olt:
+; NO-SIMD128-FAST:         .functype pmax_v4f32_fast_olt (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.lt $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $5, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.lt $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $6, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.lt $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $7, $3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.lt $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $8, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast olt <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmax_v4f32_fast_oge(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmax_v4f32_fast_oge:
+; SIMD128:         .functype pmax_v4f32_fast_oge (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmax_v4f32_fast_oge:
+; SIMD128-FAST:         .functype pmax_v4f32_fast_oge (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmax_v4f32_fast_oge:
+; NO-SIMD128:         .functype pmax_v4f32_fast_oge (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.ge $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $4, $8, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.ge $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $3, $7, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.ge $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $2, $6, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.ge $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $1, $5, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmax_v4f32_fast_oge:
+; NO-SIMD128-FAST:         .functype pmax_v4f32_fast_oge (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.ge $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $1, $5, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.ge $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $2, $6, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.ge $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $3, $7, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.ge $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $4, $8, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast oge <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+define <4 x float> @pmax_v4f32_fast_ole(<4 x float> %x, <4 x float> %y) {
+; SIMD128-LABEL: pmax_v4f32_fast_ole:
+; SIMD128:         .functype pmax_v4f32_fast_ole (v128, v128) -> (v128)
+; SIMD128-NEXT:  # %bb.0:
+; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    return $pop0
+;
+; SIMD128-FAST-LABEL: pmax_v4f32_fast_ole:
+; SIMD128-FAST:         .functype pmax_v4f32_fast_ole (v128, v128) -> (v128)
+; SIMD128-FAST-NEXT:  # %bb.0:
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    return $pop0
+;
+; NO-SIMD128-LABEL: pmax_v4f32_fast_ole:
+; NO-SIMD128:         .functype pmax_v4f32_fast_ole (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-NEXT:  # %bb.0:
+; NO-SIMD128-NEXT:    f32.le $push0=, $4, $8
+; NO-SIMD128-NEXT:    f32.select $push1=, $8, $4, $pop0
+; NO-SIMD128-NEXT:    f32.store 12($0), $pop1
+; NO-SIMD128-NEXT:    f32.le $push2=, $3, $7
+; NO-SIMD128-NEXT:    f32.select $push3=, $7, $3, $pop2
+; NO-SIMD128-NEXT:    f32.store 8($0), $pop3
+; NO-SIMD128-NEXT:    f32.le $push4=, $2, $6
+; NO-SIMD128-NEXT:    f32.select $push5=, $6, $2, $pop4
+; NO-SIMD128-NEXT:    f32.store 4($0), $pop5
+; NO-SIMD128-NEXT:    f32.le $push6=, $1, $5
+; NO-SIMD128-NEXT:    f32.select $push7=, $5, $1, $pop6
+; NO-SIMD128-NEXT:    f32.store 0($0), $pop7
+; NO-SIMD128-NEXT:    return
+;
+; NO-SIMD128-FAST-LABEL: pmax_v4f32_fast_ole:
+; NO-SIMD128-FAST:         .functype pmax_v4f32_fast_ole (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NO-SIMD128-FAST-NEXT:  # %bb.0:
+; NO-SIMD128-FAST-NEXT:    f32.le $push0=, $1, $5
+; NO-SIMD128-FAST-NEXT:    f32.select $push1=, $5, $1, $pop0
+; NO-SIMD128-FAST-NEXT:    f32.store 0($0), $pop1
+; NO-SIMD128-FAST-NEXT:    f32.le $push2=, $2, $6
+; NO-SIMD128-FAST-NEXT:    f32.select $push3=, $6, $2, $pop2
+; NO-SIMD128-FAST-NEXT:    f32.store 4($0), $pop3
+; NO-SIMD128-FAST-NEXT:    f32.le $push4=, $3, $7
+; NO-SIMD128-FAST-NEXT:    f32.select $push5=, $7, $3, $pop4
+; NO-SIMD128-FAST-NEXT:    f32.store 8($0), $pop5
+; NO-SIMD128-FAST-NEXT:    f32.le $push6=, $4, $8
+; NO-SIMD128-FAST-NEXT:    f32.select $push7=, $8, $4, $pop6
+; NO-SIMD128-FAST-NEXT:    f32.store 12($0), $pop7
+; NO-SIMD128-FAST-NEXT:    return
+  %c = fcmp fast ole <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
   ret <4 x float> %a
 }

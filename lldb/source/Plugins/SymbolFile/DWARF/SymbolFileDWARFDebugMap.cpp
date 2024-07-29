@@ -848,9 +848,17 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
                 debug_map_entry->data.GetOSOFileAddress();
             Address oso_so_addr;
             if (oso_module->ResolveFileAddress(oso_file_addr, oso_so_addr)) {
-              resolved_flags |=
-                  oso_module->GetSymbolFile()->ResolveSymbolContext(
-                      oso_so_addr, resolve_scope, sc);
+              if (SymbolFile *sym_file = oso_module->GetSymbolFile()) {
+                resolved_flags |= sym_file->ResolveSymbolContext(
+                    oso_so_addr, resolve_scope, sc);
+              } else {
+                ObjectFile *obj_file = GetObjectFile();
+                LLDB_LOG(GetLog(DWARFLog::DebugMap),
+                         "Failed to get symfile for OSO: {0} in module: {1}",
+                         oso_module->GetFileSpec(),
+                         obj_file ? obj_file->GetFileSpec()
+                                  : FileSpec("unknown"));
+              }
             }
           }
         }
@@ -1139,14 +1147,13 @@ SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(
   return {};
 }
 
-TypeSP SymbolFileDWARFDebugMap::FindDefinitionTypeForDWARFDeclContext(
-    const DWARFDIE &die) {
-  TypeSP type_sp;
+DWARFDIE SymbolFileDWARFDebugMap::FindDefinitionDIE(const DWARFDIE &die) {
+  DWARFDIE result;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-    type_sp = oso_dwarf->FindDefinitionTypeForDWARFDeclContext(die);
-    return type_sp ? IterationAction::Stop : IterationAction::Continue;
+    result = oso_dwarf->FindDefinitionDIE(die);
+    return result ? IterationAction::Stop : IterationAction::Continue;
   });
-  return type_sp;
+  return result;
 }
 
 bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(

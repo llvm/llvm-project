@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -26,6 +27,11 @@
 #define DEBUG_TYPE "gi-combiner"
 
 using namespace llvm;
+
+STATISTIC(NumOneIteration, "Number of functions with one iteration");
+STATISTIC(NumTwoIterations, "Number of functions with two iterations");
+STATISTIC(NumThreeOrMoreIterations,
+          "Number of functions with three or more iterations");
 
 namespace llvm {
 cl::OptionCategory GICombinerOptionCategory(
@@ -135,7 +141,11 @@ bool Combiner::combineMachineInstrs() {
   bool MFChanged = false;
   bool Changed;
 
-  do {
+  unsigned Iteration = 0;
+  while (true) {
+    ++Iteration;
+    LLVM_DEBUG(dbgs() << "\n\nCombiner iteration #" << Iteration << '\n');
+
     WorkList.clear();
 
     // Collect all instructions. Do a post order traversal for basic blocks and
@@ -166,7 +176,28 @@ bool Combiner::combineMachineInstrs() {
       WLObserver->reportFullyCreatedInstrs();
     }
     MFChanged |= Changed;
-  } while (Changed);
+
+    if (!Changed) {
+      LLVM_DEBUG(dbgs() << "\nCombiner reached fixed-point after iteration #"
+                        << Iteration << '\n');
+      break;
+    }
+    // Iterate until a fixed-point is reached if MaxIterations == 0,
+    // otherwise limit the number of iterations.
+    if (CInfo.MaxIterations && Iteration >= CInfo.MaxIterations) {
+      LLVM_DEBUG(
+          dbgs() << "\nCombiner reached iteration limit after iteration #"
+                 << Iteration << '\n');
+      break;
+    }
+  }
+
+  if (Iteration == 1)
+    ++NumOneIteration;
+  else if (Iteration == 2)
+    ++NumTwoIterations;
+  else
+    ++NumThreeOrMoreIterations;
 
 #ifndef NDEBUG
   if (CSEInfo) {

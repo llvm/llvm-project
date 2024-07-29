@@ -291,10 +291,12 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     uint32_t BitWidth = Ty->getScalarSizeInBits();
     assert(BitWidth < OrigBitWidth && "Unexpected bitwidths!");
     APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
-    if (IC.MaskedValueIsZero(I->getOperand(0), Mask, 0, CxtI) &&
-        IC.MaskedValueIsZero(I->getOperand(1), Mask, 0, CxtI)) {
-      return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
-             canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
+    // Do not preserve the original context instruction. Simplifying div/rem
+    // based on later context may introduce a trap.
+    if (IC.MaskedValueIsZero(I->getOperand(0), Mask, 0, I) &&
+        IC.MaskedValueIsZero(I->getOperand(1), Mask, 0, I)) {
+      return canEvaluateTruncated(I->getOperand(0), Ty, IC, I) &&
+             canEvaluateTruncated(I->getOperand(1), Ty, IC, I);
     }
     break;
   }
@@ -747,10 +749,10 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
 
     Constant *C;
-    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_Constant(C))))) {
+    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_ImmConstant(C))))) {
       // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
       Constant *One = ConstantInt::get(SrcTy, APInt(SrcWidth, 1));
-      Constant *MaskC = ConstantExpr::getShl(One, C);
+      Value *MaskC = Builder.CreateShl(One, C);
       Value *And = Builder.CreateAnd(X, MaskC);
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
@@ -758,7 +760,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
                                    m_Deferred(X))))) {
       // trunc (or (lshr X, C), X) to i1 --> icmp ne (and X, C'), 0
       Constant *One = ConstantInt::get(SrcTy, APInt(SrcWidth, 1));
-      Constant *MaskC = ConstantExpr::getShl(One, C);
+      Value *MaskC = Builder.CreateShl(One, C);
       Value *And = Builder.CreateAnd(X, Builder.CreateOr(MaskC, One));
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
@@ -769,6 +771,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         // trunc (C << X) to i1 --> X == 0, where C is odd
         return new ICmpInst(ICmpInst::Predicate::ICMP_EQ, X, Zero);
       }
+    }
+
+    if (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) {
+      Value *X, *Y;
+      if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
+        return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
     }
   }
 
@@ -1481,7 +1489,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Y;
     if (Src->hasOneUse() &&
         match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowUndef(XBitSize - SrcBitSize)))) {
+                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
       Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
@@ -1990,7 +1998,7 @@ Instruction *InstCombinerImpl::visitSIToFP(CastInst &CI) {
   if (Instruction *R = commonCastTransforms(CI))
     return R;
   if (isKnownNonNegative(CI.getOperand(0), SQ)) {
-    auto UI =
+    auto *UI =
         CastInst::Create(Instruction::UIToFP, CI.getOperand(0), CI.getType());
     UI->setNonNeg(true);
     return UI;
@@ -2043,7 +2051,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(SrcOp)) {
+  if (auto *GEP = dyn_cast<GEPOperator>(SrcOp)) {
     // Fold ptrtoint(gep null, x) to multiply + constant if the GEP has one use.
     // While this can increase the number of instructions it doesn't actually
     // increase the overall complexity since the arithmetic is just part of
@@ -2053,6 +2061,20 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       return replaceInstUsesWith(CI,
                                  Builder.CreateIntCast(EmitGEPOffset(GEP), Ty,
                                                        /*isSigned=*/false));
+    }
+
+    // (ptrtoint (gep (inttoptr Base), ...)) -> Base + Offset
+    Value *Base;
+    if (GEP->hasOneUse() &&
+        match(GEP->getPointerOperand(), m_OneUse(m_IntToPtr(m_Value(Base)))) &&
+        Base->getType() == Ty) {
+      Value *Offset = EmitGEPOffset(GEP);
+      auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
+      if (GEP->hasNoUnsignedWrap() ||
+          (GEP->hasNoUnsignedSignedWrap() &&
+           isKnownNonNegative(Offset, SQ.getWithInstruction(&CI))))
+        NewOp->setHasNoUnsignedWrap(true);
+      return NewOp;
     }
   }
 
@@ -2656,14 +2678,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   if (DestTy == Src->getType())
     return replaceInstUsesWith(CI, Src);
 
-  if (FixedVectorType *DestVTy = dyn_cast<FixedVectorType>(DestTy)) {
-    // Beware: messing with this target-specific oddity may cause trouble.
-    if (DestVTy->getNumElements() == 1 && SrcTy->isX86_MMXTy()) {
-      Value *Elem = Builder.CreateBitCast(Src, DestVTy->getElementType());
-      return InsertElementInst::Create(PoisonValue::get(DestTy), Elem,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
-    }
-
+  if (isa<FixedVectorType>(DestTy)) {
     if (isa<IntegerType>(SrcTy)) {
       // If this is a cast from an integer to vector, check to see if the input
       // is a trunc or zext of a bitcast from vector.  If so, we can replace all

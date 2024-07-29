@@ -340,9 +340,10 @@ define i32 @pcmpestri_reg_diff_i16(<8 x i16> %lhs, i32 %lhs_len, <8 x i16> %rhs,
 ; X64-NEXT:  .LBB8_2: # %compare
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $7, %ecx
-; X64-NEXT:    movzwl -24(%rsp,%rcx,2), %eax
+; X64-NEXT:    addl %ecx, %ecx
+; X64-NEXT:    movzwl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    subw -40(%rsp,%rcx,2), %ax
+; X64-NEXT:    subw -40(%rsp,%rcx), %ax
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:
@@ -479,9 +480,10 @@ define i32 @pcmpestri_mem_diff_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32
 ; X64-NEXT:  .LBB11_2: # %compare
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $7, %ecx
-; X64-NEXT:    movzwl -24(%rsp,%rcx,2), %eax
+; X64-NEXT:    addl %ecx, %ecx
+; X64-NEXT:    movzwl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    subw -40(%rsp,%rcx,2), %ax
+; X64-NEXT:    subw -40(%rsp,%rcx), %ax
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:
@@ -792,9 +794,10 @@ define i32 @pcmpistri_reg_diff_i16(<8 x i16> %lhs, <8 x i16> %rhs) nounwind {
 ; X64-NEXT:  .LBB20_2: # %compare
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $7, %ecx
-; X64-NEXT:    movzwl -24(%rsp,%rcx,2), %eax
+; X64-NEXT:    addl %ecx, %ecx
+; X64-NEXT:    movzwl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    subw -40(%rsp,%rcx,2), %ax
+; X64-NEXT:    subw -40(%rsp,%rcx), %ax
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:
@@ -911,9 +914,10 @@ define i32 @pcmpistri_mem_diff_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X64-NEXT:  .LBB23_2: # %compare
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $7, %ecx
-; X64-NEXT:    movzwl -24(%rsp,%rcx,2), %eax
+; X64-NEXT:    addl %ecx, %ecx
+; X64-NEXT:    movzwl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    subw -40(%rsp,%rcx,2), %ax
+; X64-NEXT:    subw -40(%rsp,%rcx), %ax
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:

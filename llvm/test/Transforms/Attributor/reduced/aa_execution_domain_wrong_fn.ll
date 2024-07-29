@@ -26,7 +26,7 @@ define internal i1 @__kmpc_kernel_parallel() {
 
 !0 = !{i32 7, !"openmp", i32 50}
 ;.
-; CHECK: @[[_ZN4OMPX5STATE9TEAMSTATEE:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
+; CHECK: @_ZN4ompx5state9TeamStateE = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_16_1d1156__Z38test_target_teams_distribute__parallelv_l16() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_target_init(ptr null)

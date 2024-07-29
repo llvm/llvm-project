@@ -11,10 +11,14 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
+#include "DXILMetadata.h"
+#include "DXILResourceAnalysis.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
@@ -23,6 +27,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "dxil-prepare"
 
@@ -80,6 +85,62 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
                       Attr);
 }
 
+static void collectDeadStringAttrs(AttributeMask &DeadAttrs, AttributeSet &&AS,
+                                   const StringSet<> &LiveKeys,
+                                   bool AllowExperimental) {
+  for (auto &Attr : AS) {
+    if (!Attr.isStringAttribute())
+      continue;
+    StringRef Key = Attr.getKindAsString();
+    if (LiveKeys.contains(Key))
+      continue;
+    if (AllowExperimental && Key.starts_with("exp-"))
+      continue;
+    DeadAttrs.addAttribute(Key);
+  }
+}
+
+static void removeStringFunctionAttributes(Function &F,
+                                           bool AllowExperimental) {
+  AttributeList Attrs = F.getAttributes();
+  const StringSet<> LiveKeys = {"waveops-include-helper-lanes",
+                                "fp32-denorm-mode"};
+  // Collect DeadKeys in FnAttrs.
+  AttributeMask DeadAttrs;
+  collectDeadStringAttrs(DeadAttrs, Attrs.getFnAttrs(), LiveKeys,
+                         AllowExperimental);
+  collectDeadStringAttrs(DeadAttrs, Attrs.getRetAttrs(), LiveKeys,
+                         AllowExperimental);
+
+  F.removeFnAttrs(DeadAttrs);
+  F.removeRetAttrs(DeadAttrs);
+}
+
+static void cleanModuleFlags(Module &M) {
+  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
+  if (!MDFlags)
+    return;
+
+  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  M.getModuleFlagsMetadata(FlagEntries);
+  bool Updated = false;
+  for (auto &Flag : FlagEntries) {
+    // llvm 3.7 only supports behavior up to AppendUnique.
+    if (Flag.Behavior <= Module::ModFlagBehavior::AppendUnique)
+      continue;
+    Flag.Behavior = Module::ModFlagBehavior::Warning;
+    Updated = true;
+  }
+
+  if (!Updated)
+    return;
+
+  MDFlags->eraseFromParent();
+
+  for (auto &Flag : FlagEntries)
+    M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
+}
+
 class DXILPrepareModule : public ModulePass {
 
   static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
@@ -110,9 +171,18 @@ public:
       if (!isValidForDXIL(I))
         AttrMask.addAttribute(I);
     }
+
+    dxil::ValidatorVersionMD ValVerMD(M);
+    VersionTuple ValVer = ValVerMD.getAsVersionTuple();
+    bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
+
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
+      // Only remove string attributes if we are not skipping validation.
+      // This will reserve the experimental attributes when validation version
+      // is 0.0 for experiment mode.
+      removeStringFunctionAttributes(F, SkipValidation);
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
@@ -168,11 +238,16 @@ public:
         }
       }
     }
+    // Remove flags not for DXIL.
+    cleanModuleFlags(M);
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
-
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<DXILResourceWrapper>();
+  }
   static char ID; // Pass identification.
 };
 char DXILPrepareModule::ID = 0;

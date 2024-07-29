@@ -57,6 +57,7 @@ class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
+class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -825,19 +826,26 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
 
   unsigned getHashValue() const {
+    // Use the Scope's linkage name instead of using the scope directly, as the
+    // scope may be a temporary one which can replaced, which would produce a
+    // different hash for the same DISubprogram.
+    llvm::StringRef ScopeLinkageName;
+    if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+      if (auto *ID = CT->getRawIdentifier())
+        ScopeLinkageName = ID->getString();
+
     // If this is a declaration inside an ODR type, only hash the type and the
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
-    if (!isDefinition() && LinkageName)
-      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
-        if (CT->getRawIdentifier())
-          return hash_combine(LinkageName, Scope);
+    if (!isDefinition() && LinkageName &&
+        isa_and_nonnull<DICompositeType>(Scope))
+      return hash_combine(LinkageName, ScopeLinkageName);
 
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Name, Scope, File, Type, Line);
+    return hash_combine(Name, ScopeLinkageName, File, Type, Line);
   }
 };
 
@@ -1450,6 +1458,10 @@ public:
   /// will be automatically deleted if this context is deleted.
   SmallPtrSet<Module *, 4> OwnedModules;
 
+  /// MachineFunctionNums - Keep the next available unique number available for
+  /// a MachineFunction in given module. Module must in OwnedModules.
+  DenseMap<Module *, unsigned> MachineFunctionNums;
+
   /// The main remark streamer used by all the other streamers (e.g. IR, MIR,
   /// frontends, etc.). This should only be used by the specific streamers, and
   /// never directly.
@@ -1523,6 +1535,13 @@ public:
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
 
+  // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
+  // ConstantRange. Since this is a dynamically sized class, it's not
+  // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
+  // for allocation and record all allocated pointers in this vector. In the
+  // LLVMContext destructor, call the destuctors of everything in the vector.
+  std::vector<ConstantRangeListAttributeImpl *> ConstantRangeListAttributes;
+
   DenseMap<Type *, std::unique_ptr<ConstantAggregateZero>> CAZConstants;
 
   using ArrayConstantsTy = ConstantUniqueMap<ConstantArray>;
@@ -1551,6 +1570,8 @@ public:
 
   DenseMap<const GlobalValue *, NoCFIValue *> NoCFIValues;
 
+  ConstantUniqueMap<ConstantPtrAuth> ConstantPtrAuths;
+
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 
   ConstantUniqueMap<InlineAsm> InlineAsms;
@@ -1561,7 +1582,7 @@ public:
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
-  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy, X86_AMXTy;
+  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
@@ -1702,6 +1723,9 @@ public:
   }
 
   void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDbgRecords.erase(B); }
+
+  std::string DefaultTargetCPU;
+  std::string DefaultTargetFeatures;
 };
 
 } // end namespace llvm

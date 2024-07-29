@@ -41,9 +41,9 @@ llvm::StringRef Attributes::getIntExtensionAttrName() const {
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
   assert(isa_real(type));
-  if (auto ty = type.dyn_cast<fir::RealType>())
+  if (auto ty = mlir::dyn_cast<fir::RealType>(type))
     return kindMap.getFloatSemantics(ty.getFKind());
-  return type.cast<mlir::FloatType>().getFloatSemantics();
+  return mlir::cast<mlir::FloatType>(type).getFloatSemantics();
 }
 
 static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
@@ -1112,4 +1112,15 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
         ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
+}
+
+std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
+    mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+    llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
+    const mlir::DataLayout &dl, llvm::StringRef tuneCPU) {
+  std::unique_ptr<fir::CodeGenSpecifics> CGS = fir::CodeGenSpecifics::get(
+      ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+
+  CGS->tuneCPU = tuneCPU;
+  return CGS;
 }

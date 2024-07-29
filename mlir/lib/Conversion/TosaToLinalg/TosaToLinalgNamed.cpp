@@ -101,9 +101,18 @@ static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
   // The source tensor is broadcast to all the outer dimensions of the
   // result tensor.
   SmallVector<AffineExpr> sourceDims;
-  for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
-    auto expr = rewriter.getAffineDimExpr(dim + resultRank - sourceRank);
-    sourceDims.push_back(expr);
+  // In the case of a rank one source tensor with a single element TOSA
+  // specifies that the value be broadcast meaning we need an edge case for a
+  // constant map.
+  assert(sourceTy.hasStaticShape() &&
+         "Dynamic broadcasting shapes not supported!");
+  if (sourceRank == 1 && sourceTy.getDimSize(0) == 1) {
+    sourceDims.push_back(rewriter.getAffineConstantExpr(0));
+  } else {
+    for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
+      auto expr = rewriter.getAffineDimExpr(dim + resultRank - sourceRank);
+      sourceDims.push_back(expr);
+    }
   }
 
   // Creating maps for the input and output of the broacast-like generic op.
@@ -1006,7 +1015,8 @@ public:
             auto max = rewriter.create<arith::ConstantIntOp>(
                 loc, APInt::getSignedMaxValue(outBitwidth).getSExtValue(),
                 accETy);
-            auto clamp = clampIntHelper(loc, scaled, min, max, rewriter);
+            auto clamp = clampIntHelper(loc, scaled, min, max, rewriter,
+                                        /*isUnsigned=*/false);
 
             poolVal = clamp;
             // Convert type.

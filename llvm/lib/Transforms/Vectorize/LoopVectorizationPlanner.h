@@ -179,6 +179,12 @@ public:
         VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
+  VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
+                            const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
+  }
+
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
                         DebugLoc DL = {}, const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
@@ -220,7 +226,7 @@ public:
 
 /// TODO: The following VectorizationFactor was pulled out of
 /// LoopVectorizationCostModel class. LV also deals with
-/// VectorizerParams::VectorizationFactor and VectorizationCostTy.
+/// VectorizerParams::VectorizationFactor.
 /// We need to streamline them.
 
 /// Information about vectorization costs.
@@ -255,16 +261,6 @@ struct VectorizationFactor {
     return !(*this == rhs);
   }
 };
-
-/// ElementCountComparator creates a total ordering for ElementCount
-/// for the purposes of using it in a set structure.
-struct ElementCountComparator {
-  bool operator()(const ElementCount &LHS, const ElementCount &RHS) const {
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
-  }
-};
-using ElementCountSet = SmallSet<ElementCount, 16, ElementCountComparator>;
 
 /// A class that represents two vectorization factors (initialized with 0 by
 /// default). One for fixed-width vectorization and one for scalable
@@ -338,6 +334,16 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
+  /// Computes the cost of \p Plan for vectorization factor \p VF.
+  ///
+  /// The current implementation requires access to the
+  /// LoopVectorizationLegality to handle inductions and reductions, which is
+  /// why it is kept separate from the VPlan-only cost infrastructure.
+  ///
+  /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
+  /// been retired.
+  InstructionCost cost(VPlan &Plan, ElementCount VF) const;
+
 public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
@@ -358,6 +364,9 @@ public:
 
   /// Return the best VPlan for \p VF.
   VPlan &getBestPlanFor(ElementCount VF) const;
+
+  /// Return the most profitable vectorization factor.
+  ElementCount getBestVF() const;
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
@@ -402,6 +411,9 @@ public:
   VectorizationFactor
   selectEpilogueVectorizationFactor(const ElementCount MaxVF, unsigned IC);
 
+  /// Emit remarks for recipes with invalid costs in the available VPlans.
+  void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
@@ -432,14 +444,16 @@ private:
   // converted to reductions, with one operand being vector and the other being
   // the scalar reduction chain. For other reductions, a select is introduced
   // between the phi and live-out recipes when folding the tail.
-  void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
+  void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 
-  /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every VF in \p CandidateVFs.
-  VectorizationFactor
-  selectVectorizationFactor(const ElementCountSet &CandidateVFs);
+  /// \return The most profitable vectorization factor for the available VPlans
+  /// and the cost of that VF.
+  /// This is now only used to verify the decisions by the new VPlan-based
+  /// cost-model and will be retired once the VPlan-based cost-model is
+  /// stabilized.
+  VectorizationFactor selectVectorizationFactor();
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

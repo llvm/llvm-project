@@ -1,9 +1,9 @@
 // Test without PCH
-// RUN: %clang_cc1 -fsyntax-only -include %S/delete-mismatch.h -fdiagnostics-parseable-fixits -std=c++11 %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -include %S/delete-mismatch.h -fdiagnostics-parseable-fixits -std=c++11 %s 2>&1 -fexperimental-new-constant-interpreter | FileCheck %s
 
 // Test with PCH
 // RUN: %clang_cc1 -x c++-header -std=c++11 -emit-pch -o %t %S/delete-mismatch.h
-// RUN: %clang_cc1 -std=c++11 -include-pch %t -DWITH_PCH -fsyntax-only -verify %s -ast-dump
+// RUN: %clang_cc1 -std=c++11 -include-pch %t -DWITH_PCH -verify %s -ast-dump
 
 void f(int a[10][20]) {
   delete a; // expected-warning {{'delete' applied to a pointer-to-array type}}

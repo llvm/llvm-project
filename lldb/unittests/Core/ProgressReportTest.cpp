@@ -61,7 +61,7 @@ protected:
 };
 
 TEST_F(ProgressReportTest, TestReportCreation) {
-  ListenerSP listener_sp = CreateListenerFor(Debugger::eBroadcastBitProgress);
+  ListenerSP listener_sp = CreateListenerFor(lldb::eBroadcastBitProgress);
   EventSP event_sp;
   const ProgressEventData *data;
 
@@ -135,7 +135,7 @@ TEST_F(ProgressReportTest, TestReportCreation) {
 
 TEST_F(ProgressReportTest, TestProgressManager) {
   ListenerSP listener_sp =
-      CreateListenerFor(Debugger::eBroadcastBitProgressCategory);
+      CreateListenerFor(lldb::eBroadcastBitProgressCategory);
   EventSP event_sp;
   const ProgressEventData *data;
 
@@ -173,7 +173,7 @@ TEST_F(ProgressReportTest, TestProgressManager) {
 
 TEST_F(ProgressReportTest, TestOverlappingEvents) {
   ListenerSP listener_sp =
-      CreateListenerFor(Debugger::eBroadcastBitProgressCategory);
+      CreateListenerFor(lldb::eBroadcastBitProgressCategory);
   EventSP event_sp;
   const ProgressEventData *data;
 
@@ -214,7 +214,7 @@ TEST_F(ProgressReportTest, TestOverlappingEvents) {
 
 TEST_F(ProgressReportTest, TestProgressManagerDisjointReports) {
   ListenerSP listener_sp =
-      CreateListenerFor(Debugger::eBroadcastBitProgressCategory);
+      CreateListenerFor(lldb::eBroadcastBitProgressCategory);
   EventSP event_sp;
   const ProgressEventData *data;
   uint64_t expected_progress_id;

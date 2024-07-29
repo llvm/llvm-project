@@ -5,7 +5,7 @@
 // compiler. Certain LLVM IR optimisation passes will perform runtime breaking 
 // transformations on allocations not found to be in the entry block, current
 // OpenMP dialect lowering of TargetOp's will inject user allocations after
-// compiler generated entry code, in a seperate block, this test checks that
+// compiler generated entry code, in a separate block, this test checks that
 // a small function which attempts to raise some of these (specifically 
 // constant sized) allocations performs its task reasonably in these 
 // scenarios. 

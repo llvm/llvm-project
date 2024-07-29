@@ -2,6 +2,10 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
   "Compile Fortran runtime as CUDA sources (experimental)" OFF
   )
 
+option(FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS
+  "Do not compile global variables' definitions when producing PTX library" OFF
+  )
+
 set(FLANG_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
 
 set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
@@ -56,6 +60,11 @@ macro(enable_cuda_compilation name files)
     # Add an OBJECT library consisting of CUDA PTX.
     llvm_add_library(${name}PTX OBJECT PARTIAL_SOURCES_INTENDED ${files})
     set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    if (FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
+      target_compile_definitions(obj.${name}PTX
+        PRIVATE FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+        )
+    endif()
   endif()
 endmacro()
 
@@ -92,6 +101,7 @@ macro(enable_omp_offload_compilation files)
         "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
         "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
         "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
+        "gfx1152"
         )
       set(all_nvptx_architectures
         "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"

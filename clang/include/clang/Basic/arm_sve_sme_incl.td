@@ -225,7 +225,7 @@ def IsStreamingCompatible           : FlagType<0x4000000000>;
 def IsReadZA                        : FlagType<0x8000000000>;
 def IsWriteZA                       : FlagType<0x10000000000>;
 def IsReductionQV                   : FlagType<0x20000000000>;
-def IsStreamingOrSVE2p1             : FlagType<0x40000000000>; // Use for intrinsics that are common between sme/sme2 and sve2p1.
+def VerifyRuntimeMode               : FlagType<0x40000000000>; // Use for intrinsics that are common between SVE and SME.
 def IsInZA                          : FlagType<0x80000000000>;
 def IsOutZA                         : FlagType<0x100000000000>;
 def IsInOutZA                       : FlagType<0x200000000000>;
@@ -267,12 +267,15 @@ class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   ImmCheckType Kind = kind;
 }
 
+defvar InvalidMode = "";
+
 class Inst<string n, string p, string t, MergeType mt, string i,
            list<FlagType> ft, list<ImmCheck> ch, MemEltType met = MemEltTyDefault> {
   string Name = n;
   string Prototype = p;
   string Types = t;
-  string TargetGuard = "sve";
+  string SVETargetGuard = "sve";
+  string SMETargetGuard = "sme";
   int Merge = mt.Value;
   string MergeSuffix = mt.Suffix;
   string LLVMIntrinsic = i;

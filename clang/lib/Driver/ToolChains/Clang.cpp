@@ -45,6 +45,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
@@ -54,11 +55,13 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 
@@ -637,7 +640,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                            ProfileGenerateArg->getValue()));
     // The default is to use Clang Instrumentation.
     CmdArgs.push_back("-fprofile-instrument=clang");
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -656,7 +661,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fprofile-instrument=csllvm");
   }
   if (PGOGenArg) {
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -788,10 +795,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
       Args.hasArg(options::OPT_coverage))
     FProfileDir = Args.getLastArg(options::OPT_fprofile_dir);
 
-  // TODO: Don't claim -c/-S to warn about -fsyntax-only -c/-S, -E -c/-S,
-  // like we warn about -fsyntax-only -E.
-  (void)(Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S));
-
   // Put the .gcno and .gcda files (if needed) next to the primary output file,
   // or fall back to a file in the current directory for `clang -c --coverage
   // d/a.c` in the absence of -o.
@@ -829,36 +832,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
           Args.MakeArgString("-coverage-data-file=" + CoverageFilename));
     }
   }
-}
-
-/// Check whether the given input tree contains any compilation actions.
-static bool ContainsCompileAction(const Action *A) {
-  if (isa<CompileJobAction>(A) || isa<BackendJobAction>(A))
-    return true;
-
-  return llvm::any_of(A->inputs(), ContainsCompileAction);
-}
-
-/// Check if -relax-all should be passed to the internal assembler.
-/// This is done by default when compiling non-assembler source with -O0.
-static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
-  bool RelaxDefault = true;
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
-    RelaxDefault = A->getOption().matches(options::OPT_O0);
-
-  if (RelaxDefault) {
-    RelaxDefault = false;
-    for (const auto &Act : C.getActions()) {
-      if (ContainsCompileAction(Act)) {
-        RelaxDefault = true;
-        break;
-      }
-    }
-  }
-
-  return Args.hasFlag(options::OPT_mrelax_all, options::OPT_mno_relax_all,
-                      RelaxDefault);
 }
 
 static void
@@ -1055,7 +1028,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
       // If user provided -o, that is the dependency target, except
       // when we are only generating a dependency file.
-      Arg *OutputOpt = Args.getLastArg(options::OPT_o);
+      Arg *OutputOpt = Args.getLastArg(options::OPT_o, options::OPT__SLASH_Fo);
       if (OutputOpt && Output.getType() != types::TY_Dependencies) {
         DepTarget = OutputOpt->getValue();
       } else {
@@ -1100,33 +1073,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
   if (JA.isOffloading(Action::OFK_HIP))
     getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
-
-  // If we are compiling for a GPU target we want to override the system headers
-  // with ones created by the 'libc' project if present.
-  if (!Args.hasArg(options::OPT_nostdinc) &&
-      !Args.hasArg(options::OPT_nogpuinc) &&
-      !Args.hasArg(options::OPT_nobuiltininc)) {
-    // Without an offloading language we will include these headers directly.
-    // Offloading languages will instead only use the declarations stored in
-    // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
-    if ((getToolChain().getTriple().isNVPTX() ||
-         getToolChain().getTriple().isAMDGCN()) &&
-        C.getActiveOffloadKinds() == Action::OFK_None) {
-      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, getToolChain().getTripleString());
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
-    } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
-      // TODO: CUDA / HIP include their own headers for some common functions
-      // implemented here. We'll need to clean those up so they do not conflict.
-      SmallString<128> P(D.ResourceDir);
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, "llvm_libc_wrappers");
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
-    }
-  }
 
   // If we are offloading to a target via OpenMP we need to include the
   // openmp_wrappers folder which contains alternative system headers.
@@ -1244,7 +1190,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs,
                   {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_index_header_map});
+                   options::OPT_F, options::OPT_index_header_map,
+                   options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -1297,6 +1244,35 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
           HasStdlibxxIsystem ? TC.AddClangCXXStdlibIsystemArgs(Args, CmdArgs)
                              : TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
         });
+  }
+
+  // If we are compiling for a GPU target we want to override the system headers
+  // with ones created by the 'libc' project if present.
+  // TODO: This should be moved to `AddClangSystemIncludeArgs` by passing the
+  //       OffloadKind as an argument.
+  if (!Args.hasArg(options::OPT_nostdinc) &&
+      !Args.hasArg(options::OPT_nogpuinc) &&
+      !Args.hasArg(options::OPT_nobuiltininc)) {
+    // Without an offloading language we will include these headers directly.
+    // Offloading languages will instead only use the declarations stored in
+    // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
+    if ((getToolChain().getTriple().isNVPTX() ||
+         getToolChain().getTriple().isAMDGCN()) &&
+        C.getActiveOffloadKinds() == Action::OFK_None) {
+      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
+      llvm::sys::path::append(P, "include");
+      llvm::sys::path::append(P, getToolChain().getTripleString());
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(P));
+    } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
+      // TODO: CUDA / HIP include their own headers for some common functions
+      // implemented here. We'll need to clean those up so they do not conflict.
+      SmallString<128> P(D.ResourceDir);
+      llvm::sys::path::append(P, "include");
+      llvm::sys::path::append(P, "llvm_libc_wrappers");
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(P));
+    }
   }
 
   // Add system include arguments for all targets but IAMCU.
@@ -1507,6 +1483,45 @@ void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
 }
 }
 
+// Each combination of options here forms a signing schema, and in most cases
+// each signing schema is its own incompatible ABI. The default values of the
+// options represent the default signing schema.
+static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                         options::OPT_fno_ptrauth_intrinsics))
+    CC1Args.push_back("-fptrauth-intrinsics");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                         options::OPT_fno_ptrauth_calls))
+    CC1Args.push_back("-fptrauth-calls");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                         options::OPT_fno_ptrauth_returns))
+    CC1Args.push_back("-fptrauth-returns");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                         options::OPT_fno_ptrauth_auth_traps))
+    CC1Args.push_back("-fptrauth-auth-traps");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_address_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+
+  if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtable_pointer_type_discrimination,
+          options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+    CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                         options::OPT_fno_ptrauth_indirect_gotos))
+    CC1Args.push_back("-fptrauth-indirect-gotos");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_init_fini,
+                         options::OPT_fno_ptrauth_init_fini))
+    CC1Args.push_back("-fptrauth-init-fini");
+}
+
 static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs, bool isAArch64) {
   const Arg *A = isAArch64
@@ -1537,7 +1552,24 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   } else {
     StringRef DiagMsg;
     llvm::ARM::ParsedBranchProtection PBP;
-    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg))
+    bool EnablePAuthLR = false;
+
+    // To know if we need to enable PAuth-LR As part of the standard branch
+    // protection option, it needs to be determined if the feature has been
+    // activated in the `march` argument. This information is stored within the
+    // CmdArgs variable and can be found using a search.
+    if (isAArch64) {
+      auto isPAuthLR = [](const char *member) {
+        llvm::AArch64::ExtensionInfo pauthlr_extension =
+            llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
+        return pauthlr_extension.PosTargetFeature == member;
+      };
+
+      if (std::any_of(CmdArgs.begin(), CmdArgs.end(), isPAuthLR))
+        EnablePAuthLR = true;
+    }
+    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
+                                          EnablePAuthLR))
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << DiagMsg;
     if (!isAArch64 && PBP.Key == "b_key")
@@ -1552,16 +1584,30 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
 
   CmdArgs.push_back(
       Args.MakeArgString(Twine("-msign-return-address=") + Scope));
-  if (!Scope.equals("none"))
+  if (Scope != "none") {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
-  if (BranchProtectionPAuthLR)
+  }
+  if (BranchProtectionPAuthLR) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mbranch-protection-pauth-lr")));
+  }
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
-  if (GuardedControlStack)
+  // GCS is currently untested with PAuthABI, but enabling this could be allowed
+  // in future after testing with a suitable system.
+  if (GuardedControlStack) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back("-mguarded-control-stack");
+  }
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
@@ -1705,6 +1751,8 @@ void RenderAArch64ABI(const llvm::Triple &Triple, const ArgList &Args,
     ABIName = A->getValue();
   else if (Triple.isOSDarwin())
     ABIName = "darwinpcs";
+  else if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    ABIName = "pauthtest";
   else
     ABIName = "aapcs";
 
@@ -1741,14 +1789,16 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   // Enable/disable return address signing and indirect branch targets.
   CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
 
+  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    handlePAuthABI(Args, CmdArgs);
+
   // Handle -msve_vector_bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
     StringRef Val = A->getValue();
     const Driver &D = getToolChain().getDriver();
-    if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
-        Val.equals("1024") || Val.equals("2048") || Val.equals("128+") ||
-        Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
-        Val.equals("2048+")) {
+    if (Val == "128" || Val == "256" || Val == "512" || Val == "1024" ||
+        Val == "2048" || Val == "128+" || Val == "256+" || Val == "512+" ||
+        Val == "1024+" || Val == "2048+") {
       unsigned Bits = 0;
       if (!Val.consume_back("+")) {
         bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
@@ -1762,7 +1812,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
     // Silently drop requests for vector-length agnostic code as it's implied.
-    } else if (!Val.equals("scalable"))
+    } else if (Val != "scalable")
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
@@ -1782,6 +1832,29 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
                     options::OPT_fno_ptrauth_intrinsics);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_calls,
+                    options::OPT_fno_ptrauth_calls);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_returns,
+                    options::OPT_fno_ptrauth_returns);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_auth_traps,
+                    options::OPT_fno_ptrauth_auth_traps);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_vtable_pointer_address_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_address_discrimination);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_vtable_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
+      options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
+                    options::OPT_fno_ptrauth_init_fini);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_function_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_function_pointer_type_discrimination);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_indirect_gotos,
+                    options::OPT_fno_ptrauth_indirect_gotos);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -1954,10 +2027,10 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const Driver &D = getToolChain().getDriver();
   const llvm::Triple &T = getToolChain().getTriple();
-  if (Args.getLastArg(options::OPT_mtune_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
-    std::string CPU = ppc::getPPCTuneCPU(Args, T);
-    CmdArgs.push_back(Args.MakeArgString(CPU));
+    StringRef CPU = llvm::PPC::getNormalizedPPCTuneCPU(T, A->getValue());
+    CmdArgs.push_back(Args.MakeArgString(CPU.str()));
   }
 
   // Select the ABI to use.
@@ -2100,7 +2173,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
-    StringRef Arch = riscv::getRISCVArch(Args, Triple);
+    std::string Arch = riscv::getRISCVArch(Args, Triple);
     auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
         Arch, /*EnableExperimentalExtensions*/ true);
     // Ignore parsing error.
@@ -2110,7 +2183,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     // If the value is "zvl", use MinVLen from march. Otherwise, try to parse
     // as integer as long as we have a MinVLen.
     unsigned Bits = 0;
-    if (Val.equals("zvl") && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
+    if (Val == "zvl" && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
       Bits = MinVLen;
     } else if (!Val.getAsInteger(10, Bits)) {
       // Only accept power of 2 values beteen RVVBitsPerBlock and 65536 that
@@ -2127,7 +2200,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
           Args.MakeArgString("-mvscale-max=" + llvm::Twine(VScaleMin)));
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(VScaleMin)));
-    } else if (!Val.equals("scalable")) {
+    } else if (Val != "scalable") {
       // Handle the unsupported values passed to mrvv-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
@@ -2458,8 +2531,16 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const ArgList &Args,
                                               ArgStringList &CmdArgs,
                                               const Driver &D) {
-  if (UseRelaxAll(C, Args))
-    CmdArgs.push_back("-mrelax-all");
+  // Default to -mno-relax-all.
+  //
+  // Note: RISC-V requires an indirect jump for offsets larger than 1MiB. This
+  // cannot be done by assembler branch relaxation as it needs a free temporary
+  // register. Because of this, branch relaxation is handled by a MachineIR pass
+  // before the assembler. Forcing assembler branch relaxation for -O0 makes the
+  // MachineIR branch relaxation inaccurate and it will miss cases where an
+  // indirect branch is necessary.
+  Args.addOptInFlag(CmdArgs, options::OPT_mrelax_all,
+                    options::OPT_mno_relax_all);
 
   // Only default to -mincremental-linker-compatible if we think we are
   // targeting the MSVC linker.
@@ -2485,6 +2566,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   // arg after parsing the '-I' arg.
   bool TakeNextArg = false;
 
+  const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
+  bool Crel = false, ExperimentalCrel = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   bool UseNoExecStack = false;
   const char *MipsTargetFeature = nullptr;
@@ -2524,6 +2607,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 
       switch (C.getDefaultToolChain().getArch()) {
       default:
+        break;
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        if (Value == "-msse2avx") {
+          CmdArgs.push_back("-msse2avx");
+          continue;
+        }
         break;
       case llvm::Triple::wasm32:
       case llvm::Triple::wasm64:
@@ -2608,6 +2698,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                  Value == "-nocompress-debug-sections" ||
                  Value == "--nocompress-debug-sections") {
         CmdArgs.push_back(Value.data());
+      } else if (Value == "--crel") {
+        Crel = true;
+      } else if (Value == "--no-crel") {
+        Crel = false;
+      } else if (Value == "--allow-experimental-crel") {
+        ExperimentalCrel = true;
       } else if (Value == "-mrelax-relocations=yes" ||
                  Value == "--mrelax-relocations=yes") {
         UseRelaxRelocations = true;
@@ -2633,7 +2729,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
                  Value.starts_with("-mhwdiv") || Value.starts_with("-march")) {
         // Do nothing, we'll validate it later.
-      } else if (Value == "-defsym") {
+      } else if (Value == "-defsym" || Value == "--defsym") {
         if (A->getNumValues() != 2) {
           D.Diag(diag::err_drv_defsym_invalid_format) << Value;
           break;
@@ -2652,7 +2748,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           D.Diag(diag::err_drv_defsym_invalid_symval) << SVal;
           break;
         }
-        CmdArgs.push_back(Value.data());
+        CmdArgs.push_back("--defsym");
         TakeNextArg = true;
       } else if (Value == "-fdebug-compilation-dir") {
         CmdArgs.push_back("-fdebug-compilation-dir");
@@ -2673,6 +2769,16 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
   if (ImplicitIt.size())
     AddARMImplicitITArgs(Args, CmdArgs, ImplicitIt);
+  if (Crel) {
+    if (!ExperimentalCrel)
+      D.Diag(diag::err_drv_experimental_crel);
+    if (Triple.isOSBinFormatELF() && !Triple.isMIPS()) {
+      CmdArgs.push_back("--crel");
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--crel" << D.getTargetTriple();
+    }
+  }
   if (!UseRelaxRelocations)
     CmdArgs.push_back("-mrelax-relocations=no");
   if (UseNoExecStack)
@@ -2754,24 +2860,22 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool TrappingMathPresent = false; // Is trapping-math in args, and not
                                     // overriden by ffp-exception-behavior?
   bool RoundingFPMath = false;
-  bool RoundingMathPresent = false; // Is rounding-math in args?
   // -ffp-model values: strict, fast, precise
   StringRef FPModel = "";
   // -ffp-exception-behavior options: strict, maytrap, ignore
   StringRef FPExceptionBehavior = "";
   // -ffp-eval-method options: double, extended, source
   StringRef FPEvalMethod = "";
-  const llvm::DenormalMode DefaultDenormalFPMath =
+  llvm::DenormalMode DenormalFPMath =
       TC.getDefaultDenormalModeForType(Args, JA);
-  const llvm::DenormalMode DefaultDenormalFP32Math =
+  llvm::DenormalMode DenormalFP32Math =
       TC.getDefaultDenormalModeForType(Args, JA, &llvm::APFloat::IEEEsingle());
 
-  llvm::DenormalMode DenormalFPMath = DefaultDenormalFPMath;
-  llvm::DenormalMode DenormalFP32Math = DefaultDenormalFP32Math;
   // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
   // If one wasn't given by the user, don't pass it here.
   StringRef FPContract;
   StringRef LastSeenFfpContractOption;
+  StringRef LastFpContractOverrideOption;
   bool SeenUnsafeMathModeOption = false;
   if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
       !JA.isOffloading(Action::OFK_HIP))
@@ -2813,17 +2917,37 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     SeenUnsafeMathModeOption = true;
   };
 
+  // Lambda to consolidate common handling for fp-contract
+  auto restoreFPContractState = [&]() {
+    // CUDA and HIP don't rely on the frontend to pass an ffp-contract option.
+    // For other targets, if the state has been changed by one of the
+    // unsafe-math umbrella options a subsequent -fno-fast-math or
+    // -fno-unsafe-math-optimizations option reverts to the last value seen for
+    // the -ffp-contract option or "on" if we have not seen the -ffp-contract
+    // option. If we have not seen an unsafe-math option or -ffp-contract,
+    // we leave the FPContract state unchanged.
+    if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
+        !JA.isOffloading(Action::OFK_HIP)) {
+      if (LastSeenFfpContractOption != "")
+        FPContract = LastSeenFfpContractOption;
+      else if (SeenUnsafeMathModeOption)
+        FPContract = "on";
+    }
+    // In this case, we're reverting to the last explicit fp-contract option
+    // or the platform default
+    LastFpContractOverrideOption = "";
+  };
+
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
     CmdArgs.push_back(A->getValue());
   }
 
   for (const Arg *A : Args) {
-    auto optID = A->getOption().getID();
-    bool PreciseFPModel = false;
-    switch (optID) {
-    default:
-      break;
+    switch (A->getOption().getID()) {
+    // If this isn't an FP option skip the claim below
+    default: continue;
+
     case options::OPT_fcx_limited_range:
       if (GccRangeComplexOption.empty()) {
         if (Range != LangOptions::ComplexRangeKind::CX_Basic)
@@ -2873,13 +2997,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fcomplex_arithmetic_EQ: {
       LangOptions::ComplexRangeKind RangeVal;
       StringRef Val = A->getValue();
-      if (Val.equals("full"))
+      if (Val == "full")
         RangeVal = LangOptions::ComplexRangeKind::CX_Full;
-      else if (Val.equals("improved"))
+      else if (Val == "improved")
         RangeVal = LangOptions::ComplexRangeKind::CX_Improved;
-      else if (Val.equals("promoted"))
+      else if (Val == "promoted")
         RangeVal = LangOptions::ComplexRangeKind::CX_Promoted;
-      else if (Val.equals("basic"))
+      else if (Val == "basic")
         RangeVal = LangOptions::ComplexRangeKind::CX_Basic;
       else {
         D.Diag(diag::err_drv_unsupported_option_argument)
@@ -2915,55 +3039,41 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
-      // -fno_fast_math restores default denormal and fpcontract handling
-      FPContract = "on";
-      DenormalFPMath = llvm::DenormalMode::getIEEE();
-
-      // FIXME: The target may have picked a non-IEEE default mode here based on
-      // -cl-denorms-are-zero. Should the target consider -fp-model interaction?
-      DenormalFP32Math = llvm::DenormalMode::getIEEE();
 
       StringRef Val = A->getValue();
-      if (OFastEnabled && !Val.equals("fast")) {
-          // Only -ffp-model=fast is compatible with OFast, ignore.
+      if (OFastEnabled && Val != "fast") {
+        // Only -ffp-model=fast is compatible with OFast, ignore.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-model=" + Val) << "-Ofast";
         break;
       }
       StrictFPModel = false;
-      PreciseFPModel = true;
-      // ffp-model= is a Driver option, it is entirely rewritten into more
-      // granular options before being passed into cc1.
-      // Use the gcc option in the switch below.
-      if (!FPModel.empty() && !FPModel.equals(Val))
+      if (!FPModel.empty() && FPModel != Val)
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-model=" + FPModel)
             << Args.MakeArgString("-ffp-model=" + Val);
-      if (Val.equals("fast")) {
+      if (Val == "fast") {
         FPModel = Val;
         applyFastMath();
-      } else if (Val.equals("precise")) {
-        optID = options::OPT_ffp_contract;
+        // applyFastMath sets fp-contract="fast"
+        LastFpContractOverrideOption = "-ffp-model=fast";
+      } else if (Val == "precise") {
         FPModel = Val;
         FPContract = "on";
-        PreciseFPModel = true;
-      } else if (Val.equals("strict")) {
+        LastFpContractOverrideOption = "-ffp-model=precise";
+      } else if (Val == "strict") {
         StrictFPModel = true;
-        optID = options::OPT_frounding_math;
         FPExceptionBehavior = "strict";
         FPModel = Val;
         FPContract = "off";
+        LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
+        RoundingFPMath = true;
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
       break;
     }
-    }
-
-    switch (optID) {
-    // If this isn't an FP option skip the claim below
-    default: continue;
 
     // Options controlling individual features
     case options::OPT_fhonor_infinities:    HonorINFs = true;         break;
@@ -2982,7 +3092,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fno_signed_zeros:     SignedZeros = false;      break;
     case options::OPT_ftrapping_math:
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals("strict"))
+          FPExceptionBehavior != "strict")
         // Warn that previous value of option is overridden.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-exception-behavior=" +
@@ -2994,7 +3104,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     case options::OPT_fno_trapping_math:
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals("ignore"))
+          FPExceptionBehavior != "ignore")
         // Warn that previous value of option is overridden.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-exception-behavior=" +
@@ -3007,12 +3117,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
     case options::OPT_frounding_math:
       RoundingFPMath = true;
-      RoundingMathPresent = true;
       break;
 
     case options::OPT_fno_rounding_math:
       RoundingFPMath = false;
-      RoundingMathPresent = false;
       break;
 
     case options::OPT_fdenormal_fp_math_EQ:
@@ -3035,42 +3143,37 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // Validate and pass through -ffp-contract option.
     case options::OPT_ffp_contract: {
       StringRef Val = A->getValue();
-      if (PreciseFPModel) {
-        // -ffp-model=precise enables ffp-contract=on.
-        // -ffp-model=precise sets PreciseFPModel to on and Val to
-        // "precise". FPContract is set.
-        ;
-      } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off") ||
-                 Val.equals("fast-honor-pragmas")) {
+      if (Val == "fast" || Val == "on" || Val == "off" ||
+          Val == "fast-honor-pragmas") {
+        if (Val != FPContract && LastFpContractOverrideOption != "") {
+          D.Diag(clang::diag::warn_drv_overriding_option)
+              << LastFpContractOverrideOption
+              << Args.MakeArgString("-ffp-contract=" + Val);
+        }
+
         FPContract = Val;
         LastSeenFfpContractOption = Val;
+        LastFpContractOverrideOption = "";
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
       break;
     }
 
-    // Validate and pass through -ffp-model option.
-    case options::OPT_ffp_model_EQ:
-      // This should only occur in the error case
-      // since the optID has been replaced by a more granular
-      // floating point option.
-      break;
-
     // Validate and pass through -ffp-exception-behavior option.
     case options::OPT_ffp_exception_behavior_EQ: {
       StringRef Val = A->getValue();
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals(Val))
+          FPExceptionBehavior != Val)
         // Warn that previous value of option is overridden.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-exception-behavior=" +
                                   FPExceptionBehavior)
             << Args.MakeArgString("-ffp-exception-behavior=" + Val);
       TrappingMath = TrappingMathPresent = false;
-      if (Val.equals("ignore") || Val.equals("maytrap"))
+      if (Val == "ignore" || Val == "maytrap")
         FPExceptionBehavior = Val;
-      else if (Val.equals("strict")) {
+      else if (Val == "strict") {
         FPExceptionBehavior = Val;
         TrappingMath = TrappingMathPresent = true;
       } else
@@ -3082,8 +3185,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // Validate and pass through -ffp-eval-method option.
     case options::OPT_ffp_eval_method_EQ: {
       StringRef Val = A->getValue();
-      if (Val.equals("double") || Val.equals("extended") ||
-          Val.equals("source"))
+      if (Val == "double" || Val == "extended" || Val == "source")
         FPEvalMethod = Val;
       else
         D.Diag(diag::err_drv_unsupported_option_argument)
@@ -3095,18 +3197,18 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       StringRef Val = A->getValue();
       const llvm::Triple::ArchType Arch = TC.getArch();
       if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
-        if (Val.equals("standard") || Val.equals("fast"))
+        if (Val == "standard" || Val == "fast")
           Float16ExcessPrecision = Val;
         // To make it GCC compatible, allow the value of "16" which
         // means disable excess precision, the same meaning than clang's
         // equivalent value "none".
-        else if (Val.equals("16"))
+        else if (Val == "16")
           Float16ExcessPrecision = "none";
         else
           D.Diag(diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Val;
       } else {
-        if (!(Val.equals("standard") || Val.equals("fast")))
+        if (!(Val == "standard" || Val == "fast"))
           D.Diag(diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Val;
       }
@@ -3130,6 +3232,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       TrappingMath = false;
       FPExceptionBehavior = "";
       FPContract = "fast";
+      LastFpContractOverrideOption = "-funsafe-math-optimizations";
       SeenUnsafeMathModeOption = true;
       break;
     case options::OPT_fno_unsafe_math_optimizations:
@@ -3137,19 +3240,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       ApproxFunc = false;
-      TrappingMath = true;
-      FPExceptionBehavior = "strict";
-
-      // The target may have opted to flush by default, so force IEEE.
-      DenormalFPMath = llvm::DenormalMode::getIEEE();
-      DenormalFP32Math = llvm::DenormalMode::getIEEE();
-      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-          !JA.isOffloading(Action::OFK_HIP)) {
-        if (LastSeenFfpContractOption != "") {
-          FPContract = LastSeenFfpContractOption;
-        } else if (SeenUnsafeMathModeOption)
-          FPContract = "on";
-      }
+      restoreFPContractState();
       break;
 
     case options::OPT_Ofast:
@@ -3157,10 +3248,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (!OFastEnabled)
         continue;
       [[fallthrough]];
-    case options::OPT_ffast_math: {
+    case options::OPT_ffast_math:
       applyFastMath();
+      if (A->getOption().getID() == options::OPT_Ofast)
+        LastFpContractOverrideOption = "-Ofast";
+      else
+        LastFpContractOverrideOption = "-ffast-math";
       break;
-    }
     case options::OPT_fno_fast_math:
       HonorINFs = true;
       HonorNaNs = true;
@@ -3172,37 +3266,39 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       ApproxFunc = false;
       SignedZeros = true;
-      // -fno_fast_math restores default denormal and fpcontract handling
-      DenormalFPMath = DefaultDenormalFPMath;
-      DenormalFP32Math = llvm::DenormalMode::getIEEE();
-      if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-          !JA.isOffloading(Action::OFK_HIP)) {
-        if (LastSeenFfpContractOption != "") {
-          FPContract = LastSeenFfpContractOption;
-        } else if (SeenUnsafeMathModeOption)
-          FPContract = "on";
-      }
+      restoreFPContractState();
+      LastFpContractOverrideOption = "";
       break;
-    }
+    } // End switch (A->getOption().getID())
+
+    // The StrictFPModel local variable is needed to report warnings
+    // in the way we intend. If -ffp-model=strict has been used, we
+    // want to report a warning for the next option encountered that
+    // takes us out of the settings described by fp-model=strict, but
+    // we don't want to continue issuing warnings for other conflicting
+    // options after that.
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
       if (HonorINFs && HonorNaNs && !AssociativeMath && !ReciprocalMath &&
           SignedZeros && TrappingMath && RoundingFPMath && !ApproxFunc &&
-          DenormalFPMath == llvm::DenormalMode::getIEEE() &&
-          DenormalFP32Math == llvm::DenormalMode::getIEEE() &&
-          FPContract.equals("off"))
+          FPContract == "off")
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
         StrictFPModel = false;
         FPModel = "";
+        // The warning for -ffp-contract would have been reported by the
+        // OPT_ffp_contract_EQ handler above. A special check here is needed
+        // to avoid duplicating the warning.
         auto RHS = (A->getNumValues() == 0)
                        ? A->getSpelling()
                        : Args.MakeArgString(A->getSpelling() + A->getValue());
-        if (RHS != "-ffp-model=strict")
-          D.Diag(clang::diag::warn_drv_overriding_option)
-              << "-ffp-model=strict" << RHS;
+        if (A->getSpelling() != "-ffp-contract=") {
+          if (RHS != "-ffp-model=strict")
+            D.Diag(clang::diag::warn_drv_overriding_option)
+                << "-ffp-model=strict" << RHS;
+        }
       }
     }
 
@@ -3237,7 +3333,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (TrappingMath) {
     // FP Exception Behavior is also set to strict
-    assert(FPExceptionBehavior.equals("strict"));
+    assert(FPExceptionBehavior == "strict");
   }
 
   // The default is IEEE.
@@ -3259,11 +3355,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!FPContract.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
 
-  if (!RoundingFPMath)
-    CmdArgs.push_back(Args.MakeArgString("-fno-rounding-math"));
-
-  if (RoundingFPMath && RoundingMathPresent)
+  if (RoundingFPMath)
     CmdArgs.push_back(Args.MakeArgString("-frounding-math"));
+  else
+    CmdArgs.push_back(Args.MakeArgString("-fno-rounding-math"));
 
   if (!FPExceptionBehavior.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-exception-behavior=" +
@@ -3285,26 +3380,32 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // individual features enabled by -ffast-math instead of the option itself as
   // that's consistent with gcc's behaviour.
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
-      ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath) {
+      ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath)
     CmdArgs.push_back("-ffast-math");
-    if (FPModel.equals("fast")) {
-      if (FPContract.equals("fast"))
-        // All set, do nothing.
-        ;
-      else if (FPContract.empty())
-        // Enable -ffp-contract=fast
-        CmdArgs.push_back(Args.MakeArgString("-ffp-contract=fast"));
-      else
-        D.Diag(clang::diag::warn_drv_overriding_option)
-            << "-ffp-model=fast"
-            << Args.MakeArgString("-ffp-contract=" + FPContract);
-    }
-  }
 
   // Handle __FINITE_MATH_ONLY__ similarly.
-  if (!HonorINFs && !HonorNaNs)
+  // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
+  // Otherwise process the Xclang arguments to determine if -menable-no-infs and
+  // -menable-no-nans are set by the user.
+  bool shouldAddFiniteMathOnly = false;
+  if (!HonorINFs && !HonorNaNs) {
+    shouldAddFiniteMathOnly = true;
+  } else {
+    bool InfValues = true;
+    bool NanValues = true;
+    for (const auto *Arg : Args.filtered(options::OPT_Xclang)) {
+      StringRef ArgValue = Arg->getValue();
+      if (ArgValue == "-menable-no-nans")
+        NanValues = false;
+      else if (ArgValue == "-menable-no-infs")
+        InfValues = false;
+    }
+    if (!NanValues && !InfValues)
+      shouldAddFiniteMathOnly = true;
+  }
+  if (shouldAddFiniteMathOnly) {
     CmdArgs.push_back("-ffinite-math-only");
-
+  }
   if (const Arg *A = Args.getLastArg(options::OPT_mfpmath_EQ)) {
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
@@ -3673,6 +3774,11 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
     CmdArgs.push_back(Args.MakeArgString(CLExtStr));
   }
 
+  if (Args.hasArg(options::OPT_cl_finite_math_only)) {
+    CmdArgs.push_back("-menable-no-infs");
+    CmdArgs.push_back("-menable-no-nans");
+  }
+
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
       CmdArgs.push_back(Args.MakeArgString(A->getOption().getPrefixedName()));
@@ -3691,7 +3797,6 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
                                          options::OPT_D,
                                          options::OPT_I,
-                                         options::OPT_S,
                                          options::OPT_O,
                                          options::OPT_emit_llvm,
                                          options::OPT_emit_obj,
@@ -3898,6 +4003,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (Args.hasFlag(options::OPT_fmodules_strict_decluse,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                     options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -4632,6 +4740,21 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     }
   }
 
+  // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
+  bool UseDebugTemplateAlias =
+      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 4;
+  if (const auto *DebugTemplateAlias = Args.getLastArg(
+          options::OPT_gtemplate_alias, options::OPT_gno_template_alias)) {
+    // DW_TAG_template_alias is only supported from DWARFv5 but if a user
+    // asks for it we should let them have it (if the target supports it).
+    if (checkDebugInfoOption(DebugTemplateAlias, Args, D, TC)) {
+      const auto &Opt = DebugTemplateAlias->getOption();
+      UseDebugTemplateAlias = Opt.matches(options::OPT_gtemplate_alias);
+    }
+  }
+  if (UseDebugTemplateAlias)
+    CmdArgs.push_back("-gtemplate-alias");
+
   if (const Arg *A = Args.getLastArg(options::OPT_gsrc_hash_EQ)) {
     StringRef v = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-gsrc-hash=" + v));
@@ -4642,11 +4765,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
-  // Always enabled for SCE tuning.
-  bool NeedAranges = DebuggerTuning == llvm::DebuggerKind::SCE;
-  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges))
-    NeedAranges = checkDebugInfoOption(A, Args, D, TC) || NeedAranges;
-  if (NeedAranges) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gdwarf_aranges);
+      A && checkDebugInfoOption(A, Args, D, TC)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-generate-arange-section");
   }
@@ -4654,6 +4774,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   Args.addOptInFlag(CmdArgs, options::OPT_fforce_dwarf_frame,
                     options::OPT_fno_force_dwarf_frame);
 
+  bool EnableTypeUnits = false;
   if (Args.hasFlag(options::OPT_fdebug_types_section,
                    options::OPT_fno_debug_types_section, false)) {
     if (!(T.isOSBinFormatELF() || T.isOSBinFormatWasm())) {
@@ -4664,9 +4785,22 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     } else if (checkDebugInfoOption(
                    Args.getLastArg(options::OPT_fdebug_types_section), Args, D,
                    TC)) {
+      EnableTypeUnits = true;
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-generate-type-units");
     }
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_gomit_unreferenced_methods,
+                          options::OPT_gno_omit_unreferenced_methods))
+    (void)checkDebugInfoOption(A, Args, D, TC);
+  if (Args.hasFlag(options::OPT_gomit_unreferenced_methods,
+                   options::OPT_gno_omit_unreferenced_methods, false) &&
+      (DebugInfoKind == llvm::codegenoptions::DebugInfoConstructor ||
+       DebugInfoKind == llvm::codegenoptions::LimitedDebugInfo) &&
+      !EnableTypeUnits) {
+    CmdArgs.push_back("-gomit-unreferenced-methods");
   }
 
   // To avoid join/split of directory+filename, the integrated assembler prefers
@@ -4718,7 +4852,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                        Output.getFilename());
 }
 
-static void ProcessVSRuntimeLibrary(const ArgList &Args,
+static void ProcessVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   unsigned RTOptionID = options::OPT__SLASH_MT;
 
@@ -4781,6 +4915,12 @@ static void ProcessVSRuntimeLibrary(const ArgList &Args,
     // implemented in clang.
     CmdArgs.push_back("--dependent-lib=oldnames");
   }
+
+  // All Arm64EC object files implicitly add softintrin.lib. This is necessary
+  // even if the file doesn't actually refer to any of the routines because
+  // the CRT itself has incomplete dependency markings.
+  if (TC.getTriple().isWindowsArm64EC())
+    CmdArgs.push_back("--dependent-lib=softintrin");
 }
 
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -4929,7 +5069,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
 
     if (JA.isDeviceOffloading(Action::OFK_HIP) &&
-        getToolChain().getTriple().isAMDGPU()) {
+        (getToolChain().getTriple().isAMDGPU() ||
+         (getToolChain().getTriple().isSPIRV() &&
+          getToolChain().getTriple().getVendor() == llvm::Triple::AMD))) {
       // Device side compilation printf
       if (Args.getLastArg(options::OPT_mprintf_kind_EQ)) {
         CmdArgs.push_back(Args.MakeArgString(
@@ -5669,6 +5811,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   case CodeGenOptions::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
     break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    FPKeepKindStr = "-mframe-pointer=reserved";
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";
     break;
@@ -5683,16 +5828,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_zero_initialized_in_bss);
 
   bool OFastEnabled = isOptimizationLevelFast(Args);
+  if (OFastEnabled)
+    D.Diag(diag::warn_drv_deprecated_arg_ofast);
   // If -Ofast is the optimization level, then -fstrict-aliasing should be
   // enabled.  This alias option is being used to simplify the hasFlag logic.
   OptSpecifier StrictAliasingAliasOption =
       OFastEnabled ? options::OPT_Ofast : options::OPT_fstrict_aliasing;
-  // We turn strict aliasing off by default if we're in CL mode, since MSVC
+  // We turn strict aliasing off by default if we're Windows MSVC since MSVC
   // doesn't do any TBAA.
-  bool TBAAOnByDefault = !D.IsCLMode();
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
-                    options::OPT_fno_strict_aliasing, TBAAOnByDefault))
+                    options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
     CmdArgs.push_back("-relaxed-aliasing");
+  if (Args.hasFlag(options::OPT_fpointer_tbaa, options::OPT_fno_pointer_tbaa,
+                   false))
+    CmdArgs.push_back("-pointer-tbaa");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");
@@ -5719,6 +5868,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_omit_vtable_rtti,
                   options::OPT_fno_experimental_omit_vtable_rtti);
+
+  Args.AddLastArg(CmdArgs, options::OPT_fdisable_block_signature_string,
+                  options::OPT_fno_disable_block_signature_string);
 
   // Handle segmented stacks.
   Args.addOptInFlag(CmdArgs, options::OPT_fsplit_stack,
@@ -5788,7 +5940,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // If toolchain choose to use MCAsmParser for inline asm don't pass the
-  // option to disable integrated-as explictly.
+  // option to disable integrated-as explicitly.
   if (!TC.useIntegratedAs() && !TC.parseInlineAsmUsingAsmParser())
     CmdArgs.push_back("-no-integrated-as");
 
@@ -5896,81 +6048,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
 
-  if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-    StringRef CM = A->getValue();
-    bool Ok = false;
-    if (Triple.isOSAIX() && CM == "medium")
-      CM = "large";
-    if (Triple.isAArch64(64)) {
-      Ok = CM == "tiny" || CM == "small" || CM == "large";
-      if (CM == "large" && !Triple.isOSBinFormatMachO() &&
-          RelocationModel != llvm::Reloc::Static)
-        D.Diag(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-fno-pic";
-    } else if (Triple.isLoongArch()) {
-      if (CM == "extreme" &&
-          Args.hasFlagNoClaim(options::OPT_fplt, options::OPT_fno_plt, false))
-        D.Diag(diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "-fplt";
-      Ok = CM == "normal" || CM == "medium" || CM == "extreme";
-      // Convert to LLVM recognizable names.
-      if (Ok)
-        CM = llvm::StringSwitch<StringRef>(CM)
-                 .Case("normal", "small")
-                 .Case("extreme", "large")
-                 .Default(CM);
-    } else if (Triple.isPPC64() || Triple.isOSAIX()) {
-      Ok = CM == "small" || CM == "medium" || CM == "large";
-    } else if (Triple.isRISCV()) {
-      if (CM == "medlow")
-        CM = "small";
-      else if (CM == "medany")
-        CM = "medium";
-      Ok = CM == "small" || CM == "medium";
-    } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
-                              CM);
-    } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {
-      // NVPTX/AMDGPU/SPIRV does not care about the code model and will accept
-      // whatever works for the host.
-      Ok = true;
-    } else if (Triple.isSPARC64()) {
-      if (CM == "medlow")
-        CM = "small";
-      else if (CM == "medmid")
-        CM = "medium";
-      else if (CM == "medany")
-        CM = "large";
-      Ok = CM == "small" || CM == "medium" || CM == "large";
-    }
-    if (Ok) {
-      CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
-    } else {
-      D.Diag(diag::err_drv_unsupported_option_argument_for_target)
-          << A->getSpelling() << CM << TripleStr;
-    }
-  }
-
-  if (Triple.getArch() == llvm::Triple::x86_64) {
-    bool IsMediumCM = false;
-    bool IsLargeCM = false;
-    if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-      IsMediumCM = StringRef(A->getValue()) == "medium";
-      IsLargeCM = StringRef(A->getValue()) == "large";
-    }
-    if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
-      if (!IsMediumCM && !IsLargeCM) {
-        D.Diag(diag::warn_drv_large_data_threshold_invalid_code_model)
-            << A->getOption().getRenderName();
-      } else {
-        A->render(Args, CmdArgs);
-      }
-    } else if (IsMediumCM) {
-      CmdArgs.push_back("-mlarge-data-threshold=65536");
-    } else if (IsLargeCM) {
-      CmdArgs.push_back("-mlarge-data-threshold=0");
-    }
-  }
+  addMCModel(D, Args, Triple, RelocationModel, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
     StringRef Value = A->getValue();
@@ -6152,6 +6230,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_funique_section_names,
                      options::OPT_fno_unique_section_names);
+  Args.addOptInFlag(CmdArgs, options::OPT_fseparate_named_sections,
+                    options::OPT_fno_separate_named_sections);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
@@ -6526,7 +6606,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *A =
           Args.getLastArg(options::OPT_fvisibility_global_new_delete_hidden)) {
     D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args)
+        << A->getAsString(Args) << /*hasReplacement=*/true
         << "-fvisibility-global-new-delete=force-hidden";
   }
 
@@ -6557,6 +6637,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fheinous_gnu_extensions);
   Args.AddLastArg(CmdArgs, options::OPT_fdigraphs, options::OPT_fno_digraphs);
   Args.AddLastArg(CmdArgs, options::OPT_fzero_call_used_regs_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fraw_string_literals,
+                  options::OPT_fno_raw_string_literals);
 
   if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
                    Triple.hasDefaultEmulatedTLS()))
@@ -6685,7 +6767,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef S0 = A->getValue(), S = S0;
     unsigned Size, Offset = 0;
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
-        !Triple.isX86())
+        !Triple.isX86() &&
+        !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
+                                Triple.getArch() == llvm::Triple::ppc64)))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||
@@ -6778,6 +6862,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (const char *Name = C.getTimeTraceFile(&JA)) {
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
+    Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
@@ -7031,12 +7116,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       options::OPT_fms_compatibility, options::OPT_fno_ms_compatibility,
       (IsWindowsMSVC && Args.hasFlag(options::OPT_fms_extensions,
                                      options::OPT_fno_ms_extensions, true)));
-  if (IsMSVCCompat)
+  if (IsMSVCCompat) {
     CmdArgs.push_back("-fms-compatibility");
+    if (!types::isCXX(Input.getType()) &&
+        Args.hasArg(options::OPT_fms_define_stdc))
+      CmdArgs.push_back("-fms-define-stdc");
+  }
 
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
-    ProcessVSRuntimeLibrary(Args, CmdArgs);
+    ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   // Handle -fgcc-version, if present.
   VersionTuple GNUCVer;
@@ -7253,16 +7342,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_unique_vtables,
                      options::OPT_fno_assume_unique_vtables);
 
-  // -frelaxed-template-template-args is off by default, as it is a severe
-  // breaking change until a corresponding change to template partial ordering
-  // is provided.
-  Args.addOptInFlag(CmdArgs, options::OPT_frelaxed_template_template_args,
-                    options::OPT_fno_relaxed_template_template_args);
+  // -frelaxed-template-template-args is deprecated.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_frelaxed_template_template_args,
+                          options::OPT_fno_relaxed_template_template_args)) {
+    if (A->getOption().matches(
+            options::OPT_fno_relaxed_template_template_args)) {
+      D.Diag(diag::warn_drv_deprecated_arg_no_relaxed_template_template_args);
+      CmdArgs.push_back("-fno-relaxed-template-template-args");
+    } else {
+      D.Diag(diag::warn_drv_deprecated_arg)
+          << A->getAsString(Args) << /*hasReplacement=*/false;
+    }
+  }
 
-  // -fsized-deallocation is off by default, as it is an ABI-breaking change for
-  // most platforms.
-  Args.addOptInFlag(CmdArgs, options::OPT_fsized_deallocation,
-                    options::OPT_fno_sized_deallocation);
+  // -fsized-deallocation is on by default in C++14 onwards and otherwise off
+  // by default.
+  Args.addLastArg(CmdArgs, options::OPT_fsized_deallocation,
+                  options::OPT_fno_sized_deallocation);
 
   // -faligned-allocation is on by default in C++17 onwards and otherwise off
   // by default.
@@ -7500,6 +7597,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fsafe_buffer_usage_suggestions,
                     options::OPT_fno_safe_buffer_usage_suggestions);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_late_parse_attributes,
+                    options::OPT_fno_experimental_late_parse_attributes);
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
@@ -8111,7 +8211,7 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args,
 
   std::vector<std::string> EHArgs =
       Args.getAllArgValues(options::OPT__SLASH_EH);
-  for (auto EHVal : EHArgs) {
+  for (const auto &EHVal : EHArgs) {
     for (size_t I = 0, E = EHVal.size(); I != E; ++I) {
       switch (EHVal[I]) {
       case 'a':
@@ -8163,7 +8263,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                            ArgStringList &CmdArgs) const {
   bool isNVPTX = getToolChain().getTriple().isNVPTX();
 
-  ProcessVSRuntimeLibrary(Args, CmdArgs);
+  ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   if (Arg *ShowIncludes =
           Args.getLastArg(options::OPT__SLASH_showIncludes,
@@ -8476,6 +8576,9 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Pass along any -I options so we get proper .include search paths.
   Args.AddAllArgs(CmdArgs, options::OPT_I_Group);
+
+  // Pass along any --embed-dir or similar options so we get proper embed paths.
+  Args.AddAllArgs(CmdArgs, options::OPT_embed_dir_EQ);
 
   // Determine the original source input.
   auto FindSource = [](const Action *S) -> const Action * {
@@ -9048,6 +9151,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
     A->claim();
   }
+
+  // If we disable the GPU C library support it needs to be forwarded to the
+  // link job.
+  if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
+    CmdArgs.push_back("--device-linker=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

@@ -110,7 +110,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticOffsets);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
 
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
   auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
@@ -127,7 +127,7 @@ LogicalResult CreateNdDescOp::verify() {
 
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
-  auto memrefTy = getSourceType().dyn_cast<MemRefType>();
+  auto memrefTy = dyn_cast<MemRefType>(getSourceType());
   if (memrefTy) {
     invalidRank |= (memrefTy.getRank() != rank);
     invalidElemTy |= memrefTy.getElementType() != getElementType();
@@ -403,6 +403,28 @@ LogicalResult StoreScatterOp::verify() {
   auto tdescShape = getShapeOf(tdescTy);
   if (tdescShape[0] != maskShape[0])
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
+
+  return success();
+}
+//===----------------------------------------------------------------------===//
+// XeGPU_DpasOp
+//===----------------------------------------------------------------------===//
+LogicalResult DpasOp::verify() {
+  int64_t lhsRank = getLhsType().getRank();
+  int64_t rhsRank = getRhsType().getRank();
+
+  if (lhsRank != rhsRank || lhsRank != 3)
+    return emitOpError(
+        "lhs and rhs rank does not match for dpas op, or their rank is not 3.");
+
+  if (getAcc() && getAccType() != getResultType())
+    return emitOpError("Accumulator and Result for dpas op should have the "
+                       "same type (both shape and element type).");
+
+  auto lhsShape = getLhsType().getShape();
+  auto rhsShape = getRhsType().getShape();
+  if (lhsShape[1] != rhsShape[0] || lhsShape[2] != rhsShape[2])
+    return emitOpError("K-dimension or vnni-factor mismatch.");
 
   return success();
 }

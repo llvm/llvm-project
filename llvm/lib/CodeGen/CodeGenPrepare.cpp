@@ -509,7 +509,7 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
     return false;
   auto TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   CodeGenPrepare CGP(TM);
-  CGP.DL = &F.getParent()->getDataLayout();
+  CGP.DL = &F.getDataLayout();
   CGP.SubtargetInfo = TM->getSubtargetImpl(F);
   CGP.TLI = CGP.SubtargetInfo->getTargetLowering();
   CGP.TRI = CGP.SubtargetInfo->getRegisterInfo();
@@ -557,7 +557,7 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
 }
 
 bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   TRI = SubtargetInfo->getRegisterInfo();
@@ -1194,12 +1194,12 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
 // derived pointer relocation instructions given a vector of all relocate calls
 static void computeBaseDerivedRelocateMap(
     const SmallVectorImpl<GCRelocateInst *> &AllRelocateCalls,
-    DenseMap<GCRelocateInst *, SmallVector<GCRelocateInst *, 2>>
+    MapVector<GCRelocateInst *, SmallVector<GCRelocateInst *, 0>>
         &RelocateInstMap) {
   // Collect information in two maps: one primarily for locating the base object
   // while filling the second map; the second map is the final structure holding
   // a mapping between Base and corresponding Derived relocate calls
-  DenseMap<std::pair<unsigned, unsigned>, GCRelocateInst *> RelocateIdxMap;
+  MapVector<std::pair<unsigned, unsigned>, GCRelocateInst *> RelocateIdxMap;
   for (auto *ThisRelocate : AllRelocateCalls) {
     auto K = std::make_pair(ThisRelocate->getBasePtrIndex(),
                             ThisRelocate->getDerivedPtrIndex());
@@ -1375,7 +1375,7 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
 
   // RelocateInstMap is a mapping from the base relocate instruction to the
   // corresponding derived relocate instructions
-  DenseMap<GCRelocateInst *, SmallVector<GCRelocateInst *, 2>> RelocateInstMap;
+  MapVector<GCRelocateInst *, SmallVector<GCRelocateInst *, 0>> RelocateInstMap;
   computeBaseDerivedRelocateMap(AllRelocateCalls, RelocateInstMap);
   if (RelocateInstMap.empty())
     return false;
@@ -1431,10 +1431,8 @@ static bool SinkCast(CastInst *CI) {
     if (!InsertedCast) {
       BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
       assert(InsertPt != UserBB->end());
-      InsertedCast = CastInst::Create(CI->getOpcode(), CI->getOperand(0),
-                                      CI->getType(), "");
+      InsertedCast = cast<CastInst>(CI->clone());
       InsertedCast->insertBefore(*UserBB, InsertPt);
-      InsertedCast->setDebugLoc(CI->getDebugLoc());
     }
 
     // Replace a use of the cast with a use of the new cast.
@@ -1501,8 +1499,8 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
 // Match a simple increment by constant operation.  Note that if a sub is
 // matched, the step is negated (as if the step had been canonicalized to
 // an add, even though we leave the instruction alone.)
-bool matchIncrement(const Instruction *IVInc, Instruction *&LHS,
-                    Constant *&Step) {
+static bool matchIncrement(const Instruction *IVInc, Instruction *&LHS,
+                           Constant *&Step) {
   if (match(IVInc, m_Add(m_Instruction(LHS), m_Constant(Step))) ||
       match(IVInc, m_ExtractValue<0>(m_Intrinsic<Intrinsic::uadd_with_overflow>(
                        m_Instruction(LHS), m_Constant(Step)))))
@@ -3498,7 +3496,7 @@ class AddressingModeMatcher {
       std::pair<AssertingVH<GetElementPtrInst>, int64_t> &LargeOffsetGEP,
       bool OptSize, ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
       : AddrModeInsts(AMI), TLI(TLI), TRI(TRI),
-        DL(MI->getModule()->getDataLayout()), LI(LI), getDTFn(getDTFn),
+        DL(MI->getDataLayout()), LI(LI), getDTFn(getDTFn),
         AccessTy(AT), AddrSpace(AS), MemoryInst(MI), AddrMode(AM),
         InsertedInsts(InsertedInsts), PromotedInsts(PromotedInsts), TPT(TPT),
         LargeOffsetGEP(LargeOffsetGEP), OptSize(OptSize), PSI(PSI), BFI(BFI) {
@@ -5082,6 +5080,15 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     }
     return true;
   }
+  case Instruction::Call:
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(AddrInst)) {
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address) {
+        GlobalValue &GV = cast<GlobalValue>(*II->getArgOperand(0));
+        if (TLI.addressingModeSupportsTLS(GV))
+          return matchAddr(AddrInst->getOperand(0), Depth);
+      }
+    }
+    break;
   }
   return false;
 }
@@ -5178,7 +5185,7 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
                                     const TargetRegisterInfo &TRI) {
   const Function *F = CI->getFunction();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
-      TLI.ParseConstraints(F->getParent()->getDataLayout(), &TRI, *CI);
+      TLI.ParseConstraints(F->getDataLayout(), &TRI, *CI);
 
   for (TargetLowering::AsmOperandInfo &OpInfo : TargetConstraints) {
     // Compute the constraint code and ConstraintType to use.
@@ -5620,11 +5627,16 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         return Modified;
     }
 
-    if (AddrMode.BaseGV) {
+    GlobalValue *BaseGV = AddrMode.BaseGV;
+    if (BaseGV != nullptr) {
       if (ResultPtr)
         return Modified;
 
-      ResultPtr = AddrMode.BaseGV;
+      if (BaseGV->isThreadLocal()) {
+        ResultPtr = Builder.CreateThreadLocalAddress(BaseGV);
+      } else {
+        ResultPtr = BaseGV;
+      }
     }
 
     // If the real base value actually came from an inttoptr, then the matcher
@@ -5789,8 +5801,15 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     }
 
     // Add in the BaseGV if present.
-    if (AddrMode.BaseGV) {
-      Value *V = Builder.CreatePtrToInt(AddrMode.BaseGV, IntPtrTy, "sunkaddr");
+    GlobalValue *BaseGV = AddrMode.BaseGV;
+    if (BaseGV != nullptr) {
+      Value *BaseGVPtr;
+      if (BaseGV->isThreadLocal()) {
+        BaseGVPtr = Builder.CreateThreadLocalAddress(BaseGV);
+      } else {
+        BaseGVPtr = BaseGV;
+      }
+      Value *V = Builder.CreatePtrToInt(BaseGVPtr, IntPtrTy, "sunkaddr");
       if (Result)
         Result = Builder.CreateAdd(Result, V, "sunkaddr");
       else
@@ -6252,9 +6271,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
         };
     // Sorting all the GEPs of the same data structures based on the offsets.
     llvm::sort(LargeOffsetGEPs, compareGEPOffset);
-    LargeOffsetGEPs.erase(
-        std::unique(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end()),
-        LargeOffsetGEPs.end());
+    LargeOffsetGEPs.erase(llvm::unique(LargeOffsetGEPs), LargeOffsetGEPs.end());
     // Skip if all the GEPs have the same offsets.
     if (LargeOffsetGEPs.front().second == LargeOffsetGEPs.back().second)
       continue;
@@ -8015,7 +8032,7 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   if (HBC && HBC->getParent() != SI.getParent())
     HValue = Builder.CreateBitCast(HBC->getOperand(0), HBC->getType());
 
-  bool IsLE = SI.getModule()->getDataLayout().isLittleEndian();
+  bool IsLE = SI.getDataLayout().isLittleEndian();
   auto CreateSplitStore = [&](Value *V, bool Upper) {
     V = Builder.CreateZExtOrBitCast(V, SplitStoreType);
     Value *Addr = SI.getPointerOperand();
@@ -8251,6 +8268,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch);
+      UI->dropPoisonGeneratingFlags();
       Value *NewCmp = Builder.CreateCmp(ICmpInst::ICMP_EQ, UI,
                                         ConstantInt::get(UI->getType(), 0));
       LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
@@ -8264,6 +8282,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch);
+      UI->dropPoisonGeneratingFlags();
       Value *NewCmp = Builder.CreateCmp(Cmp->getPredicate(), UI,
                                         ConstantInt::get(UI->getType(), 0));
       LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
@@ -8312,7 +8331,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     if (OptimizeNoopCopyExpression(CI, *TLI, *DL))
       return true;
 
-    if ((isa<UIToFPInst>(I) || isa<FPToUIInst>(I) || isa<TruncInst>(I)) &&
+    if ((isa<UIToFPInst>(I) || isa<SIToFPInst>(I) || isa<FPToUIInst>(I) ||
+         isa<TruncInst>(I)) &&
         TLI->optimizeExtendOrTruncateConversion(
             I, LI->getLoopFor(I->getParent()), *TTI))
       return true;
@@ -8845,7 +8865,8 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
         scaleWeights(NewTrueWeight, NewFalseWeight);
         Br1->setMetadata(LLVMContext::MD_prof,
                          MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+                             .createBranchWeights(TrueWeight, FalseWeight,
+                                                  hasBranchWeightOrigin(*Br1)));
 
         NewTrueWeight = TrueWeight;
         NewFalseWeight = 2 * FalseWeight;

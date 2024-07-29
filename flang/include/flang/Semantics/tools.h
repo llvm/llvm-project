@@ -213,9 +213,24 @@ inline bool IsCUDADeviceContext(const Scope *scope) {
 }
 
 inline bool HasCUDAAttr(const Symbol &sym) {
-  if (const auto *details{
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
     if (details->cudaDataAttr()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool NeedCUDAAlloc(const Symbol &sym) {
+  if (IsDummy(sym)) {
+    return false;
+  }
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
   }
@@ -227,7 +242,7 @@ std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const semantics::Scope &, const Symbol &);
+    const Scope &, const Symbol &);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);
@@ -634,7 +649,7 @@ public:
   void Post(const parser::ErrLabel &errLabel);
   void Post(const parser::EndLabel &endLabel);
   void Post(const parser::EorLabel &eorLabel);
-  void checkLabelUse(const parser::Label &labelUsed);
+  void CheckLabelUse(const parser::Label &labelUsed);
 
 private:
   SemanticsContext &context_;
@@ -687,14 +702,13 @@ inline const parser::Name *getDesignatorNameIfDataRef(
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
-std::optional<R> GetConstExpr(
-    Fortran::semantics::SemanticsContext &semanticsContext, const T &x) {
-  using DefaultCharConstantType = Fortran::evaluate::Ascii;
-  if (const auto *expr{Fortran::semantics::GetExpr(semanticsContext, x)}) {
-    const auto foldExpr{Fortran::evaluate::Fold(
-        semanticsContext.foldingContext(), Fortran::common::Clone(*expr))};
+std::optional<R> GetConstExpr(SemanticsContext &semanticsContext, const T &x) {
+  using DefaultCharConstantType = evaluate::Ascii;
+  if (const auto *expr{GetExpr(semanticsContext, x)}) {
+    const auto foldExpr{evaluate::Fold(
+        semanticsContext.foldingContext(), common::Clone(*expr))};
     if constexpr (std::is_same_v<R, std::string>) {
-      return Fortran::evaluate::GetScalarConstantValue<DefaultCharConstantType>(
+      return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
           foldExpr);
     }
   }
