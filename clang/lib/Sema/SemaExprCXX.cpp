@@ -3806,6 +3806,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                                      Overaligned, DeleteName);
     }
 
+    if (OperatorDelete->isInvalidDecl())
+      return ExprError();
+
     MarkFunctionReferenced(StartLoc, OperatorDelete);
 
     // Check access and ambiguity of destructor if we're going to call it.
