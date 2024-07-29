@@ -16509,6 +16509,35 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   return getSema().ActOnCapturedRegionEnd(Body.get());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformHLSLOutArgExpr(HLSLOutArgExpr *E) {
+  ExprResult Res = getDerived().TransformExpr(E->getBase());
+  if (Res.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Res.get() == E->getBase())
+    return E;
+
+  Expr *BaseExpr = Res.get();
+  auto *OpV = new (getSema().Context) OpaqueValueExpr(
+      E->getBeginLoc(), E->getType(), VK_LValue, OK_Ordinary, BaseExpr);
+  if (isa<OpaqueValueExpr>(E->getWriteback()))
+    return HLSLOutArgExpr::Create(getSema().Context, E->getType(), BaseExpr,
+                                  E->isInOut(), OpV, OpV);
+  // If the writeback isn't directly an opaque value, it means there is a
+  // conversion sequence. Since none of these are actually dependent types, and
+  // we already generated this sequence once successfully in the pattern decl it
+  // should be impossible for this to fail generating a new conversion sequence.
+  Res =
+      getSema().PerformImplicitConversion(OpV, E->getType(), Sema::AA_Passing);
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Writeback = Res.get();
+
+  return HLSLOutArgExpr::Create(getSema().Context, E->getType(), BaseExpr,
+                                E->isInOut(), Writeback, OpV);
+}
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_LIB_SEMA_TREETRANSFORM_H

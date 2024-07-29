@@ -2565,6 +2565,8 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
     switch (EPI.ExtParameterInfos[paramIndex].getABI()) {
     // Nothing interesting to check for orindary-ABI parameters.
     case ParameterABI::Ordinary:
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
       continue;
 
     // swift_indirect_result parameters must be a prefix of the function

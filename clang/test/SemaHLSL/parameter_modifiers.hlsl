@@ -48,11 +48,9 @@ void callFns() {
   // Call with literal arguments.
   implicitFn(1); // Ok.
   inFn(1); // Ok.
-  inoutFn(1); // expected-error{{no matching function for call to 'inoutFn'}}
-  // expected-note@#inoutFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
-  outFn(1); // expected-error{{no matching function for call to 'outFn}}
-  // expected-note@#outFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
-  
+  inoutFn(1); // expected-error{{cannot bind non-lvalue argument 1 to inout paramemter}}
+  outFn(1); // expected-error{{cannot bind non-lvalue argument 1 to out paramemter}}
+
   // Call with variables.
   float f;
   implicitFn(f); // Ok.

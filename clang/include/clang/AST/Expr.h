@@ -7061,6 +7061,67 @@ private:
   void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
 };
 
+/// This class represents temporary values used to represent inout and out
+/// arguments in HLSL. From the callee perspective these parameters are more or
+/// less __restrict__ T&. They are guaranteed to not alias any memory. inout
+/// parameters are initialized by the caller, and out parameters are references
+/// to uninitialized memory.
+///
+/// In the caller, the argument expression creates a temporary in local memory
+/// and the address of the temporary is passed into the callee. There may be
+/// implicit conversion sequences to initialize the temporary, and on expiration
+/// of the temporary an inverse conversion sequence is applied as a write-back
+/// conversion to the source l-value.
+class HLSLOutArgExpr : public Expr {
+  friend class ASTStmtReader;
+
+  Expr *Base;
+  Expr *Writeback;
+  OpaqueValueExpr *OpaqueVal;
+  bool IsInOut;
+
+  HLSLOutArgExpr(QualType Ty, Expr *B, Expr *WB, OpaqueValueExpr *OpV,
+                 bool IsInOut)
+      : Expr(HLSLOutArgExprClass, Ty, VK_LValue, OK_Ordinary), Base(B),
+        Writeback(WB), OpaqueVal(OpV), IsInOut(IsInOut) {
+    assert(!Ty->isDependentType() && "HLSLOutArgExpr given a dependent type!");
+  }
+
+  explicit HLSLOutArgExpr(EmptyShell Shell)
+      : Expr(HLSLOutArgExprClass, Shell) {}
+
+public:
+  static HLSLOutArgExpr *Create(const ASTContext &C, QualType Ty, Expr *Base,
+                                bool IsInOut, Expr *WB, OpaqueValueExpr *OpV);
+  static HLSLOutArgExpr *CreateEmpty(const ASTContext &Ctx);
+
+  const Expr *getBase() const { return Base; }
+  Expr *getBase() { return Base; }
+
+  const Expr *getWriteback() const { return Writeback; }
+  Expr *getWriteback() { return Writeback; }
+
+  const OpaqueValueExpr *getOpaqueValue() const { return OpaqueVal; }
+  OpaqueValueExpr *getOpaqueValue() { return OpaqueVal; }
+
+  bool isInOut() const { return IsInOut; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return Base->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY { return Base->getEndLoc(); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == HLSLOutArgExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range((Stmt **)&Base, ((Stmt **)&Writeback) + 1);
+  }
+};
+
 /// Frontend produces RecoveryExprs on semantic errors that prevent creating
 /// other well-formed expressions. E.g. when type-checking of a binary operator
 /// fails, we cannot produce a BinaryOperator expression. Instead, we can choose

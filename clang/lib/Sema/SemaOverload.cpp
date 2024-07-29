@@ -7007,6 +7007,10 @@ void Sema::AddOverloadCandidate(
       // (13.3.3.1) that converts that argument to the corresponding
       // parameter of F.
       QualType ParamType = Proto->getParamType(ArgIdx);
+      auto ParamABI = Proto->getExtParameterInfo(ArgIdx).getABI();
+      if (ParamABI == ParameterABI::HLSLOut ||
+          ParamABI == ParameterABI::HLSLInOut)
+        ParamType = ParamType.getNonReferenceType();
       Candidate.Conversions[ConvIdx] = TryCopyInitialization(
           *this, Args[ArgIdx], ParamType, SuppressUserConversions,
           /*InOverloadResolution=*/true,

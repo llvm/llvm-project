@@ -2833,6 +2833,22 @@ void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 }
 
 //===----------------------------------------------------------------------===//
+// HLSL Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtReader::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
+  VisitExpr(S);
+  S->Base = Record.readSubExpr();
+  S->Writeback = Record.readSubExpr();
+  S->IsInOut = Record.readBool();
+  Expr::child_iterator Child = S->getWriteback()->child_begin();
+  while (!isa<OpaqueValueExpr>(*Child))
+    Child = Child->child_begin();
+  assert(isa<OpaqueValueExpr>(*Child) && "Writeback must end in an OVE.");
+  S->OpaqueVal = cast<OpaqueValueExpr>(*Child);
+}
+
+//===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
@@ -4280,11 +4296,15 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = OpenACCLoopConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
-    case EXPR_REQUIRES:
+    case EXPR_REQUIRES: {
       unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];
       unsigned numRequirement = Record[ASTStmtReader::NumExprFields + 1];
       S = RequiresExpr::Create(Context, Empty, numLocalParameters,
                                numRequirement);
+      break;
+    }
+    case EXPR_HLSL_OUT_ARG:
+      S = HLSLOutArgExpr::CreateEmpty(Context);
       break;
     }
 

@@ -4613,14 +4613,13 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
 }
 
-def HLSLParamModifier : TypeAttr {
+def HLSLParamModifier : ParameterABIAttr {
   let Spellings = [CustomKeyword<"in">, CustomKeyword<"inout">, CustomKeyword<"out">];
   let Accessors = [Accessor<"isIn", [CustomKeyword<"in">]>,
                    Accessor<"isInOut", [CustomKeyword<"inout">]>,
                    Accessor<"isOut", [CustomKeyword<"out">]>,
                    Accessor<"isAnyOut", [CustomKeyword<"out">, CustomKeyword<"inout">]>,
                    Accessor<"isAnyIn", [CustomKeyword<"in">, CustomKeyword<"inout">]>];
-  let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [HLSLParamQualifierDocs];
   let Args = [DefaultBoolArgument<"MergedSpelling", /*default*/0, /*fake*/1>];
 }

@@ -1377,6 +1377,14 @@ public:
   /// in the return type and parameter types.
   bool hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U);
 
+  /// Get or construct a function type that is equivalent to the input type
+  /// except that the parameter ABI annotations are stripped.
+  QualType getFunctionTypeWithoutParamABIs(QualType T);
+
+  /// Determine if two function types are the same, ignoring parameter ABI
+  /// annotations.
+  bool hasSameFunctionTypeIgnoringParamABI(QualType T, QualType U);
+
   /// Return the uniqued reference to the type for a complex
   /// number with the specified element type.
   QualType getComplexType(QualType T) const;

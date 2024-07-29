@@ -2830,6 +2830,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     switch (FI.getExtParameterInfo(ArgNo).getABI()) {
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
+      // FIXME: Do this...
     case ParameterABI::Ordinary:
       break;
 
@@ -4148,6 +4151,30 @@ static void emitWriteback(CodeGenFunction &CGF,
   assert(!isProvablyNull(srcAddr.getBasePointer()) &&
          "shouldn't have writeback for provably null argument");
 
+  if (CGF.getLangOpts().HLSL) {
+    if (writeback.CastExpr) {
+      RValue TmpVal = CGF.EmitAnyExprToTemp(writeback.CastExpr);
+      if (TmpVal.isScalar())
+        CGF.EmitStoreThroughLValue(TmpVal, srcLV);
+      else
+        CGF.EmitAggregateStore(srcLV.getPointer(CGF),
+                               TmpVal.getAggregateAddress(), false);
+    } else {
+      if (srcLV.isSimple())
+        CGF.EmitAggregateStore(srcLV.getPointer(CGF), writeback.Temporary,
+                               false);
+      else {
+        llvm::Value *value = CGF.Builder.CreateLoad(writeback.Temporary);
+        RValue TmpVal = RValue::get(value);
+        CGF.EmitStoreThroughLValue(TmpVal, srcLV);
+      }
+    }
+    if (writeback.LifetimeSz)
+      CGF.EmitLifetimeEnd(writeback.LifetimeSz,
+                          writeback.Temporary.getBasePointer());
+    return;
+  }
+
   llvm::BasicBlock *contBB = nullptr;
 
   // If the argument wasn't provably non-null, we need to null check
@@ -4610,6 +4637,9 @@ void CodeGenFunction::EmitCallArgs(
     // Un-reverse the arguments we just evaluated so they match up with the LLVM
     // IR function.
     std::reverse(Args.begin() + CallArgsStart, Args.end());
+
+    // Reverse the writebacks to match the MSVC ABI.
+    Args.reverseWritebacks();
   }
 }
 
@@ -4688,6 +4718,32 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
 
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
+
+  // Add writeback for HLSLOutParamExpr.
+  if (const HLSLOutArgExpr *OE = dyn_cast<HLSLOutArgExpr>(E)) {
+    LValue LV = EmitLValue(E);
+    llvm::Type *ElTy = ConvertTypeForMem(LV.getType());
+    llvm::Value *Addr, *BaseAddr;
+    if (LV.isExtVectorElt()) {
+      llvm::Constant *VecElts = LV.getExtVectorElts();
+      BaseAddr = LV.getExtVectorAddress().getBasePointer();
+      Addr = Builder.CreateGEP(
+          ElTy, BaseAddr,
+          {Builder.getInt32(0), VecElts->getAggregateElement((unsigned)0)});
+    } else // LV.getAddress() will assert if this is not a simple LValue.
+      Addr = BaseAddr = LV.getAddress().getBasePointer();
+
+    llvm::TypeSize Sz =
+        CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(LV.getType()));
+
+    llvm::Value *LifetimeSize = EmitLifetimeStart(Sz, BaseAddr);
+
+    Address TmpAddr(Addr, ElTy, LV.getAlignment());
+    // TODO-HLSLOutArgExp: Fix me!!!
+    args.addWriteback(EmitLValue(OE->getBase()->IgnoreImpCasts()), TmpAddr,
+                      nullptr, OE->getWriteback(), LifetimeSize);
+    return args.add(RValue::get(TmpAddr, *this), type);
+  }
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);

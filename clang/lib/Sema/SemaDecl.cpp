@@ -4057,6 +4057,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
                                                          NewQType))
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
 
+    if (getLangOpts().HLSL && Context.hasSameFunctionTypeIgnoringParamABI(
+                                  OldQTypeForComparison, NewQType))
+      return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
+
     // If the types are imprecise (due to dependent constructs in friends or
     // local extern declarations), it's OK if they differ. We'll check again
     // during instantiation.

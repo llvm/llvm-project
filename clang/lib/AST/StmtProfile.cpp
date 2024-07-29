@@ -2631,6 +2631,10 @@ void StmtProfiler::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
   P.VisitOpenACCClauseList(S->clauses());
 }
 
+void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {
+  VisitStmt(S);
+}
+
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                    bool Canonical, bool ProfileLambdaExpr) const {
   StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr);

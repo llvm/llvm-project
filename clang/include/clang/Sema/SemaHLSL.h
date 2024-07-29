@@ -61,6 +61,8 @@ public:
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 };
 
 } // namespace clang

@@ -1671,6 +1671,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitCoyieldLValue(cast<CoyieldExpr>(E));
   case Expr::PackIndexingExprClass:
     return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr());
+  case Expr::HLSLOutArgExprClass:
+    return EmitHLSLOutArgExpr(cast<HLSLOutArgExpr>(E));
   }
 }
 
@@ -5384,6 +5386,29 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
 LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
   assert(OpaqueValueMappingData::shouldBindAsLValue(e));
   return getOrCreateOpaqueLValueMapping(e);
+}
+
+LValue CodeGenFunction::BindHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                           Address OutTemp) {
+  LValue Result = MakeAddrLValue(OutTemp, E->getType());
+  OpaqueValueMappingData::bind(*this, E->getOpaqueValue(), Result);
+  return Result;
+}
+
+LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
+  if (!E->isInOut())
+    return BindHLSLOutArgExpr(E, CreateIRTemp(E->getType()));
+
+  RValue InVal = EmitAnyExprToTemp(E->getBase());
+  if (!InVal.isScalar())
+    return BindHLSLOutArgExpr(E, InVal.getAggregateAddress());
+
+  Address OutTemp = CreateIRTemp(E->getType());
+  llvm::Value *V = InVal.getScalarVal();
+  if (V->getType()->getScalarType()->isIntegerTy(1))
+    V = Builder.CreateZExt(V, ConvertTypeForMem(E->getType()), "frombool");
+  (void)Builder.CreateStore(V, OutTemp);
+  return BindHLSLOutArgExpr(E, OutTemp);
 }
 
 LValue

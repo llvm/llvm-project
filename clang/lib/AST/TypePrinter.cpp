@@ -933,6 +933,10 @@ StringRef clang::getParameterABISpelling(ParameterABI ABI) {
     return "swift_error_result";
   case ParameterABI::SwiftIndirectResult:
     return "swift_indirect_result";
+  case ParameterABI::HLSLOut:
+    return "out";
+  case ParameterABI::HLSLInOut:
+    return "inout";
   }
   llvm_unreachable("bad parameter ABI kind");
 }
@@ -955,7 +959,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
       if (EPI.isNoEscape())
         OS << "__attribute__((noescape)) ";
       auto ABI = EPI.getABI();
-      if (ABI != ParameterABI::Ordinary)
+      if (ABI == ParameterABI::HLSLInOut || ABI == ParameterABI::HLSLOut) {
+        OS << getParameterABISpelling(ABI) << " ";
+        if (Policy.UseHLSLTypes) {
+          // This is a bit of a hack because we _do_ use reference types in the
+          // AST for representing inout and out parameters so that code
+          // generation is sane, but when re-printing these for HLSL we need to
+          // skip the reference.
+          print(T->getParamType(i).getNonReferenceType(), OS, StringRef());
+          continue;
+        }
+      } else if (ABI != ParameterABI::Ordinary)
         OS << "__attribute__((" << getParameterABISpelling(ABI) << ")) ";
 
       print(T->getParamType(i), OS, StringRef());
@@ -2022,10 +2036,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
-    break;
-
-  // Nothing to print for this attribute.
-  case attr::HLSLParamModifier:
     break;
   }
   OS << "))";

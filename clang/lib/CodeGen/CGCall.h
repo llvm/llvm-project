@@ -285,6 +285,13 @@ public:
 
     /// A value to "use" after the writeback, or null.
     llvm::Value *ToUse;
+
+    /// An Expression representing a cast from the temporary's type to the
+    /// source l-value's type.
+    const Expr *CastExpr;
+
+    // Size for optional lifetime end on the temporary.
+    llvm::Value *LifetimeSz;
   };
 
   struct CallArgCleanup {
@@ -316,8 +323,10 @@ public:
       StackBase = other.StackBase;
   }
 
-  void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse) {
-    Writeback writeback = {srcLV, temporary, toUse};
+  void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse,
+                    const Expr *castExpr = nullptr,
+                    llvm::Value *lifetimeSz = nullptr) {
+    Writeback writeback = {srcLV, temporary, toUse, castExpr, lifetimeSz};
     Writebacks.push_back(writeback);
   }
 
@@ -349,6 +358,11 @@ public:
   /// Returns if we're using an inalloca struct to pass arguments in
   /// memory.
   bool isUsingInAlloca() const { return StackBase; }
+
+  // Support reversing writebacks for MSVC ABI.
+  void reverseWritebacks() {
+    std::reverse(Writebacks.begin(), Writebacks.end());
+  }
 
 private:
   SmallVector<Writeback, 1> Writebacks;
