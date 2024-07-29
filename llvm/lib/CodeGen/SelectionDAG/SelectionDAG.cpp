@@ -9927,12 +9927,26 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
   if (auto *CondC = dyn_cast<ConstantSDNode>(Cond))
     return CondC->isZero() ? F : T;
 
-  // TODO: This should simplify VSELECT with non-zero constant condition using
-  // something like this (but check boolean contents to be complete?):
   if (ConstantSDNode *CondC = isConstOrConstSplat(Cond, /*AllowUndefs*/ false,
-                                                  /*AllowTruncation*/ true))
+                                                  /*AllowTruncation*/ true)) {
     if (CondC->isZero())
       return F;
+
+    switch (TLI->getBooleanContents(Cond.getValueType())) {
+    case TargetLowering::UndefinedBooleanContent:
+      if (CondC->getAPIntValue()[0])
+        return T;
+      break;
+    case TargetLowering::ZeroOrOneBooleanContent:
+      if (CondC->isOne())
+        return T;
+      break;
+    case TargetLowering::ZeroOrNegativeOneBooleanContent:
+      if (CondC->isAllOnes())
+        return T;
+      break;
+    }
+  }
 
   // select ?, T, T --> T
   if (T == F)
