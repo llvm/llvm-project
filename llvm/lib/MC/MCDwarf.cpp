@@ -198,8 +198,6 @@ void MCDwarfLineTable::emitOne(
         init();
       }
       MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
-
-      IsAtStartSeq = true;
       continue;
     }
 
@@ -208,7 +206,6 @@ void MCDwarfLineTable::emitOne(
                                      asmInfo->getCodePointerSize());
       init();
       EndEntryEmitted = true;
-      IsAtStartSeq = true;
       continue;
     }
 
