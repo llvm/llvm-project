@@ -761,7 +761,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);
   // Check getAlign()
   EXPECT_EQ(Ld->getAlign(), 64);
-  // Check create(InsertBefore)
+  // Check create(InsertBefore, IsVolatile=false)
   sandboxir::LoadInst *NewLd =
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertBefore=*/Ret, Ctx, "NewLd");
@@ -771,7 +771,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
-
+  // Check create(InsertBefore, IsVolatile=true)
   sandboxir::LoadInst *NewVLd =
       sandboxir::LoadInst::create(VLd->getType(), Arg1, Align(8),
                                   /*InsertBefore=*/Ret,
@@ -780,7 +780,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   // Checking if create() was volatile
   EXPECT_TRUE(NewVLd->isVolatile());
   EXPECT_EQ(NewVLd->getName(), "NewVLd");
-  // Check create(InsertAtEnd)
+  // Check create(InsertAtEnd, IsVolatile=false)
   sandboxir::LoadInst *NewLdEnd =
       sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
                                   /*InsertAtEnd=*/BB, Ctx, "NewLdEnd");
@@ -791,7 +791,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(NewLdEnd->getAlign(), 8);
   EXPECT_EQ(NewLdEnd->getParent(), BB);
   EXPECT_EQ(NewLdEnd->getNextNode(), nullptr);
-  // Check create(InsertAtEnd)
+  // Check create(InsertAtEnd, IsVolatile=true)
   sandboxir::LoadInst *NewVLdEnd =
       sandboxir::LoadInst::create(VLd->getType(), Arg1, Align(8),
                                   /*InsertAtEnd=*/BB,
