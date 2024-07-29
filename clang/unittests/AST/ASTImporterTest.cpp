@@ -6738,6 +6738,23 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_TRUE(ToLambda);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ReturnTypeDeclaredInsideOfCXX11LambdaWithTrailingReturn) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      void foo() {
+        (void) [] {
+          struct X {};
+          return X();
+        };
+      }
+      )",
+      Lang_CXX11, "", Lang_CXX11, "foo"); // c++11 only
+  auto *ToLambda = FirstDeclMatcher<LambdaExpr>().match(To, lambdaExpr());
+  EXPECT_TRUE(ToLambda);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
   Decl *FromTU = getTuDecl(
       R"(

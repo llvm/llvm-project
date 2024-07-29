@@ -3713,11 +3713,8 @@ bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
 
-  auto IsCXX11LambdaWithouTrailingReturn = [&]() {
+  auto IsCXX11Lambda = [&]() {
     if (Importer.FromContext.getLangOpts().CPlusPlus14) // C++14 or later
-      return false;
-
-    if (FromFPT->hasTrailingReturn())
       return false;
 
     if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
@@ -3727,7 +3724,7 @@ bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   };
 
   QualType RetT = FromFPT->getReturnType();
-  if (isa<AutoType>(RetT.getTypePtr()) || IsCXX11LambdaWithouTrailingReturn()) {
+  if (isa<AutoType>(RetT.getTypePtr()) || IsCXX11Lambda()) {
     FunctionDecl *Def = D->getDefinition();
     IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
     return Visitor.CheckType(RetT);
