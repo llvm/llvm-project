@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected,since-cxx11,cxx11-14 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected,since-cxx11,cxx11-14 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx11,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx23,since-cxx26 %s
 
 namespace cwg2718 { // cwg2718: 2.7
 struct B {};
@@ -100,6 +100,21 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2)
 static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
 #endif
 } // namespace cwg2759
+
+namespace cwg2768 { // cwg2768: 20
+#if __cplusplus >= 201103L
+enum class E {E1};
+
+void f() {
+  E e;
+  e = E{0}; // #1
+  // cxx11-14-error@-1 {{cannot initialize a value of type 'E' with an rvalue of type 'int'}}
+  e = {0};  // #2
+  // since-cxx11-error@-1 {{cannot initialize a value of type 'E' with an rvalue of type 'int'}}
+  e = {E::E1};
+}
+#endif
+} // namespace cwg2768
 
 namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L
