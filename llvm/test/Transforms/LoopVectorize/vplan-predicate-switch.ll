@@ -21,12 +21,15 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<13>
+; CHECK-NEXT:     EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
+; CHECK-NEXT:     EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
+; CHECK-NEXT:     EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
+; CHECK-NEXT:     EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C1]]>
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C2]]>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
@@ -39,12 +42,11 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): if.then.2.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   if.then.2.0:
-; CHECK-NEXT:     EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C2]]>
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C1]]>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
@@ -57,8 +59,6 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): if.then.1.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   if.then.1.1:
-; CHECK-NEXT:     EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C2]]>, vp<[[C1]]>
-; CHECK-NEXT:     EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
 ; CHECK-NEXT:     EMIT vp<[[C3:%.+]]> = or vp<[[DEFAULT_MASK]]>, vp<[[DEFAULT_MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
