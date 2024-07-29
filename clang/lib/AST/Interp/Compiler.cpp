@@ -3256,6 +3256,9 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   if (E->containsErrors())
     return this->emitError(E);
 
+  if (!this->checkLiteralType(E))
+    return false;
+
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
   return this->Visit(E);
@@ -4696,6 +4699,17 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   // Nothing to do, since we emitted the RVO pointer above.
   return this->emitRetVoid(MD);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
+  if (Ctx.getLangOpts().CPlusPlus23)
+    return true;
+
+  if (!E->isPRValue() || E->getType()->isLiteralType(Ctx.getASTContext()))
+    return true;
+
+  return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
 template <class Emitter>
