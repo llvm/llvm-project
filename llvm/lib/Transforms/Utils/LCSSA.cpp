@@ -74,20 +74,16 @@ static bool isExitBlock(BasicBlock *BB,
 /// For every instruction from the worklist, check to see if it has any uses
 /// that are outside the current loop.  If so, insert LCSSA PHI nodes and
 /// rewrite the uses.
-bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
-                                    const DominatorTree &DT, const LoopInfo &LI,
-                                    ScalarEvolution *SE,
-                                    SmallVectorImpl<PHINode *> *PHIsToRemove,
-                                    SmallVectorImpl<PHINode *> *InsertedPHIs) {
+static bool formLCSSAForInstructionsWorker(
+    SmallVectorImpl<Instruction *> &Worklist, const DominatorTree &DT,
+    const LoopInfo &LI, ScalarEvolution *SE,
+    SmallVectorImpl<PHINode *> *PHIsToRemove,
+    SmallVectorImpl<PHINode *> *InsertedPHIs,
+    SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>> &LoopExitBlocks) {
   SmallVector<Use *, 16> UsesToRewrite;
   SmallSetVector<PHINode *, 16> LocalPHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
-
-  // Cache the Loop ExitBlocks across this loop.  We expect to get a lot of
-  // instructions within the same loops, computing the exit blocks is
-  // expensive, and we're not mutating the loop structure.
-  SmallDenseMap<Loop*, SmallVector<BasicBlock *,1>> LoopExitBlocks;
 
   while (!Worklist.empty()) {
     UsesToRewrite.clear();
@@ -317,6 +313,23 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
   return Changed;
 }
 
+/// For every instruction from the worklist, check to see if it has any uses
+/// that are outside the current loop.  If so, insert LCSSA PHI nodes and
+/// rewrite the uses.
+bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
+                                    const DominatorTree &DT, const LoopInfo &LI,
+                                    ScalarEvolution *SE,
+                                    SmallVectorImpl<PHINode *> *PHIsToRemove,
+                                    SmallVectorImpl<PHINode *> *InsertedPHIs) {
+  // Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
+  // lot of instructions within the same loops, computing the exit blocks is
+  // expensive, and we're not mutating the loop structure.
+  SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>> LoopExitBlocks;
+
+  return formLCSSAForInstructionsWorker(Worklist, DT, LI, SE, PHIsToRemove,
+                                        InsertedPHIs, LoopExitBlocks);
+}
+
 // Compute the set of BasicBlocks in the loop `L` dominating at least one exit.
 static void computeBlocksDominatingExits(
     Loop &L, const DominatorTree &DT, SmallVector<BasicBlock *, 8> &ExitBlocks,
@@ -360,8 +373,9 @@ static void computeBlocksDominatingExits(
   }
 }
 
-bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
-                     ScalarEvolution *SE) {
+static bool formLCSSAWorker(
+    Loop &L, const DominatorTree &DT, const LoopInfo *LI, ScalarEvolution *SE,
+    SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>> &LoopExitBlocks) {
   bool Changed = false;
 
 #ifdef EXPENSIVE_CHECKS
@@ -374,6 +388,8 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 
   SmallVector<BasicBlock *, 8> ExitBlocks;
   L.getExitBlocks(ExitBlocks);
+  if (!LoopExitBlocks.count(&L))
+    L.getExitBlocks(LoopExitBlocks[&L]);
   if (ExitBlocks.empty())
     return false;
 
@@ -414,24 +430,47 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
     }
   }
 
-  Changed = formLCSSAForInstructions(Worklist, DT, *LI, SE);
+  Changed = formLCSSAForInstructionsWorker(Worklist, DT, *LI, SE, nullptr,
+                                           nullptr, LoopExitBlocks);
 
   assert(L.isLCSSAForm(DT));
 
   return Changed;
 }
 
+bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
+                     ScalarEvolution *SE) {
+  // Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
+  // lot of instructions within the same loops, computing the exit blocks is
+  // expensive, and we're not mutating the loop structure.
+  SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>> LoopExitBlocks;
+
+  return formLCSSAWorker(L, DT, LI, SE, LoopExitBlocks);
+}
+
 /// Process a loop nest depth first.
-bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
-                                const LoopInfo *LI, ScalarEvolution *SE) {
+static bool formLCSSARecursivelyWorker(
+    Loop &L, const DominatorTree &DT, const LoopInfo *LI, ScalarEvolution *SE,
+    SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>> &LoopExitBlocks) {
   bool Changed = false;
 
   // Recurse depth-first through inner loops.
   for (Loop *SubLoop : L.getSubLoops())
-    Changed |= formLCSSARecursively(*SubLoop, DT, LI, SE);
+    Changed |= formLCSSARecursivelyWorker(*SubLoop, DT, LI, SE, LoopExitBlocks);
 
-  Changed |= formLCSSA(L, DT, LI, SE);
+  Changed |= formLCSSAWorker(L, DT, LI, SE, LoopExitBlocks);
   return Changed;
+}
+
+/// Process a loop nest depth first.
+bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
+                                const LoopInfo *LI, ScalarEvolution *SE) {
+  // Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
+  // lot of instructions within the same loops, computing the exit blocks is
+  // expensive, and we're not mutating the loop structure.
+  SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>> LoopExitBlocks;
+
+  return formLCSSARecursivelyWorker(L, DT, LI, SE, LoopExitBlocks);
 }
 
 /// Process all loops in the function, inner-most out.
