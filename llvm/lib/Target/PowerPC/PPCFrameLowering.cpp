@@ -376,8 +376,6 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return false;
 
-  if (Subtarget.isAIXABI() && Subtarget.getRegisterInfo()->hasBasePointer(MF))
-    return true;
 
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects() || MFI.hasStackMap() || MFI.hasPatchPoint() ||
@@ -699,7 +697,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   int64_t LROffset = getReturnSaveOffset();
 
   int64_t FPOffset = 0;
-  if (HasFP) {
+  if (HasFP || (HasBP && Subtarget.isAIXABI())) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     int FPIndex = FI->getFramePointerSaveIndex();
     assert(FPIndex && "No Frame Pointer Save Slot!");
@@ -824,7 +822,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMoveFromCR();
 
   if (HasRedZone) {
-    if (HasFP)
+    if (HasFP || (HasBP && Subtarget.isAIXABI()))
       BuildMI(MBB, MBBI, dl, StoreInst)
         .addReg(FPReg)
         .addImm(FPOffset)
@@ -1010,7 +1008,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // R0 cannot be used as a base register, but it can be used as an
         // index in a store-indexed.
         int LastOffset = 0;
-        if (HasFP)  {
+        if (HasFP || (HasBP && Subtarget.isAIXABI()))  {
           // R0 += (FPOffset-LastOffset).
           // Need addic, since addi treats R0 as 0.
           BuildMI(MBB, MBBI, dl, TII.get(PPC::ADDIC), ScratchReg)
@@ -1055,7 +1053,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
         // Now that the stack frame has been allocated, save all the necessary
         // registers using ScratchReg as the base address.
-        if (HasFP)
+        if (HasFP || (HasBP && Subtarget.isAIXABI()))
           BuildMI(MBB, MBBI, dl, StoreInst)
             .addReg(FPReg)
             .addImm(FPOffset)
@@ -1080,7 +1078,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       // field of STWU). To be here we have to be compiling for PPC32.
       // Since the SPReg has been decreased by FrameSize, add it back to each
       // offset.
-      if (HasFP)
+      if (HasFP || (HasBP && Subtarget.isAIXABI()))
         BuildMI(MBB, MBBI, dl, StoreInst)
           .addReg(FPReg)
           .addImm(FrameSize + FPOffset)
@@ -1126,7 +1124,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
 
-    if (HasFP) {
+    if (HasFP || (HasBP && Subtarget.isAIXABI())) {
       // Describe where FP was saved, at a fixed offset from CFA.
       unsigned Reg = MRI->getDwarfRegNum(FPReg, true);
       CFIIndex = MF.addFrameInst(
@@ -1609,7 +1607,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
   SingleScratchReg = ScratchReg == TempReg;
 
-  if (HasFP) {
+  if (HasFP || (HasBP && Subtarget.isAIXABI())) {
     int FPIndex = FI->getFramePointerSaveIndex();
     assert(FPIndex && "No Frame Pointer Save Slot!");
     FPOffset = MFI.getObjectOffset(FPIndex);
@@ -1805,7 +1803,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       .addReg(RBReg);
   }
 
-  if (HasFP) {
+  if (HasFP || (HasBP && Subtarget.isAIXABI())) {
     // If there is red zone, restore FP directly, since SP has already been
     // restored. Otherwise, restore the value of FP into ScratchReg.
     if (HasRedZone || RBReg == SPReg)
@@ -1997,7 +1995,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // If the frame pointer save index hasn't been defined yet.
-  if (!FPSI && needsFP(MF)) {
+  if (!FPSI && (needsFP(MF)
+      || (RegInfo->hasBasePointer(MF) && Subtarget.isAIXABI()))) {
     // Find out what the fix offset of the frame pointer save area.
     int FPOffset = getFramePointerSaveOffset();
     // Allocate the frame index for frame pointer save area.
@@ -2026,7 +2025,7 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // some inline asm which explicitly clobbers it, when we otherwise have a
   // frame pointer and are using r31's spill slot for the prologue/epilogue
   // code. Same goes for the base pointer and the PIC base register.
-  if (needsFP(MF))
+  if (needsFP(MF) || (RegInfo->hasBasePointer(MF) && Subtarget.isAIXABI()))
     SavedRegs.reset(isPPC64 ? PPC::X31 : PPC::R31);
   if (RegInfo->hasBasePointer(MF))
     SavedRegs.reset(RegInfo->getBaseRegister(MF));
@@ -2169,9 +2168,10 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     LowerBound -= (31 - TRI->getEncodingValue(MinFPR) + 1) * 8;
   }
 
+  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   // Check whether the frame pointer register is allocated. If so, make sure it
   // is spilled to the correct offset.
-  if (needsFP(MF)) {
+  if (needsFP(MF) || (RegInfo->hasBasePointer(MF) && Subtarget.isAIXABI())) {
     int FI = PFI->getFramePointerSaveIndex();
     assert(FI && "No Frame Pointer Save Slot!");
     MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
@@ -2188,7 +2188,6 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     HasGPSaveArea = true;
   }
 
-  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   if (RegInfo->hasBasePointer(MF)) {
     int FI = PFI->getBasePointerSaveIndex();
     assert(FI && "No Base Pointer Save Slot!");

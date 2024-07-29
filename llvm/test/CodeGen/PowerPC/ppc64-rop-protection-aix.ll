@@ -2310,22 +2310,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-P10-NEXT:    mr r29, r3
 ; BE-P10-NEXT:    lwz r3, 4(r3)
 ; BE-P10-NEXT:    lis r4, 0
-; BE-P10-NEXT:    mr r31, r1
+; BE-P10-NEXT:    addi r5, r1, 32764
 ; BE-P10-NEXT:    ori r4, r4, 65500
-; BE-P10-NEXT:    stwx r3, r31, r4
+; BE-P10-NEXT:    stwx r3, r1, r4
 ; BE-P10-NEXT:    lwz r3, 12(r29)
 ; BE-P10-NEXT:    lis r4, 0
 ; BE-P10-NEXT:    ori r4, r4, 32768
-; BE-P10-NEXT:    stwx r3, r31, r4
+; BE-P10-NEXT:    stwx r3, r1, r4
 ; BE-P10-NEXT:    lwz r3, 20(r29)
 ; BE-P10-NEXT:    lis r4, 0
 ; BE-P10-NEXT:    ori r4, r4, 65500
-; BE-P10-NEXT:    stw r3, 32764(r31)
+; BE-P10-NEXT:    add r4, r1, r4
+; BE-P10-NEXT:    stw r3, 32764(r1)
 ; BE-P10-NEXT:    lis r3, 0
 ; BE-P10-NEXT:    ori r3, r3, 32768
-; BE-P10-NEXT:    add r3, r31, r3
-; BE-P10-NEXT:    add r4, r31, r4
-; BE-P10-NEXT:    addi r5, r31, 32764
+; BE-P10-NEXT:    add r3, r1, r3
 ; BE-P10-NEXT:    bl .callee3[PR]
 ; BE-P10-NEXT:    nop
 ; BE-P10-NEXT:    lwz r4, 16(r29)
@@ -2356,22 +2355,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-P9-NEXT:    mr r29, r3
 ; BE-P9-NEXT:    lwz r3, 4(r3)
 ; BE-P9-NEXT:    lis r4, 0
-; BE-P9-NEXT:    mr r31, r1
+; BE-P9-NEXT:    addi r5, r1, 32764
 ; BE-P9-NEXT:    ori r4, r4, 65500
-; BE-P9-NEXT:    addi r5, r31, 32764
-; BE-P9-NEXT:    stwx r3, r31, r4
+; BE-P9-NEXT:    stwx r3, r1, r4
 ; BE-P9-NEXT:    lwz r3, 12(r29)
 ; BE-P9-NEXT:    lis r4, 0
 ; BE-P9-NEXT:    ori r4, r4, 32768
-; BE-P9-NEXT:    stwx r3, r31, r4
+; BE-P9-NEXT:    stwx r3, r1, r4
 ; BE-P9-NEXT:    lwz r3, 20(r29)
 ; BE-P9-NEXT:    lis r4, 0
 ; BE-P9-NEXT:    ori r4, r4, 65500
-; BE-P9-NEXT:    stw r3, 32764(r31)
+; BE-P9-NEXT:    stw r3, 32764(r1)
 ; BE-P9-NEXT:    lis r3, 0
-; BE-P9-NEXT:    add r4, r31, r4
+; BE-P9-NEXT:    add r4, r1, r4
 ; BE-P9-NEXT:    ori r3, r3, 32768
-; BE-P9-NEXT:    add r3, r31, r3
+; BE-P9-NEXT:    add r3, r1, r3
 ; BE-P9-NEXT:    bl .callee3[PR]
 ; BE-P9-NEXT:    nop
 ; BE-P9-NEXT:    lwz r4, 16(r29)
@@ -2402,22 +2400,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-P8-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
 ; BE-P8-NEXT:    mr r29, r3
 ; BE-P8-NEXT:    lwz r3, 4(r3)
-; BE-P8-NEXT:    mr r31, r1
+; BE-P8-NEXT:    addi r5, r1, 32764
 ; BE-P8-NEXT:    ori r4, r4, 65500
-; BE-P8-NEXT:    addi r5, r31, 32764
-; BE-P8-NEXT:    stwx r3, r31, r4
+; BE-P8-NEXT:    stwx r3, r1, r4
 ; BE-P8-NEXT:    lis r4, 0
 ; BE-P8-NEXT:    lwz r3, 12(r29)
 ; BE-P8-NEXT:    ori r4, r4, 32768
-; BE-P8-NEXT:    stwx r3, r31, r4
+; BE-P8-NEXT:    stwx r3, r1, r4
 ; BE-P8-NEXT:    lwz r3, 20(r29)
 ; BE-P8-NEXT:    lis r4, 0
 ; BE-P8-NEXT:    ori r4, r4, 65500
-; BE-P8-NEXT:    stw r3, 32764(r31)
+; BE-P8-NEXT:    stw r3, 32764(r1)
 ; BE-P8-NEXT:    lis r3, 0
-; BE-P8-NEXT:    add r4, r31, r4
+; BE-P8-NEXT:    add r4, r1, r4
 ; BE-P8-NEXT:    ori r3, r3, 32768
-; BE-P8-NEXT:    add r3, r31, r3
+; BE-P8-NEXT:    add r3, r1, r3
 ; BE-P8-NEXT:    bl .callee3[PR]
 ; BE-P8-NEXT:    nop
 ; BE-P8-NEXT:    lwz r4, 16(r29)
@@ -2448,22 +2445,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P10-NEXT:    mr r29, r3
 ; BE-32BIT-P10-NEXT:    lwz r3, 4(r3)
 ; BE-32BIT-P10-NEXT:    lis r4, 0
-; BE-32BIT-P10-NEXT:    mr r31, r1
+; BE-32BIT-P10-NEXT:    addi r5, r1, 32764
 ; BE-32BIT-P10-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P10-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P10-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P10-NEXT:    lwz r3, 12(r29)
 ; BE-32BIT-P10-NEXT:    lis r4, 0
 ; BE-32BIT-P10-NEXT:    ori r4, r4, 32768
-; BE-32BIT-P10-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P10-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P10-NEXT:    lwz r3, 20(r29)
 ; BE-32BIT-P10-NEXT:    lis r4, 0
 ; BE-32BIT-P10-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P10-NEXT:    stw r3, 32764(r31)
+; BE-32BIT-P10-NEXT:    add r4, r1, r4
+; BE-32BIT-P10-NEXT:    stw r3, 32764(r1)
 ; BE-32BIT-P10-NEXT:    lis r3, 0
 ; BE-32BIT-P10-NEXT:    ori r3, r3, 32768
-; BE-32BIT-P10-NEXT:    add r3, r31, r3
-; BE-32BIT-P10-NEXT:    add r4, r31, r4
-; BE-32BIT-P10-NEXT:    addi r5, r31, 32764
+; BE-32BIT-P10-NEXT:    add r3, r1, r3
 ; BE-32BIT-P10-NEXT:    bl .callee3[PR]
 ; BE-32BIT-P10-NEXT:    nop
 ; BE-32BIT-P10-NEXT:    lwz r4, 16(r29)
@@ -2493,22 +2489,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P9-NEXT:    mr r29, r3
 ; BE-32BIT-P9-NEXT:    lwz r3, 4(r3)
 ; BE-32BIT-P9-NEXT:    lis r4, 0
-; BE-32BIT-P9-NEXT:    mr r31, r1
+; BE-32BIT-P9-NEXT:    addi r5, r1, 32764
 ; BE-32BIT-P9-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P9-NEXT:    addi r5, r31, 32764
-; BE-32BIT-P9-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P9-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P9-NEXT:    lwz r3, 12(r29)
 ; BE-32BIT-P9-NEXT:    lis r4, 0
 ; BE-32BIT-P9-NEXT:    ori r4, r4, 32768
-; BE-32BIT-P9-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P9-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P9-NEXT:    lwz r3, 20(r29)
 ; BE-32BIT-P9-NEXT:    lis r4, 0
 ; BE-32BIT-P9-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P9-NEXT:    stw r3, 32764(r31)
+; BE-32BIT-P9-NEXT:    stw r3, 32764(r1)
 ; BE-32BIT-P9-NEXT:    lis r3, 0
-; BE-32BIT-P9-NEXT:    add r4, r31, r4
+; BE-32BIT-P9-NEXT:    add r4, r1, r4
 ; BE-32BIT-P9-NEXT:    ori r3, r3, 32768
-; BE-32BIT-P9-NEXT:    add r3, r31, r3
+; BE-32BIT-P9-NEXT:    add r3, r1, r3
 ; BE-32BIT-P9-NEXT:    bl .callee3[PR]
 ; BE-32BIT-P9-NEXT:    nop
 ; BE-32BIT-P9-NEXT:    lwz r4, 16(r29)
@@ -2538,22 +2533,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P8-NEXT:    stw r29, -12(r30) # 4-byte Folded Spill
 ; BE-32BIT-P8-NEXT:    mr r29, r3
 ; BE-32BIT-P8-NEXT:    lwz r3, 4(r3)
-; BE-32BIT-P8-NEXT:    mr r31, r1
+; BE-32BIT-P8-NEXT:    addi r5, r1, 32764
 ; BE-32BIT-P8-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P8-NEXT:    addi r5, r31, 32764
-; BE-32BIT-P8-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P8-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P8-NEXT:    lis r4, 0
 ; BE-32BIT-P8-NEXT:    lwz r3, 12(r29)
 ; BE-32BIT-P8-NEXT:    ori r4, r4, 32768
-; BE-32BIT-P8-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P8-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P8-NEXT:    lwz r3, 20(r29)
 ; BE-32BIT-P8-NEXT:    lis r4, 0
 ; BE-32BIT-P8-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P8-NEXT:    stw r3, 32764(r31)
+; BE-32BIT-P8-NEXT:    stw r3, 32764(r1)
 ; BE-32BIT-P8-NEXT:    lis r3, 0
-; BE-32BIT-P8-NEXT:    add r4, r31, r4
+; BE-32BIT-P8-NEXT:    add r4, r1, r4
 ; BE-32BIT-P8-NEXT:    ori r3, r3, 32768
-; BE-32BIT-P8-NEXT:    add r3, r31, r3
+; BE-32BIT-P8-NEXT:    add r3, r1, r3
 ; BE-32BIT-P8-NEXT:    bl .callee3[PR]
 ; BE-32BIT-P8-NEXT:    nop
 ; BE-32BIT-P8-NEXT:    lwz r4, 16(r29)
@@ -2583,22 +2577,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-P10-PRIV-NEXT:    mr r29, r3
 ; BE-P10-PRIV-NEXT:    lwz r3, 4(r3)
 ; BE-P10-PRIV-NEXT:    lis r4, 0
-; BE-P10-PRIV-NEXT:    mr r31, r1
+; BE-P10-PRIV-NEXT:    addi r5, r1, 32764
 ; BE-P10-PRIV-NEXT:    ori r4, r4, 65500
-; BE-P10-PRIV-NEXT:    stwx r3, r31, r4
+; BE-P10-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-P10-PRIV-NEXT:    lwz r3, 12(r29)
 ; BE-P10-PRIV-NEXT:    lis r4, 0
 ; BE-P10-PRIV-NEXT:    ori r4, r4, 32768
-; BE-P10-PRIV-NEXT:    stwx r3, r31, r4
+; BE-P10-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-P10-PRIV-NEXT:    lwz r3, 20(r29)
 ; BE-P10-PRIV-NEXT:    lis r4, 0
 ; BE-P10-PRIV-NEXT:    ori r4, r4, 65500
-; BE-P10-PRIV-NEXT:    stw r3, 32764(r31)
+; BE-P10-PRIV-NEXT:    add r4, r1, r4
+; BE-P10-PRIV-NEXT:    stw r3, 32764(r1)
 ; BE-P10-PRIV-NEXT:    lis r3, 0
 ; BE-P10-PRIV-NEXT:    ori r3, r3, 32768
-; BE-P10-PRIV-NEXT:    add r3, r31, r3
-; BE-P10-PRIV-NEXT:    add r4, r31, r4
-; BE-P10-PRIV-NEXT:    addi r5, r31, 32764
+; BE-P10-PRIV-NEXT:    add r3, r1, r3
 ; BE-P10-PRIV-NEXT:    bl .callee3[PR]
 ; BE-P10-PRIV-NEXT:    nop
 ; BE-P10-PRIV-NEXT:    lwz r4, 16(r29)
@@ -2629,22 +2622,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-P9-PRIV-NEXT:    mr r29, r3
 ; BE-P9-PRIV-NEXT:    lwz r3, 4(r3)
 ; BE-P9-PRIV-NEXT:    lis r4, 0
-; BE-P9-PRIV-NEXT:    mr r31, r1
+; BE-P9-PRIV-NEXT:    addi r5, r1, 32764
 ; BE-P9-PRIV-NEXT:    ori r4, r4, 65500
-; BE-P9-PRIV-NEXT:    addi r5, r31, 32764
-; BE-P9-PRIV-NEXT:    stwx r3, r31, r4
+; BE-P9-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-P9-PRIV-NEXT:    lwz r3, 12(r29)
 ; BE-P9-PRIV-NEXT:    lis r4, 0
 ; BE-P9-PRIV-NEXT:    ori r4, r4, 32768
-; BE-P9-PRIV-NEXT:    stwx r3, r31, r4
+; BE-P9-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-P9-PRIV-NEXT:    lwz r3, 20(r29)
 ; BE-P9-PRIV-NEXT:    lis r4, 0
 ; BE-P9-PRIV-NEXT:    ori r4, r4, 65500
-; BE-P9-PRIV-NEXT:    stw r3, 32764(r31)
+; BE-P9-PRIV-NEXT:    stw r3, 32764(r1)
 ; BE-P9-PRIV-NEXT:    lis r3, 0
-; BE-P9-PRIV-NEXT:    add r4, r31, r4
+; BE-P9-PRIV-NEXT:    add r4, r1, r4
 ; BE-P9-PRIV-NEXT:    ori r3, r3, 32768
-; BE-P9-PRIV-NEXT:    add r3, r31, r3
+; BE-P9-PRIV-NEXT:    add r3, r1, r3
 ; BE-P9-PRIV-NEXT:    bl .callee3[PR]
 ; BE-P9-PRIV-NEXT:    nop
 ; BE-P9-PRIV-NEXT:    lwz r4, 16(r29)
@@ -2675,22 +2667,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-P8-PRIV-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
 ; BE-P8-PRIV-NEXT:    mr r29, r3
 ; BE-P8-PRIV-NEXT:    lwz r3, 4(r3)
-; BE-P8-PRIV-NEXT:    mr r31, r1
+; BE-P8-PRIV-NEXT:    addi r5, r1, 32764
 ; BE-P8-PRIV-NEXT:    ori r4, r4, 65500
-; BE-P8-PRIV-NEXT:    addi r5, r31, 32764
-; BE-P8-PRIV-NEXT:    stwx r3, r31, r4
+; BE-P8-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-P8-PRIV-NEXT:    lis r4, 0
 ; BE-P8-PRIV-NEXT:    lwz r3, 12(r29)
 ; BE-P8-PRIV-NEXT:    ori r4, r4, 32768
-; BE-P8-PRIV-NEXT:    stwx r3, r31, r4
+; BE-P8-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-P8-PRIV-NEXT:    lwz r3, 20(r29)
 ; BE-P8-PRIV-NEXT:    lis r4, 0
 ; BE-P8-PRIV-NEXT:    ori r4, r4, 65500
-; BE-P8-PRIV-NEXT:    stw r3, 32764(r31)
+; BE-P8-PRIV-NEXT:    stw r3, 32764(r1)
 ; BE-P8-PRIV-NEXT:    lis r3, 0
-; BE-P8-PRIV-NEXT:    add r4, r31, r4
+; BE-P8-PRIV-NEXT:    add r4, r1, r4
 ; BE-P8-PRIV-NEXT:    ori r3, r3, 32768
-; BE-P8-PRIV-NEXT:    add r3, r31, r3
+; BE-P8-PRIV-NEXT:    add r3, r1, r3
 ; BE-P8-PRIV-NEXT:    bl .callee3[PR]
 ; BE-P8-PRIV-NEXT:    nop
 ; BE-P8-PRIV-NEXT:    lwz r4, 16(r29)
@@ -2721,22 +2712,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P10-PRIV-NEXT:    mr r29, r3
 ; BE-32BIT-P10-PRIV-NEXT:    lwz r3, 4(r3)
 ; BE-32BIT-P10-PRIV-NEXT:    lis r4, 0
-; BE-32BIT-P10-PRIV-NEXT:    mr r31, r1
+; BE-32BIT-P10-PRIV-NEXT:    addi r5, r1, 32764
 ; BE-32BIT-P10-PRIV-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P10-PRIV-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P10-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P10-PRIV-NEXT:    lwz r3, 12(r29)
 ; BE-32BIT-P10-PRIV-NEXT:    lis r4, 0
 ; BE-32BIT-P10-PRIV-NEXT:    ori r4, r4, 32768
-; BE-32BIT-P10-PRIV-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P10-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P10-PRIV-NEXT:    lwz r3, 20(r29)
 ; BE-32BIT-P10-PRIV-NEXT:    lis r4, 0
 ; BE-32BIT-P10-PRIV-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P10-PRIV-NEXT:    stw r3, 32764(r31)
+; BE-32BIT-P10-PRIV-NEXT:    add r4, r1, r4
+; BE-32BIT-P10-PRIV-NEXT:    stw r3, 32764(r1)
 ; BE-32BIT-P10-PRIV-NEXT:    lis r3, 0
 ; BE-32BIT-P10-PRIV-NEXT:    ori r3, r3, 32768
-; BE-32BIT-P10-PRIV-NEXT:    add r3, r31, r3
-; BE-32BIT-P10-PRIV-NEXT:    add r4, r31, r4
-; BE-32BIT-P10-PRIV-NEXT:    addi r5, r31, 32764
+; BE-32BIT-P10-PRIV-NEXT:    add r3, r1, r3
 ; BE-32BIT-P10-PRIV-NEXT:    bl .callee3[PR]
 ; BE-32BIT-P10-PRIV-NEXT:    nop
 ; BE-32BIT-P10-PRIV-NEXT:    lwz r4, 16(r29)
@@ -2766,22 +2756,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P9-PRIV-NEXT:    mr r29, r3
 ; BE-32BIT-P9-PRIV-NEXT:    lwz r3, 4(r3)
 ; BE-32BIT-P9-PRIV-NEXT:    lis r4, 0
-; BE-32BIT-P9-PRIV-NEXT:    mr r31, r1
+; BE-32BIT-P9-PRIV-NEXT:    addi r5, r1, 32764
 ; BE-32BIT-P9-PRIV-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P9-PRIV-NEXT:    addi r5, r31, 32764
-; BE-32BIT-P9-PRIV-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P9-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P9-PRIV-NEXT:    lwz r3, 12(r29)
 ; BE-32BIT-P9-PRIV-NEXT:    lis r4, 0
 ; BE-32BIT-P9-PRIV-NEXT:    ori r4, r4, 32768
-; BE-32BIT-P9-PRIV-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P9-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P9-PRIV-NEXT:    lwz r3, 20(r29)
 ; BE-32BIT-P9-PRIV-NEXT:    lis r4, 0
 ; BE-32BIT-P9-PRIV-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P9-PRIV-NEXT:    stw r3, 32764(r31)
+; BE-32BIT-P9-PRIV-NEXT:    stw r3, 32764(r1)
 ; BE-32BIT-P9-PRIV-NEXT:    lis r3, 0
-; BE-32BIT-P9-PRIV-NEXT:    add r4, r31, r4
+; BE-32BIT-P9-PRIV-NEXT:    add r4, r1, r4
 ; BE-32BIT-P9-PRIV-NEXT:    ori r3, r3, 32768
-; BE-32BIT-P9-PRIV-NEXT:    add r3, r31, r3
+; BE-32BIT-P9-PRIV-NEXT:    add r3, r1, r3
 ; BE-32BIT-P9-PRIV-NEXT:    bl .callee3[PR]
 ; BE-32BIT-P9-PRIV-NEXT:    nop
 ; BE-32BIT-P9-PRIV-NEXT:    lwz r4, 16(r29)
@@ -2811,22 +2800,21 @@ define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P8-PRIV-NEXT:    stw r29, -12(r30) # 4-byte Folded Spill
 ; BE-32BIT-P8-PRIV-NEXT:    mr r29, r3
 ; BE-32BIT-P8-PRIV-NEXT:    lwz r3, 4(r3)
-; BE-32BIT-P8-PRIV-NEXT:    mr r31, r1
+; BE-32BIT-P8-PRIV-NEXT:    addi r5, r1, 32764
 ; BE-32BIT-P8-PRIV-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P8-PRIV-NEXT:    addi r5, r31, 32764
-; BE-32BIT-P8-PRIV-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P8-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P8-PRIV-NEXT:    lis r4, 0
 ; BE-32BIT-P8-PRIV-NEXT:    lwz r3, 12(r29)
 ; BE-32BIT-P8-PRIV-NEXT:    ori r4, r4, 32768
-; BE-32BIT-P8-PRIV-NEXT:    stwx r3, r31, r4
+; BE-32BIT-P8-PRIV-NEXT:    stwx r3, r1, r4
 ; BE-32BIT-P8-PRIV-NEXT:    lwz r3, 20(r29)
 ; BE-32BIT-P8-PRIV-NEXT:    lis r4, 0
 ; BE-32BIT-P8-PRIV-NEXT:    ori r4, r4, 65508
-; BE-32BIT-P8-PRIV-NEXT:    stw r3, 32764(r31)
+; BE-32BIT-P8-PRIV-NEXT:    stw r3, 32764(r1)
 ; BE-32BIT-P8-PRIV-NEXT:    lis r3, 0
-; BE-32BIT-P8-PRIV-NEXT:    add r4, r31, r4
+; BE-32BIT-P8-PRIV-NEXT:    add r4, r1, r4
 ; BE-32BIT-P8-PRIV-NEXT:    ori r3, r3, 32768
-; BE-32BIT-P8-PRIV-NEXT:    add r3, r31, r3
+; BE-32BIT-P8-PRIV-NEXT:    add r3, r1, r3
 ; BE-32BIT-P8-PRIV-NEXT:    bl .callee3[PR]
 ; BE-32BIT-P8-PRIV-NEXT:    nop
 ; BE-32BIT-P8-PRIV-NEXT:    lwz r4, 16(r29)

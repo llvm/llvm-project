@@ -26,8 +26,7 @@ declare void @callee(ptr)
 ; 32BIT:         clrlwi  0, 1, 27
 ; 32BIT:         subfic 0, 0, -224
 ; 32BIT:         stwux 1, 1, 0
-; 32BIT:         mr 31, 1
-; 32BIT:         addi 3, 31, 64
+; 32BIT:         addi 3, 1, 64
 ; 32BIT:         bl .callee
 ; 32BIT:         mr 1, 30
 ; 32BIT:         lwz 31, -12(1)
@@ -40,8 +39,7 @@ declare void @callee(ptr)
 ; 64BIT:         clrldi  0, 1, 59
 ; 64BIT:         subfic 0, 0, -288
 ; 64BIT:         stdux 1, 1, 0
-; 64BIT:         mr 31, 1
-; 64BIT:         addi 3, 31, 128
+; 64BIT:         addi 3, 1, 128
 ; 64BIT:         bl .callee
 ; 64BIT:         mr 1, 30
 ; 64BIT:         ld 31, -16(1)
