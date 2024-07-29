@@ -383,12 +383,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.cospif
-    libc.src.math.dfmaf128
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
     libc.src.math.dsubl
-    libc.src.math.dsubf128
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -563,6 +561,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    
     libc.src.math.f16add
     libc.src.math.f16addf
     libc.src.math.f16addl
@@ -649,8 +648,10 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
+    libc.src.math.dsubf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
