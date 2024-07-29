@@ -6035,11 +6035,11 @@ MSVC Reference Binding
 
 Please see the `MSDN doc<https://learn.microsoft.com/en-us/cpp/build/reference/zc-referencebinding-enforce-reference-binding-rules>`_ for more information on this non-conforming C++ extension.
 
-MSVC allows user-defined type temporaries to be bound to non-const lvalue references when `/permissive`
-or `/Zc:referenceBinding-` are given on the command line.
+MSVC allows user-defined type temporaries to be bound to non-const lvalue references when ``/permissive``
+or ``/Zc:referenceBinding-`` are given on the command line.
 
-The current default behavior as of MSVC 1940 is `/permissive`.
-As of Visual Studio 2017, `/permissive-` is the default for projects meaning C++ conformance is enforced when
+The current default behavior as of MSVC 1940 is ``/permissive``.
+As of Visual Studio 2017, ``/permissive-`` is the default for projects meaning C++ conformance is enforced when
 building with MSVC in Visual Studio.
 
 This MSVC extension can be enabled with ``-fms-reference-binding`` with the clang or cl driver.
