@@ -6,7 +6,6 @@ target_link_libraries(MLIRDialectTests
   MLIRIR
   MLIRDialect)
 
-add_subdirectory(Arith)
 add_subdirectory(ArmSME)
 add_subdirectory(Index)
 add_subdirectory(LLVMIR)
