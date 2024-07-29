@@ -76,8 +76,9 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
                     error = lldb.SBError()
                     ret_addr = process.ReadPointerFromMemory(
                         cfa[fibonacci_number-1] + target.addr_size, error)
+                    prologue_to_skip = frame.GetFunction().GetPrologueByteSize()
                     self.assertSuccess(error, "Managed to read context memory")
-                    self.assertEqual(ret_addr, frame.GetPC())
+                    self.assertEqual(ret_addr + prologue_to_skip, frame.GetPC())
 
             self.assertIn("Main.main", thread.GetFrameAtIndex(n+1).GetFunctionName())
 

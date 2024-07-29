@@ -44,7 +44,7 @@ class TestCase(lldbtest.TestBase):
             lldbutil.check_variable(self, myvar, False, value=expected_value)
 
     @swiftTest
-    @skipIf(oslist=["windows", "linux", "macos"])
+    @skipIf(oslist=["windows", "linux"])
     def test(self):
         """Test `frame variable` in async functions"""
         self.build()
