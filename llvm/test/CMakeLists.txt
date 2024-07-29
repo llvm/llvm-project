@@ -82,6 +82,7 @@ set(LLVM_TEST_DEPENDS
           llvm-cfi-verify
           llvm-config
           llvm-cov
+          llvm-ctxprof-util
           llvm-cvtres
           llvm-cxxdump
           llvm-cxxfilt
