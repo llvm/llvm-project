@@ -4111,12 +4111,15 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
           NMask.push_back(MaskElt % LTNumElts);
       }
       // If the sub-mask has at most 2 input sub-vectors then re-cost it using
-      // getShuffleCost. If not then cost it using the worst case as the number
-      // of element moves into a new vector.
+      // getShuffleCost. If not then cost it using the worst case.
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
+      else if (any_of(enumerate(NMask), [&](const auto &ME) {
+                 return ME.value() % LTNumElts == ME.index();
+               }))
+        Cost += LTNumElts - 1;
       else
         Cost += LTNumElts;
     }
