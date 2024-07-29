@@ -837,9 +837,9 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   // TODO: Support the following clauses: private, firstprivate, lastprivate,
   // allocate
   if (!sectionsOp.getAllocateVars().empty() ||
-      !sectionsOp.getAllocatorVars().empty())
-    return emitError(sectionsOp.getLoc())
-           << "allocate clause is not supported for sections construct";
+      !sectionsOp.getAllocatorVars().empty() ||
+      !sectionsOp.getPrivateVars().empty() || sectionsOp.getPrivateSyms())
+    return opInst.emitError("unhandled clauses for translation to LLVM IR");
 
   llvm::ArrayRef<bool> isByRef = getIsByRef(sectionsOp.getReductionByref());
   assert(isByRef.size() == sectionsOp.getNumReductionVars());
@@ -945,6 +945,9 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   LogicalResult bodyGenStatus = success();
+  if (!singleOp.getPrivateVars().empty() || singleOp.getPrivateSyms())
+    return singleOp.emitError("unhandled clauses for translation to LLVM IR");
+
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
     builder.restoreIP(codegenIP);
     convertOmpOpRegions(singleOp.getRegion(), "omp.single.region", builder,
@@ -976,7 +979,8 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   LogicalResult bodyGenStatus = success();
-  if (!op.getAllocatorVars().empty() || op.getReductionSyms())
+  if (!op.getAllocatorVars().empty() || op.getReductionSyms() ||
+      !op.getPrivateVars().empty() || op.getPrivateSyms())
     return op.emitError("unhandled clauses for translation to LLVM IR");
 
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
@@ -1043,7 +1047,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   LogicalResult bodyGenStatus = success();
   if (taskOp.getUntiedAttr() || taskOp.getMergeableAttr() ||
       taskOp.getInReductionSyms() || taskOp.getPriority() ||
-      !taskOp.getAllocateVars().empty()) {
+      !taskOp.getAllocateVars().empty() || !taskOp.getPrivateVars().empty() ||
+      taskOp.getPrivateSyms()) {
     return taskOp.emitError("unhandled clauses for translation to LLVM IR");
   }
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
@@ -1091,11 +1096,28 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
       ompLoc, allocaIP, bodyCB));
   return bodyGenStatus;
 }
+
+static LogicalResult
+convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  if (!twOp.getDependVars().empty() || twOp.getDependKinds() ||
+      twOp.getNowait())
+    return twOp.emitError("unhandled clauses for translation to LLVM IR");
+
+  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder.saveIP());
+  return success();
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto wsloopOp = cast<omp::WsloopOp>(opInst);
+  if (!wsloopOp.getAllocateVars().empty() ||
+      !wsloopOp.getAllocatorVars().empty() ||
+      !wsloopOp.getPrivateVars().empty() || wsloopOp.getPrivateSyms())
+    return opInst.emitError("unhandled clauses for translation to LLVM IR");
+
   // FIXME: Here any other nested wrappers (e.g. omp.simd) are skipped, so
   // codegen for composite constructs like 'DO/FOR SIMD' will be the same as for
   // 'DO/FOR'.
@@ -1606,6 +1628,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                LLVM::ModuleTranslation &moduleTranslation) {
   auto simdOp = cast<omp::SimdOp>(opInst);
   auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
+
+  if (!simdOp.getLinearVars().empty() || !simdOp.getLinearStepVars().empty() ||
+      !simdOp.getPrivateVars().empty() || simdOp.getPrivateSyms() ||
+      !simdOp.getReductionVars().empty() || simdOp.getReductionByref() ||
+      simdOp.getReductionSyms())
+    return opInst.emitError("unhandled clauses for translation to LLVM IR");
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
@@ -3035,6 +3063,18 @@ static bool targetOpSupported(Operation &opInst) {
     return false;
   }
 
+  if (!targetOp.getAllocateVars().empty() ||
+      !targetOp.getAllocatorVars().empty()) {
+    opInst.emitError("Allocate clause not yet supported");
+    return false;
+  }
+
+  if (!targetOp.getInReductionVars().empty() ||
+      targetOp.getInReductionByref() || targetOp.getInReductionSyms()) {
+    opInst.emitError("In reduction clause not yet supported");
+    return false;
+  }
+
   return true;
 }
 
@@ -3434,10 +3474,6 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
         ompBuilder->createBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
         return success();
       })
-      .Case([&](omp::TaskwaitOp) {
-        ompBuilder->createTaskwait(builder.saveIP());
-        return success();
-      })
       .Case([&](omp::TaskyieldOp) {
         ompBuilder->createTaskyield(builder.saveIP());
         return success();
@@ -3504,6 +3540,9 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       })
       .Case([&](omp::TaskgroupOp op) {
         return convertOmpTaskgroupOp(op, builder, moduleTranslation);
+      })
+      .Case([&](omp::TaskwaitOp op) {
+        return convertOmpTaskwaitOp(op, builder, moduleTranslation);
       })
       .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareReductionOp,
             omp::CriticalDeclareOp>([](auto op) {

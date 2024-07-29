@@ -272,11 +272,10 @@ using ParallelOperands =
 using SectionsOperands = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
                                          PrivateClauseOps, ReductionClauseOps>;
 
-// TODO `linear` clause.
 using SimdOperands =
-    detail::Clauses<AlignedClauseOps, IfClauseOps, NontemporalClauseOps,
-                    OrderClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    SafelenClauseOps, SimdlenClauseOps>;
+    detail::Clauses<AlignedClauseOps, IfClauseOps, LinearClauseOps,
+                    NontemporalClauseOps, OrderClauseOps, PrivateClauseOps,
+                    ReductionClauseOps, SafelenClauseOps, SimdlenClauseOps>;
 
 using SingleOperands = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
                                        NowaitClauseOps, PrivateClauseOps>;
