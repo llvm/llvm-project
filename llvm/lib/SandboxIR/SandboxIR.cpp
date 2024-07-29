@@ -612,7 +612,13 @@ void BranchInst::dump() const {
 
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx,
-                           bool IsVolatile, const Twine &Name) {
+                           const Twine &Name) {
+  return create(Ty, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx, Name);
+}
+
+LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, bool IsVolatile,
+                           Context &Ctx, const Twine &Name) {
   llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(BeforeIR);
@@ -624,7 +630,13 @@ LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
 
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            BasicBlock *InsertAtEnd, Context &Ctx,
-                           bool IsVolatile, const Twine &Name) {
+                           const Twine &Name) {
+  return create(Ty, Ptr, Align, InsertAtEnd, /*IsVolatile=*/false, Ctx, Name);
+}
+
+LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, bool IsVolatile,
+                           Context &Ctx, const Twine &Name) {
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
   auto *NewLI =
