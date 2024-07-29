@@ -198,7 +198,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       for (MVT VT : F16VecVTs)
         addRegClassForRVV(VT);
 
-    if (Subtarget.hasVInstructionsBF16())
+    if (Subtarget.hasVInstructionsBF16Minimal())
       for (MVT VT : BF16VecVTs)
         addRegClassForRVV(VT);
 
@@ -1092,7 +1092,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     // TODO: Could we merge some code with zvfhmin?
-    if (Subtarget.hasVInstructionsBF16()) {
+    if (Subtarget.hasVInstructionsBF16Minimal()) {
       for (MVT VT : BF16VecVTs) {
         if (!isTypeLegal(VT))
           continue;
@@ -2637,7 +2637,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
       return false;
     break;
   case MVT::bf16:
-    if (!Subtarget.hasVInstructionsBF16())
+    if (!Subtarget.hasVInstructionsBF16Minimal())
       return false;
     break;
   case MVT::f32:
@@ -6834,7 +6834,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           Subtarget.hasStdExtZfhminOrZhinxmin() &&
           !Subtarget.hasVInstructionsF16())) ||
         (Op.getValueType().getScalarType() == MVT::bf16 &&
-         (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin()))) {
+         (Subtarget.hasVInstructionsBF16Minimal() &&
+          Subtarget.hasStdExtZfbfmin()))) {
       if (Op.getValueType() == MVT::nxv32f16 ||
           Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
