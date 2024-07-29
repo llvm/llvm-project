@@ -315,10 +315,11 @@ define i32 @pcmpestri_reg_diff_i16(<8 x i16> %lhs, i32 %lhs_len, <8 x i16> %rhs,
 ; X86-NEXT:    jmp .LBB8_3
 ; X86-NEXT:  .LBB8_2: # %compare
 ; X86-NEXT:    movdqa %xmm0, (%esp)
-; X86-NEXT:    andl $7, %ecx
-; X86-NEXT:    movzwl (%esp,%ecx,2), %eax
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    andl $14, %ecx
+; X86-NEXT:    movzwl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
-; X86-NEXT:    subw 16(%esp,%ecx,2), %ax
+; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:  .LBB8_3: # %exit
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl %ebp, %esp
@@ -452,10 +453,11 @@ define i32 @pcmpestri_mem_diff_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32
 ; X86-NEXT:    jmp .LBB11_3
 ; X86-NEXT:  .LBB11_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
-; X86-NEXT:    andl $7, %ecx
-; X86-NEXT:    movzwl (%esp,%ecx,2), %eax
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    andl $14, %ecx
+; X86-NEXT:    movzwl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    subw 16(%esp,%ecx,2), %ax
+; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:  .LBB11_3: # %exit
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    leal -4(%ebp), %esp
@@ -772,10 +774,11 @@ define i32 @pcmpistri_reg_diff_i16(<8 x i16> %lhs, <8 x i16> %rhs) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movdqa %xmm0, (%esp)
-; X86-NEXT:    andl $7, %ecx
-; X86-NEXT:    movzwl (%esp,%ecx,2), %eax
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    andl $14, %ecx
+; X86-NEXT:    movzwl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
-; X86-NEXT:    subw 16(%esp,%ecx,2), %ax
+; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    movzwl %ax, %eax
@@ -889,10 +892,11 @@ define i32 @pcmpistri_mem_diff_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-NEXT:    jmp .LBB23_3
 ; X86-NEXT:  .LBB23_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
-; X86-NEXT:    andl $7, %ecx
-; X86-NEXT:    movzwl (%esp,%ecx,2), %eax
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    andl $14, %ecx
+; X86-NEXT:    movzwl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    subw 16(%esp,%ecx,2), %ax
+; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:  .LBB23_3: # %exit
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl %ebp, %esp

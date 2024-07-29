@@ -91,10 +91,9 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 4, 0
-; CHECK-NEXT:    ld.b $a0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 4, 0
+; CHECK-NEXT:    ld.b $a0, $a0, 0
 ; CHECK-NEXT:    st.b $a0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
@@ -117,10 +116,9 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 4, 1
-; CHECK-NEXT:    ld.h $a0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 4, 1
+; CHECK-NEXT:    ld.h $a0, $a0, 0
 ; CHECK-NEXT:    st.h $a0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
@@ -143,10 +141,9 @@ define void @extract_8xi32_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 4, 2
-; CHECK-NEXT:    ld.w $a0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 4, 2
+; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
@@ -169,10 +166,9 @@ define void @extract_4xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 4, 3
-; CHECK-NEXT:    ld.d $a0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 4, 3
+; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    st.d $a0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
@@ -195,10 +191,9 @@ define void @extract_8xfloat_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 4, 2
-; CHECK-NEXT:    fld.s $fa0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 4, 2
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    fst.s $fa0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
@@ -221,10 +216,9 @@ define void @extract_4xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    addi.d $a2, $sp, 0
-; CHECK-NEXT:    bstrins.d $a2, $a0, 4, 3
-; CHECK-NEXT:    fld.d $fa0, $a2, 0
+; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    bstrins.d $a0, $a2, 4, 3
+; CHECK-NEXT:    fld.d $fa0, $a0, 0
 ; CHECK-NEXT:    fst.d $fa0, $a1, 0
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
