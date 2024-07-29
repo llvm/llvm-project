@@ -1,8 +1,14 @@
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG %s
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK %s
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,DARWIN %s
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK,DARWIN %s
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,ELF %s
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK,ELF %s
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
+// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 
 
 // CHECK: @gmethod0 = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base011nonvirtual0Ev, i32 0, i64 [[TYPEDISC1:35591]]) to i64), i64 0 }, align 8
@@ -78,9 +84,9 @@ struct Class0 {
   MethodTy1 m0;
 };
 
-// CHECK: define void @_ZN5Base08virtual1Ev(
+// CHECK: define{{.*}} void @_ZN5Base08virtual1Ev(
 
-// CHECK: define void @_Z5test0v()
+// CHECK: define{{.*}} void @_Z5test0v()
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK-NEXT: %[[VARMETHOD1:.*]] = alloca { i64, i64 }, align 8
 // CHECK-NEXT: %[[METHOD2:.*]] = alloca { i64, i64 }, align 8
@@ -246,7 +252,7 @@ void test0() {
   method7 = &Derived1::virtual1;
 }
 
-// CHECK: define void @_Z5test1P5Base0MS_FvvE(ptr noundef %[[A0:.*]], [2 x i64] %[[A1_COERCE:.*]])
+// CHECK: define{{.*}} void @_Z5test1P5Base0MS_FvvE(ptr noundef %[[A0:.*]], [2 x i64] %[[A1_COERCE:.*]])
 // CHECK: %[[A1:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[A0_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[A1_ADDR:.*]] = alloca { i64, i64 }, align 8
@@ -264,15 +270,16 @@ void test0() {
 // CHECK: %[[MEMPTR_ISVIRTUAL:.*]] = icmp ne i64 %[[V5]], 0
 // CHECK: br i1 %[[MEMPTR_ISVIRTUAL]]
 
-// CHECK: %[[VTABLE:.*]] = load ptr, ptr %[[V4]], align 8
-// CHECK: %[[V7:.*]] = ptrtoint ptr %[[VTABLE]] to i64
-// CHECK: %[[V8:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V7]], i32 2, i64 0)
-// CHECK: %[[V9:.*]] = inttoptr i64 %[[V8]] to ptr
-// CHECK: %[[V10:.*]] = trunc i64 %[[MEMPTR_PTR]] to i32
-// CHECK: %[[V11:.*]] = zext i32 %[[V10]] to i64
-// CHECK: %[[V12:.*]] = getelementptr i8, ptr %[[V9]], i64 %[[V11]]
-// CHECK: %[[MEMPTR_VIRTUALFN:.*]] = load ptr, ptr %[[V12]], align 8
-// CHECK: br
+// CHECK:  %[[VTABLE:.*]] = load ptr, ptr %[[V4]], align 8
+// CHECK:  %[[V7:.*]] = ptrtoint ptr %[[VTABLE]] to i64
+// CHECK:  %[[V8:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V7]], i32 2, i64 0)
+// CHECK:  %[[V9:.*]] = inttoptr i64 %[[V8]] to ptr
+// DARWIN: %[[V10:.*]] = trunc i64 %[[MEMPTR_PTR]] to i32
+// DARWIN: %[[V11:.*]] = zext i32 %[[V10]] to i64
+// DARWIN: %[[V12:.*]] = getelementptr i8, ptr %[[V9]], i64 %[[V11]]
+// ELF:    %[[V12:.*]] = getelementptr i8, ptr %[[V9]], i64 %[[MEMPTR_PTR]]
+// CHECK:  %[[MEMPTR_VIRTUALFN:.*]] = load ptr, ptr %[[V12]], align 8
+// CHECK:  br
 
 // CHECK: %[[MEMPTR_NONVIRTUALFN:.*]] = inttoptr i64 %[[MEMPTR_PTR]] to ptr
 // CHECK: br
@@ -286,7 +293,7 @@ void test1(Base0 *a0, MethodTy0 a1) {
   (a0->*a1)();
 }
 
-// CHECK: define void @_Z15testConversion0M5Base0FvvEM8Derived0FvvE([2 x i64] %[[METHOD0_COERCE:.*]], [2 x i64] %[[METHOD1_COERCE:.*]])
+// CHECK: define{{.*}} void @_Z15testConversion0M5Base0FvvEM8Derived0FvvE([2 x i64] %[[METHOD0_COERCE:.*]], [2 x i64] %[[METHOD1_COERCE:.*]])
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[METHOD1:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[METHOD0_ADDR:.*]] = alloca { i64, i64 }, align 8
@@ -326,21 +333,21 @@ void testConversion0(MethodTy0 method0, MethodTy1 method1) {
   method1 = method0;
 }
 
-// CHECK: define void @_Z15testConversion1M5Base0FvvE(
+// CHECK: define{{.*}} void @_Z15testConversion1M5Base0FvvE(
 // CHECK: call i64 @llvm.ptrauth.resign(i64 %{{.*}}, i32 0, i64 [[TYPEDISC0]], i32 0, i64 [[TYPEDISC1]])
 
 void testConversion1(MethodTy0 method0) {
   MethodTy1 method1 = reinterpret_cast<MethodTy1>(method0);
 }
 
-// CHECK: define void @_Z15testConversion2M8Derived0FvvE(
+// CHECK: define{{.*}} void @_Z15testConversion2M8Derived0FvvE(
 // CHECK: call i64 @llvm.ptrauth.resign(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
 
 void testConversion2(MethodTy1 method1) {
   MethodTy0 method0 = static_cast<MethodTy0>(method1);
 }
 
-// CHECK: define void @_Z15testConversion3M8Derived0FvvE(
+// CHECK: define{{.*}} void @_Z15testConversion3M8Derived0FvvE(
 // CHECK: call i64 @llvm.ptrauth.resign(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
 
 void testConversion3(MethodTy1 method1) {
@@ -350,7 +357,7 @@ void testConversion3(MethodTy1 method1) {
 // No need to call @llvm.ptrauth.resign if the source member function
 // pointer is a constant.
 
-// CHECK: define void @_Z15testConversion4v(
+// CHECK: define{{.*}} void @_Z15testConversion4v(
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 [[TYPEDISC0]]) to i64), i64 0 }, ptr %[[METHOD0]], align 8
 // CHECK: ret void
@@ -396,7 +403,7 @@ MethodTy1 gmethod0 = reinterpret_cast<MethodTy1>(&Base0::nonvirtual0);
 MethodTy0 gmethod1 = reinterpret_cast<MethodTy0>(&Derived0::nonvirtual5);
 MethodTy0 gmethod2 = reinterpret_cast<MethodTy0>(&Derived0::virtual1);
 
-// CHECK-LABEL: define void @_Z13testArrayInitv()
+// CHECK-LABEL: define{{.*}} void @_Z13testArrayInitv()
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %p0, ptr align 8 @__const._Z13testArrayInitv.p0, i64 16, i1 false)
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %p1, ptr align 8 @__const._Z13testArrayInitv.p1, i64 16, i1 false)
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %c0, ptr align 8 @__const._Z13testArrayInitv.c0, i64 16, i1 false)
@@ -424,7 +431,7 @@ void testArrayInit() {
 // STACK-PROT-NOT: sspreq
 // STACK-PROT-NEXT: attributes
 
-// CHECK: define void @_Z15testConvertNullv(
+// CHECK: define{{.*}} void @_Z15testConvertNullv(
 // CHECK: %[[T:.*]] = alloca { i64, i64 },
 // store { i64, i64 } zeroinitializer, { i64, i64 }* %[[T]],
 

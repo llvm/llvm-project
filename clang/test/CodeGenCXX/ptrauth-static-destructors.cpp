@@ -1,34 +1,35 @@
 // RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
 // RUN:  | FileCheck %s --check-prefix=CXAATEXIT
 
-<<<<<<< HEAD
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
-// RUN:    -fno-use-cxa-atexit \
-// RUN:  | FileCheck %s --check-prefix=ATEXIT
-=======
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN:    -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:    -fno-use-cxa-atexit | FileCheck %s --check-prefixes=ATEXIT,ATEXIT_DARWIN
 
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN:    -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:  | FileCheck %s --check-prefix=CXAATEXIT
 
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN:    -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:    -fno-use-cxa-atexit | FileCheck %s --check-prefixes=ATEXIT,ATEXIT_ELF
 
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s \
+// RUN:  -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:  -fptrauth-function-pointer-type-discrimination  -o - | FileCheck %s --check-prefix=CXAATEXIT_DISC
 
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN:   -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:   -fptrauth-function-pointer-type-discrimination  -fno-use-cxa-atexit \
 // RUN:  | FileCheck %s --check-prefixes=ATEXIT_DISC,ATEXIT_DISC_DARWIN
 
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -emit-llvm -std=c++11 %s \
+// RUN:  -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:  -fptrauth-function-pointer-type-discrimination  -o - | FileCheck %s --check-prefix=CXAATEXIT_DISC
 
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN:   -mllvm -ptrauth-emit-wrapper-globals=0 \
 // RUN:   -fptrauth-function-pointer-type-discrimination -fno-use-cxa-atexit \
 // RUN:  | FileCheck %s --check-prefixes=ATEXIT_DISC,ATEXIT_DISC_ELF
->>>>>>> refs/am/changes/8be1325cb1903797ba3dce67087e395f9e080576_next
 
 class Foo {
  public:
@@ -47,10 +48,6 @@ Foo global;
 // ATEXIT: define internal void @__cxx_global_var_init()
 // ATEXIT:   %{{.*}} = call i32 @atexit(ptr ptrauth (ptr @__dtor_global, i32 0))
 
-<<<<<<< HEAD
-// ATEXIT: define internal void @__dtor_global() {{.*}} section "__TEXT,__StaticInit,regular,pure_instructions" {
-// ATEXIT:   %{{.*}} = call ptr @_ZN3FooD1Ev(ptr @global)
-=======
 // ATEXIT_DARWIN: define internal void @__dtor_global() {{.*}} section "__TEXT,__StaticInit,regular,pure_instructions" {
 // ATEXIT_ELF:    define internal void @__dtor_global() {{.*}} section ".text.startup" {
 // ATEXIT_DARWIN:   %{{.*}} = call ptr @_ZN3FooD1Ev(ptr @global)
@@ -64,4 +61,3 @@ Foo global;
 // ATEXIT_DISC_ELF:    define internal void @__dtor_global() {{.*}} section ".text.startup" {
 // ATEXIT_DISC_DARWIN:   %{{.*}} = call ptr @_ZN3FooD1Ev(ptr @global)
 // ATEXIT_DISC_ELF:      call void @_ZN3FooD1Ev(ptr @global)
->>>>>>> refs/am/changes/8be1325cb1903797ba3dce67087e395f9e080576_next
