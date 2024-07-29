@@ -253,8 +253,10 @@ def FmodF16F128 : F16F128MathTemplate, Builtin {
 
 def FrexpF16F128 : F16F128MathTemplate, Builtin {
   let Spellings = ["__builtin_frexp"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, ConstexprSince];
   let Prototype = "T(T, int*)";
+  let BuiltinPrefixedAliasIsConstexpr = 1;
+  let UnprefixedOnlyConstexprSince = "lang_cxx23";
 }
 
 def HugeVal : Builtin, FPMathWithF128Template {

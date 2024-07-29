@@ -34,6 +34,8 @@
 // CHECK-NEXT:    [[FREXP6:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[FREXP7:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[FREXP8:%.*]] = alloca x86_fp80, align 16
+// CHECK-NEXT:    [[FREXP9:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[FREXP10:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK-NEXT:    store double 1.300000e+00, ptr [[MIN1]], align 8
 // CHECK-NEXT:    store double -0.000000e+00, ptr [[MIN2]], align 8
@@ -57,8 +59,10 @@
 // CHECK-NEXT:    store float 0x7FF8000000000000, ptr [[FREXP4]], align 4
 // CHECK-NEXT:    store float 0xFFF8000000000000, ptr [[FREXP5]], align 4
 // CHECK-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP6]], align 4
-// CHECK-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP7]], align 4
+// CHECK-NEXT:    store float 0xFFF0000000000000, ptr [[FREXP7]], align 4
 // CHECK-NEXT:    store x86_fp80 0xK3FFE81A9FBE76C8B4396, ptr [[FREXP8]], align 16
+// CHECK-NEXT:    store float 8.750000e-01, ptr [[FREXP9]], align 4
+// CHECK-NEXT:    store x86_fp80 0xK3FFEEAC7AE147AE14800, ptr [[FREXP10]], align 16
 // CHECK-NEXT:    ret i32 0
 //
 int func()
@@ -91,9 +95,11 @@ int func()
   constexpr double frexp3 = __builtin_frexp(-0.0, &i);
   constexpr float frexp4 = __builtin_frexpf(NAN, &i);
   constexpr float frexp5 = __builtin_frexpf(-NAN, &i);
-  constexpr float frexp6 = __builtin_frexpf(INFINITY, &i);
-  constexpr float frexp7 = __builtin_frexpf(INFINITY, &i);
+  constexpr float frexp6 = __builtin_frexpf(+INFINITY, &i);
+  constexpr float frexp7 = __builtin_frexpf(-INFINITY, &i);
   constexpr long double frexp8 = __builtin_frexpl(259.328L, &i);
+  constexpr float frexp9 = __builtin_frexpf16(3.5, &i);
+  constexpr long double frexp10 = __builtin_frexpf128(234.78, &i);
 
   return 0;
 }

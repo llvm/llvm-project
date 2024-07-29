@@ -14814,7 +14814,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BIfrexpl:
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
-  case Builtin::BI__builtin_frexpl: {
+  case Builtin::BI__builtin_frexpl:
+  case Builtin::BI__builtin_frexpf16:
+  case Builtin::BI__builtin_frexpf128: {
     const auto *FDecl = E->getDirectCallee();
     Builtin::Context BTC = Info.Ctx.BuiltinInfo;
     if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
