@@ -464,7 +464,8 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
   return Streamer;
 }
 
-static void emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
+static void emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer,
+                     DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
   Streamer.emitUnit(Unit, *UnitDIE);
 }
