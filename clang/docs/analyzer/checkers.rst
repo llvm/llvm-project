@@ -1706,6 +1706,8 @@ The stream operations are by this checker usually split into two cases, a succes
 and a failure case.
 On the success case it also assumes that the current value of ``stdout``,
 ``stderr``, or ``stdin`` can't be equal to the file pointer returned by ``fopen``.
+Operations performed on ``stdout``, ``stderr``, or ``stdin`` are not checked by
+this checker in contrast to the streams opened by ``fopen``.
 
 In the case of write operations (like ``fwrite``,
 ``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
