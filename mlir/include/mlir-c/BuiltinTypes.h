@@ -89,6 +89,16 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E5M2(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E5M2TypeGet(MlirContext ctx);
 
+/// Returns the typeID of an Float8E4M3 type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3TypeGetTypeID(void);
+
+/// Checks whether the given type is an f8E4M3 type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3(MlirType type);
+
+/// Creates an f8E4M3 type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3TypeGet(MlirContext ctx);
+
 /// Returns the typeID of an Float8E4M3FN type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3FNTypeGetTypeID(void);
 

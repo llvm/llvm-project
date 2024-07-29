@@ -419,6 +419,12 @@ public:
   /// this factor, it is very likely to be predicted correctly.
   BranchProbability getPredictableBranchThreshold() const;
 
+  /// Returns estimated penalty of a branch misprediction in latency. Indicates
+  /// how aggressive the target wants for eliminating unpredictable branches. A
+  /// zero return value means extra optimization applied to them should be
+  /// minimal.
+  InstructionCost getBranchMispredictPenalty() const;
+
   /// Return true if branch divergence exists.
   ///
   /// Branch divergence has a significantly negative impact on GPU performance
@@ -1581,7 +1587,7 @@ public:
   /// \returns The type to use in a loop expansion of a memcpy call.
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize = std::nullopt) const;
 
   /// \param[out] OpsOut The operand types to copy RemainingBytes of memory.
@@ -1593,7 +1599,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize = std::nullopt) const;
 
   /// \returns True if the two functions have compatible attributes for inlining
@@ -1832,6 +1838,7 @@ public:
                                              ArrayRef<const Value *> Operands,
                                              TargetCostKind CostKind) = 0;
   virtual BranchProbability getPredictableBranchThreshold() = 0;
+  virtual InstructionCost getBranchMispredictPenalty() = 0;
   virtual bool hasBranchDivergence(const Function *F = nullptr) = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
@@ -2126,13 +2133,13 @@ public:
                                                    Type *ExpectedType) = 0;
   virtual Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize) const = 0;
 
   virtual void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
@@ -2242,6 +2249,9 @@ public:
   }
   BranchProbability getPredictableBranchThreshold() override {
     return Impl.getPredictableBranchThreshold();
+  }
+  InstructionCost getBranchMispredictPenalty() override {
+    return Impl.getBranchMispredictPenalty();
   }
   bool hasBranchDivergence(const Function *F = nullptr) override {
     return Impl.hasBranchDivergence(F);
@@ -2828,7 +2838,7 @@ public:
   }
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize) const override {
     return Impl.getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
                                           DestAddrSpace, SrcAlign, DestAlign,
@@ -2837,7 +2847,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const override {
     Impl.getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
                                            SrcAddrSpace, DestAddrSpace,

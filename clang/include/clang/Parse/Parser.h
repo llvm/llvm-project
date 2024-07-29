@@ -221,6 +221,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> MCFuncPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -3888,6 +3889,8 @@ private:
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
+
+  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

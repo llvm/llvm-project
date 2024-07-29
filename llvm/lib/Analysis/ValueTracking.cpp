@@ -254,8 +254,7 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    ICmpInst::Predicate P;
-    return match(U, m_ICmp(P, m_Value(), m_Zero()));
+    return match(U, m_ICmp(m_Value(), m_Zero()));
   });
 }
 
@@ -1435,7 +1434,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // inferred hold at original context instruction.  TODO: It may be
         // correct to use the original context.  IF warranted, explore and
         // add sufficient tests to cover.
-        SimplifyQuery RecQ = Q;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
         RecQ.CxtI = P;
         computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
         switch (Opcode) {
@@ -1468,7 +1467,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
-        SimplifyQuery RecQ = Q;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
 
         unsigned OpNum = P->getOperand(0) == R ? 0 : 1;
         Instruction *RInst = P->getIncomingBlock(OpNum)->getTerminator();
@@ -1546,7 +1545,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
-        SimplifyQuery RecQ = Q;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
@@ -2329,7 +2328,7 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     // it is an induction variable where in each step its value is a power of
     // two.
     auto *PN = cast<PHINode>(I);
-    SimplifyQuery RecQ = Q;
+    SimplifyQuery RecQ = Q.getWithoutCondContext();
 
     // Check if it is an induction variable and always power of two.
     if (isPowerOfTwoRecurrence(PN, OrZero, Depth, RecQ))
@@ -2594,10 +2593,10 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
 }
 
 static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
-  ICmpInst::Predicate Pred;
-  return (match(Op0, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op1), m_Zero()))) ||
-          match(Op1, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op0), m_Zero())))) &&
-         Pred == ICmpInst::ICMP_EQ;
+  return match(Op0, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op1), m_Zero()))) ||
+         match(Op1, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op0), m_Zero())));
 }
 
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
@@ -2943,7 +2942,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       return true;
 
     // Check if all incoming values are non-zero using recursion.
-    SimplifyQuery RecQ = Q;
+    SimplifyQuery RecQ = Q.getWithoutCondContext();
     unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
     return llvm::all_of(PN->operands(), [&](const Use &U) {
       if (U.get() == PN)
@@ -3509,7 +3508,7 @@ static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
     if (UsedFullRecursion)
       return false;
 
-    SimplifyQuery RecQ = Q;
+    SimplifyQuery RecQ = Q.getWithoutCondContext();
     RecQ.CxtI = IncomBB->getTerminator();
     if (!isKnownNonEqual(IV1, IV2, DemandedElts, Depth + 1, RecQ))
       return false;
@@ -4001,7 +4000,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
       // Take the minimum of all incoming values.  This can't infinitely loop
       // because of our depth threshold.
-      SimplifyQuery RecQ = Q;
+      SimplifyQuery RecQ = Q.getWithoutCondContext();
       Tmp = TyBits;
       for (unsigned i = 0, e = NumIncomingValues; i != e; ++i) {
         if (Tmp == 1) return Tmp;
@@ -5909,10 +5908,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
-        computeKnownFPClass(
-            IncValue, DemandedElts, InterestedClasses, KnownSrc,
-            PhiRecursionLimit,
-            Q.getWithInstruction(P->getIncomingBlock(U)->getTerminator()));
+        computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
+                            PhiRecursionLimit,
+                            Q.getWithoutCondContext().getWithInstruction(
+                                P->getIncomingBlock(U)->getTerminator()));
 
         if (First) {
           Known = KnownSrc;
@@ -6580,7 +6579,7 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
 
 void llvm::getUnderlyingObjects(const Value *V,
                                 SmallVectorImpl<const Value *> &Objects,
-                                LoopInfo *LI, unsigned MaxLookup) {
+                                const LoopInfo *LI, unsigned MaxLookup) {
   SmallPtrSet<const Value *, 4> Visited;
   SmallVector<const Value *, 4> Worklist;
   Worklist.push_back(V);
@@ -6618,6 +6617,48 @@ void llvm::getUnderlyingObjects(const Value *V,
 
     Objects.push_back(P);
   } while (!Worklist.empty());
+}
+
+const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
+  const unsigned MaxVisited = 8;
+
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *, 8> Worklist;
+  Worklist.push_back(V);
+  const Value *Object = nullptr;
+  // Used as fallback if we can't find a common underlying object through
+  // recursion.
+  bool First = true;
+  const Value *FirstObject = getUnderlyingObject(V);
+  do {
+    const Value *P = Worklist.pop_back_val();
+    P = First ? FirstObject : getUnderlyingObject(P);
+    First = false;
+
+    if (!Visited.insert(P).second)
+      continue;
+
+    if (Visited.size() == MaxVisited)
+      return FirstObject;
+
+    if (auto *SI = dyn_cast<SelectInst>(P)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+
+    if (auto *PN = dyn_cast<PHINode>(P)) {
+      append_range(Worklist, PN->incoming_values());
+      continue;
+    }
+
+    if (!Object)
+      Object = P;
+    else if (Object != P)
+      return FirstObject;
+  } while (!Worklist.empty());
+
+  return Object;
 }
 
 /// This is the function that does the work of looking through basic
@@ -7068,16 +7109,13 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
     if (isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT))
       return OverflowResult::NeverOverflows;
 
-  // Checking for conditions implied by dominating conditions may be expensive.
-  // Limit it to usub_with_overflow calls for now.
-  if (match(SQ.CxtI,
-            m_Intrinsic<Intrinsic::usub_with_overflow>(m_Value(), m_Value())))
-    if (auto C = isImpliedByDomCondition(CmpInst::ICMP_UGE, LHS, RHS, SQ.CxtI,
-                                         SQ.DL)) {
-      if (*C)
-        return OverflowResult::NeverOverflows;
-      return OverflowResult::AlwaysOverflowsLow;
-    }
+  if (auto C = isImpliedByDomCondition(CmpInst::ICMP_UGE, LHS, RHS, SQ.CxtI,
+                                       SQ.DL)) {
+    if (*C)
+      return OverflowResult::NeverOverflows;
+    return OverflowResult::AlwaysOverflowsLow;
+  }
+
   ConstantRange LHSRange =
       computeConstantRangeIncludingKnownBits(LHS, /*ForSigned=*/false, SQ);
   ConstantRange RHSRange =

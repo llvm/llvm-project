@@ -1333,7 +1333,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin,
+                        BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
@@ -1345,6 +1345,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
+  MMI = &MMIin;
   FnVarLocs = VarLocs;
 }
 
@@ -2482,6 +2483,11 @@ Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
     Align RedAlign2 = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
     if (RedAlign2 < RedAlign)
       RedAlign = RedAlign2;
+
+    if (!getMachineFunction().getFrameInfo().isStackRealignable())
+      // If the stack is not realignable, the alignment should be limited to the
+      // StackAlignment
+      RedAlign = std::min(RedAlign, StackAlign);
   }
 
   return RedAlign;
@@ -4705,14 +4711,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return 1;  // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    // sub_carry(x,x,c) -> 0/-1 (sext carry)
+    if (Op.getResNo() == 0 && Op.getOperand(0) == Op.getOperand(1))
+      return VTBits;
+    [[fallthrough]];
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SADDO_CARRY:
   case ISD::UADDO_CARRY:
   case ISD::SSUBO:
   case ISD::USUBO:
-  case ISD::SSUBO_CARRY:
-  case ISD::USUBO_CARRY:
   case ISD::SMULO:
   case ISD::UMULO:
     if (Op.getResNo() != 1)

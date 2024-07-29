@@ -675,6 +675,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_macros_optimization",
@@ -1073,6 +1074,22 @@ libc_support_library(
     }),
     deps = [
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_pid",
+    srcs = ["src/__support/OSUtil/linux/pid.cpp"],
+    hdrs = ["src/__support/OSUtil/pid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
     ],
 )
 
@@ -3032,8 +3049,11 @@ libc_function(
     hdrs = ["src/unistd/getpid.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_pid",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_pid_t",
     ],
 )
 

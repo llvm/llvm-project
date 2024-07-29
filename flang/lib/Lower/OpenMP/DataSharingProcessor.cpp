@@ -13,10 +13,12 @@
 #include "DataSharingProcessor.h"
 
 #include "Utils.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
 
 namespace Fortran {
@@ -116,6 +118,11 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
+
+  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  if (!isFirstPrivate &&
+      Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
+    Fortran::lower::defaultInitializeAtRuntime(converter, *sym, *symTable);
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
@@ -127,8 +134,52 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym,
     [[maybe_unused]] mlir::OpBuilder::InsertPoint *lastPrivIP) {
-  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
-    converter.copyHostAssociateVar(*sym, lastPrivIP);
+  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate)) {
+    bool allocatable = semantics::IsAllocatable(sym->GetUltimate());
+    if (!allocatable) {
+      converter.copyHostAssociateVar(*sym, lastPrivIP);
+      return;
+    }
+
+    // copyHostAssociateVar doesn't work properly if the privatised copy was
+    // reallocated (e.g. by assignment): it will only copy if the ultimate
+    // symbol was already allocated, and it only copies data so any reallocated
+    // lengths etc are lost
+
+    // 1) Fetch the original copy of the variable.
+    assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
+           "No host-association found");
+    const Fortran::semantics::Symbol &hsym = sym->GetUltimate();
+    Fortran::lower::SymbolBox hsb = symTable->lookupOneLevelUpSymbol(hsym);
+    assert(hsb && "Host symbol box not found");
+
+    // 2) Fetch the copied one that will mask the original.
+    Fortran::lower::SymbolBox sb = symTable->shallowLookupSymbol(sym);
+    assert(sb && "Host-associated symbol box not found");
+    assert(hsb.getAddr() != sb.getAddr() &&
+           "Host and associated symbol boxes are the same");
+
+    // 3) Perform the assignment.
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::Location loc = converter.genLocation(sym->name());
+    mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
+    if (lastPrivIP && lastPrivIP->isSet())
+      builder.restoreInsertionPoint(*lastPrivIP);
+    else
+      builder.setInsertionPointAfter(sb.getAddr().getDefiningOp());
+
+    hlfir::Entity dst{hsb.getAddr()};
+    hlfir::Entity src{sb.getAddr()};
+    builder.create<hlfir::AssignOp>(
+        loc, src, dst, /*isWholeAllocatableAssignment=*/allocatable,
+        /*keepLhsLengthInAllocatableAssignment=*/false,
+        /*temporary_lhs=*/false);
+
+    if (lastPrivIP && lastPrivIP->isSet() &&
+        sym->test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
+      builder.restoreInsertionPoint(insPt);
+    }
+  }
 }
 
 void DataSharingProcessor::collectOmpObjectListSymbol(
@@ -222,8 +273,9 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       mlir::Value cmpOp;
       llvm::SmallVector<mlir::Value> vs;
       vs.reserve(loopOp.getIVs().size());
-      for (auto [iv, ub, step] : llvm::zip_equal(
-               loopOp.getIVs(), loopOp.getUpperBound(), loopOp.getStep())) {
+      for (auto [iv, ub, step] :
+           llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
+                           loopOp.getLoopSteps())) {
         // v = iv + step
         // cmp = step < 0 ? v < ub : v > ub
         mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
@@ -542,7 +594,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   }();
 
   if (clauseOps) {
-    clauseOps->privatizers.push_back(mlir::SymbolRefAttr::get(privatizerOp));
+    clauseOps->privateSyms.push_back(mlir::SymbolRefAttr::get(privatizerOp));
     clauseOps->privateVars.push_back(hsb.getAddr());
   }
 

@@ -388,6 +388,9 @@ public:
 
   bool NeedsVTTParameter(GlobalDecl GD) override;
 
+  llvm::Constant *
+  getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD);
+
   /**************************** RTTI Uniqueness ******************************/
 
 protected:
@@ -426,6 +429,9 @@ public:
                 const CXXRecordDecl *RD) override;
 
  private:
+   llvm::Constant *
+   getSignedVirtualMemberFunctionPointer(const CXXMethodDecl *MD);
+
    bool hasAnyUnusedVirtualInlineFunction(const CXXRecordDecl *RD) const {
      const auto &VtableLayout =
          CGM.getItaniumVTableContext().getVTableLayout(RD);
@@ -835,7 +841,25 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   CalleePtr->addIncoming(VirtualFn, FnVirtual);
   CalleePtr->addIncoming(NonVirtualFn, FnNonVirtual);
 
-  CGCallee Callee(FPT, CalleePtr);
+  CGPointerAuthInfo PointerAuth;
+
+  if (const auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers) {
+    llvm::PHINode *DiscriminatorPHI = Builder.CreatePHI(CGF.IntPtrTy, 2);
+    DiscriminatorPHI->addIncoming(llvm::ConstantInt::get(CGF.IntPtrTy, 0),
+                                  FnVirtual);
+    const auto &AuthInfo =
+        CGM.getMemberFunctionPointerAuthInfo(QualType(MPT, 0));
+    assert(Schema.getKey() == AuthInfo.getKey() &&
+           "Keys for virtual and non-virtual member functions must match");
+    auto *NonVirtualDiscriminator = AuthInfo.getDiscriminator();
+    DiscriminatorPHI->addIncoming(NonVirtualDiscriminator, FnNonVirtual);
+    PointerAuth = CGPointerAuthInfo(
+        Schema.getKey(), Schema.getAuthenticationMode(), Schema.isIsaPointer(),
+        Schema.authenticatesNullValues(), DiscriminatorPHI);
+  }
+
+  CGCallee Callee(FPT, CalleePtr, PointerAuth);
   return Callee;
 }
 
@@ -851,6 +875,25 @@ llvm::Value *ItaniumCXXABI::EmitMemberDataPointerAddress(
   // Apply the offset, which we assume is non-null.
   return Builder.CreateInBoundsGEP(CGF.Int8Ty, Base.emitRawPointer(CGF), MemPtr,
                                    "memptr.offset");
+}
+
+// See if it's possible to return a constant signed pointer.
+static llvm::Constant *pointerAuthResignConstant(
+    llvm::Value *Ptr, const CGPointerAuthInfo &CurAuthInfo,
+    const CGPointerAuthInfo &NewAuthInfo, CodeGenModule &CGM) {
+  const auto *CPA = dyn_cast<llvm::ConstantPtrAuth>(Ptr);
+
+  if (!CPA)
+    return nullptr;
+
+  assert(CPA->getKey()->getZExtValue() == CurAuthInfo.getKey() &&
+         CPA->getAddrDiscriminator()->isZeroValue() &&
+         CPA->getDiscriminator() == CurAuthInfo.getDiscriminator() &&
+         "unexpected key or discriminators");
+
+  return CGM.getConstantSignedPointer(
+      CPA->getPointer(), NewAuthInfo.getKey(), nullptr,
+      cast<llvm::ConstantInt>(NewAuthInfo.getDiscriminator()));
 }
 
 /// Perform a bitcast, derived-to-base, or base-to-derived member pointer
@@ -880,21 +923,63 @@ llvm::Value *
 ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
                                            const CastExpr *E,
                                            llvm::Value *src) {
-  assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
-         E->getCastKind() == CK_BaseToDerivedMemberPointer ||
-         E->getCastKind() == CK_ReinterpretMemberPointer);
-
-  // Under Itanium, reinterprets don't require any additional processing.
-  if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
-
   // Use constant emission if we can.
   if (isa<llvm::Constant>(src))
     return EmitMemberPointerConversion(E, cast<llvm::Constant>(src));
 
+  assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
+         E->getCastKind() == CK_BaseToDerivedMemberPointer ||
+         E->getCastKind() == CK_ReinterpretMemberPointer);
+
+  CGBuilderTy &Builder = CGF.Builder;
+  QualType DstType = E->getType();
+
+  if (DstType->isMemberFunctionPointerType()) {
+    if (const auto &NewAuthInfo =
+            CGM.getMemberFunctionPointerAuthInfo(DstType)) {
+      QualType SrcType = E->getSubExpr()->getType();
+      assert(SrcType->isMemberFunctionPointerType());
+      const auto &CurAuthInfo = CGM.getMemberFunctionPointerAuthInfo(SrcType);
+      llvm::Value *MemFnPtr = Builder.CreateExtractValue(src, 0, "memptr.ptr");
+      llvm::Type *OrigTy = MemFnPtr->getType();
+
+      llvm::BasicBlock *StartBB = Builder.GetInsertBlock();
+      llvm::BasicBlock *ResignBB = CGF.createBasicBlock("resign");
+      llvm::BasicBlock *MergeBB = CGF.createBasicBlock("merge");
+
+      // Check whether we have a virtual offset or a pointer to a function.
+      assert(UseARMMethodPtrABI && "ARM ABI expected");
+      llvm::Value *Adj = Builder.CreateExtractValue(src, 1, "memptr.adj");
+      llvm::Constant *Ptrdiff_1 = llvm::ConstantInt::get(CGM.PtrDiffTy, 1);
+      llvm::Value *AndVal = Builder.CreateAnd(Adj, Ptrdiff_1);
+      llvm::Value *IsVirtualOffset =
+          Builder.CreateIsNotNull(AndVal, "is.virtual.offset");
+      Builder.CreateCondBr(IsVirtualOffset, MergeBB, ResignBB);
+
+      CGF.EmitBlock(ResignBB);
+      llvm::Type *PtrTy = llvm::PointerType::getUnqual(CGM.Int8Ty);
+      MemFnPtr = Builder.CreateIntToPtr(MemFnPtr, PtrTy);
+      MemFnPtr =
+          CGF.emitPointerAuthResign(MemFnPtr, SrcType, CurAuthInfo, NewAuthInfo,
+                                    isa<llvm::Constant>(src));
+      MemFnPtr = Builder.CreatePtrToInt(MemFnPtr, OrigTy);
+      llvm::Value *ResignedVal = Builder.CreateInsertValue(src, MemFnPtr, 0);
+      ResignBB = Builder.GetInsertBlock();
+
+      CGF.EmitBlock(MergeBB);
+      llvm::PHINode *NewSrc = Builder.CreatePHI(src->getType(), 2);
+      NewSrc->addIncoming(src, StartBB);
+      NewSrc->addIncoming(ResignedVal, ResignBB);
+      src = NewSrc;
+    }
+  }
+
+  // Under Itanium, reinterprets don't require any additional processing.
+  if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
+
   llvm::Constant *adj = getMemberPointerAdjustment(E);
   if (!adj) return src;
 
-  CGBuilderTy &Builder = CGF.Builder;
   bool isDerivedToBase = (E->getCastKind() == CK_DerivedToBaseMemberPointer);
 
   const MemberPointerType *destTy =
@@ -932,12 +1017,46 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
   return Builder.CreateInsertValue(src, dstAdj, 1);
 }
 
+static llvm::Constant *
+pointerAuthResignMemberFunctionPointer(llvm::Constant *Src, QualType DestType,
+                                       QualType SrcType, CodeGenModule &CGM) {
+  assert(DestType->isMemberFunctionPointerType() &&
+         SrcType->isMemberFunctionPointerType() &&
+         "member function pointers expected");
+  if (DestType == SrcType)
+    return Src;
+
+  const auto &NewAuthInfo = CGM.getMemberFunctionPointerAuthInfo(DestType);
+  const auto &CurAuthInfo = CGM.getMemberFunctionPointerAuthInfo(SrcType);
+
+  if (!NewAuthInfo && !CurAuthInfo)
+    return Src;
+
+  llvm::Constant *MemFnPtr = Src->getAggregateElement(0u);
+  if (MemFnPtr->getNumOperands() == 0) {
+    // src must be a pair of null pointers.
+    assert(isa<llvm::ConstantInt>(MemFnPtr) && "constant int expected");
+    return Src;
+  }
+
+  llvm::Constant *ConstPtr = pointerAuthResignConstant(
+      cast<llvm::User>(MemFnPtr)->getOperand(0), CurAuthInfo, NewAuthInfo, CGM);
+  ConstPtr = llvm::ConstantExpr::getPtrToInt(ConstPtr, MemFnPtr->getType());
+  return ConstantFoldInsertValueInstruction(Src, ConstPtr, 0);
+}
+
 llvm::Constant *
 ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
                                            llvm::Constant *src) {
   assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
          E->getCastKind() == CK_BaseToDerivedMemberPointer ||
          E->getCastKind() == CK_ReinterpretMemberPointer);
+
+  QualType DstType = E->getType();
+
+  if (DstType->isMemberFunctionPointerType())
+    src = pointerAuthResignMemberFunctionPointer(
+        src, DstType, E->getSubExpr()->getType(), CGM);
 
   // Under Itanium, reinterprets don't require any additional processing.
   if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
@@ -1036,9 +1155,32 @@ llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
       //   least significant bit of adj then makes exactly the same
       //   discrimination as the least significant bit of ptr does for
       //   Itanium.
-      MemPtr[0] = llvm::ConstantInt::get(CGM.PtrDiffTy, VTableOffset);
-      MemPtr[1] = llvm::ConstantInt::get(CGM.PtrDiffTy,
-                                         2 * ThisAdjustment.getQuantity() + 1);
+
+      // We cannot use the Itanium ABI's representation for virtual member
+      // function pointers under pointer authentication because it would
+      // require us to store both the virtual offset and the constant
+      // discriminator in the pointer, which would be immediately vulnerable
+      // to attack.  Instead we introduce a thunk that does the virtual dispatch
+      // and store it as if it were a non-virtual member function.  This means
+      // that virtual function pointers may not compare equal anymore, but
+      // fortunately they aren't required to by the standard, and we do make
+      // a best-effort attempt to re-use the thunk.
+      //
+      // To support interoperation with code in which pointer authentication
+      // is disabled, derefencing a member function pointer must still handle
+      // the virtual case, but it can use a discriminator which should never
+      // be valid.
+      const auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
+      if (Schema)
+        MemPtr[0] = llvm::ConstantExpr::getPtrToInt(
+            getSignedVirtualMemberFunctionPointer(MD), CGM.PtrDiffTy);
+      else
+        MemPtr[0] = llvm::ConstantInt::get(CGM.PtrDiffTy, VTableOffset);
+      // Don't set the LSB of adj to 1 if pointer authentication for member
+      // function pointers is enabled.
+      MemPtr[1] = llvm::ConstantInt::get(
+          CGM.PtrDiffTy, 2 * ThisAdjustment.getQuantity() + !Schema);
     } else {
       // Itanium C++ ABI 2.3:
       //   For a virtual function, [the pointer field] is 1 plus the
@@ -1060,7 +1202,7 @@ llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
       // function type is incomplete.
       Ty = CGM.PtrDiffTy;
     }
-    llvm::Constant *addr = CGM.GetAddrOfFunction(MD, Ty);
+    llvm::Constant *addr = CGM.getMemberFunctionPointer(MD, Ty);
 
     MemPtr[0] = llvm::ConstantExpr::getPtrToInt(addr, CGM.PtrDiffTy);
     MemPtr[1] = llvm::ConstantInt::get(CGM.PtrDiffTy,
@@ -1080,8 +1222,12 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
 
   CharUnits ThisAdjustment = getContext().getMemberPointerPathAdjustment(MP);
 
-  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MPD))
-    return BuildMemberPointer(MD, ThisAdjustment);
+  if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MPD)) {
+    llvm::Constant *Src = BuildMemberPointer(MD, ThisAdjustment);
+    QualType SrcType = getContext().getMemberPointerType(
+        MD->getType(), MD->getParent()->getTypeForDecl());
+    return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
+  }
 
   CharUnits FieldOffset =
     getContext().toCharUnitsFromBits(getContext().getFieldOffset(MPD));
@@ -3185,6 +3331,78 @@ bool ItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
   return false;
 }
 
+llvm::Constant *
+ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
+  SmallString<256> MethodName;
+  llvm::raw_svector_ostream Out(MethodName);
+  getMangleContext().mangleCXXName(MD, Out);
+  MethodName += "_vfpthunk_";
+  StringRef ThunkName = MethodName.str();
+  llvm::Function *ThunkFn;
+  if ((ThunkFn = cast_or_null<llvm::Function>(
+           CGM.getModule().getNamedValue(ThunkName))))
+    return ThunkFn;
+
+  const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeCXXMethodDeclaration(MD);
+  llvm::FunctionType *ThunkTy = CGM.getTypes().GetFunctionType(FnInfo);
+  llvm::GlobalValue::LinkageTypes Linkage =
+      MD->isExternallyVisible() ? llvm::GlobalValue::LinkOnceODRLinkage
+                                : llvm::GlobalValue::InternalLinkage;
+  ThunkFn =
+      llvm::Function::Create(ThunkTy, Linkage, ThunkName, &CGM.getModule());
+  if (Linkage == llvm::GlobalValue::LinkOnceODRLinkage)
+    ThunkFn->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  assert(ThunkFn->getName() == ThunkName && "name was uniqued!");
+
+  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/true);
+  CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
+
+  // Stack protection sometimes gets inserted after the musttail call.
+  ThunkFn->removeFnAttr(llvm::Attribute::StackProtect);
+  ThunkFn->removeFnAttr(llvm::Attribute::StackProtectStrong);
+  ThunkFn->removeFnAttr(llvm::Attribute::StackProtectReq);
+
+  // Start codegen.
+  CodeGenFunction CGF(CGM);
+  CGF.CurGD = GlobalDecl(MD);
+  CGF.CurFuncIsThunk = true;
+
+  // Build FunctionArgs.
+  FunctionArgList FunctionArgs;
+  CGF.BuildFunctionArgList(CGF.CurGD, FunctionArgs);
+
+  CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
+                    FunctionArgs, MD->getLocation(), SourceLocation());
+  llvm::Value *ThisVal = loadIncomingCXXThis(CGF);
+  setCXXABIThisValue(CGF, ThisVal);
+
+  CallArgList CallArgs;
+  for (const VarDecl *VD : FunctionArgs)
+    CGF.EmitDelegateCallArg(CallArgs, VD, SourceLocation());
+
+  const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
+  RequiredArgs Required = RequiredArgs::forPrototypePlus(FPT, /*this*/ 1);
+  const CGFunctionInfo &CallInfo =
+      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0);
+  CGCallee Callee = CGCallee::forVirtual(nullptr, GlobalDecl(MD),
+                                         getThisAddress(CGF), ThunkTy);
+  llvm::CallBase *CallOrInvoke;
+  CGF.EmitCall(CallInfo, Callee, ReturnValueSlot(), CallArgs, &CallOrInvoke,
+               /*IsMustTail=*/true, SourceLocation(), true);
+  auto *Call = cast<llvm::CallInst>(CallOrInvoke);
+  Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+  if (Call->getType()->isVoidTy())
+    CGF.Builder.CreateRetVoid();
+  else
+    CGF.Builder.CreateRet(Call);
+
+  // Finish the function to maintain CodeGenFunction invariants.
+  // FIXME: Don't emit unreachable code.
+  CGF.EmitBlock(CGF.createBasicBlock());
+  CGF.FinishFunction();
+  return ThunkFn;
+}
+
 namespace {
 class ItaniumRTTIBuilder {
   CodeGenModule &CGM;  // Per-module state.
@@ -4873,6 +5091,18 @@ std::pair<llvm::Value *, const CXXRecordDecl *>
 ItaniumCXXABI::LoadVTablePtr(CodeGenFunction &CGF, Address This,
                              const CXXRecordDecl *RD) {
   return {CGF.GetVTablePtr(This, CGM.Int8PtrTy, RD), RD};
+}
+
+llvm::Constant *
+ItaniumCXXABI::getSignedVirtualMemberFunctionPointer(const CXXMethodDecl *MD) {
+  const CXXMethodDecl *origMD =
+      cast<CXXMethodDecl>(CGM.getItaniumVTableContext()
+                              .findOriginalMethod(MD->getCanonicalDecl())
+                              .getDecl());
+  llvm::Constant *thunk = getOrCreateVirtualFunctionPointerThunk(origMD);
+  QualType funcType = CGM.getContext().getMemberPointerType(
+      MD->getType(), MD->getParent()->getTypeForDecl());
+  return CGM.getMemberFunctionPointer(thunk, funcType);
 }
 
 void WebAssemblyCXXABI::emitBeginCatch(CodeGenFunction &CGF,

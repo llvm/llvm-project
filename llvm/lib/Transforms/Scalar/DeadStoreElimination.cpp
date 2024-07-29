@@ -1889,12 +1889,12 @@ struct DSEState {
         return true;
       auto *Ptr = Memset->getArgOperand(0);
       auto *TI = MallocBB->getTerminator();
-      ICmpInst::Predicate Pred;
       BasicBlock *TrueBB, *FalseBB;
-      if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
-                          FalseBB)))
+      if (!match(TI, m_Br(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(Ptr),
+                                         m_Zero()),
+                          TrueBB, FalseBB)))
         return false;
-      if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
+      if (MemsetBB != FalseBB)
         return false;
       return true;
     };

@@ -74,17 +74,10 @@ struct AtomicBenchmarkSums {
 };
 
 AtomicBenchmarkSums all_results;
-const char *header_format_string =
-    "Benchmark            |  Cycles |     Min |     Max | Iterations |        "
-    "Time |   Stddev |  Threads |\n";
-const char *output_format_string =
-    "%-20s |%8ld |%8ld |%8ld |%11ld |%9ld %2s |%9ld |%9d |\n";
-
 constexpr auto GREEN = "\033[32m";
 constexpr auto RESET = "\033[0m";
 
 void print_results(Benchmark *b) {
-
   BenchmarkResult result;
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
   int num_threads = all_results.active_threads.load(cpp::MemoryOrder::RELAXED);
@@ -104,16 +97,16 @@ void print_results(Benchmark *b) {
   const uint64_t duration_us = duration_ns / 1000;
   const uint64_t duration_ms = duration_ns / (1000 * 1000);
   uint64_t converted_duration = duration_ns;
-  cpp::string time_unit;
+  const char *time_unit;
   if (duration_ms != 0) {
     converted_duration = duration_ms;
-    time_unit = cpp::string("ms");
+    time_unit = "ms";
   } else if (duration_us != 0) {
     converted_duration = duration_us;
-    time_unit = cpp::string("us");
+    time_unit = "us";
   } else {
     converted_duration = duration_ns;
-    time_unit = cpp::string("ns");
+    time_unit = "ns";
   }
   result.total_time = converted_duration;
   // result.total_time =
@@ -121,10 +114,10 @@ void print_results(Benchmark *b) {
   cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
 
   LIBC_NAMESPACE::printf(
-      output_format_string, b->get_test_name().data(), result.cycles,
-      result.min, result.max, result.total_iterations, result.total_time,
-      time_unit.data(), static_cast<uint64_t>(result.standard_deviation),
-      num_threads);
+      "%-20s |%8ld |%8ld |%8ld |%11d |%9ld %2s |%9ld |%9d |\n",
+      b->get_test_name().data(), result.cycles, result.min, result.max,
+      result.total_iterations, result.total_time, time_unit,
+      static_cast<uint64_t>(result.standard_deviation), num_threads);
 }
 
 void print_header() {
@@ -132,7 +125,9 @@ void print_header() {
   LIBC_NAMESPACE::printf("Running Suite: %-10s\n",
                          benchmarks[0]->get_suite_name().data());
   LIBC_NAMESPACE::printf("%s", RESET);
-  LIBC_NAMESPACE::printf(header_format_string);
+  LIBC_NAMESPACE::printf("Benchmark            |  Cycles |     Min |     Max | "
+                         "Iterations |        "
+                         "Time |   Stddev |  Threads |\n");
   LIBC_NAMESPACE::printf(
       "---------------------------------------------------------------------"
       "--------------------------------\n");
@@ -210,6 +205,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     if (samples >= options.max_samples || iterations >= options.max_iterations)
       break;
     if (total_time >= options.min_duration && samples >= options.min_samples &&
+        total_iterations >= options.min_iterations &&
         change_ratio < options.epsilon)
       break;
 

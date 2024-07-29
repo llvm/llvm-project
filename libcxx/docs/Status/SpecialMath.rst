@@ -1,4 +1,4 @@
-.. special-math-status:
+.. _special-math-status:
 
 ======================================================
 libc++ Mathematical Special Functions Status (P0226R1)

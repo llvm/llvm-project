@@ -620,8 +620,10 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const char *LinkingOutput) const {
   std::string Linker = getToolChain().GetLinkerPath();
   ArgStringList CmdArgs;
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
+  if (!Args.hasArg(options::OPT_r)) {
+    CmdArgs.push_back("--no-undefined");
+    CmdArgs.push_back("-shared");
+  }
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
@@ -633,6 +635,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Args.hasArg(options::OPT_mcpu_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
+
+  addGPULibraries(getToolChain(), Args, CmdArgs);
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(std::make_unique<Command>(
