@@ -1772,7 +1772,7 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
-  for (auto *I : D->varlists()) {
+  for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
   }
  })
@@ -1801,7 +1801,7 @@ DEF_TRAVERSE_DECL(OMPDeclareMapperDecl, {
 DEF_TRAVERSE_DECL(OMPCapturedExprDecl, { TRY_TO(TraverseVarHelper(D)); })
 
 DEF_TRAVERSE_DECL(OMPAllocateDecl, {
-  for (auto *I : D->varlists())
+  for (auto *I : D->varlist())
     TRY_TO(TraverseStmt(I));
   for (auto *C : D->clauselists())
     TRY_TO(TraverseOMPClause(C));
@@ -3552,7 +3552,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNocontextClause(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::VisitOMPClauseList(T *Node) {
-  for (auto *E : Node->varlists()) {
+  for (auto *E : Node->varlist()) {
     TRY_TO(TraverseStmt(E));
   }
   return true;
@@ -3926,7 +3926,7 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAffinityClause(
     OMPAffinityClause *C) {
   TRY_TO(TraverseStmt(C->getModifier()));
-  for (Expr *E : C->varlists())
+  for (Expr *E : C->varlist())
     TRY_TO(TraverseStmt(E));
   return true;
 }
