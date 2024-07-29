@@ -5109,14 +5109,6 @@ public:
     return 0;
   }
 
-  /// Indicate whether this target prefers to force the lowering of a div by
-  /// constant to a MUL of a magic value, even if the MUL operation is not legal
-  /// or custom.
-  virtual bool forceDivByConstantToMul(EVT DivVT, EVT MuLVT,
-                                       bool IsAfterLegalization) const {
-    return false;
-  }
-
   /// Hooks for building estimates in place of slower divisions and square
   /// roots.
 
