@@ -17,18 +17,78 @@ define float @maximumnum_float(float %x, float %y) {
 ;
 ; MIPS32-LABEL: maximumnum_float:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    jal fmaximum_numf
-; MIPS32-NEXT:    nop
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    c.un.s $f12, $f12
+; MIPS32-NEXT:    movt.s $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.s $f14, $f14
+; MIPS32-NEXT:    movt.s $f14, $f12, $fcc0
+; MIPS32-NEXT:    c.ule.s $f12, $f14
+; MIPS32-NEXT:    mov.s $f0, $f14
+; MIPS32-NEXT:    movf.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.s $f1, $f0, $f0
+; MIPS32-NEXT:    c.un.s $f0, $f0
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
+; MIPS32-NEXT:    mfc1 $1, $f12
+; MIPS32-NEXT:    mov.s $f1, $f0
+; MIPS32-NEXT:    movz.s $f1, $f12, $1
+; MIPS32-NEXT:    mfc1 $1, $f14
+; MIPS32-NEXT:    mtc1 $zero, $f2
+; MIPS32-NEXT:    movz.s $f1, $f14, $1
+; MIPS32-NEXT:    c.eq.s $f0, $f2
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
   %z = call float @llvm.maximumnum.f32(float %x, float %y)
   ret float %z
 }
+
+define float @maximumnum_float_nsz(float %x, float %y) {
+; MIPS32R6-LABEL: maximumnum_float_nsz:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    min.s $f0, $f14, $f14
+; MIPS32R6-NEXT:    min.s $f1, $f12, $f12
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f0, $f1, $f0
+;
+; MIPS32-LABEL: maximumnum_float_nsz:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    mov.s $f0, $f14
+; MIPS32-NEXT:    c.un.s $f12, $f12
+; MIPS32-NEXT:    movt.s $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.s $f14, $f14
+; MIPS32-NEXT:    movt.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    c.ule.s $f12, $f0
+; MIPS32-NEXT:    movf.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.s $f1, $f0, $f0
+; MIPS32-NEXT:    c.un.s $f0, $f0
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
+  %z = call nsz float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @maximumnum_float_nnan(float %x, float %y) {
+; MIPS32R6-LABEL: maximumnum_float_nnan:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f0, $f12, $f14
+;
+; MIPS32-LABEL: maximumnum_float_nnan:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    c.ule.s $f12, $f14
+; MIPS32-NEXT:    mov.s $f0, $f14
+; MIPS32-NEXT:    movf.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    mfc1 $1, $f12
+; MIPS32-NEXT:    mov.s $f1, $f0
+; MIPS32-NEXT:    movz.s $f1, $f12, $1
+; MIPS32-NEXT:    mfc1 $1, $f14
+; MIPS32-NEXT:    movz.s $f1, $f14, $1
+; MIPS32-NEXT:    mtc1 $zero, $f2
+; MIPS32-NEXT:    c.eq.s $f0, $f2
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
+  %z = call nnan float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %z
+}
+
 
 define double @maximumnum_double(double %x, double %y) {
 ; MIPS32R6-LABEL: maximumnum_double:
@@ -40,16 +100,81 @@ define double @maximumnum_double(double %x, double %y) {
 ;
 ; MIPS32-LABEL: maximumnum_double:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    jal fmaximum_num
-; MIPS32-NEXT:    nop
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    c.un.d $f12, $f12
+; MIPS32-NEXT:    movt.d $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.d $f14, $f14
+; MIPS32-NEXT:    movt.d $f14, $f12, $fcc0
+; MIPS32-NEXT:    c.ule.d $f12, $f14
+; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    movf.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.d $f2, $f0, $f0
+; MIPS32-NEXT:    c.un.d $f0, $f0
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
+; MIPS32-NEXT:    cvt.s.d $f2, $f12
+; MIPS32-NEXT:    mfc1 $1, $f2
+; MIPS32-NEXT:    mov.d $f2, $f0
+; MIPS32-NEXT:    movz.d $f2, $f12, $1
+; MIPS32-NEXT:    cvt.s.d $f4, $f14
+; MIPS32-NEXT:    mfc1 $1, $f4
+; MIPS32-NEXT:    movz.d $f2, $f14, $1
+; MIPS32-NEXT:    mtc1 $zero, $f4
+; MIPS32-NEXT:    mtc1 $zero, $f5
+; MIPS32-NEXT:    c.eq.d $f0, $f4
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
   %z = call double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @maximumnum_double_nsz(double %x, double %y) {
+; MIPS32R6-LABEL: maximumnum_double_nsz:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    min.d $f0, $f14, $f14
+; MIPS32R6-NEXT:    min.d $f1, $f12, $f12
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.d $f0, $f1, $f0
+;
+; MIPS32-LABEL: maximumnum_double_nsz:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    c.un.d $f12, $f12
+; MIPS32-NEXT:    movt.d $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.d $f14, $f14
+; MIPS32-NEXT:    movt.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    c.ule.d $f12, $f0
+; MIPS32-NEXT:    movf.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.d $f2, $f0, $f0
+; MIPS32-NEXT:    c.un.d $f0, $f0
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
+  %z = call nsz double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @maximumnum_double_nnan(double %x, double %y) {
+; MIPS32R6-LABEL: maximumnum_double_nnan:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.d $f0, $f12, $f14
+;
+; MIPS32-LABEL: maximumnum_double_nnan:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    c.ule.d $f12, $f14
+; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    movf.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    cvt.s.d $f2, $f12
+; MIPS32-NEXT:    mfc1 $1, $f2
+; MIPS32-NEXT:    mov.d $f2, $f0
+; MIPS32-NEXT:    movz.d $f2, $f12, $1
+; MIPS32-NEXT:    cvt.s.d $f4, $f14
+; MIPS32-NEXT:    mfc1 $1, $f4
+; MIPS32-NEXT:    movz.d $f2, $f14, $1
+; MIPS32-NEXT:    mtc1 $zero, $f4
+; MIPS32-NEXT:    mtc1 $zero, $f5
+; MIPS32-NEXT:    c.eq.d $f0, $f4
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
+  %z = call nnan double @llvm.maximumnum.f64(double %x, double %y)
   ret double %z
 }
 
@@ -63,16 +188,81 @@ define float @minimumnum_float(float %x, float %y) {
 ;
 ; MIPS32-LABEL: minimumnum_float:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    jal fminimum_numf
-; MIPS32-NEXT:    nop
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    c.un.s $f12, $f12
+; MIPS32-NEXT:    movt.s $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.s $f14, $f14
+; MIPS32-NEXT:    movt.s $f14, $f12, $fcc0
+; MIPS32-NEXT:    c.olt.s $f12, $f14
+; MIPS32-NEXT:    mov.s $f0, $f14
+; MIPS32-NEXT:    movt.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.s $f1, $f0, $f0
+; MIPS32-NEXT:    c.un.s $f0, $f0
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
+; MIPS32-NEXT:    mfc1 $1, $f12
+; MIPS32-NEXT:    lui $2, 32768
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    mov.s $f1, $f0
+; MIPS32-NEXT:    movz.s $f1, $f12, $1
+; MIPS32-NEXT:    mfc1 $1, $f14
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    mtc1 $zero, $f2
+; MIPS32-NEXT:    movz.s $f1, $f14, $1
+; MIPS32-NEXT:    c.eq.s $f0, $f2
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
   %z = call float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @minimumnum_float_nsz(float %x, float %y) {
+; MIPS32R6-LABEL: minimumnum_float_nsz:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    min.s $f0, $f14, $f14
+; MIPS32R6-NEXT:    min.s $f1, $f12, $f12
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.s $f0, $f1, $f0
+;
+; MIPS32-LABEL: minimumnum_float_nsz:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    mov.s $f0, $f14
+; MIPS32-NEXT:    c.un.s $f12, $f12
+; MIPS32-NEXT:    movt.s $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.s $f14, $f14
+; MIPS32-NEXT:    movt.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    c.olt.s $f12, $f0
+; MIPS32-NEXT:    movt.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.s $f1, $f0, $f0
+; MIPS32-NEXT:    c.un.s $f0, $f0
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
+  %z = call nsz float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @minimumnum_float_nnan(float %x, float %y) {
+; MIPS32R6-LABEL: minimumnum_float_nnan:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.s $f0, $f12, $f14
+;
+; MIPS32-LABEL: minimumnum_float_nnan:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    c.olt.s $f12, $f14
+; MIPS32-NEXT:    mov.s $f0, $f14
+; MIPS32-NEXT:    movt.s $f0, $f12, $fcc0
+; MIPS32-NEXT:    mfc1 $1, $f12
+; MIPS32-NEXT:    lui $2, 32768
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    mov.s $f1, $f0
+; MIPS32-NEXT:    movz.s $f1, $f12, $1
+; MIPS32-NEXT:    mfc1 $1, $f14
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    movz.s $f1, $f14, $1
+; MIPS32-NEXT:    mtc1 $zero, $f2
+; MIPS32-NEXT:    c.eq.s $f0, $f2
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.s $f0, $f1, $fcc0
+  %z = call nnan float @llvm.minimumnum.f32(float %x, float %y)
   ret float %z
 }
 
@@ -86,15 +276,86 @@ define double @minimumnum_double(double %x, double %y) {
 ;
 ; MIPS32-LABEL: minimumnum_double:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    addiu $sp, $sp, -24
-; MIPS32-NEXT:    .cfi_def_cfa_offset 24
-; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    jal fminimum_num
-; MIPS32-NEXT:    nop
-; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    c.un.d $f12, $f12
+; MIPS32-NEXT:    movt.d $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.d $f14, $f14
+; MIPS32-NEXT:    movt.d $f14, $f12, $fcc0
+; MIPS32-NEXT:    c.olt.d $f12, $f14
+; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    movt.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.d $f2, $f0, $f0
+; MIPS32-NEXT:    c.un.d $f0, $f0
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
+; MIPS32-NEXT:    cvt.s.d $f2, $f12
+; MIPS32-NEXT:    mfc1 $1, $f2
+; MIPS32-NEXT:    lui $2, 32768
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    mov.d $f2, $f0
+; MIPS32-NEXT:    movz.d $f2, $f12, $1
+; MIPS32-NEXT:    cvt.s.d $f4, $f14
+; MIPS32-NEXT:    mfc1 $1, $f4
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    movz.d $f2, $f14, $1
+; MIPS32-NEXT:    mtc1 $zero, $f4
+; MIPS32-NEXT:    mtc1 $zero, $f5
+; MIPS32-NEXT:    c.eq.d $f0, $f4
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 24
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
   %z = call double @llvm.minimumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @minimumnum_double_nsz(double %x, double %y) {
+; MIPS32R6-LABEL: minimumnum_double_nsz:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    min.d $f0, $f14, $f14
+; MIPS32R6-NEXT:    min.d $f1, $f12, $f12
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.d $f0, $f1, $f0
+;
+; MIPS32-LABEL: minimumnum_double_nsz:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    c.un.d $f12, $f12
+; MIPS32-NEXT:    movt.d $f12, $f14, $fcc0
+; MIPS32-NEXT:    c.un.d $f14, $f14
+; MIPS32-NEXT:    movt.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    c.olt.d $f12, $f0
+; MIPS32-NEXT:    movt.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    add.d $f2, $f0, $f0
+; MIPS32-NEXT:    c.un.d $f0, $f0
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
+  %z = call nsz double @llvm.minimumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @minimumnum_double_nnan(double %x, double %y) {
+; MIPS32R6-LABEL: minimumnum_double_nnan:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.d $f0, $f12, $f14
+;
+; MIPS32-LABEL: minimumnum_double_nnan:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    c.olt.d $f12, $f14
+; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    movt.d $f0, $f12, $fcc0
+; MIPS32-NEXT:    cvt.s.d $f2, $f12
+; MIPS32-NEXT:    mfc1 $1, $f2
+; MIPS32-NEXT:    lui $2, 32768
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    mov.d $f2, $f0
+; MIPS32-NEXT:    movz.d $f2, $f12, $1
+; MIPS32-NEXT:    cvt.s.d $f4, $f14
+; MIPS32-NEXT:    mfc1 $1, $f4
+; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    movz.d $f2, $f14, $1
+; MIPS32-NEXT:    mtc1 $zero, $f4
+; MIPS32-NEXT:    mtc1 $zero, $f5
+; MIPS32-NEXT:    c.eq.d $f0, $f4
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    movt.d $f0, $f2, $fcc0
+  %z = call nnan double @llvm.minimumnum.f64(double %x, double %y)
   ret double %z
 }

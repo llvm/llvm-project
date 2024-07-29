@@ -10,6 +10,7 @@ declare float @llvm.minimumnum.f32(float, float)
 declare double @llvm.minimumnum.f64(double, double)
 
 define float @maximumnum_float(float %x, float %y) {
+;
 ; LA32F-LABEL: maximumnum_float:
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    fmax.s $fa1, $fa1, $fa1
@@ -41,7 +42,67 @@ define float @maximumnum_float(float %x, float %y) {
   ret float %z
 }
 
+define float @maximumnum_float_nsz(float %x, float %y) {
+;
+; LA32F-LABEL: maximumnum_float_nsz:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: maximumnum_float_nsz:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: maximumnum_float_nsz:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: maximumnum_float_nsz:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nsz float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @maximumnum_float_nnan(float %x, float %y) {
+;
+; LA32F-LABEL: maximumnum_float_nnan:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: maximumnum_float_nnan:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: maximumnum_float_nnan:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: maximumnum_float_nnan:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nnan float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+
 define double @maximumnum_double(double %x, double %y) {
+;
 ; LA32F-LABEL: maximumnum_double:
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
@@ -81,7 +142,86 @@ define double @maximumnum_double(double %x, double %y) {
   ret double %z
 }
 
+define double @maximumnum_double_nsz(double %x, double %y) {
+;
+; LA32F-LABEL: maximumnum_double_nsz:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    addi.w $sp, $sp, -16
+; LA32F-NEXT:    .cfi_def_cfa_offset 16
+; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32F-NEXT:    .cfi_offset 1, -4
+; LA32F-NEXT:    bl %plt(fmaximum_num)
+; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32F-NEXT:    addi.w $sp, $sp, 16
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: maximumnum_double_nsz:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmax.d $fa1, $fa1, $fa1
+; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa0
+; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: maximumnum_double_nsz:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    addi.d $sp, $sp, -16
+; LA64F-NEXT:    .cfi_def_cfa_offset 16
+; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64F-NEXT:    .cfi_offset 1, -8
+; LA64F-NEXT:    bl %plt(fmaximum_num)
+; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 16
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: maximumnum_double_nsz:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa1
+; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
+; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nsz double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @maximumnum_double_nnan(double %x, double %y) {
+;
+; LA32F-LABEL: maximumnum_double_nnan:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    addi.w $sp, $sp, -16
+; LA32F-NEXT:    .cfi_def_cfa_offset 16
+; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32F-NEXT:    .cfi_offset 1, -4
+; LA32F-NEXT:    bl %plt(fmaximum_num)
+; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32F-NEXT:    addi.w $sp, $sp, 16
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: maximumnum_double_nnan:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: maximumnum_double_nnan:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    addi.d $sp, $sp, -16
+; LA64F-NEXT:    .cfi_def_cfa_offset 16
+; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64F-NEXT:    .cfi_offset 1, -8
+; LA64F-NEXT:    bl %plt(fmaximum_num)
+; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 16
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: maximumnum_double_nnan:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nnan double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %z
+}
+
 define float @minimumnum_float(float %x, float %y) {
+;
 ; LA32F-LABEL: minimumnum_float:
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    fmax.s $fa1, $fa1, $fa1
@@ -113,7 +253,66 @@ define float @minimumnum_float(float %x, float %y) {
   ret float %z
 }
 
+define float @minimumnum_float_nsz(float %x, float %y) {
+;
+; LA32F-LABEL: minimumnum_float_nsz:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA32F-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA32F-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: minimumnum_float_nsz:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA32D-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA32D-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: minimumnum_float_nsz:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA64F-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA64F-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: minimumnum_float_nsz:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmax.s $fa1, $fa1, $fa1
+; LA64D-NEXT:    fmax.s $fa0, $fa0, $fa0
+; LA64D-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nsz float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @minimumnum_float_nnan(float %x, float %y) {
+;
+; LA32F-LABEL: minimumnum_float_nnan:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: minimumnum_float_nnan:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: minimumnum_float_nnan:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: minimumnum_float_nnan:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmin.s $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nnan float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %z
+}
+
 define double @minimumnum_double(double %x, double %y) {
+;
 ; LA32F-LABEL: minimumnum_double:
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
@@ -150,5 +349,83 @@ define double @minimumnum_double(double %x, double %y) {
 ; LA64D-NEXT:    fmin.d $fa0, $fa0, $fa1
 ; LA64D-NEXT:    ret
   %z = call double @llvm.minimumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @minimumnum_double_nsz(double %x, double %y) {
+;
+; LA32F-LABEL: minimumnum_double_nsz:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    addi.w $sp, $sp, -16
+; LA32F-NEXT:    .cfi_def_cfa_offset 16
+; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32F-NEXT:    .cfi_offset 1, -4
+; LA32F-NEXT:    bl %plt(fminimum_num)
+; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32F-NEXT:    addi.w $sp, $sp, 16
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: minimumnum_double_nsz:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmax.d $fa1, $fa1, $fa1
+; LA32D-NEXT:    fmax.d $fa0, $fa0, $fa0
+; LA32D-NEXT:    fmin.d $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: minimumnum_double_nsz:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    addi.d $sp, $sp, -16
+; LA64F-NEXT:    .cfi_def_cfa_offset 16
+; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64F-NEXT:    .cfi_offset 1, -8
+; LA64F-NEXT:    bl %plt(fminimum_num)
+; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 16
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: minimumnum_double_nsz:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa1
+; LA64D-NEXT:    fmax.d $fa0, $fa0, $fa0
+; LA64D-NEXT:    fmin.d $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nsz double @llvm.minimumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @minimumnum_double_nnan(double %x, double %y) {
+;
+; LA32F-LABEL: minimumnum_double_nnan:
+; LA32F:       # %bb.0:
+; LA32F-NEXT:    addi.w $sp, $sp, -16
+; LA32F-NEXT:    .cfi_def_cfa_offset 16
+; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32F-NEXT:    .cfi_offset 1, -4
+; LA32F-NEXT:    bl %plt(fminimum_num)
+; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32F-NEXT:    addi.w $sp, $sp, 16
+; LA32F-NEXT:    ret
+;
+; LA32D-LABEL: minimumnum_double_nnan:
+; LA32D:       # %bb.0:
+; LA32D-NEXT:    fmin.d $fa0, $fa0, $fa1
+; LA32D-NEXT:    ret
+;
+; LA64F-LABEL: minimumnum_double_nnan:
+; LA64F:       # %bb.0:
+; LA64F-NEXT:    addi.d $sp, $sp, -16
+; LA64F-NEXT:    .cfi_def_cfa_offset 16
+; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64F-NEXT:    .cfi_offset 1, -8
+; LA64F-NEXT:    bl %plt(fminimum_num)
+; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64F-NEXT:    addi.d $sp, $sp, 16
+; LA64F-NEXT:    ret
+;
+; LA64D-LABEL: minimumnum_double_nnan:
+; LA64D:       # %bb.0:
+; LA64D-NEXT:    fmin.d $fa0, $fa0, $fa1
+; LA64D-NEXT:    ret
+  %z = call nnan double @llvm.minimumnum.f64(double %x, double %y)
   ret double %z
 }
