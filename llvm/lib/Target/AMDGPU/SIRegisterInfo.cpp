@@ -2570,7 +2570,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               } else {
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
                         TmpResultReg)
-                    .addImm(Offset);
+                    .addImm(Offset * ST.getWavefrontSize());
                 assert(Offset > 0 && "Offset is positive");
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)

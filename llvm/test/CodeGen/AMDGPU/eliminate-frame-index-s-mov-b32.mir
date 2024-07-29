@@ -368,7 +368,7 @@ body:   |
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63
     ; GFX8-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX8-NEXT: $vgpr0 = V_MOV_B32_e32 64, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = V_MOV_B32_e32 4096, implicit $exec
     ; GFX8-NEXT: $vgpr0 = V_MAD_U32_U24_e64 $sgpr32, 64, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -483,7 +483,7 @@ body:             |
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63
     ; GFX8-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX8-NEXT: $vgpr0 = V_MOV_B32_e32 68, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = V_MOV_B32_e32 4352, implicit $exec
     ; GFX8-NEXT: $vgpr0 = V_MAD_U32_U24_e64 $sgpr32, 64, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
