@@ -753,7 +753,9 @@ define void @foo(ptr %arg0, ptr %arg1) {
   auto *VLd = cast<sandboxir::LoadInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
+  // Check isVolatile()
   EXPECT_FALSE(Ld->isVolatile());
+  // Check isVolatile()
   EXPECT_TRUE(VLd->isVolatile());
   // Check getPointerOperand()
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);
