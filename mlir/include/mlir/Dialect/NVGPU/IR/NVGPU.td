@@ -126,8 +126,6 @@ def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
 def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
 def RcpRoundingModeAttr : EnumAttr<NVGPU_Dialect, RcpRoundingMode, "rcp_rounding_mode">;
 
-// rcp mode attribute
-
 //===----------------------------------------------------------------------===//
 // NVGPU Type Definitions
 //===----------------------------------------------------------------------===//
