@@ -1992,8 +1992,7 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const CallInst *CI) const {
 
   auto *I = dyn_cast<IntrinsicInst>(CI);
-  if (!I)
-    return true;
+  assert(I && "shouldExpandPartialReductionIntrinsic expects an intrinisc");
 
   ScalableVectorType *RetTy = dyn_cast<ScalableVectorType>(I->getType());
 
