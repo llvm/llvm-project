@@ -41,4 +41,6 @@ define void @call__Exit_N(i32 %N) {
   ret void
 }
 
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold }
+;.
+; CHECK: attributes #[[ATTR0]] = { cold }
+;.
