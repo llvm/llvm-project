@@ -762,7 +762,64 @@ for.exit:
   ret void
 }
 
+;; Make sure the histogram intrinsic uses the active lane mask when tail folding.
+define void @simple_histogram_tailfold(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @simple_histogram_tailfold(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP5]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP8]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP9]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP10]], i32 1, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP6]])
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-NEXT:    br i1 [[TMP11]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 poison, label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom1 = zext i32 %0 to i64
+  %arrayidx2 = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
+  %inc = add nsw i32 %1, 1
+  store i32 %inc, ptr %arrayidx2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !2
+
+for.exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
+!2 = distinct !{!2, !3}
+!3 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
