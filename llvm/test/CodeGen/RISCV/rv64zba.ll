@@ -2879,8 +2879,8 @@ entry:
   ret ptr %5
 }
 
-define i64 @srli_slliw(i64 %1) {
-; RV64I-LABEL: srli_slliw:
+define i64 @srli_slliuw(i64 %1) {
+; RV64I-LABEL: srli_slliuw:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    li a1, 1
@@ -2889,7 +2889,7 @@ define i64 @srli_slliw(i64 %1) {
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
-; RV64ZBA-LABEL: srli_slliw:
+; RV64ZBA-LABEL: srli_slliuw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    srli a0, a0, 2
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 4
@@ -2901,8 +2901,8 @@ entry:
   ret i64 %4
 }
 
-define i64 @srli_slliw_canonical(i64 %0) {
-; RV64I-LABEL: srli_slliw_canonical:
+define i64 @srli_slliuw_canonical(i64 %0) {
+; RV64I-LABEL: srli_slliuw_canonical:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    li a1, 1
@@ -2911,7 +2911,7 @@ define i64 @srli_slliw_canonical(i64 %0) {
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
-; RV64ZBA-LABEL: srli_slliw_canonical:
+; RV64ZBA-LABEL: srli_slliuw_canonical:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    srli a0, a0, 2
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 4
@@ -2948,4 +2948,49 @@ entry:
   %3 = and i64 %2, 65535
   %4 = shl i64 %3, 4
   ret i64 %4
+}
+
+define i64 @srli_slliuw_2(i64 %1) {
+; RV64I-LABEL: srli_slliuw_2:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srli a0, a0, 15
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 35
+; RV64I-NEXT:    addi a1, a1, -8
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srli_slliuw_2:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    srli a0, a0, 15
+; RV64ZBA-NEXT:    srli a0, a0, 3
+; RV64ZBA-NEXT:    slli.uw a0, a0, 3
+; RV64ZBA-NEXT:    ret
+entry:
+  %2 = lshr i64 %1, 18
+  %3 = and i64 %2, 4294967295
+  %4 = shl i64 %3, 3
+  ret i64 %4
+}
+
+define i64 @srli_slliuw_canonical_2(i64 %0) {
+; RV64I-LABEL: srli_slliuw_canonical_2:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srli a0, a0, 15
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 35
+; RV64I-NEXT:    addi a1, a1, -8
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srli_slliuw_canonical_2:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    srli a0, a0, 15
+; RV64ZBA-NEXT:    srli a0, a0, 3
+; RV64ZBA-NEXT:    slli.uw a0, a0, 3
+; RV64ZBA-NEXT:    ret
+entry:
+  %1 = lshr i64 %0, 15
+  %2 = and i64 %1, 34359738360
+  ret i64 %2
 }

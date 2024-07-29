@@ -1494,13 +1494,26 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     allSymbols.append(dsp.getAllSymbolsToPrivatize().begin(),
                       dsp.getAllSymbolsToPrivatize().end());
 
-    for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
-                                     loc, firOpBuilder, hlfir::Entity{prv},
-                                     /*contiguousHint=*/
-                                     evaluate::IsSimplyContiguous(
-                                         *arg, converter.getFoldingContext()))
-                                     .first);
+    unsigned argIdx = 0;
+    for (const semantics::Symbol *arg : allSymbols) {
+      auto bind = [&](const semantics::Symbol *sym) {
+        mlir::BlockArgument blockArg = region.getArgument(argIdx);
+        ++argIdx;
+        converter.bindSymbol(*sym,
+                             hlfir::translateToExtendedValue(
+                                 loc, firOpBuilder, hlfir::Entity{blockArg},
+                                 /*contiguousHint=*/
+                                 evaluate::IsSimplyContiguous(
+                                     *sym, converter.getFoldingContext()))
+                                 .first);
+      };
+
+      if (const auto *commonDet =
+              arg->detailsIf<semantics::CommonBlockDetails>()) {
+        for (const auto &mem : commonDet->objects())
+          bind(&*mem);
+      } else
+        bind(arg);
     }
 
     return allSymbols;

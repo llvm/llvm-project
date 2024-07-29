@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -o %t %s
 // RUN: not grep __builtin %t
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -o - %s | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -fexperimental-new-constant-interpreter -o - %s | FileCheck %s
 
 int printf(const char *, ...);
 

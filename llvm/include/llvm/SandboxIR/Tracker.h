@@ -101,6 +101,27 @@ public:
 #endif
 };
 
+/// Tracks swapping a Use with another Use.
+class UseSwap : public IRChangeBase {
+  Use ThisUse;
+  Use OtherUse;
+
+public:
+  UseSwap(const Use &ThisUse, const Use &OtherUse, Tracker &Tracker)
+      : IRChangeBase(Tracker), ThisUse(ThisUse), OtherUse(OtherUse) {
+    assert(ThisUse.getUser() == OtherUse.getUser() && "Expected same user!");
+  }
+  void revert() final { ThisUse.swap(OtherUse); }
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "UseSwap";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 class EraseFromParent : public IRChangeBase {
   /// Contains all the data we need to restore an "erased" (i.e., detached)
   /// instruction: the instruction itself and its operands in order.

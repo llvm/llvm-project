@@ -693,7 +693,6 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::FloatTyID:
     return TypeSize::getFixed(32);
   case Type::DoubleTyID:
-  case Type::X86_MMXTyID:
     return TypeSize::getFixed(64);
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:
