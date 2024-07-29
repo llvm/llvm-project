@@ -1,4 +1,4 @@
-//===-- heap_sort_fuzz.cpp ----------------------------------------------------===//
+//===-- heap_sort_fuzz.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/config.h"
 #include "src/stdlib/heap_sort.h"
 #include <stdint.h>
 
@@ -18,10 +19,9 @@ static int int_compare(const void *l, const void *r) {
   int ri = *reinterpret_cast<const int *>(r);
   if (li == ri)
     return 0;
-  else if (li > ri)
+  if (li > ri)
     return 1;
-  else
-    return -1;
+  return -1;
 }
 
 namespace LIBC_NAMESPACE_DECL {
@@ -37,14 +37,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   for (size_t i = 0; i < array_size; ++i)
     array[i] = data_as_int[i];
 
-  auto arr = internal::Array(reinterpret_cast<uint8_t *>(array), array_size, sizeof(int), int_compare);
+  auto arr = internal::Array(reinterpret_cast<uint8_t *>(array), array_size, 
+                                            sizeof(int), int_compare);
 
   internal::heap_sort(arr);
 
-  for (size_t i = 0; i < array_size - 1; ++i) {
+  for (size_t i = 0; i < array_size - 1; ++i)
     if (arr.get(i) > arr.get(i + 1))
       __builtin_trap();
-  }
 
   delete[] array;
   return 0;

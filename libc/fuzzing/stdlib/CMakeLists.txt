@@ -11,7 +11,7 @@ add_libc_fuzzer(
   SRCS
     heap_sort_fuzz.cpp
   DEPENDS
-    libc.src.stlib.heap_sort
+    libc.src.stdlib.qsort_util
 )
 
 add_libc_fuzzer(
