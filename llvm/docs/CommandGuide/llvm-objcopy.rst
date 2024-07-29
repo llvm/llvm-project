@@ -308,9 +308,9 @@ them.
  Change the address of sections that match ``<section>`` pattern to the
  specified value, or apply ``+<val>``/``-<val>`` to the current value. Can be
  specified multiple times to specify multiple patterns. Each section is only
- modified by one ``--change-section-address`` argument. Changes apply from the
- right of the command line. If a section name matches multiple patterns, the
- rightmost change applies. The object file needs to be of ET_REL type.
+ modified by one ``--change-section-address`` argument. If a section name
+ matches multiple patterns, the rightmost change applies. The object file needs
+ to be of ET_REL type.
 
 .. option:: --change-start <incr>, --adjust-start
 

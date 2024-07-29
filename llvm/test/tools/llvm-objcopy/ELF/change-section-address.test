@@ -8,7 +8,7 @@
 
 ## Check that --change-section-address alias --adjust-section-vma produces the same output as the test above.
 # RUN: llvm-objcopy --adjust-section-vma *+0x20 %ti1 %to2
-# RUN: llvm-readelf --section-headers %to2 | FileCheck %s --check-prefix=CHECK-ADD-ALL
+# RUN: cmp %to1 %to2
 
 ## Check that negative adjustment reduces the address by the specified value.
 # RUN: llvm-objcopy --change-section-address .anotherone-0x30 %ti1 %to3
@@ -38,30 +38,35 @@
 # RUN: llvm-objcopy --change-section-address .text2-0x200 %ti1 %to9
 # RUN: llvm-readelf --section-headers %to9 | FileCheck %s --check-prefix=CHECK-ZERO
 
+## Check that a section address can be adjusted by a maximum possible positive offset (UINT64_MAX).
+# RUN: llvm-objcopy --change-section-address .text2=0 %ti1 %to10
+# RUN: llvm-objcopy --change-section-address .text2+0xffffffffffffffff %to10 %to11
+# RUN: llvm-readelf --section-headers %to11 | FileCheck %s --check-prefix=CHECK-MAX
+
 ## Check that a section address can be adjusted by a maximum possible negative offset (UINT64_MIN).
-# RUN: llvm-objcopy --change-section-address .text2=0xffffffffffffffff %ti1 %to10
-# RUN: llvm-objcopy --change-section-address .text2-0xffffffffffffffff %to10 %to11
-# RUN: llvm-readelf --section-headers %to11 | FileCheck %s --check-prefix=CHECK-ZERO
+# RUN: llvm-objcopy --change-section-address .text2=0xffffffffffffffff %ti1 %to12
+# RUN: llvm-objcopy --change-section-address .text2-0xffffffffffffffff %to12 %to13
+# RUN: llvm-readelf --section-headers %to13 | FileCheck %s --check-prefix=CHECK-ZERO
 
 ## Check two independent changes.
-# RUN: llvm-objcopy --change-section-address .text1=0x110 --change-section-address .text2=0x210 %ti1 %to12
-# RUN: llvm-readelf --section-headers %to12 | FileCheck %s --check-prefix=CHECK-INDEPENDENT
+# RUN: llvm-objcopy --change-section-address .text1=0x110 --change-section-address .text2=0x210 %ti1 %to14
+# RUN: llvm-readelf --section-headers %to14 | FileCheck %s --check-prefix=CHECK-INDEPENDENT
 
 ## Check two overlapping changes.
-# RUN: llvm-objcopy --change-section-address .anotherone-0x30 --change-section-address .anotherone+0x20 %ti1 %to13
-# RUN: llvm-readelf --section-headers %to13 | FileCheck %s --check-prefix=CHECK-USE-LAST
+# RUN: llvm-objcopy --change-section-address .anotherone-0x30 --change-section-address .anotherone+0x20 %ti1 %to15
+# RUN: llvm-readelf --section-headers %to15 | FileCheck %s --check-prefix=CHECK-USE-LAST
 
 ## Check unused option.
-# RUN: llvm-objcopy --change-section-address .anotherone=0x455 --change-section-address *+0x20 %ti1 %to14
-# RUN: llvm-readelf --section-headers %to14 | FileCheck %s --check-prefix=CHECK-NOTSUPERSET-SET
+# RUN: llvm-objcopy --change-section-address .anotherone=0x455 --change-section-address *+0x20 %ti1 %to16
+# RUN: llvm-readelf --section-headers %to16 | FileCheck %s --check-prefix=CHECK-NOTSUPERSET-SET
 
 ## Check partial overlap (.anotherone overlaps).
-# RUN: llvm-objcopy --change-section-address *+0x20 --change-section-address .anotherone=0x455 %ti1 %to15
-# RUN: llvm-readelf --section-headers %to15 | FileCheck %s --check-prefix=CHECK-SUPERSET-SET
+# RUN: llvm-objcopy --change-section-address *+0x20 --change-section-address .anotherone=0x455 %ti1 %to17
+# RUN: llvm-readelf --section-headers %to17 | FileCheck %s --check-prefix=CHECK-SUPERSET-SET
 
 ## Check more complex partial overlap (P1: .anotherone, .text2, P2: .text1, text2) (.text2 overlaps).
-# RUN: llvm-objcopy --regex  --change-section-address  ".(text2|anotherone)+0x20" --change-section-address .text.*+0x30  %ti1 %to16
-# RUN: llvm-readelf --section-headers %to16 | FileCheck %s --check-prefix=CHECK-PARTIAL-OVERLAP
+# RUN: llvm-objcopy --regex  --change-section-address  ".(text2|anotherone)+0x20" --change-section-address .text.*+0x30  %ti1 %to18
+# RUN: llvm-readelf --section-headers %to18 | FileCheck %s --check-prefix=CHECK-PARTIAL-OVERLAP
 
 # CHECK-ADD-ALL:          [Nr] Name              Type            Address
 # CHECK-ADD-ALL:               .text1
@@ -146,7 +151,7 @@
 # RUN: not llvm-objcopy --change-section-address =0x10 %ti1 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-SECTION
 ## Check error when the negative adjustment value is missing.
 # RUN: not llvm-objcopy --change-section-address .text1- %ti1 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-VALUE-MINUS
-## Check error when the positive adjustment valu is missing.
+## Check error when the positive adjustment value is missing.
 # RUN: not llvm-objcopy --change-section-address .text1+ %ti1 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-VALUE-PLUS
 ## Check error when the value to set the address to is missing.
 # RUN: not llvm-objcopy --change-section-address .text1= %ti1 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-VALUE-EQUAL
