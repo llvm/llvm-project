@@ -418,19 +418,19 @@ int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 // FIXME: This could use fine tuning and microbenchmarks.
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+    unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicElementSize) const {
 
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
 
-  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+  Align MinAlign = std::min(SrcAlign, DestAlign);
 
   // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
   // hardware into byte accesses. If you assume all alignments are equally
   // probable, it's more efficient on average to use short accesses for this
   // case.
-  if (MinAlign == 2)
+  if (MinAlign == Align(2))
     return Type::getInt16Ty(Context);
 
   // Not all subtargets have 128-bit DS instructions, and we currently don't
@@ -450,7 +450,7 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
 void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-    unsigned SrcAlign, unsigned DestAlign,
+    Align SrcAlign, Align DestAlign,
     std::optional<uint32_t> AtomicCpySize) const {
   assert(RemainingBytes < 16);
 
@@ -459,9 +459,9 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  unsigned MinAlign = std::min(SrcAlign, DestAlign);
+  Align MinAlign = std::min(SrcAlign, DestAlign);
 
-  if (MinAlign != 2) {
+  if (MinAlign != Align(2)) {
     Type *I64Ty = Type::getInt64Ty(Context);
     while (RemainingBytes >= 8) {
       OpsOut.push_back(I64Ty);
