@@ -13,6 +13,7 @@
 #include "llvm/IR/Function.h"
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -84,6 +85,28 @@ static cl::opt<int> NonGlobalValueMaxNameSize(
     cl::desc("Maximum size for the name of non-global values."));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
+
+void Function::renumberBlocks() {
+  validateBlockNumbers();
+
+  NextBlockNum = 0;
+  for (auto &BB : *this)
+    BB.Number = NextBlockNum++;
+}
+
+#ifndef NDEBUG
+/// In asserts builds, this checks the numbering. In non-asserts builds, it
+/// is defined as a no-op inline function in Function.h
+void Function::validateBlockNumbers() const {
+  BitVector Numbers(NextBlockNum);
+  for (const auto &BB : *this) {
+    unsigned Num = BB.getNumber();
+    assert(Num < NextBlockNum && "out of range block number");
+    assert(!Numbers[Num] && "duplicate block numbers");
+    Numbers.set(Num);
+  }
+}
+#endif
 
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
@@ -509,6 +532,8 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 }
 
 Function::~Function() {
+  validateBlockNumbers();
+
   dropAllReferences();    // After this it is safe to delete instructions.
 
   // Delete all of the method arguments and unlink from symbol table...

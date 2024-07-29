@@ -75,6 +75,22 @@ public:
 private:
   // Important things that make up a function!
   BasicBlockListType BasicBlocks;         ///< The basic blocks
+
+  // Basic blocks need to get their number when added to a function.
+  friend void BasicBlock::setParent(Function *);
+  unsigned NextBlockNum = 0;
+
+public:
+  /// Renumber basic blocks into a dense value range starting from 0. Be aware
+  /// that other data structures and analyses (e.g., DominatorTree) may depend
+  /// on the value numbers and need to be updated or invalidated.
+  void renumberBlocks();
+
+  /// Assert that all blocks have unique numbers within 0..NextBlockNum. This
+  /// has O(n) runtime complexity.
+  void validateBlockNumbers() const;
+
+private:
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
   size_t NumArgs;
   std::unique_ptr<ValueSymbolTable>
@@ -995,6 +1011,12 @@ private:
   }
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
+
+#ifdef NDEBUG
+/// In release builds, this is a no-op. For !NDEBUG builds, the checks are
+/// implemented in the .cpp file.
+inline void Function::validateBlockNumbers() const {}
+#endif
 
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.
