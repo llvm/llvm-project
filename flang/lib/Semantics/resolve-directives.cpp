@@ -2036,9 +2036,11 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   auto IsPrivatizable = [](const Symbol *sym) {
-    return !sym->owner().IsDerivedType() && !IsProcedure(*sym) &&
-        !IsNamedConstant(*sym) &&
-        !sym->detailsIf<semantics::AssocEntityDetails>();
+    return !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
+        !sym->owner().IsDerivedType() &&
+        sym->owner().kind() != Scope::Kind::ImpliedDos &&
+        !sym->detailsIf<semantics::AssocEntityDetails>() &&
+        !sym->detailsIf<semantics::NamelistDetails>();
   };
 
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
