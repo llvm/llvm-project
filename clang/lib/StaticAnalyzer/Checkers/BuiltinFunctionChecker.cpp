@@ -22,6 +22,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include <clang/AST/Stmt.h>
+#include <clang/Basic/LLVM.h>
+#include <clang/StaticAnalyzer/Core/PathSensitive/SVals.h>
+#include <cstdio>
+#include <llvm/Support/raw_ostream.h>
 
 using namespace clang;
 using namespace ento;
@@ -76,6 +81,26 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
 
   const LocationContext *LCtx = C.getLocationContext();
   const Expr *CE = Call.getOriginExpr();
+
+  if (const auto *AttrStmt = dyn_cast<AttributedStmt>(CE)) {
+      for (const Attr *I : AttrStmt->getAttrs()) {
+          if (const auto *AssumeAttr = dyn_cast<CXXAssumeAttr>(I)) {
+              const Expr *AssumeExpr = AssumeAttr->getAssumption();
+              SVal Arg = C.getSVal(AssumeExpr);
+              if (Arg.isUndef())
+                  return true;
+
+              state = state->assume(Arg.castAs<DefinedOrUnknownSVal>(), true);
+              if (!state) {
+                  C.generateSink(C.getState(), C.getPredecessor());
+                  return true;
+              }
+
+              C.addTransition(state);
+              return true;
+          } 
+      }
+  }
 
   if (isBuiltinLikeFunction(Call)) {
     C.addTransition(state->BindExpr(CE, LCtx, Call.getArgSVal(0)));
