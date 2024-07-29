@@ -274,8 +274,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       llvm::SmallVector<mlir::Value> vs;
       vs.reserve(loopOp.getIVs().size());
       for (auto [iv, ub, step] :
-           llvm::zip_equal(loopOp.getIVs(), loopOp.getCollapseUpperBounds(),
-                           loopOp.getCollapseSteps())) {
+           llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
+                           loopOp.getLoopSteps())) {
         // v = iv + step
         // cmp = step < 0 ? v < ub : v > ub
         mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);

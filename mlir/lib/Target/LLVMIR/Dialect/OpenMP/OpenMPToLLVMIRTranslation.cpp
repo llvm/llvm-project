@@ -1109,8 +1109,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       wsloopOp.getScheduleKind().value_or(omp::ClauseScheduleKind::Static);
 
   // Find the loop configuration.
-  llvm::Value *step =
-      moduleTranslation.lookupValue(loopOp.getCollapseSteps()[0]);
+  llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]);
   llvm::Type *ivType = step->getType();
   llvm::Value *chunk = nullptr;
   if (wsloopOp.getScheduleChunk()) {
@@ -1179,11 +1178,10 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
     llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loopOp.getCollapseLowerBounds()[i]);
+        moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[i]);
     llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loopOp.getCollapseUpperBounds()[i]);
-    llvm::Value *step =
-        moduleTranslation.lookupValue(loopOp.getCollapseSteps()[i]);
+        moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[i]);
 
     // Make sure loop trip count are emitted in the preheader of the outermost
     // loop at the latest so that they are all available for the new collapsed
@@ -1196,7 +1194,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     loopInfos.push_back(ompBuilder->createCanonicalLoop(
         loc, bodyGen, lowerBound, upperBound, step,
-        /*IsSigned=*/true, loopOp.getInclusive(), computeIP));
+        /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP));
 
     if (failed(bodyGenStatus))
       return failure();
@@ -1644,11 +1642,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
     llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loopOp.getCollapseLowerBounds()[i]);
+        moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[i]);
     llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loopOp.getCollapseUpperBounds()[i]);
-    llvm::Value *step =
-        moduleTranslation.lookupValue(loopOp.getCollapseSteps()[i]);
+        moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[i]);
 
     // Make sure loop trip count are emitted in the preheader of the outermost
     // loop at the latest so that they are all available for the new collapsed
