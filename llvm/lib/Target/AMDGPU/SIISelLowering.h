@@ -372,11 +372,6 @@ public:
     return 2;
   }
 
-  bool forceDivByConstantToMul(EVT DivVT, EVT MuLVT,
-                               bool IsAfterLegalization) const override {
-    return !IsAfterLegalization;
-  }
-
   bool supportSplitCSR(MachineFunction *MF) const override;
   void initializeSplitCSR(MachineBasicBlock *Entry) const override;
   void insertCopiesSplitCSR(
