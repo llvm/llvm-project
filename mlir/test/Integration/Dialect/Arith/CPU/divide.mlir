@@ -98,8 +98,8 @@ func.func @remsi() {
   %c1 = arith.constant 1 : i8
   
   // remsi minIntPlus1 -1 == 0
-  // however remsi -2^(w-1) -1 would be UB according to 
-  // LLVM semantics
+  // However, remsi -2^(w-1) -1 would be UB according to 
+  // LLVM semantics.
   // CHECK-LABEL: @remsi_i8
   // CHECK-NEXT:  0
   func.call @remsi_i8(%i8_min_p1, %cn1) : (i8, i8) -> ()
