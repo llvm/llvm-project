@@ -28,9 +28,9 @@
 
 inline constexpr unsigned g_max_n =
 #if !(defined(__MVS__) && !defined(__BFP__))
-  128;
+    128;
 #else
-  39;
+    39;
 #endif
 
 template <class T>
