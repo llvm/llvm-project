@@ -42,6 +42,7 @@ class Use {
   friend class OperandUseIterator; // For constructor
   friend class UserUseIterator;    // For accessing members
   friend class CallBase;           // For LLVMUse
+  friend class CallBrInst;         // For constructor
 
 public:
   operator Value *() const { return get(); }
