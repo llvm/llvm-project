@@ -24,14 +24,14 @@
 
 # IE32-REL:      FLAGS STATIC_TLS
 # IE32-REL:      .rela.dyn {
-# IE32-REL-NEXT:   0x221C R_RISCV_TLS_TPREL32 - 0xC
-# IE32-REL-NEXT:   0x2218 R_RISCV_TLS_TPREL32 a 0x0
+# IE32-REL-NEXT:   0x2021C R_RISCV_TLS_TPREL32 - 0xC
+# IE32-REL-NEXT:   0x20218 R_RISCV_TLS_TPREL32 a 0x0
 # IE32-REL-NEXT: }
 
 # IE64-REL:      FLAGS STATIC_TLS
 # IE64-REL:      .rela.dyn {
-# IE64-REL-NEXT:   0x2378 R_RISCV_TLS_TPREL64 - 0xC
-# IE64-REL-NEXT:   0x2370 R_RISCV_TLS_TPREL64 a 0x0
+# IE64-REL-NEXT:   0x20378 R_RISCV_TLS_TPREL64 - 0xC
+# IE64-REL-NEXT:   0x20370 R_RISCV_TLS_TPREL64 a 0x0
 # IE64-REL-NEXT: }
 
 ## rv32: &.got[0] - . = 0x2218 - . = 4096*1+116
@@ -52,23 +52,23 @@
 # a@tprel = st_value(a) = 0x8
 # b@tprel = st_value(a) = 0xc
 # LE32-GOT: section '.got':
-# LE32-GOT-NEXT: 0x0001212c 00000000 08000000 0c000000
+# LE32-GOT-NEXT: 0x0003012c 00000000 08000000 0c000000
 # LE64-GOT: section '.got':
-# LE64-GOT-NEXT: 0x000121e0 00000000 00000000 08000000 00000000
-# LE64-GOT-NEXT: 0x000121f0 0c000000 00000000
+# LE64-GOT-NEXT: 0x000301e0 00000000 00000000 08000000 00000000
+# LE64-GOT-NEXT: 0x000301f0 0c000000 00000000
 
 ## rv32: &.got[0] - . = 0x12130 - 0x11114 = 4096*1+28
 ## rv64: &.got[0] - . = 0x121e8 - 0x111c8 = 4096*1+32
-# LE32:      11114: auipc a4, 0x1
+# LE32:      20114: auipc a4, 0x1
 # LE32-NEXT:        lw a4, 0x1c(a4)
-# LE64:      111c8: auipc a4, 0x1
+# LE64:      201c8: auipc a4, 0x1
 # LE64-NEXT:        ld a4, 0x20(a4)
 # LE-NEXT:          add a4, a4, tp
 ## rv32: &.got[1] - . = 0x12134 - 0x11120 = 4096*1+20
 ## rv64: &.got[1] - . = 0x121f0 - 0x111d4 = 4096*1+28
-# LE32:      11120: auipc a5, 0x1
+# LE32:      20120: auipc a5, 0x1
 # LE32-NEXT:        lw a5, 0x14(a5)
-# LE64:      111d4: auipc a5, 0x1
+# LE64:      201d4: auipc a5, 0x1
 # LE64-NEXT:        ld a5, 0x1c(a5)
 # LE-NEXT:          add a5, a5, tp
 

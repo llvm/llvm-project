@@ -18,12 +18,12 @@
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie -z separate-code
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.64.ie | FileCheck %s --check-prefix=IE64
 
-# GD64:      .got     00000018 00000000000020c0
+# GD64:      .got     00000018 00000000000200c0
 # GD64-LABEL: <_start>:
 # GD64-NEXT:         jal     {{.*}} <foo>
 # GD64-LABEL: <foo>:
 ## &.got[c]-. = 0x20c0+8 - 0x1004 = 0x10c4
-# GD64:        1004: auipc   a2, 0x1
+# GD64:        10004: auipc   a2, 0x1
 # GD64-NEXT:         c.add   a7, a7
 # GD64-NEXT:         ld      a3, 0xc4(a2)
 # GD64-NEXT:         c.add   a7, a7
@@ -34,14 +34,14 @@
 # GD64-NEXT:         jal     {{.*}} <foo>
 ## &.got[c]-. = 0x20c0+8 - 0x1020 = 0x10a8
 # GD64-LABEL: <.Ltlsdesc_hi1>:
-# GD64-NEXT:   1020: auipc   a4, 0x1
+# GD64-NEXT:   10020: auipc   a4, 0x1
 # GD64-NEXT:         ld      a5, 0xa8(a4)
 # GD64-NEXT:         addi    a0, a4, 0xa8
 # GD64-NEXT:         jalr    t0, 0x0(a5)
 # GD64-NEXT:         c.add   a0, tp
 ## &.got[c]-. = 0x20c0+8 - 0x1032 = 0x1096
 # GD64-LABEL: <.Ltlsdesc_hi2>:
-# GD64-NEXT:   1032: auipc   a6, 0x1
+# GD64-NEXT:   10032: auipc   a6, 0x1
 # GD64-NEXT:         ld      a7, 0x96(a6)
 # GD64-NEXT:         addi    a0, a6, 0x96
 # GD64-NEXT:         jalr    t0, 0x0(a7)
@@ -56,7 +56,7 @@
 # LE64-NEXT:         c.add   a7, a7
 # LE64-NEXT:                 R_RISCV_TLSDESC_LOAD_LO12 .Ltlsdesc_hi0
 # LE64-NEXT:                 R_RISCV_RELAX *ABS*
-# LE64-NEXT:  11008: c.add   a7, a7
+# LE64-NEXT:  20008: c.add   a7, a7
 # LE64-NEXT:                 R_RISCV_TLSDESC_ADD_LO12 .Ltlsdesc_hi0
 # LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:         addi    a0, zero, 0x7ff
@@ -92,7 +92,7 @@
 # LE64A-LABEL: <foo>:
 # LE64A-NEXT:         c.add   a7, a7
 # LE64A-NEXT:         c.add   a7, a7
-# LE64A-NEXT:  11008: lui     a0, 0x2
+# LE64A-NEXT:  20008: lui     a0, 0x2
 # LE64A-NEXT:         c.add   a7, a7
 # LE64A-NEXT:         addi    a0, a0, -0x479
 # LE64A-NEXT:         c.add   a0, tp
@@ -108,28 +108,28 @@
 # LE64A-NEXT:         addi    a0, a0, -0x479
 # LE64A-NEXT:         c.add   a0, tp
 
-# IE64:       .got     00000010 00000000000120e0
+# IE64:       .got     00000010 00000000000300e0
 # IE64-LABEL: <_start>:
 # IE64-NEXT:         jal     {{.*}} <foo>
 # IE64-LABEL: <foo>:
 # IE64-NEXT:         c.add   a7, a7
 # IE64-NEXT:         c.add   a7, a7
 ## &.got[c]-. = 0x120e0+8 - 0x11008 = 0x10e0
-# IE64-NEXT:  11008: auipc   a0, 0x1
+# IE64-NEXT:  20008: auipc   a0, 0x1
 # IE64-NEXT:         c.add   a7, a7
 # IE64-NEXT:         ld      a0, 0xe0(a0)
 # IE64-NEXT:         c.add   a0, tp
 # IE64-NEXT:         jal     {{.*}} <foo>
 ## &.got[c]-. = 0x120e0+8 - 0x11018 = 0x10d0
 # IE64-LABEL: <.Ltlsdesc_hi1>:
-# IE64-NEXT:  11018: auipc   a0, 0x1
+# IE64-NEXT:  20018: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xd0(a0)
 # IE64-NEXT:         c.add   a0, tp
 ## &.got[c]-. = 0x120e0+8 - 0x1102a = 0x10be
 # IE64-LABEL: <.Ltlsdesc_hi2>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
-# IE64-NEXT:  1102a: auipc   a0, 0x1
+# IE64-NEXT:  2002a: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xbe(a0)
 # IE64-NEXT:         c.add   a0, tp
 

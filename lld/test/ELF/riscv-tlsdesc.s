@@ -43,52 +43,52 @@
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -Rd a1.64 | FileCheck %s --check-prefix=IE64A
 
 # GD64-RELA:      .rela.dyn {
-# GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
-# GD64-RELA-NEXT:   0x23E8 R_RISCV_TLSDESC a 0x0
-# GD64-RELA-NEXT:   0x23F8 R_RISCV_TLSDESC c 0x0
+# GD64-RELA-NEXT:   0x20408 R_RISCV_TLSDESC - 0x7FF
+# GD64-RELA-NEXT:   0x203E8 R_RISCV_TLSDESC a 0x0
+# GD64-RELA-NEXT:   0x203F8 R_RISCV_TLSDESC c 0x0
 # GD64-RELA-NEXT: }
 # GD64-RELA:      Hex dump of section '.got':
-# GD64-RELA-NEXT: 0x000023e0 20230000 00000000 00000000 00000000 #
-# GD64-RELA-NEXT: 0x000023f0 00000000 00000000 00000000 00000000 .
+# GD64-RELA-NEXT: 0x000203e0 20030200 00000000 00000000 00000000 .
+# GD64-RELA-NEXT: 0x000203f0 00000000 00000000 00000000 00000000 .
 
 # GD64-REL:      .rel.dyn {
-# GD64-REL-NEXT:   0x23F0 R_RISCV_TLSDESC -
-# GD64-REL-NEXT:   0x23D0 R_RISCV_TLSDESC a
-# GD64-REL-NEXT:   0x23E0 R_RISCV_TLSDESC c
+# GD64-REL-NEXT:   0x203F0 R_RISCV_TLSDESC -
+# GD64-REL-NEXT:   0x203D0 R_RISCV_TLSDESC a
+# GD64-REL-NEXT:   0x203E0 R_RISCV_TLSDESC c
 # GD64-REL-NEXT: }
 # GD64-REL:      Hex dump of section '.got':
-# GD64-REL-NEXT: 0x000023c8 08230000 00000000 00000000 00000000 .
-# GD64-REL-NEXT: 0x000023d8 00000000 00000000 00000000 00000000 .
-# GD64-REL-NEXT: 0x000023e8 00000000 00000000 00000000 00000000 .
-# GD64-REL-NEXT: 0x000023f8 ff070000 00000000                   .
+# GD64-REL-NEXT: 0x000203c8 08030200 00000000 00000000 00000000 .
+# GD64-REL-NEXT: 0x000203d8 00000000 00000000 00000000 00000000 .
+# GD64-REL-NEXT: 0x000203e8 00000000 00000000 00000000 00000000 .
+# GD64-REL-NEXT: 0x000203f8 ff070000 00000000                   .
 
 # GD32-REL:      .rel.dyn {
-# GD32-REL-NEXT:   0x2274 R_RISCV_TLSDESC -
-# GD32-REL-NEXT:   0x2264 R_RISCV_TLSDESC a
-# GD32-REL-NEXT:   0x226C R_RISCV_TLSDESC c
+# GD32-REL-NEXT:   0x20274 R_RISCV_TLSDESC -
+# GD32-REL-NEXT:   0x20264 R_RISCV_TLSDESC a
+# GD32-REL-NEXT:   0x2026C R_RISCV_TLSDESC c
 # GD32-REL-NEXT: }
 # GD32-REL:      Hex dump of section '.got':
-# GD32-REL-NEXT: 0x00002260 00220000 00000000 00000000 00000000 .
-# GD32-REL-NEXT: 0x00002270 00000000 00000000 ff070000          .
+# GD32-REL-NEXT: 0x00020260 00020200 00000000 00000000 00000000 .
+# GD32-REL-NEXT: 0x00020270 00000000 00000000 ff070000          .
 
-# GD64:      .got     00000038 00000000000023e0
+# GD64:      .got     00000038 00000000000203e0
 
 ## &.got[a]-. = 0x23e0+8 - 0x12e0 = 0x1108
-# GD64:        12e0: auipc   a0, 0x1
+# GD64:        102e0: auipc   a0, 0x1
 # GD64-NEXT:         ld      a1, 0x108(a0)
 # GD64-NEXT:         addi    a0, a0, 0x108
 # GD64-NEXT:         jalr    t0, 0x0(a1)
 # GD64-NEXT:         add     a0, a0, tp
 
 ## &.got[b]-. = 0x23e0+40 - 0x12f4 = 0x1114
-# GD64:        12f4: auipc   a2, 0x1
+# GD64:        102f4: auipc   a2, 0x1
 # GD64-NEXT:         ld      a3, 0x114(a2)
 # GD64-NEXT:         addi    a0, a2, 0x114
 # GD64-NEXT:         jalr    t0, 0x0(a3)
 # GD64-NEXT:         add     a0, a0, tp
 
 ## &.got[c]-. = 0x23e0+24 - 0x1308 = 0x10f0
-# GD64:        1308: auipc   a4, 0x1
+# GD64:        10308: auipc   a4, 0x1
 # GD64-NEXT:         ld      a5, 0xf0(a4)
 # GD64-NEXT:         addi    a0, a4, 0xf0
 # GD64-NEXT:         jalr    t0, 0x0(a5)
@@ -119,10 +119,10 @@
 # LE64-NEXT:         add     a0, a0, tp
 
 # IE64-RELA:      .rela.dyn {
-# IE64-RELA-NEXT:   0x123B0 R_RISCV_TLS_TPREL64 c 0x0
+# IE64-RELA-NEXT:   0x303B0 R_RISCV_TLS_TPREL64 c 0x0
 # IE64-RELA-NEXT: }
 
-# IE64:       .got     00000010 00000000000123a8
+# IE64:       .got     00000010 00000000000303a8
 
 ## a and b are optimized to use LE. c is optimized to IE.
 # IE64-LABEL: <.Ltlsdesc_hi0>:
@@ -141,11 +141,11 @@
 # IE64-LABEL: <.Ltlsdesc_hi2>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
-# IE64-NEXT:  112b8: auipc   a0, 0x1
+# IE64-NEXT:  202b8: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xf8(a0)
 # IE64-NEXT:         add     a0, a0, tp
 
-# IE32:       .got     00000008 00012248
+# IE32:       .got     00000008 00030248
 
 # IE32-LABEL: <.Ltlsdesc_hi0>:
 ## st_value(a) = 8
@@ -165,18 +165,18 @@
 # IE32-LABEL: <.Ltlsdesc_hi2>:
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
-# IE32-NEXT:  111cc: auipc   a0, 0x1
+# IE32-NEXT:  201cc: auipc   a0, 0x1
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
 
 # IE64A:       OFFSET           TYPE                     VALUE
-# IE64A-NEXT:  0000000000002340 R_RISCV_TLS_TPREL64      c
+# IE64A-NEXT:  0000000000020340 R_RISCV_TLS_TPREL64      c
 # IE64A-EMPTY:
 ## &.got[c]-. = 0x2340 - 0x1258 = 0x10e8
 # IE64A-LABEL: <.Ltlsdesc_hi2>:
 # IE64A-NEXT:         addi    zero, zero, 0x0
 # IE64A-NEXT:         addi    zero, zero, 0x0
-# IE64A-NEXT:   1258: auipc   a0, 0x1
+# IE64A-NEXT:   10258: auipc   a0, 0x1
 # IE64A-NEXT:         ld      a0, 0xe8(a0)
 # IE64A-NEXT:         add     a0, a0, tp
 
