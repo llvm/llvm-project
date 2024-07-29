@@ -304,6 +304,11 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<bool> DisableFullLTOPrelinkOptimization(
+    "disable-full-lto-prelink-optimization", cl::init(false), cl::Hidden,
+    cl::desc("Disable the module optimization pipeline for the FullLTO prelink "
+             "pipeline"));
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
@@ -1591,7 +1596,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   MPM.addPass(buildModuleSimplificationPipeline(Level, LTOPhase));
 
   // Now add the optimization pipeline.
-  MPM.addPass(buildModuleOptimizationPipeline(Level, LTOPhase));
+  if (LTOPhase != ThinOrFullLTOPhase::FullLTOPreLink ||
+      !DisableFullLTOPrelinkOptimization)
+    MPM.addPass(buildModuleOptimizationPipeline(Level, LTOPhase));
 
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
       PGOOpt->Action == PGOOptions::SampleUse)
