@@ -3841,6 +3841,32 @@ restart_radix_check:
   __kmp_free(counts);
   CLEANUP_THREAD_INFO;
   __kmp_topology->sort_ids();
+
+  int tlevel = __kmp_topology->get_level(KMP_HW_THREAD);
+  if (tlevel > 0) {
+    // If the thread level does not have ids, then put them in.
+    if (__kmp_topology->at(0).ids[tlevel] == kmp_hw_thread_t::UNKNOWN_ID) {
+      __kmp_topology->at(0).ids[tlevel] = 0;
+    }
+    for (int i = 1; i < __kmp_topology->get_num_hw_threads(); ++i) {
+      kmp_hw_thread_t &hw_thread = __kmp_topology->at(i);
+      if (hw_thread.ids[tlevel] != kmp_hw_thread_t::UNKNOWN_ID)
+        continue;
+      kmp_hw_thread_t &prev_hw_thread = __kmp_topology->at(i - 1);
+      // Check if socket, core, anything above thread level changed.
+      // If the ids did change, then restart thread id at 0
+      // Otherwise, set thread id to prev thread's id + 1
+      for (int j = 0; j < tlevel; ++j) {
+        if (hw_thread.ids[j] != prev_hw_thread.ids[j]) {
+          hw_thread.ids[tlevel] = 0;
+          break;
+        }
+      }
+      if (hw_thread.ids[tlevel] == kmp_hw_thread_t::UNKNOWN_ID)
+        hw_thread.ids[tlevel] = prev_hw_thread.ids[tlevel] + 1;
+    }
+  }
+
   if (!__kmp_topology->check_ids()) {
     kmp_topology_t::deallocate(__kmp_topology);
     __kmp_topology = nullptr;
