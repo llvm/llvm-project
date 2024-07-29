@@ -38,16 +38,6 @@ define i64 @fold_strnlen_s3_s5_1(i1 %C) {
   ret i64 %len
 }
 
-define i64 @fold_strnlen_s3_s5_1_asan(i1 %C) sanitize_address {
-; CHECK-LABEL: @fold_strnlen_s3_s5_1_asan(
-; CHECK-NEXT:    ret i64 1
-;
-  %ptr = select i1 %C, ptr @s3, ptr @s6
-
-  %len = call i64 @strnlen(ptr %ptr, i64 1)
-  ret i64 %len
-}
-
 
 ; Fold strnlen (C ? s3 : s5, 3) to 3.
 

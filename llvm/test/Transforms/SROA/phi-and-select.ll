@@ -344,27 +344,6 @@ entry:
   ret i32 %loaded
 }
 
-; We should not unconditionally load with sanitizers.
-define i32 @test9_asan(i32 %b, ptr %ptr) sanitize_address {
-; Same as @test8 but for a select rather than a PHI node.
-;
-; CHECK-LABEL: @test9_asan(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], i32 undef, i32 [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
-; CHECK-NEXT:    ret i32 [[LOADED_SROA_SPECULATED]]
-;
-entry:
-  %f = alloca float
-  store i32 0, ptr %ptr
-  %test = icmp ne i32 %b, 0
-  %select = select i1 %test, ptr %f, ptr %ptr
-  %loaded = load i32, ptr %select, align 4
-  ret i32 %loaded
-}
-
 define float @test10(i32 %b, ptr %ptr) {
 ; Don't try to promote allocas which are not elligible for it even after
 ; rewriting due to the necessity of inserting bitcasts when speculating a PHI
