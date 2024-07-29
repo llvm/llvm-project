@@ -3256,6 +3256,9 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   if (E->containsErrors())
     return this->emitError(E);
 
+  if (!this->checkLiteralType(E))
+    return false;
+
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
   return this->Visit(E);
@@ -4699,6 +4702,17 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
+  if (Ctx.getLangOpts().CPlusPlus23)
+    return true;
+
+  if (!E->isPRValue() || E->getType()->isLiteralType(Ctx.getASTContext()))
+    return true;
+
+  return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
@@ -5238,6 +5252,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
             return RT->getPointeeType().isConstQualified();
           return false;
         };
+
+        // DecompositionDecls are just proxies for us.
+        if (isa<DecompositionDecl>(VD))
+          return revisit(VD);
 
         // Visit local const variables like normal.
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||

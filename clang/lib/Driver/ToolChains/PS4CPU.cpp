@@ -152,47 +152,35 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   }
 
-  const bool UseLTO = D.isUsingLTO();
   const bool UseJMC =
       Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
 
   const char *LTOArgs = "";
-  auto AddCodeGenFlag = [&](Twine Flag) {
+  auto AddLTOFlag = [&](Twine Flag) {
     LTOArgs = Args.MakeArgString(Twine(LTOArgs) + " " + Flag);
   };
 
-  if (UseLTO) {
-    // This tells LTO to perform JustMyCode instrumentation.
-    if (UseJMC)
-      AddCodeGenFlag("-enable-jmc-instrument");
+  // If the linker sees bitcode objects it will perform LTO. We can't tell
+  // whether or not that will be the case at this point. So, unconditionally
+  // pass LTO options to ensure proper codegen, metadata production, etc if
+  // LTO indeed occurs.
+  if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
+                   true))
+    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
+                                                  : "--lto=full");
+  if (UseJMC)
+    AddLTOFlag("-enable-jmc-instrument");
 
-    if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
-      AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
+  if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+    AddLTOFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
 
-    StringRef Parallelism = getLTOParallelism(Args, D);
-    if (!Parallelism.empty())
-      AddCodeGenFlag(Twine("-threads=") + Parallelism);
+  if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
+    AddLTOFlag(Twine("-threads=") + Threads);
 
-    const char *Prefix = nullptr;
-    if (D.getLTOMode() == LTOK_Thin)
-      Prefix = "-lto-thin-debug-options=";
-    else if (D.getLTOMode() == LTOK_Full)
-      Prefix = "-lto-debug-options=";
-    else
-      llvm_unreachable("new LTO mode?");
-
-    CmdArgs.push_back(Args.MakeArgString(Twine(Prefix) + LTOArgs));
-  }
+  CmdArgs.push_back(Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
-
-  if (D.isUsingLTO() && Args.hasArg(options::OPT_funified_lto)) {
-    if (D.getLTOMode() == LTOK_Thin)
-      CmdArgs.push_back("--lto=thin");
-    else if (D.getLTOMode() == LTOK_Full)
-      CmdArgs.push_back("--lto=full");
-  }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});
@@ -259,36 +247,37 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Output.getFilename());
   }
 
-  const bool UseLTO = D.isUsingLTO();
   const bool UseJMC =
       Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
 
-  auto AddCodeGenFlag = [&](Twine Flag) {
+  auto AddLTOFlag = [&](Twine Flag) {
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=") + Flag));
   };
 
-  if (UseLTO) {
-    // This tells LTO to perform JustMyCode instrumentation.
-    if (UseJMC)
-      AddCodeGenFlag("-enable-jmc-instrument");
+  // If the linker sees bitcode objects it will perform LTO. We can't tell
+  // whether or not that will be the case at this point. So, unconditionally
+  // pass LTO options to ensure proper codegen, metadata production, etc if
+  // LTO indeed occurs.
+  if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
+                   true))
+    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
+                                                  : "--lto=full");
 
-    if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
-      AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
+  if (UseJMC)
+    AddLTOFlag("-enable-jmc-instrument");
 
-    StringRef Parallelism = getLTOParallelism(Args, D);
-    if (!Parallelism.empty())
-      CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=jobs=") + Parallelism));
-  }
+  if (Args.hasFlag(options::OPT_fstack_size_section,
+                   options::OPT_fno_stack_size_section, false))
+    AddLTOFlag("-stack-size-section");
+
+  if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+    AddLTOFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
+
+  if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
+    AddLTOFlag(Twine("jobs=") + Jobs);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
-
-  if (D.isUsingLTO() && Args.hasArg(options::OPT_funified_lto)) {
-    if (D.getLTOMode() == LTOK_Thin)
-      CmdArgs.push_back("--lto=thin");
-    else if (D.getLTOMode() == LTOK_Full)
-      CmdArgs.push_back("--lto=full");
-  }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t});

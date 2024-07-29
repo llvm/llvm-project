@@ -67,6 +67,7 @@ def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
+def ArgTypePtr : ArgType { let Name = "const Type *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -394,6 +395,10 @@ def CheckEnumValue : Opcode {
   let Args = [ArgEnumDecl];
   let Types = [FixedSizeIntegralTypeClass];
   let HasGroup = 1;
+}
+
+def CheckLiteralType : Opcode {
+  let Args = [ArgTypePtr];
 }
 
 // [] -> [Value]

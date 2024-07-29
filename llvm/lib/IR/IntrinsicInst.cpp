@@ -599,6 +599,25 @@ Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
   return Intrinsic::not_intrinsic;
 }
 
+constexpr static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id) {
+  if (::isVPIntrinsic(Id))
+    return Id;
+
+  switch (Id) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
+#define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN) case Intrinsic::INTRIN:
+#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
+  return ::getForIntrinsic(Id);
+}
+
 bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   using namespace PatternMatch;
 
