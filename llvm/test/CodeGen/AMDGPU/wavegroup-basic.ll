@@ -59,7 +59,7 @@ entry:
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_z 0
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_info 0
 ; KERNEL-NEXT:         .amdhsa_system_vgpr_workitem_id 1
-; KERNEL-NEXT:         .amdhsa_next_free_vgpr 2
+; KERNEL-NEXT:         .amdhsa_next_free_vgpr 4
 ; KERNEL-NEXT:         .amdhsa_next_free_sgpr 34
 ; KERNEL-NEXT:         .amdhsa_reserve_vcc 0
 ; KERNEL-NEXT:         .amdhsa_float_round_mode_32 0
@@ -94,6 +94,6 @@ entry:
 ; KERNEL-NEXT:    .sgpr_spill_count: 0
 ; KERNEL-NEXT:    .symbol:         wavegroup_kernel.kd
 ; KERNEL-NEXT:    .uses_dynamic_stack: false
-; KERNEL-NEXT:    .vgpr_count:     2
+; KERNEL-NEXT:    .vgpr_count:     4
 ; KERNEL-NEXT:    .vgpr_spill_count: 0
 ; KERNEL-NEXT:    .wavefront_size: 32
