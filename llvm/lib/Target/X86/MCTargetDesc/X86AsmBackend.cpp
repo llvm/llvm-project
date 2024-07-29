@@ -437,8 +437,6 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
     return cast<MCDataFragment>(*F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(*F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
   }
 }
 
@@ -884,9 +882,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       if (LabeledFragments.count(&F))
         Relaxable.clear();
 
-      if (F.getKind() == MCFragment::FT_Data ||
-          F.getKind() == MCFragment::FT_CompactEncodedInst)
-        // Skip and ignore
+      if (F.getKind() == MCFragment::FT_Data) // Skip and ignore
         continue;
 
       if (F.getKind() == MCFragment::FT_Relaxable) {
