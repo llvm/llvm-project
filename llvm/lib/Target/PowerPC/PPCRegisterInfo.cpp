@@ -402,7 +402,7 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TM.isPPC64())
     markSuperRegs(Reserved, PPC::R13);
 
-  if (TFI->needsFP(MF) || (hasBasePointer(MF) && Subtarget.isAIXABI()))
+  if (TFI->needsFP(MF))
     markSuperRegs(Reserved, PPC::R31);
 
   bool IsPositionIndependent = TM.isPositionIndependent();

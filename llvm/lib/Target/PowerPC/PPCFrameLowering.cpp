@@ -376,7 +376,6 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return false;
 
-
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects() || MFI.hasStackMap() || MFI.hasPatchPoint() ||
          MF.exposesReturnsTwice() ||
@@ -1008,7 +1007,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // R0 cannot be used as a base register, but it can be used as an
         // index in a store-indexed.
         int LastOffset = 0;
-        if (HasFP || (HasBP && Subtarget.isAIXABI()))  {
+        if (HasFP || (HasBP && Subtarget.isAIXABI())) {
           // R0 += (FPOffset-LastOffset).
           // Need addic, since addi treats R0 as 0.
           BuildMI(MBB, MBBI, dl, TII.get(PPC::ADDIC), ScratchReg)
@@ -1995,8 +1994,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // If the frame pointer save index hasn't been defined yet.
-  if (!FPSI && (needsFP(MF)
-      || (RegInfo->hasBasePointer(MF) && Subtarget.isAIXABI()))) {
+  if (!FPSI &&
+      (needsFP(MF) || (RegInfo->hasBasePointer(MF) && Subtarget.isAIXABI()))) {
     // Find out what the fix offset of the frame pointer save area.
     int FPOffset = getFramePointerSaveOffset();
     // Allocate the frame index for frame pointer save area.
