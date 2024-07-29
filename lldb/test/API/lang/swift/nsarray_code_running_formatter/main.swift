@@ -23,7 +23,7 @@ func main() {
   var tb = Test() as Array + []
 
   print("second stop") //% self.expect('frame variable -d run -- t', substrs=['t = 0x', 'NSArray = {', 'NSObject = {'])
-                       //% self.expect('frame variable -d run -- ta', substrs=['ta = {', '_buffer = {', '_storage =', 'rawValue = 0x'])
+                       //% self.expect('frame variable -d run -- ta', substrs=['ta = <uninitialized>', '_buffer = {', '_storage =', 'rawValue = 0x'])
                        //% self.expect('frame variable -d run -- tb', substrs=['tb = 1 value {', '"abc"'])
                        //% self.expect('po t', substrs=['0 : abc'])
                        //% self.expect('po ta', substrs=['0 : abc'])

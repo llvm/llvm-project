@@ -114,7 +114,7 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
 }
 
 bool SwiftArrayNativeBufferHandler::IsValid() {
-  return m_metadata_ptr != LLDB_INVALID_ADDRESS &&
+  return m_metadata_ptr != LLDB_INVALID_ADDRESS && m_metadata_ptr &&
          m_first_elem_ptr != LLDB_INVALID_ADDRESS && m_capacity >= m_size &&
          m_elem_type.IsValid();
 }
@@ -437,10 +437,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
         handler.reset(new SwiftArrayBridgedBufferHandler(
             process_sp, masked_storage_location));
       }
-
-      if (handler && handler->IsValid())
-        return handler;
-      return nullptr;
+      return handler;
     } else {
       CompilerType elem_type(
           valobj.GetCompilerType().GetArrayElementType(exe_scope));
@@ -456,6 +453,12 @@ bool lldb_private::formatters::swift::Array_SummaryProvider(
 
   if (!handler)
     return false;
+
+  if (!handler->IsValid()) {
+    // FIXME: This should be an out-of-band llvm::Error return value.
+    stream << "<uninitialized>";
+    return true;
+  }
 
   auto count = handler->GetCount();
 
