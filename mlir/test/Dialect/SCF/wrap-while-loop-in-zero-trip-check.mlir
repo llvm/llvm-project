@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -scf-rotate-while -split-input-file  | FileCheck %s
-// RUN: mlir-opt %s -test-force-wrap-scf-while-loop-in-zero-trip-check -split-input-file  | FileCheck %s --check-prefix FORCE-CREATE-CHECK
+// RUN: mlir-opt %s -test-wrap-scf-while-loop-in-zero-trip-check -split-input-file  | FileCheck %s
+// RUN: mlir-opt %s -test-wrap-scf-while-loop-in-zero-trip-check='force-create-check=true' -split-input-file  | FileCheck %s --check-prefix FORCE-CREATE-CHECK
 
 func.func @wrap_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
   %cst0 = arith.constant 0 : i32

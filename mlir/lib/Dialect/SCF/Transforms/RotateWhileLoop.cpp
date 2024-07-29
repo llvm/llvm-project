@@ -10,17 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Patterns.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFROTATEWHILELOOPPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -39,19 +31,6 @@ struct RotateWhileLoopPattern : OpRewritePattern<scf::WhileOp> {
     // mechanism. 'do-while' loops are simply returned unmodified. In order to
     // stop recursion, we check input and output operations differ.
     return success(succeeded(result) && *result != whileOp);
-  }
-};
-
-struct SCFRotateWhileLoopPass
-    : impl::SCFRotateWhileLoopPassBase<SCFRotateWhileLoopPass> {
-  using Base::Base;
-
-  void runOnOperation() final {
-    Operation *parentOp = getOperation();
-    MLIRContext *context = &getContext();
-    RewritePatternSet patterns(context);
-    scf::populateSCFRotateWhileLoopPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
   }
 };
 } // namespace
