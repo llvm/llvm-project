@@ -126,3 +126,58 @@ export int case5() {
   increment(I);
   return I;
 }
+
+// Case 6: Aggregate out parameters.
+struct S {
+  int X;
+  float Y;
+};
+
+void init(out S s) {
+  s.X = 3;
+  s.Y = 4;
+}
+
+// ALL-LABEL: define noundef i32 {{.*}}case6
+
+// CHECK: [[S:%.*]] = alloca %struct.S
+// CHECK: [[Tmp:%.*]] = alloca %struct.S
+// CHECK: call void {{.*}}init{{.*}}(ptr noundef nonnull align 4 dereferenceable(8) [[Tmp]])
+// CHECK: [[RetVal:%.*]] = load %struct.S, ptr [[Tmp]]
+// CHECK: [[XAddr:%.*]] = getelementptr inbounds %struct.S, ptr [[S]], i32 0, i32 0
+// CHECK: [[XVal:%.*]] = extractvalue %struct.S [[RetVal]], 0
+// CHECK: store i32 [[XVal]], ptr [[XAddr]]
+// CHECK: [[YAddr:%.*]] = getelementptr inbounds %struct.S, ptr [[S]], i32 0, i32 1
+// CHECK: [[YVal:%.*]] = extractvalue %struct.S [[RetVal]], 1
+// CHECK: store float [[YVal]], ptr [[YAddr]]
+
+// OPT: ret i32 7
+export int case6() {
+  S s;
+  init(s);
+  return s.X + s.Y;
+}
+
+// Case 7: Non-scalars with a cast expression.
+void trunc_vec(inout int3 V) {}
+
+// ALL-LABEL: define noundef <3 x float> {{.*}}case7
+
+// CHECK: [[V:%.*]] = alloca <3 x float>
+// CHECK: [[Tmp:%.*]] = alloca <3 x i32>
+// CHECK: [[FVal:%.*]] = load <3 x float>, ptr [[V]]
+// CHECK: [[IVal:%.*]] = fptosi <3 x float> [[FVal]] to <3 x i32>
+// CHECK: store <3 x i32> [[IVal]], ptr [[Tmp]]
+// CHECK: call void {{.*}}trunc_vec{{.*}}(ptr noundef nonnull align 16 dereferenceable(16) [[Tmp]])
+// CHECK: [[IRet:%.*]] = load <3 x i32>, ptr [[Tmp]]
+// CHECK: [[FRet:%.*]] = sitofp <3 x i32> [[IRet]] to <3 x float>
+// CHECK: store <3 x float> [[FRet]], ptr [[V]]
+
+// OPT: [[IVal:%.*]] = fptosi <3 x float> {{.*}} to <3 x i32>
+// OPT: [[FVal:%.*]] = sitofp <3 x i32> [[IVal]] to <3 x float>
+// OPT: ret <3 x float> [[FVal]]
+
+export float3 case7(float3 V) {
+  trunc_vec(V);
+  return V;
+}

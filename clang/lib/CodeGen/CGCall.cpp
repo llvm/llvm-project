@@ -4152,20 +4152,20 @@ static void emitWriteback(CodeGenFunction &CGF,
          "shouldn't have writeback for provably null argument");
 
   if (CGF.getLangOpts().HLSL) {
-    if (writeback.CastExpr) {
+    if (!isa<OpaqueValueExpr>(writeback.CastExpr)) {
       RValue TmpVal = CGF.EmitAnyExprToTemp(writeback.CastExpr);
       if (TmpVal.isScalar())
         CGF.EmitStoreThroughLValue(TmpVal, srcLV);
-      else
-        CGF.EmitAggregateStore(srcLV.getPointer(CGF),
-                               TmpVal.getAggregateAddress(), false);
-    } else {
-      if (srcLV.isSimple())
-        CGF.EmitAggregateStore(srcLV.getPointer(CGF), writeback.Temporary,
-                               false);
       else {
-        llvm::Value *value = CGF.Builder.CreateLoad(writeback.Temporary);
-        RValue TmpVal = RValue::get(value);
+        llvm::Value *Val = CGF.Builder.CreateLoad(TmpVal.getAggregateAddress());
+        CGF.EmitAggregateStore(Val, srcLV.getAddress(), false);
+      }
+    } else {
+      llvm::Value *Val = CGF.Builder.CreateLoad(writeback.Temporary);
+      if (srcLV.isSimple()) {
+        CGF.EmitAggregateStore(Val, srcLV.getAddress(), false);
+      } else {
+        RValue TmpVal = RValue::get(Val);
         CGF.EmitStoreThroughLValue(TmpVal, srcLV);
       }
     }
