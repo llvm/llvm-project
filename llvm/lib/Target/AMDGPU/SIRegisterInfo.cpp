@@ -2572,6 +2572,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 // pair for it. This a way around to avoid carry.
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
                     .addImm(Offset);
+                assert(Offset > 0 && "Offset is positive");
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)
                           .addReg(TmpResultReg, RegState::Kill)
