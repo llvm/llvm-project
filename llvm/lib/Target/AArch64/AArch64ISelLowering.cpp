@@ -1988,6 +1988,57 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
   return false;
 }
 
+bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
+    const CallInst *CI) const {
+  const bool TargetLowers = false;
+  const bool GenericLowers = true;
+
+  auto *I = dyn_cast<IntrinsicInst>(CI);
+  if (!I)
+    return GenericLowers;
+
+  ScalableVectorType *RetTy = dyn_cast<ScalableVectorType>(I->getType());
+
+  if (!RetTy)
+    return GenericLowers;
+
+  ScalableVectorType *InputTy = nullptr;
+
+  auto RetScalarTy = RetTy->getScalarType();
+  if (RetScalarTy->isIntegerTy(64)) {
+    InputTy = ScalableVectorType::get(Type::getInt16Ty(I->getContext()), 8);
+  } else if (RetScalarTy->isIntegerTy(32)) {
+    InputTy = ScalableVectorType::get(Type::getInt8Ty(I->getContext()), 16);
+  }
+
+  if (!InputTy)
+    return GenericLowers;
+
+  Value *InputA;
+  Value *InputB;
+
+  auto Pattern = m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
+      m_Value(), m_OneUse(m_Mul(m_OneUse(m_ZExtOrSExt(m_Value(InputA))),
+                                m_OneUse(m_ZExtOrSExt(m_Value(InputB))))));
+
+  if (!match(I, Pattern))
+    return GenericLowers;
+
+  auto Mul = cast<Instruction>(I->getOperand(1));
+
+  auto getOpcodeOfOperand = [&](unsigned Idx) {
+    return cast<Instruction>(Mul->getOperand(Idx))->getOpcode();
+  };
+
+  if (getOpcodeOfOperand(0) != getOpcodeOfOperand(1))
+    return GenericLowers;
+
+  if (InputA->getType() != InputTy || InputB->getType() != InputTy)
+    return GenericLowers;
+
+  return TargetLowers;
+}
+
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   if (!Subtarget->isSVEorStreamingSVEAvailable())
     return true;
@@ -21765,6 +21816,32 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    SDLoc DL(N);
+
+    auto NarrowOp = N->getOperand(1);
+    auto MulOp = N->getOperand(2);
+
+    auto ExtA = MulOp->getOperand(0);
+    auto ExtB = MulOp->getOperand(1);
+
+    unsigned DotIntrinsicId = Intrinsic::not_intrinsic;
+
+    if (ExtA->getOpcode() == ISD::SIGN_EXTEND)
+      DotIntrinsicId = Intrinsic::aarch64_sve_sdot;
+    else if (ExtA->getOpcode() == ISD::ZERO_EXTEND)
+      DotIntrinsicId = Intrinsic::aarch64_sve_udot;
+
+    assert(DotIntrinsicId != Intrinsic::not_intrinsic &&
+           "Unexpected dot product case encountered.");
+
+    auto A = ExtA->getOperand(0);
+    auto B = ExtB->getOperand(0);
+
+    auto IntrinsicId = DAG.getConstant(DotIntrinsicId, DL, MVT::i64);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NarrowOp.getValueType(),
+                       {IntrinsicId, NarrowOp, A, B});
+  }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:
     return tryCombineFixedPointConvert(N, DCI, DAG);
