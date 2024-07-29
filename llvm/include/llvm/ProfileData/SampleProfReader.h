@@ -392,6 +392,11 @@ public:
   /// which doesn't support loading function profiles on demand.
   virtual bool collectFuncsFromModule() { return false; }
 
+  virtual std::error_code readOnDemand(const DenseSet<StringRef> &FuncsToUse,
+                                       SampleProfileMap &Profiles) {
+    return sampleprof_error::not_implemented;
+  };
+
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
 
@@ -412,6 +417,16 @@ public:
     auto It = Profiles.find(FunctionId(Fname));
     if (It != Profiles.end())
       return &It->second;
+
+    if (FuncNameToProfNameMap && !FuncNameToProfNameMap->empty()) {
+      auto R = FuncNameToProfNameMap->find(FunctionId(Fname));
+      if (R != FuncNameToProfNameMap->end()) {
+        Fname = R->second.stringRef();
+        auto It = Profiles.find(FunctionId(Fname));
+        if (It != Profiles.end())
+          return &It->second;
+      }
+    }
 
     if (Remapper) {
       if (auto NameInProfile = Remapper->lookUpNameInProfile(Fname)) {
@@ -494,6 +509,11 @@ public:
 
   void setModule(const Module *Mod) { M = Mod; }
 
+  void setFuncNameToProfNameMap(
+      HashKeyMap<std::unordered_map, FunctionId, FunctionId> *FPMap) {
+    FuncNameToProfNameMap = FPMap;
+  }
+
 protected:
   /// Map every function to its associated profile.
   ///
@@ -521,6 +541,21 @@ protected:
   void computeSummary();
 
   std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
+
+  // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
+  // which maps the function name to the matched profile name. This is used
+  // for sample loader to look up profile using the new name.
+  HashKeyMap<std::unordered_map, FunctionId, FunctionId>
+      *FuncNameToProfNameMap = nullptr;
+
+  // A map from a function's context hash to its meta data section range, used
+  // for on-demand read function profile metadata.
+  std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
+      FContextToMetaDataSecRange;
+
+  std::pair<const uint8_t *, const uint8_t *> LBRProfileSecRange;
+
+  bool ProfileHasAttribute = false;
 
   /// \brief Whether samples are collected based on pseudo probes.
   bool ProfileIsProbeBased = false;
@@ -621,6 +656,8 @@ protected:
 
   /// Read the next function profile instance.
   std::error_code readFuncProfile(const uint8_t *Start);
+  std::error_code readFuncProfile(const uint8_t *Start,
+                                  SampleProfileMap &Profiles);
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
@@ -720,11 +757,15 @@ protected:
   std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
+  std::error_code readFuncMetadataOnDemand(bool ProfileHasAttribute,
+                                           SampleProfileMap &Profiles);
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
   std::error_code readFuncMetadata(bool ProfileHasAttribute,
                                    FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
+  std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
+                                   SampleProfileMap &Profiles);
   std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList();
@@ -775,6 +816,12 @@ public:
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.
   bool collectFuncsFromModule() override;
+
+  /// Read the profiles on-demand for the given functions. This is used after
+  /// stale call graph matching finds new functions whose profiles aren't read
+  /// at the beginning and we need to re-read the profiles.
+  std::error_code readOnDemand(const DenseSet<StringRef> &FuncsToUse,
+                               SampleProfileMap &Profiles) override;
 
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
