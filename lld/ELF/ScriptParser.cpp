@@ -310,8 +310,8 @@ void ScriptParser::readDefsym(StringRef name) {
 void ScriptParser::readNoCrossRefs(bool to) {
   expect("(");
   NoCrossRefCommand cmd{{}, to};
-  while (auto tok = till(")"))
-    cmd.outputSections.push_back(unquote(tok));
+  while (auto tok = readNameTill(")"))
+    cmd.outputSections.push_back(tok);
   if (cmd.outputSections.size() < 2)
     warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
   else
@@ -371,8 +371,8 @@ void ScriptParser::readAsNeeded() {
   expect("(");
   bool orig = config->asNeeded;
   config->asNeeded = true;
-  while (auto tok = till(")"))
-    addFile(unquote(tok));
+  while (auto tok = readNameTill(")"))
+    addFile(tok);
   config->asNeeded = orig;
 }
 
@@ -387,8 +387,8 @@ void ScriptParser::readEntry() {
 
 void ScriptParser::readExtern() {
   expect("(");
-  while (auto tok = till(")"))
-    config->undefined.push_back(unquote(tok));
+  while (auto tok = readNameTill(")"))
+    config->undefined.push_back(tok);
 }
 
 void ScriptParser::readGroup() {
@@ -420,11 +420,11 @@ void ScriptParser::readInclude() {
 
 void ScriptParser::readInput() {
   expect("(");
-  while (auto tok = till(")")) {
+  while (auto tok = readNameTill(")")) {
     if (tok == "AS_NEEDED")
       readAsNeeded();
     else
-      addFile(unquote(tok));
+      addFile(tok);
   }
 }
 
@@ -524,7 +524,7 @@ void ScriptParser::readPhdrs() {
     cmd.name = tok;
     cmd.type = readPhdrType();
 
-    while (auto tok2 = till(";")) {
+    while (auto tok2 = readNameTill(";")) {
       if (tok2 == "FILEHDR")
         cmd.hasFilehdr = true;
       else if (tok2 == "PHDRS")
@@ -1391,9 +1391,8 @@ std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
   uint64_t withFlags = 0;
   uint64_t withoutFlags = 0;
   expect("(");
-  while (!errorCount()) {
-    StringRef tok = readName();
-    bool without = tok.consume_front("!");
+  while (auto tok = readNameTill(")")) {
+    bool without = tok.str.consume_front("!");
     if (std::optional<uint64_t> flag = parseFlag(tok)) {
       if (without)
         withoutFlags |= *flag;

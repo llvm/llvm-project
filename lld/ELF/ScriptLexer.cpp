@@ -231,6 +231,23 @@ ScriptLexer::Token ScriptLexer::till(StringRef tok) {
   return {};
 }
 
+ScriptLexer::Token ScriptLexer::readNameTill(StringRef tok) {
+  // this behaves like till but expects that token to be an
+  // identify of quoted string
+  StringRef str = next();
+  if (str.starts_with("\""))
+    str = str.substr(1, str.size() - 2);
+  if (str == tok)
+    return {};
+  if (str == "(" || str == ")" || str == "}")
+    setError(tok + " is missing before " + str);
+  if (!atEOF())
+    return {str};
+  prevTok = {};
+  setError("unexpected EOF");
+  return {};
+}
+
 // Returns true if S encloses T.
 static bool encloses(StringRef s, StringRef t) {
   return s.bytes_begin() <= t.bytes_begin() && t.bytes_end() <= s.bytes_end();

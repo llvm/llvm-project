@@ -110,6 +110,12 @@ PHDRS { text PT_LOAD
 # RUN: not ld.lld -T unclosed2.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED2 %s
 # UNCLOSED2: error: unclosed2.lds:1: unexpected EOF
 
+#--- unclosed3.lds
+PHDRS {all PT_LOAD FILEHDR PHDRS }
+
+# RUN: not ld.lld -T unclosed3.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED3 %s
+# UNCLOSED3: error: unclosed3.lds:1: ; is missing before }
+
 #--- a.s
 .global _start
 _start:
