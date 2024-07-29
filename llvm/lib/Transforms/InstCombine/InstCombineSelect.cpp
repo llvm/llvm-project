@@ -3566,8 +3566,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
 // into
 //   %r = call iN @llvm.ucmp/scmp(%x, %y)
 Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
-  if (!isa<ConstantInt>(SI.getTrueValue()) ||
-      !dyn_cast<ConstantInt>(SI.getTrueValue())->isAllOnesValue())
+  if (!isa<Constant>(SI.getTrueValue()) ||
+      !dyn_cast<Constant>(SI.getTrueValue())->isAllOnesValue())
     return nullptr;
 
   Value *LHS, *RHS;

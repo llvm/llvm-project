@@ -222,6 +222,15 @@ define i8 @ucmp_from_select(i32 %x, i32 %y) {
   ret i8 %r
 }
 
+; Vector version
+define <4 x i8> @ucmp_from_select_vec(<4 x i32> %x, <4 x i32> %y) {
+  %ne_bool = icmp ne <4 x i32> %x, %y
+  %ne = zext <4 x i1> %ne_bool to <4 x i8>
+  %lt = icmp ult <4 x i32> %x, %y
+  %r = select <4 x i1> %lt, <4 x i8> splat(i8 -1), <4 x i8> %ne
+  ret <4 x i8> %r
+}
+
 ; Negative test: false value of the select is not `icmp ne x, y`
 define i8 @ucmp_from_select_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @ucmp_from_select_neg1(
