@@ -2483,6 +2483,11 @@ Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
     Align RedAlign2 = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
     if (RedAlign2 < RedAlign)
       RedAlign = RedAlign2;
+
+    if (!getMachineFunction().getFrameInfo().isStackRealignable())
+      // If the stack is not realignable, the alignment should be limited to the
+      // StackAlignment
+      RedAlign = std::min(RedAlign, StackAlign);
   }
 
   return RedAlign;

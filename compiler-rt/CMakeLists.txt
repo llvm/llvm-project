@@ -809,6 +809,10 @@ if(ANDROID)
   append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
 endif()
+if(${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES sparc)
+  # lld has several bugs/limitations on SPARC, so disable (Issue #100320).
+  set(COMPILER_RT_HAS_LLD FALSE)
+endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)
 
