@@ -208,3 +208,102 @@ define i8 @scmp_negated_multiuse(i32 %x, i32 %y) {
   %2 = sub i8 0, %1
   ret i8 %2
 }
+
+; Fold ((x s< y) ? -1 : (x != y)) into scmp(x, y)
+define i8 @scmp_from_select(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[NE:%.*]] = zext i1 [[NE_BOOL]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 -1, i8 [[NE]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = zext i1 %ne_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %ne
+  ret i8 %r
+}
+
+; Negative test: false value of the select is not `icmp ne x, y`
+define i8 @scmp_from_select_neg1(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_neg1(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[NE:%.*]] = zext i1 [[NE_BOOL]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 -1, i8 [[NE]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp eq i32 %x, %y
+  %ne = zext i1 %ne_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %ne
+  ret i8 %r
+}
+
+define i8 @scmp_from_select_neg2(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_neg2(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ne i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[NE:%.*]] = zext i1 [[NE_BOOL]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 -1, i8 [[NE]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %y, %x
+  %ne = zext i1 %ne_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %ne
+  ret i8 %r
+}
+
+; Negative test: true value of select is not -1
+define i8 @scmp_from_select_neg3(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_neg3(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[NE:%.*]] = zext i1 [[NE_BOOL]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 2, i8 [[NE]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = zext i1 %ne_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 2, i8 %ne
+  ret i8 %r
+}
+
+; Negative test: false value of select is sign-extended instead of zero-extended
+define i8 @scmp_from_select_neg4(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_neg4(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NE_BOOL]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = sext i1 %ne_bool to i8
+  %lt = icmp slt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %ne
+  ret i8 %r
+}
+
+; Negative test: condition of select is not (x s< y)
+define i8 @scmp_from_select_neg5(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_neg5(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[NE:%.*]] = zext i1 [[NE_BOOL]] to i8
+; CHECK-NEXT:    [[LT:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 -1, i8 [[NE]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ne_bool = icmp ne i32 %x, %y
+  %ne = zext i1 %ne_bool to i8
+  %lt = icmp sgt i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %ne
+  ret i8 %r
+}
