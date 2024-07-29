@@ -690,8 +690,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
     }
     auto Buffer = std::move(BufferOrErr.get());
 
-    BitstreamCursor Cursor(*Buffer);
-    PGOCtxProfileReader Reader(Cursor);
+    PGOCtxProfileReader Reader(Buffer->getBuffer());
     auto Ctx = Reader.loadContexts();
     if (!Ctx) {
       report_fatal_error("Failed to parse contextual profiles");
@@ -742,7 +741,8 @@ public:
     }
     if (!ContextualProfile.empty())
       loadFromCtxProf();
-    loadFromJson();
+    else
+      loadFromJson();
     LLVM_DEBUG({
       for (const auto &[Root, Set] : Workloads) {
         dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
