@@ -826,6 +826,32 @@ body:             |
     ; GCN-NEXT: scratch_load_u8 v0, v255 /*v511*/, s0
     $vgpr0 = SCRATCH_LOAD_UBYTE_SVS $vgpr511, undef $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
 
+    ; use idx0-3
+
+    ; GCN-NEXT: s_set_gpr_idx_u32 idx2, s4
+    $idx2 = S_SET_GPR_IDX_U32 undef $sgpr4
+
+    ; GCN-NEXT: s_set_vgpr_frames 2
+    ; ASM-SAME:                                         ;  vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v11, v5
+    renamable $vgpr11 = V_LOAD_IDX $idx2, 5, 1, implicit $exec
+
+    ; GCN-NEXT: s_set_gpr_idx_u32 idx3, s5
+    $idx3 = S_SET_GPR_IDX_U32 undef $sgpr5
+
+    ; GCN-NEXT: s_set_vgpr_frames 0xc0
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v0, v10
+    V_STORE_IDX undef $vgpr10, $idx3, 0, 1, implicit $exec
+
+    ; GCN-NEXT: s_set_gpr_idx_u32 idx0, s6
+    $idx0 = S_SET_GPR_IDX_U32 undef $sgpr6
+
+    ; GCN-NEXT: s_set_vgpr_frames 0
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v11, v6
+    renamable $vgpr11 = V_LOAD_IDX $idx0, 6, 1, implicit $exec
+
     ; TODO-GFX13 tests with idx bits
     ; Tuple crossing the 256 boundary
     ; DPP/tied operand
