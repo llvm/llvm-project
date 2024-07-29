@@ -36,6 +36,8 @@ void mlir::populateOpConvertToLLVMConversionPatterns(
     RewritePatternSet &patterns) {
   auto iface = dyn_cast<ConvertToLLVMOpInterface>(op);
   if (!iface)
+    iface = op->getParentOfType<ConvertToLLVMOpInterface>();
+  if (!iface)
     return;
   SmallVector<ConvertToLLVMAttrInterface, 12> attrs;
   iface.getConvertToLLVMConversionAttrs(attrs);
