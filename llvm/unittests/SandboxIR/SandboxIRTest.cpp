@@ -826,6 +826,7 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertBefore=*/Ret,
                                    /*IsVolatile=*/true, Ctx);
+  // Check if create was volatile
   EXPECT_TRUE(NewVSt->isVolatile());
 }
 
