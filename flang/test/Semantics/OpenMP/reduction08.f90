@@ -15,7 +15,7 @@ program omp_reduction
   do i=1,10
     !DEF: /omp_reduction/OtherConstruct1/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/max ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /omp_reduction/OtherConstruct1/m HostAssoc INTEGER(4)
+    !REF: /omp_reduction/m
     k = max(k, m)
   end do
   !$omp end parallel do
@@ -25,7 +25,7 @@ program omp_reduction
   do i=1,10
     !DEF: /omp_reduction/OtherConstruct2/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /omp_reduction/OtherConstruct2/m HostAssoc INTEGER(4)
+    !REF: /omp_reduction/m
     k = min(k, m)
   end do
   !$omp end parallel do
@@ -35,7 +35,7 @@ program omp_reduction
   do i=1,10
     !DEF: /omp_reduction/OtherConstruct3/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/iand ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /omp_reduction/OtherConstruct3/m HostAssoc INTEGER(4)
+    !REF: /omp_reduction/m
     k = iand(k, m)
   end do
   !$omp end parallel do
@@ -45,7 +45,7 @@ program omp_reduction
   do i=1,10
     !DEF: /omp_reduction/OtherConstruct4/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/ior ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /omp_reduction/OtherConstruct4/m HostAssoc INTEGER(4)
+    !REF: /omp_reduction/m
     k = ior(k, m)
   end do
   !$omp end parallel do
@@ -55,7 +55,7 @@ program omp_reduction
   do i=1,10
     !DEF: /omp_reduction/OtherConstruct5/k (OmpReduction) HostAssoc INTEGER(4)
     !DEF: /omp_reduction/ieor ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-    !DEF: /omp_reduction/OtherConstruct5/m HostAssoc INTEGER(4)
+    !REF: /omp_reduction/m
     k = ieor(k,m)
   end do
   !$omp end parallel do
