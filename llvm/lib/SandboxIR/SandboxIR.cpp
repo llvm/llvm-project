@@ -8,6 +8,7 @@
 
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include <sstream>
@@ -613,11 +614,17 @@ void BranchInst::dump() const {
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx,
                            const Twine &Name) {
+  return create(Ty, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx, Name);
+}
+
+LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, bool IsVolatile,
+                           Context &Ctx, const Twine &Name) {
   llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(BeforeIR);
-  auto *NewLI = Builder.CreateAlignedLoad(Ty, Ptr->Val, Align,
-                                          /*isVolatile=*/false, Name);
+  auto *NewLI =
+      Builder.CreateAlignedLoad(Ty, Ptr->Val, Align, IsVolatile, Name);
   auto *NewSBI = Ctx.createLoadInst(NewLI);
   return NewSBI;
 }
@@ -625,10 +632,16 @@ LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
                            BasicBlock *InsertAtEnd, Context &Ctx,
                            const Twine &Name) {
+  return create(Ty, Ptr, Align, InsertAtEnd, /*IsVolatile=*/false, Ctx, Name);
+}
+
+LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, bool IsVolatile,
+                           Context &Ctx, const Twine &Name) {
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
-  auto *NewLI = Builder.CreateAlignedLoad(Ty, Ptr->Val, Align,
-                                          /*isVolatile=*/false, Name);
+  auto *NewLI =
+      Builder.CreateAlignedLoad(Ty, Ptr->Val, Align, IsVolatile, Name);
   auto *NewSBI = Ctx.createLoadInst(NewLI);
   return NewSBI;
 }
@@ -809,6 +822,180 @@ void CallInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *IfNormal, BasicBlock *IfException,
+                               ArrayRef<Value *> Args, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &NameStr) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  SmallVector<llvm::Value *> LLVMArgs;
+  LLVMArgs.reserve(Args.size());
+  for (Value *Arg : Args)
+    LLVMArgs.push_back(Arg->Val);
+  llvm::InvokeInst *Invoke = Builder.CreateInvoke(
+      FTy, Func->Val, cast<llvm::BasicBlock>(IfNormal->Val),
+      cast<llvm::BasicBlock>(IfException->Val), LLVMArgs, NameStr);
+  return Ctx.createInvokeInst(Invoke);
+}
+
+InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *IfNormal, BasicBlock *IfException,
+                               ArrayRef<Value *> Args,
+                               Instruction *InsertBefore, Context &Ctx,
+                               const Twine &NameStr) {
+  return create(FTy, Func, IfNormal, IfException, Args,
+                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
+                NameStr);
+}
+
+InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *IfNormal, BasicBlock *IfException,
+                               ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                               Context &Ctx, const Twine &NameStr) {
+  return create(FTy, Func, IfNormal, IfException, Args, InsertAtEnd->end(),
+                InsertAtEnd, Ctx, NameStr);
+}
+
+BasicBlock *InvokeInst::getNormalDest() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getNormalDest()));
+}
+BasicBlock *InvokeInst::getUnwindDest() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getUnwindDest()));
+}
+void InvokeInst::setNormalDest(BasicBlock *BB) {
+  setOperand(1, BB);
+  assert(getNormalDest() == BB && "LLVM IR uses a different operan index!");
+}
+void InvokeInst::setUnwindDest(BasicBlock *BB) {
+  setOperand(2, BB);
+  assert(getUnwindDest() == BB && "LLVM IR uses a different operan index!");
+}
+Instruction *InvokeInst::getLandingPadInst() const {
+  return cast<Instruction>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getLandingPadInst()));
+  ;
+}
+BasicBlock *InvokeInst::getSuccessor(unsigned SuccIdx) const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::InvokeInst>(Val)->getSuccessor(SuccIdx)));
+}
+
+#ifndef NDEBUG
+void InvokeInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+void InvokeInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *DefaultDest,
+                               ArrayRef<BasicBlock *> IndirectDests,
+                               ArrayRef<Value *> Args, BBIterator WhereIt,
+                               BasicBlock *WhereBB, Context &Ctx,
+                               const Twine &NameStr) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+
+  SmallVector<llvm::BasicBlock *> LLVMIndirectDests;
+  LLVMIndirectDests.reserve(IndirectDests.size());
+  for (BasicBlock *IndDest : IndirectDests)
+    LLVMIndirectDests.push_back(cast<llvm::BasicBlock>(IndDest->Val));
+
+  SmallVector<llvm::Value *> LLVMArgs;
+  LLVMArgs.reserve(Args.size());
+  for (Value *Arg : Args)
+    LLVMArgs.push_back(Arg->Val);
+
+  llvm::CallBrInst *CallBr = Builder.CreateCallBr(
+      FTy, Func->Val, cast<llvm::BasicBlock>(DefaultDest->Val),
+      LLVMIndirectDests, LLVMArgs, NameStr);
+  return Ctx.createCallBrInst(CallBr);
+}
+
+CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *DefaultDest,
+                               ArrayRef<BasicBlock *> IndirectDests,
+                               ArrayRef<Value *> Args,
+                               Instruction *InsertBefore, Context &Ctx,
+                               const Twine &NameStr) {
+  return create(FTy, Func, DefaultDest, IndirectDests, Args,
+                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
+                NameStr);
+}
+CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
+                               BasicBlock *DefaultDest,
+                               ArrayRef<BasicBlock *> IndirectDests,
+                               ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                               Context &Ctx, const Twine &NameStr) {
+  return create(FTy, Func, DefaultDest, IndirectDests, Args, InsertAtEnd->end(),
+                InsertAtEnd, Ctx, NameStr);
+}
+
+Value *CallBrInst::getIndirectDestLabel(unsigned Idx) const {
+  return Ctx.getValue(cast<llvm::CallBrInst>(Val)->getIndirectDestLabel(Idx));
+}
+Value *CallBrInst::getIndirectDestLabelUse(unsigned Idx) const {
+  return Ctx.getValue(
+      cast<llvm::CallBrInst>(Val)->getIndirectDestLabelUse(Idx));
+}
+BasicBlock *CallBrInst::getDefaultDest() const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::CallBrInst>(Val)->getDefaultDest()));
+}
+BasicBlock *CallBrInst::getIndirectDest(unsigned Idx) const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::CallBrInst>(Val)->getIndirectDest(Idx)));
+}
+llvm::SmallVector<BasicBlock *, 16> CallBrInst::getIndirectDests() const {
+  SmallVector<BasicBlock *, 16> BBs;
+  for (llvm::BasicBlock *LLVMBB :
+       cast<llvm::CallBrInst>(Val)->getIndirectDests())
+    BBs.push_back(cast<BasicBlock>(Ctx.getValue(LLVMBB)));
+  return BBs;
+}
+void CallBrInst::setDefaultDest(BasicBlock *BB) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(std::make_unique<CallBrInstSetDefaultDest>(this, Tracker));
+  cast<llvm::CallBrInst>(Val)->setDefaultDest(cast<llvm::BasicBlock>(BB->Val));
+}
+void CallBrInst::setIndirectDest(unsigned Idx, BasicBlock *BB) {
+  auto &Tracker = Ctx.getTracker();
+  if (Tracker.isTracking())
+    Tracker.track(
+        std::make_unique<CallBrInstSetIndirectDest>(this, Idx, Tracker));
+  cast<llvm::CallBrInst>(Val)->setIndirectDest(Idx,
+                                               cast<llvm::BasicBlock>(BB->Val));
+}
+BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
+  return cast<BasicBlock>(
+      Ctx.getValue(cast<llvm::CallBrInst>(Val)->getSuccessor(Idx)));
+}
+
+#ifndef NDEBUG
+void CallBrInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+void CallBrInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -968,6 +1155,16 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<CallInst>(new CallInst(LLVMCall, *this));
     return It->second.get();
   }
+  case llvm::Instruction::Invoke: {
+    auto *LLVMInvoke = cast<llvm::InvokeInst>(LLVMV);
+    It->second = std::unique_ptr<InvokeInst>(new InvokeInst(LLVMInvoke, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::CallBr: {
+    auto *LLVMCallBr = cast<llvm::CallBrInst>(LLVMV);
+    It->second = std::unique_ptr<CallBrInst>(new CallBrInst(LLVMCallBr, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1014,6 +1211,16 @@ ReturnInst *Context::createReturnInst(llvm::ReturnInst *I) {
 CallInst *Context::createCallInst(llvm::CallInst *I) {
   auto NewPtr = std::unique_ptr<CallInst>(new CallInst(I, *this));
   return cast<CallInst>(registerValue(std::move(NewPtr)));
+}
+
+InvokeInst *Context::createInvokeInst(llvm::InvokeInst *I) {
+  auto NewPtr = std::unique_ptr<InvokeInst>(new InvokeInst(I, *this));
+  return cast<InvokeInst>(registerValue(std::move(NewPtr)));
+}
+
+CallBrInst *Context::createCallBrInst(llvm::CallBrInst *I) {
+  auto NewPtr = std::unique_ptr<CallBrInst>(new CallBrInst(I, *this));
+  return cast<CallBrInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {
