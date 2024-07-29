@@ -1994,18 +1994,17 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   auto *I = dyn_cast<IntrinsicInst>(CI);
   assert(I && "shouldExpandPartialReductionIntrinsic expects an intrinisc");
 
-  ScalableVectorType *RetTy = dyn_cast<ScalableVectorType>(I->getType());
-
+  VectorType *RetTy = dyn_cast<VectorType>(I->getType());
   if (!RetTy)
     return true;
 
-  ScalableVectorType *InputTy = nullptr;
+  VectorType *InputTy = nullptr;
 
   auto RetScalarTy = RetTy->getScalarType();
   if (RetScalarTy->isIntegerTy(64)) {
-    InputTy = ScalableVectorType::get(Type::getInt16Ty(I->getContext()), 8);
+    InputTy = VectorType::get(Type::getInt16Ty(I->getContext()), 8, RetTy->isScalableTy());
   } else if (RetScalarTy->isIntegerTy(32)) {
-    InputTy = ScalableVectorType::get(Type::getInt8Ty(I->getContext()), 16);
+    InputTy = VectorType::get(Type::getInt8Ty(I->getContext()), 16, RetTy->isScalableTy());
   }
 
   if (!InputTy)
