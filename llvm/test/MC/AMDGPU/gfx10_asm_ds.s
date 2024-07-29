@@ -1,5 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 //===----------------------------------------------------------------------===//
 // ENC_DS.

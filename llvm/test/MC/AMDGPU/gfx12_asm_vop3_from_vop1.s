@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
 
 v_bfrev_b32_e64 v5, v1
 // GFX12: encoding: [0x05,0x00,0xb8,0xd5,0x01,0x01,0x00,0x00]
