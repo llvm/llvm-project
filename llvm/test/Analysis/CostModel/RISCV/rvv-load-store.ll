@@ -592,16 +592,16 @@ define void @load_oddsize_vectors(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load <32 x i1>, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <1 x i32>, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <2 x i32>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %16 = load <3 x i32>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = load <3 x i32>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = load <4 x i32>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %18 = load <5 x i32>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %19 = load <6 x i32>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %20 = load <7 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load <5 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load <6 x i32>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %20 = load <7 x i32>, ptr %p, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <8 x i32>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %22 = load <9 x i32>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %23 = load <15 x i32>, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %22 = load <9 x i32>, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %23 = load <15 x i32>, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %24 = load <16 x i32>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %25 = load <31 x i32>, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %25 = load <31 x i32>, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %26 = load <32 x i32>, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -682,15 +682,15 @@ define void @store_oddsize_vectors(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i1> undef, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i32> undef, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i32> undef, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i32> undef, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i32> undef, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <5 x i32> undef, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: store <6 x i32> undef, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <7 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i32> undef, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i32> undef, ptr %p, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> undef, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: store <15 x i32> undef, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i32> undef, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i32> undef, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: store <31 x i32> undef, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i32> undef, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i32> undef, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
