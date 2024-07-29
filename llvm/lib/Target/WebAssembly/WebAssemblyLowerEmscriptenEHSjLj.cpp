@@ -777,6 +777,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
   SSAUpdaterBulk SSA;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      if (I.getType()->isVoidTy())
+        continue;
       unsigned VarID = SSA.AddVariable(I.getName(), I.getType());
       // If a value is defined by an invoke instruction, it is only available in
       // its normal destination and not in its unwind destination.
@@ -1687,6 +1689,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     }
   }
 
+  SmallDenseMap<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4>
+      UnwindDestToNewPreds;
   for (auto *CI : LongjmpableCalls) {
     // Even if the callee function has attribute 'nounwind', which is true for
     // all C functions, it can longjmp, which means it can throw a Wasm
@@ -1724,6 +1728,11 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     }
     if (!UnwindDest)
       UnwindDest = CatchDispatchLongjmpBB;
+    // Because we are changing a longjmpable call to an invoke, its unwind
+    // destination can be an existing EH pad that already have phis, and the BB
+    // with the newly created invoke will become a new predecessor of that EH
+    // pad. In this case we need to add the new predecessor to those phis.
+    UnwindDestToNewPreds[UnwindDest].insert(CI->getParent());
     changeToInvokeAndSplitBasicBlock(CI, UnwindDest);
   }
 
@@ -1752,4 +1761,45 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
 
   for (Instruction *I : ToErase)
     I->eraseFromParent();
+
+  // Add entries for new predecessors to phis in unwind destinations. We use
+  // 'undef' as a placeholder value. We should make sure the phis have a valid
+  // set of predecessors before running SSAUpdater, because SSAUpdater
+  // internally can use existing phis to gather predecessor info rather than
+  // scanning the actual CFG (See FindPredecessorBlocks in SSAUpdater.cpp for
+  // details).
+  for (auto &[UnwindDest, NewPreds] : UnwindDestToNewPreds) {
+    for (PHINode &PN : UnwindDest->phis()) {
+      for (auto *NewPred : NewPreds) {
+        assert(PN.getBasicBlockIndex(NewPred) == -1);
+        PN.addIncoming(UndefValue::get(PN.getType()), NewPred);
+      }
+    }
+  }
+
+  // For unwind destinations for newly added invokes to longjmpable functions,
+  // calculate incoming values for the newly added predecessors using
+  // SSAUpdater. We add existing values in the phis to SSAUpdater as available
+  // values and let it calculate what the value should be at the end of new
+  // incoming blocks.
+  for (auto &[UnwindDest, NewPreds] : UnwindDestToNewPreds) {
+    for (PHINode &PN : UnwindDest->phis()) {
+      SSAUpdater SSA;
+      SSA.Initialize(PN.getType(), PN.getName());
+      for (unsigned Idx = 0, E = PN.getNumIncomingValues(); Idx != E; ++Idx) {
+        if (NewPreds.contains(PN.getIncomingBlock(Idx)))
+          continue;
+        Value *V = PN.getIncomingValue(Idx);
+        if (auto *II = dyn_cast<InvokeInst>(V))
+          SSA.AddAvailableValue(II->getNormalDest(), II);
+        else if (auto *I = dyn_cast<Instruction>(V))
+          SSA.AddAvailableValue(I->getParent(), I);
+        else
+          SSA.AddAvailableValue(PN.getIncomingBlock(Idx), V);
+      }
+      for (auto *NewPred : NewPreds)
+        PN.setIncomingValueForBlock(NewPred, SSA.GetValueAtEndOfBlock(NewPred));
+      assert(PN.isComplete());
+    }
+  }
 }
