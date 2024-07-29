@@ -274,6 +274,10 @@ static cl::opt<bool>
     DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
                       cl::desc("Disable elimination of dead PHI nodes."));
 
+static cl::opt<unsigned>
+    MinBooleanPhisToPack("min-boolean-phis-to-pack", cl::Hidden, cl::init(8),
+                         cl::desc("Min number of boolean PHI nodes to pack."));
+
 namespace {
 
 enum ExtType {
@@ -473,6 +477,7 @@ private:
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool packBooleanPhiNodes(Function &F);
   void verifyBFIUpdates(Function &F);
   bool _run(Function &F);
 };
@@ -634,6 +639,8 @@ bool CodeGenPrepare::_run(Function &F) {
   // to help generate sane code for PHIs involving such edges.
   EverMadeChange |=
       SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
+
+  EverMadeChange |= packBooleanPhiNodes(F);
 
   // If we are optimzing huge function, we need to consider the build time.
   // Because the basic algorithm's complex is near O(N!).
@@ -8919,4 +8926,58 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
                TmpBB->dump());
   }
   return MadeChange;
+}
+
+bool CodeGenPrepare::packBooleanPhiNodes(Function &F) {
+  bool Changed = false;
+  for (auto &BB : F) {
+    SmallVector<PHINode *, 8> PhiNodes;
+    for (auto &PN : BB.phis()) {
+      if (!PN.getType()->isIntegerTy(1))
+        continue;
+      bool AllConst = true;
+      for (Value *V : PN.incoming_values())
+        if (!isa<ConstantInt>(V)) {
+          AllConst = false;
+          break;
+        }
+      if (AllConst)
+        PhiNodes.push_back(&PN);
+    }
+    uint32_t BitWidth = PhiNodes.size();
+    if (BitWidth < MinBooleanPhisToPack)
+      continue;
+
+    if (BitWidth > 64 || !DL->fitsInLegalInteger(BitWidth))
+      continue;
+    IRBuilder<> Builder(&BB, BB.begin());
+    PHINode *FirstPN = PhiNodes.front();
+    IntegerType *StateTy = IntegerType::get(F.getContext(), BitWidth);
+    PHINode *PackedPN =
+        Builder.CreatePHI(StateTy, FirstPN->getNumIncomingValues());
+
+    for (auto *PredBB : FirstPN->blocks()) {
+      uint64_t State = 0;
+      uint32_t Idx = 0;
+      for (PHINode *PN : PhiNodes) {
+        ConstantInt *CI =
+            cast<ConstantInt>(PN->getIncomingValueForBlock(PredBB));
+        State |= CI->getZExtValue() << Idx;
+        ++Idx;
+      }
+      PackedPN->addIncoming(ConstantInt::get(StateTy, State), PredBB);
+    }
+    Builder.SetInsertPoint(&BB, BB.getFirstInsertionPt());
+    uint32_t Idx = 0;
+    for (PHINode *PN : PhiNodes) {
+      Value *BitTest = Builder.CreateIsNotNull(
+          Builder.CreateAnd(PackedPN, ConstantInt::get(StateTy, 1ULL << Idx)));
+      PN->replaceAllUsesWith(BitTest);
+      PN->eraseFromParent();
+      ++Idx;
+    }
+    Changed = true;
+  }
+
+  return Changed;
 }
