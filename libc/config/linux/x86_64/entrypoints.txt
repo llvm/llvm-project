@@ -402,6 +402,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.floorl
@@ -652,6 +656,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
+    libc.src.math.fdivf128
+    libc.src.math.ffmaf128
     libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fmaximum_mag_numf128

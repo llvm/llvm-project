@@ -156,6 +156,14 @@ add_math_entrypoint_object(fdiml)
 add_math_entrypoint_object(fdimf16)
 add_math_entrypoint_object(fdimf128)
 
+add_math_entrypoint_object(fdiv)
+add_math_entrypoint_object(fdivl)
+add_math_entrypoint_object(fdivf128)
+
+add_math_entrypoint_object(ffma)
+add_math_entrypoint_object(ffmal)
+add_math_entrypoint_object(ffmaf128)
+
 add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
 add_math_entrypoint_object(floorl)

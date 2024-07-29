@@ -2990,6 +2990,42 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdiv
+  SRCS
+    fdiv.cpp
+  HDRS
+    ../fdiv.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
+  fdivl
+  SRCS
+    fdivl.cpp
+  HDRS
+    ../fdivl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
+  fdivf128
+  SRCS
+    fdivf128.cpp
+  HDRS
+    ../fdivf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
   hypot
   SRCS
     hypot.cpp

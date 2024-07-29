@@ -553,6 +553,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16subf
     libc.src.math.fabsf16
     libc.src.math.fdimf16
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floorf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
@@ -611,6 +615,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
+    libc.src.math.fdivf128
+    libc.src.math.ffmaf128
     libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fmaximum_mag_numf128
