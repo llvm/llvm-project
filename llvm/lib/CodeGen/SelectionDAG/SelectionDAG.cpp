@@ -9924,7 +9924,7 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
 
   // select true, T, F --> T
   // select false, T, F --> F
-  if (auto CondC = isBoolConstant(Cond, /*AllowTruncation*/ true))
+  if (auto CondC = isBoolConstant(Cond, /*AllowTruncation=*/ true))
     return *CondC ? T : F;
 
   // select ?, T, T --> T
