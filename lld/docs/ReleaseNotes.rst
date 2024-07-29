@@ -29,12 +29,11 @@ ELF Improvements
 * ``-z nosectionheader`` has been implemented to omit the section header table.
   The operation is similar to ``llvm-objcopy --strip-sections``.
   (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
-* Section ``CLASS`` syntax allows binding input section to named classes. This
-  allows the linker to automatically pack the input sections into memory
-  regions by automatically spilling to later class references if a region would
-  overflow. This reduces the toil of manually packing regions (typical for
-  embedded). It also makes full LTO feasible in such cases, since IR merging
-  currently prevents the linker script from referring to input files.
+* Section ``CLASS`` linker script syntax binds input sections to named classes,
+  which are referenced later one or more times. This provides access to the
+  automatic spilling mechanism of `--enable-non-contiguous-regions` without
+  globally changing the semantics of section matching. It also independently
+  increases the expressive power of linker scripts.
   (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
 
 Breaking changes
