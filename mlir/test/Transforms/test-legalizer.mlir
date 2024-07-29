@@ -408,10 +408,10 @@ func.func @test_move_op_before_rollback() {
 
 // CHECK-LABEL: func @test_properties_rollback()
 func.func @test_properties_rollback() {
-  // CHECK: test.with_properties <{a = 32 : i64,
+  // CHECK: test.with_properties a = 32,
   // expected-remark @below{{op 'test.with_properties' is not legalizable}}
   test.with_properties
-      <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo"}>
+      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
       {modify_inplace}
   "test.return"() : () -> ()
 }

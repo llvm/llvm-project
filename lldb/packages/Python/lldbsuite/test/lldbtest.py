@@ -1379,10 +1379,6 @@ class Base(unittest.TestCase):
         """Returns the compiler in effect the test suite is running with."""
         return lldbplatformutil.getCompiler()
 
-    def getCompilerBinary(self):
-        """Returns the compiler binary the test suite is running with."""
-        return lldbplatformutil.getCompilerBinary()
-
     def getCompilerVersion(self):
         """Returns a string that represents the compiler version.
         Supports: llvm, clang.

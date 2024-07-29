@@ -4842,10 +4842,27 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   if (!AnyConsecutive)
     return false;
 
-  for (auto &Base : Bases) {
-    for (auto &T : Base.second)
+  // If we have a better order, also sort the base pointers by increasing
+  // (variable) values if possible, to try and keep the order more regular.
+  SmallVector<std::pair<Value *, Value *>> SortedBases;
+  for (auto &Base : Bases)
+    SortedBases.emplace_back(Base.first,
+                             Base.first->stripInBoundsConstantOffsets());
+  llvm::stable_sort(SortedBases, [](std::pair<Value *, Value *> V1,
+                                    std::pair<Value *, Value *> V2) {
+    const Value *V = V2.second;
+    while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
+      if (Gep->getOperand(0) == V1.second)
+        return true;
+      V = Gep->getOperand(0);
+    }
+    return false;
+  });
+
+  // Collect the final order of sorted indices
+  for (auto Base : SortedBases)
+    for (auto &T : Bases[Base.first])
       SortedIndices.push_back(std::get<2>(T));
-  }
 
   assert(SortedIndices.size() == VL.size() &&
          "Expected SortedIndices to be the size of VL");
@@ -8363,6 +8380,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                   : TTI.getStridedMemoryOpCost(
                         Instruction::Load, LoadTy, LI->getPointerOperand(),
                         /*VariableMask=*/false, Alignment, CostKind, LI);
+          // Add external uses costs.
+          for (auto [Idx, V] : enumerate(VL.slice(
+                   P.first, std::min<unsigned>(VL.size() - P.first, VF))))
+            if (!R.areAllUsersVectorized(cast<Instruction>(V)))
+              GatherCost += TTI.getVectorInstrCost(Instruction::ExtractElement,
+                                                   LoadTy, CostKind, Idx);
           // Estimate GEP cost.
           SmallVector<Value *> PointerOps(VF);
           for (auto [I, V] : enumerate(VL.slice(P.first, VF)))

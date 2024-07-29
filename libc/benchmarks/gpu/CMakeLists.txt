@@ -24,6 +24,8 @@ function(add_benchmark benchmark_name)
       libc.src.stdio.printf
       ${BENCHMARK_DEPENDS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
+    COMPILE_OPTIONS
+      -flto
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
   set(fq_build_target_name ${fq_target_name}.__build__)
