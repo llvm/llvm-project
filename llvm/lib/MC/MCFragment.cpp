@@ -37,9 +37,6 @@ void MCFragment::destroy() {
     case FT_Data:
       cast<MCDataFragment>(this)->~MCDataFragment();
       return;
-    case FT_CompactEncodedInst:
-      cast<MCCompactEncodedInstFragment>(this)->~MCCompactEncodedInstFragment();
-      return;
     case FT_Fill:
       cast<MCFillFragment>(this)->~MCFillFragment();
       return;
@@ -107,8 +104,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
-  case MCFragment::FT_CompactEncodedInst:
-    OS << "MCCompactEncodedInstFragment"; break;
   case MCFragment::FT_Fill:  OS << "MCFillFragment"; break;
   case MCFragment::FT_Nops:
     OS << "MCFNopsFragment";
@@ -166,19 +161,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       }
       OS << "]";
     }
-    break;
-  }
-  case MCFragment::FT_CompactEncodedInst: {
-    const auto *CEIF =
-      cast<MCCompactEncodedInstFragment>(this);
-    OS << "\n       ";
-    OS << " Contents:[";
-    const SmallVectorImpl<char> &Contents = CEIF->getContents();
-    for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
-      if (i) OS << ",";
-      OS << hexdigit((Contents[i] >> 4) & 0xF) << hexdigit(Contents[i] & 0xF);
-    }
-    OS << "] (" << Contents.size() << " bytes)";
     break;
   }
   case MCFragment::FT_Fill:  {

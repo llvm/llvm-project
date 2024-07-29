@@ -1357,11 +1357,10 @@ of the condition.
 def ConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``convergent`` attribute can be placed on a function declaration or a
-statement containing call expressions. It is translated into the LLVM
-``convergent`` attribute, which indicates that the call instructions of a
-function with this attribute cannot be made control-dependent on any additional
-values.
+The ``convergent`` attribute can be placed on a function declaration. It is
+translated into the LLVM ``convergent`` attribute, which indicates that the call
+instructions of a function with this attribute cannot be made control-dependent
+on any additional values.
 
 In languages designed for SPMD/SIMT programming model, e.g. OpenCL or CUDA,
 the call instructions of a function with this attribute must be executed by
@@ -1380,10 +1379,31 @@ Sample usage:
   // Setting it as a C++11 attribute is also valid in a C++ program.
   // void convfunc(void) [[clang::convergent]];
 
-  int f() {
-    [[clang::convergent]] foo(arg);
-    // The call to 'foo' has attribute 'convergent'.
+  }];
+}
+
+def NoConvergentDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``noconvergent`` attribute removes the LLVM ``convergent`` attribute if
+present. If a statement is marked ``noconvergent`` and contains calls,
+``convergent`` attributes on those calls are removed as well.
+
+In languages following SPMD/SIMT programming model, e.g. CUDA, mark function
+declarations and calls with ``convergent`` by default for the correctness. This
+``noconvergent`` attribute could be used to remove that ``convergent``
+attribute when it's safe.
+
+.. code-block:: c
+
+  __device__ float bar(float);
+  __device__ float foo(float) __attribute__((noconvergent)) {}
+
+  __device__ int example(void) {
+    float x;
+    [[clang::noconvergent]] x = bar(x);
   }
+
   }];
 }
 
@@ -5988,6 +6008,16 @@ definition (
 For more information see
 `gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
+}]; }
+
+def HybridPatchableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hybrid_patchable`` attribute declares an ARM64EC function with an additional
+x86-64 thunk, which may be patched at runtime.
+
+For more information see
+`ARM64EC ABI documentation <https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi>`_.
 }]; }
 
 def WebAssemblyExportNameDocs : Documentation {

@@ -723,7 +723,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
   bool noinline = false;
   bool alwaysinline = false;
-  bool convergent = false;
+  bool noconvergent = false;
   const CallExpr *musttail = nullptr;
 
   for (const auto *A : S.getAttrs()) {
@@ -739,8 +739,8 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     case attr::AlwaysInline:
       alwaysinline = true;
       break;
-    case attr::Convergent:
-      convergent = true;
+    case attr::NoConvergent:
+      noconvergent = true;
       break;
     case attr::MustTail: {
       const Stmt *Sub = S.getSubStmt();
@@ -760,7 +760,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
   SaveAndRestore save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
-  SaveAndRestore save_convergent(InConvergentAttributedStmt, convergent);
+  SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
@@ -2470,7 +2470,7 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
 
 static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                               bool HasUnwindClobber, bool ReadOnly,
-                              bool ReadNone, bool NoMerge, bool Convergent,
+                              bool ReadNone, bool NoMerge, bool NoConvergent,
                               const AsmStmt &S,
                               const std::vector<llvm::Type *> &ResultRegTypes,
                               const std::vector<llvm::Type *> &ArgElemTypes,
@@ -2481,10 +2481,6 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 
   if (NoMerge)
     Result.addFnAttr(llvm::Attribute::NoMerge);
-
-  if (Convergent)
-    Result.addFnAttr(llvm::Attribute::Convergent);
-
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {
     if (ReadNone)
@@ -2516,11 +2512,11 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                                          llvm::ConstantAsMetadata::get(Loc)));
   }
 
-  if (CGF.getLangOpts().assumeFunctionsAreConvergent())
+  if (!NoConvergent && CGF.getLangOpts().assumeFunctionsAreConvergent())
     // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
     // convergent (meaning, they may call an intrinsically convergent op, such
     // as bar.sync, and so can't have certain optimizations applied around
-    // them).
+    // them) unless it's explicitly marked 'noconvergent'.
     Result.addFnAttr(llvm::Attribute::Convergent);
   // Extract all of the register value results from the asm.
   if (ResultRegTypes.size() == 1) {
@@ -3049,7 +3045,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     EmitBlock(Fallthrough);
     UpdateAsmCallInst(*CBR, HasSideEffect, /*HasUnwindClobber=*/false, ReadOnly,
                       ReadNone, InNoMergeAttributedStmt,
-                      InConvergentAttributedStmt, S, ResultRegTypes,
+                      InNoConvergentAttributedStmt, S, ResultRegTypes,
                       ArgElemTypes, *this, RegResults);
     // Because we are emitting code top to bottom, we don't have enough
     // information at this point to know precisely whether we have a critical
@@ -3080,14 +3076,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
     UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/true,
                       ReadOnly, ReadNone, InNoMergeAttributedStmt,
-                      InConvergentAttributedStmt, S, ResultRegTypes,
+                      InNoConvergentAttributedStmt, S, ResultRegTypes,
                       ArgElemTypes, *this, RegResults);
   } else {
     llvm::CallInst *Result =
         Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
     UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/false,
                       ReadOnly, ReadNone, InNoMergeAttributedStmt,
-                      InConvergentAttributedStmt, S, ResultRegTypes,
+                      InNoConvergentAttributedStmt, S, ResultRegTypes,
                       ArgElemTypes, *this, RegResults);
   }
 

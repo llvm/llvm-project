@@ -56,7 +56,9 @@ public:
         MachineFunctionProperties::Property::IsSSA);
   }
 
-  StringRef getPassName() const override { return "RISC-V Fold Masks"; }
+  StringRef getPassName() const override {
+    return "RISC-V Vector Peephole Optimization";
+  }
 
 private:
   bool convertToVLMAX(MachineInstr &MI) const;

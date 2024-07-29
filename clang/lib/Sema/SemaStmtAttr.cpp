@@ -230,9 +230,8 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) NoMergeAttr(S.Context, A);
 }
 
-static Attr *handleConvergentAttr(Sema &S, Stmt *St, const ParsedAttr &A,
-                                  SourceRange Range) {
-  NoMergeAttr NMA(S.Context, A);
+static Attr *handleNoConvergentAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
   CallExprFinder CEF(S, St);
 
   if (!CEF.foundCallExpr() && !CEF.foundAsmStmt()) {
@@ -241,7 +240,7 @@ static Attr *handleConvergentAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
   }
 
-  return ::new (S.Context) ConvergentAttr(S.Context, A);
+  return ::new (S.Context) NoConvergentAttr(S.Context, A);
 }
 
 template <typename OtherAttr, int DiagIdx>
@@ -686,8 +685,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleCodeAlignAttr(S, St, A);
   case ParsedAttr::AT_MSConstexpr:
     return handleMSConstexprAttr(S, St, A, Range);
-  case ParsedAttr::AT_Convergent:
-    return handleConvergentAttr(S, St, A, Range);
+  case ParsedAttr::AT_NoConvergent:
+    return handleNoConvergentAttr(S, St, A, Range);
   default:
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // declaration attribute is not written on a statement, but this code is

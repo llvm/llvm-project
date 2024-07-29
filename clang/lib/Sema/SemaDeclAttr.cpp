@@ -3034,9 +3034,6 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << TargetVersion;
   }
-  if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                             /*IncludeLocallyStreaming=*/false))
-    return Diag(LiteralLoc, diag::err_sme_streaming_cannot_be_multiversioned);
   return false;
 }
 
@@ -3133,10 +3130,6 @@ bool Sema::checkTargetClonesAttrString(
           HasNotDefault = true;
         }
       }
-      if (IsArmStreamingFunction(cast<FunctionDecl>(D),
-                                 /*IncludeLocallyStreaming=*/false))
-        return Diag(LiteralLoc,
-                    diag::err_sme_streaming_cannot_be_multiversioned);
     } else {
       // Other targets ( currently X86 )
       if (Cur.starts_with("arch=")) {
@@ -6877,6 +6870,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_MSConstexpr:
     handleMSConstexprAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HybridPatchable:
+    handleSimpleAttribute<HybridPatchableAttr>(S, D, AL);
     break;
 
   // HLSL attributes:

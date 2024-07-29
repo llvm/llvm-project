@@ -477,6 +477,9 @@ def TargetELF : TargetSpec {
 def TargetELFOrMachO : TargetSpec {
   let ObjectFormats = ["ELF", "MachO"];
 }
+def TargetWindowsArm64EC : TargetSpec {
+  let CustomCode = [{ Target.getTriple().isWindowsArm64EC() }];
+}
 
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
@@ -2042,11 +2045,21 @@ def NoDuplicate : InheritableAttr {
 
 def Convergent : InheritableAttr {
   let Spellings = [Clang<"convergent">];
-  let Subjects = SubjectList<[Function, Stmt], WarnDiag,
-                             "functions and statements">;
+  let Subjects = SubjectList<[Function]>;
   let Documentation = [ConvergentDocs];
   let SimpleHandler = 1;
 }
+
+def NoConvergent : InheritableAttr {
+  let Spellings = [Clang<"noconvergent">, Declspec<"noconvergent">];
+  let Subjects = SubjectList<[Function, Stmt], WarnDiag,
+                             "functions and statements">;
+  let LangOpts = [CUDA];
+  let Documentation = [NoConvergentDocs];
+  let SimpleHandler = 1;
+}
+
+def : MutualExclusions<[Convergent, NoConvergent]>;
 
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
@@ -4026,6 +4039,12 @@ def SelectAny : InheritableAttr {
   let Spellings = [Declspec<"selectany">, GCC<"selectany">];
   let Documentation = [SelectAnyDocs];
   let SimpleHandler = 1;
+}
+
+def HybridPatchable : InheritableAttr, TargetSpecificAttr<TargetWindowsArm64EC> {
+  let Spellings = [Declspec<"hybrid_patchable">, Clang<"hybrid_patchable">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [HybridPatchableDocs];
 }
 
 def Thread : Attr {

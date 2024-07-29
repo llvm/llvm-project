@@ -2522,6 +2522,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         }
       }
     }
+    // Remove 'convergent' if requested.
+    if (TargetDecl->hasAttr<NoConvergentAttr>())
+      FuncAttrs.removeAttribute(llvm::Attribute::Convergent);
   }
 
   // Add "sample-profile-suffix-elision-policy" attribute for internal linkage
@@ -5636,9 +5639,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
-  // Add call-site convergent attribute if exists.
-  if (InConvergentAttributedStmt)
-    Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
+  // Remove call-site convergent attribute if requested.
+  if (InNoConvergentAttributedStmt)
+    Attrs =
+        Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
 
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
