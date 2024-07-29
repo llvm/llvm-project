@@ -1775,7 +1775,7 @@ DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
   }
- })
+})
 
 DEF_TRAVERSE_DECL(OMPRequiresDecl, {
   for (auto *C : D->clauselists()) {
