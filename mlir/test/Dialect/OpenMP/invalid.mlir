@@ -1394,7 +1394,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1407,7 +1407,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
     // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1432,7 +1432,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,1,0,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0,0,0>} : (memref<i32>) -> ()
   return
 }
 
@@ -1442,7 +1442,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,0,0,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,1>} : (memref<i32>) -> ()
   return
 }
 
@@ -1623,7 +1623,7 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.task"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -2137,7 +2137,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
 
 func.func @omp_distribute_schedule(%chunk_size : i32) -> () {
   // expected-error @below {{op chunk size set without dist_schedule_static being present}}
-  "omp.distribute"(%chunk_size) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>}> ({
+  "omp.distribute"(%chunk_size) <{operandSegmentSizes = array<i32: 0, 0, 1, 0>}> ({
       "omp.terminator"() : () -> ()
     }) : (i32) -> ()
 }
@@ -2146,7 +2146,7 @@ func.func @omp_distribute_schedule(%chunk_size : i32) -> () {
 
 func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
-  "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 0, 1, 0, 0>}> ({
+  "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 1, 0, 0, 0>}> ({
       "omp.terminator"() : () -> ()
     }) : (memref<i32>) -> ()
 }
@@ -2340,7 +2340,7 @@ func.func @undefined_privatizer(%arg0: index) {
 // -----
 func.func @undefined_privatizer(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
-  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1>, private_syms = [@x.privatizer, @y.privatizer]}> ({
+  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 1, 0>, private_syms = [@x.privatizer, @y.privatizer]}> ({
     ^bb0(%arg2: !llvm.ptr):
       omp.terminator
     }) : (!llvm.ptr) -> ()

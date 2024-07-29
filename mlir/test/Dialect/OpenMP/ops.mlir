@@ -67,37 +67,37 @@ func.func @omp_terminator() -> () {
 
 func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %idx : index) -> () {
   // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32) allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
-  "omp.parallel" (%if_cond, %num_threads, %data_var, %data_var) ({
+  "omp.parallel" (%data_var, %data_var, %if_cond, %num_threads) ({
 
   // test without if condition
   // CHECK: omp.parallel num_threads(%{{.*}} : i32) allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
-    "omp.parallel"(%num_threads, %data_var, %data_var) ({
+    "omp.parallel"(%data_var, %data_var, %num_threads) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,1,1,1,0,0>} : (i32, memref<i32>, memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,1,0,1,0,0>} : (memref<i32>, memref<i32>, i32) -> ()
 
   // CHECK: omp.barrier
     omp.barrier
 
   // test without num_threads
   // CHECK: omp.parallel if(%{{.*}}) allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
-    "omp.parallel"(%if_cond, %data_var, %data_var) ({
+    "omp.parallel"(%data_var, %data_var, %if_cond) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,1,1,0,0>} : (i1, memref<i32>, memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} : (memref<i32>, memref<i32>, i1) -> ()
 
   // test without allocate
   // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32)
     "omp.parallel"(%if_cond, %num_threads) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (i1, i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (i1, i32, memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,1,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (memref<i32>, memref<i32>, i1, i32) -> ()
 
   // test with multiple parameters for single variadic argument
   // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
   "omp.parallel" (%data_var, %data_var) ({
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (memref<i32>, memref<i32>) -> ()
 
   // CHECK: omp.distribute
   omp.distribute {
@@ -392,7 +392,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0,0>, schedule_kind = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp<schedulekind static>} :
     (memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
@@ -402,7 +402,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 2,2,0,0,0,0,0>, schedule_kind = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp<schedulekind static>} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}) ordered(2) {
@@ -412,7 +412,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,0,1,0,0,0>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2} :
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2} :
     (memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop schedule(auto) nowait {
@@ -1874,13 +1874,13 @@ func.func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
   "omp.sections" (%data_var1, %data_var1) ({
     // CHECK: omp.terminator
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,1,1,0>} : (memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,1,0,0>} : (memref<i32>, memref<i32>) -> ()
 
     // CHECK: omp.sections reduction(@add_f32 -> %{{.*}} : !llvm.ptr)
   "omp.sections" (%redn_var) ({
     // CHECK: omp.terminator
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,0,0,0>, reduction_byref = array<i1: false>, reduction_syms=[@add_f32]} : (!llvm.ptr) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,0,1>, reduction_byref = array<i1: false>, reduction_syms=[@add_f32]} : (!llvm.ptr) -> ()
 
   // CHECK: omp.sections nowait {
   omp.sections nowait {
@@ -2098,14 +2098,14 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   }
 
   // Checking multiple clauses
-  // CHECK: omp.task if(%[[bool_var]]) final(%[[bool_var]]) untied
-  omp.task if(%bool_var) final(%bool_var) untied
+  // CHECK: omp.task allocate(%[[data_var]] : memref<i32> -> %[[data_var]] : memref<i32>)
+  omp.task allocate(%data_var : memref<i32> -> %data_var : memref<i32>)
+      // CHECK-SAME: final(%[[bool_var]]) if(%[[bool_var]])
+      final(%bool_var) if(%bool_var) 
       // CHECK-SAME: in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr, byref @add_f32 -> %[[redn_var2]] : !llvm.ptr)
       in_reduction(@add_f32 -> %0 : !llvm.ptr, byref @add_f32 -> %1 : !llvm.ptr)
-      // CHECK-SAME: priority(%[[i32_var]] : i32)
-      priority(%i32_var : i32)
-      // CHECK-SAME: allocate(%[[data_var]] : memref<i32> -> %[[data_var]] : memref<i32>)
-      allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+      // CHECK-SAME: priority(%[[i32_var]] : i32) untied
+      priority(%i32_var : i32) untied {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
