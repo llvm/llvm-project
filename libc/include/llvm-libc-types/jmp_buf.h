@@ -38,6 +38,10 @@ typedef struct {
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif
+  __UINT64_TYPE__ __sigmask;
+  __UINT64_TYPE__ __has_sigmask : 1;
+  __UINT64_TYPE__ __unused : 63;
+  __UINT64_TYPE__ __chksum;
 } __jmp_buf;
 
 typedef __jmp_buf jmp_buf[1];
