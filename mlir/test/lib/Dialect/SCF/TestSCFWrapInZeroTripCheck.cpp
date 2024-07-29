@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the pass to test wrap-in-zero-trip-check transforms on
+// This file implements the passes to test wrap-in-zero-trip-check transforms on
 // SCF loop ops.
 //
 //===----------------------------------------------------------------------===//
@@ -24,17 +24,10 @@ using namespace mlir;
 namespace {
 
 struct TestWrapWhileLoopInZeroTripCheckPass
-    : PassWrapper<TestWrapWhileLoopInZeroTripCheckPass,
-                  OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestWrapWhileLoopInZeroTripCheckPass,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestWrapWhileLoopInZeroTripCheckPass)
-
-  TestWrapWhileLoopInZeroTripCheckPass() = default;
-  TestWrapWhileLoopInZeroTripCheckPass(
-      const TestWrapWhileLoopInZeroTripCheckPass &) {}
-  explicit TestWrapWhileLoopInZeroTripCheckPass(bool forceCreateCheckParam) {
-    forceCreateCheck = forceCreateCheckParam;
-  }
 
   StringRef getArgument() const final {
     return "test-wrap-scf-while-loop-in-zero-trip-check";
@@ -42,6 +35,13 @@ struct TestWrapWhileLoopInZeroTripCheckPass
 
   StringRef getDescription() const final {
     return "test scf::wrapWhileLoopInZeroTripCheck";
+  }
+
+  TestWrapWhileLoopInZeroTripCheckPass() = default;
+  TestWrapWhileLoopInZeroTripCheckPass(
+      const TestWrapWhileLoopInZeroTripCheckPass &) {}
+  explicit TestWrapWhileLoopInZeroTripCheckPass(bool forceCreateCheckParam) {
+    forceCreateCheck = forceCreateCheckParam;
   }
 
   void runOnOperation() override {
