@@ -160,9 +160,8 @@ static bool isProcessableCondBI(const ScalarEvolution &SE,
                                 const BranchInst *BI) {
   BasicBlock *TrueSucc = nullptr;
   BasicBlock *FalseSucc = nullptr;
-  ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
-  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+  if (!match(BI, m_Br(m_ICmp(m_Value(LHS), m_Value(RHS)),
                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
     return false;
 

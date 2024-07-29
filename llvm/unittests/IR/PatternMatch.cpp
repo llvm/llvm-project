@@ -2317,6 +2317,14 @@ TYPED_TEST(MutableConstTest, ICmp) {
   EXPECT_FALSE(m_SpecificCmp(ICmpInst::getInversePredicate(Pred),
                              m_Value(MatchL), m_Value(MatchR))
                    .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+
+  EXPECT_TRUE(m_c_SpecificICmp(Pred, m_Specific(L), m_Specific(R))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_TRUE(m_c_SpecificICmp(ICmpInst::getSwappedPredicate(Pred),
+                               m_Specific(R), m_Specific(L))
+                  .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_FALSE(m_c_SpecificICmp(Pred, m_Specific(R), m_Specific(L))
+                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
 }
 
 TYPED_TEST(MutableConstTest, FCmp) {

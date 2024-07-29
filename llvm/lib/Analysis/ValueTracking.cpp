@@ -254,8 +254,7 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    ICmpInst::Predicate P;
-    return match(U, m_ICmp(P, m_Value(), m_Zero()));
+    return match(U, m_ICmp(m_Value(), m_Zero()));
   });
 }
 
@@ -2594,10 +2593,10 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
 }
 
 static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
-  ICmpInst::Predicate Pred;
-  return (match(Op0, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op1), m_Zero()))) ||
-          match(Op1, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op0), m_Zero())))) &&
-         Pred == ICmpInst::ICMP_EQ;
+  return match(Op0, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op1), m_Zero()))) ||
+         match(Op1, m_ZExtOrSExt(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                                m_Specific(Op0), m_Zero())));
 }
 
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,

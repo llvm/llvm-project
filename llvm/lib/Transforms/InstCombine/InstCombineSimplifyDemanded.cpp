@@ -388,8 +388,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       // invert the transform that reduces set bits and infinite-loop.
       Value *X;
       const APInt *CmpC;
-      ICmpInst::Predicate Pred;
-      if (!match(I->getOperand(0), m_ICmp(Pred, m_Value(X), m_APInt(CmpC))) ||
+      if (!match(I->getOperand(0), m_ICmp(m_Value(X), m_APInt(CmpC))) ||
           isa<Constant>(X) || CmpC->getBitWidth() != SelC->getBitWidth())
         return ShrinkDemandedConstant(I, OpNo, DemandedMask);
 

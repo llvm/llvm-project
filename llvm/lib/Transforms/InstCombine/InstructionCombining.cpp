@@ -1651,14 +1651,14 @@ static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
                                                         bool IsTrueArm) {
   SmallVector<Constant *> ConstOps;
   for (Value *Op : I.operands()) {
-    CmpInst::Predicate Pred;
     Constant *C = nullptr;
     if (Op == SI) {
       C = dyn_cast<Constant>(IsTrueArm ? SI->getTrueValue()
                                        : SI->getFalseValue());
     } else if (match(SI->getCondition(),
-                     m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
-               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+                     m_SpecificICmp(IsTrueArm ? ICmpInst::ICMP_EQ
+                                              : ICmpInst::ICMP_NE,
+                                    m_Specific(Op), m_Constant(C))) &&
                isGuaranteedNotToBeUndefOrPoison(C)) {
       // Pass
     } else {
