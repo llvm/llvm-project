@@ -13654,9 +13654,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       return false;
 
     // If we have Unknown pointers we should fail if they are not global values.
-    if (!(IsGlobalLValue(LHSValue.getLValueBase()) && IsGlobalLValue(RHSValue.getLValueBase())) &&
-         (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
-         return false;
+    if (!(IsGlobalLValue(LHSValue.getLValueBase()) &&
+          IsGlobalLValue(RHSValue.getLValueBase())) &&
+        (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
+      return false;
 
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
