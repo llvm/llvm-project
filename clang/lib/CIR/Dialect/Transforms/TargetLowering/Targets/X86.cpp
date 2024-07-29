@@ -7,6 +7,7 @@
 #include "TargetInfo.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
@@ -157,6 +158,8 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
       Current = Class::SSE;
       return;
 
+    } else if (isa<BoolType>(Ty)) {
+      Current = Class::Integer;
     } else {
       llvm::outs() << "Missing X86 classification for type " << Ty << "\n";
       llvm_unreachable("NYI");
@@ -294,7 +297,7 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
       // enums directly as their unerlying integer types. NOTE(cir): For some
       // reason, Clang does not set the coerce type here and delays it to
       // arrangeLLVMFunctionInfo. We do the same to keep parity.
-      if (isa<IntType>(RetTy) && isPromotableIntegerTypeForABI(RetTy))
+      if (isa<IntType, BoolType>(RetTy) && isPromotableIntegerTypeForABI(RetTy))
         return ABIArgInfo::getExtend(RetTy);
     }
     break;

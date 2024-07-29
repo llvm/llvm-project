@@ -22,6 +22,7 @@
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -410,12 +411,9 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
     switch (ArgInfo.getKind()) {
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
-      // NOTE(cir): While booleans are lowered directly as `i1`s in the
-      // original codegen, in CIR they require a trivial bitcast. This is
-      // handled here.
+
       if (isa<BoolType>(info_it->type)) {
-        IRCallArgs[FirstIRArg] =
-            createBitcast(*I, ArgInfo.getCoerceToType(), *this);
+        IRCallArgs[FirstIRArg] = *I;
         break;
       }
 
@@ -514,11 +512,6 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
 
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
-      // NOTE(cir): While booleans are lowered directly as `i1`s in the
-      // original codegen, in CIR they require a trivial bitcast. This is
-      // handled here.
-      assert(!isa<BoolType>(RetTy));
-
       Type RetIRTy = RetTy;
       if (RetAI.getCoerceToType() == RetIRTy && RetAI.getDirectOffset() == 0) {
         switch (getEvaluationKind(RetTy)) {
@@ -564,7 +557,7 @@ Value LowerFunction::getUndefRValue(Type Ty) {
   // FIXME(cir): Implement type classes for CIR types.
   if (isa<StructType>(type))
     return ::cir::TypeEvaluationKind::TEK_Aggregate;
-  if (isa<IntType, SingleType, DoubleType>(type))
+  if (isa<BoolType, IntType, SingleType, DoubleType>(type))
     return ::cir::TypeEvaluationKind::TEK_Scalar;
   llvm_unreachable("NYI");
 }

@@ -9,6 +9,12 @@ void Void(void) {
 
 // Test call conv lowering for trivial usinged integer cases.
 
+// CHECK: @_Z4Boolb(%arg0: !cir.bool loc({{.+}})) -> !cir.bool
+bool Bool(bool a) {
+// CHECK:   cir.call @_Z4Boolb({{.+}}) : (!cir.bool) -> !cir.bool
+  return Bool(a);
+}
+
 // CHECK: cir.func @_Z5UCharh(%arg0: !u8i loc({{.+}})) -> !u8i
 unsigned char UChar(unsigned char c) {
   // CHECK: cir.call @_Z5UCharh(%2) : (!u8i) -> !u8i
