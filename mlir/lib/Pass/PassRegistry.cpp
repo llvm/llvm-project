@@ -318,7 +318,7 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options,
 
 /// Print the options held by this struct in a form that can be parsed via
 /// 'parseFromString'.
-void detail::PassOptions::print(raw_ostream &os) {
+void detail::PassOptions::print(raw_ostream &os) const {
   // If there are no options, there is nothing left to do.
   if (OptionsMap.empty())
     return;
