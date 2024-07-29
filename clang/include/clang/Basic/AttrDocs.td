@@ -1385,14 +1385,17 @@ Sample usage:
 def NoConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``noconvergent`` attribute removes the LLVM ``convergent`` attribute if
-present. If a statement is marked ``noconvergent`` and contains calls,
-``convergent`` attributes on those calls are removed as well.
+This attribute prevents a function from being treated as convergent, which
+means that optimizations can only move calls to that function to
+control-equivalent blocks. If a statement is marked as ``noconvergent`` and
+contains calls, it also prevents those calls from being treated as convergent.
+In other words, those calls are not restricted to only being moved to
+control-equivalent blocks.
 
-In languages following SPMD/SIMT programming model, e.g. CUDA, mark function
-declarations and calls with ``convergent`` by default for the correctness. This
-``noconvergent`` attribute could be used to remove that ``convergent``
-attribute when it's safe.
+In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
+declarations and calls are treated as convergent by default for correctness.
+This ``noconvergent`` attribute is helpful for developers to prevent them from
+being treated as convergent when it's safe.
 
 .. code-block:: c
 
