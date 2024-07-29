@@ -8610,13 +8610,16 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
     SDValue LRound = LHS;
     SDValue RRound = RHS;
     EVT RCCVT = CCVT;
-    // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for this case.
-    if (TT.isArch32Bit() && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT) && VT.getSizeInBits() > TT.getArchPointerBitWidth() && !TT.isX32()) {
+    // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for
+    // this case.
+    if (TT.isArch32Bit() && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT) &&
+        VT.getSizeInBits() > TT.getArchPointerBitWidth() && !TT.isX32()) {
       LRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, LHS,
-                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
       RRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, RHS,
-                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-      RCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+      RCCVT =
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
     }
     SDValue TestZero =
         DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
