@@ -171,28 +171,11 @@ public:
 };
 
 /// Interface implemented by fragments that contain encoded instructions and/or
-/// data.
-///
-template<unsigned ContentsSize>
-class MCEncodedFragmentWithContents : public MCEncodedFragment {
-  SmallVector<char, ContentsSize> Contents;
-
-protected:
-  MCEncodedFragmentWithContents(MCFragment::FragmentType FType,
-                                bool HasInstructions)
-      : MCEncodedFragment(FType, HasInstructions) {}
-
-public:
-  SmallVectorImpl<char> &getContents() { return Contents; }
-  const SmallVectorImpl<char> &getContents() const { return Contents; }
-};
-
-/// Interface implemented by fragments that contain encoded instructions and/or
 /// data and also have fixups registered.
 ///
-template<unsigned ContentsSize, unsigned FixupsSize>
-class MCEncodedFragmentWithFixups :
-  public MCEncodedFragmentWithContents<ContentsSize> {
+template <unsigned ContentsSize, unsigned FixupsSize>
+class MCEncodedFragmentWithFixups : public MCEncodedFragment {
+  SmallVector<char, ContentsSize> Contents;
 
   /// The list of fixups in this fragment.
   SmallVector<MCFixup, FixupsSize> Fixups;
@@ -200,12 +183,15 @@ class MCEncodedFragmentWithFixups :
 protected:
   MCEncodedFragmentWithFixups(MCFragment::FragmentType FType,
                               bool HasInstructions)
-      : MCEncodedFragmentWithContents<ContentsSize>(FType, HasInstructions) {}
+      : MCEncodedFragment(FType, HasInstructions) {}
 
 public:
 
   using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
   using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
+
+  SmallVectorImpl<char> &getContents() { return Contents; }
+  const SmallVectorImpl<char> &getContents() const { return Contents; }
 
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
