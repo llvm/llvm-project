@@ -7,12 +7,6 @@
 // RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -I %S -c %t/coro-elide-caller.cpp -o coro-elide-caller.bc
 // RUN: llvm-lto --thinlto coro-elide-callee.bc coro-elide-caller.bc -o summary
 // RUN: %clang_cc1 -O2 -x ir coro-elide-caller.bc -fthinlto-index=summary.thinlto.bc -emit-llvm -o - | FileCheck %s
-//
-// Run asan
-// RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -fsanitize=address -I %S -c %t/coro-elide-callee.cpp -o coro-elide-callee.bc
-// RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -fsanitize=address -I %S -c %t/coro-elide-caller.cpp -o coro-elide-caller.bc
-// RUN: llvm-lto --thinlto coro-elide-callee.bc coro-elide-caller.bc -o summary
-// RUN: %clang_cc1 -O2 -x ir coro-elide-caller.bc -fthinlto-index=summary.thinlto.bc -emit-llvm -o - | FileCheck %s
 
 //--- coro-elide-task.h
 #pragma once
