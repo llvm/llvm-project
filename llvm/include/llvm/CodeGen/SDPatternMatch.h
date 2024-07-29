@@ -728,6 +728,10 @@ inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
   return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(Op), Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;
