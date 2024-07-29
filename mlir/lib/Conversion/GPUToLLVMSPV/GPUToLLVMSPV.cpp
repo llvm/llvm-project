@@ -8,15 +8,18 @@
 
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 
+#include "../GPUCommon/GPUOpsLowering.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -321,8 +324,8 @@ struct GPUToLLVMSPVConversionPass final
     LLVMConversionTarget target(*context);
 
     target.addIllegalOp<gpu::BarrierOp, gpu::BlockDimOp, gpu::BlockIdOp,
-                        gpu::GlobalIdOp, gpu::GridDimOp, gpu::ShuffleOp,
-                        gpu::ThreadIdOp>();
+                        gpu::GPUFuncOp, gpu::GlobalIdOp, gpu::GridDimOp,
+                        gpu::ReturnOp, gpu::ShuffleOp, gpu::ThreadIdOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
 
@@ -340,11 +343,27 @@ struct GPUToLLVMSPVConversionPass final
 namespace mlir {
 void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
                                             RewritePatternSet &patterns) {
-  patterns.add<GPUBarrierConversion, GPUShuffleConversion,
+  patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
                LaunchConfigOpConversion<gpu::BlockIdOp>,
                LaunchConfigOpConversion<gpu::GridDimOp>,
                LaunchConfigOpConversion<gpu::BlockDimOp>,
                LaunchConfigOpConversion<gpu::ThreadIdOp>,
                LaunchConfigOpConversion<gpu::GlobalIdOp>>(typeConverter);
+  constexpr spirv::ClientAPI clientAPI = spirv::ClientAPI::OpenCL;
+  MLIRContext *context = &typeConverter.getContext();
+  unsigned privateAddressSpace =
+      storageClassToAddressSpace(clientAPI, spirv::StorageClass::Function);
+  unsigned localAddressSpace =
+      storageClassToAddressSpace(clientAPI, spirv::StorageClass::Workgroup);
+  OperationName llvmFuncOpName(LLVM::LLVMFuncOp::getOperationName(), context);
+  StringAttr kernelBlockSizeAttributeName =
+      LLVM::LLVMFuncOp::getReqdWorkGroupSizeAttrName(llvmFuncOpName);
+  patterns.add<GPUFuncOpLowering>(
+      typeConverter,
+      GPUFuncOpLoweringOptions{
+          privateAddressSpace, localAddressSpace,
+          /*kernelAttributeName=*/std::nullopt, kernelBlockSizeAttributeName,
+          LLVM::CConv::SPIR_KERNEL, LLVM::CConv::SPIR_FUNC,
+          /*encodeWorkgroupAttributionsAsArguments=*/true});
 }
 } // namespace mlir

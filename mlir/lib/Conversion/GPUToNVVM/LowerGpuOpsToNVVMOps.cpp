@@ -365,13 +365,15 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   // attributions since NVVM models it as `alloca`s in the default
   // memory space and does not support `alloca`s with addrspace(5).
   patterns.add<GPUFuncOpLowering>(
-      converter, /*allocaAddrSpace=*/0,
-      /*workgroupAddrSpace=*/
-      static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
-      StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getKernelFuncAttrName()),
-      StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getMaxntidAttrName()));
+      converter,
+      GPUFuncOpLoweringOptions{
+          /*allocaAddrSpace=*/0,
+          /*workgroupAddrSpace=*/
+          static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
+          StringAttr::get(&converter.getContext(),
+                          NVVM::NVVMDialect::getKernelFuncAttrName()),
+          StringAttr::get(&converter.getContext(),
+                          NVVM::NVVMDialect::getMaxntidAttrName())});
 
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
                                     "__nv_fmod");
