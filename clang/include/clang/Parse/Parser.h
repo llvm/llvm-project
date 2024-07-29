@@ -1025,6 +1025,8 @@ private:
   ///   ....
   ///   TPA.Revert();
   ///
+  /// If the Unannotated parameter is true, any token annotations created
+  /// during the tentative parse are reverted.
   class TentativeParsingAction {
     Parser &P;
     PreferredTypeBuilder PrevPreferredType;

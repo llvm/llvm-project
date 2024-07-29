@@ -1160,6 +1160,8 @@ private:
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
 
+  /// Stack of cached tokens/initial number of cached tokens pairs, allowing
+  /// nested unannotated backtracks.
   std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
       UnannotatedBacktrackTokens;
 
@@ -1725,6 +1727,8 @@ public:
   /// at some point after EnableBacktrackAtThisPos. If you don't, caching of
   /// tokens will continue indefinitely.
   ///
+  /// \param Unannotated Whether token annotations are reverted upon calling
+  /// Backtrack().
   void EnableBacktrackAtThisPos(bool Unannotated = false);
 
 private:
@@ -1744,6 +1748,8 @@ public:
   /// caching of tokens is on.
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
 
+  /// True if EnableBacktrackAtThisPos() was called and
+  /// caching of unannotated tokens is on.
   bool isUnannotatedBacktrackEnabled() const {
     return !UnannotatedBacktrackTokens.empty();
   }
