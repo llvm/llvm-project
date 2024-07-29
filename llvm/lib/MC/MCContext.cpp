@@ -672,9 +672,7 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                       : std::nullopt;
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
-                                         MCSection *Parent,
-                                         uint32_t Subsection) {
+MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool =
       GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
@@ -683,8 +681,8 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
     return Iter->second;
 
   StringRef CachedName = Iter->first;
-  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, Parent, Subsection);
+  MCSectionGOFF *GOFFSection =
+      new (GOFFAllocator.Allocate()) MCSectionGOFF(CachedName, Kind);
   Iter->second = GOFFSection;
   allocInitialFragment(*GOFFSection);
   return GOFFSection;

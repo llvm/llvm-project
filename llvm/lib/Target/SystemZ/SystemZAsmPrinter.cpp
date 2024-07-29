@@ -19,6 +19,7 @@
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
@@ -1124,7 +1125,8 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
     OutStreamer->emitLabel(FnEndSym);
 
     OutStreamer->pushSection();
-    OutStreamer->switchSection(getObjFileLowering().getPPA1Section());
+    OutStreamer->switchSection(getObjFileLowering().getTextSection(),
+                               GOFF::SK_PPA1);
     emitPPA1(FnEndSym);
     OutStreamer->popSection();
 
@@ -1428,8 +1430,6 @@ void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 void SystemZAsmPrinter::emitPPA2(Module &M) {
-  OutStreamer->pushSection();
-  OutStreamer->switchSection(getObjFileLowering().getPPA2Section());
   MCContext &OutContext = OutStreamer->getContext();
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
@@ -1532,8 +1532,9 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
 
   OutStreamer->emitInt16(0x0000); // Service level string length.
 
-  // The binder requires that the offset to the PPA2 be emitted in a different,
+  // The runtime requires that the offset to the PPA2 be emitted in a different,
   // specially-named section.
+  OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getPPA2ListSection());
   // Emit 8 byte alignment.
   // Emit pointer to PPA2 label.

@@ -15,7 +15,6 @@
 #ifndef LLVM_MC_MCSECTIONGOFF_H
 #define LLVM_MC_MCSECTIONGOFF_H
 
-#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -25,25 +24,21 @@ class MCExpr;
 
 class MCSectionGOFF final : public MCSection {
 private:
-  MCSection *Parent;
-  uint32_t Subsection;
-
   friend class MCContext;
-  MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, uint32_t Sub)
-      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
-        Parent(P), Subsection(Sub) {}
+  MCSectionGOFF(StringRef Name, SectionKind K)
+      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            uint32_t /*Subsection*/) const override {
+                            uint32_t Subsection) const override {
     OS << "\t.section\t\"" << getName() << "\"\n";
+    if (Subsection) {
+      OS << "\t.subsection\t" << Subsection << '\n';
+    }
   }
 
   bool useCodeAlign() const override { return false; }
-
-  MCSection *getParent() const { return Parent; }
-  uint32_t getSubsection() const { return Subsection; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
 };
