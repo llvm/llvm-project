@@ -38,7 +38,6 @@ public:
   enum FragmentType : uint8_t {
     FT_Align,
     FT_Data,
-    FT_CompactEncodedInst,
     FT_Fill,
     FT_Nops,
     FT_Relaxable,
@@ -136,7 +135,6 @@ public:
     default:
       return false;
     case MCFragment::FT_Relaxable:
-    case MCFragment::FT_CompactEncodedInst:
     case MCFragment::FT_Data:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
@@ -238,21 +236,6 @@ public:
 
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
-};
-
-/// This is a compact (memory-size-wise) fragment for holding an encoded
-/// instruction (non-relaxable) that has no fixups registered. When applicable,
-/// it can be used instead of MCDataFragment and lead to lower memory
-/// consumption.
-///
-class MCCompactEncodedInstFragment : public MCEncodedFragmentWithContents<4> {
-public:
-  MCCompactEncodedInstFragment()
-      : MCEncodedFragmentWithContents(FT_CompactEncodedInst, true) {}
-
-  static bool classof(const MCFragment *F) {
-    return F->getKind() == MCFragment::FT_CompactEncodedInst;
-  }
 };
 
 /// A relaxable fragment holds on to its MCInst, since it may need to be
