@@ -1168,6 +1168,11 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
       return !llvm::is_contained(getScalableDims(), false);
     }
 
+    /// Get the number of scalable dimensions.
+    int64_t getNumScalableDims() const {
+      return llvm::count(getScalableDims(), true);
+    }
+
     /// Get or create a new VectorType with the same shape as `this` and an
     /// element type of bitwidth scaled by `scale`.
     /// Return null if the scaled element type cannot be represented.
