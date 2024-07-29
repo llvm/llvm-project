@@ -132,6 +132,8 @@ Improvements to Clang's diagnostics
       template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
      };
 
+- Clang now has improved diagnostics for functions with explicit 'this' parameters. Fixes #GH97878
+
 - Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
 
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
@@ -161,6 +163,7 @@ Bug Fixes to C++ Support
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
+- Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -269,6 +272,10 @@ Crash and bug fixes
 
 Improvements
 ^^^^^^^^^^^^
+
+- Improved the handling of the ``ownership_returns`` attribute. Now, Clang reports an
+  error if the attribute is attached to a function that returns a non-pointer value.
+  Fixes (#GH99501)
 
 Moved checkers
 ^^^^^^^^^^^^^^

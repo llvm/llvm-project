@@ -2962,8 +2962,7 @@ define i64 @srli_slliuw_2(i64 %1) {
 ;
 ; RV64ZBA-LABEL: srli_slliuw_2:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    srli a0, a0, 15
-; RV64ZBA-NEXT:    srli a0, a0, 3
+; RV64ZBA-NEXT:    srli a0, a0, 18
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 3
 ; RV64ZBA-NEXT:    ret
 entry:
@@ -2985,8 +2984,7 @@ define i64 @srli_slliuw_canonical_2(i64 %0) {
 ;
 ; RV64ZBA-LABEL: srli_slliuw_canonical_2:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    srli a0, a0, 15
-; RV64ZBA-NEXT:    srli a0, a0, 3
+; RV64ZBA-NEXT:    srli a0, a0, 18
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 3
 ; RV64ZBA-NEXT:    ret
 entry:

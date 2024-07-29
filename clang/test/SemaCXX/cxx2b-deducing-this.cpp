@@ -965,3 +965,10 @@ void f();
 };
 void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 }
+
+struct R {
+  void f(this auto &&self, int &&r_value_ref) {} // expected-note {{candidate function template not viable: expects an rvalue for 2nd argument}}
+  void g(int &&r_value_ref) {
+	f(r_value_ref); // expected-error {{no matching member function for call to 'f'}}
+  }
+};

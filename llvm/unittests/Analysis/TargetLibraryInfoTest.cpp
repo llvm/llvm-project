@@ -500,6 +500,10 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
 
       "declare i32 @atexit(void ()*)\n"
 
+      "declare void @abort()\n"
+      "declare void @exit(i32)\n"
+      "declare void @_Exit(i32)\n"
+
       "declare i32 @__nvvm_reflect(i8*)\n"
 
       "declare i8* @__memcpy_chk(i8*, i8*, i64, i64)\n"
