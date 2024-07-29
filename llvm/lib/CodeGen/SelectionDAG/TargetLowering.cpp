@@ -8542,6 +8542,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   bool IsMax = Opc == ISD::FMAXIMUMNUM;
   const TargetOptions &Options = DAG.getTarget().Options;
   SDNodeFlags Flags = Node->getFlags();
+  const Triple &TT = DAG.getTarget().getTargetTriple();
 
   unsigned NewOp =
       Opc == ISD::FMINIMUMNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
@@ -8599,7 +8600,6 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
     SDValue MinMaxQuiet = DAG.getNode(ISD::FADD, DL, VT, MinMax, MinMax, Flags);
     MinMax =
         DAG.getSelectCC(DL, MinMax, MinMax, MinMaxQuiet, MinMax, ISD::SETUO);
-    //}
   }
 
   // Fixup signed zero behavior.
@@ -8607,15 +8607,26 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)) {
     return MinMax;
   } else {
+    SDValue LRound = LHS;
+    SDValue RRound = RHS;
+    EVT RCCVT = CCVT;
+    // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for this case.
+    if (TT.isArch32Bit() && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT) && VT.getSizeInBits() > TT.getArchPointerBitWidth() && !TT.isX32()) {
+      LRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, LHS,
+                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+      RRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, RHS,
+                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+      RCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+    }
     SDValue TestZero =
         DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
     SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
+        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, LRound, TestZero), LHS,
         MinMax, Flags);
     SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
+        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, RRound, TestZero), RHS,
         LCmp, Flags);
     return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
   }
