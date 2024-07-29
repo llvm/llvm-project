@@ -870,48 +870,49 @@ void DWARFRewriter::handleCompileUnit(
                          DIEInteger(LineTablePatchMap[&Unit]));
 }
 
+void updateLowPCHighPC(DIE *Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+                       DebugAddrWriter &AddressWriter, const DIEValue &LowPCVal,
+                       const DIEValue &HighPCVal, uint64_t LowPC,
+                       const uint64_t HighPC) {
+  dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
+  dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
+  dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
+  dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
+  const uint32_t Size = HighPC - LowPC;
+  // Whatever was generated is not low_pc/high_pc, so will reset to
+  // default for size 1.
+  if (!LowPCVal || !HighPCVal) {
+    if (Unit.getVersion() >= 5)
+      FormLowPC = dwarf::DW_FORM_addrx;
+    else if (Unit.isDWOUnit())
+      FormLowPC = dwarf::DW_FORM_GNU_addr_index;
+  } else {
+    AttrLowPC = LowPCVal.getAttribute();
+    FormLowPC = LowPCVal.getForm();
+    AttrHighPC = HighPCVal.getAttribute();
+    FormHighPC = HighPCVal.getForm();
+  }
+
+  if (FormLowPC == dwarf::DW_FORM_addrx ||
+      FormLowPC == dwarf::DW_FORM_GNU_addr_index)
+    LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
+
+  if (LowPCVal)
+    DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
+  else
+    DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
+  if (HighPCVal) {
+    DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+  } else {
+    DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
+    DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+  }
+}
 void DWARFRewriter::handleSubprogram(
     DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
     DebugRangesSectionWriter &RangesSectionWriter,
     DebugAddrWriter &AddressWriter,
     std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) {
-  auto updateLowPCHighPC = [&](DIE *Die, const DIEValue &LowPCVal,
-                               const DIEValue &HighPCVal, uint64_t LowPC,
-                               const uint64_t HighPC) {
-    dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
-    dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
-    dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
-    dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
-    const uint32_t Size = HighPC - LowPC;
-    // Whatever was generated is not low_pc/high_pc, so will reset to
-    // default for size 1.
-    if (!LowPCVal || !HighPCVal) {
-      if (Unit.getVersion() >= 5)
-        FormLowPC = dwarf::DW_FORM_addrx;
-      else if (Unit.isDWOUnit())
-        FormLowPC = dwarf::DW_FORM_GNU_addr_index;
-    } else {
-      AttrLowPC = LowPCVal.getAttribute();
-      FormLowPC = LowPCVal.getForm();
-      AttrHighPC = HighPCVal.getAttribute();
-      FormHighPC = HighPCVal.getForm();
-    }
-
-    if (FormLowPC == dwarf::DW_FORM_addrx ||
-        FormLowPC == dwarf::DW_FORM_GNU_addr_index)
-      LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
-
-    if (LowPCVal)
-      DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
-    else
-      DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
-    if (HighPCVal) {
-      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
-    } else {
-      DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
-      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
-    }
-  };
   // Get function address either from ranges or [LowPC, HighPC) pair.
   uint64_t Address = UINT64_MAX;
   uint64_t SectionIndex, HighPC;
@@ -950,8 +951,8 @@ void DWARFRewriter::handleSubprogram(
       }
 
       if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
-        updateLowPCHighPC(&Die, LowPCVal, HighPCVal,
-                          FunctionRanges.back().LowPC,
+        updateLowPCHighPC(&Die, Unit, DIEBldr, AddressWriter, LowPCVal,
+                          HighPCVal, FunctionRanges.back().LowPC,
                           FunctionRanges.back().HighPC);
         return;
       }
@@ -965,44 +966,6 @@ void DWARFRewriter::handleLexicalBlock(
     DebugRangesSectionWriter &RangesSectionWriter,
     DebugAddrWriter &AddressWriter,
     std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) {
-  auto updateLowPCHighPC = [&](DIE *Die, const DIEValue &LowPCVal,
-                               const DIEValue &HighPCVal, uint64_t LowPC,
-                               const uint64_t HighPC) {
-    dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
-    dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
-    dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
-    dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
-    const uint32_t Size = HighPC - LowPC;
-    // Whatever was generated is not low_pc/high_pc, so will reset to
-    // default for size 1.
-    if (!LowPCVal || !HighPCVal) {
-      if (Unit.getVersion() >= 5)
-        FormLowPC = dwarf::DW_FORM_addrx;
-      else if (Unit.isDWOUnit())
-        FormLowPC = dwarf::DW_FORM_GNU_addr_index;
-    } else {
-      AttrLowPC = LowPCVal.getAttribute();
-      FormLowPC = LowPCVal.getForm();
-      AttrHighPC = HighPCVal.getAttribute();
-      FormHighPC = HighPCVal.getForm();
-    }
-
-    if (FormLowPC == dwarf::DW_FORM_addrx ||
-        FormLowPC == dwarf::DW_FORM_GNU_addr_index)
-      LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
-
-    if (LowPCVal)
-      DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
-    else
-      DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
-    if (HighPCVal) {
-      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
-    } else {
-      DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
-      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
-    }
-  };
-
   uint64_t RangesSectionOffset = 0;
   Expected<DWARFAddressRangesVector> RangesOrError =
       getDIEAddressRanges(Die, Unit);
@@ -1034,8 +997,8 @@ void DWARFRewriter::handleLexicalBlock(
   DIEValue LowPCVal = Die.findAttribute(dwarf::DW_AT_low_pc);
   DIEValue HighPCVal = Die.findAttribute(dwarf::DW_AT_high_pc);
   if (OutputRanges.size() == 1) {
-    updateLowPCHighPC(&Die, LowPCVal, HighPCVal, OutputRanges.back().LowPC,
-                      OutputRanges.back().HighPC);
+    updateLowPCHighPC(&Die, Unit, DIEBldr, AddressWriter, LowPCVal, HighPCVal,
+                      OutputRanges.back().LowPC, OutputRanges.back().HighPC);
     return;
   }
   updateDWARFObjectAddressRanges(Unit, DIEBldr, Die, RangesSectionOffset);
