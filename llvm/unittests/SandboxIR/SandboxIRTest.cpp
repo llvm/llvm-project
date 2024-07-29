@@ -821,13 +821,39 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
   EXPECT_EQ(NewSt->getValueOperand(), Val);
   EXPECT_EQ(NewSt->getPointerOperand(), Ptr);
   EXPECT_EQ(NewSt->getAlign(), 8);
-  // Check create(InsertBefore)
+  // Check create(InsertBefore, IsVolatile=true)
   sandboxir::StoreInst *NewVSt =
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertBefore=*/Ret,
                                    /*IsVolatile=*/true, Ctx);
   // Check if create was volatile
   EXPECT_TRUE(NewVSt->isVolatile());
+
+  // Check create(InsertAtEnd)
+  sandboxir::StoreInst *NewStEnd =
+      sandboxir::StoreInst::create(Val, Ptr, Align(8),
+                                   /*InsertAtEnd=*/BB, Ctx);
+  // Check if create was volatile
+  EXPECT_FALSE(NewStEnd->isVolatile());
+  EXPECT_EQ(NewStEnd->getType(), St->getType());
+  EXPECT_EQ(NewStEnd->getValueOperand(), Val);
+  EXPECT_EQ(NewStEnd->getPointerOperand(), Ptr);
+  EXPECT_EQ(NewStEnd->getAlign(), 8);
+  EXPECT_EQ(NewStEnd->getParent(), BB);
+  EXPECT_EQ(NewStEnd->getNextNode(), nullptr);
+  // Check create(InsertAtEnd, IsVolatile=true)
+  sandboxir::StoreInst *NewVStEnd =
+      sandboxir::StoreInst::create(Val, Ptr, Align(8),
+                                   /*InsertAtEnd=*/BB,
+                                   /*IsVolatile=*/true, Ctx);
+  // Check if create was volatile
+  EXPECT_TRUE(NewVStEnd->isVolatile());
+  EXPECT_EQ(NewVStEnd->getType(), VSt->getType());
+  EXPECT_EQ(NewVStEnd->getValueOperand(), Val);
+  EXPECT_EQ(NewVStEnd->getPointerOperand(), Ptr);
+  EXPECT_EQ(NewVStEnd->getAlign(), 8);
+  EXPECT_EQ(NewVStEnd->getParent(), BB);
+  EXPECT_EQ(NewVStEnd->getNextNode(), nullptr);
 }
 
 TEST_F(SandboxIRTest, ReturnInst) {
