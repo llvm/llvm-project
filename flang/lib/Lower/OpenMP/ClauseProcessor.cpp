@@ -181,20 +181,19 @@ static void addUseDeviceClause(
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
                               mlir::Location loc,
-                              mlir::omp::CollapseClauseOps &result,
+                              mlir::omp::LoopRelatedOps &result,
                               std::size_t loopVarTypeSize) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // The types of lower bound, upper bound, and step are converted into the
   // type of the loop variable if necessary.
   mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)result.collapseLowerBounds.size();
-       it++) {
-    result.collapseLowerBounds[it] = firOpBuilder.createConvert(
-        loc, loopVarType, result.collapseLowerBounds[it]);
-    result.collapseUpperBounds[it] = firOpBuilder.createConvert(
-        loc, loopVarType, result.collapseUpperBounds[it]);
-    result.collapseSteps[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.collapseSteps[it]);
+  for (unsigned it = 0; it < (unsigned)result.loopLowerBounds.size(); it++) {
+    result.loopLowerBounds[it] = firOpBuilder.createConvert(
+        loc, loopVarType, result.loopLowerBounds[it]);
+    result.loopUpperBounds[it] = firOpBuilder.createConvert(
+        loc, loopVarType, result.loopUpperBounds[it]);
+    result.loopSteps[it] =
+        firOpBuilder.createConvert(loc, loopVarType, result.loopSteps[it]);
   }
 }
 
@@ -204,7 +203,7 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::CollapseClauseOps &result,
+    mlir::omp::LoopRelatedOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -233,15 +232,15 @@ bool ClauseProcessor::processCollapse(
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
     lower::StatementContext stmtCtx;
-    result.collapseLowerBounds.push_back(fir::getBase(
+    result.loopLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx)));
-    result.collapseUpperBounds.push_back(fir::getBase(
+    result.loopUpperBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx)));
     if (bounds->step) {
-      result.collapseSteps.push_back(fir::getBase(
+      result.loopSteps.push_back(fir::getBase(
           converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx)));
     } else { // If `step` is not present, assume it as `1`.
-      result.collapseSteps.push_back(firOpBuilder.createIntegerConstant(
+      result.loopSteps.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
     iv.push_back(bounds->name.thing.symbol);

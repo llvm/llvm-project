@@ -195,10 +195,9 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 def TeamsOp : OpenMP_Op<"teams", traits = [
     AttrSizedOperandSegments, RecursiveMemoryEffects
   ], clauses = [
-    // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
     OpenMP_NumTeamsClause, OpenMP_IfClause, OpenMP_ThreadLimitClause,
-    OpenMP_AllocateClause, OpenMP_ReductionClause
+    OpenMP_AllocateClause, OpenMP_ReductionClause, OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "teams construct";
   let description = [{
@@ -238,9 +237,9 @@ def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">],
 def SectionsOp : OpenMP_Op<"sections", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
-    OpenMP_ReductionClause, OpenMP_AllocateClause, OpenMP_NowaitClause
+    OpenMP_ReductionClause, OpenMP_AllocateClause, OpenMP_NowaitClause,
+    OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "sections construct";
   let description = [{
@@ -271,8 +270,8 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 def SingleOp : OpenMP_Op<"single", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Complete clause list (private).
-    OpenMP_AllocateClause, OpenMP_CopyprivateClause, OpenMP_NowaitClause
+    OpenMP_AllocateClause, OpenMP_CopyprivateClause, OpenMP_NowaitClause,
+    OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "single directive";
   let description = [{
@@ -297,7 +296,7 @@ def SingleOp : OpenMP_Op<"single", traits = [
 def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     RecursiveMemoryEffects, SameVariadicOperandSize
   ], clauses = [
-    OpenMP_CollapseClause
+    OpenMP_LoopRelatedClause
   ], singleRegion = true> {
   let summary = "rectangular loop nest";
   let description = [{
@@ -306,14 +305,14 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     lower and upper bounds, as well as a step variable, must be defined.
 
     The lower and upper bounds specify a half-open range: the range includes the
-    lower bound but does not include the upper bound. If the `inclusive`
+    lower bound but does not include the upper bound. If the `loop_inclusive`
     attribute is specified then the upper bound is also included.
 
     The body region can contain any number of blocks. The region is terminated
     by an `omp.yield` instruction without operands. The induction variables,
     represented as entry block arguments to the loop nest operation's single
-    region, match the types of the `collapse_lower_bounds`,
-    `collapse_upper_bounds` and `collapse_steps` arguments.
+    region, match the types of the `loop_lower_bounds`, `loop_upper_bounds` and
+    `loop_steps` arguments.
 
     ```mlir
     omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
@@ -334,8 +333,6 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     addition of support for loop transformations, non-rectangular loops and
     non-perfectly nested loops.
   }];
-
-  let arguments = !con(clausesArgs, (ins UnitAttr:$inclusive));
 
   let builders = [
     OpBuilder<(ins CArg<"const LoopNestOperands &">:$clauses)>
@@ -365,14 +362,15 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    // TODO: Complete clause list (allocate, private).
     // TODO: Sort clauses alphabetically.
     OpenMP_LinearClauseSkip<assemblyFormat = true>,
     OpenMP_ReductionClauseSkip<assemblyFormat = true>,
     OpenMP_ScheduleClauseSkip<assemblyFormat = true>,
     OpenMP_NowaitClauseSkip<assemblyFormat = true>,
     OpenMP_OrderedClauseSkip<assemblyFormat = true>,
-    OpenMP_OrderClauseSkip<assemblyFormat = true>
+    OpenMP_OrderClauseSkip<assemblyFormat = true>,
+    OpenMP_AllocateClauseSkip<assemblyFormat = true>,
+    OpenMP_PrivateClauseSkip<assemblyFormat = true>
   ], singleRegion = true> {
   let summary = "worksharing-loop construct";
   let description = [{
@@ -419,6 +417,13 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
           |`nowait` $nowait
           |`ordered` `(` $ordered `)`
           |`order` `(` custom<OrderClause>($order, $order_mod) `)`
+          |`allocate` `(`
+                custom<AllocateAndAllocator>(
+                  $allocate_vars, type($allocate_vars), $allocator_vars,
+                  type($allocator_vars)) `)`
+          |`private` `(`
+                custom<PrivateList>(
+                  $private_vars, type($private_vars), $private_syms) `)`
     ) custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
                      $reduction_byref, $reduction_syms) attr-dict
   }];
@@ -434,9 +439,9 @@ def SimdOp : OpenMP_Op<"simd", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    // TODO: Complete clause list (linear, private, reduction).
-    OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_NontemporalClause,
-    OpenMP_OrderClause, OpenMP_SafelenClause, OpenMP_SimdlenClause
+    OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_LinearClause,
+    OpenMP_NontemporalClause, OpenMP_OrderClause, OpenMP_PrivateClause,
+    OpenMP_ReductionClause, OpenMP_SafelenClause, OpenMP_SimdlenClause
   ], singleRegion = true> {
   let summary = "simd construct";
   let description = [{
@@ -501,9 +506,9 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
-    OpenMP_DistScheduleClause, OpenMP_AllocateClause, OpenMP_OrderClause
+    OpenMP_DistScheduleClause, OpenMP_AllocateClause, OpenMP_OrderClause,
+    OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "distribute construct";
   let description = [{
@@ -554,11 +559,12 @@ def TaskOp : OpenMP_Op<"task", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     OutlineableOpenMPOpInterface
   ], clauses = [
-    // TODO: Complete clause list (affinity, detach, private).
+    // TODO: Complete clause list (affinity, detach).
     // TODO: Sort clauses alphabetically.
     OpenMP_IfClause, OpenMP_FinalClause, OpenMP_UntiedClause,
     OpenMP_MergeableClause, OpenMP_InReductionClause,
-    OpenMP_PriorityClause, OpenMP_DependClause, OpenMP_AllocateClause
+    OpenMP_PriorityClause, OpenMP_DependClause, OpenMP_AllocateClause,
+    OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "task construct";
   let description = [{
@@ -591,14 +597,13 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     DeclareOpInterfaceMethods<LoopWrapperInterface>, RecursiveMemoryEffects,
     SingleBlock
   ], clauses = [
-    // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
     OpenMP_IfClause, OpenMP_FinalClause, OpenMP_UntiedClause,
     OpenMP_MergeableClause,
     OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
     OpenMP_ReductionClauseSkip<extraClassDeclaration = true>,
     OpenMP_PriorityClause, OpenMP_AllocateClause, OpenMP_GrainsizeClause,
-    OpenMP_NumTasksClause, OpenMP_NogroupClause
+    OpenMP_NumTasksClause, OpenMP_NogroupClause, OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
@@ -1078,12 +1083,12 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 def TargetOp : OpenMP_Op<"target", traits = [
     AttrSizedOperandSegments, IsolatedFromAbove, OutlineableOpenMPOpInterface
   ], clauses = [
-    // TODO: Complete clause list (allocate, defaultmap, in_reduction,
-    // uses_allocators).
+    // TODO: Complete clause list (defaultmap, uses_allocators).
     // TODO: Sort clauses alphabetically.
     OpenMP_IfClause, OpenMP_DeviceClause, OpenMP_ThreadLimitClause,
     OpenMP_DependClause, OpenMP_NowaitClause, OpenMP_IsDevicePtrClause,
-    OpenMP_HasDeviceAddrClause, OpenMP_MapClause, OpenMP_PrivateClause
+    OpenMP_HasDeviceAddrClause, OpenMP_MapClause, OpenMP_PrivateClause,
+    OpenMP_AllocateClause, OpenMP_InReductionClause
   ], singleRegion = true> {
   let summary = "target construct";
   let description = [{
@@ -1209,7 +1214,7 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 //===----------------------------------------------------------------------===//
 
 def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
-    // TODO: Complete clause list (depend, nowait).
+    OpenMP_DependClause, OpenMP_NowaitClause
   ]> {
   let summary = "taskwait construct";
   let description = [{
@@ -1220,9 +1225,6 @@ def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
   let builders = [
     OpBuilder<(ins CArg<"const TaskwaitOperands &">:$clauses)>
   ];
-
-  // TODO: Remove overriden `assemblyFormat` once a clause is added.
-  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

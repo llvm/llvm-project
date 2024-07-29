@@ -43,11 +43,6 @@ struct CancelDirectiveNameClauseOps {
   ClauseCancellationConstructTypeAttr cancelDirective;
 };
 
-struct CollapseClauseOps {
-  llvm::SmallVector<Value> collapseLowerBounds, collapseUpperBounds,
-      collapseSteps;
-};
-
 struct CopyprivateClauseOps {
   llvm::SmallVector<Value> copyprivateVars;
   llvm::SmallVector<Attribute> copyprivateSyms;
@@ -125,6 +120,7 @@ struct LinearClauseOps {
 };
 
 struct LoopRelatedOps {
+  llvm::SmallVector<Value> loopLowerBounds, loopUpperBounds, loopSteps;
   UnitAttr loopInclusive;
 };
 
@@ -261,7 +257,7 @@ using DistributeOperands =
     detail::Clauses<AllocateClauseOps, DistScheduleClauseOps, OrderClauseOps,
                     PrivateClauseOps>;
 
-using LoopNestOperands = detail::Clauses<CollapseClauseOps, LoopRelatedOps>;
+using LoopNestOperands = detail::Clauses<LoopRelatedOps>;
 
 using MaskedOperands = detail::Clauses<FilterClauseOps>;
 
@@ -276,11 +272,10 @@ using ParallelOperands =
 using SectionsOperands = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
                                          PrivateClauseOps, ReductionClauseOps>;
 
-// TODO `linear` clause.
 using SimdOperands =
-    detail::Clauses<AlignedClauseOps, IfClauseOps, NontemporalClauseOps,
-                    OrderClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    SafelenClauseOps, SimdlenClauseOps>;
+    detail::Clauses<AlignedClauseOps, IfClauseOps, LinearClauseOps,
+                    NontemporalClauseOps, OrderClauseOps, PrivateClauseOps,
+                    ReductionClauseOps, SafelenClauseOps, SimdlenClauseOps>;
 
 using SingleOperands = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
                                        NowaitClauseOps, PrivateClauseOps>;
