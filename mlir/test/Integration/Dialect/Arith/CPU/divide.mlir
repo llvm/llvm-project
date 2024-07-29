@@ -35,6 +35,28 @@ func.func @ceildivsi_i8(%v1 : i8, %v2 : i8) {
 
 func.func @divsi() {
   // ------------------------------------------------
+  // Test i1
+  // ------------------------------------------------
+
+  // Note that i1 (booleans) are printed as:
+  //  false/true -> 0/1
+  // rather than as 0/-1
+  // this is because they are automatically zero-extended
+  // by the --convert-verctor-to-llvm pass (called as a part
+  // of --test-lower-to-llvm pass)
+
+  %false = arith.constant false
+  %true = arith.constant true
+
+  // CHECK-LABEL: @divsi_i1
+  // CHECK-NEXT:  1
+  func.call @divsi_i1(%true, %true) : (i1, i1) -> ()
+
+  // CHECK-LABEL: @divsi_i1
+  // CHECK-NEXT:  0
+  func.call @divsi_i1(%false, %true) : (i1, i1) -> ()
+
+  // ------------------------------------------------
   // Test i8
   // ------------------------------------------------
   %c68 = arith.constant 68 : i8
@@ -49,9 +71,6 @@ func.func @divsi() {
   func.call @divsi_i8(%cn97, %c68) : (i8, i8) -> ()
 
   // divsi x x == 1
-  // Note that i1 (booleans) are printed as:
-  //  false/true -> 0/1
-  // rather than as 0/-1
   // CHECK-LABEL: @divsi_i8
   // CHECK-NEXT:  1
   func.call @divsi_i8(%c68, %c68) : (i8, i8) -> ()
@@ -65,20 +84,6 @@ func.func @divsi() {
   // CHECK-LABEL: @divsi_i8
   // CHECK-NEXT:  0
   func.call @divsi_i8(%c0, %cn97) : (i8, i8) -> ()
-
-  // ------------------------------------------------
-  // Test i1
-  // ------------------------------------------------
-  %false = arith.constant false
-  %true = arith.constant true
-
-  // CHECK-LABEL: @divsi_i1
-  // CHECK-NEXT:  1
-  func.call @divsi_i1(%true, %true) : (i1, i1) -> ()
-
-  // CHECK-LABEL: @divsi_i1
-  // CHECK-NEXT:  0
-  func.call @divsi_i1(%false, %true) : (i1, i1) -> ()
 
   // ------------------------------------------------
   // TODO: i16, i32 etc
