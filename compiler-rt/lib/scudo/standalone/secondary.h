@@ -11,6 +11,7 @@
 
 #include "chunk.h"
 #include "common.h"
+#include "internal_defs.h"
 #include "list.h"
 #include "mem_map.h"
 #include "memtag.h"
@@ -595,6 +596,23 @@ public:
     DCHECK_EQ(FreedBytes, 0U);
     Cache.init(ReleaseToOsInterval);
     Stats.init();
+
+    if (Config::Secondary::VerifyInUseAddresses) {
+      ReservedMemoryT InUseReserved;
+      InUseReserved.create(
+          0U, sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1),
+          "scudo:secondary_integrity");
+      DCHECK_NE(InUseReserved.getBase(), 0U);
+
+      InUseAddresses = InUseReserved.dispatch(
+          InUseReserved.getBase(),
+          sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1));
+      CHECK(InUseAddresses.isAllocated());
+      InUseAddresses.setMemoryPermission(
+          InUseAddresses.getBase(),
+          sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1), 0);
+    }
+
     if (LIKELY(S))
       S->link(&Stats);
   }
@@ -663,6 +681,8 @@ private:
   u32 NumberOfAllocs GUARDED_BY(Mutex) = 0;
   u32 NumberOfFrees GUARDED_BY(Mutex) = 0;
   LocalStats Stats GUARDED_BY(Mutex);
+
+  MemMapT InUseAddresses GUARDED_BY(Mutex) = {};
 };
 
 // As with the Primary, the size passed to this function includes any desired
@@ -707,6 +727,54 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
                BlockEnd - PtrInt);
       {
         ScopedLock L(Mutex);
+
+        if (Config::Secondary::VerifyInUseAddresses) {
+          void **IntegrityList =
+              reinterpret_cast<void **>(InUseAddresses.getBase());
+          bool isFull = true;
+          bool reachedEnd = false;
+
+          while (!reachedEnd) {
+            for (u32 I = 0; I < Config::Secondary::InUseBlocksSize; I++) {
+              if (IntegrityList[I] == nullptr) {
+                isFull = false;
+                IntegrityList[I] = Ptr;
+                break;
+              }
+            }
+            if (isFull &&
+                IntegrityList[Config::Secondary::InUseBlocksSize] != nullptr) {
+              IntegrityList = static_cast<void **>(
+                  IntegrityList[Config::Secondary::InUseBlocksSize]);
+            } else {
+              reachedEnd = true;
+            }
+          }
+
+          if (isFull) {
+            ReservedMemoryT InUseReserved;
+            InUseReserved.create(
+                0U, sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1),
+                "scudo:secondary_integrity");
+            DCHECK_NE(InUseReserved.getBase(), 0U);
+
+            MemMapT NewAddresses = InUseReserved.dispatch(
+                InUseReserved.getBase(),
+                sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1));
+            CHECK(NewAddresses.isAllocated());
+            NewAddresses.setMemoryPermission(
+                NewAddresses.getBase(),
+                sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1), 0);
+
+            IntegrityList[Config::Secondary::InUseBlocksSize] =
+                reinterpret_cast<void *>(NewAddresses.getBase());
+
+            IntegrityList = static_cast<void **>(
+                IntegrityList[Config::Secondary::InUseBlocksSize]);
+            IntegrityList[0] = Ptr;
+          }
+        }
+
         InUseBlocks.push_back(H);
         AllocatedBytes += H->CommitSize;
         FragmentedBytes += H->MemMap.getCapacity() - H->CommitSize;
@@ -781,6 +849,56 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     *BlockEndPtr = CommitBase + CommitSize;
   {
     ScopedLock L(Mutex);
+
+    if (Config::Secondary::VerifyInUseAddresses) {
+      void **IntegrityList =
+          reinterpret_cast<void **>(InUseAddresses.getBase());
+      bool isFull = true;
+      bool reachedEnd = false;
+
+      while (!reachedEnd) {
+        for (u32 I = 0; I < Config::Secondary::InUseBlocksSize; I++) {
+          if (IntegrityList[I] == nullptr) {
+            isFull = false;
+            IntegrityList[I] = reinterpret_cast<void *>(
+                HeaderPos + LargeBlock::getHeaderSize());
+            break;
+          }
+        }
+        if (isFull &&
+            IntegrityList[Config::Secondary::InUseBlocksSize] != nullptr) {
+          IntegrityList = static_cast<void **>(
+              IntegrityList[Config::Secondary::InUseBlocksSize]);
+        } else {
+          reachedEnd = true;
+        }
+      }
+
+      if (isFull) {
+        ReservedMemoryT InUseReserved;
+        InUseReserved.create(
+            0U, sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1),
+            "scudo:secondary_integrity");
+        DCHECK_NE(InUseReserved.getBase(), 0U);
+
+        MemMapT NewAddresses = InUseReserved.dispatch(
+            InUseReserved.getBase(),
+            sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1));
+        CHECK(NewAddresses.isAllocated());
+        NewAddresses.setMemoryPermission(
+            NewAddresses.getBase(),
+            sizeof(void *) * (Config::Secondary::InUseBlocksSize + 1), 0);
+
+        IntegrityList[Config::Secondary::InUseBlocksSize] =
+            reinterpret_cast<void *>(NewAddresses.getBase());
+
+        IntegrityList = static_cast<void **>(
+            IntegrityList[Config::Secondary::InUseBlocksSize]);
+        IntegrityList[0] =
+            reinterpret_cast<void *>(HeaderPos + LargeBlock::getHeaderSize());
+      }
+    }
+
     InUseBlocks.push_back(H);
     AllocatedBytes += CommitSize;
     FragmentedBytes += H->MemMap.getCapacity() - CommitSize;
@@ -800,6 +918,35 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
   const uptr CommitSize = H->CommitSize;
   {
     ScopedLock L(Mutex);
+
+    if (Config::Secondary::VerifyInUseAddresses) {
+      void **IntegrityList =
+          reinterpret_cast<void **>(InUseAddresses.getBase());
+      bool isValid = false;
+      bool reachedEnd = false;
+
+      while (!reachedEnd) {
+        for (u32 I = 0; I < Config::Secondary::InUseBlocksSize; I++) {
+          if (IntegrityList[I] == Ptr) {
+            isValid = true;
+            IntegrityList[I] = nullptr;
+            break;
+          }
+        }
+        if (!isValid &&
+            IntegrityList[Config::Secondary::InUseBlocksSize] != nullptr) {
+          IntegrityList = static_cast<void **>(
+              IntegrityList[Config::Secondary::InUseBlocksSize]);
+        } else {
+          reachedEnd = true;
+        }
+      }
+
+      if (!isValid) {
+        return;
+      }
+    }
+
     InUseBlocks.remove(H);
     FreedBytes += CommitSize;
     FragmentedBytes -= H->MemMap.getCapacity() - CommitSize;
