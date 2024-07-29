@@ -23123,7 +23123,8 @@ static SDValue combineVECTOR_COMPRESSStore(SelectionDAG &DAG,
 
   // If the passthru is all 0s, we don't need an explicit passthru store.
   unsigned MinElmts = VecVT.getVectorMinNumElements();
-  if (ISD::isConstantSplatVectorAllZeros(Passthru.getNode()) && (MinElmts == 2 || MinElmts == 4))
+  if (ISD::isConstantSplatVectorAllZeros(Passthru.getNode()) &&
+      (MinElmts == 2 || MinElmts == 4))
     return SDValue();
 
   if (!Passthru.isUndef())
