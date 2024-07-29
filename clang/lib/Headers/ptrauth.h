@@ -235,11 +235,13 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
    If the type is a C++ member function pointer type, the result is
    the discriminator used to signed member function pointers of that
-   type.  This property is currently not true of other types.
+   type.  If the type is a function, function pointer, or function
+   reference type, the result is the discriminator used to sign
+   functions of that type.  It is ill-formed to use this macro with any
+   other type.
 
-   The argument must be a type.
    A call to this function is an integer constant expression. */
-#define ptrauth_type_discriminator(__type) \
+#define ptrauth_type_discriminator(__type)                                     \
   __builtin_ptrauth_type_discriminator(__type)
 
 /* Compute a signature for the given pair of pointer-sized values.
@@ -365,6 +367,8 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__string;                                                            \
     ((ptrauth_extra_data_t)0);                                                 \
   })
+
+#define ptrauth_type_discriminator(__type) ((ptrauth_extra_data_t)0)
 
 #define ptrauth_sign_generic_data(__value, __data)                             \
   ({                                                                           \

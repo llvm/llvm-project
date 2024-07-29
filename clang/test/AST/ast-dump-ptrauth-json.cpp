@@ -2,4 +2,4 @@
 
 // CHECK: "name": "__builtin_ptrauth_type_discriminator",
 
-int d = __builtin_ptrauth_type_discriminator(int);
+int d = __builtin_ptrauth_type_discriminator(int());

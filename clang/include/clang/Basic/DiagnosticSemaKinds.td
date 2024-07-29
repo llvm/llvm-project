@@ -970,6 +970,9 @@ def err_ptrauth_qualifier_address_discrimination_invalid : Error<
   "address discrimination flag for __ptrauth must be 0 or 1; value is %0">;
 def err_ptrauth_qualifier_extra_discriminator_invalid : Error<
   "extra discriminator for __ptrauth must be between 0 and %1; value is %0">;
+def err_ptrauth_type_disc_undiscriminated : Error<
+  "cannot pass undiscriminated type %0 to "
+  "'__builtin_ptrauth_type_discriminator'">;
 
 def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
   Note<"cannot take an address of a virtual member function if its return or "
