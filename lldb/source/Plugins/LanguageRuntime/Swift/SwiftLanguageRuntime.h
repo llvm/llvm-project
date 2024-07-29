@@ -490,6 +490,13 @@ private:
   GetFollowAsyncContextUnwindPlan(lldb::ProcessSP process_sp,
                                   RegisterContext *regctx, ArchSpec &arch,
                                   bool &behaves_like_zeroth_frame);
+
+  /// Given the async register of a funclet, extract its continuation pointer,
+  /// compute the prologue size of the continuation function, and return the
+  /// address of the first non-prologue instruction.
+  std::optional<lldb::addr_t>
+  TrySkipVirtualParentProlog(lldb::addr_t async_reg_val, Process &process,
+                             unsigned num_indirections);
 };
 
 } // namespace lldb_private
