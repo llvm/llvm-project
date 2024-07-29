@@ -1897,8 +1897,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   const auto &[S, EstimatedRows, EstimatedColumns] = dryRun(F, DT, LI, SE);
 
   // Fail early if estimates exceed limits. Row estimate could be off by up to
-  // 40%.
-  if (EstimatedRows > 1.4 * MaxRows || EstimatedColumns > MaxColumns)
+  // 60%.
+  if (EstimatedRows > 1.6 * MaxRows || EstimatedColumns > MaxColumns)
     return false;
 
   SmallVector<Value *> FunctionArgs;
