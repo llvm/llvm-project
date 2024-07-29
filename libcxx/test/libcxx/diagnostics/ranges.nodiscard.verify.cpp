@@ -23,8 +23,6 @@ void test() {
   std::vector<int> range;
   std::ranges::less_equal pred;
 
-  std::views::drop(pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
 #if TEST_STD_VER >= 23
   auto rvalue_view = std::views::as_rvalue(range);
   std::views::as_rvalue(range);       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -32,7 +30,11 @@ void test() {
 
   std::views::chunk_by(pred);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::chunk_by(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif // TEST_STD_VER >= 23
 
+  std::views::drop(pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if TEST_STD_VER >= 23
   std::views::drop(std::views::repeat(1)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   // std::ranges::enumerate
