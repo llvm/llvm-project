@@ -12273,6 +12273,10 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   auto CheckedHandleSizeof = [&](QualType Ty, CharUnits &Result) {
     if (Ty.isNull() || Ty->isIncompleteType() || Ty->isFunctionType())
       return false;
+
+    if (Ty->isReferenceType())
+      Ty = Ty.getNonReferenceType();
+
     return HandleSizeof(Info, ExprLoc, Ty, Result);
   };
 
