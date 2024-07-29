@@ -217,11 +217,12 @@ static void timedlock_with_deadlock_test() {
             ETIMEDOUT);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_timedrdlock(&rwlock, &ts), 0);
   ASSERT_EQ(
-      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      LIBC_NAMESPACE::pthread_rwlock_clockwrlock(&rwlock, CLOCK_REALTIME, &ts),
       ETIMEDOUT);
   ASSERT_EQ(
-      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_MONOTONIC, &ts),
+      LIBC_NAMESPACE::pthread_rwlock_clockrdlock(&rwlock, CLOCK_REALTIME, &ts),
       0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
   // notice that ts is already expired, but the following should still succeed.
