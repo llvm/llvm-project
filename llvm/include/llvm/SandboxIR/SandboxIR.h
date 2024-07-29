@@ -804,6 +804,9 @@ class StoreInst final : public Instruction {
   }
 
 public:
+   /// Return true if this is a load from a volatile memory location.
+  bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }
+
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
@@ -811,7 +814,13 @@ public:
   static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx);
   static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, bool IsVolatile,
+                           Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
                            BasicBlock *InsertAtEnd, Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, bool IsVolatile,
+                           Context &Ctx);
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
   Value *getValueOperand() const;

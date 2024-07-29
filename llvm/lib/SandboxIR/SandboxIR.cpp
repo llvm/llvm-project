@@ -662,6 +662,18 @@ StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
   auto *NewSBI = Ctx.createStoreInst(NewSI);
   return NewSBI;
 }
+
+StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
+                             Instruction *InsertBefore, bool IsVolatile,
+                             Context &Ctx) {
+  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(BeforeIR);
+  auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
+  auto *NewSBI = Ctx.createStoreInst(NewSI);
+  return NewSBI;
+}
+
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
                              BasicBlock *InsertAtEnd, Context &Ctx) {
   auto *InsertAtEndIR = cast<llvm::BasicBlock>(InsertAtEnd->Val);
@@ -669,6 +681,17 @@ StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
   Builder.SetInsertPoint(InsertAtEndIR);
   auto *NewSI =
       Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, /*isVolatile=*/false);
+  auto *NewSBI = Ctx.createStoreInst(NewSI);
+  return NewSBI;
+}
+
+StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
+                             BasicBlock *InsertAtEnd, bool IsVolatile,
+                             Context &Ctx) {
+  auto *InsertAtEndIR = cast<llvm::BasicBlock>(InsertAtEnd->Val);
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertAtEndIR);
+  auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
   auto *NewSBI = Ctx.createStoreInst(NewSI);
   return NewSBI;
 }
