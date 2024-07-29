@@ -27,6 +27,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -489,6 +490,9 @@ struct Ctx {
                  std::pair<const InputFile *, const InputFile *>>
       backwardReferences;
   llvm::SmallSet<llvm::StringRef, 0> auxiliaryFiles;
+  // If --reproduce is specified, all input files are written to this tar
+  // archive.
+  std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile;
   // True if SHT_LLVM_SYMPART is used.
