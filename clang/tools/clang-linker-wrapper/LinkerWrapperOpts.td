@@ -34,7 +34,7 @@ def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   HelpText<"Arguments to pass to the device linker invocation">;
 def device_compiler_args_EQ : Joined<["--"], "device-compiler=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
-  HelpText<"Arguments to pass to the device linker invocation">;
+  HelpText<"Arguments to pass to the device compiler invocation">;
 def clang_backend : Flag<["--"], "clang-backend">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Run the backend using clang rather than the LTO backend">;
