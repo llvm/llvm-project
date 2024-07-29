@@ -1,3 +1,5 @@
+; REQUIRES: x86_64-linux
+
 ; RUN: not llvm-ctxprof-util nofile.json 2>&1 | FileCheck %s --check-prefix=NO_CMD
 ; RUN: not llvm-ctxprof-util invalidCmd --input nofile.json 2>&1 | FileCheck %s --check-prefix=INVALID_CMD
 ; RUN: not llvm-ctxprof-util fromJSON nofile.json 2>&1 | FileCheck %s --check-prefix=NO_FLAG
