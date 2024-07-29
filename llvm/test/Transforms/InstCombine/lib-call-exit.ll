@@ -15,7 +15,7 @@ define void @call_exit_0() {
 
 define void @call_exit_1() {
 ; CHECK-LABEL: define void @call_exit_1() {
-; CHECK-NEXT:    call void @exit(i32 1)
+; CHECK-NEXT:    call void @exit(i32 1) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @exit(i32 1)
@@ -24,7 +24,7 @@ define void @call_exit_1() {
 
 define void @call__Exit_m1() {
 ; CHECK-LABEL: define void @call__Exit_m1() {
-; CHECK-NEXT:    call void @_Exit(i32 -1)
+; CHECK-NEXT:    call void @_Exit(i32 -1) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   call void @_Exit(i32 -1)
