@@ -1099,7 +1099,6 @@ define double @getd1(<2 x double> %vd) {
 ; CHECK-LABEL: getd1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd 1, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %vd, i32 1
@@ -1115,7 +1114,6 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-NEXT:    lvsl 3, 0, 3
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    xxlor 1, 34, 34
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %vd, i32 %i

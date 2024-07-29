@@ -1481,6 +1481,14 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   }
 
+  // Allow only pointers to be return type for functions with ownership_returns
+  // attribute. This matches with current OwnershipAttr::Takes semantics
+  if (K == OwnershipAttr::Returns &&
+      !getFunctionOrMethodResultType(D)->isPointerType()) {
+    S.Diag(AL.getLoc(), diag::err_ownership_takes_return_type) << AL;
+    return;
+  }
+
   IdentifierInfo *Module = AL.getArgAsIdent(0)->Ident;
 
   StringRef ModuleName = Module->getName();
@@ -6870,6 +6878,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_MSConstexpr:
     handleMSConstexprAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HybridPatchable:
+    handleSimpleAttribute<HybridPatchableAttr>(S, D, AL);
     break;
 
   // HLSL attributes:
