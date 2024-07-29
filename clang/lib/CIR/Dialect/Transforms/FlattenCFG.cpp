@@ -232,8 +232,10 @@ public:
 
     // Start the landing pad by getting the inflight exception information.
     rewriter.setInsertionPointToEnd(catchBegin);
-    auto exception = rewriter.create<mlir::cir::EhInflightOp>(
-        loc, mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
+    auto exceptionPtrType = mlir::cir::PointerType::get(
+        mlir::cir::ExceptionInfoType::get(rewriter.getContext()));
+    auto exception =
+        rewriter.create<mlir::cir::EhInflightOp>(loc, exceptionPtrType);
     auto selector = rewriter.create<mlir::cir::EhSelectorOp>(loc, exception);
 
     // Handle dispatch. In could in theory use a switch, but let's just

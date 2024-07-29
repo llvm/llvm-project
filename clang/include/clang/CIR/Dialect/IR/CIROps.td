@@ -3329,12 +3329,12 @@ def CatchParamOp : CIR_Op<"catch_param"> {
 def EhInflightOp : CIR_Op<"eh.inflight_exception"> {
   let summary = "Materialize the catch clause formal parameter";
   let description = [{
-    `cir.eh.inflight_exception` returns an exception coming from a
-    `cir.call exception` that might throw. The returned value is opaque
-    but can be further decomposed by other operations.
+    `cir.eh.inflight_exception` returns a pointer to exception information
+    coming from a `cir.call exception` that might throw. The returned value is
+    a pointer to an opaque type that is further decomposed by other operations.
   }];
 
-  let results = (outs CIR_ExceptionType:$exception);
+  let results = (outs ExceptionPtr:$exception);
   let assemblyFormat = [{
     attr-dict
   }];
@@ -3345,13 +3345,11 @@ def EhInflightOp : CIR_Op<"eh.inflight_exception"> {
 def EhSelectorOp : CIR_Op<"eh.selector"> {
   let summary = "Materialize the eh selector";
   let description = [{
-    `cir.eh.inflight_exception` returns an exception coming from a
-    `cir.call exception ...` that might throw. `cir.eh.selector` returns the
-    runtime selector value (type id) for the needed , which represents the type id used by
-    operations to compare against other type ids.
+    Given an exception information pointer, `cir.eh.selector` returns the
+    runtime selector value (type id) for the inflight exception.
   }];
 
-  let arguments = (ins CIR_ExceptionType:$exception);
+  let arguments = (ins ExceptionPtr:$exception);
   let results = (outs UInt32:$type_id);
   let assemblyFormat = [{
     $exception attr-dict

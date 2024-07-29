@@ -484,8 +484,8 @@ def StructPtr : Type<
     ]>, "!cir.struct*"> {
 }
 
-// Pointers to exception info
-def ExceptionInfoPtr : Type<
+// Pointer to exception info
+def ExceptionPtr : Type<
     And<[
       CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
       CPred<"::mlir::isa<::mlir::cir::ExceptionInfoType>("
@@ -494,25 +494,6 @@ def ExceptionInfoPtr : Type<
     BuildableType<
       "mlir::cir::PointerType::get($_builder.getContext(),"
       "mlir::cir::ExceptionInfoType::get($_builder.getContext()))"> {
-}
-
-// Pooint to pointers to exception info
-def ExceptionInfoPtrPtr : Type<
-    And<[
-      CPred<"::mlir::isa<::mlir::cir::PointerType>($_self)">,
-      And<[
-        CPred<"::mlir::isa<::mlir::cir::PointerType>("
-              "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee()">,
-        CPred<"::mlir::isa<::mlir::cir::ExceptionInfoType>("
-              "::mlir::cast<::mlir::cir::PointerType>("
-              "::mlir::cast<::mlir::cir::PointerType>($_self).getPointee())"
-              ".getPointee()))">
-      ]>
-    ]>, "!cir.eh_info**">,
-    BuildableType<
-      "mlir::cir::PointerType::get($_builder.getContext(),"
-      "mlir::cir::PointerType::get($_builder.getContext(),"
-      "mlir::cir::ExceptionInfoType::get($_builder.getContext())))"> {
 }
 
 // Vector of integral type
