@@ -65,7 +65,6 @@ class SanitizerArgs {
   // True if cross-dso CFI support if provided by the system (i.e. Android).
   bool ImplicitCfiRuntime = false;
   bool NeedsMemProfRt = false;
-  bool SanitizeOverflowIdioms = true;
   bool HwasanUseAliases = false;
   llvm::AsanDetectStackUseAfterReturnMode AsanUseAfterReturn =
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;

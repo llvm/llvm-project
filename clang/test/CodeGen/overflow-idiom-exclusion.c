@@ -1,6 +1,6 @@
-// Ensure some common idioms don't trigger the overflow sanitizers when
-// -fno-sanitize-overflow-idioms is enabled. In many cases, overflow warnings
-// caused by these idioms are seen as "noise" and result in users turning off
+// Ensure some common overflow-dependent or overflow-prone code patterns don't
+// trigger the overflow sanitizers. In many cases, overflow warnings caused by
+// these patterns are seen as "noise" and result in users turning off
 // sanitization all together.
 
 // A pattern like "if (a + b < a)" simply checks for overflow and usually means
@@ -9,8 +9,7 @@
 // Similarly, a pattern resembling "while (i--)" is extremely common and
 // warning on its inevitable overflow can be seen as superfluous. Do note that
 // using "i" in future calculations can be tricky because it will still
-// wrap-around. Using -fno-sanitize-overflow-idioms or not doesn't change this
-// fact -- we just won't warn/trap with sanitizers.
+// wrap-around.
 
 // Another common pattern that, in some cases, is found to be too noisy is
 // unsigned negation, for example:
@@ -107,7 +106,7 @@ void nestedstructs(void) {
 }
 
 // Normally, this would be folded into a simple call to the overflow handler
-// and a store. Excluding this idiom results in just a store.
+// and a store. Excluding this pattern results in just a store.
 void constants(void) {
   unsigned base = 4294967295;
   unsigned offset = 1;
