@@ -197,7 +197,7 @@ void MCDwarfLineTable::emitOne(
         MCOS->emitDwarfLineEndEntry(Section, LastLabel);
         init();
       }
-      MCOS->emitLabel(LineEntry.LineStreamLabel);
+      MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
 
       IsAtStartSeq = true;
       continue;
@@ -268,6 +268,23 @@ void MCDwarfLineTable::emitOne(
   // conservatively use the section end symbol to end the line table.
   if (!EndEntryEmitted && !IsAtStartSeq)
     MCOS->emitDwarfLineEndEntry(Section, LastLabel);
+}
+
+void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
+                                                           SMLoc DefLoc,
+                                                           StringRef Name) {
+  auto &ctx = MCOS->getContext();
+  auto *LineStreamLabel = ctx.getOrCreateSymbol(Name);
+  auto *LineSym = ctx.createTempSymbol();
+  const MCDwarfLoc &DwarfLoc = ctx.getCurrentDwarfLoc();
+
+  // Create a 'fake' line entry by having LineStreamLabel be non-null. This
+  // won't actually emit any line information, it will reset the line table
+  // sequence and emit a label at the start of the new line table sequence.
+  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel, DefLoc);
+
+  // Add the line entry to this section's entries.
+  getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly());
 }
 
 //

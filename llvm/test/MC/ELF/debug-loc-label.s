@@ -2,15 +2,10 @@
 // the requested label at the correct position in the line stream
 
 // RUN: llvm-mc -filetype obj -triple x86_64-linux-elf %s -o %t.o
-// RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-dwarfdump -v --debug-line %t.o | FileCheck %s --check-prefix=CHECK-LINE-TABLE
+// RUN: llvm-objdump -s -j .offset_02 -j .offset_03 -j .offset_05 %t.o | FileCheck %s --check-prefix=CHECK-SECTIONS
 
-# CHECK-ASM:        <foo>:
-# CHECK-ASM-NEXT:     movq    %rdx, 0x33
-# CHECK-ASM-NEXT:     movq    %rax, 0x3b
-# CHECK-ASM-NEXT:     movq    %rbx, 0x4e
-# CHECK-ASM-NEXT:     movq    %rcx, 0x60
-# CHECK-ASM-NEXT:     retq
+
 
 # CHECK-LINE-TABLE:                  Address            Line   Column File   ISA Discriminator OpIndex Flags
 # CHECK-LINE-TABLE-NEXT:             ------------------ ------ ------ ------ --- ------------- ------- -------------
@@ -45,6 +40,15 @@
 # CHECK-LINE-TABLE-NEXT: 0x00000071: 02 DW_LNS_advance_pc (addr += 9, op-index += 0)
 # CHECK-LINE-TABLE-NEXT: 0x00000073: 00 DW_LNE_end_sequence
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000021      1      5      1   0             0       0  is_stmt end_sequence
+
+# CHECK-SECTIONS: Contents of section .offset_02:
+# CHECK-SECTIONS-NEXT: 0000 3b000000
+
+# CHECK-SECTIONS: Contents of section .offset_03:
+# CHECK-SECTIONS-NEXT: 0000 4e000000
+
+# CHECK-SECTIONS: Contents of section .offset_05:
+# CHECK-SECTIONS-NEXT: 0000 60000000
 	.text
 	.file	"test.c"
 	.globl	foo
@@ -55,20 +59,29 @@ foo:
 	.file	1 "test.c"
 	.cfi_startproc
 	.loc	1 1 1
-	mov     %rdx, 0x33
+	mov     %rax, 0x01
 	.loc_label my_label_02
 	.loc	1 1 2
-  movq    %rax, my_label_02-.Lline_table_start0
+	mov     %rax, 0x02
 	.loc	1 1 3
 	.loc_label my_label_03
 	.loc_label my_label_03.1
-  movq    %rbx, my_label_03-.Lline_table_start0
+	mov     %rax, 0x03
 	.loc	1 1 4
-	.loc_label my_label_05
+	.loc_label my_label_04
 	.loc	1 1 5
-  movq    %rcx, my_label_05-.Lline_table_start0
+	mov     %rax, 0x04
 	ret
 	.cfi_endproc
 
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
+
+	.section	.offset_02,"",@progbits
+	.quad	my_label_02-.Lline_table_start0
+
+	.section	.offset_03,"",@progbits
+	.quad	my_label_03-.Lline_table_start0
+
+	.section	.offset_05,"",@progbits
+	.quad	my_label_04-.Lline_table_start0

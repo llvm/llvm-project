@@ -268,22 +268,9 @@ void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 }
 
 void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
-  auto &ctx = getContext();
-
-  auto *LineStreamLabel = ctx.getOrCreateSymbol(Name);
-
-  auto *LineSym = ctx.createTempSymbol();
-  const MCDwarfLoc &DwarfLoc = ctx.getCurrentDwarfLoc();
-
-  // Create a 'fake' line entry by having LineStreamLabel be non-null. This
-  // won't actually emit any line information, it will reset the line table
-  // sequence and emit a label at the start of the new line table sequence.
-  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel);
-
-  // Add the line entry to this section's entries.
-  ctx.getMCDwarfLineTable(ctx.getDwarfCompileUnitID())
-      .getMCLineSections()
-      .addLineEntry(LineEntry, getCurrentSectionOnly());
+  getContext()
+      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
+      .endCurrentSeqAndEmitLineStreamLabel(this, Loc, Name);
 }
 
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
