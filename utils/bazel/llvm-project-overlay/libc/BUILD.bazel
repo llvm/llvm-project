@@ -675,6 +675,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_macros_optimization",
@@ -1089,7 +1090,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_osutil_syscall",
         ":types_pid_t",
-    ]
+    ],
 )
 
 libc_support_library(
