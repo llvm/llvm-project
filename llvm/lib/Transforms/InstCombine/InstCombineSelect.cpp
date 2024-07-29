@@ -3558,6 +3558,38 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
                                 Masked);
 }
 
+// This function tries to fold the following sequence
+//   %lt = icmp ult/slt i32 %x, %y
+//   %ne0 = icmp ne i32 %x, %y
+//   %ne = zext i1 %ne0 to iN
+//   %r = select i1 %lt, iN -1, iN %ne
+// into
+//   %r = call iN @llvm.ucmp/scmp(%x, %y)
+Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
+  if (!isa<ConstantInt>(SI.getTrueValue()) ||
+      !dyn_cast<ConstantInt>(SI.getTrueValue())->isAllOnesValue())
+    return nullptr;
+
+  Value *LHS, *RHS;
+  ICmpInst::Predicate NEPred;
+  if (!match(SI.getFalseValue(),
+             m_ZExt(m_ICmp(NEPred, m_Value(LHS), m_Value(RHS)))) ||
+      NEPred != ICmpInst::ICMP_NE)
+    return nullptr;
+
+  ICmpInst::Predicate LTPred;
+  if (!match(SI.getCondition(),
+             m_ICmp(LTPred, m_Specific(LHS), m_Specific(RHS))) ||
+      !ICmpInst::isLT(LTPred))
+    return nullptr;
+
+  bool IsSigned = ICmpInst::isSigned(LTPred);
+  Instruction *Result = Builder.CreateIntrinsic(
+      SI.getFalseValue()->getType(),
+      IsSigned ? Intrinsic::scmp : Intrinsic::ucmp, {LHS, RHS});
+  return replaceInstUsesWith(SI, Result);
+}
+
 bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                                         const Instruction *CtxI) const {
   KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
@@ -4139,6 +4171,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
     }
   }
+
+  if (auto *Instruction = foldSelectToCmp(SI))
+    return Instruction;
 
   return nullptr;
 }
