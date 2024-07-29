@@ -8,3 +8,12 @@ define <vscale x 1 x i64> @all_ones(<vscale x 1 x i64> %true, <vscale x 1 x i64>
   %v = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> %true, <vscale x 1 x i64> %false, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
+
+define <vscale x 1 x i64> @all_zeroes(<vscale x 1 x i64> %true, <vscale x 1 x i64> %false, i32 %evl) {
+; CHECK-LABEL: all_zeroes:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 false), <vscale x 1 x i64> %true, <vscale x 1 x i64> %false, i32 %evl)
+  ret <vscale x 1 x i64> %v
+}
