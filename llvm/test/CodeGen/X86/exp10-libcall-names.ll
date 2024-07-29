@@ -8,8 +8,8 @@
 ; RUN: llc -mtriple=x86_64-apple-ios8.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-tvos8.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-xros8.0 < %s | FileCheck -check-prefix=APPLE %s
-; RUN: llc -mtriple=x86_64-apple-driverkit < %s | FileCheck -check-prefix=MISSED %s
-; RUN: llc -mtriple=x86_64-apple-driverkit24.0 < %s | FileCheck -check-prefix=MISSED %s
+; RUN: llc -mtriple=x86_64-apple-driverkit < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-driverkit24.0 < %s | FileCheck -check-prefix=APPLE %s
 
 ; RUN: not llc -mtriple=x86_64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
