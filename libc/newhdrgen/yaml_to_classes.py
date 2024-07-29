@@ -174,7 +174,6 @@ def add_function_to_yaml(yaml_file, function_details):
 
     with open(yaml_file, "r") as f:
         yaml_data = yaml.load(f, Loader=yaml.FullLoader)
-
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 
