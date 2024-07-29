@@ -3301,12 +3301,21 @@ def TryOp : CIR_Op<"try",
 // CatchParamOp
 //===----------------------------------------------------------------------===//
 
+def CatchParamBegin : I32EnumAttrCase<"begin",  0>;
+def CatchParamEnd   : I32EnumAttrCase<"end",  1>;
+def CatchParamKind  : I32EnumAttr<
+    "CatchParamKind",
+    "Designate limits for begin/end of catch param handling",
+    [CatchParamBegin, CatchParamEnd]> {
+  let cppNamespace = "::mlir::cir";
+}
+
 def CatchParamOp : CIR_Op<"catch_param"> {
-  let summary = "Materialize the catch clause formal parameter";
+  let summary = "Represents catch clause formal parameter";
   let description = [{
-    The `cir.catch_param` binds to a the C/C++ catch clause param and allow
-    it to be materialized. This operantion grabs the param by looking into
-    a exception info `!cir.eh_info` argument.
+    The `cir.catch_param` can operate in two modes: within catch regions of
+    `cir.try` or anywhere else with the `begin` or `end` markers. The `begin`
+    version requires an exception pointer of `cir.ptr<!void>`.
 
     Example:
     ```mlir
@@ -3314,12 +3323,17 @@ def CatchParamOp : CIR_Op<"catch_param"> {
     ```
   }];
 
-  let results = (outs CIR_AnyType:$param);
+  let arguments = (ins Optional<VoidPtr>:$exception_ptr,
+                       OptionalAttr<CatchParamKind>:$kind);
+  let results = (outs Optional<CIR_AnyType>:$param);
   let assemblyFormat = [{
-    `->` qualified(type($param)) attr-dict
+    ($kind^)?
+    ($exception_ptr^)?
+    (`->` qualified(type($param))^)?
+    attr-dict
   }];
 
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
