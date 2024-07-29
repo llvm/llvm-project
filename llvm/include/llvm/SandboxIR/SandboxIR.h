@@ -30,9 +30,9 @@
 //                                      |
 //                                      +- CastInst
 //                                      |
-//                                      +- CallBase ----- CallInst
-//                                      |
-//                                      +- CmpInst
+//                                      +- CallBase ------+- CallInst
+//                                      |                 |
+//                                      +- CmpInst        +- InvokeInst
 //                                      |
 //                                      +- ExtractElementInst
 //                                      |
@@ -91,6 +91,7 @@ class User;
 class Value;
 class CallBase;
 class CallInst;
+class InvokeInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -204,6 +205,7 @@ protected:
   friend class ReturnInst; // For getting `Val`.
   friend class CallBase;   // For getting `Val`.
   friend class CallInst;   // For getting `Val`.
+  friend class InvokeInst; // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -542,6 +544,7 @@ protected:
   friend class StoreInst;  // For getTopmostLLVMInstruction().
   friend class ReturnInst; // For getTopmostLLVMInstruction().
   friend class CallInst;   // For getTopmostLLVMInstruction().
+  friend class InvokeInst; // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -865,7 +868,8 @@ public:
 class CallBase : public Instruction {
   CallBase(ClassID ID, Opcode Opc, llvm::Instruction *I, Context &Ctx)
       : Instruction(ID, Opc, I, Ctx) {}
-  friend class CallInst; // For constructor.
+  friend class CallInst;   // For constructor.
+  friend class InvokeInst; // For constructor.
 
 public:
   static bool classof(const Value *From) {
@@ -1033,6 +1037,70 @@ public:
 #endif
 };
 
+class InvokeInst final : public CallBase {
+  /// Use Context::createInvokeInst(). Don't call the
+  /// constructor directly.
+  InvokeInst(llvm::Instruction *I, Context &Ctx)
+      : CallBase(ClassID::Invoke, Opcode::Invoke, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static InvokeInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *IfNormal, BasicBlock *IfException,
+                            ArrayRef<Value *> Args, BBIterator WhereIt,
+                            BasicBlock *WhereBB, Context &Ctx,
+                            const Twine &NameStr = "");
+  static InvokeInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *IfNormal, BasicBlock *IfException,
+                            ArrayRef<Value *> Args, Instruction *InsertBefore,
+                            Context &Ctx, const Twine &NameStr = "");
+  static InvokeInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *IfNormal, BasicBlock *IfException,
+                            ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                            Context &Ctx, const Twine &NameStr = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Invoke;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  BasicBlock *getNormalDest() const;
+  BasicBlock *getUnwindDest() const;
+  void setNormalDest(BasicBlock *BB);
+  void setUnwindDest(BasicBlock *BB);
+  // TODO: Return a `LandingPadInst` once implemented.
+  Instruction *getLandingPadInst() const;
+  BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  void setSuccessor(unsigned SuccIdx, BasicBlock *NewSucc) {
+    assert(SuccIdx < 2 && "Successor # out of range for invoke!");
+    if (SuccIdx == 0)
+      setNormalDest(NewSucc);
+    else
+      setUnwindDest(NewSucc);
+  }
+  unsigned getNumSuccessors() const {
+    return cast<llvm::InvokeInst>(Val)->getNumSuccessors();
+  }
+#ifndef NDEBUG
+  void verify() const final {}
+  friend raw_ostream &operator<<(raw_ostream &OS, const InvokeInst &I) {
+    I.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
 /// an OpaqueInstr.
 class OpaqueInst : public sandboxir::Instruction {
@@ -1183,6 +1251,8 @@ protected:
   friend ReturnInst; // For createReturnInst()
   CallInst *createCallInst(llvm::CallInst *I);
   friend CallInst; // For createCallInst()
+  InvokeInst *createInvokeInst(llvm::InvokeInst *I);
+  friend InvokeInst; // For createInvokeInst()
 
 public:
   Context(LLVMContext &LLVMCtx)
