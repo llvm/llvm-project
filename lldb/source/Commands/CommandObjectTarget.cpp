@@ -97,7 +97,7 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
 
   uint32_t properties = 0;
   if (target_arch.IsValid()) {
-    strm.Printf("%sarch=", properties++ > 0 ? ", " : " ( ");
+    strm.Printf(" ( arch=");
     target_arch.DumpTriple(strm.AsRawOstream());
     properties++;
   }
