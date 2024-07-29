@@ -352,8 +352,10 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx);
 static std::vector<std::unique_ptr<TagNode>>
 genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
         StringRef ParentInfoDir);
+static std::unique_ptr<TagNode>
+genHTML(const std::vector<CommentInfo> &C);
 
-static std::vector<std::unique_ptr<TagNode>>
+    static std::vector<std::unique_ptr<TagNode>>
 genEnumsBlock(const std::vector<EnumInfo> &Enums,
               const ClangDocContext &CDCtx) {
   if (Enums.empty())
@@ -418,9 +420,13 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
     if (Access != "")
       Access = Access + " ";
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
-    LIBody->Children.emplace_back(std::make_unique<TextNode>(Access));
-    LIBody->Children.emplace_back(genReference(M.Type, ParentInfoDir));
-    LIBody->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
+    auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_LI);
+    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(Access));
+    MemberDecl->Children.emplace_back(genReference(M.Type, ParentInfoDir));
+    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
+    if (!M.Description.empty())
+      LIBody->Children.emplace_back(genHTML(M.Description));
+    LIBody->Children.emplace_back(std::move(MemberDecl));
     ULBody->Children.emplace_back(std::move(LIBody));
   }
   return Out;
@@ -630,6 +636,20 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     if (ParagraphComment->Children.empty())
       return nullptr;
     return std::move(ParagraphComment);
+  }
+
+  if (I.Kind == "BlockCommandComment") {
+    auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
+    auto Command = std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name);
+    BlockComment->Children.emplace_back(std::move(Command));
+    for (const auto &Child : I.Children) {
+      std::unique_ptr<HTMLNode> Node = genHTML(*Child);
+      if (Node)
+        BlockComment->Children.emplace_back(std::move(Node));
+    }
+    if (BlockComment->Children.empty())
+      return nullptr;
+    return std::move(BlockComment);
   }
 
   if (I.Kind == "TextComment") {
