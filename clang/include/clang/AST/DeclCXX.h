@@ -639,7 +639,7 @@ public:
   unsigned getNumVBases() const { return data().NumVBases; }
 
   const CXXBaseSpecifier &getVBase(unsigned Index) const {
-    assert(Index < getNumBases() && "Virtual base access out of range!");
+    assert(Index < getNumVBases() && "Virtual base access out of range!");
     return data().getVBases()[Index];
   }
 
