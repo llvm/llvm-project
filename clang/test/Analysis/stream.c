@@ -499,14 +499,14 @@ void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
   fclose(f);
 }
 
-extern FILE *stdout_like_ptr;
-void no_aliasing(void) {
+extern FILE *non_standard_stream_ptr;
+void test_fopen_does_not_alias_with_standard_streams(void) {
   FILE *f = fopen("file", "r");
   if (!f) return;
   clang_analyzer_eval(f == stdin);           // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stdout);          // expected-warning {{FALSE}} no-TRUE
   clang_analyzer_eval(f == stderr);          // expected-warning {{FALSE}} no-TRUE
-  clang_analyzer_eval(f == stdout_like_ptr); // expected-warning {{FALSE}} expected-warning {{TRUE}}
+  clang_analyzer_eval(f == non_standard_stream_ptr); // expected-warning {{FALSE}} expected-warning {{TRUE}}
   if (f != stdout) {
     fclose(f);
   }
