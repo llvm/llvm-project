@@ -1030,16 +1030,27 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsVectorType)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
-  bool IsTypeLegal = isTypeLegal(Src) && isTypeLegal(Dst) &&
-                     (Src->getScalarSizeInBits() <= ST->getELen()) &&
-                     (Dst->getScalarSizeInBits() <= ST->getELen());
-
-  // FIXME: Need to compute legalizing cost for illegal types.
-  if (!IsTypeLegal)
+  // FIXME: Need to compute legalizing cost for illegal types.  The current
+  // code handles only legal types and those which can be trivially
+  // promoted to legal.
+  if (Src->getScalarSizeInBits() > ST->getELen() ||
+      Dst->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+
+  // Our actual lowering for the case where a wider legal type is available
+  // uses promotion to the wider type.  This is reflected in the result of
+  // getTypeLegalizationCost, but BasicTTI assumes the widened cases are
+  // scalarized if the legalized Src and Dst are not equal sized.
+  const DataLayout &DL = this->getDataLayout();
+  if (!SrcLT.second.isVector() || !DstLT.second.isVector() ||
+      !TypeSize::isKnownLE(DL.getTypeSizeInBits(Src),
+                           SrcLT.second.getSizeInBits()) ||
+      !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
+                           DstLT.second.getSizeInBits()))
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
