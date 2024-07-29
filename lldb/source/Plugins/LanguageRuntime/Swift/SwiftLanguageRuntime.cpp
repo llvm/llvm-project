@@ -2582,6 +2582,37 @@ lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
   return LLDB_INVALID_ADDRESS;
 }
 
+/// Creates an expression accessing (fp - 8), with an optional dereference
+/// operation. This is only valid for x86_64 or aarch64.
+llvm::ArrayRef<uint8_t>
+GetAsyncRegFromFramePointerDWARFExpr(llvm::Triple::ArchType triple,
+                                     bool with_deref) {
+  assert(triple == llvm::Triple::x86_64 || triple == llvm::Triple::aarch64);
+
+  // These expressions must have static storage, due to how UnwindPlan::Row
+  // works.
+  static const uint8_t g_cfa_dwarf_expression_x86_64[] = {
+      llvm::dwarf::DW_OP_breg6, // DW_OP_breg6, register 6 == rbp
+      0x78,                     //    sleb128 -8 (ptrsize)
+      llvm::dwarf::DW_OP_deref,
+  };
+  static const uint8_t g_cfa_dwarf_expression_arm64[] = {
+      llvm::dwarf::DW_OP_breg29, // DW_OP_breg29, register 29 == fp
+      0x78,                      //    sleb128 -8 (ptrsize)
+      llvm::dwarf::DW_OP_deref,
+  };
+
+  const uint8_t *expr = triple == llvm::Triple::x86_64
+                            ? g_cfa_dwarf_expression_x86_64
+                            : g_cfa_dwarf_expression_arm64;
+  auto size = triple == llvm::Triple::x86_64
+                  ? sizeof(g_cfa_dwarf_expression_x86_64)
+                  : sizeof(g_cfa_dwarf_expression_arm64);
+  if (with_deref)
+    return llvm::ArrayRef<uint8_t>(expr, size);
+  return llvm::ArrayRef<uint8_t>(expr, size - 1);
+}
+
 // Examine the register state and detect the transition from a real
 // stack frame to an AsyncContext frame, or a frame in the middle of
 // the AsyncContext chain, and return an UnwindPlan for these situations.
@@ -2671,48 +2702,15 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   const int32_t ptr_size = 8;
   row->SetOffset(0);
 
-  // A DWARF Expression to set the CFA.
-  //      pushes the frame pointer register - 8
-  //      dereference
-
-  // FIXME: Row::RegisterLocation::RestoreType doesn't have a
-  // deref(reg-value + offset) yet, shortcut around it with
-  // a dwarf expression for now.
-  // The CFA of an async frame is the address of it's associated AsyncContext.
-  // In an async frame currently on the stack, this address is stored right
-  // before the saved frame pointer on the stack.
-  static const uint8_t g_cfa_dwarf_expression_x86_64[] = {
-      llvm::dwarf::DW_OP_breg6, // DW_OP_breg6, register 6 == rbp
-      0x78,                     //    sleb128 -8 (ptrsize)
-      llvm::dwarf::DW_OP_deref,
-  };
-  static const uint8_t g_cfa_dwarf_expression_arm64[] = {
-      llvm::dwarf::DW_OP_breg29, // DW_OP_breg29, register 29 == fp
-      0x78,                      //    sleb128 -8 (ptrsize)
-      llvm::dwarf::DW_OP_deref,
-  };
-
-  constexpr unsigned expr_size = sizeof(g_cfa_dwarf_expression_arm64);
-
-  static_assert(sizeof(g_cfa_dwarf_expression_x86_64) ==
-                    sizeof(g_cfa_dwarf_expression_arm64),
-                "Code relies on DWARF  expressions being the same size");
-
-  const uint8_t *expr = nullptr;
-  if (arch.GetMachine() == llvm::Triple::x86_64)
-    expr = g_cfa_dwarf_expression_x86_64;
-  else if (arch.GetMachine() == llvm::Triple::aarch64)
-    expr = g_cfa_dwarf_expression_arm64;
-  else
-    llvm_unreachable("Unsupported architecture");
-
   if (in_prologue) {
     if (indirect_context)
       row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
     else
       row->GetCFAValue().SetIsRegisterPlusOffset(regnums->async_ctx_regnum, 0);
   } else {
-    row->GetCFAValue().SetIsDWARFExpression(expr, expr_size);
+    llvm::ArrayRef<uint8_t> expr = GetAsyncRegFromFramePointerDWARFExpr(
+        arch.GetMachine(), true /*with_deref*/);
+    row->GetCFAValue().SetIsDWARFExpression(expr.data(), expr.size());
   }
 
   if (indirect_context) {
@@ -2723,12 +2721,10 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
       // dereferenced once to get the context. This is reflected in the debug
       // info so we need to account for it and report am async register value
       // that needs to be dereferenced to get to the context.
-      // Note that the size passed for the DWARF expression is the size of the
-      // array minus one. This skips the last deref for this use.
-      assert(expr[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
-             "Should skip a deref");
-      row->SetRegisterLocationToIsDWARFExpression(regnums->async_ctx_regnum,
-                                                  expr, expr_size - 1, false);
+      llvm::ArrayRef<uint8_t> expr = GetAsyncRegFromFramePointerDWARFExpr(
+          arch.GetMachine(), false /*with_deref*/);
+      row->SetRegisterLocationToIsDWARFExpression(
+          regnums->async_ctx_regnum, expr.data(), expr.size(), false);
     }
   } else {
     // In the first part of a split async function, the context is passed
