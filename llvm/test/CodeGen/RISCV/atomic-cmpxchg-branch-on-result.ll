@@ -36,6 +36,7 @@ define void @cmpxchg_and_branch1(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; ZACAS:       # %bb.0: # %entry
 ; ZACAS-NEXT:  .LBB0_1: # %do_cmpxchg
 ; ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; ZACAS-NEXT:    fence rw, rw
 ; ZACAS-NEXT:    mv a3, a1
 ; ZACAS-NEXT:    amocas.w.aqrl a3, a2, (a0)
 ; ZACAS-NEXT:    bne a3, a1, .LBB0_1
@@ -76,6 +77,7 @@ define void @cmpxchg_and_branch2(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; ZACAS:       # %bb.0: # %entry
 ; ZACAS-NEXT:  .LBB1_1: # %do_cmpxchg
 ; ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; ZACAS-NEXT:    fence rw, rw
 ; ZACAS-NEXT:    mv a3, a1
 ; ZACAS-NEXT:    amocas.w.aqrl a3, a2, (a0)
 ; ZACAS-NEXT:    beq a3, a1, .LBB1_1
@@ -216,6 +218,7 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZABHA:       # %bb.0: # %entry
 ; RV64IA-ZABHA-NEXT:  .LBB2_1: # %do_cmpxchg
 ; RV64IA-ZABHA-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-ZABHA-NEXT:    mv a3, a1
 ; RV64IA-ZABHA-NEXT:    amocas.b.aqrl a3, a2, (a0)
 ; RV64IA-ZABHA-NEXT:    bne a3, a1, .LBB2_1
@@ -368,6 +371,7 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZABHA:       # %bb.0: # %entry
 ; RV64IA-ZABHA-NEXT:  .LBB3_1: # %do_cmpxchg
 ; RV64IA-ZABHA-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZABHA-NEXT:    fence rw, rw
 ; RV64IA-ZABHA-NEXT:    mv a3, a1
 ; RV64IA-ZABHA-NEXT:    amocas.b.aqrl a3, a2, (a0)
 ; RV64IA-ZABHA-NEXT:    beq a3, a1, .LBB3_1
@@ -408,6 +412,7 @@ define void @cmpxchg_and_irrelevant_branch(ptr %ptr, i32 signext %cmp, i32 signe
 ; ZACAS:       # %bb.0: # %entry
 ; ZACAS-NEXT:  .LBB4_1: # %do_cmpxchg
 ; ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; ZACAS-NEXT:    fence rw, rw
 ; ZACAS-NEXT:    mv a4, a1
 ; ZACAS-NEXT:    amocas.w.aqrl a4, a2, (a0)
 ; ZACAS-NEXT:    beqz a3, .LBB4_1

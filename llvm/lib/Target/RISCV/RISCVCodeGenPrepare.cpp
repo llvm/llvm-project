@@ -10,6 +10,8 @@
 // It munges the code in the input function to better prepare it for
 // SelectionDAG-based code generation. This works around limitations in it's
 // basic-block-at-a-time approach.
+// It additionally implements a fence insertion for an atomic cmpxchg in a
+// case that isn't easy to do with the current AtomicExpandPass hooks API.
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,6 +61,7 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
+  bool visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
 };
 
 } // end anonymous namespace
@@ -209,6 +212,19 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
+  return true;
+}
+
+// Insert a leading fence (needed for broadest atomics ABI compatibility)
+// only if the Zacas extension is enabled and the AtomicCmpXchgInst has a
+// SequentiallyConsistent failure ordering.
+bool RISCVCodeGenPrepare::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  IRBuilder<> Builder(&I);
+  if (!ST->hasStdExtZacas() ||
+      I.getFailureOrdering() != AtomicOrdering::SequentiallyConsistent)
+    return false;
+
+  Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
   return true;
 }
 
