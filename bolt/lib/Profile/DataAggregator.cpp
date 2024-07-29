@@ -638,8 +638,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
                                             : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    if (getBranchData(BF) || getFuncSampleData(BF.getNames()))
+    FuncBranchData *FBD = getBranchData(BF);
+    if (FBD || getFuncSampleData(BF.getNames())) {
       BF.markProfiled(Flags);
+      if (FBD)
+        BF.RawBranchCount = FBD->getNumExecutedBranches();
+    }
   }
 
   for (auto &FuncBranches : NamesToBranches)
