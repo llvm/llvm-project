@@ -4077,6 +4077,7 @@ class Config:
 conf = Config()
 
 __all__ = [
+    "AccessSpecifier",
     "AvailabilityKind",
     "BinaryOperator",
     "Config",
@@ -4087,12 +4088,16 @@ __all__ = [
     "CursorKind",
     "Cursor",
     "Diagnostic",
+    "ExceptionSpecificationKind",
     "File",
     "FixIt",
     "Index",
     "LinkageKind",
+    "RefQualifierKind",
     "SourceLocation",
     "SourceRange",
+    "StorageClass",
+    "TemplateArgumentKind",
     "TLSKind",
     "TokenKind",
     "Token",

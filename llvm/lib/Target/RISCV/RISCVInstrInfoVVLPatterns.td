@@ -2934,18 +2934,16 @@ foreach vti = NoGroupFloatVectors in {
                                              (vti.Scalar (SelectFPImm (XLenVT GPR:$imm))),
                                              VLOpFrag)),
               (PseudoVMV_S_X $merge, GPR:$imm, GPR:$vl, vti.Log2SEW)>;
+    def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
+                                             vti.ScalarRegClass:$rs1,
+                                             VLOpFrag)),
+              (!cast<Instruction>("PseudoVFMV_S_"#vti.ScalarSuffix)
+                  vti.RegClass:$merge,
+                  (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.Log2SEW)>;
   }
 }
 
 foreach vti = AllFloatVectors in {
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
-                                             vti.ScalarRegClass:$rs1,
-                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMV_S_"#vti.ScalarSuffix#"_"#vti.LMul.MX)
-                  vti.RegClass:$merge,
-                  (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.Log2SEW)>;
-  }
   defvar ivti = GetIntVTypeInfo<vti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(vti.Vector
