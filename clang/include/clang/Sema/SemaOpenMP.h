@@ -398,8 +398,7 @@ public:
   StmtResult ActOnOpenMPExecutableDirective(
       OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
       OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
-      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
-      OpenMPDirectiveKind PrevMappedDirective = llvm::omp::OMPD_unknown);
+      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp parallel' after parsing
   /// of the  associated statement.
   StmtResult ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,
@@ -423,6 +422,15 @@ public:
   StmtResult ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
                                         Stmt *AStmt, SourceLocation StartLoc,
                                         SourceLocation EndLoc);
+  /// Called on well-formed '#pragma omp reverse'.
+  StmtResult ActOnOpenMPReverseDirective(Stmt *AStmt, SourceLocation StartLoc,
+                                         SourceLocation EndLoc);
+  /// Called on well-formed '#pragma omp interchange' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPInterchangeDirective(ArrayRef<OMPClause *> Clauses,
+                                             Stmt *AStmt,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult
@@ -1421,26 +1429,6 @@ private:
 
   /// All `omp assumes` we encountered so far.
   SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
-
-  /// OMPD_loop is mapped to OMPD_for, OMPD_distribute or OMPD_simd depending
-  /// on the parameter of the bind clause. In the methods for the
-  /// mapped directives, check the parameters of the lastprivate clause.
-  bool checkLastPrivateForMappedDirectives(ArrayRef<OMPClause *> Clauses);
-  /// Depending on the bind clause of OMPD_loop map the directive to new
-  /// directives.
-  ///    1) loop bind(parallel) --> OMPD_for
-  ///    2) loop bind(teams) --> OMPD_distribute
-  ///    3) loop bind(thread) --> OMPD_simd
-  /// This is being handled in Sema instead of Codegen because of the need for
-  /// rigorous semantic checking in the new mapped directives.
-  bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
-                        ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind &BindKind,
-                        OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective,
-                        SourceLocation StartLoc, SourceLocation EndLoc,
-                        const DeclarationNameInfo &DirName,
-                        OpenMPDirectiveKind CancelRegion);
 };
 
 } // namespace clang

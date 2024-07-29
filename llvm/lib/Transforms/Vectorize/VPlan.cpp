@@ -254,6 +254,7 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
 Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
   if (NeedsScalar) {
     assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def, Part) ||
+            !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPIteration(Part, 0)) &&
              Data.PerPartScalars[Def][Part].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "

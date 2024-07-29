@@ -1986,6 +1986,9 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
     return false;
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
+  if (!Destructor)
+    return false;
+
   SemaRef.CheckDestructorAccess(Loc, Destructor,
                                 SemaRef.PDiag(diag::err_access_dtor_temp)
                                 << ElementType);
@@ -2016,7 +2019,7 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
     QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getType();
+    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
     const bool TypesMatch =
         Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
         (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());

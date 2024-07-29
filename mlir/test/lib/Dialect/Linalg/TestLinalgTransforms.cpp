@@ -127,6 +127,9 @@ struct TestLinalgTransforms
       *this, "test-winograd-conv2d",
       llvm::cl::desc("Test transform conv2d by Winograd conv2d algorithm"),
       llvm::cl::init(false)};
+  Option<bool> testDecomposeWinogradOps{
+      *this, "test-decompose-winograd-ops",
+      llvm::cl::desc("Test decompose Winograd ops"), llvm::cl::init(false)};
 };
 } // namespace
 
@@ -218,6 +221,12 @@ static void applyWinogradConv2D(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
+static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateDecomposeWinogradOpsPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   if (testPatterns)
@@ -244,6 +253,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyEraseUnnecessaryInputs(getOperation());
   if (testWinogradConv2D)
     return applyWinogradConv2D(getOperation());
+  if (testDecomposeWinogradOps)
+    return applyDecomposeWinogradOps(getOperation());
 }
 
 namespace mlir {

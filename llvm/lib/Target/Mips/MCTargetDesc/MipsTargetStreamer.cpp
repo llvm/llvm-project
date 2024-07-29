@@ -801,6 +801,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
     : MipsTargetStreamer(S), MicroMipsEnabled(false), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
 
   // It's possible that MCObjectFileInfo isn't fully initialized at this point
   // due to an initialization order problem where LLVMTargetMachine creates the
@@ -824,7 +825,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // We can fix this by making the target streamer construct
   // the ABI, but this is fraught with wide ranging dependency
   // issues as well.
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   // FIXME: Fix a dependency issue by instantiating the ABI object to some
   // default based off the triple. The triple doesn't describe the target
@@ -873,7 +874,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   if (Features[Mips::FeatureNaN2008])
     EFlags |= ELF::EF_MIPS_NAN2008;
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
@@ -889,6 +890,7 @@ void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
 
 void MipsTargetELFStreamer::finish() {
   MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
   const MCObjectFileInfo &OFI = *MCA.getContext().getObjectFileInfo();
   MCELFStreamer &S = getStreamer();
 
@@ -925,7 +927,7 @@ void MipsTargetELFStreamer::finish() {
 
   // Update e_header flags. See the FIXME and comment above in
   // the constructor for a full rundown on this.
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   // ABI
   // N64 does not require any ABI bits.
@@ -948,7 +950,7 @@ void MipsTargetELFStreamer::finish() {
   if (Pic)
     EFlags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 
   // Emit all the option records.
   // At the moment we are only emitting .Mips.options (ODK_REGINFO) and
@@ -988,25 +990,25 @@ void MipsTargetELFStreamer::emitDirectiveSetNoMicroMips() {
 }
 
 void MipsTargetELFStreamer::setUsesMicroMips() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Flags |= ELF::EF_MIPS_MICROMIPS;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetMips16() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Flags |= ELF::EF_MIPS_ARCH_ASE_M16;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
   forbidModuleDirective();
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetNoReorder() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Flags |= ELF::EF_MIPS_NOREORDER;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
   forbidModuleDirective();
 }
 
@@ -1063,45 +1065,45 @@ void MipsTargetELFStreamer::emitDirectiveEnt(const MCSymbol &Symbol) {
 }
 
 void MipsTargetELFStreamer::emitDirectiveAbiCalls() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Flags |= ELF::EF_MIPS_CPIC | ELF::EF_MIPS_PIC;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveNaN2008() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Flags |= ELF::EF_MIPS_NAN2008;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveNaNLegacy() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Flags &= ~ELF::EF_MIPS_NAN2008;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveOptionPic0() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   // This option overrides other PIC options like -KPIC.
   Pic = false;
   Flags &= ~ELF::EF_MIPS_PIC;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveOptionPic2() {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned Flags = W.getELFHeaderEFlags();
   Pic = true;
   // NOTE: We are following the GAS behaviour here which means the directive
   // 'pic2' also sets the CPIC bit in the ELF header. This is different from
   // what is stated in the SYSV ABI which consider the bits EF_MIPS_PIC and
   // EF_MIPS_CPIC to be mutually exclusive.
   Flags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
-  MCA.setELFHeaderEFlags(Flags);
+  W.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveInsn() {

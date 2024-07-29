@@ -1746,6 +1746,7 @@ private:
   bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
+  bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
@@ -3868,7 +3869,8 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
   int TFEIdx   = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::tfe);
 
-  assert(VDataIdx != -1);
+  if (VDataIdx == -1 && isGFX10Plus()) // no return image_sample
+    return true;
 
   if ((DMaskIdx == -1 || TFEIdx == -1) && isGFX10_AEncoding()) // intersect_ray
     return true;
@@ -4008,6 +4010,29 @@ bool AMDGPUAsmParser::validateMIMGGatherDMask(const MCInst &Inst) {
   // (red,red,red,red) etc.) The ISA document doesn't mention
   // this.
   return DMask == 0x1 || DMask == 0x2 || DMask == 0x4 || DMask == 0x8;
+}
+
+bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst,
+                                      const OperandVector &Operands) {
+  if (!isGFX10Plus())
+    return true;
+
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & MIMGFlags) == 0)
+    return true;
+
+  // image_bvh_intersect_ray instructions do not have dim
+  if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
+    return true;
+
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    if (Op.isDim())
+      return true;
+  }
+  return false;
 }
 
 bool AMDGPUAsmParser::validateMIMGMSAA(const MCInst &Inst) {
@@ -5096,6 +5121,10 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGD16(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "d16 modifier is not supported on this GPU");
+    return false;
+  }
+  if (!validateMIMGDim(Inst, Operands)) {
+    Error(IDLoc, "missing dim operand");
     return false;
   }
   if (!validateMIMGMSAA(Inst)) {
@@ -8648,10 +8677,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isImmModifier()) {
       OptionalIdx[Op.getImmTy()] = I;
-    } else if (Op.isRegOrImm()) {
-      Op.addRegOrImmOperands(Inst, 1);
     } else {
-      llvm_unreachable("unhandled operand type");
+      Op.addRegOrImmOperands(Inst, 1);
     }
   }
 

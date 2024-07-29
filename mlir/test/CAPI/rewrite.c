@@ -68,6 +68,8 @@ void testInsertionPoint(MlirContext ctx) {
   // Get insertion blocks
   MlirBlock block1 = mlirRewriterBaseGetBlock(rewriter);
   MlirBlock block2 = mlirRewriterBaseGetInsertionBlock(rewriter);
+  (void)block1;
+  (void)block2;
   assert(body.ptr == block1.ptr);
   assert(body.ptr == block2.ptr);
 

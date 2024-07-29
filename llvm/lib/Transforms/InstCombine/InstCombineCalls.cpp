@@ -171,7 +171,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
 
   // If the memcpy has metadata describing the members, see if we can get the
-  // TBAA tag describing our copy.
+  // TBAA, scope and noalias tags describing our copy.
   AAMDNodes AACopyMD = MI->getAAMetadata().adjustForAccess(Size);
 
   Value *Src = MI->getArgOperand(1);
@@ -692,12 +692,24 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                             Ty);
 
   // Add range attribute since known bits can't completely reflect what we know.
-  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
-      !II.getMetadata(LLVMContext::MD_range)) {
-    ConstantRange Range(APInt(BitWidth, Known.countMinPopulation()),
-                        APInt(BitWidth, Known.countMaxPopulation() + 1));
-    II.addRangeRetAttr(Range);
-    return &II;
+  if (BitWidth != 1) {
+    ConstantRange OldRange =
+        II.getRange().value_or(ConstantRange::getFull(BitWidth));
+
+    unsigned Lower = Known.countMinPopulation();
+    unsigned Upper = Known.countMaxPopulation() + 1;
+
+    if (Lower == 0 && OldRange.contains(APInt::getZero(BitWidth)) &&
+        isKnownNonZero(Op0, IC.getSimplifyQuery().getWithInstruction(&II)))
+      Lower = 1;
+
+    ConstantRange Range(APInt(BitWidth, Lower), APInt(BitWidth, Upper));
+    Range = Range.intersectWith(OldRange, ConstantRange::Unsigned);
+
+    if (Range != OldRange) {
+      II.addRangeRetAttr(Range);
+      return &II;
+    }
   }
 
   return nullptr;
@@ -1500,10 +1512,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // Don't try to simplify calls without uses. It will not do anything useful,
   // but will result in the following folds being skipped.
   if (!CI.use_empty()) {
-    SmallVector<Value *, 4> Args;
-    Args.reserve(CI.arg_size());
-    for (Value *Op : CI.args())
-      Args.push_back(Op);
+    SmallVector<Value *, 8> Args(CI.args());
     if (Value *V = simplifyCall(&CI, CI.getCalledOperand(), Args,
                                 SQ.getWithInstruction(&CI)))
       return replaceInstUsesWith(CI, V);
@@ -2480,6 +2489,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // fma fneg(x), fneg(y), z -> fma x, y, z
     Value *Src0 = II->getArgOperand(0);
     Value *Src1 = II->getArgOperand(1);
+    Value *Src2 = II->getArgOperand(2);
     Value *X, *Y;
     if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y)))) {
       replaceOperand(*II, 0, X);
@@ -2497,10 +2507,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
-    if (Value *V = simplifyFMAFMul(II->getArgOperand(0), II->getArgOperand(1),
-                                   II->getFastMathFlags(),
+    if (Value *V = simplifyFMAFMul(Src0, Src1, II->getFastMathFlags(),
                                    SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, II->getArgOperand(2));
+      auto *FAdd = BinaryOperator::CreateFAdd(V, Src2);
       FAdd->copyFastMathFlags(II);
       return FAdd;
     }
@@ -2508,10 +2517,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // fma x, y, 0 -> fmul x, y
     // This is always valid for -0.0, but requires nsz for +0.0 as
     // -0.0 + 0.0 = 0.0, which would not be the same as the fmul on its own.
-    if (match(II->getArgOperand(2), m_NegZeroFP()) ||
-        (match(II->getArgOperand(2), m_PosZeroFP()) &&
-         II->getFastMathFlags().noSignedZeros()))
+    if (match(Src2, m_NegZeroFP()) ||
+        (match(Src2, m_PosZeroFP()) && II->getFastMathFlags().noSignedZeros()))
       return BinaryOperator::CreateFMulFMF(Src0, Src1, II);
+
+    // fma x, -1.0, y -> fsub y, x
+    if (match(Src1, m_SpecificFP(-1.0)))
+      return BinaryOperator::CreateFSubFMF(Src2, Src0, II);
 
     break;
   }
@@ -3028,10 +3040,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // assume( (load addr) != null ) -> add 'nonnull' metadata to load
     // (if assume is valid at the load)
-    CmpInst::Predicate Pred;
     Instruction *LHS;
-    if (match(IIOperand, m_ICmp(Pred, m_Instruction(LHS), m_Zero())) &&
-        Pred == ICmpInst::ICMP_NE && LHS->getOpcode() == Instruction::Load &&
+    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_NE, m_Instruction(LHS),
+                                        m_Zero())) &&
+        LHS->getOpcode() == Instruction::Load &&
         LHS->getType()->isPointerTy() &&
         isValidAssumeForContext(II, LHS, &DT)) {
       MDNode *MD = MDNode::get(II->getContext(), std::nullopt);
@@ -3070,8 +3082,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
     if (EnableKnowledgeRetention &&
-        match(IIOperand, m_Cmp(Pred, m_Value(A), m_Zero())) &&
-        Pred == CmpInst::ICMP_NE && A->getType()->isPointerTy()) {
+        match(IIOperand,
+              m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
+        A->getType()->isPointerTy()) {
       if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
@@ -3091,9 +3104,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     uint64_t AlignMask;
     if (EnableKnowledgeRetention &&
         match(IIOperand,
-              m_Cmp(Pred, m_And(m_Value(A), m_ConstantInt(AlignMask)),
-                    m_Zero())) &&
-        Pred == CmpInst::ICMP_EQ) {
+              m_SpecificICmp(ICmpInst::ICMP_EQ,
+                             m_And(m_Value(A), m_ConstantInt(AlignMask)),
+                             m_Zero()))) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
@@ -3430,8 +3443,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAddReduce(Vect);
             if (Arg != Vect)
               Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
@@ -3460,8 +3473,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAndReduce(Vect);
             if (Res->getType() != II->getType())
               Res = Builder.CreateZExt(Res, II->getType());
@@ -3491,8 +3504,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = IID == Intrinsic::vector_reduce_umin
                              ? Builder.CreateAndReduce(Vect)
                              : Builder.CreateOrReduce(Vect);
@@ -3533,8 +3546,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-          if (FTy->getElementType() == Builder.getInt1Ty()) {
+        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
+          if (VTy->getElementType() == Builder.getInt1Ty()) {
             Instruction::CastOps ExtOpc = Instruction::CastOps::CastOpsEnd;
             if (Arg != Vect)
               ExtOpc = cast<CastInst>(Arg)->getOpcode();

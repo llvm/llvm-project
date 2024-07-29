@@ -174,6 +174,17 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
+static cl::opt<bool> ImportAssumeUniqueLocal(
+    "import-assume-unique-local", cl::init(false),
+    cl::desc(
+        "By default, a local-linkage global variable won't be imported in the "
+        "edge mod1:func -> mod2:local-var (from value profiles) since compiler "
+        "cannot assume mod2 is compiled with full path which gives local-var a "
+        "program-wide unique GUID. Set this option to true will help cross "
+        "module import of such variables. This is only safe if the compiler "
+        "user specify the full module path."),
+    cl::Hidden);
+
 static cl::opt<std::string>
     ContextualProfile("thinlto-pgo-ctx-prof",
                       cl::desc("Path to a contextual profile."), cl::Hidden);
@@ -198,6 +209,23 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   }
 
   return Result;
+}
+
+static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
+                                           size_t NumDefs,
+                                           StringRef ImporterModule) {
+  // We can import a local from another module if all inputs are compiled
+  // with full paths or when there is one definition.
+  if (ImportAssumeUniqueLocal || NumDefs == 1)
+    return false;
+  // In other cases, make sure we import the copy in the caller's module if the
+  // referenced value has local linkage. The only time a local variable can
+  // share an entry in the index is if there is a local with the same name in
+  // another module that had the same source file name (in a different
+  // directory), where each was compiled in their own directory so there was not
+  // distinguishing path.
+  return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
+         RefSummary->modulePath() != ImporterModule;
 }
 
 /// Given a list of possible callee implementation for a call site, qualify the
@@ -232,19 +260,20 @@ static auto qualifyCalleeCandidates(
         if (!Summary)
           return {FunctionImporter::ImportFailureReason::GlobalVar, GVSummary};
 
-        // If this is a local function, make sure we import the copy
-        // in the caller's module. The only time a local function can
-        // share an entry in the index is if there is a local with the same name
-        // in another module that had the same source file name (in a different
-        // directory), where each was compiled in their own directory so there
-        // was not distinguishing path.
-        // However, do the import from another module if there is only one
-        // entry in the list - in that case this must be a reference due
-        // to indirect call profile data, since a function pointer can point to
-        // a local in another module.
-        if (GlobalValue::isLocalLinkage(Summary->linkage()) &&
-            CalleeSummaryList.size() > 1 &&
-            Summary->modulePath() != CallerModulePath)
+        // If this is a local function, make sure we import the copy in the
+        // caller's module. The only time a local function can share an entry in
+        // the index is if there is a local with the same name in another module
+        // that had the same source file name (in a different directory), where
+        // each was compiled in their own directory so there was not
+        // distinguishing path.
+        // If the local function is from another module, it must be a reference
+        // due to indirect call profile data since a function pointer can point
+        // to a local in another module. Do the import from another module if
+        // there is only one entry in the list or when all files in the program
+        // are compiled with full path - in both cases the local function has
+        // unique PGO name and GUID.
+        if (shouldSkipLocalInAnotherModule(Summary, CalleeSummaryList.size(),
+                                           CallerModulePath))
           return {
               FunctionImporter::ImportFailureReason::LocalLinkageNotInModule,
               GVSummary};
@@ -363,18 +392,6 @@ class GlobalsImporter final {
 
       LLVM_DEBUG(dbgs() << " ref -> " << VI << "\n");
 
-      // If this is a local variable, make sure we import the copy
-      // in the caller's module. The only time a local variable can
-      // share an entry in the index is if there is a local with the same name
-      // in another module that had the same source file name (in a different
-      // directory), where each was compiled in their own directory so there
-      // was not distinguishing path.
-      auto LocalNotInModule =
-          [&](const GlobalValueSummary *RefSummary) -> bool {
-        return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
-               RefSummary->modulePath() != Summary.modulePath();
-      };
-
       for (const auto &RefSummary : VI.getSummaryList()) {
         const auto *GVS = dyn_cast<GlobalVarSummary>(RefSummary.get());
         // Functions could be referenced by global vars - e.g. a vtable; but we
@@ -383,7 +400,8 @@ class GlobalsImporter final {
         // based on profile information). Should we decide to handle them here,
         // we can refactor accordingly at that time.
         if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
-            LocalNotInModule(GVS))
+            shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
+                                           Summary.modulePath()))
           continue;
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.

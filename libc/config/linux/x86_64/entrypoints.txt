@@ -364,6 +364,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -382,6 +383,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.dmull
+    libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -395,6 +398,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd 
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -437,6 +441,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.fmodl
     libc.src.math.fmul
+    libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -446,6 +451,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -535,6 +542,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
@@ -561,6 +571,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16fma
     libc.src.math.f16fmaf
     libc.src.math.f16fmal
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
+    libc.src.math.f16mull
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
     libc.src.math.f16sqrtl
@@ -622,6 +635,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
       libc.src.math.f16addf128
       libc.src.math.f16divf128
       libc.src.math.f16fmaf128
+      libc.src.math.f16mulf128
       libc.src.math.f16sqrtf128
       libc.src.math.f16subf128
     )
@@ -634,6 +648,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.dmulf128
+    libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -648,9 +664,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fminimum_numf128
     libc.src.math.fminimumf128
     libc.src.math.fmodf128
+    libc.src.math.fmulf128
     libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
+    libc.src.math.fsqrtf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -671,6 +689,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundf128
     libc.src.math.scalbnf128
     libc.src.math.sqrtf128
+    libc.src.math.totalordermagf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
@@ -771,6 +790,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlock_clockrdlock
+    libc.src.pthread.pthread_rwlock_clockwrlock
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
     libc.src.pthread.pthread_rwlock_rdlock

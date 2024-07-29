@@ -11526,6 +11526,7 @@
 #CHECK: may	%f0, %f15, 0            # encoding: [0xed,0xf0,0x00,0x00,0x00,0x3a]
 #CHECK: may	%f13, %f0, 0            # encoding: [0xed,0x00,0x00,0x00,0xd0,0x3a]
 #CHECK: may	%f13, %f15, 0           # encoding: [0xed,0xf0,0x00,0x00,0xd0,0x3a]
+#CHECK: may	%f2, %f0, 0             # encoding: [0xed,0x00,0x00,0x00,0x20,0x3a]
 
 	may	%f0, %f0, 0
 	may	%f0, %f0, 4095
@@ -11536,6 +11537,7 @@
 	may	%f0, %f15, 0
 	may	%f13, %f0, 0
 	may	%f13, %f15, 0
+	may	%f2, %f0, 0
 
 #CHECK: mayh	%f0, %f0, 0             # encoding: [0xed,0x00,0x00,0x00,0x00,0x3c]
 #CHECK: mayh	%f0, %f0, 4095          # encoding: [0xed,0x00,0x0f,0xff,0x00,0x3c]
@@ -11611,6 +11613,7 @@
 #CHECK: mayr	%f13, %f0, %f0          # encoding: [0xb3,0x3a,0xd0,0x00]
 #CHECK: mayr	%f5, %f8, %f9           # encoding: [0xb3,0x3a,0x50,0x89]
 #CHECK: mayr	%f13, %f15, %f15        # encoding: [0xb3,0x3a,0xd0,0xff]
+#CHECK: mayr	%f2, %f0, %f0           # encoding: [0xb3,0x3a,0x20,0x00]
 
 	mayr	%f0, %f0, %f0
 	mayr	%f0, %f0, %f15
@@ -11618,6 +11621,7 @@
 	mayr	%f13, %f0, %f0
 	mayr	%f5, %f8, %f9
 	mayr	%f13, %f15, %f15
+	mayr	%f2, %f0, %f0
 
 #CHECK: mc	0, 0                    # encoding: [0xaf,0x00,0x00,0x00]
 #CHECK: mc	4095, 0                 # encoding: [0xaf,0x00,0x0f,0xff]

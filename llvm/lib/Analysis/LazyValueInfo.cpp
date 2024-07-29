@@ -428,6 +428,8 @@ class LazyValueInfoImpl {
   std::optional<ValueLatticeElement> solveBlockValueIntrinsic(IntrinsicInst *II,
                                                               BasicBlock *BB);
   std::optional<ValueLatticeElement>
+  solveBlockValueInsertElement(InsertElementInst *IEI, BasicBlock *BB);
+  std::optional<ValueLatticeElement>
   solveBlockValueExtractValue(ExtractValueInst *EVI, BasicBlock *BB);
   bool isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
@@ -656,6 +658,9 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
 
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI))
       return solveBlockValueBinaryOp(BO, BB);
+
+    if (auto *IEI = dyn_cast<InsertElementInst>(BBI))
+      return solveBlockValueInsertElement(IEI, BB);
 
     if (auto *EVI = dyn_cast<ExtractValueInst>(BBI))
       return solveBlockValueExtractValue(EVI, BB);
@@ -1036,6 +1041,24 @@ LazyValueInfoImpl::solveBlockValueIntrinsic(IntrinsicInst *II, BasicBlock *BB) {
   return intersect(ValueLatticeElement::getRange(ConstantRange::intrinsic(
                        II->getIntrinsicID(), OpRanges)),
                    MetadataVal);
+}
+
+std::optional<ValueLatticeElement>
+LazyValueInfoImpl::solveBlockValueInsertElement(InsertElementInst *IEI,
+                                                BasicBlock *BB) {
+  std::optional<ValueLatticeElement> OptEltVal =
+      getBlockValue(IEI->getOperand(1), BB, IEI);
+  if (!OptEltVal)
+    return std::nullopt;
+  ValueLatticeElement &Res = *OptEltVal;
+
+  std::optional<ValueLatticeElement> OptVecVal =
+      getBlockValue(IEI->getOperand(0), BB, IEI);
+  if (!OptVecVal)
+    return std::nullopt;
+
+  Res.mergeIn(*OptVecVal);
+  return Res;
 }
 
 std::optional<ValueLatticeElement>

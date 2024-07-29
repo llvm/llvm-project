@@ -95,9 +95,6 @@ private:
 
   std::mutex LocListDebugInfoPatchesMutex;
 
-  /// Dwo id specific its RangesBase.
-  std::unordered_map<uint64_t, uint64_t> DwoRangesBase;
-
   std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
   std::unordered_map<const DWARFUnit *, uint64_t> TypeUnitRelocMap;
 
@@ -190,12 +187,6 @@ public:
 
   /// Update stmt_list for CUs based on the new .debug_line \p Layout.
   void updateLineTableOffsets(const MCAssembler &Asm);
-
-  uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
-
-  void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
-    DwoRangesBase[DWOId] = RangesBase;
-  }
 
   using OverriddenSectionsMap = std::unordered_map<DWARFSectionKind, StringRef>;
   /// Output .dwo files.

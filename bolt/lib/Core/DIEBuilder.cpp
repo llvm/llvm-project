@@ -78,7 +78,7 @@ static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
   uint32_t NewOffset = StrWriter.addString(Str);
   if (Unit.getVersion() >= 5) {
     StrOffstsWriter.updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
-                                     NewOffset);
+                                     NewOffset, Unit);
     return;
   }
   DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
@@ -552,25 +552,6 @@ void DIEBuilder::finish() {
 }
 
 DWARFDie DIEBuilder::resolveDIEReference(
-    const DWARFFormValue &RefValue,
-    const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-    DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry) {
-  assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset;
-  if (std::optional<uint64_t> Off = RefValue.getAsRelativeReference()) {
-    RefOffset = RefValue.getUnit()->getOffset() + *Off;
-  } else if (Off = RefValue.getAsDebugInfoReference(); Off) {
-    RefOffset = *Off;
-  } else {
-    BC.errs()
-        << "BOLT-WARNING: [internal-dwarf-error]: unsupported reference type: "
-        << FormEncodingString(RefValue.getForm()) << ".\n";
-    return DWARFDie();
-  }
-  return resolveDIEReference(AttrSpec, RefOffset, RefCU, DwarfDebugInfoEntry);
-}
-
-DWARFDie DIEBuilder::resolveDIEReference(
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     const uint64_t RefOffset, DWARFUnit *&RefCU,
     DWARFDebugInfoEntry &DwarfDebugInfoEntry) {
@@ -613,23 +594,14 @@ DWARFDie DIEBuilder::resolveDIEReference(
   return DWARFDie();
 }
 
-void DIEBuilder::cloneDieReferenceAttribute(
+void DIEBuilder::cloneDieOffsetReferenceAttribute(
     DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
-    const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-    const DWARFFormValue &Val) {
-  uint64_t Ref;
-  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
-    Ref = Val.getUnit()->getOffset() + *Off;
-  else if (Off = Val.getAsDebugInfoReference(); Off)
-    Ref = *Off;
-  else
-    return;
-
+    const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref) {
   DIE *NewRefDie = nullptr;
   DWARFUnit *RefUnit = nullptr;
 
   DWARFDebugInfoEntry DDIEntry;
-  const DWARFDie RefDie = resolveDIEReference(Val, AttrSpec, RefUnit, DDIEntry);
+  const DWARFDie RefDie = resolveDIEReference(AttrSpec, Ref, RefUnit, DDIEntry);
 
   if (!RefDie)
     return;
@@ -834,7 +806,7 @@ void DIEBuilder::cloneAddressAttribute(
 void DIEBuilder::cloneRefsigAttribute(
     DIE &Die, DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     const DWARFFormValue &Val) {
-  const std::optional<uint64_t> SigVal = Val.getRawUValue();
+  const std::optional<uint64_t> SigVal = Val.getAsSignatureReference();
   Die.addValue(getState().DIEAlloc, AttrSpec.Attr, dwarf::DW_FORM_ref_sig8,
                DIEInteger(*SigVal));
 }
@@ -902,11 +874,16 @@ void DIEBuilder::cloneAttribute(
     cloneStringAttribute(Die, U, AttrSpec, Val);
     break;
   case dwarf::DW_FORM_ref_addr:
+    cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
+                                     *Val.getAsDebugInfoReference());
+    break;
   case dwarf::DW_FORM_ref1:
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_ref8:
-    cloneDieReferenceAttribute(Die, U, InputDIE, AttrSpec, Val);
+    cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
+                                     Val.getUnit()->getOffset() +
+                                         *Val.getAsRelativeReference());
     break;
   case dwarf::DW_FORM_block:
   case dwarf::DW_FORM_block1:

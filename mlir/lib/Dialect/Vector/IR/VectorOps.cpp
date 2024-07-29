@@ -88,15 +88,14 @@ static MaskFormat getMaskFormat(Value mask) {
     // Inspect constant mask index. If the index exceeds the
     // dimension size, all bits are set. If the index is zero
     // or less, no bits are set.
-    ArrayAttr masks = m.getMaskDimSizes();
+    ArrayRef<int64_t> masks = m.getMaskDimSizes();
     auto shape = m.getType().getShape();
     bool allTrue = true;
     bool allFalse = true;
     for (auto [maskIdx, dimSize] : llvm::zip_equal(masks, shape)) {
-      int64_t i = llvm::cast<IntegerAttr>(maskIdx).getInt();
-      if (i < dimSize)
+      if (maskIdx < dimSize)
         allTrue = false;
-      if (i > 0)
+      if (maskIdx > 0)
         allFalse = false;
     }
     if (allTrue)
@@ -3593,8 +3592,7 @@ public:
     if (extractStridedSliceOp.hasNonUnitStrides())
       return failure();
     // Gather constant mask dimension sizes.
-    SmallVector<int64_t, 4> maskDimSizes;
-    populateFromInt64AttrArray(constantMaskOp.getMaskDimSizes(), maskDimSizes);
+    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
     // Gather strided slice offsets and sizes.
     SmallVector<int64_t, 4> sliceOffsets;
     populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
@@ -3625,7 +3623,7 @@ public:
     // region.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         extractStridedSliceOp, extractStridedSliceOp.getResult().getType(),
-        vector::getVectorSubscriptAttr(rewriter, sliceMaskDimSizes));
+        sliceMaskDimSizes);
     return success();
   }
 };
@@ -5238,6 +5236,16 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
     if (!isValidShapeCast(resultShape, sourceShape))
       return op->emitOpError("invalid shape cast");
   }
+
+  // Check that (non-)scalability is preserved
+  int64_t sourceNScalableDims = sourceVectorType.getNumScalableDims();
+  int64_t resultNScalableDims = resultVectorType.getNumScalableDims();
+  if (sourceNScalableDims != resultNScalableDims)
+    return op->emitOpError("different number of scalable dims at source (")
+           << sourceNScalableDims << ") and result (" << resultNScalableDims
+           << ")";
+  sourceVectorType.getNumDynamicDims();
+
   return success();
 }
 
@@ -5400,21 +5408,19 @@ public:
     }
 
     if (constantMaskOp) {
-      auto maskDimSizes = constantMaskOp.getMaskDimSizes().getValue();
+      auto maskDimSizes = constantMaskOp.getMaskDimSizes();
       auto numMaskOperands = maskDimSizes.size();
 
       // Check every mask dim size to see whether it can be dropped
       for (size_t i = numMaskOperands - 1; i >= numMaskOperands - numDimsToDrop;
            --i) {
-        if (cast<IntegerAttr>(maskDimSizes[i]).getValue() != 1)
+        if (maskDimSizes[i] != 1)
           return failure();
       }
 
       auto newMaskOperands = maskDimSizes.drop_back(numDimsToDrop);
-      ArrayAttr newMaskOperandsAttr = rewriter.getArrayAttr(newMaskOperands);
-
       rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(shapeOp, shapeOpResTy,
-                                                          newMaskOperandsAttr);
+                                                          newMaskOperands);
       return success();
     }
 
@@ -5794,12 +5800,10 @@ public:
 
     // ConstantMaskOp case.
     auto maskDimSizes = constantMaskOp.getMaskDimSizes();
-    SmallVector<Attribute> newMaskDimSizes(maskDimSizes.getValue());
-    applyPermutationToVector(newMaskDimSizes, permutation);
+    auto newMaskDimSizes = applyPermutation(maskDimSizes, permutation);
 
     rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
-        transpOp, transpOp.getResultVectorType(),
-        ArrayAttr::get(transpOp.getContext(), newMaskDimSizes));
+        transpOp, transpOp.getResultVectorType(), newMaskDimSizes);
     return success();
   }
 };
@@ -5822,7 +5826,7 @@ LogicalResult ConstantMaskOp::verify() {
   if (resultType.getRank() == 0) {
     if (getMaskDimSizes().size() != 1)
       return emitError("array attr must have length 1 for 0-D vectors");
-    auto dim = llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt();
+    auto dim = getMaskDimSizes()[0];
     if (dim != 0 && dim != 1)
       return emitError("mask dim size must be either 0 or 1 for 0-D vectors");
     return success();
@@ -5836,9 +5840,8 @@ LogicalResult ConstantMaskOp::verify() {
   // result dimension size.
   auto resultShape = resultType.getShape();
   auto resultScalableDims = resultType.getScalableDims();
-  SmallVector<int64_t, 4> maskDimSizes;
-  for (const auto [index, intAttr] : llvm::enumerate(getMaskDimSizes())) {
-    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
+  ArrayRef<int64_t> maskDimSizes = getMaskDimSizes();
+  for (const auto [index, maskDimSize] : llvm::enumerate(maskDimSizes)) {
     if (maskDimSize < 0 || maskDimSize > resultShape[index])
       return emitOpError(
           "array attr of size out of bounds of vector result dimension size");
@@ -5846,7 +5849,6 @@ LogicalResult ConstantMaskOp::verify() {
         maskDimSize != resultShape[index])
       return emitOpError(
           "only supports 'none set' or 'all set' scalable dimensions");
-    maskDimSizes.push_back(maskDimSize);
   }
   // Verify that if one mask dim size is zero, they all should be zero (because
   // the mask region is a conjunction of each mask dimension interval).
@@ -5863,11 +5865,10 @@ bool ConstantMaskOp::isAllOnesMask() {
   // Check the corner case of 0-D vectors first.
   if (resultType.getRank() == 0) {
     assert(getMaskDimSizes().size() == 1 && "invalid sizes for zero rank mask");
-    return llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt() == 1;
+    return getMaskDimSizes()[0] == 1;
   }
-  for (const auto [resultSize, intAttr] :
+  for (const auto [resultSize, maskDimSize] :
        llvm::zip_equal(resultType.getShape(), getMaskDimSizes())) {
-    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
     if (maskDimSize < resultSize)
       return false;
   }
@@ -5997,9 +5998,8 @@ public:
     }
 
     // Replace 'createMaskOp' with ConstantMaskOp.
-    rewriter.replaceOpWithNewOp<ConstantMaskOp>(
-        createMaskOp, retTy,
-        vector::getVectorSubscriptAttr(rewriter, maskDimSizes));
+    rewriter.replaceOpWithNewOp<ConstantMaskOp>(createMaskOp, retTy,
+                                                maskDimSizes);
     return success();
   }
 };

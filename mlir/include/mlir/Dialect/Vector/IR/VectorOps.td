@@ -300,9 +300,9 @@ def Vector_MultiDimReductionOp :
 
     ```mlir
     %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
-      vector<4x8x16x32xf32> into vector<4x16xf32>
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
-      vector<4x16xf32> into f32
+      vector<4x16xf32> to f32
     ```
   }];
   let builders = [
@@ -2443,7 +2443,7 @@ def Vector_TypeCastOp :
 
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [Pure]>,
-    Arguments<(ins I64ArrayAttr:$mask_dim_sizes)>,
+    Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
   let description = [{
