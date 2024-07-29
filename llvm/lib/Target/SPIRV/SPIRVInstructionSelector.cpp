@@ -88,7 +88,7 @@ public:
                            const RegisterBankInfo &RBI);
   void setupMF(MachineFunction &MF, GISelKnownBits *KB,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
-               BlockFrequencyInfo *BFI) override;
+               BlockFrequencyInfo *BFI, MachineModuleInfo *MMI) override;
   // Common selection code. Instruction-specific selection occurs in spvSelect.
   bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
@@ -279,11 +279,12 @@ SPIRVInstructionSelector::SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                        CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
-                                       BlockFrequencyInfo *BFI) {
-  MMI = &MF.getMMI().getObjFileInfo<SPIRVMachineModuleInfo>();
+                                       BlockFrequencyInfo *BFI,
+                                       MachineModuleInfo *MI) {
+  MMI = &MI->getObjFileInfo<SPIRVMachineModuleInfo>();
   MRI = &MF.getRegInfo();
   GR.setCurrentFunc(MF);
-  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI, MI);
 }
 
 static bool isImm(const MachineOperand &MO, MachineRegisterInfo *MRI);

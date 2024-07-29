@@ -60,11 +60,12 @@ const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                         CodeGenCoverage *CoverageInfo,
                                         ProfileSummaryInfo *PSI,
-                                        BlockFrequencyInfo *BFI) {
+                                        BlockFrequencyInfo *BFI,
+                                        MachineModuleInfo *MMI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
-  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI, MMI);
 }
 
 // Return the wave level SGPR base address if this is a wave address.

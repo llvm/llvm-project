@@ -78,8 +78,8 @@ public:
 
   void setupMF(MachineFunction &MF, GISelKnownBits *KB,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
-               BlockFrequencyInfo *BFI) override {
-    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+               BlockFrequencyInfo *BFI, MachineModuleInfo *MMI) override {
+    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI, MMI);
     MIB.setMF(MF);
 
     // hasFnAttribute() is expensive to call on every BRCOND selection, so

@@ -43,6 +43,7 @@ class MachineInstr;
 class MachineIRBuilder;
 class MachineInstrBuilder;
 class MachineFunction;
+class MachineModuleInfo;
 class MachineOperand;
 class MachineRegisterInfo;
 class RegisterBankInfo;
@@ -582,7 +583,8 @@ public:
   virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
-                       BlockFrequencyInfo *bfi = nullptr) {
+                       BlockFrequencyInfo *bfi = nullptr,
+                       MachineModuleInfo *MMI = nullptr) {
     CoverageInfo = covinfo;
     KB = kb;
     MF = &mf;

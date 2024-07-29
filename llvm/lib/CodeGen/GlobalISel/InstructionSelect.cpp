@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -102,9 +103,10 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
   }
 
+  auto *MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   CodeGenCoverage CoverageInfo;
   assert(ISel && "Cannot work without InstructionSelector");
-  ISel->setupMF(MF, KB, &CoverageInfo, PSI, BFI);
+  ISel->setupMF(MF, KB, &CoverageInfo, PSI, BFI, MMI);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
