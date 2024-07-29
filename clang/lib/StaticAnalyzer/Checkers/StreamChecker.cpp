@@ -756,7 +756,7 @@ protected:
   bool doesFnIntendToHandleOwnership(const Decl *Callee,
                                      ASTContext &ACtx) final {
     using namespace clang::ast_matchers;
-    const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
+    const FunctionDecl *FD = cast<FunctionDecl>(Callee);
 
     auto Matches =
         match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
