@@ -165,7 +165,7 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.s }, p1, [sp]
 ; CHECK-NEXT:    cntp x8, p2, p1.s
-; CHECK-NEXT:    and x8, x8, #0xffffffff
+; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
@@ -196,9 +196,9 @@ define <vscale x 64 x i8> @test_compress_very_large(<vscale x 64 x i8> %vec, <vs
 ; CHECK-NEXT:    cntp x8, p4, p0.b
 ; CHECK-NEXT:    cntp x9, p4, p2.b
 ; CHECK-NEXT:    eor p0.b, p4/z, p0.b, p1.b
-; CHECK-NEXT:    and x8, x8, #0xffffffff
+; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    and x9, x9, #0xffffffff
+; CHECK-NEXT:    mov w9, w9
 ; CHECK-NEXT:    csel x8, x8, x10, lo
 ; CHECK-NEXT:    cmp x9, x10
 ; CHECK-NEXT:    st1b { z1.b }, p1, [x11, x8]
@@ -213,7 +213,7 @@ define <vscale x 64 x i8> @test_compress_very_large(<vscale x 64 x i8> %vec, <vs
 ; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    st1b { z0.b }, p4, [sp, #5, mul vl]
 ; CHECK-NEXT:    ld1b { z0.b }, p4/z, [sp]
-; CHECK-NEXT:    and x8, x8, #0xffffffff
+; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    st1b { z0.b }, p4, [sp, #4, mul vl]
@@ -302,11 +302,11 @@ define <4 x i32> @test_compress_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask) {
 define <1 x i32> @test_compress_v1i32_with_sve(<1 x i32> %vec, <1 x i1> %mask) {
 ; CHECK-LABEL: test_compress_v1i32_with_sve:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    sbfx w8, w0, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    shl v1.2s, v1.2s, #31
-; CHECK-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-NEXT:    mov v1.s[0], w8
 ; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    and z1.d, z1.d, #0x1
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
@@ -421,12 +421,10 @@ define void @test_combine_compress_store_v16i8_with_sve(<16 x i8> %vec, <16 x i1
 define <vscale x 4 x i32> @test_compress_nxv4i32_with_passthru(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) {
 ; CHECK-LABEL: test_compress_nxv4i32_with_passthru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    uaddv d2, p1, z2.s
-; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z3.s, w8
 ; CHECK-NEXT:    cmphi p1.s, p1/z, z3.s, z2.s
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
@@ -447,12 +445,10 @@ define <vscale x 4 x i32> @test_compress_nxv4i32_with_zero_passthru(<vscale x 4 
 define <vscale x 4 x i32> @test_compress_nxv4i32_with_const_passthru(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_nxv4i32_with_const_passthru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    compact z0.s, p0, z0.s
-; CHECK-NEXT:    uaddv d1, p1, z1.s
-; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    cntp x8, p0, p0.s
 ; CHECK-NEXT:    index z1.s, #0, #1
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    cmphi p1.s, p1/z, z2.s, z1.s
 ; CHECK-NEXT:    mov z1.s, #5 // =0x5

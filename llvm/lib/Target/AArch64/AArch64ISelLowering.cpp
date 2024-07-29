@@ -23074,6 +23074,67 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   return Chain;
 }
 
+static SDValue combineVECTOR_COMPRESSStore(SelectionDAG &DAG,
+                                           StoreSDNode *Store,
+                                           const AArch64Subtarget *Subtarget) {
+  // If the regular store is preceded by an VECTOR_COMPRESS, we can combine them
+  // into a compressing store for scalable vectors in SVE.
+  SDValue VecOp = Store->getValue();
+  EVT VecVT = VecOp.getValueType();
+  if (VecOp.getOpcode() != ISD::VECTOR_COMPRESS || !Subtarget->hasSVE())
+    return SDValue();
+
+  bool IsFixedLength = VecVT.isFixedLengthVector();
+  if (IsFixedLength && VecVT.getSizeInBits().getFixedValue() > 128)
+    return SDValue();
+
+  SDLoc DL(Store);
+  SDValue Vec = VecOp.getOperand(0);
+  SDValue Mask = VecOp.getOperand(1);
+  SDValue Passthru = VecOp.getOperand(2);
+  EVT MemVT = Store->getMemoryVT();
+  MachineMemOperand *MMO = Store->getMemOperand();
+  SDValue Chain = Store->getChain();
+
+  // We can use the SVE register containing the NEON vector in its lowest bits.
+  if (IsFixedLength) {
+    EVT ElmtVT = VecVT.getVectorElementType();
+    unsigned NumElmts = VecVT.getVectorNumElements();
+    EVT ScalableVecVT =
+        MVT::getScalableVectorVT(ElmtVT.getSimpleVT(), NumElmts);
+    EVT ScalableMaskVT = MVT::getScalableVectorVT(
+        Mask.getValueType().getVectorElementType().getSimpleVT(), NumElmts);
+
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalableVecVT,
+                      DAG.getUNDEF(ScalableVecVT), Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+    Mask = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalableMaskVT,
+                       DAG.getUNDEF(ScalableMaskVT), Mask,
+                       DAG.getConstant(0, DL, MVT::i64));
+    Mask = DAG.getNode(ISD::TRUNCATE, DL,
+                       ScalableMaskVT.changeVectorElementType(MVT::i1), Mask);
+    Passthru = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalableVecVT,
+                           DAG.getUNDEF(ScalableVecVT), Passthru,
+                           DAG.getConstant(0, DL, MVT::i64));
+
+    MemVT = ScalableVecVT;
+    MMO->setType(LLT::scalable_vector(NumElmts, ElmtVT.getSizeInBits()));
+  }
+
+  // If the passthru is all 0s, we don't need an explicit passthru store.
+  unsigned MinElmts = VecVT.getVectorMinNumElements();
+  if (ISD::isConstantSplatVectorAllZeros(Passthru.getNode()) && (MinElmts == 2 || MinElmts == 4))
+    return SDValue();
+
+  if (!Passthru.isUndef())
+    Chain = DAG.getStore(Chain, DL, Passthru, Store->getBasePtr(), MMO);
+
+  return DAG.getMaskedStore(Chain, DL, Vec, Store->getBasePtr(),
+                            DAG.getUNDEF(MVT::i64), Mask, MemVT, MMO,
+                            ISD::UNINDEXED, Store->isTruncatingStore(),
+                            /*IsCompressing=*/true);
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -23116,6 +23177,9 @@ static SDValue performSTORECombine(SDNode *N,
     return Store;
 
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
+    return Store;
+
+  if (SDValue Store = combineVECTOR_COMPRESSStore(DAG, ST, Subtarget))
     return Store;
 
   if (ST->isTruncatingStore()) {
