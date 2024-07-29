@@ -52,3 +52,67 @@ extern Swim& trident; // expected-note {{declared here}}
 constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
 constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}}
                                                 // expected-note@-1 {{initializer of 'trident' is not a constant expression}}
+
+namespace GH64376 {
+template<int V>
+struct Test {
+    static constexpr int value = V;
+};
+
+int main() {
+    Test<124> test;
+    auto& test2 = test;
+
+    if constexpr(test2.value > 3) {
+       return 1;
+    }
+
+    return 0;
+}
+}
+
+namespace GH30060 {
+template<int V>
+struct A {
+  static constexpr int value = V;
+};
+
+template<class T>
+static void test1(T &f) {
+    A<f.value> bar;
+}
+
+void g() {
+    A<42> f;
+
+    test1(f);
+}
+}
+
+namespace GH26067 {
+struct A {
+    constexpr operator int() const { return 42; }
+};
+
+template <int>
+void f() {}
+
+void test(const A& value) {
+    f<value>();
+}
+
+int main() {
+    A a{};
+    test(a);
+}
+}
+
+namespace GH34365 {
+void g() {
+  auto f = []() { return 42; };
+  constexpr int x = f();
+  [](auto f) { constexpr int x = f(); }(f);
+  [](auto &f) { constexpr int x = f(); }(f);
+  (void)[&]() { constexpr int x = f(); };
+}
+}

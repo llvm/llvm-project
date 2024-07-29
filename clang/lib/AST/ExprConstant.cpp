@@ -555,6 +555,7 @@ namespace {
     typedef std::map<MapKeyTy, APValue> MapTy;
     /// Temporaries - Temporary lvalues materialized within this stack frame.
     MapTy Temporaries;
+    MapTy ConstexprUnknownAPValues;
 
     /// CallRange - The source range of the call expression for this call.
     SourceRange CallRange;
@@ -628,6 +629,9 @@ namespace {
     template<typename KeyT>
     APValue &createTemporary(const KeyT *Key, QualType T,
                              ScopeKind Scope, LValue &LV);
+
+    APValue &createConstexprUnknownAPValues(const VarDecl *Key,
+                                            APValue::LValueBase Base);
 
     /// Allocate storage for a parameter of a function call made in this frame.
     APValue &createParam(CallRef Args, const ParmVarDecl *PVD, LValue &LV);
@@ -1923,6 +1927,16 @@ APValue &CallStackFrame::createTemporary(const KeyT *Key, QualType T,
   APValue::LValueBase Base(Key, Index, Version);
   LV.set(Base);
   return createLocal(Base, Key, T, Scope);
+}
+
+APValue &
+CallStackFrame::createConstexprUnknownAPValues(const VarDecl *Key,
+                                               APValue::LValueBase Base) {
+  APValue &Result = ConstexprUnknownAPValues[MapKeyTy(Key, Base.getVersion())];
+  Result = APValue(Base, APValue::ConstexprUnknown{}, CharUnits::One());
+  Result.setConstexprUnknown();
+
+  return Result;
 }
 
 /// Allocate storage for a parameter of a function call made in this frame.
@@ -3410,6 +3424,10 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // P2280R4 struck the initialization requirement for variables of reference
   // type so we can no longer assume we have an Init.
   if (Init && !VD->evaluateValue()) {
+    if (AllowConstexprUnknown) {
+      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
+      return true;
+    }
     Info.FFDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
     return false;
@@ -3447,7 +3465,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // a ConstexprUnknown status.
   if (AllowConstexprUnknown) {
     if (!Result) {
-      Result = new APValue(Base, APValue::ConstexprUnknown{}, CharUnits::One());
+      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
+    } else {
+      Result->setConstexprUnknown();
     }
   }
   return true;
@@ -13632,6 +13652,11 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
 
     if (!EvaluatePointer(E->getRHS(), RHSValue, Info) || !LHSOK)
       return false;
+
+    // If we have Unknown pointers we should fail if they are not global values.
+    if (!(IsGlobalLValue(LHSValue.getLValueBase()) && IsGlobalLValue(RHSValue.getLValueBase())) &&
+         (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
+         return false;
 
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.

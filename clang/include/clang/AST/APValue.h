@@ -257,7 +257,7 @@ public:
 
 private:
   ValueKind Kind;
-  bool AllowConstexprUnknown = false;
+  bool AllowConstexprUnknown;
 
   struct ComplexAPSInt {
     APSInt Real, Imag;
