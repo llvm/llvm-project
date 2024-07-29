@@ -1540,7 +1540,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (tryIndexedLoad(Node))
       return;
 
-    if (Subtarget->hasVendorXCVmem()) {
+    if (Subtarget->hasVendorXCVmem() && !Subtarget->is64Bit()) {
       // We match post-incrementing load here
       LoadSDNode *Load = cast<LoadSDNode>(Node);
       if (Load->getAddressingMode() != ISD::POST_INC)
