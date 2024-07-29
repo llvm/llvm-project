@@ -3852,10 +3852,7 @@ void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // If the narrow CTPOP is not supported by the target, try to convert it
-  // to a libcall.
-  EVT ExpandedVT = TLI.getTypeToExpandTo(*DAG.getContext(), VT);
-  if (!TLI.isOperationLegalOrCustom(ISD::CTPOP, ExpandedVT)) {
+  if (TLI.getOperationAction(ISD::CTPOP, VT) == TargetLoweringBase::LibCall) {
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
     if (VT == MVT::i32)
       LC = RTLIB::CTPOP_I32;
@@ -3863,12 +3860,12 @@ void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
       LC = RTLIB::CTPOP_I64;
     else if (VT == MVT::i128)
       LC = RTLIB::CTPOP_I128;
-    if (LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC)) {
-      TargetLowering::MakeLibCallOptions CallOptions;
-      SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
-      SplitInteger(Res, Lo, Hi);
-      return;
-    }
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC) &&
+           "LibCall explicitly requested, but not available");
+    TargetLowering::MakeLibCallOptions CallOptions;
+    SDValue Res = TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, DL).first;
+    SplitInteger(Res, Lo, Hi);
+    return;
   }
 
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)

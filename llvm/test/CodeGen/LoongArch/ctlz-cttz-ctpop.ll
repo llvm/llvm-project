@@ -297,11 +297,40 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 define i64 @test_ctpop_i64(i64 %a) nounwind {
 ; LA32-LABEL: test_ctpop_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(__popcountdi2)
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    srli.w $a2, $a1, 1
+; LA32-NEXT:    lu12i.w $a3, 349525
+; LA32-NEXT:    ori $a3, $a3, 1365
+; LA32-NEXT:    and $a2, $a2, $a3
+; LA32-NEXT:    sub.w $a1, $a1, $a2
+; LA32-NEXT:    lu12i.w $a2, 209715
+; LA32-NEXT:    ori $a2, $a2, 819
+; LA32-NEXT:    and $a4, $a1, $a2
+; LA32-NEXT:    srli.w $a1, $a1, 2
+; LA32-NEXT:    and $a1, $a1, $a2
+; LA32-NEXT:    add.w $a1, $a4, $a1
+; LA32-NEXT:    srli.w $a4, $a1, 4
+; LA32-NEXT:    add.w $a1, $a1, $a4
+; LA32-NEXT:    lu12i.w $a4, 61680
+; LA32-NEXT:    ori $a4, $a4, 3855
+; LA32-NEXT:    and $a1, $a1, $a4
+; LA32-NEXT:    lu12i.w $a5, 4112
+; LA32-NEXT:    ori $a5, $a5, 257
+; LA32-NEXT:    mul.w $a1, $a1, $a5
+; LA32-NEXT:    srli.w $a1, $a1, 24
+; LA32-NEXT:    srli.w $a6, $a0, 1
+; LA32-NEXT:    and $a3, $a6, $a3
+; LA32-NEXT:    sub.w $a0, $a0, $a3
+; LA32-NEXT:    and $a3, $a0, $a2
+; LA32-NEXT:    srli.w $a0, $a0, 2
+; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    add.w $a0, $a3, $a0
+; LA32-NEXT:    srli.w $a2, $a0, 4
+; LA32-NEXT:    add.w $a0, $a0, $a2
+; LA32-NEXT:    and $a0, $a0, $a4
+; LA32-NEXT:    mul.w $a0, $a0, $a5
+; LA32-NEXT:    srli.w $a0, $a0, 24
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_ctpop_i64:

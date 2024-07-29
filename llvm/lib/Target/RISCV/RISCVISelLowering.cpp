@@ -388,12 +388,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
     }
   } else if (!Subtarget.hasVendorXCVbitmanip()) {
+    setOperationAction(ISD::CTPOP, MVT::i32, LibCall);
+    setOperationAction(ISD::CTPOP, MVT::i64, LibCall);
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
-    setOperationAction(ISD::CTPOP, XLenVT, LibCall);
-    if (RV64LegalI32 && Subtarget.is64Bit()) {
+    if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction(ISD::CTTZ, MVT::i32, Expand);
-      setOperationAction(ISD::CTPOP, MVT::i32, LibCall);
-    }
   }
 
   if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
