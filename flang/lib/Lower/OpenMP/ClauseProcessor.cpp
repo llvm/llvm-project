@@ -187,13 +187,14 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
   // The types of lower bound, upper bound, and step are converted into the
   // type of the loop variable if necessary.
   mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)result.loopLBVar.size(); it++) {
-    result.loopLBVar[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopLBVar[it]);
-    result.loopUBVar[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopUBVar[it]);
-    result.loopStepVar[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopStepVar[it]);
+  for (unsigned it = 0; it < (unsigned)result.collapseLowerBounds.size();
+       it++) {
+    result.collapseLowerBounds[it] = firOpBuilder.createConvert(
+        loc, loopVarType, result.collapseLowerBounds[it]);
+    result.collapseUpperBounds[it] = firOpBuilder.createConvert(
+        loc, loopVarType, result.collapseUpperBounds[it]);
+    result.collapseSteps[it] =
+        firOpBuilder.createConvert(loc, loopVarType, result.collapseSteps[it]);
   }
 }
 
@@ -232,15 +233,15 @@ bool ClauseProcessor::processCollapse(
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
     lower::StatementContext stmtCtx;
-    result.loopLBVar.push_back(fir::getBase(
+    result.collapseLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx)));
-    result.loopUBVar.push_back(fir::getBase(
+    result.collapseUpperBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx)));
     if (bounds->step) {
-      result.loopStepVar.push_back(fir::getBase(
+      result.collapseSteps.push_back(fir::getBase(
           converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx)));
     } else { // If `step` is not present, assume it as `1`.
-      result.loopStepVar.push_back(firOpBuilder.createIntegerConstant(
+      result.collapseSteps.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
     iv.push_back(bounds->name.thing.symbol);
@@ -291,8 +292,7 @@ bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
       }
     }
     const auto &deviceExpr = std::get<omp::SomeExpr>(clause->t);
-    result.deviceVar =
-        fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
+    result.device = fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
     return true;
   }
   return false;
@@ -322,10 +322,10 @@ bool ClauseProcessor::processDistSchedule(
     lower::StatementContext &stmtCtx,
     mlir::omp::DistScheduleClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::DistSchedule>()) {
-    result.distScheduleStaticAttr = converter.getFirOpBuilder().getUnitAttr();
+    result.distScheduleStatic = converter.getFirOpBuilder().getUnitAttr();
     const auto &chunkSize = std::get<std::optional<ExprTy>>(clause->t);
     if (chunkSize)
-      result.distScheduleChunkSizeVar =
+      result.distScheduleChunkSize =
           fir::getBase(converter.genExprValue(*chunkSize, stmtCtx));
     return true;
   }
@@ -335,7 +335,7 @@ bool ClauseProcessor::processDistSchedule(
 bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
                                     mlir::omp::FilterClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
-    result.filteredThreadIdVar =
+    result.filteredThreadId =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
@@ -351,7 +351,7 @@ bool ClauseProcessor::processFinal(lower::StatementContext &stmtCtx,
 
     mlir::Value finalVal =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
-    result.finalVar = firOpBuilder.createConvert(
+    result.final = firOpBuilder.createConvert(
         clauseLocation, firOpBuilder.getI1Type(), finalVal);
     return true;
   }
@@ -362,7 +362,7 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Hint>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     int64_t hintValue = *evaluate::ToInt64(clause->v);
-    result.hintAttr = firOpBuilder.getI64IntegerAttr(hintValue);
+    result.hint = firOpBuilder.getI64IntegerAttr(hintValue);
     return true;
   }
   return false;
@@ -370,11 +370,11 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
 
 bool ClauseProcessor::processMergeable(
     mlir::omp::MergeableClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::Mergeable>(result.mergeableAttr);
+  return markClauseOccurrence<omp::clause::Mergeable>(result.mergeable);
 }
 
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::Nowait>(result.nowaitAttr);
+  return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
 
 bool ClauseProcessor::processNumTeams(
@@ -385,7 +385,7 @@ bool ClauseProcessor::processNumTeams(
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
     // auto lowerBound = std::get<std::optional<ExprTy>>(clause->t);
     auto &upperBound = std::get<ExprTy>(clause->t);
-    result.numTeamsUpperVar =
+    result.numTeamsUpper =
         fir::getBase(converter.genExprValue(upperBound, stmtCtx));
     return true;
   }
@@ -397,7 +397,7 @@ bool ClauseProcessor::processNumThreads(
     mlir::omp::NumThreadsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
     // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result.numThreadsVar =
+    result.numThreads =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
@@ -408,17 +408,17 @@ bool ClauseProcessor::processOrder(mlir::omp::OrderClauseOps &result) const {
   using Order = omp::clause::Order;
   if (auto *clause = findUniqueClause<Order>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    result.orderAttr = mlir::omp::ClauseOrderKindAttr::get(
+    result.order = mlir::omp::ClauseOrderKindAttr::get(
         firOpBuilder.getContext(), mlir::omp::ClauseOrderKind::Concurrent);
     const auto &modifier =
         std::get<std::optional<Order::OrderModifier>>(clause->t);
     if (modifier && *modifier == Order::OrderModifier::Unconstrained) {
-      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+      result.orderMod = mlir::omp::OrderModifierAttr::get(
           firOpBuilder.getContext(), mlir::omp::OrderModifier::unconstrained);
     } else {
       // "If order-modifier is not unconstrained, the behavior is as if the
       // reproducible modifier is present."
-      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+      result.orderMod = mlir::omp::OrderModifierAttr::get(
           firOpBuilder.getContext(), mlir::omp::OrderModifier::reproducible);
     }
     return true;
@@ -433,7 +433,7 @@ bool ClauseProcessor::processOrdered(
     int64_t orderedClauseValue = 0l;
     if (clause->v.has_value())
       orderedClauseValue = *evaluate::ToInt64(*clause->v);
-    result.orderedAttr = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
+    result.ordered = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
     return true;
   }
   return false;
@@ -443,8 +443,7 @@ bool ClauseProcessor::processPriority(
     lower::StatementContext &stmtCtx,
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
-    result.priorityVar =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
@@ -454,7 +453,7 @@ bool ClauseProcessor::processProcBind(
     mlir::omp::ProcBindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ProcBind>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    result.procBindKindAttr = genProcBindKindAttr(firOpBuilder, *clause);
+    result.procBindKind = genProcBindKindAttr(firOpBuilder, *clause);
     return true;
   }
   return false;
@@ -465,7 +464,7 @@ bool ClauseProcessor::processSafelen(
   if (auto *clause = findUniqueClause<omp::clause::Safelen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     const std::optional<std::int64_t> safelenVal = evaluate::ToInt64(clause->v);
-    result.safelenAttr = firOpBuilder.getI64IntegerAttr(*safelenVal);
+    result.safelen = firOpBuilder.getI64IntegerAttr(*safelenVal);
     return true;
   }
   return false;
@@ -498,19 +497,19 @@ bool ClauseProcessor::processSchedule(
       break;
     }
 
-    result.scheduleValAttr =
+    result.scheduleKind =
         mlir::omp::ClauseScheduleKindAttr::get(context, scheduleKind);
 
-    mlir::omp::ScheduleModifier scheduleModifier = getScheduleModifier(*clause);
-    if (scheduleModifier != mlir::omp::ScheduleModifier::none)
-      result.scheduleModAttr =
-          mlir::omp::ScheduleModifierAttr::get(context, scheduleModifier);
+    mlir::omp::ScheduleModifier scheduleMod = getScheduleModifier(*clause);
+    if (scheduleMod != mlir::omp::ScheduleModifier::none)
+      result.scheduleMod =
+          mlir::omp::ScheduleModifierAttr::get(context, scheduleMod);
 
     if (getSimdModifier(*clause) != mlir::omp::ScheduleModifier::none)
-      result.scheduleSimdAttr = firOpBuilder.getUnitAttr();
+      result.scheduleSimd = firOpBuilder.getUnitAttr();
 
     if (const auto &chunkExpr = std::get<omp::MaybeExpr>(clause->t))
-      result.scheduleChunkVar =
+      result.scheduleChunk =
           fir::getBase(converter.genExprValue(*chunkExpr, stmtCtx));
 
     return true;
@@ -523,7 +522,7 @@ bool ClauseProcessor::processSimdlen(
   if (auto *clause = findUniqueClause<omp::clause::Simdlen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     const std::optional<std::int64_t> simdlenVal = evaluate::ToInt64(clause->v);
-    result.simdlenAttr = firOpBuilder.getI64IntegerAttr(*simdlenVal);
+    result.simdlen = firOpBuilder.getI64IntegerAttr(*simdlenVal);
     return true;
   }
   return false;
@@ -533,7 +532,7 @@ bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
-    result.threadLimitVar =
+    result.threadLimit =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
@@ -541,7 +540,7 @@ bool ClauseProcessor::processThreadLimit(
 }
 
 bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::Untied>(result.untiedAttr);
+  return markClauseOccurrence<omp::clause::Untied>(result.untied);
 }
 
 //===----------------------------------------------------------------------===//
@@ -565,7 +564,7 @@ static void
 addAlignedClause(lower::AbstractConverter &converter,
                  const omp::clause::Aligned &clause,
                  llvm::SmallVectorImpl<mlir::Value> &alignedVars,
-                 llvm::SmallVectorImpl<mlir::Attribute> &alignmentAttrs) {
+                 llvm::SmallVectorImpl<mlir::Attribute> &alignments) {
   using Aligned = omp::clause::Aligned;
   lower::StatementContext stmtCtx;
   mlir::IntegerAttr alignmentValueAttr;
@@ -594,7 +593,7 @@ addAlignedClause(lower::AbstractConverter &converter,
     alignmentValueAttr = builder.getI64IntegerAttr(alignment);
     // All the list items in a aligned clause will have same alignment
     for (std::size_t i = 0; i < objects.size(); i++)
-      alignmentAttrs.push_back(alignmentValueAttr);
+      alignments.push_back(alignmentValueAttr);
   }
 }
 
@@ -603,7 +602,7 @@ bool ClauseProcessor::processAligned(
   return findRepeatableClause<omp::clause::Aligned>(
       [&](const omp::clause::Aligned &clause, const parser::CharBlock &) {
         addAlignedClause(converter, clause, result.alignedVars,
-                         result.alignmentAttrs);
+                         result.alignments);
       });
 }
 
@@ -798,7 +797,7 @@ bool ClauseProcessor::processCopyprivate(
     result.copyprivateVars.push_back(cpVar);
     mlir::func::FuncOp funcOp =
         createCopyFunc(currentLocation, converter, cpVar.getType(), attrs);
-    result.copyprivateFuncs.push_back(mlir::SymbolRefAttr::get(funcOp));
+    result.copyprivateSyms.push_back(mlir::SymbolRefAttr::get(funcOp));
   };
 
   bool hasCopyPrivate = findRepeatableClause<clause::Copyprivate>(
@@ -832,7 +831,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
 
         mlir::omp::ClauseTaskDependAttr dependTypeOperand =
             genDependKindAttr(firOpBuilder, kind);
-        result.dependTypeAttrs.append(objects.size(), dependTypeOperand);
+        result.dependKinds.append(objects.size(), dependTypeOperand);
 
         for (const omp::Object &object : objects) {
           assert(object.ref() && "Expecting designator");
@@ -1037,10 +1036,9 @@ bool ClauseProcessor::processReduction(
 
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
-        llvm::copy(reduceVarByRef,
-                   std::back_inserter(result.reductionVarsByRef));
+        llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
-                   std::back_inserter(result.reductionDeclSymbols));
+                   std::back_inserter(result.reductionSyms));
 
         if (outReductionTypes) {
           outReductionTypes->reserve(outReductionTypes->size() +
