@@ -3319,6 +3319,22 @@ LogicalResult EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CatchParamOp::verify() {
+  if (getExceptionPtr()) {
+    auto kind = getKind();
+    if (!kind || *kind != mlir::cir::CatchParamKind::begin)
+      return emitOpError("needs 'begin' to work with exception pointer");
+    return success();
+  }
+  if (!getKind() && !(*this)->getParentOfType<mlir::cir::TryOp>())
+    return emitOpError("without 'kind' requires 'cir.try' surrounding scope");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
