@@ -13,10 +13,11 @@ add_mlir_dialect_library(MLIRSCFTransforms
   ParallelLoopCollapsing.cpp
   ParallelLoopFusion.cpp
   ParallelLoopTiling.cpp
+  SCFVectorize.cpp
   StructuralTypeConversions.cpp
   TileUsingInterface.cpp
-  WrapInZeroTripCheck.cpp
   UpliftWhileToFor.cpp
+  WrapInZeroTripCheck.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SCF
