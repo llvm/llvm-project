@@ -369,12 +369,12 @@ protected:
            "currently stopped.";
   }
 
-  // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target is present you want to prime the dummy
-  // target with entities that will be copied over to new targets.
-  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target &GetSelectedTarget();
-  Target &GetDummyTarget();
+  // This is for use in the command interpreter and returns the most relevant
+  // target. In order of priority, that's the target from the command object's
+  // execution context, from the interpreter's execution context, the selected
+  // target or the dummy target. This function always return the dummy target if
+  // explicitly requested.
+  Target &GetTarget(bool dummy = false);
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have

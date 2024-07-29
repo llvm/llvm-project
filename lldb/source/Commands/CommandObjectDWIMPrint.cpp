@@ -77,7 +77,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   Target *target_ptr = m_exe_ctx.GetTargetPtr();
   // Fallback to the dummy target, which can allow for expression evaluation.
-  Target &target = target_ptr ? *target_ptr : GetDummyTarget();
+  Target &target = target_ptr ? *target_ptr : GetTarget(/*dummy=*/true);
 
   EvaluateExpressionOptions eval_options =
       m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);

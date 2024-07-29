@@ -1584,7 +1584,7 @@ public:
 
 protected:
   void DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // Any signals that are being set should be added to the Target's
     // DummySignals so they will get applied on rerun, etc.
@@ -1662,7 +1662,7 @@ protected:
     if (m_options.do_clear) {
       target.ClearDummySignals(signal_args);
       if (m_options.dummy)
-        GetDummyTarget().ClearDummySignals(signal_args);
+        GetTarget(/*dummy=*/true).ClearDummySignals(signal_args);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }

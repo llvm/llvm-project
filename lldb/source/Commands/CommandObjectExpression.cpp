@@ -344,7 +344,7 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
     return;
 
   Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : GetDummyTarget();
+  Target &target = exe_target ? *exe_target : GetTarget(/*dummy=*/true);
 
   unsigned cursor_pos = request.GetRawCursorPos();
   // Get the full user input including the suffix. The suffix is necessary
@@ -407,7 +407,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   // that use an input reader...
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
   Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : GetDummyTarget();
+  Target &target = exe_target ? *exe_target : GetTarget(/*dummy=*/true);
 
   lldb::ValueObjectSP result_valobj_sp;
   StackFrame *frame = exe_ctx.GetFramePtr();
@@ -605,7 +605,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
       return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target &target = GetSelectedOrDummyTarget();
+      Target &target = GetTarget();
       // Drop into REPL
       m_expr_lines.clear();
       m_expr_line_count = 0;
@@ -665,7 +665,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     }
   }
 
-  Target &target = GetSelectedOrDummyTarget();
+  Target &target = GetTarget();
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 
