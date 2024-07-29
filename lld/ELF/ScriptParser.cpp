@@ -613,8 +613,7 @@ SectionClassDesc *ScriptParser::readSectionClassDescription() {
   if (!script->sectionClasses.insert({CachedHashStringRef(name), desc}).second)
     setError("section class '" + name + "' already defined");
   expect("{");
-  while (!errorCount() && !consume("}")) {
-    StringRef tok = next();
+  while (auto tok = till("}")) {
     if (tok == "(" || tok == ")") {
       setError("expected filename pattern");
     } else if (peek() == "(") {
