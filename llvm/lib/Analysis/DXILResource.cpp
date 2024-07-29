@@ -9,6 +9,7 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Metadata.h"
 
 using namespace llvm;
 using namespace dxil;
