@@ -26,7 +26,12 @@
 
 #include "type_algorithms.h"
 
-inline constexpr unsigned g_max_n = 128;
+inline constexpr unsigned g_max_n =
+#if !(defined(__MVS__) && !defined(__BFP__))
+  128;
+#else
+  39;
+#endif
 
 template <class T>
 std::array<T, 11> sample_points() {
@@ -203,6 +208,7 @@ std::vector<T> get_roots(unsigned n) {
 
 template <class Real>
 void test() {
+#if !(defined(__MVS__) && !defined(__BFP__))
   { // checks if NaNs are reported correctly (i.e. output == input for input == NaN)
     using nl = std::numeric_limits<Real>;
     for (Real NaN : {nl::quiet_NaN(), nl::signaling_NaN()})
@@ -215,6 +221,7 @@ void test() {
       for (unsigned n = 0; n < g_max_n; ++n)
         assert(!std::isnan(std::hermite(n, x)));
   }
+#endif
 
   { // checks std::hermite(n, x) for n=0..5 against analytic polynoms
     const auto h0 = [](Real) -> Real { return 1; };
@@ -289,6 +296,7 @@ void test() {
     }
   }
 
+#if !(defined(__MVS__) && !defined(__BFP__))
   { // check input infinity is handled correctly
     Real inf = std::numeric_limits<Real>::infinity();
     for (unsigned n = 1; n < g_max_n; ++n) {
@@ -316,6 +324,7 @@ void test() {
       }
     }
   }
+#endif
 }
 
 struct TestFloat {
