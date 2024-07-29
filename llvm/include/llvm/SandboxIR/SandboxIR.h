@@ -806,7 +806,6 @@ class StoreInst final : public Instruction {
 public:
   /// Return true if this is a store from a volatile memory location.
   bool isVolatile() const { return cast<llvm::StoreInst>(Val)->isVolatile(); }
-
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }

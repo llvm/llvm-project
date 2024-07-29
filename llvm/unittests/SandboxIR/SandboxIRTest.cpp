@@ -785,9 +785,9 @@ define void @foo(ptr %arg0, ptr %arg1) {
 
 TEST_F(SandboxIRTest, StoreInst) {
   parseIR(C, R"IR(
-define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
+define void @foo(i8 %val, ptr %ptr) {
   store i8 %val, ptr %ptr, align 64
-  store volatile i8 %val, ptr %vptr, align 64
+  store volatile i8 %val, ptr %ptr, align 64
   ret void
 }
 )IR");
@@ -803,7 +803,6 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   // Check that the StoreInst has been created correctly.
-  // Check isVolatile()
   EXPECT_FALSE(St->isVolatile());
   EXPECT_TRUE(VSt->isVolatile());
   // Check getPointerOperand()
@@ -820,6 +819,7 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
   EXPECT_EQ(NewSt->getValueOperand(), Val);
   EXPECT_EQ(NewSt->getPointerOperand(), Ptr);
   EXPECT_EQ(NewSt->getAlign(), 8);
+  EXPECT_EQ(NewSt->getNextNode(), Ret);
   // Check create(InsertBefore, IsVolatile=true)
   sandboxir::StoreInst *NewVSt =
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
