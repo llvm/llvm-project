@@ -1,5 +1,5 @@
 add_mlir_dialect(PtrOps ptr)
-add_mlir_doc(PtrOps PtrOps Dialects/ -gen-dialect-doc)
+add_mlir_doc(PtrOps PtrOps Dialects/ -gen-dialect-doc -dialect=ptr)
 
 set(LLVM_TARGET_DEFINITIONS PtrOps.td)
 mlir_tablegen(PtrOpsAttrs.h.inc -gen-attrdef-decls -attrdefs-dialect=ptr)
