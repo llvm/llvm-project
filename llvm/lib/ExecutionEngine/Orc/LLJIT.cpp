@@ -630,10 +630,12 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
                                                  result, DSOHandles[&JD],
                                                  int32_t(ORC_RT_RTLD_LAZY));
-      if (result)
+      if (E)
+        return E;
+      else if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
-      return E;
+      return Error::success();
     }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
