@@ -2582,11 +2582,11 @@ lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
   return LLDB_INVALID_ADDRESS;
 }
 
-/// Creates an expression accessing (fp - 8), with an optional dereference
-/// operation. This is only valid for x86_64 or aarch64.
+/// Creates an expression accessing *(fp - 8) or **(fp - 8) if
+/// `with_double_deref` is true. This is only valid for x86_64 or aarch64.
 llvm::ArrayRef<uint8_t>
 GetAsyncRegFromFramePointerDWARFExpr(llvm::Triple::ArchType triple,
-                                     bool with_deref) {
+                                     bool with_double_deref) {
   assert(triple == llvm::Triple::x86_64 || triple == llvm::Triple::aarch64);
 
   // These expressions must have static storage, due to how UnwindPlan::Row
@@ -2595,10 +2595,12 @@ GetAsyncRegFromFramePointerDWARFExpr(llvm::Triple::ArchType triple,
       llvm::dwarf::DW_OP_breg6, // DW_OP_breg6, register 6 == rbp
       0x78,                     //    sleb128 -8 (ptrsize)
       llvm::dwarf::DW_OP_deref,
+      llvm::dwarf::DW_OP_deref,
   };
   static const uint8_t g_cfa_dwarf_expression_arm64[] = {
       llvm::dwarf::DW_OP_breg29, // DW_OP_breg29, register 29 == fp
       0x78,                      //    sleb128 -8 (ptrsize)
+      llvm::dwarf::DW_OP_deref,
       llvm::dwarf::DW_OP_deref,
   };
 
@@ -2608,7 +2610,7 @@ GetAsyncRegFromFramePointerDWARFExpr(llvm::Triple::ArchType triple,
   auto size = triple == llvm::Triple::x86_64
                   ? sizeof(g_cfa_dwarf_expression_x86_64)
                   : sizeof(g_cfa_dwarf_expression_arm64);
-  if (with_deref)
+  if (with_double_deref)
     return llvm::ArrayRef<uint8_t>(expr, size);
   return llvm::ArrayRef<uint8_t>(expr, size - 1);
 }
@@ -2708,8 +2710,11 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     else
       row->GetCFAValue().SetIsRegisterPlusOffset(regnums->async_ctx_regnum, 0);
   } else {
+    // In indirect funclets, dereferencing (fp-8) once produces the CFA of the
+    // frame above. Dereferencing twice will produce the current frame's CFA.
+    bool with_double_deref = indirect_context;
     llvm::ArrayRef<uint8_t> expr = GetAsyncRegFromFramePointerDWARFExpr(
-        arch.GetMachine(), true /*with_deref*/);
+        arch.GetMachine(), with_double_deref);
     row->GetCFAValue().SetIsDWARFExpression(expr.data(), expr.size());
   }
 
@@ -2717,12 +2722,8 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     if (in_prologue) {
       row->SetRegisterLocationToSame(regnums->async_ctx_regnum, false);
     } else {
-      // In a "resume" coroutine, the passed context argument needs to be
-      // dereferenced once to get the context. This is reflected in the debug
-      // info so we need to account for it and report am async register value
-      // that needs to be dereferenced to get to the context.
       llvm::ArrayRef<uint8_t> expr = GetAsyncRegFromFramePointerDWARFExpr(
-          arch.GetMachine(), false /*with_deref*/);
+          arch.GetMachine(), false /*with_double_deref*/);
       row->SetRegisterLocationToIsDWARFExpression(
           regnums->async_ctx_regnum, expr.data(), expr.size(), false);
     }
