@@ -1546,10 +1546,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // If we have SVE, we can use SVE logic for legal (or smaller than legal)
     // NEON vectors in the lowest bits of the SVE register.
     if (Subtarget->hasSVE())
-      for (auto VT : {MVT::v1i8, MVT::v1i16, MVT::v1i32, MVT::v1i64, MVT::v1f32,
-                      MVT::v1f64, MVT::v2i8, MVT::v2i16, MVT::v2i32, MVT::v2i64,
-                      MVT::v2f32, MVT::v2f64, MVT::v4i8, MVT::v4i16, MVT::v4i32,
-                      MVT::v4f32, MVT::v8i8, MVT::v8i16, MVT::v8i16, MVT::v16i8})
+      for (auto VT :
+           {MVT::v1i8,  MVT::v1i16, MVT::v1i32, MVT::v1i64, MVT::v1f32,
+            MVT::v1f64, MVT::v2i8,  MVT::v2i16, MVT::v2i32, MVT::v2i64,
+            MVT::v2f32, MVT::v2f64, MVT::v4i8,  MVT::v4i16, MVT::v4i32,
+            MVT::v4f32, MVT::v8i8,  MVT::v8i16, MVT::v8i16, MVT::v16i8})
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     // NEON doesn't support masked loads/stores, but SME and SVE do.
@@ -6695,7 +6696,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
       Chain = DAG.getStore(Chain, DL, Passthru, StackPtr, PtrInfo);
 
     Chain = DAG.getMaskedStore(Chain, DL, Vec, StackPtr, DAG.getUNDEF(MVT::i64),
-                               Mask, VecVT, MMO, ISD::UNINDEXED, /*IsTruncating=*/false, /*IsCompressing=*/true);
+                               Mask, VecVT, MMO, ISD::UNINDEXED,
+                               /*IsTruncating=*/false, /*IsCompressing=*/true);
 
     SDValue Compressed = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
 
