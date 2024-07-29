@@ -34,8 +34,10 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MI->getOpcode(), getSubtargetInfo().getFeatureBits());
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
+  }
 
   switch (MI->getOpcode()) {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
