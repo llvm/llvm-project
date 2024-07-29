@@ -431,7 +431,7 @@ Code Generation Options
     with other aggressive optimizations that may violate strict compliance with
     language standards. This is deprecated in Clang 19 and a warning is emitted
     that :option:`-O3` in combination with :option:`-ffast-math` should be used
-    instead if the request for non-standard math behavior is intended.  There
+    instead if the request for non-standard math behavior is intended. There
     is no timeline yet for removal; the aim is to discourage use of
     :option:`-Ofast` due to the surprising behavior of an optimization flag
     changing the observable behavior of correct code.
