@@ -790,8 +790,9 @@ define void @foo(ptr %arg0, ptr %arg1) {
   // Check create(InsertAtEnd)
   sandboxir::LoadInst *NewVLdEnd =
       sandboxir::LoadInst::create(VLd->getType(), Arg1, Align(8),
-                                  /*InsertAtEnd=*/BB, Ctx, "NewVLdEnd");
-  EXPECT_FALSE(NewVLdEnd->isVolatile());
+                                  /*InsertAtEnd=*/BB,
+                                  /*IsVolatile=*/true, Ctx, "NewVLdEnd");
+  EXPECT_TRUE(NewVLdEnd->isVolatile());
   EXPECT_EQ(NewVLdEnd->getName(), "NewVLdEnd");
 }
 
