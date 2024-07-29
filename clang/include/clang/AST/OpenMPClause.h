@@ -5556,6 +5556,7 @@ protected:
     MapperIdInfo = MapperId;
   }
 
+public:
   /// Get the user-defined mapper references that are in the trailing objects of
   /// the class.
   MutableArrayRef<Expr *> getUDMapperRefs() {
@@ -5588,7 +5589,6 @@ protected:
     std::copy(DMDs.begin(), DMDs.end(), getUDMapperRefs().begin());
   }
 
-public:
   /// Return the number of unique base declarations in this clause.
   unsigned getUniqueDeclarationsNum() const { return NumUniqueDeclarations; }
 
