@@ -5529,7 +5529,7 @@ struct SwapShapeCastOfTranspose : public OpRewritePattern<vector::ShapeCastOp> {
     if (!transposeOp)
       return rewriter.notifyMatchFailure(shapeCastOp, "not TransposeOp");
 
-    auto resultType = shapeCastOp.getResultVectorType();
+    VectorType resultType = shapeCastOp.getResultVectorType();
     if (resultType.getRank() <= 1)
       return rewriter.notifyMatchFailure(shapeCastOp, "result rank too low");
 
@@ -5537,7 +5537,7 @@ struct SwapShapeCastOfTranspose : public OpRewritePattern<vector::ShapeCastOp> {
       return rewriter.notifyMatchFailure(
           shapeCastOp, "ShapeCastOp changes non-unit dimension(s)");
 
-    auto transposeSourceVectorType = transposeOp.getSourceVectorType();
+    VectorType transposeSourceVectorType = transposeOp.getSourceVectorType();
     auto transposeSourceDims =
         llvm::to_vector(getDims(transposeSourceVectorType));
 
@@ -5551,7 +5551,7 @@ struct SwapShapeCastOfTranspose : public OpRewritePattern<vector::ShapeCastOp> {
     }
 
     // Drop unit dims from transpose permutation.
-    auto perm = transposeOp.getPermutation();
+    ArrayRef<int64_t> perm = transposeOp.getPermutation();
     SmallVector<int64_t> newPerm;
     for (int64_t idx : perm) {
       if (transposeSourceDims[idx] == std::make_tuple(1, false))
