@@ -1076,10 +1076,8 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
   pushRVVObjects(0, MFI.getObjectIndexEnd() - RVVCSI.size());
 
   // The minimum alignment is 16 bytes.
-  Align RVVStackAlign(16);
-  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
-
-  if (!ST.hasVInstructions()) {
+  Align RVVStackAlign = getABIStackAlignment(STI.getTargetABI());
+  if (!STI.hasVInstructions()) {
     assert(ObjectsToAllocate.empty() &&
            "Can't allocate scalable-vector objects without V instructions");
     return std::make_pair(0, RVVStackAlign);
