@@ -1208,20 +1208,23 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           cx->u)};
     }
   } else if (name == "rank") {
-    if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-      if (auto named{ExtractNamedEntity(*array)}) {
-        const Symbol &symbol{named->GetLastSymbol()};
-        if (IsAssumedRank(symbol)) {
-          // DescriptorInquiry can only be placed in expression of kind
-          // DescriptorInquiry::Result::kind.
-          return ConvertToType<T>(Expr<
-              Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
-              DescriptorInquiry{*named, DescriptorInquiry::Field::Rank}});
-        }
+    if (args[0]) {
+      const Symbol *symbol{nullptr};
+      if (auto dataRef{ExtractDataRef(args[0])}) {
+        symbol = &dataRef->GetLastSymbol();
+      } else {
+        symbol = args[0]->GetAssumedTypeDummy();
       }
-      return Expr<T>{args[0].value().Rank()};
+      if (symbol && IsAssumedRank(*symbol)) {
+        // DescriptorInquiry can only be placed in expression of kind
+        // DescriptorInquiry::Result::kind.
+        return ConvertToType<T>(
+            Expr<Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
+                DescriptorInquiry{
+                    NamedEntity{*symbol}, DescriptorInquiry::Field::Rank}});
+      }
+      return Expr<T>{args[0]->Rank()};
     }
-    return Expr<T>{args[0].value().Rank()};
   } else if (name == "selected_char_kind") {
     if (const auto *chCon{UnwrapExpr<Constant<TypeOf<std::string>>>(args[0])}) {
       if (std::optional<std::string> value{chCon->GetScalarValue()}) {
