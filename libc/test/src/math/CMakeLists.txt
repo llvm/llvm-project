@@ -69,7 +69,6 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.math.daddf128
-    libc.src.__support.FPUtil.generic.add_sub
 )
 
 add_fp_unittest(
@@ -82,7 +81,6 @@ add_fp_unittest(
   HDRS
     DivTest.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.div
     libc.src.math.ddivf128
 )
 

@@ -175,6 +175,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.div
 )
 
