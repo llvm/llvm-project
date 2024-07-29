@@ -772,10 +772,17 @@ public:
   unsigned getNumOfIRInstrs() const final { return 1u; }
   static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
                           Instruction *InsertBefore, Context &Ctx,
-                          bool IsVolatile = false, const Twine &Name = "");
+                          const Twine &Name = "");
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          Instruction *InsertBefore, bool IsVolatile,
+                          Context &Ctx, const Twine &Name = "");
   static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
                           BasicBlock *InsertAtEnd, Context &Ctx,
-                          bool IsVolatile = false, const Twine &Name = "");
+                          const Twine &Name = "");
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          BasicBlock *InsertAtEnd, bool IsVolatile,
+                          Context &Ctx, const Twine &Name = "");
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
   Value *getPointerOperand() const;
