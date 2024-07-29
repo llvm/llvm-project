@@ -9924,29 +9924,8 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
 
   // select true, T, F --> T
   // select false, T, F --> F
-  if (auto *CondC = dyn_cast<ConstantSDNode>(Cond))
-    return CondC->isZero() ? F : T;
-
-  if (ConstantSDNode *CondC = isConstOrConstSplat(Cond, /*AllowUndefs*/ false,
-                                                  /*AllowTruncation*/ true)) {
-    if (CondC->isZero())
-      return F;
-
-    switch (TLI->getBooleanContents(Cond.getValueType())) {
-    case TargetLowering::UndefinedBooleanContent:
-      if (CondC->getAPIntValue()[0])
-        return T;
-      break;
-    case TargetLowering::ZeroOrOneBooleanContent:
-      if (CondC->isOne())
-        return T;
-      break;
-    case TargetLowering::ZeroOrNegativeOneBooleanContent:
-      if (CondC->isAllOnes())
-        return T;
-      break;
-    }
-  }
+  if (auto CondC = isBoolConstant(Cond, /*AllowTruncation*/ true))
+    return *CondC ? T : F;
 
   // select ?, T, T --> T
   if (T == F)
@@ -13136,6 +13115,23 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
     return N.getNode();
 
   return nullptr;
+}
+
+std::optional<bool> SelectionDAG::isBoolConstant(SDValue N,
+                                                 bool AllowTruncation) const {
+  ConstantSDNode *Const = isConstOrConstSplat(N, false, AllowTruncation);
+  if (!Const)
+    return std::nullopt;
+
+  switch (TLI->getBooleanContents(N.getValueType())) {
+  case TargetLowering::ZeroOrOneBooleanContent:
+    return Const->isOne();
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    return Const->isAllOnes();
+    break;
+  case TargetLowering::UndefinedBooleanContent:
+    return Const->getAPIntValue()[0];
+  }
 }
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
