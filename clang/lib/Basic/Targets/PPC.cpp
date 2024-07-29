@@ -465,21 +465,35 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
                                  const std::vector<std::string> &FeaturesVec) {
-  // Cannot allow soft-float with Altivec.
-  if (llvm::is_contained(FeaturesVec, "-hard-float") &&
-      llvm::is_contained(FeaturesVec, "+altivec")) {
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
-                                                   << "-maltivec";
+  auto FindVSXSubfeature = [&](StringRef Feature, StringRef SubOption,
+                               StringRef Option) {
+    if (llvm::is_contained(FeaturesVec, Feature)) {
+      Diags.Report(diag::err_opt_not_valid_with_opt) << SubOption << Option;
+      return true;
+    }
     return false;
-  }
+  };
 
-  // Cannot allow soft-float with VSX.
-  if (llvm::is_contained(FeaturesVec, "-hard-float") &&
-      llvm::is_contained(FeaturesVec, "+vsx")) {
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
-                                                   << "-mvsx";
-    return false;
+  // Cannot allow soft-float with VSX, Altivec, or any
+  // VSX subfeatures.
+  bool Found = false;
+  if (llvm::is_contained(FeaturesVec, "-hard-float")) {
+    Found |= FindVSXSubfeature("+vsx", "-mvsx", "-msoft-float");
+    Found |= FindVSXSubfeature("+altivec", "-maltivec", "-msoft-float");
+    Found |=
+        FindVSXSubfeature("+power8-vector", "-mpower8-vector", "-msoft-float");
+    Found |= FindVSXSubfeature("+direct-move", "-mdirect-move", "-msoft-float");
+    Found |= FindVSXSubfeature("+float128", "-mfloat128", "-msoft-float");
+    Found |=
+        FindVSXSubfeature("+power9-vector", "-mpower9-vector", "-msoft-float");
+    Found |= FindVSXSubfeature("+paired-vector-memops",
+                               "-mpaired-vector-memops", "-msoft-float");
+    Found |= FindVSXSubfeature("+mma", "-mmma", "-msoft-float");
+    Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector",
+                               "-msoft-float");
   }
+  if (Found)
+    return false;
 
   // Cannot allow VSX with no Altivec.
   if (llvm::is_contained(FeaturesVec, "+vsx") &&
@@ -493,21 +507,14 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
   if (!llvm::is_contained(FeaturesVec, "-vsx"))
     return true;
 
-  auto FindVSXSubfeature = [&](StringRef Feature, StringRef Option) {
-    if (llvm::is_contained(FeaturesVec, Feature)) {
-      Diags.Report(diag::err_opt_not_valid_with_opt) << Option << "-mno-vsx";
-      return true;
-    }
-    return false;
-  };
-
-  bool Found = FindVSXSubfeature("+power8-vector", "-mpower8-vector");
-  Found |= FindVSXSubfeature("+direct-move", "-mdirect-move");
-  Found |= FindVSXSubfeature("+float128", "-mfloat128");
-  Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector");
-  Found |= FindVSXSubfeature("+paired-vector-memops", "-mpaired-vector-memops");
-  Found |= FindVSXSubfeature("+mma", "-mmma");
-  Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector");
+  Found = FindVSXSubfeature("+power8-vector", "-mpower8-vector", "-mno-vsx");
+  Found |= FindVSXSubfeature("+direct-move", "-mdirect-move", "-mno-vsx");
+  Found |= FindVSXSubfeature("+float128", "-mfloat128", "-mno-vsx");
+  Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector", "-mno-vsx");
+  Found |= FindVSXSubfeature("+paired-vector-memops", "-mpaired-vector-memops",
+                             "-mno-vsx");
+  Found |= FindVSXSubfeature("+mma", "-mmma", "-mno-vsx");
+  Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector", "-mno-vsx");
 
   // Return false if any vsx subfeatures was found.
   return !Found;
@@ -693,6 +700,13 @@ bool PPCTargetInfo::initFeatureMap(
   if (llvm::is_contained(FeaturesVec, "-hard-float")) {
     Features["altivec"] = false;
     Features["vsx"] = false;
+    Features["direct-move"] = false;
+    Features["power8-vector"] = false;
+    Features["power9-vector"] = false;
+    Features["paired-vector-memops"] = false;
+    Features["power10-vector"] = false;
+    Features["float128"] = false;
+    Features["mma"] = false;
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
