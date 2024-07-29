@@ -2770,7 +2770,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
 
   auto &DL = scop->getFunction().getDataLayout();
   if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getType(),
-                                  LI->getAlign(), DL)) {
+                                  LI->getAlign(), DL, nullptr)) {
     SafeToLoad = isl::set::universe(AccessRelation.get_space().range());
   } else if (BB != LI->getParent()) {
     // Skip accesses in non-affine subregions as they might not be executed
