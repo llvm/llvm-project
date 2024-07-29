@@ -207,7 +207,7 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   return Result;
 }
 
-static bool shouldSkipLocalInAnotherModule(const GlobalVarSummary *RefSummary,
+static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
   // We can import a local from another module if all inputs are compiled
@@ -268,8 +268,7 @@ static auto qualifyCalleeCandidates(
         // there is only one entry in the list or when all files in the program
         // are compiled with full path - in both cases the local function has
         // unique PGO name and GUID.
-        if (shouldSkipLocalInAnotherModule(dyn_cast<GlobalVarSummary>(Summary),
-                                           CalleeSummaryList.size(),
+        if (shouldSkipLocalInAnotherModule(Summary, CalleeSummaryList.size(),
                                            CallerModulePath))
           return {
               FunctionImporter::ImportFailureReason::LocalLinkageNotInModule,
