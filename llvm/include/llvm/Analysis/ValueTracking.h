@@ -792,13 +792,6 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
-/// Return true if speculation of the given load must be suppressed to avoid
-/// ordering or interfering with an active sanitizer.  If not suppressed,
-/// dereferenceability and alignment must be proven separately.  Note: This
-/// is only needed for raw reasoning; if you use the interface below
-/// (isSafeToSpeculativelyExecute), this is handled internally.
-bool mustSuppressSpeculation(const LoadInst &LI);
-
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.
 ///
