@@ -2001,13 +2001,11 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   VectorType *InputTy = nullptr;
 
   auto RetScalarTy = RetTy->getScalarType();
-  if (RetScalarTy->isIntegerTy(64)) {
+  if (RetScalarTy->isIntegerTy(64))
     InputTy = VectorType::get(Type::getInt16Ty(I->getContext()), 8, RetTy->isScalableTy());
-  } else if (RetScalarTy->isIntegerTy(32)) {
+  else if (RetScalarTy->isIntegerTy(32))
     InputTy = VectorType::get(Type::getInt8Ty(I->getContext()), 16, RetTy->isScalableTy());
-  }
-
-  if (!InputTy)
+  else
     return true;
 
   Value *InputA;
@@ -2021,7 +2019,6 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   auto Mul = cast<Instruction>(I->getOperand(1));
-
   auto getOpcodeOfOperand = [&](unsigned Idx) {
     return cast<Instruction>(Mul->getOperand(Idx))->getOpcode();
   };
