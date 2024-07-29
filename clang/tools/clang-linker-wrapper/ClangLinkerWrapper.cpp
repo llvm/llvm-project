@@ -14,6 +14,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -37,6 +38,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -61,6 +64,54 @@
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
+
+// Various tools (e.g., llc and opt) duplicate this series of declarations for
+// options related to passes and remarks.
+
+static cl::opt<bool> RemarksWithHotness(
+    "pass-remarks-with-hotness",
+    cl::desc("With PGO, include profile count in optimization remarks"),
+    cl::Hidden);
+
+static cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
+    RemarksHotnessThreshold(
+        "pass-remarks-hotness-threshold",
+        cl::desc("Minimum profile count required for "
+                 "an optimization remark to be output. "
+                 "Use 'auto' to apply the threshold from profile summary."),
+        cl::value_desc("N or 'auto'"), cl::init(0), cl::Hidden);
+
+static cl::opt<std::string>
+    RemarksFilename("pass-remarks-output",
+                    cl::desc("Output filename for pass remarks"),
+                    cl::value_desc("filename"));
+
+static cl::opt<std::string>
+    RemarksPasses("pass-remarks-filter",
+                  cl::desc("Only record optimization remarks from passes whose "
+                           "names match the given regular expression"),
+                  cl::value_desc("regex"));
+
+static cl::opt<std::string> RemarksFormat(
+    "pass-remarks-format",
+    cl::desc("The format used for serializing remarks (default: YAML)"),
+    cl::value_desc("format"), cl::init("yaml"));
+
+static cl::list<std::string>
+    PassPlugins("load-pass-plugin",
+                cl::desc("Load passes from plugin library"));
+
+static cl::opt<std::string> PassPipeline(
+    "passes",
+    cl::desc(
+        "A textual description of the pass pipeline. To have analysis passes "
+        "available before a certain pass, add 'require<foo-analysis>'. "
+        "'-passes' overrides the pass pipeline (but not all effects) from "
+        "specifying '--opt-level=O?' (O2 is the default) to "
+        "clang-linker-wrapper.  Be sure to include the corresponding "
+        "'default<O?>' in '-passes'."));
+static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
+                               cl::desc("Alias for -passes"));
 
 /// Path of the current binary.
 static const char *LinkerExecutable;
@@ -240,6 +291,14 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
     return createStringError(Path.getError(),
                              "Unable to find '" + Name + "' in path");
   return *Path;
+}
+
+/// We will defer LTO to the target's linker if we are not doing JIT and it is
+/// supported by the toolchain.
+bool linkerSupportsLTO(const ArgList &Args) {
+  llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  return Triple.isNVPTX() || Triple.isAMDGPU() ||
+         Args.getLastArgValue(OPT_linker_path_EQ).ends_with("ld.lld");
 }
 
 /// Returns the hashed value for a constant string.
@@ -466,6 +525,13 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
       Args.MakeArgString("-" + OptLevel),
   };
 
+  // Forward all of the `--offload-opt` and similar options to the device.
+  if (linkerSupportsLTO(Args)) {
+    for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
+      CmdArgs.push_back(
+          Args.MakeArgString("-Wl,--plugin-opt=" + StringRef(Arg->getValue())));
+  }
+
   if (!Triple.isNVPTX())
     CmdArgs.push_back("-Wl,--no-undefined");
 
@@ -504,17 +570,22 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
-  // Pass on -mllvm options to the clang invocation.
-  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Arg->getValue());
-  }
+  // Pass on -mllvm options to the linker invocation.
+  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
+    CmdArgs.push_back(
+        Args.MakeArgString("-Wl,-mllvm=" + StringRef(Arg->getValue())));
 
   if (Args.hasArg(OPT_debug))
     CmdArgs.push_back("-g");
 
   if (SaveTemps)
     CmdArgs.push_back("-save-temps");
+
+  if (SaveTemps && linkerSupportsLTO(Args))
+    CmdArgs.push_back("-Wl,--save-temps");
+
+  if (Args.hasArg(OPT_embed_bitcode))
+    CmdArgs.push_back("-Wl,--lto-emit-llvm");
 
   if (Verbose)
     CmdArgs.push_back("-v");
@@ -536,8 +607,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
                       Args.MakeArgString(Arg.split('=').second)});
   }
 
-  // The OpenMPOpt pass can introduce new calls and is expensive, we do not want
-  // this when running CodeGen through clang.
+  // The OpenMPOpt pass can introduce new calls and is expensive, we do
+  // not want this when running CodeGen through clang.
   if (Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ))
     CmdArgs.append({"-mllvm", "-openmp-opt-disable"});
 
@@ -618,7 +689,8 @@ std::unique_ptr<lto::LTO> createLTO(
     ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   // We need to remove AMD's target-id from the processor if present.
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ).split(":").first;
+  StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
+  StringRef Arch = clang::getProcessorFromTargetID(Triple, TargetID);
   lto::Config Conf;
   lto::ThinBackend Backend;
   // TODO: Handle index-only thin-LTO
@@ -627,6 +699,12 @@ std::unique_ptr<lto::LTO> createLTO(
 
   Conf.CPU = Arch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+
+  Conf.RemarksFilename = RemarksFilename;
+  Conf.RemarksPasses = RemarksPasses;
+  Conf.RemarksWithHotness = RemarksWithHotness;
+  Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
+  Conf.RemarksFormat = RemarksFormat;
 
   StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   Conf.MAttrs = Features;
@@ -637,6 +715,17 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.OptLevel = OptLevel[1] - '0';
   Conf.DefaultTriple = Triple.getTriple();
 
+  // TODO: Should we complain about combining --opt-level and -passes, as opt
+  // does?  That might be too limiting in clang-linker-wrapper, so for now we
+  // just warn in the help entry for -passes that the default<O?> corresponding
+  // to --opt-level=O? should be included there.  The problem is that
+  // --opt-level produces effects in clang-linker-wrapper beyond what -passes
+  // appears to be able to achieve, so rejecting the combination of --opt-level
+  // and -passes would apparently make it impossible to combine those effects
+  // with a custom pass pipeline.
+  Conf.OptPipeline = PassPipeline;
+  Conf.PassPlugins = PassPlugins;
+
   LTOError = false;
   Conf.DiagHandler = diagnosticHandler;
 
@@ -645,7 +734,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   if (SaveTemps) {
     std::string TempName = (sys::path::filename(ExecutableName) + "." +
-                            Triple.getTriple() + "." + Arch)
+                            Triple.getTriple() + "." + TargetID)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
       std::string File =
@@ -703,8 +792,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
-  // Search for bitcode files in the input and create an LTO input file. If it
-  // is not a bitcode file, scan its symbol table for symbols we need to save.
+  // Search for bitcode files in the input and create an LTO input file. If
+  // it is not a bitcode file, scan its symbol table for symbols we need to
+  // save.
   for (OffloadFile &File : InputFiles) {
     MemoryBufferRef Buffer = MemoryBufferRef(File.getBinary()->getImage(), "");
 
@@ -738,7 +828,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
         if (!Name)
           return Name.takeError();
 
-        // Record if we've seen these symbols in any object or shared libraries.
+        // Record if we've seen these symbols in any object or shared
+        // libraries.
         if ((*ObjFile)->isRelocatableObject())
           UsedInRegularObj.insert(Saver.save(*Name));
         else
@@ -775,7 +866,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return false;
   };
 
-  // We assume visibility of the whole program if every input file was bitcode.
+  // We assume visibility of the whole program if every input file was
+  // bitcode.
   auto Features = getTargetFeatures(BitcodeInputFiles);
   auto LTOBackend = Args.hasArg(OPT_embed_bitcode) ||
                             Args.hasArg(OPT_builtin_bitcode_EQ) ||
@@ -783,9 +875,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                         ? createLTO(Args, Features, OutputBitcode)
                         : createLTO(Args, Features);
 
-  // We need to resolve the symbols so the LTO backend knows which symbols need
-  // to be kept or can be internalized. This is a simplified symbol resolution
-  // scheme to approximate the full resolution a linker would do.
+  // We need to resolve the symbols so the LTO backend knows which symbols
+  // need to be kept or can be internalized. This is a simplified symbol
+  // resolution scheme to approximate the full resolution a linker would do.
   uint64_t Idx = 0;
   DenseSet<StringRef> PrevailingSymbols;
   for (auto &BitcodeInput : BitcodeInputFiles) {
@@ -817,7 +909,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
       // We need LTO to preseve the following global symbols:
       // 1) Symbols used in regular objects.
       // 2) Sections that will be given a __start/__stop symbol.
-      // 3) Prevailing symbols that are needed visible to external libraries.
+      // 3) Prevailing symbols that are needed visible to external
+      // libraries.
       Res.VisibleToRegularObj =
           UsedInRegularObj.contains(Sym.getName()) ||
           isValidCIdentifier(Sym.getSectionName()) ||
@@ -832,9 +925,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
           (UsedInSharedLib.contains(Sym.getName()) ||
            !Sym.canBeOmittedFromSymbolTable());
 
-      // The final definition will reside in this linkage unit if the symbol is
-      // defined and local to the module. This only checks for bitcode files,
-      // full assertion will require complete symbol resolution.
+      // The final definition will reside in this linkage unit if the symbol
+      // is defined and local to the module. This only checks for bitcode
+      // files, full assertion will require complete symbol resolution.
       Res.FinalDefinitionInLinkageUnit =
           Sym.getVisibility() != GlobalValue::DefaultVisibility &&
           (!Sym.isUndefined() && !Sym.isCommon());
@@ -887,8 +980,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return Error::success();
   }
 
-  // Append the new inputs to the device linker input. If the user requested an
-  // internalizing link we need to pass the bitcode to clang.
+  // Append the new inputs to the device linker input. If the user requested
+  // an internalizing link we need to pass the bitcode to clang.
   for (StringRef File :
        Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ)
            ? BitcodeOutput
@@ -903,10 +996,9 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
   StringRef Prefix =
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-  StringRef Suffix = getImageKindName(Binary.getImageKind());
 
   auto TempFileOrErr = createOutputFile(
-      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), Suffix);
+      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -1119,8 +1211,8 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
-  // If every input file is bitcode we have whole program visibility as we do
-  // only support static linking with bitcode.
+  // If every input file is bitcode we have whole program visibility as we
+  // do only support static linking with bitcode.
   auto ContainsBitcode = [](const OffloadFile &F) {
     return identify_magic(F.getBinary()->getImage()) == file_magic::bitcode;
   };
@@ -1130,7 +1222,13 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   // Forward '-Xoffload-linker' options to the appropriate backend.
   for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ)) {
     auto [Triple, Value] = Arg.split('=');
-    if (Value.empty())
+    llvm::Triple TT(Triple);
+    // If this isn't a recognized triple then it's an `arg=value` option.
+    if (TT.getArch() <= Triple::ArchType::UnknownArch ||
+        TT.getArch() > Triple::ArchType::LastArchType)
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+                       Args.MakeArgString(Arg));
+    else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Triple));
     else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
@@ -1208,12 +1306,15 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       if (File.getBinary()->getOffloadKind() != OFK_None)
         ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
 
-    // First link and remove all the input files containing bitcode.
+    // First link and remove all the input files containing bitcode if
+    // the target linker does not support it natively.
     SmallVector<StringRef> InputFiles;
-    if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
-      return Err;
+    if (!linkerSupportsLTO(LinkerArgs))
+      if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
+        return Err;
 
-    // Write any remaining device inputs to an output file for the linker.
+    // Write any remaining device inputs to an output file for the
+    // linker.
     for (const OffloadFile &File : Input) {
       auto FileNameOrErr = writeOffloadFile(File);
       if (!FileNameOrErr)
@@ -1222,9 +1323,10 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     }
 
     // Link the remaining device files using the device linker.
-    auto OutputOrErr = !Args.hasArg(OPT_embed_bitcode)
-                           ? linkDevice(InputFiles, LinkerArgs)
-                           : InputFiles.front();
+    auto OutputOrErr =
+        !Args.hasArg(OPT_embed_bitcode) || linkerSupportsLTO(LinkerArgs)
+            ? linkDevice(InputFiles, LinkerArgs)
+            : InputFiles.front();
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
@@ -1351,12 +1453,14 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       bool NewSymbol = Syms.count(Sym.getName()) == 0;
       auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
 
-      // We will extract if it defines a currenlty undefined non-weak symbol.
+      // We will extract if it defines a currenlty undefined non-weak
+      // symbol.
       bool ResolvesStrongReference =
           ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
            !Sym.isUndefined());
-      // We will extract if it defines a new global symbol visible to the host.
-      // This is only necessary for code targeting an offloading language.
+      // We will extract if it defines a new global symbol visible to the
+      // host. This is only necessary for code targeting an offloading
+      // language.
       bool NewGlobalSymbol =
           ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
            !Sym.canBeOmittedFromSymbolTable() && Kind != object::OFK_None &&
@@ -1411,8 +1515,9 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
                                    !(OldSym & Sym_Weak) &&
                                    !(*FlagsOrErr & SymbolRef::SF_Undefined);
 
-    // We will extract if it defines a new global symbol visible to the host.
-    // This is only necessary for code targeting an offloading language.
+    // We will extract if it defines a new global symbol visible to the
+    // host. This is only necessary for code targeting an offloading
+    // language.
     bool NewGlobalSymbol =
         ((NewSymbol || (OldSym & Sym_Undefined)) &&
          !(*FlagsOrErr & SymbolRef::SF_Undefined) && Kind != object::OFK_None &&
@@ -1579,8 +1684,8 @@ getDeviceInput(const ArgList &Args) {
 
         Expected<bool> ExtractOrErr =
             getSymbols(Binary.getBinary()->getImage(),
-                       Binary.getBinary()->getOffloadKind(), /*IsArchive=*/true,
-                       Saver, Syms[ID]);
+                       Binary.getBinary()->getOffloadKind(),
+                       /*IsArchive=*/true, Saver, Syms[ID]);
         if (!ExtractOrErr)
           return ExtractOrErr.takeError();
 
@@ -1659,7 +1764,14 @@ int main(int Argc, char **Argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
-    NewArgv.push_back(Args.MakeArgString(StringRef("-") + Arg->getValue()));
+    NewArgv.push_back(Arg->getValue());
+  SmallVector<PassPlugin, 1> PluginList;
+  PassPlugins.setCallback([&](const std::string &PluginPath) {
+    auto Plugin = PassPlugin::Load(PluginPath);
+    if (!Plugin)
+      report_fatal_error(Plugin.takeError(), /*gen_crash_diag=*/false);
+    PluginList.emplace_back(Plugin.get());
+  });
   cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
 
   Verbose = Args.hasArg(OPT_verbose);

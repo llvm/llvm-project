@@ -106,9 +106,13 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   B.Pointers = Blk->Pointers;
   for (Pointer *P = Blk->Pointers; P; P = P->Next)
     P->PointeeStorage.BS.Pointee = &B;
+  Blk->Pointers = nullptr;
 }
 
 void DeadBlock::free() {
+  if (B.IsInitialized)
+    B.invokeDtor();
+
   if (Prev)
     Prev->Next = Next;
   if (Next)

@@ -136,6 +136,7 @@ static constexpr fltSemantics semIEEEquad = {16383, -16382, 113, 128};
 static constexpr fltSemantics semFloat8E5M2 = {15, -14, 3, 8};
 static constexpr fltSemantics semFloat8E5M2FNUZ = {
     15, -15, 3, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
+static constexpr fltSemantics semFloat8E4M3 = {7, -6, 4, 8};
 static constexpr fltSemantics semFloat8E4M3FN = {
     8, -6, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::AllOnes};
 static constexpr fltSemantics semFloat8E4M3FNUZ = {
@@ -208,6 +209,8 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return Float8E5M2();
   case S_Float8E5M2FNUZ:
     return Float8E5M2FNUZ();
+  case S_Float8E4M3:
+    return Float8E4M3();
   case S_Float8E4M3FN:
     return Float8E4M3FN();
   case S_Float8E4M3FNUZ:
@@ -246,6 +249,8 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_Float8E5M2;
   else if (&Sem == &llvm::APFloat::Float8E5M2FNUZ())
     return S_Float8E5M2FNUZ;
+  else if (&Sem == &llvm::APFloat::Float8E4M3())
+    return S_Float8E4M3;
   else if (&Sem == &llvm::APFloat::Float8E4M3FN())
     return S_Float8E4M3FN;
   else if (&Sem == &llvm::APFloat::Float8E4M3FNUZ())
@@ -276,6 +281,7 @@ const fltSemantics &APFloatBase::PPCDoubleDouble() {
 }
 const fltSemantics &APFloatBase::Float8E5M2() { return semFloat8E5M2; }
 const fltSemantics &APFloatBase::Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
+const fltSemantics &APFloatBase::Float8E4M3() { return semFloat8E4M3; }
 const fltSemantics &APFloatBase::Float8E4M3FN() { return semFloat8E4M3FN; }
 const fltSemantics &APFloatBase::Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
 const fltSemantics &APFloatBase::Float8E4M3B11FNUZ() {
@@ -3617,6 +3623,11 @@ APInt IEEEFloat::convertFloat8E5M2FNUZAPFloatToAPInt() const {
   return convertIEEEFloatToAPInt<semFloat8E5M2FNUZ>();
 }
 
+APInt IEEEFloat::convertFloat8E4M3APFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<semFloat8E4M3>();
+}
+
 APInt IEEEFloat::convertFloat8E4M3FNAPFloatToAPInt() const {
   assert(partCount() == 1);
   return convertIEEEFloatToAPInt<semFloat8E4M3FN>();
@@ -3680,6 +3691,9 @@ APInt IEEEFloat::bitcastToAPInt() const {
 
   if (semantics == (const llvm::fltSemantics *)&semFloat8E5M2FNUZ)
     return convertFloat8E5M2FNUZAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3)
+    return convertFloat8E4M3APFloatToAPInt();
 
   if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3FN)
     return convertFloat8E4M3FNAPFloatToAPInt();
@@ -3902,6 +3916,10 @@ void IEEEFloat::initFromFloat8E5M2FNUZAPInt(const APInt &api) {
   initFromIEEEAPInt<semFloat8E5M2FNUZ>(api);
 }
 
+void IEEEFloat::initFromFloat8E4M3APInt(const APInt &api) {
+  initFromIEEEAPInt<semFloat8E4M3>(api);
+}
+
 void IEEEFloat::initFromFloat8E4M3FNAPInt(const APInt &api) {
   initFromIEEEAPInt<semFloat8E4M3FN>(api);
 }
@@ -3951,6 +3969,8 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloat8E5M2APInt(api);
   if (Sem == &semFloat8E5M2FNUZ)
     return initFromFloat8E5M2FNUZAPInt(api);
+  if (Sem == &semFloat8E4M3)
+    return initFromFloat8E4M3APInt(api);
   if (Sem == &semFloat8E4M3FN)
     return initFromFloat8E4M3FNAPInt(api);
   if (Sem == &semFloat8E4M3FNUZ)
@@ -4118,6 +4138,199 @@ namespace {
     exp += FirstSignificant;
     buffer.erase(&buffer[0], &buffer[FirstSignificant]);
   }
+
+  void toStringImpl(SmallVectorImpl<char> &Str, const bool isNeg, int exp,
+                    APInt significand, unsigned FormatPrecision,
+                    unsigned FormatMaxPadding, bool TruncateZero) {
+    const int semanticsPrecision = significand.getBitWidth();
+
+    if (isNeg)
+      Str.push_back('-');
+
+    // Set FormatPrecision if zero.  We want to do this before we
+    // truncate trailing zeros, as those are part of the precision.
+    if (!FormatPrecision) {
+      // We use enough digits so the number can be round-tripped back to an
+      // APFloat. The formula comes from "How to Print Floating-Point Numbers
+      // Accurately" by Steele and White.
+      // FIXME: Using a formula based purely on the precision is conservative;
+      // we can print fewer digits depending on the actual value being printed.
+
+      // FormatPrecision = 2 + floor(significandBits / lg_2(10))
+      FormatPrecision = 2 + semanticsPrecision * 59 / 196;
+    }
+
+    // Ignore trailing binary zeros.
+    int trailingZeros = significand.countr_zero();
+    exp += trailingZeros;
+    significand.lshrInPlace(trailingZeros);
+
+    // Change the exponent from 2^e to 10^e.
+    if (exp == 0) {
+      // Nothing to do.
+    } else if (exp > 0) {
+      // Just shift left.
+      significand = significand.zext(semanticsPrecision + exp);
+      significand <<= exp;
+      exp = 0;
+    } else { /* exp < 0 */
+      int texp = -exp;
+
+      // We transform this using the identity:
+      //   (N)(2^-e) == (N)(5^e)(10^-e)
+      // This means we have to multiply N (the significand) by 5^e.
+      // To avoid overflow, we have to operate on numbers large
+      // enough to store N * 5^e:
+      //   log2(N * 5^e) == log2(N) + e * log2(5)
+      //                 <= semantics->precision + e * 137 / 59
+      //   (log_2(5) ~ 2.321928 < 2.322034 ~ 137/59)
+
+      unsigned precision = semanticsPrecision + (137 * texp + 136) / 59;
+
+      // Multiply significand by 5^e.
+      //   N * 5^0101 == N * 5^(1*1) * 5^(0*2) * 5^(1*4) * 5^(0*8)
+      significand = significand.zext(precision);
+      APInt five_to_the_i(precision, 5);
+      while (true) {
+        if (texp & 1)
+          significand *= five_to_the_i;
+
+        texp >>= 1;
+        if (!texp)
+          break;
+        five_to_the_i *= five_to_the_i;
+      }
+    }
+
+    AdjustToPrecision(significand, exp, FormatPrecision);
+
+    SmallVector<char, 256> buffer;
+
+    // Fill the buffer.
+    unsigned precision = significand.getBitWidth();
+    if (precision < 4) {
+      // We need enough precision to store the value 10.
+      precision = 4;
+      significand = significand.zext(precision);
+    }
+    APInt ten(precision, 10);
+    APInt digit(precision, 0);
+
+    bool inTrail = true;
+    while (significand != 0) {
+      // digit <- significand % 10
+      // significand <- significand / 10
+      APInt::udivrem(significand, ten, significand, digit);
+
+      unsigned d = digit.getZExtValue();
+
+      // Drop trailing zeros.
+      if (inTrail && !d)
+        exp++;
+      else {
+        buffer.push_back((char) ('0' + d));
+        inTrail = false;
+      }
+    }
+
+    assert(!buffer.empty() && "no characters in buffer!");
+
+    // Drop down to FormatPrecision.
+    // TODO: don't do more precise calculations above than are required.
+    AdjustToPrecision(buffer, exp, FormatPrecision);
+
+    unsigned NDigits = buffer.size();
+
+    // Check whether we should use scientific notation.
+    bool FormatScientific;
+    if (!FormatMaxPadding)
+      FormatScientific = true;
+    else {
+      if (exp >= 0) {
+        // 765e3 --> 765000
+        //              ^^^
+        // But we shouldn't make the number look more precise than it is.
+        FormatScientific = ((unsigned) exp > FormatMaxPadding ||
+                            NDigits + (unsigned) exp > FormatPrecision);
+      } else {
+        // Power of the most significant digit.
+        int MSD = exp + (int) (NDigits - 1);
+        if (MSD >= 0) {
+          // 765e-2 == 7.65
+          FormatScientific = false;
+        } else {
+          // 765e-5 == 0.00765
+          //           ^ ^^
+          FormatScientific = ((unsigned) -MSD) > FormatMaxPadding;
+        }
+      }
+    }
+
+    // Scientific formatting is pretty straightforward.
+    if (FormatScientific) {
+      exp += (NDigits - 1);
+
+      Str.push_back(buffer[NDigits-1]);
+      Str.push_back('.');
+      if (NDigits == 1 && TruncateZero)
+        Str.push_back('0');
+      else
+        for (unsigned I = 1; I != NDigits; ++I)
+          Str.push_back(buffer[NDigits-1-I]);
+      // Fill with zeros up to FormatPrecision.
+      if (!TruncateZero && FormatPrecision > NDigits - 1)
+        Str.append(FormatPrecision - NDigits + 1, '0');
+      // For !TruncateZero we use lower 'e'.
+      Str.push_back(TruncateZero ? 'E' : 'e');
+
+      Str.push_back(exp >= 0 ? '+' : '-');
+      if (exp < 0)
+        exp = -exp;
+      SmallVector<char, 6> expbuf;
+      do {
+        expbuf.push_back((char) ('0' + (exp % 10)));
+        exp /= 10;
+      } while (exp);
+      // Exponent always at least two digits if we do not truncate zeros.
+      if (!TruncateZero && expbuf.size() < 2)
+        expbuf.push_back('0');
+      for (unsigned I = 0, E = expbuf.size(); I != E; ++I)
+        Str.push_back(expbuf[E-1-I]);
+      return;
+    }
+
+    // Non-scientific, positive exponents.
+    if (exp >= 0) {
+      for (unsigned I = 0; I != NDigits; ++I)
+        Str.push_back(buffer[NDigits-1-I]);
+      for (unsigned I = 0; I != (unsigned) exp; ++I)
+        Str.push_back('0');
+      return;
+    }
+
+    // Non-scientific, negative exponents.
+
+    // The number of digits to the left of the decimal point.
+    int NWholeDigits = exp + (int) NDigits;
+
+    unsigned I = 0;
+    if (NWholeDigits > 0) {
+      for (; I != (unsigned) NWholeDigits; ++I)
+        Str.push_back(buffer[NDigits-I-1]);
+      Str.push_back('.');
+    } else {
+      unsigned NZeros = 1 + (unsigned) -NWholeDigits;
+
+      Str.push_back('0');
+      Str.push_back('.');
+      for (unsigned Z = 1; Z != NZeros; ++Z)
+        Str.push_back('0');
+    }
+
+    for (; I != NDigits; ++I)
+      Str.push_back(buffer[NDigits-I-1]);
+
+  }
 } // namespace
 
 void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
@@ -4152,193 +4365,15 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
     break;
   }
 
-  if (isNegative())
-    Str.push_back('-');
-
   // Decompose the number into an APInt and an exponent.
   int exp = exponent - ((int) semantics->precision - 1);
   APInt significand(
       semantics->precision,
       ArrayRef(significandParts(), partCountForBits(semantics->precision)));
 
-  // Set FormatPrecision if zero.  We want to do this before we
-  // truncate trailing zeros, as those are part of the precision.
-  if (!FormatPrecision) {
-    // We use enough digits so the number can be round-tripped back to an
-    // APFloat. The formula comes from "How to Print Floating-Point Numbers
-    // Accurately" by Steele and White.
-    // FIXME: Using a formula based purely on the precision is conservative;
-    // we can print fewer digits depending on the actual value being printed.
+  toStringImpl(Str, isNegative(), exp, significand, FormatPrecision,
+               FormatMaxPadding, TruncateZero);
 
-    // FormatPrecision = 2 + floor(significandBits / lg_2(10))
-    FormatPrecision = 2 + semantics->precision * 59 / 196;
-  }
-
-  // Ignore trailing binary zeros.
-  int trailingZeros = significand.countr_zero();
-  exp += trailingZeros;
-  significand.lshrInPlace(trailingZeros);
-
-  // Change the exponent from 2^e to 10^e.
-  if (exp == 0) {
-    // Nothing to do.
-  } else if (exp > 0) {
-    // Just shift left.
-    significand = significand.zext(semantics->precision + exp);
-    significand <<= exp;
-    exp = 0;
-  } else { /* exp < 0 */
-    int texp = -exp;
-
-    // We transform this using the identity:
-    //   (N)(2^-e) == (N)(5^e)(10^-e)
-    // This means we have to multiply N (the significand) by 5^e.
-    // To avoid overflow, we have to operate on numbers large
-    // enough to store N * 5^e:
-    //   log2(N * 5^e) == log2(N) + e * log2(5)
-    //                 <= semantics->precision + e * 137 / 59
-    //   (log_2(5) ~ 2.321928 < 2.322034 ~ 137/59)
-
-    unsigned precision = semantics->precision + (137 * texp + 136) / 59;
-
-    // Multiply significand by 5^e.
-    //   N * 5^0101 == N * 5^(1*1) * 5^(0*2) * 5^(1*4) * 5^(0*8)
-    significand = significand.zext(precision);
-    APInt five_to_the_i(precision, 5);
-    while (true) {
-      if (texp & 1) significand *= five_to_the_i;
-
-      texp >>= 1;
-      if (!texp) break;
-      five_to_the_i *= five_to_the_i;
-    }
-  }
-
-  AdjustToPrecision(significand, exp, FormatPrecision);
-
-  SmallVector<char, 256> buffer;
-
-  // Fill the buffer.
-  unsigned precision = significand.getBitWidth();
-  if (precision < 4) {
-    // We need enough precision to store the value 10.
-    precision = 4;
-    significand = significand.zext(precision);
-  }
-  APInt ten(precision, 10);
-  APInt digit(precision, 0);
-
-  bool inTrail = true;
-  while (significand != 0) {
-    // digit <- significand % 10
-    // significand <- significand / 10
-    APInt::udivrem(significand, ten, significand, digit);
-
-    unsigned d = digit.getZExtValue();
-
-    // Drop trailing zeros.
-    if (inTrail && !d) exp++;
-    else {
-      buffer.push_back((char) ('0' + d));
-      inTrail = false;
-    }
-  }
-
-  assert(!buffer.empty() && "no characters in buffer!");
-
-  // Drop down to FormatPrecision.
-  // TODO: don't do more precise calculations above than are required.
-  AdjustToPrecision(buffer, exp, FormatPrecision);
-
-  unsigned NDigits = buffer.size();
-
-  // Check whether we should use scientific notation.
-  bool FormatScientific;
-  if (!FormatMaxPadding)
-    FormatScientific = true;
-  else {
-    if (exp >= 0) {
-      // 765e3 --> 765000
-      //              ^^^
-      // But we shouldn't make the number look more precise than it is.
-      FormatScientific = ((unsigned) exp > FormatMaxPadding ||
-                          NDigits + (unsigned) exp > FormatPrecision);
-    } else {
-      // Power of the most significant digit.
-      int MSD = exp + (int) (NDigits - 1);
-      if (MSD >= 0) {
-        // 765e-2 == 7.65
-        FormatScientific = false;
-      } else {
-        // 765e-5 == 0.00765
-        //           ^ ^^
-        FormatScientific = ((unsigned) -MSD) > FormatMaxPadding;
-      }
-    }
-  }
-
-  // Scientific formatting is pretty straightforward.
-  if (FormatScientific) {
-    exp += (NDigits - 1);
-
-    Str.push_back(buffer[NDigits-1]);
-    Str.push_back('.');
-    if (NDigits == 1 && TruncateZero)
-      Str.push_back('0');
-    else
-      for (unsigned I = 1; I != NDigits; ++I)
-        Str.push_back(buffer[NDigits-1-I]);
-    // Fill with zeros up to FormatPrecision.
-    if (!TruncateZero && FormatPrecision > NDigits - 1)
-      Str.append(FormatPrecision - NDigits + 1, '0');
-    // For !TruncateZero we use lower 'e'.
-    Str.push_back(TruncateZero ? 'E' : 'e');
-
-    Str.push_back(exp >= 0 ? '+' : '-');
-    if (exp < 0) exp = -exp;
-    SmallVector<char, 6> expbuf;
-    do {
-      expbuf.push_back((char) ('0' + (exp % 10)));
-      exp /= 10;
-    } while (exp);
-    // Exponent always at least two digits if we do not truncate zeros.
-    if (!TruncateZero && expbuf.size() < 2)
-      expbuf.push_back('0');
-    for (unsigned I = 0, E = expbuf.size(); I != E; ++I)
-      Str.push_back(expbuf[E-1-I]);
-    return;
-  }
-
-  // Non-scientific, positive exponents.
-  if (exp >= 0) {
-    for (unsigned I = 0; I != NDigits; ++I)
-      Str.push_back(buffer[NDigits-1-I]);
-    for (unsigned I = 0; I != (unsigned) exp; ++I)
-      Str.push_back('0');
-    return;
-  }
-
-  // Non-scientific, negative exponents.
-
-  // The number of digits to the left of the decimal point.
-  int NWholeDigits = exp + (int) NDigits;
-
-  unsigned I = 0;
-  if (NWholeDigits > 0) {
-    for (; I != (unsigned) NWholeDigits; ++I)
-      Str.push_back(buffer[NDigits-I-1]);
-    Str.push_back('.');
-  } else {
-    unsigned NZeros = 1 + (unsigned) -NWholeDigits;
-
-    Str.push_back('0');
-    Str.push_back('.');
-    for (unsigned Z = 1; Z != NZeros; ++Z)
-      Str.push_back('0');
-  }
-
-  for (; I != NDigits; ++I)
-    Str.push_back(buffer[NDigits-I-1]);
 }
 
 bool IEEEFloat::getExactInverse(APFloat *inv) const {

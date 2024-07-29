@@ -137,7 +137,7 @@ public:
     MCSymbol *BeginLabel, *EndLabel;
   };
 
-  MapVector<unsigned, MBBSectionRange> MBBSectionRanges;
+  MapVector<MBBSectionID, MBBSectionRange> MBBSectionRanges;
 
   /// Map global GOT equivalent MCSymbols to GlobalVariables and keep track of
   /// its number of uses by other globals.
@@ -157,7 +157,7 @@ private:
   /// Map a basic block section ID to the exception symbol associated with that
   /// section. Map entries are assigned and looked up via
   /// AsmPrinter::getMBBExceptionSym.
-  DenseMap<unsigned, MCSymbol *> MBBSectionExceptionSyms;
+  DenseMap<MBBSectionID, MCSymbol *> MBBSectionExceptionSyms;
 
   // The symbol used to represent the start of the current BB section of the
   // function. This is used to calculate the size of the BB section.
@@ -224,6 +224,9 @@ private:
   /// .note.GNU-no-split-stack section when it also contains functions without a
   /// split stack prologue.
   bool HasNoSplitStack = false;
+
+  /// True if debugging information is available in this module.
+  bool DbgInfoAvailable = false;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -430,6 +433,9 @@ public:
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
+  /// Returns true if valid debug info is present.
+  bool hasDebugInfo() const { return DbgInfoAvailable; }
+
   bool needsSEHMoves();
 
   /// Since emitting CFI unwind information is entangled with supporting the
@@ -576,6 +582,9 @@ public:
   virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     report_fatal_error("ptrauth constant lowering not implemented");
   }
+
+  /// Lower the specified BlockAddress to an MCExpr.
+  virtual const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA);
 
   /// Return true if the basic block has exactly one predecessor and the control
   /// transfer mechanism between the predecessor and this block is a
@@ -892,7 +901,6 @@ private:
   virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
-  virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
 private:
@@ -900,6 +908,7 @@ private:
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 
 protected:
+  virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;
   }

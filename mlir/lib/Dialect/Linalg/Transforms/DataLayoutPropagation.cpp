@@ -378,7 +378,7 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
     return failure();
 
   // User controlled propagation function.
-  if (!controlFn(genericOp))
+  if (!controlFn(&packOp.getSourceMutable()))
     return failure();
 
   // TODO: Enable propagation in the presence of linalg.index and
@@ -488,10 +488,7 @@ public:
       return failure();
 
     // User controlled propagation function.
-    if (!controlFn(padOp))
-      return failure();
-
-    if (!padOp.getResult().hasOneUse())
+    if (!controlFn(&packOp.getSourceMutable()))
       return failure();
 
     // TODO: Enable padding when the padding values are the same.
@@ -510,7 +507,6 @@ public:
       return failure();
 
     ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
-    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
 
     // Bail out if one of the padded dimension is a tiled one.
     llvm::SmallBitVector paddedDims = padOp.getPaddedDims();
@@ -524,11 +520,13 @@ public:
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(padOp);
 
+    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+    SmallVector<OpFoldResult> mixedTiles = packOp.getMixedTiles();
     auto empty = tensor::PackOp::createDestinationTensor(
-        rewriter, loc, padOp.getSource(), packOp.getMixedTiles(), innerDimsPos,
+        rewriter, loc, padOp.getSource(), mixedTiles, innerDimsPos,
         outerDimsPerm);
-    Value packedSource = rewriter.create<tensor::PackOp>(
-        loc, padOp.getSource(), empty, innerDimsPos, packOp.getMixedTiles(),
+    auto sourcePack = rewriter.create<tensor::PackOp>(
+        loc, padOp.getSource(), empty, innerDimsPos, mixedTiles,
         /*padding=*/std::nullopt, outerDimsPerm);
 
     // If we have `outer_dims_perms` we need to adjust the padded dimensions.
@@ -545,9 +543,22 @@ public:
     highPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
 
     auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, /*result=*/Type(), packedSource, lowPad, highPad, paddingVal,
+        loc, /*result=*/Type(), sourcePack, lowPad, highPad, paddingVal,
         padOp.getNofold());
+
+    // If the pad has more than one user, create an unpack on the new pad to
+    // replace the other uses.
+    if (!padOp->hasOneUse()) {
+      auto unpackEmpty = tensor::UnPackOp::createDestinationTensor(
+          rewriter, loc, newPadOp, mixedTiles, innerDimsPos, outerDimsPerm);
+      Value unpackedPad = rewriter.create<tensor::UnPackOp>(
+          loc, newPadOp, unpackEmpty, innerDimsPos, mixedTiles, outerDimsPerm);
+      rewriter.replaceAllUsesExcept(padOp, unpackedPad, sourcePack);
+    }
+
+    // Replace the pack with the new pad.
     rewriter.replaceOp(packOp, newPadOp.getResult());
+
     return success();
   }
 
@@ -844,7 +855,7 @@ public:
     }
 
     // User controlled propagation function.
-    if (!controlFn(srcOp))
+    if (!controlFn(&packOp.getSourceMutable()))
       return failure();
 
     return TypeSwitch<Operation *, LogicalResult>(srcOp)
@@ -880,10 +891,13 @@ private:
 /// %unpack = tensor.unpack %expanded outer_dims_perm = [0, 1, 2]
 ///     inner_dims_pos = [1, 2] inner_tiles = [8, 8] into %empty
 ///     : tensor<?x32x32x8x8xf32> -> tensor<?x256x256xf32>
-static LogicalResult
-pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
-                                   tensor::ExpandShapeOp expandOp,
-                                   PatternRewriter &rewriter) {
+static LogicalResult pushDownUnPackOpThroughExpandShape(
+    tensor::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
+    PatternRewriter &rewriter, ControlPropagationFn controlFn) {
+  // User controlled propagation function.
+  if (!controlFn(&expandOp.getSrcMutable()))
+    return failure();
+
   SmallVector<int64_t> innerTileSizes = unPackOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
@@ -970,13 +984,10 @@ public:
     }
 
     Operation *consumerOp = *result.user_begin();
-    // User controlled propagation function.
-    if (!controlFn(consumerOp))
-      return failure();
-
     return TypeSwitch<Operation *, LogicalResult>(consumerOp)
         .Case([&](tensor::ExpandShapeOp op) {
-          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter);
+          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter,
+                                                    controlFn);
         })
         .Default([](Operation *) { return failure(); });
   }
@@ -1038,7 +1049,8 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
 ///                       inner_dims_pos = [3] inner_tiles = [32] into %0
 ///
 static FailureOr<std::tuple<GenericOp, Value>>
-pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
+pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                                 ControlPropagationFn controlFn) {
   if (genericOp.getNumResults() != 1)
     return failure();
 
@@ -1055,6 +1067,10 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   tensor::UnPackOp producerUnPackOp =
       unPackedOperand->get().getDefiningOp<tensor::UnPackOp>();
   assert(producerUnPackOp && "expect a valid UnPackOp");
+
+  if (!controlFn(unPackedOperand))
+    return failure();
+
   auto packInfo =
       getPackingInfoFromOperand(unPackedOperand, genericOp, producerUnPackOp);
   if (failed(packInfo))
@@ -1122,10 +1138,8 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!controlFn(genericOp))
-      return failure();
-
-    auto genericAndRepl = pushDownUnPackOpThroughGenericOp(rewriter, genericOp);
+    auto genericAndRepl =
+        pushDownUnPackOpThroughGenericOp(rewriter, genericOp, controlFn);
     if (failed(genericAndRepl))
       return failure();
     rewriter.replaceOp(genericOp, std::get<1>(*genericAndRepl));
@@ -1150,7 +1164,7 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
     if (!unpackOp)
       return failure();
 
-    if (!controlFn(padOp))
+    if (!controlFn(&padOp.getSourceMutable()))
       return failure();
 
     Location loc = padOp.getLoc();

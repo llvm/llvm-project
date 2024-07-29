@@ -88,7 +88,7 @@
 
 - `--comp-dir-override=<string>`
 
-  Overrides DW_AT_comp_dir, and provides an alterantive base location, which is
+  Overrides DW_AT_comp_dir, and provides an alternative base location, which is
   used with DW_AT_dwo_name to construct a path to *.dwo files.
 
 - `--create-debug-names-section`
@@ -112,11 +112,6 @@
 - `--debug-skeleton-cu`
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
-
-- `--deterministic-debuginfo`
-
-  Disables parallel execution of tasks that may produce nondeterministic debug
-  info
 
 - `--dot-tooltip-code`
 
@@ -282,6 +277,12 @@
 - `--pad-funcs=<func1:pad1,func2:pad2,func3:pad3,...>`
 
   List of functions to pad with amount of bytes
+
+- `--print-mappings`
+
+  Print mappings in the legend, between characters/blocks and text sections
+  (default false).
+
 
 - `--profile-format=<value>`
 
@@ -680,6 +681,10 @@
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
 
+- `--match-with-call-graph`
+
+  Match functions with call graph
+
 - `--memcpy1-spec=<func1,func2:cs1:cs2,func3:cs1,...>`
 
   List of functions with call sites for which to specialize memcpy() for size 1
@@ -687,6 +692,10 @@
 - `--min-branch-clusters`
 
   Use a modified clustering algorithm geared towards minimizing branches
+
+- `--name-similarity-function-matching-threshold=<uint>`
+
+  Match functions using namespace and edit distance.
 
 - `--no-inline`
 

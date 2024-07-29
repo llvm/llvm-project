@@ -336,9 +336,12 @@ def warn_anyx86_excessive_regsave : Warning<
   " with attribute 'no_caller_saved_registers'"
   " or be compiled with '-mgeneral-regs-only'">,
   InGroup<DiagGroup<"excessive-regsave">>;
-def warn_arm_interrupt_calling_convention : Warning<
-   "call to function without interrupt attribute could clobber interruptee's VFP registers">,
-   InGroup<Extra>;
+def warn_arm_interrupt_vfp_clobber : Warning<
+  "interrupt service routine with vfp enabled may clobber the "
+  "interruptee's vfp state">,
+  InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
+def err_arm_interrupt_called : Error<
+  "interrupt service routine cannot be called directly">;
 def warn_interrupt_attribute_invalid : Warning<
    "%select{MIPS|MSP430|RISC-V}0 'interrupt' attribute only applies to "
    "functions that have %select{no parameters|a 'void' return type}1">,
@@ -939,6 +942,9 @@ def warn_ptrauth_auth_null_pointer :
   InGroup<PtrAuthNullPointers>;
 def err_ptrauth_string_not_literal : Error<
   "argument must be a string literal%select{| of char type}0">;
+def err_ptrauth_type_disc_undiscriminated : Error<
+  "cannot pass undiscriminated type %0 to "
+  "'__builtin_ptrauth_type_discriminator'">;
 
 def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
   Note<"cannot take an address of a virtual member function if its return or "
@@ -946,6 +952,9 @@ def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
 def note_ptrauth_virtual_function_incomplete_arg_ret_type :
   Note<"%0 is incomplete">;
 
+def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
+  "%select{subtraction|addition}0 of address-of-label expressions is not "
+  "supported with ptrauth indirect gotos">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -2419,6 +2428,7 @@ def err_selected_explicit_constructor : Error<
   "chosen constructor is explicit in copy-initialization">;
 def note_explicit_ctor_deduction_guide_here : Note<
   "explicit %select{constructor|deduction guide}0 declared here">;
+def note_implicit_deduction_guide : Note<"implicit deduction guide declared as '%0'">;
 
 // C++11 auto
 def warn_cxx98_compat_auto_type_specifier : Warning<
@@ -3324,6 +3334,10 @@ def err_ownership_returns_index_mismatch : Error<
   "'ownership_returns' attribute index does not match; here it is %0">;
 def note_ownership_returns_index_mismatch : Note<
   "declared with index %0 here">;
+def err_ownership_takes_class_mismatch : Error<
+  "'ownership_takes' attribute class does not match; here it is '%0'">;
+def note_ownership_takes_class_mismatch : Note<
+  "declared with class '%0' here">;
 def err_format_strftime_third_parameter : Error<
   "strftime format attribute requires 3rd parameter to be 0">;
 def err_format_attribute_not : Error<"format argument not a string type">;
@@ -3488,7 +3502,7 @@ def err_attr_tlsmodel_arg : Error<"tls_model must be \"global-dynamic\", "
 
 def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this target">;
 
-def err_aix_attr_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_aix_attr_unsupported : Error<"%0 attribute is not yet supported on AIX">;
 
 def err_tls_var_aligned_over_maximum : Error<
   "alignment (%0) of thread-local variable %1 is greater than the maximum supported "
@@ -3546,6 +3560,12 @@ def warn_alignment_not_power_of_two : Warning<
   InGroup<DiagGroup<"non-power-of-two-alignment">>;
 def err_alignment_dependent_typedef_name : Error<
   "requested alignment is dependent but declaration is not dependent">;
+def ext_c2y_alignof_incomplete_array : Extension<
+  "'alignof' on an incomplete array type is a C2y extension">,
+  InGroup<C2y>;
+def warn_c2y_compat_alignof_incomplete_array : Warning<
+  "'alignof' on an incomplete array type is incompatible with C standards "
+  "before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def warn_alignment_builtin_useless : Warning<
   "%select{aligning a value|the result of checking whether a value is aligned}0"
@@ -3661,6 +3681,9 @@ def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
 def err_attribute_selectany_non_extern_data : Error<
   "'selectany' can only be applied to data items with external linkage">;
+def warn_attribute_hybrid_patchable_non_extern : Warning<
+  "'hybrid_patchable' is ignored on functions without external linkage">,
+  InGroup<IgnoredAttributes>;
 def err_declspec_thread_on_thread_variable : Error<
   "'__declspec(thread)' applied to variable that already has a "
   "thread-local storage specifier">;
@@ -3792,8 +3815,6 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
-def err_sme_streaming_cannot_be_multiversioned : Error<
-  "streaming function cannot be multi-versioned">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
 def err_missing_arm_state : Error<
@@ -5155,7 +5176,7 @@ def warn_cxx11_compat_variable_template : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def err_template_variable_noparams : Error<
   "extraneous 'template<>' in declaration of variable %0">;
-def err_template_member : Error<"member %0 declared as a template">;
+def err_template_member : Error<"non-static data member %0 cannot be declared as a template">;
 def err_member_with_template_arguments : Error<"member %0 cannot have template arguments">;
 def err_template_member_noparams : Error<
   "extraneous 'template<>' in declaration of member %0">;
@@ -6006,7 +6027,7 @@ def note_deleted_assign_field : Note<
   "because field %2 is of %select{reference|const-qualified}4 type %3">;
 
 // These should be errors.
-def warn_undefined_internal : Warning<
+def warn_undefined_internal : ExtWarn<
   "%select{function|variable}0 %q1 has internal linkage but is not defined">,
   InGroup<DiagGroup<"undefined-internal">>;
 def err_undefined_internal_type : Error<
@@ -6065,7 +6086,7 @@ def note_extern_c_global_conflict : Note<
 def note_extern_c_begins_here : Note<
   "extern \"C\" language linkage specification begins here">;
 def warn_weak_import : Warning <
-  "an already-declared variable is made a weak_import declaration %0">;
+  "%0 cannot be declared 'weak_import' because its definition has been provided">;
 def ext_static_non_static : Extension<
   "redeclaring non-static %0 as static is a Microsoft extension">,
   InGroup<MicrosoftRedeclareStatic>;
@@ -6560,28 +6581,28 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
-def err_flexible_array_count_not_in_same_struct : Error<
-  "'counted_by' field %0 isn't within the same struct as the flexible array">;
-def err_counted_by_attr_not_on_ptr_or_flexible_array_member : Error<
-  "'counted_by' only applies to pointers or C99 flexible array members">;
+def err_count_attr_param_not_in_same_struct : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' field %0 isn't within the same struct as the annotated %select{pointer|flexible array}2">;
+def err_count_attr_not_on_ptr_or_flexible_array_member : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' only applies to pointers%select{ or C99 flexible array members|||}0%select{|; did you mean to use 'counted_by'?}1">;
 def err_counted_by_attr_on_array_not_flexible_array_member : Error<
   "'counted_by' on arrays only applies to C99 flexible array members">;
 def err_counted_by_attr_refer_to_itself : Error<
   "'counted_by' cannot refer to the flexible array member %0">;
-def err_counted_by_must_be_in_structure : Error<
-  "field %0 in 'counted_by' not inside structure">;
-def err_counted_by_attr_argument_not_integer : Error<
-  "'counted_by' requires a non-boolean integer type argument">;
-def err_counted_by_attr_only_support_simple_decl_reference : Error<
-  "'counted_by' argument must be a simple declaration reference">;
-def err_counted_by_attr_in_union : Error<
-  "'counted_by' cannot be applied to a union member">;
-def err_counted_by_attr_refer_to_union : Error<
-  "'counted_by' argument cannot refer to a union member">;
+def err_count_attr_must_be_in_structure : Error<
+  "field %0 in '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' not inside structure">;
+def err_count_attr_argument_not_integer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' requires a non-boolean integer type argument">;
+def err_count_attr_only_support_simple_decl_reference : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' argument must be a simple declaration reference">;
+def err_count_attr_in_union : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' cannot be applied to a union member">;
+def err_count_attr_refer_to_union : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 def err_counted_by_attr_pointee_unknown_size : Error<
-  "'counted_by' %select{cannot|should not}3 be applied to %select{"
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}4' %select{cannot|should not}3 be applied to %select{"
     "a pointer with pointee|" // pointer
     "an array with element}0" // array
   " of unknown size because %1 is %select{"
@@ -7239,7 +7260,10 @@ def err_array_init_utf8_string_into_char : Error<
 def warn_cxx20_compat_utf8_string : Warning<
   "type of UTF-8 string literal will change from array of const char to "
   "array of const char8_t in C++20">, InGroup<CXX20Compat>, DefaultIgnore;
-def note_cxx20_compat_utf8_string_remove_u8 : Note<
+def warn_c23_compat_utf8_string : Warning<
+  "type of UTF-8 string literal will change from array of char to "
+  "array of char8_t in C23">, InGroup<C23Compat>, DefaultIgnore;
+def note_cxx20_c23_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
 def err_array_init_different_type : Error<
@@ -7567,6 +7591,8 @@ def err_explicit_object_lambda_ambiguous_base : Error<
 def err_explicit_object_lambda_inaccessible_base : Error<
   "invalid explicit object parameter type %0 in lambda with capture; "
   "the type must derive publicly from the lambda">;
+def err_explicit_object_parameter_invalid: Error<
+  "an explicit object parameter can only appear as the first parameter of a member function">;
 
 def err_ref_qualifier_overload : Error<
   "cannot overload a member function %select{without a ref-qualifier|with "
@@ -7581,9 +7607,6 @@ def err_nested_non_static_member_use : Error<
 def warn_cxx98_compat_non_static_member_use : Warning<
   "use of non-static data member %0 in an unevaluated context is "
   "incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
-def err_form_ptr_to_member_from_parenthesized_expr : Error<
-  "cannot form pointer to member from a parenthesized expression; "
-  "did you mean to remove the parentheses?">;
 def err_invalid_incomplete_type_use : Error<
   "invalid use of incomplete type %0">;
 def err_builtin_func_cast_more_than_one_arg : Error<
@@ -7663,8 +7686,12 @@ def ext_gnu_ptr_func_arith : Extension<
   InGroup<GNUPointerArith>;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
-def ext_increment_complex : Extension<
-  "'%select{--|++}0' on an object of complex type is a Clang extension">;
+def ext_c2y_increment_complex : Extension<
+  "'%select{--|++}0' on an object of complex type is a C2y extension">,
+  InGroup<C2y>;
+def warn_c2y_compat_increment_complex : Warning<
+  "'%select{--|++}0' on an object of complex type is incompatible with C "
+  "standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 def ext_integer_complement_complex : Extension<
   "ISO C does not support '~' for complex conjugation of %0">;
 def err_nosetter_property_assignment : Error<
@@ -7685,7 +7712,6 @@ def err_qualified_objc_access : Error<
 def ext_freestanding_complex : Extension<
   "complex numbers are an extension in a freestanding C99 implementation">;
 
-// FIXME: Remove when we support imaginary.
 def err_imaginary_not_supported : Error<"imaginary types are not supported">;
 
 // Obj-c expressions
@@ -7978,8 +8004,11 @@ def ext_delete_void_ptr_operand : ExtWarn<
 def err_ambiguous_delete_operand : Error<
   "ambiguous conversion of delete expression of type %0 to a pointer">;
 def warn_delete_incomplete : Warning<
-  "deleting pointer to incomplete type %0 may cause undefined behavior">,
+  "deleting pointer to incomplete type %0 is incompatible with C++2c"
+  " and may cause undefined behavior">,
   InGroup<DeleteIncomplete>;
+def err_delete_incomplete : Error<
+  "cannot delete pointer to incomplete type %0">;
 def err_delete_incomplete_class_type : Error<
   "deleting incomplete class type %0; no conversions to pointer type">;
 def err_delete_explicit_conversion : Error<
@@ -10103,6 +10132,9 @@ def warn_dangling_lifetime_pointer : Warning<
   "object backing the pointer "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingGsl>;
+def warn_dangling_lifetime_pointer_assignment : Warning<"object backing the "
+  "pointer %0 will be destroyed at the end of the full-expression">,
+  InGroup<DanglingAssignmentGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"
@@ -12323,6 +12355,9 @@ def warn_hlsl_availability : Warning<
 def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
+
+def err_hlsl_export_not_on_function : Error<
+  "export declaration can only be used on functions">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

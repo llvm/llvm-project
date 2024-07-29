@@ -24,7 +24,6 @@ class MCFragment;
 class MCLEBFragment;
 class MCRelaxableFragment;
 class MCSymbol;
-class MCAsmLayout;
 class MCAssembler;
 class MCContext;
 struct MCDwarfFrameInfo;
@@ -115,7 +114,6 @@ public:
   }
 
   virtual bool evaluateTargetFixup(const MCAssembler &Asm,
-                                   const MCAsmLayout &Layout,
                                    const MCFixup &Fixup, const MCFragment *DF,
                                    const MCValue &Target,
                                    const MCSubtargetInfo *STI, uint64_t &Value,
@@ -166,9 +164,10 @@ public:
                                             const bool WasForced) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
-  virtual bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout) const = 0;
+  virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                                    uint64_t Value) const {
+    llvm_unreachable("Needed if mayNeedRelaxation may return true");
+  }
 
   /// Relax the instruction in the given fragment to the next wider instruction.
   ///
@@ -178,12 +177,14 @@ public:
   virtual void relaxInstruction(MCInst &Inst,
                                 const MCSubtargetInfo &STI) const {};
 
-  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                                  MCAsmLayout &Layout, bool &WasRelaxed) const {
+  virtual bool relaxDwarfLineAddr(const MCAssembler &Asm,
+                                  MCDwarfLineAddrFragment &DF,
+                                  bool &WasRelaxed) const {
     return false;
   }
 
-  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+  virtual bool relaxDwarfCFA(const MCAssembler &Asm,
+                             MCDwarfCallFrameFragment &DF,
                              bool &WasRelaxed) const {
     return false;
   }
@@ -191,7 +192,7 @@ public:
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
   virtual std::pair<bool, bool>
-  relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout, int64_t &Value) const {
+  relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF, int64_t &Value) const {
     return std::make_pair(false, false);
   }
 
@@ -216,15 +217,15 @@ public:
   virtual bool writeNopData(raw_ostream &OS, uint64_t Count,
                             const MCSubtargetInfo *STI) const = 0;
 
-  /// Give backend an opportunity to finish layout after relaxation
-  virtual void finishLayout(MCAssembler const &Asm,
-                            MCAsmLayout &Layout) const {}
+  // Return true if fragment offsets have been adjusted and an extra layout
+  // iteration is needed.
+  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
 
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 
   /// Generate the compact unwind encoding for the CFI instructions.
-  virtual uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+  virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {
     return 0;
   }

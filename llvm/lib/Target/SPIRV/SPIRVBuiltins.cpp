@@ -169,25 +169,19 @@ using namespace InstructionSet;
 // TableGen records
 //===----------------------------------------------------------------------===//
 
-/// Looks up the demangled builtin call in the SPIRVBuiltins.td records using
-/// the provided \p DemangledCall and specified \p Set.
-///
-/// The lookup follows the following algorithm, returning the first successful
-/// match:
-/// 1. Search with the plain demangled name (expecting a 1:1 match).
-/// 2. Search with the prefix before or suffix after the demangled name
-/// signyfying the type of the first argument.
-///
-/// \returns Wrapper around the demangled call and found builtin definition.
-static std::unique_ptr<const SPIRV::IncomingCall>
-lookupBuiltin(StringRef DemangledCall,
-              SPIRV::InstructionSet::InstructionSet Set,
-              Register ReturnRegister, const SPIRVType *ReturnType,
-              const SmallVectorImpl<Register> &Arguments) {
+namespace SPIRV {
+/// Parses the name part of the demangled builtin call.
+std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
+  const static std::string PassPrefix = "(anonymous namespace)::";
+  std::string BuiltinName;
+  // Itanium Demangler result may have "(anonymous namespace)::" prefix
+  if (DemangledCall.starts_with(PassPrefix.c_str()))
+    BuiltinName = DemangledCall.substr(PassPrefix.length());
+  else
+    BuiltinName = DemangledCall;
   // Extract the builtin function name and types of arguments from the call
   // skeleton.
-  std::string BuiltinName =
-      DemangledCall.substr(0, DemangledCall.find('(')).str();
+  BuiltinName = BuiltinName.substr(0, BuiltinName.find('('));
 
   // Account for possible "__spirv_ocl_" prefix in SPIR-V friendly LLVM IR
   if (BuiltinName.rfind("__spirv_ocl_", 0) == 0)
@@ -208,6 +202,27 @@ lookupBuiltin(StringRef DemangledCall,
       StringRef(BuiltinName).contains("_R")) {
     BuiltinName = BuiltinName.substr(0, BuiltinName.find("_R"));
   }
+
+  return BuiltinName;
+}
+} // namespace SPIRV
+
+/// Looks up the demangled builtin call in the SPIRVBuiltins.td records using
+/// the provided \p DemangledCall and specified \p Set.
+///
+/// The lookup follows the following algorithm, returning the first successful
+/// match:
+/// 1. Search with the plain demangled name (expecting a 1:1 match).
+/// 2. Search with the prefix before or suffix after the demangled name
+/// signyfying the type of the first argument.
+///
+/// \returns Wrapper around the demangled call and found builtin definition.
+static std::unique_ptr<const SPIRV::IncomingCall>
+lookupBuiltin(StringRef DemangledCall,
+              SPIRV::InstructionSet::InstructionSet Set,
+              Register ReturnRegister, const SPIRVType *ReturnType,
+              const SmallVectorImpl<Register> &Arguments) {
+  std::string BuiltinName = SPIRV::lookupBuiltinNameHelper(DemangledCall);
 
   SmallVector<StringRef, 10> BuiltinArgumentTypes;
   StringRef BuiltinArgs =
@@ -1060,15 +1075,17 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     Register ScopeReg = Call->Arguments[0];
     if (!MRI->getRegClassOrNull(ScopeReg))
       MRI->setRegClass(ScopeReg, &SPIRV::IDRegClass);
-    Register ValueReg = Call->Arguments[2];
-    if (!MRI->getRegClassOrNull(ValueReg))
-      MRI->setRegClass(ValueReg, &SPIRV::IDRegClass);
-    MIRBuilder.buildInstr(GroupBuiltin->Opcode)
-        .addDef(Call->ReturnRegister)
-        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-        .addUse(ScopeReg)
-        .addImm(GrpOp)
-        .addUse(ValueReg);
+    auto MIB = MIRBuilder.buildInstr(GroupBuiltin->Opcode)
+                   .addDef(Call->ReturnRegister)
+                   .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+                   .addUse(ScopeReg)
+                   .addImm(GrpOp);
+    for (unsigned i = 2; i < Call->Arguments.size(); ++i) {
+      Register ArgReg = Call->Arguments[i];
+      if (!MRI->getRegClassOrNull(ArgReg))
+        MRI->setRegClass(ArgReg, &SPIRV::IDRegClass);
+      MIB.addUse(ArgReg);
+    }
     return true;
   }
 
@@ -1461,6 +1478,9 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicFlagClear:
     return buildAtomicFlagInst(Call, Opcode, MIRBuilder, GR);
   default:
+    if (Call->isSpirvOp())
+      return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                                GR->getSPIRVTypeID(Call->ReturnType));
     return false;
   }
 }
@@ -1504,6 +1524,9 @@ static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
 static bool generateDotOrFMulInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpDot, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
   unsigned Opcode = GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode();
   bool IsVec = Opcode == SPIRV::OpTypeVector;
   // Use OpDot only in case of vector args and OpFMul in case of scalar args.
@@ -2226,6 +2249,14 @@ static bool generateConvertInst(const StringRef DemangledCall,
   const SPIRV::ConvertBuiltin *Builtin =
       SPIRV::lookupConvertBuiltin(Call->Builtin->Name, Call->Builtin->Set);
 
+  if (!Builtin && Call->isSpirvOp()) {
+    const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+    unsigned Opcode =
+        SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+  }
+
   if (Builtin->IsSaturated)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,
                     SPIRV::Decoration::SaturatedConversion, {});
@@ -2377,9 +2408,80 @@ static bool generateLoadStoreInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-/// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
-/// and external instruction \p Set.
 namespace SPIRV {
+// Try to find a builtin function attributes by a demangled function name and
+// return a tuple <builtin group, op code, ext instruction number>, or a special
+// tuple value <-1, 0, 0> if the builtin function is not found.
+// Not all builtin functions are supported, only those with a ready-to-use op
+// code or instruction number defined in TableGen.
+// TODO: consider a major rework of mapping demangled calls into a builtin
+// functions to unify search and decrease number of individual cases.
+std::tuple<int, unsigned, unsigned>
+mapBuiltinToOpcode(const StringRef DemangledCall,
+                   SPIRV::InstructionSet::InstructionSet Set) {
+  Register Reg;
+  SmallVector<Register> Args;
+  std::unique_ptr<const IncomingCall> Call =
+      lookupBuiltin(DemangledCall, Set, Reg, nullptr, Args);
+  if (!Call)
+    return std::make_tuple(-1, 0, 0);
+
+  switch (Call->Builtin->Group) {
+  case SPIRV::Relational:
+  case SPIRV::Atomic:
+  case SPIRV::Barrier:
+  case SPIRV::CastToPtr:
+  case SPIRV::ImageMiscQuery:
+  case SPIRV::SpecConstant:
+  case SPIRV::Enqueue:
+  case SPIRV::AsyncCopy:
+  case SPIRV::LoadStore:
+  case SPIRV::CoopMatr:
+    if (const auto *R =
+            SPIRV::lookupNativeBuiltin(Call->Builtin->Name, Call->Builtin->Set))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
+    break;
+  case SPIRV::Extended:
+    if (const auto *R = SPIRV::lookupExtendedBuiltin(Call->Builtin->Name,
+                                                     Call->Builtin->Set))
+      return std::make_tuple(Call->Builtin->Group, 0, R->Number);
+    break;
+  case SPIRV::VectorLoadStore:
+    if (const auto *R = SPIRV::lookupVectorLoadStoreBuiltin(Call->Builtin->Name,
+                                                            Call->Builtin->Set))
+      return std::make_tuple(SPIRV::Extended, 0, R->Number);
+    break;
+  case SPIRV::Group:
+    if (const auto *R = SPIRV::lookupGroupBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
+    break;
+  case SPIRV::AtomicFloating:
+    if (const auto *R = SPIRV::lookupAtomicFloatingBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
+    break;
+  case SPIRV::IntelSubgroups:
+    if (const auto *R = SPIRV::lookupIntelSubgroupsBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
+    break;
+  case SPIRV::GroupUniform:
+    if (const auto *R = SPIRV::lookupGroupUniformBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
+    break;
+  case SPIRV::WriteImage:
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpImageWrite, 0);
+  case SPIRV::Select:
+    return std::make_tuple(Call->Builtin->Group, TargetOpcode::G_SELECT, 0);
+  case SPIRV::Construct:
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpCompositeConstruct,
+                           0);
+  case SPIRV::KernelClock:
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpReadClockKHR, 0);
+  default:
+    return std::make_tuple(-1, 0, 0);
+  }
+  return std::make_tuple(-1, 0, 0);
+}
+
 std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  SPIRV::InstructionSet::InstructionSet Set,
                                  MachineIRBuilder &MIRBuilder,
@@ -2517,9 +2619,6 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
     // Unable to recognize SPIRV type name.
     return nullptr;
 
-  if (BaseType->isVoidTy())
-    BaseType = Type::getInt8Ty(Ctx);
-
   // Handle "typeN*" or "type vector[N]*".
   TypeStr.consume_back("*");
 
@@ -2528,7 +2627,8 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
 
   TypeStr.getAsInteger(10, VecElts);
   if (VecElts > 0)
-    BaseType = VectorType::get(BaseType, VecElts, false);
+    BaseType = VectorType::get(
+        BaseType->isVoidTy() ? Type::getInt8Ty(Ctx) : BaseType, VecElts, false);
 
   return BaseType;
 }

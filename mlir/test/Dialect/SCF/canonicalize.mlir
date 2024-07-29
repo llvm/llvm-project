@@ -1846,3 +1846,21 @@ func.func @index_switch_fold() -> (f32, f32) {
 //  CHECK-NEXT:   %[[c1:.*]] = arith.constant 1.000000e+00 : f32
 //  CHECK-NEXT:   %[[c42:.*]] = arith.constant 4.200000e+01 : f32
 //  CHECK-NEXT:   return %[[c1]], %[[c42]] : f32, f32
+
+// -----
+
+func.func @index_switch_fold_no_res() {
+  %c1 = arith.constant 1 : index
+  scf.index_switch %c1
+  case 0 {
+    scf.yield
+  }
+  default {
+    "test.op"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @index_switch_fold_no_res()
+//  CHECK-NEXT: "test.op"() : () -> ()

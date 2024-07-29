@@ -5,12 +5,13 @@
 ; RUN: llc -mtriple=x86_64-apple-tvos9.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-watchos9.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-xros9.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-ios8.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-tvos8.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-xros8.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=x86_64-apple-driverkit < %s | FileCheck -check-prefix=MISSED %s
+; RUN: llc -mtriple=x86_64-apple-driverkit24.0 < %s | FileCheck -check-prefix=MISSED %s
 
 ; RUN: not llc -mtriple=x86_64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-ios8.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-tvos8.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-xros8.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-
 ; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
 
 ; ERR: no libcall available for fexp10
@@ -23,6 +24,11 @@ define float @test_exp10_f32(float %x) {
 ; APPLE-LABEL: test_exp10_f32:
 ; APPLE:       ## %bb.0:
 ; APPLE-NEXT:    jmp ___exp10f ## TAILCALL
+;
+; MISSED-LABEL: test_exp10_f32:
+; MISSED:       ## %bb.0:
+; MISSED-NEXT:    jmp _exp10f ## TAILCALL
+
   %ret = call float @llvm.exp10.f32(float %x)
   ret float %ret
 }
@@ -35,6 +41,11 @@ define double @test_exp10_f64(double %x) {
 ; APPLE-LABEL: test_exp10_f64:
 ; APPLE:       ## %bb.0:
 ; APPLE-NEXT:    jmp ___exp10 ## TAILCALL
+;
+; MISSED-LABEL: test_exp10_f64:
+; MISSED:       ## %bb.0:
+; MISSED-NEXT:    jmp _exp10 ## TAILCALL
+;
   %ret = call double @llvm.exp10.f64(double %x)
   ret double %ret
 }

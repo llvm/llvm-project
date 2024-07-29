@@ -397,6 +397,10 @@ def simm20_pcaddu18i : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
 }
 
+def simm20_pcaddi : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddi">;
+}
+
 def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
@@ -455,6 +459,19 @@ def BareSymbol : AsmOperandClass {
 def bare_symbol : Operand<GRLenVT> {
   let ParserMatchClass = BareSymbol;
 }
+
+def TPRelAddSymbol : AsmOperandClass {
+  let Name = "TPRelAddSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTPRelAddSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %le_add_r variant.
+def tprel_add_symbol : Operand<GRLenVT> {
+  let ParserMatchClass = TPRelAddSymbol;
+}
+
 
 // Standalone (codegen-only) immleaf patterns.
 
@@ -741,7 +758,7 @@ def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
 def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDI    : ALU_1RI20<0x18000000, simm20>;
+def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>;
 def PCADDU12I : ALU_1RI20<0x1c000000, simm20>;
 def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>;
 def AND  : ALU_3R<0x00148000>;
@@ -1131,7 +1148,6 @@ def : PatGprGpr<urem, MOD_DU>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<rotr, ROTR_D>;
 def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
-def : PatGprGpr_32<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
 def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;
@@ -1569,6 +1585,21 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
 def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
                           "tail36", "$tmp, $dst">,
                    Requires<[IsLA64]>;
+
+// This is a special case of the ADD_W/D instruction used to facilitate the use
+// of a fourth operand to emit a relocation on a symbol relating to this
+// instruction. The relocation does not affect any bits of the instruction itself
+// but is used as a hint to the linker.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in {
+def PseudoAddTPRel_W : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.w", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA32]>;
+def PseudoAddTPRel_D : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.d", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA64]>;
+}
 
 /// Load address (la*) macro instructions.
 

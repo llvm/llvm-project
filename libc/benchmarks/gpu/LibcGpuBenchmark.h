@@ -6,22 +6,24 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/time/clock.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace benchmarks {
 
 struct BenchmarkOptions {
   uint32_t initial_iterations = 1;
+  uint32_t min_iterations = 50;
   uint32_t max_iterations = 10000000;
   uint32_t min_samples = 4;
   uint32_t max_samples = 1000;
-  uint64_t min_duration = 0;                  // in nanoseconds (ns)
-  uint64_t max_duration = 1000 * 1000 * 1000; // 1e9 nanoseconds = 1 second
-  double epsilon = 0.01;
+  int64_t min_duration = 500 * 1000;         // 500 * 1000 nanoseconds = 500 us
+  int64_t max_duration = 1000 * 1000 * 1000; // 1e9 nanoseconds = 1 second
+  double epsilon = 0.0001;
   double scaling_factor = 1.4;
 };
 
@@ -78,15 +80,21 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
 
 class Benchmark {
   const cpp::function<uint64_t(void)> func;
-  const cpp::string_view name;
+  const cpp::string_view suite_name;
+  const cpp::string_view test_name;
+  const uint32_t num_threads;
 
 public:
-  Benchmark(cpp::function<uint64_t(void)> func, char const *name)
-      : func(func), name(name) {
+  Benchmark(cpp::function<uint64_t(void)> func, char const *suite_name,
+            char const *test_name, uint32_t num_threads)
+      : func(func), suite_name(suite_name), test_name(test_name),
+        num_threads(num_threads) {
     add_benchmark(this);
   }
 
   static void run_benchmarks();
+  const cpp::string_view get_suite_name() const { return suite_name; }
+  const cpp::string_view get_test_name() const { return test_name; }
 
 protected:
   static void add_benchmark(Benchmark *benchmark);
@@ -96,13 +104,25 @@ private:
     BenchmarkOptions options;
     return benchmark(options, func);
   }
-  const cpp::string_view get_name() const { return name; }
 };
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
+// Passing -1 indicates the benchmark should be run with as many threads as
+// allocated by the user in the benchmark's CMake.
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName);
+      Func, #SuiteName, #TestName, -1)
+
+#define BENCHMARK_N_THREADS(SuiteName, TestName, Func, NumThreads)             \
+  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
+      Func, #SuiteName, #TestName, NumThreads)
+
+#define SINGLE_THREADED_BENCHMARK(SuiteName, TestName, Func)                   \
+  BENCHMARK_N_THREADS(SuiteName, TestName, Func, 1)
+
+#define SINGLE_WAVE_BENCHMARK(SuiteName, TestName, Func)                       \
+  BENCHMARK_N_THREADS(SuiteName, TestName, Func,                               \
+                      LIBC_NAMESPACE::gpu::get_lane_size())
 
 #endif

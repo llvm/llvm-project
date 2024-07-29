@@ -68,7 +68,6 @@ public:
       F = F->Next;
       return *this;
     }
-    iterator operator++(int) { return iterator(F->Next); }
   };
 
   struct FragList {
@@ -86,8 +85,6 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
-  /// The index of this section in the layout order.
-  unsigned LayoutOrder = 0;
 
   /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;
@@ -102,8 +99,6 @@ private:
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
-  bool HasLayout : 1;
-
   bool IsRegistered : 1;
 
   bool IsText : 1;
@@ -116,15 +111,6 @@ private:
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
-
-  /// State for tracking labels that don't yet have Fragments
-  struct PendingLabel {
-    MCSymbol* Sym;
-    unsigned Subsection;
-    PendingLabel(MCSymbol* Sym, unsigned Subsection = 0)
-      : Sym(Sym), Subsection(Subsection) {}
-  };
-  SmallVector<PendingLabel, 2> PendingLabels;
 
 protected:
   // TODO Make Name private when possible.
@@ -167,9 +153,6 @@ public:
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
 
-  unsigned getLayoutOrder() const { return LayoutOrder; }
-  void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
-
   BundleLockStateType getBundleLockState() const { return BundleLockState; }
   void setBundleLockState(BundleLockStateType NewState);
   bool isBundleLocked() const { return BundleLockState != NotBundleLocked; }
@@ -183,9 +166,6 @@ public:
 
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
-
-  bool hasLayout() const { return HasLayout; }
-  void setHasLayout(bool Value) { HasLayout = Value; }
 
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
@@ -213,10 +193,6 @@ public:
   bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
-
-  /// Add a pending label for the requested subsection. This label will be
-  /// associated with a fragment in flushPendingLabels()
-  void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
 };
 
 } // end namespace llvm

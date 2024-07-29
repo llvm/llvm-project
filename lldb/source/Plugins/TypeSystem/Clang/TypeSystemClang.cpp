@@ -2233,30 +2233,31 @@ TypeSystemClang::CreateBlockPointerType(const CompilerType &function_type) {
 
 #pragma mark Array Types
 
-CompilerType TypeSystemClang::CreateArrayType(const CompilerType &element_type,
-                                              size_t element_count,
-                                              bool is_vector) {
-  if (element_type.IsValid()) {
-    ASTContext &ast = getASTContext();
+CompilerType
+TypeSystemClang::CreateArrayType(const CompilerType &element_type,
+                                 std::optional<size_t> element_count,
+                                 bool is_vector) {
+  if (!element_type.IsValid())
+    return {};
 
-    if (is_vector) {
-      return GetType(ast.getExtVectorType(ClangUtil::GetQualType(element_type),
-                                          element_count));
-    } else {
+  ASTContext &ast = getASTContext();
 
-      llvm::APInt ap_element_count(64, element_count);
-      if (element_count == 0) {
-        return GetType(
-            ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type),
-                                       clang::ArraySizeModifier::Normal, 0));
-      } else {
-        return GetType(ast.getConstantArrayType(
-            ClangUtil::GetQualType(element_type), ap_element_count, nullptr,
-            clang::ArraySizeModifier::Normal, 0));
-      }
-    }
-  }
-  return CompilerType();
+  // Unknown number of elements; this is an incomplete array
+  // (e.g., variable length array with non-constant bounds, or
+  // a flexible array member).
+  if (!element_count)
+    return GetType(
+        ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type),
+                                   clang::ArraySizeModifier::Normal, 0));
+
+  if (is_vector)
+    return GetType(ast.getExtVectorType(ClangUtil::GetQualType(element_type),
+                                        *element_count));
+
+  llvm::APInt ap_element_count(64, *element_count);
+  return GetType(ast.getConstantArrayType(ClangUtil::GetQualType(element_type),
+                                          ap_element_count, nullptr,
+                                          clang::ArraySizeModifier::Normal, 0));
 }
 
 CompilerType TypeSystemClang::CreateStructForIdentifier(
@@ -4726,66 +4727,68 @@ TypeSystemClang::GetFloatTypeSemantics(size_t byte_size) {
 }
 
 std::optional<uint64_t>
-TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
-                            ExecutionContextScope *exe_scope) {
-  if (GetCompleteType(type)) {
-    clang::QualType qual_type(GetCanonicalQualType(type));
-    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
-    switch (type_class) {
-    case clang::Type::Record:
-      if (GetCompleteType(type))
-        return getASTContext().getTypeSize(qual_type);
-      else
-        return std::nullopt;
-      break;
-
-    case clang::Type::ObjCInterface:
-    case clang::Type::ObjCObject: {
-      ExecutionContext exe_ctx(exe_scope);
-      Process *process = exe_ctx.GetProcessPtr();
-      if (process) {
-        if (ObjCLanguageRuntime *objc_runtime =
-                ObjCLanguageRuntime::Get(*process)) {
-          if (std::optional<uint64_t> bit_size =
-                  objc_runtime->GetTypeBitSize(GetType(qual_type)))
-            return *bit_size;
-        }
-      } else {
-        static bool g_printed = false;
-        if (!g_printed) {
-          StreamString s;
-          DumpTypeDescription(type, s);
-
-          llvm::outs() << "warning: trying to determine the size of type ";
-          llvm::outs() << s.GetString() << "\n";
-          llvm::outs() << "without a valid ExecutionContext. this is not "
-                          "reliable. please file a bug against LLDB.\n";
-          llvm::outs() << "backtrace:\n";
-          llvm::sys::PrintStackTrace(llvm::outs());
-          llvm::outs() << "\n";
-          g_printed = true;
-        }
-      }
+TypeSystemClang::GetObjCBitSize(QualType qual_type,
+                                ExecutionContextScope *exe_scope) {
+  assert(qual_type->isObjCObjectOrInterfaceType());
+  ExecutionContext exe_ctx(exe_scope);
+  if (Process *process = exe_ctx.GetProcessPtr()) {
+    if (ObjCLanguageRuntime *objc_runtime =
+            ObjCLanguageRuntime::Get(*process)) {
+      if (std::optional<uint64_t> bit_size =
+              objc_runtime->GetTypeBitSize(GetType(qual_type)))
+        return *bit_size;
     }
-      [[fallthrough]];
-    default:
-      const uint32_t bit_size = getASTContext().getTypeSize(qual_type);
-      if (bit_size == 0) {
-        if (qual_type->isIncompleteArrayType())
-          return getASTContext().getTypeSize(
-              qual_type->getArrayElementTypeNoTypeQual()
-                  ->getCanonicalTypeUnqualified());
-      }
-      if (qual_type->isObjCObjectOrInterfaceType())
-        return bit_size +
-               getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy);
-      // Function types actually have a size of 0, that's not an error.
-      if (qual_type->isFunctionProtoType())
-        return bit_size;
-      if (bit_size)
-        return bit_size;
+  } else {
+    static bool g_printed = false;
+    if (!g_printed) {
+      StreamString s;
+      DumpTypeDescription(qual_type.getAsOpaquePtr(), s);
+
+      llvm::outs() << "warning: trying to determine the size of type ";
+      llvm::outs() << s.GetString() << "\n";
+      llvm::outs() << "without a valid ExecutionContext. this is not "
+                      "reliable. please file a bug against LLDB.\n";
+      llvm::outs() << "backtrace:\n";
+      llvm::sys::PrintStackTrace(llvm::outs());
+      llvm::outs() << "\n";
+      g_printed = true;
     }
   }
+
+  return getASTContext().getTypeSize(qual_type) +
+         getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy);
+}
+
+std::optional<uint64_t>
+TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
+                            ExecutionContextScope *exe_scope) {
+  if (!GetCompleteType(type))
+    return std::nullopt;
+
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+  switch (type_class) {
+  case clang::Type::ConstantArray:
+  case clang::Type::FunctionProto:
+  case clang::Type::Record:
+    return getASTContext().getTypeSize(qual_type);
+  case clang::Type::ObjCInterface:
+  case clang::Type::ObjCObject:
+    return GetObjCBitSize(qual_type, exe_scope);
+  case clang::Type::IncompleteArray: {
+    const uint64_t bit_size = getASTContext().getTypeSize(qual_type);
+    if (bit_size == 0)
+      return getASTContext().getTypeSize(
+          qual_type->getArrayElementTypeNoTypeQual()
+              ->getCanonicalTypeUnqualified());
+
+    return bit_size;
+  }
+  default:
+    if (const uint64_t bit_size = getASTContext().getTypeSize(qual_type))
+      return bit_size;
+  }
+
   return std::nullopt;
 }
 
@@ -5456,9 +5459,9 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
   case clang::Type::IncompleteArray:
     if (auto array_info =
             GetDynamicArrayInfo(*this, GetSymbolFile(), qual_type, exe_ctx))
-      // Only 1-dimensional arrays are supported.
+      // FIXME: Only 1-dimensional arrays are supported.
       num_children = array_info->element_orders.size()
-                         ? array_info->element_orders.back()
+                         ? array_info->element_orders.back().value_or(0)
                          : 0;
     break;
 
@@ -8639,8 +8642,13 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   const clang::EnumDecl *enum_decl = enutype->getDecl();
   assert(enum_decl);
   lldb::offset_t offset = byte_offset;
-  const uint64_t enum_svalue = data.GetMaxS64Bitfield(
-      &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+  bool qual_type_is_signed = qual_type->isSignedIntegerOrEnumerationType();
+  const uint64_t enum_svalue =
+      qual_type_is_signed
+          ? data.GetMaxS64Bitfield(&offset, byte_size, bitfield_bit_size,
+                                   bitfield_bit_offset)
+          : data.GetMaxU64Bitfield(&offset, byte_size, bitfield_bit_size,
+                                   bitfield_bit_offset);
   bool can_be_bitfield = true;
   uint64_t covered_bits = 0;
   int num_enumerators = 0;
@@ -8651,17 +8659,25 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // every enumerator is either a one bit value or a superset of the previous
   // enumerators. Also 0 doesn't make sense when the enumerators are used as
   // flags.
-  for (auto *enumerator : enum_decl->enumerators()) {
-    uint64_t val = enumerator->getInitVal().getSExtValue();
-    val = llvm::SignExtend64(val, 8*byte_size);
-    if (llvm::popcount(val) != 1 && (val & ~covered_bits) != 0)
-      can_be_bitfield = false;
-    covered_bits |= val;
-    ++num_enumerators;
-    if (val == enum_svalue) {
-      // Found an exact match, that's all we need to do.
-      s.PutCString(enumerator->getNameAsString());
-      return true;
+  clang::EnumDecl::enumerator_range enumerators = enum_decl->enumerators();
+  if (enumerators.empty())
+    can_be_bitfield = false;
+  else {
+    for (auto *enumerator : enumerators) {
+      llvm::APSInt init_val = enumerator->getInitVal();
+      uint64_t val = qual_type_is_signed ? init_val.getSExtValue()
+                                         : init_val.getZExtValue();
+      if (qual_type_is_signed)
+        val = llvm::SignExtend64(val, 8 * byte_size);
+      if (llvm::popcount(val) != 1 && (val & ~covered_bits) != 0)
+        can_be_bitfield = false;
+      covered_bits |= val;
+      ++num_enumerators;
+      if (val == enum_svalue) {
+        // Found an exact match, that's all we need to do.
+        s.PutCString(enumerator->getNameAsString());
+        return true;
+      }
     }
   }
 
@@ -8673,10 +8689,17 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // No exact match, but we don't think this is a bitfield. Print the value as
   // decimal.
   if (!can_be_bitfield) {
-    if (qual_type->isSignedIntegerOrEnumerationType())
+    if (qual_type_is_signed)
       s.Printf("%" PRIi64, enum_svalue);
     else
       s.Printf("%" PRIu64, enum_uvalue);
+    return true;
+  }
+
+  if (!enum_uvalue) {
+    // This is a bitfield enum, but the value is 0 so we know it won't match
+    // with any of the enumerators.
+    s.Printf("0x%" PRIx64, enum_uvalue);
     return true;
   }
 
@@ -8704,7 +8727,8 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
       s.PutCString(" | ");
   }
 
-  // If there is a remainder that is not covered by the value, print it as hex.
+  // If there is a remainder that is not covered by the value, print it as
+  // hex.
   if (remaining_value)
     s.Printf("0x%" PRIx64, remaining_value);
 

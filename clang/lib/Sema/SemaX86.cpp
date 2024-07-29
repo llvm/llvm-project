@@ -502,7 +502,6 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return false;
-  case X86::BI__builtin_ia32_vec_ext_v2si:
   case X86::BI__builtin_ia32_vec_ext_v2di:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -26,6 +27,7 @@ using namespace mlir::detail;
 
 using llvm::divideCeilSigned;
 using llvm::divideFloorSigned;
+using llvm::divideSignedWouldOverflow;
 using llvm::mod;
 
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
@@ -256,7 +258,7 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
     if (rhs && rhs.getValue() != 0) {
       int64_t lhsDiv = binExpr.getLHS().getLargestKnownDivisor();
       if (lhsDiv % rhs.getValue() == 0)
-        return lhsDiv / rhs.getValue();
+        return std::abs(lhsDiv / rhs.getValue());
     }
     return 1;
   }
@@ -750,8 +752,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   }
 
   // Process lrhs, which is 'expr floordiv c'.
+  // expr + (expr // c * -c) = expr % c
   AffineBinaryOpExpr lrBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  if (!lrBinOpExpr || lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
+  if (!lrBinOpExpr || rhs.getKind() != AffineExprKind::Mul ||
+      lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
     return nullptr;
 
   llrhs = lrBinOpExpr.getLHS();
@@ -859,11 +863,8 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
     return nullptr;
 
   if (lhsConst) {
-    // divideFloorSigned can only overflow in this case:
-    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
-        rhsConst.getValue() == -1) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
-    }
     return getAffineConstantExpr(
         divideFloorSigned(lhsConst.getValue(), rhsConst.getValue()),
         lhs.getContext());
@@ -921,11 +922,8 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
     return nullptr;
 
   if (lhsConst) {
-    // divideCeilSigned can only overflow in this case:
-    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
-        rhsConst.getValue() == -1) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
-    }
     return getAffineConstantExpr(
         divideCeilSigned(lhsConst.getValue(), rhsConst.getValue()),
         lhs.getContext());

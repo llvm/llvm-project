@@ -154,12 +154,11 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
                                 Value *Length, bool isLast) {
   auto Int64Ty = Builder.getInt64Ty();
-  auto PtrTy = Builder.getPtrTy();
-  auto Int32Ty = Builder.getInt32Ty();
+  auto IsLastInt32 = Builder.getInt32(isLast);
   auto M = Builder.GetInsertBlock()->getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_string_n", Int64Ty,
-                                   Int64Ty, PtrTy, Int64Ty, Int32Ty);
-  auto IsLastInt32 = Builder.getInt32(isLast);
+                                   Desc->getType(), Str->getType(),
+                                   Length->getType(), IsLastInt32->getType());
   return Builder.CreateCall(Fn, {Desc, Str, Length, IsLastInt32});
 }
 
@@ -409,9 +408,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       WhatToStore.push_back(processNonStringArg(Args[i], Builder));
     }
 
-    for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
-      Value *toStore = WhatToStore[I];
-
+    for (Value *toStore : WhatToStore) {
       StoreInst *StBuff = Builder.CreateStore(toStore, PtrToStore);
       LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
                         << '\n');

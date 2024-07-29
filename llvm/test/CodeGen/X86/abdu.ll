@@ -289,7 +289,6 @@ define i64 @abd_ext_i64(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl $0, %esi
 ; X86-NEXT:    sbbl %esi, %esi
 ; X86-NEXT:    sbbl %ecx, %ecx
-; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    xorl %ecx, %edx
 ; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
@@ -325,7 +324,6 @@ define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl $0, %esi
 ; X86-NEXT:    sbbl %esi, %esi
 ; X86-NEXT:    sbbl %ecx, %ecx
-; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    xorl %ecx, %edx
 ; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax

@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-256: error:
+# ERROR-COUNT-260: error:
 # ERROR-NOT: error:
 # CHECK: ctestbb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0xf6,0x44,0x80,0x7b,0x7b]
@@ -27,6 +27,19 @@
 # CHECK: ctestbq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x02,0x85,0x4c,0x80,0x7b]
          ctestbq {dfv=of} %r9, 123(%r8,%rax,4)
+# Swap mr form
+# CHECK: ctestbb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x02,0x84,0x5c,0x80,0x7b]
+         ctestbb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ctestbw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x45,0x02,0x85,0x54,0x80,0x7b]
+         ctestbw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ctestbl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x02,0x85,0x4c,0x80,0x7b]
+         ctestbl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ctestbq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0x54,0xc4,0x02,0x85,0x4c,0x80,0x7b]
+         ctestbq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: ctestbb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0xf6,0xc3,0x7b]
          ctestbb {dfv=of} $123, %bl

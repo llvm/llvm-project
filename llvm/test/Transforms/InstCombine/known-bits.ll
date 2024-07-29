@@ -2025,6 +2025,34 @@ define i8 @simplifydemanded_context(i8 %x, i8 %y) {
   ret i8 %and2
 }
 
+define i16 @pr97330(i1 %c, ptr %p1, ptr %p2) {
+; CHECK-LABEL: @pr97330(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[V]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+entry:
+  %v = load i64, ptr %p1, align 8
+  %conv = trunc i64 %v to i16
+  br i1 %c, label %exit, label %if
+
+if:
+  %cmp = icmp ne i16 %conv, 1
+  %conv2 = zext i1 %cmp to i32
+  store i32 %conv2, ptr %p2, align 4
+  %cmp2 = icmp eq i64 %v, 1
+  call void @llvm.assume(i1 %cmp2)
+  unreachable
+
+exit:
+  ret i16 %conv
+}
+
 declare void @dummy()
 declare void @use(i1)
 declare void @sink(i8)

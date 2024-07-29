@@ -436,6 +436,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
   HasSplitStack = false;
   HasNoSplitStack = false;
+  DbgInfoAvailable = !M.debug_compile_units().empty();
 
   AddrLabelSymbols = nullptr;
 
@@ -541,8 +542,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     if (EmitCodeView && TM.getTargetTriple().isOSWindows())
       DebugHandlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
-      assert(MMI && "MMI could not be nullptr here!");
-      if (MMI->hasDebugInfo()) {
+      if (hasDebugInfo()) {
         DD = new DwarfDebug(this);
         DebugHandlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
@@ -1128,7 +1128,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
     OS << ' ' << (Op.isDef() ? "def " : "killed ")
        << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
   }
-  AP.OutStreamer->AddComment(OS.str());
+  AP.OutStreamer->AddComment(Str);
   AP.OutStreamer->addBlankLine();
 }
 
@@ -1235,7 +1235,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
-  AP.OutStreamer->emitRawComment(OS.str());
+  AP.OutStreamer->emitRawComment(Str);
   return true;
 }
 
@@ -1277,8 +1277,7 @@ AsmPrinter::getFunctionCFISectionType(const Function &F) const {
   if (MAI->usesCFIWithoutEH() && F.hasUWTable())
     return CFISection::EH;
 
-  assert(MMI != nullptr && "Invalid machine module info");
-  if (MMI->hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
+  if (hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
     return CFISection::Debug;
 
   return CFISection::None;
@@ -1374,7 +1373,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     OutStreamer->emitULEB128IntValue(MBBSectionRanges.size());
   }
   // Number of blocks in each MBB section.
-  MapVector<unsigned, unsigned> MBBSectionNumBlocks;
+  MapVector<MBBSectionID, unsigned> MBBSectionNumBlocks;
   const MCSymbol *PrevMBBEndSymbol = nullptr;
   if (!Features.MultiBBRange) {
     OutStreamer->AddComment("function address");
@@ -1388,7 +1387,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       BBCount++;
       if (MBB.isEndSection()) {
         // Store each section's basic block count when it ends.
-        MBBSectionNumBlocks[MBB.getSectionIDNum()] = BBCount;
+        MBBSectionNumBlocks[MBB.getSectionID()] = BBCount;
         // Reset the count for the next section.
         BBCount = 0;
       }
@@ -1404,8 +1403,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->AddComment("base address");
       OutStreamer->emitSymbolValue(MBBSymbol, getPointerSize());
       OutStreamer->AddComment("number of basic blocks");
-      OutStreamer->emitULEB128IntValue(
-          MBBSectionNumBlocks[MBB.getSectionIDNum()]);
+      OutStreamer->emitULEB128IntValue(MBBSectionNumBlocks[MBB.getSectionID()]);
       PrevMBBEndSymbol = MBBSymbol;
     }
     // TODO: Remove this check when version 1 is deprecated.
@@ -1670,10 +1668,9 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
 }
 
 /// Returns true if function begin and end labels should be emitted.
-static bool needFuncLabels(const MachineFunction &MF) {
-  MachineModuleInfo &MMI = MF.getMMI();
-  if (!MF.getLandingPads().empty() || MF.hasEHFunclets() ||
-      MMI.hasDebugInfo() ||
+static bool needFuncLabels(const MachineFunction &MF, const AsmPrinter &Asm) {
+  if (Asm.hasDebugInfo() || !MF.getLandingPads().empty() ||
+      MF.hasEHFunclets() ||
       MF.getFunction().hasMetadata(LLVMContext::MD_pcsections))
     return true;
 
@@ -1704,10 +1701,11 @@ void AsmPrinter::emitFunctionBody() {
     }
 
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
-    MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
-      OwnedMLI->getBase().analyze(MDT->getBase());
+      OwnedMLI->analyze(MDT->getBase());
       MLI = OwnedMLI.get();
     }
   }
@@ -1855,7 +1853,9 @@ void AsmPrinter::emitFunctionBody() {
               OutContext);
           OutStreamer->emitELFSize(CurrentSectionBeginSym, SizeExp);
         }
-        MBBSectionRanges[MBB.getSectionIDNum()] =
+        assert(!MBBSectionRanges.contains(MBB.getSectionID()) &&
+               "Overwrite section range");
+        MBBSectionRanges[MBB.getSectionID()] =
             MBBSectionRange{CurrentSectionBeginSym, MBB.getEndSymbol()};
       }
     }
@@ -1942,7 +1942,7 @@ void AsmPrinter::emitFunctionBody() {
   // are automatically sized.
   bool EmitFunctionSize = MAI->hasDotTypeDotSizeDirective() && !TT.isWasm();
 
-  if (needFuncLabels(*MF) || EmitFunctionSize) {
+  if (EmitFunctionSize || needFuncLabels(*MF, *this)) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
@@ -1972,7 +1972,9 @@ void AsmPrinter::emitFunctionBody() {
   for (auto &Handler : Handlers)
     Handler->markFunctionEnd();
 
-  MBBSectionRanges[MF->front().getSectionIDNum()] =
+  assert(!MBBSectionRanges.contains(MF->front().getSectionID()) &&
+         "Overwrite section range");
+  MBBSectionRanges[MF->front().getSectionID()] =
       MBBSectionRange{CurrentFnBegin, CurrentFnEnd};
 
   // Print out jump tables referenced by the function.
@@ -2274,7 +2276,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
       OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
 
-  OutStreamer->emitBinaryData(OS.str());
+  OutStreamer->emitBinaryData(Buf);
 }
 
 bool AsmPrinter::doFinalization(Module &M) {
@@ -2325,8 +2327,10 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Emit linkage for the function entry point.
     emitLinkage(&F, FnEntryPointSym);
 
-    // Emit linkage for the function descriptor.
-    emitLinkage(&F, Name);
+    // If a function's address is taken, which means it may be called via a
+    // function pointer, we need the function descriptor for it.
+    if (F.hasAddressTaken())
+      emitLinkage(&F, Name);
   }
 
   // Emit the remarks section contents.
@@ -2536,7 +2540,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 }
 
 MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
-  auto Res = MBBSectionExceptionSyms.try_emplace(MBB.getSectionIDNum());
+  auto Res = MBBSectionExceptionSyms.try_emplace(MBB.getSectionID());
   if (Res.second)
     Res.first->second = createTempSymbol("exception");
   return Res.first->second;
@@ -2581,8 +2585,9 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   bool NeedsLocalForSize = MAI->needsLocalForSize();
   if (F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
-      F.hasFnAttribute("xray-instruction-threshold") || needFuncLabels(MF) ||
-      NeedsLocalForSize || MF.getTarget().Options.EmitStackSizeSection ||
+      F.hasFnAttribute("xray-instruction-threshold") ||
+      needFuncLabels(MF, *this) || NeedsLocalForSize ||
+      MF.getTarget().Options.EmitStackSizeSection ||
       MF.getTarget().Options.BBAddrMap || MF.hasBBLabels()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
@@ -2853,8 +2858,8 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     auto *Arr = cast<ConstantArray>(GV->getInitializer());
     for (auto &U : Arr->operands()) {
       auto *C = cast<Constant>(U);
-      auto *Src = cast<Function>(C->getOperand(0)->stripPointerCasts());
-      auto *Dst = cast<Function>(C->getOperand(1)->stripPointerCasts());
+      auto *Src = cast<GlobalValue>(C->getOperand(0)->stripPointerCasts());
+      auto *Dst = cast<GlobalValue>(C->getOperand(1)->stripPointerCasts());
       int Kind = cast<ConstantInt>(C->getOperand(2))->getZExtValue();
 
       if (Src->hasDLLImportStorageClass()) {
@@ -2990,8 +2995,7 @@ void AsmPrinter::emitModuleIdents(Module &M) {
     return;
 
   if (const NamedMDNode *NMD = M.getNamedMetadata("llvm.ident")) {
-    for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
-      const MDNode *N = NMD->getOperand(i);
+    for (const MDNode *N : NMD->operands()) {
       assert(N->getNumOperands() == 1 &&
              "llvm.ident metadata entry can have only one operand");
       const MDString *S = cast<MDString>(N->getOperand(0));
@@ -3012,8 +3016,7 @@ void AsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->pushSection();
   OutStreamer->switchSection(CommandLine);
   OutStreamer->emitZeros(1);
-  for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
-    const MDNode *N = NMD->getOperand(i);
+  for (const MDNode *N : NMD->operands()) {
     assert(N->getNumOperands() == 1 &&
            "llvm.commandline metadata entry can have only one operand");
     const MDString *S = cast<MDString>(N->getOperand(0));
@@ -3139,7 +3142,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
-    return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
+    return lowerBlockAddressConstant(*BA);
 
   if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
     return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
@@ -3282,7 +3285,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   OS << "Unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
                      !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(OS.str()));
+  report_fatal_error(Twine(S));
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
@@ -3821,6 +3824,10 @@ MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BasicBlock *BB) const {
   return const_cast<AsmPrinter *>(this)->getAddrLabelSymbol(BB);
 }
 
+const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
+  return MCSymbolRefExpr::create(GetBlockAddressSymbol(&BA), OutContext);
+}
+
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.
 MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
   if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment()) {
@@ -3959,6 +3966,9 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
                                                             MBB, TM));
     CurrentSectionBeginSym = MBB.getSymbol();
   }
+
+  for (auto &Handler : DebugHandlers)
+    Handler->beginCodeAlignment(MBB);
 
   // Emit an alignment directive for this block, if needed.
   const Align Alignment = MBB.getAlignment();

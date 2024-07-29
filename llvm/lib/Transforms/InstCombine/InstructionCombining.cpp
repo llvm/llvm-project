@@ -1651,14 +1651,14 @@ static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
                                                         bool IsTrueArm) {
   SmallVector<Constant *> ConstOps;
   for (Value *Op : I.operands()) {
-    CmpInst::Predicate Pred;
     Constant *C = nullptr;
     if (Op == SI) {
       C = dyn_cast<Constant>(IsTrueArm ? SI->getTrueValue()
                                        : SI->getFalseValue());
     } else if (match(SI->getCondition(),
-                     m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
-               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+                     m_SpecificICmp(IsTrueArm ? ICmpInst::ICMP_EQ
+                                              : ICmpInst::ICMP_NE,
+                                    m_Specific(Op), m_Constant(C))) &&
                isGuaranteedNotToBeUndefOrPoison(C)) {
       // Pass
     } else {
@@ -4399,8 +4399,8 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   if (MakeNewInstruction) {
     LandingPadInst *NLI = LandingPadInst::Create(LI.getType(),
                                                  NewClauses.size());
-    for (unsigned i = 0, e = NewClauses.size(); i != e; ++i)
-      NLI->addClause(NewClauses[i]);
+    for (Constant *C : NewClauses)
+      NLI->addClause(C);
     // A landing pad with no clauses must have the cleanup flag set.  It is
     // theoretically possible, though highly unlikely, that we eliminated all
     // clauses.  If so, force the cleanup flag to true.

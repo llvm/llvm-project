@@ -1551,7 +1551,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
   Expr *CountExpr = importChecked(Err, T->getCountExpr());
 
   SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
-  for (auto TI : T->dependent_decls()) {
+  for (const TypeCoupledDeclRefInfo &TI : T->dependent_decls()) {
     Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
     if (!ToDeclOrErr)
       return ToDeclOrErr.takeError();
@@ -2949,7 +2949,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
         if (!hasSameVisibilityContextAndLinkage(FoundEnum, D))
           continue;
-        if (IsStructuralMatch(D, FoundEnum)) {
+        if (IsStructuralMatch(D, FoundEnum, !SearchName.isEmpty())) {
           EnumDecl *FoundDef = FoundEnum->getDefinition();
           if (D->isThisDeclarationADefinition() && FoundDef)
             return Importer.MapImported(D, FoundDef);
@@ -2960,7 +2960,12 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       }
     }
 
-    if (!ConflictingDecls.empty()) {
+    // In case of unnamed enums, we try to find an existing similar one, if none
+    // was found, perform the import always.
+    // Structural in-equivalence is not detected in this way here, but it may
+    // be found when the parent decl is imported (if the enum is part of a
+    // class). To make this totally exact a more difficult solution is needed.
+    if (SearchName && !ConflictingDecls.empty()) {
       ExpectedName NameOrErr = Importer.HandleNameConflict(
           SearchName, DC, IDNS, ConflictingDecls.data(),
           ConflictingDecls.size());
@@ -4174,12 +4179,6 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
                               D->getInClassInitStyle()))
     return ToField;
 
-  // We need [[no_unqiue_address]] attributes to be added to FieldDecl, before
-  // we add fields in CXXRecordDecl::addedMember, otherwise record will be
-  // marked as having non-zero size.
-  Err = Importer.ImportAttrs(ToField, D);
-  if (Err)
-    return std::move(Err);
   ToField->setAccess(D->getAccess());
   ToField->setLexicalDeclContext(LexicalDC);
   ToField->setImplicit(D->isImplicit());
@@ -9394,19 +9393,6 @@ TranslationUnitDecl *ASTImporter::GetFromTU(Decl *ToD) {
   return FromDPos->second->getTranslationUnitDecl();
 }
 
-Error ASTImporter::ImportAttrs(Decl *ToD, Decl *FromD) {
-  if (!FromD->hasAttrs() || ToD->hasAttrs())
-    return Error::success();
-  for (const Attr *FromAttr : FromD->getAttrs()) {
-    auto ToAttrOrErr = Import(FromAttr);
-    if (ToAttrOrErr)
-      ToD->addAttr(*ToAttrOrErr);
-    else
-      return ToAttrOrErr.takeError();
-  }
-  return Error::success();
-}
-
 Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   if (!FromD)
     return nullptr;
@@ -9540,8 +9526,15 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   }
   // Make sure that ImportImpl registered the imported decl.
   assert(ImportedDecls.count(FromD) != 0 && "Missing call to MapImported?");
-  if (auto Error = ImportAttrs(ToD, FromD))
-    return std::move(Error);
+
+  if (FromD->hasAttrs())
+    for (const Attr *FromAttr : FromD->getAttrs()) {
+      auto ToAttrOrErr = Import(FromAttr);
+      if (ToAttrOrErr)
+        ToD->addAttr(*ToAttrOrErr);
+      else
+        return ToAttrOrErr.takeError();
+    }
 
   // Notify subclasses.
   Imported(FromD, ToD);

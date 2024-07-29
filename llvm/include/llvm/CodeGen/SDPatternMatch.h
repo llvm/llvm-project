@@ -447,6 +447,55 @@ template <> struct EffectiveOperands<false> {
   explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {}
 };
 
+// === Ternary operations ===
+template <typename T0_P, typename T1_P, typename T2_P, bool Commutable = false,
+          bool ExcludeChain = false>
+struct TernaryOpc_match {
+  unsigned Opcode;
+  T0_P Op0;
+  T1_P Op1;
+  T2_P Op2;
+
+  TernaryOpc_match(unsigned Opc, const T0_P &Op0, const T1_P &Op1,
+                   const T2_P &Op2)
+      : Opcode(Opc), Op0(Op0), Op1(Op1), Op2(Op2) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+      EffectiveOperands<ExcludeChain> EO(N);
+      assert(EO.Size == 3);
+      return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
+               Op1.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
+              (Commutable && Op0.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
+               Op1.match(Ctx, N->getOperand(EO.FirstIndex)))) &&
+             Op2.match(Ctx, N->getOperand(EO.FirstIndex + 2));
+    }
+
+    return false;
+  }
+};
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, false, false>
+m_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, false, false>(ISD::SETCC, LHS, RHS,
+                                                          CC);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, true, false>
+m_c_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, true, false>(ISD::SETCC, LHS, RHS,
+                                                         CC);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_Select(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::SELECT, Cond, T, F);
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -677,6 +726,10 @@ inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(const Opnd &Op) {
 template <typename Opnd>
 inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
   return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(Op), Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
 }
 
 // === Constants ===

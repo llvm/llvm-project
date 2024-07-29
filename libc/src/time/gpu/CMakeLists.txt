@@ -32,3 +32,15 @@ add_entrypoint_object(
     libc.src.__support.GPU.utils
     .time_utils
 )
+
+add_entrypoint_object(
+  clock_gettime
+  SRCS
+    clock_gettime.cpp
+  HDRS
+    ../clock_gettime.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    .time_utils
+)

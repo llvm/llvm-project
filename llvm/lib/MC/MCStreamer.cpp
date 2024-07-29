@@ -689,6 +689,13 @@ void MCStreamer::emitCFIReturnColumn(int64_t Register) {
   CurFrame->RAReg = Register;
 }
 
+void MCStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCSymbol *Label = emitCFILabel();
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+  if (MCDwarfFrameInfo *F = getCurrentDwarfFrameInfo())
+    F->Instructions.push_back(MCCFIInstruction::createLabel(Label, Sym, Loc));
+}
+
 WinEH::FrameInfo *MCStreamer::EnsureValidWinFrameInfo(SMLoc Loc) {
   const MCAsmInfo *MAI = Context.getAsmInfo();
   if (!MAI->usesWindowsCFI()) {
