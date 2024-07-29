@@ -10,11 +10,16 @@
 #define LLVM_LIBC_SRC_MATH_DFMAf128_H
 
 #include "src/__support/macros/config.h"
+#include "src/math/dfmaf128.h"
 #include "src/__support/macros/properties/types.h"
+#include "src/__support/FPUtil/FMA.h"
+
 
 namespace LIBC_NAMESPACE_DECL {
 
-double dfmaf128(float128 x, float128 y, float128 z);
+LLVM_LIBC_FUNCTION(double, dfmaf128, (float128 x, float128 y, float128 z)) {
+  return fputil::generic::fma<double>(x, y, z);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
 

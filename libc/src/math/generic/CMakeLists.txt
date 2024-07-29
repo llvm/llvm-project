@@ -137,6 +137,7 @@ add_entrypoint_object(
     ../dfmaf128.h
   DEPENDS
     libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
@@ -186,7 +187,8 @@ add_entrypoint_object(
   HDRS
     ../dsubf128.h
   DEPENDS
-    libc.src.__support.FPUtil.add_sub
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
@@ -198,7 +200,7 @@ add_entrypoint_object(
   HDRS
     ../dsubl.h
   DEPENDS
-    libc.src.__support.FPUtil.add_sub
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )

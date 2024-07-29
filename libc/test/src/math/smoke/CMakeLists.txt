@@ -359,6 +359,54 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dfmal_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dfmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.dfmal
+)
+
+add_fp_unittest(
+  dfmaf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dfmaf128_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.dfmaf128
+)
+
+add_fp_unittest(
+  dsubl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsubl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.dsubl
+)
+
+add_fp_unittest(
+  dsubf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsubf128_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.dsubf128
+)
+
+add_fp_unittest(
   floor_test
   SUITE
     libc-math-smoke-tests
