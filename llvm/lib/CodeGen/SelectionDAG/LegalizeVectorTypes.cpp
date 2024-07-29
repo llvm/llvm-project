@@ -2409,11 +2409,11 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   // This is not "trivial", as there is a dependency between the two subvectors.
   // Depending on the number of 1s in the mask, the elements from the Hi vector
   // need to be moved to the Lo vector. Passthru values make this even harder.
-  // We try to use MASKED_COMPRESS if the target has custom lowering with
+  // We try to use VECTOR_COMPRESS if the target has custom lowering with
   // smaller types and passthru is undef, as it is most likely faster than the
   // fully expand path. Otherwise, just do the full expansion as one "big"
   // operation and then extract the Lo and Hi vectors from that. This gets
-  // rid of MASKED_COMPRESS and all other operands can be legalized later.
+  // rid of VECTOR_COMPRESS and all other operands can be legalized later.
   SDLoc DL(N);
   EVT VecVT = N->getValueType(0);
 
