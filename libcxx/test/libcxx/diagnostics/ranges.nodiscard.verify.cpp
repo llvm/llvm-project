@@ -12,13 +12,10 @@
 
 
 #include <ranges>
-#include <tuple>
 #include <utility>
 #include <vector>
 
-#include "test_iterators.h"
 #include "test_macros.h"
-#include "test_range.h"
 
 // clang-format off
 
@@ -40,11 +37,8 @@ void test() {
 
   // std::ranges::enumerate
   {
-    // test_range<cpp17_input_iterator<std::tuple<int, int*>>> r;
-    // test_sized_range<cpp20_random_access_iterator> r;
     std::views::enumerate(range);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-    // test_sized_view<cpp17_input_iterator> v;
     // class enumerate_view<>
     auto ev = std::ranges::subrange(range.begin(), range.end() - 1) | std::views::enumerate;
     ev.begin();                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -72,7 +66,6 @@ void test() {
     iter_move(it);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     // class enumerate_view<>::__sentinel
-    // auto ev2 = std::ranges::subrange(range.begin(), range.end() - 1); | std::views::enumerate;
     auto st = ev.end();
     auto const_st = std::as_const(ev).end();
     st.base();                   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

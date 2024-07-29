@@ -84,7 +84,6 @@ struct test_sized_view : std::ranges::view_base {
   sentinel end();
   sentinel end() const;
   std::size_t size() const;
-  T& operator[](std::size_t __n) const;
 };
 
 template <class T = int>
