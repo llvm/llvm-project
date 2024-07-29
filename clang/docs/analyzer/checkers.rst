@@ -1703,7 +1703,11 @@ are detected:
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
 The stream operations are by this checker usually split into two cases, a success
-and a failure case. However, in the case of write operations (like ``fwrite``,
+and a failure case.
+On the success case it also assumes that the current value of ``stdout``,
+``stderr``, or ``stdin`` can't be equal to the file pointer returned by ``fopen``.
+
+In the case of write operations (like ``fwrite``,
 ``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
 unwanted reports on projects that don't have error checks around the write
 operations, so by default the checker assumes that write operations always succeed.
@@ -1765,13 +1769,6 @@ are assumed to succeed.)
 
    fclose(p);
  }
-
-**Limitations**
-
-The checker does not track the correspondence between integer file descriptors
-and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
-treated specially and are therefore often not recognized (because these streams
-are usually not opened explicitly by the program, and are global variables).
 
 .. _osx-checkers:
 
