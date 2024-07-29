@@ -494,28 +494,22 @@ static void emitDWOBuilder(const std::string &DWOName,
   std::unique_ptr<DIEStreamer> Streamer =
       createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
                         DWODIEBuilder, GDBIndexSection);
-  DWARFRewriter::UnitMetaVectorType TUMetaVector;
-  DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_info_section_units()) {
       if (!CU->isTypeUnit())
         continue;
-      DWARFRewriter::UnitMeta MI =
-          emitUnit(DWODIEBuilder, *Streamer, *CU.get());
-      TUMetaVector.emplace_back(MI);
+      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
     }
-    CUMI = emitUnit(DWODIEBuilder, *Streamer, SplitCU);
+    emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_compile_units())
       emitUnit(DWODIEBuilder, *Streamer, *CU.get());
 
     // emit debug_types sections for dwarf4
-    for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector()) {
-      DWARFRewriter::UnitMeta MI = emitUnit(DWODIEBuilder, *Streamer, *CU);
-      TUMetaVector.emplace_back(MI);
-    }
+    for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector())
+      emitUnit(DWODIEBuilder, *Streamer, *CU);
   }
 
   Streamer->emitAbbrevs(DWODIEBuilder.getAbbrevs(),
