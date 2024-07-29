@@ -815,7 +815,6 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
   sandboxir::StoreInst *NewSt =
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertBefore=*/Ret, Ctx);
-  // Check if create was volatile
   EXPECT_FALSE(NewSt->isVolatile());
   EXPECT_EQ(NewSt->getType(), St->getType());
   EXPECT_EQ(NewSt->getValueOperand(), Val);
@@ -826,14 +825,15 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertBefore=*/Ret,
                                    /*IsVolatile=*/true, Ctx);
-  // Check if create was volatile
   EXPECT_TRUE(NewVSt->isVolatile());
-
+  EXPECT_EQ(NewVSt->getType(), VSt->getType());
+  EXPECT_EQ(NewVSt->getValueOperand(), Val);
+  EXPECT_EQ(NewVSt->getPointerOperand(), Ptr);
+  EXPECT_EQ(NewVSt->getAlign(), 8);
   // Check create(InsertAtEnd)
   sandboxir::StoreInst *NewStEnd =
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertAtEnd=*/BB, Ctx);
-  // Check if create was volatile
   EXPECT_FALSE(NewStEnd->isVolatile());
   EXPECT_EQ(NewStEnd->getType(), St->getType());
   EXPECT_EQ(NewStEnd->getValueOperand(), Val);
@@ -846,7 +846,6 @@ define void @foo(i8 %val, ptr %ptr, ptr %vptr) {
       sandboxir::StoreInst::create(Val, Ptr, Align(8),
                                    /*InsertAtEnd=*/BB,
                                    /*IsVolatile=*/true, Ctx);
-  // Check if create was volatile
   EXPECT_TRUE(NewVStEnd->isVolatile());
   EXPECT_EQ(NewVStEnd->getType(), VSt->getType());
   EXPECT_EQ(NewVStEnd->getValueOperand(), Val);
