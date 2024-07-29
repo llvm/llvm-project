@@ -288,9 +288,6 @@ def err_function_needs_feature : Error<
 let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
-def warn_function_always_inline_attribute_mismatch : Warning<
-  "always_inline function %1 and its caller %0 have mismatching %2 attributes, "
-  "inlining may change runtime behaviour">, InGroup<AArch64SMEAttributes>;
 def err_function_always_inline_new_za : Error<
   "always_inline function %0 has new za state">;
 
