@@ -13785,9 +13785,9 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
 }
 
 /// Try to lower the construction of a pointer alias mask to a WHILEWR.
-/// The mask's enabled lanes represent the elements that will not overlap across one loop iteration.
-/// This tries to match:
-/// or (splat (setcc_lt (sub ptrA, ptrB), -(element_size - 1))),
+/// The mask's enabled lanes represent the elements that will not overlap across
+/// one loop iteration. This tries to match: or (splat (setcc_lt (sub ptrA,
+/// ptrB), -(element_size - 1))),
 ///    (get_active_lane_mask 0, (div (sub ptrA, ptrB), element_size))
 SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   if (!DAG.getSubtarget<AArch64Subtarget>().hasSVE2())
@@ -13825,7 +13825,8 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
       (EltSize != 1 && LaneMask.getOperand(2).getOpcode() != ISD::SRA))
     return SDValue();
 
-  // An alias mask for i8 elements omits the division because it would just divide by 1
+  // An alias mask for i8 elements omits the division because it would just
+  // divide by 1
   if (EltSize > 1) {
     auto DiffDiv = LaneMask.getOperand(2);
     auto DiffDivConst = dyn_cast<ConstantSDNode>(DiffDiv.getOperand(1));
