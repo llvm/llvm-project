@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
 
 v_fma_mix_f32 v0, v1, v2, v3 op_sel:[0,0,0] row_ror:7 bank_mask:0x1 bound_ctrl:0
 // GFX13: v_fma_mix_f32_e64_dpp v0, v1, v2, v3 row_ror:7 row_mask:0xf bank_mask:0x1 ; encoding: [0x00,0x00,0x20,0xcc,0xfa,0x04,0x0e,0x04,0x01,0x27,0x01,0xf1]

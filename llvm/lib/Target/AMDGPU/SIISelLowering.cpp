@@ -13,6 +13,7 @@
 
 #include "SIISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -24,7 +25,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ByteProvider.h"
@@ -5693,19 +5693,6 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   return &MBB;
 }
 
-static bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
-  if (auto *val = MemOpnd->getValue()) {
-    auto *Obj = getUnderlyingObject(val);
-    if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
-      if (GV->hasAttribute("lane-shared-in-vgpr")) {
-        assert(MemOpnd->getAddrSpace() == AMDGPUAS::LANE_SHARED);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -6297,7 +6284,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     if (TII->isFLATScratch(MI)) {
       bool LaneSharedInVGPR = false;
       for (const auto *MemOp : MI.memoperands()) {
-        if (IsLaneSharedInVGPR(MemOp)) {
+        if (AMDGPU::IsLaneSharedInVGPR(MemOp)) {
           LaneSharedInVGPR = true;
           break;
         }
@@ -11562,7 +11549,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // we can bypass splitting when it will be converted into v_load_idx, and
     // NumElements matches the scratch-pseudo we support
     if (AS == AMDGPUAS::LANE_SHARED) {
-      if (IsLaneSharedInVGPR(Load->getMemOperand()) &&
+      if (AMDGPU::IsLaneSharedInVGPR(Load->getMemOperand()) &&
           (NumElements <= 6 || NumElements == 8 || NumElements == 9 ||
            NumElements == 16 || NumElements == 18))
         return SDValue();
@@ -12135,7 +12122,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     // we can bypass splitting when it will be converted into v_load_idx, and
     // NumElements matches the scratch-pseudo we support
     if (AS == AMDGPUAS::LANE_SHARED) {
-      if (IsLaneSharedInVGPR(Store->getMemOperand()) &&
+      if (AMDGPU::IsLaneSharedInVGPR(Store->getMemOperand()) &&
           (NumElements <= 6 || NumElements == 8 || NumElements == 9 ||
            NumElements == 16 || NumElements == 18))
         return SDValue();

@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX13-W32-ERR --implicit-check-not=error: --strict-whitespace %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX13-W64-ERR --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX13-W32-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX13-W64-ERR --strict-whitespace %s
 
 v_send_vgpr_next_b32 s1, v2, v3
 // GFX13-W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

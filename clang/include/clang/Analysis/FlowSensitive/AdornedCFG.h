@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
@@ -26,6 +27,24 @@
 
 namespace clang {
 namespace dataflow {
+
+namespace internal {
+class StmtToBlockMap {
+public:
+  StmtToBlockMap(const CFG &Cfg);
+
+  const CFGBlock *lookup(const Stmt &S) const {
+    return StmtToBlock.lookup(&ignoreCFGOmittedNodes(S));
+  }
+
+  const llvm::DenseMap<const Stmt *, const CFGBlock *> &getMap() const {
+    return StmtToBlock;
+  }
+
+private:
+  llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
+};
+} // namespace internal
 
 /// Holds CFG with additional information derived from it that is needed to
 /// perform dataflow analysis.
@@ -49,8 +68,17 @@ public:
   const CFG &getCFG() const { return *Cfg; }
 
   /// Returns a mapping from statements to basic blocks that contain them.
+  /// Deprecated. Use `blockForStmt()` instead (which prevents the potential
+  /// error of forgetting to call `ignoreCFGOmittedNodes()` on the statement to
+  /// look up).
   const llvm::DenseMap<const Stmt *, const CFGBlock *> &getStmtToBlock() const {
-    return StmtToBlock;
+    return StmtToBlock.getMap();
+  }
+
+  /// Returns the basic block that contains `S`, or null if no basic block
+  /// containing `S` is found.
+  const CFGBlock *blockForStmt(const Stmt &S) const {
+    return StmtToBlock.lookup(S);
   }
 
   /// Returns whether `B` is reachable from the entry block.
@@ -73,8 +101,7 @@ public:
 private:
   AdornedCFG(
       const Decl &D, std::unique_ptr<CFG> Cfg,
-      llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
-      llvm::BitVector BlockReachable,
+      internal::StmtToBlockMap StmtToBlock, llvm::BitVector BlockReachable,
       llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock)
       : ContainingDecl(D), Cfg(std::move(Cfg)),
         StmtToBlock(std::move(StmtToBlock)),
@@ -85,7 +112,7 @@ private:
   /// The `Decl` containing the statement used to construct the CFG.
   const Decl &ContainingDecl;
   std::unique_ptr<CFG> Cfg;
-  llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
+  internal::StmtToBlockMap StmtToBlock;
   llvm::BitVector BlockReachable;
   llvm::DenseSet<const CFGBlock *> ContainsExprConsumedInDifferentBlock;
 };

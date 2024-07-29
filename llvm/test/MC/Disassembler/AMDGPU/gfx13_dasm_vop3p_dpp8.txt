@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
 
 # GFX13: v_fma_mix_f32_bf16_e64_dpp v0, v1, v2, v3 clamp dpp8:[2,2,2,2,4,4,4,4] fi:1 ; encoding: [0x00,0x80,0x3d,0xcc,0xea,0x04,0x0e,0x04,0x01,0x92,0x44,0x92]
 0x00,0x80,0x3d,0xcc,0xea,0x04,0x0e,0x04,0x01,0x92,0x44,0x92

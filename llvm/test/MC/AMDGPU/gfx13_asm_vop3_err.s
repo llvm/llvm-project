@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13 --strict-whitespace --implicit-check-not=error %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13 --strict-whitespace --implicit-check-not=error %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13 --strict-whitespace --implicit-check-not=error %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13 --strict-whitespace --implicit-check-not=error %s
 
 v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

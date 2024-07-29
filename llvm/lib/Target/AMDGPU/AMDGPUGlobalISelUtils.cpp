@@ -8,6 +8,7 @@
 
 #include "AMDGPUGlobalISelUtils.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -68,4 +69,16 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   return std::pair(Reg, 0);
+}
+
+bool AMDGPU::IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
+  if (auto *val = MemOpnd->getValue()) {
+    auto *Obj = getUnderlyingObject(val);
+    if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
+      if (GV->hasAttribute("lane-shared-in-vgpr")) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
