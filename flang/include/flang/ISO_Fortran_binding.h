@@ -167,9 +167,7 @@ typedef struct CFI_cdesc_t {
   RT_API_ATTRS inline bool HasAddendum() const {
     return extra & _CFI_ADDENDUM_FLAG;
   }
-  RT_API_ATTRS inline void SetHasAddendum() {
-    extra |= _CFI_ADDENDUM_FLAG;
-  }
+  RT_API_ATTRS inline void SetHasAddendum() { extra |= _CFI_ADDENDUM_FLAG; }
   RT_API_ATTRS inline int GetAllocIdx() const {
     return ((int)extra >> _CFI_ADDENDUM_BITS);
   }
