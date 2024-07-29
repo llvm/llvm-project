@@ -1049,18 +1049,29 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
+class NamedIntOperand<ValueType Type, string prefix, bit Optional = 1,
                       string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  string Prefix = prefix;
+
   let PredicateMethod =
     "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
     "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
+
   string Validator = "[](int64_t V) { return true; }";
   string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
     "AMDGPUOperand::"#ImmTy#", "#ConvertMethod#"); }";
+
+  bit PrintInHex = 0;
+  bit AlwaysPrint = 0;
+  let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "
+                    "const MCSubtargetInfo &STI, raw_ostream &O) { "
+                    "printNamedInt(MI, OpNo, STI, O, \""#Prefix#"\", "#
+                    !if(PrintInHex, "true", "false")#", "#
+                    !if(AlwaysPrint, "true", "false")#"); }";
 }
 
 class NamedBitOperand<string Id, string Name = NAME>
@@ -1099,6 +1110,7 @@ class ArrayOperand0<string Id, string Name = NAME>
 
 let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
+let PrintMethod = "printOffset" in
 def Offset : NamedIntOperand<i32, "offset">;
 let Validator = "isUInt<8>" in {
 def Offset0 : NamedIntOperand<i32, "offset0">;
@@ -1137,6 +1149,7 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 def FORMAT : CustomOperand<i8>;
 
+let PrintInHex = 1 in
 def DMask : NamedIntOperand<i16, "dmask">;
 
 def Dim : CustomOperand<i8, /*optional=*/1>;
@@ -1157,16 +1170,18 @@ def IndexKey8bit : CustomOperand<i32, 1>;
 def dpp8 : CustomOperand<i32, 0, "DPP8">;
 def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
-let DefaultValue = "0xf" in {
+let DefaultValue = "0xf", PrintInHex = 1, AlwaysPrint = 1 in {
 def DppRowMask : NamedIntOperand<i32, "row_mask">;
 def DppBankMask : NamedIntOperand<i32, "bank_mask">;
 }
 def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl"> {
   let ConvertMethod = "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }";
+  let PrintMethod = "printDppBoundCtrl";
 }
 
-let DecoderMethod = "decodeDpp8FI" in
+let DecoderMethod = "decodeDpp8FI", PrintMethod = "printDppFI" in
 def Dpp8FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
+let PrintMethod = "printDppFI" in
 def Dpp16FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
@@ -1180,6 +1195,7 @@ def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
 def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
+let AlwaysPrint = 1 in {
 def WaitVDST : NamedIntOperand<i8, "wait_vdst"> {
   let Validator = "isUInt<4>";
 }
@@ -1192,6 +1208,7 @@ def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst"> {
 def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc"> {
   let Validator = "isUInt<1>";
 }
+} // End AlwaysPrint = 1
 
 def ByteSel : NamedIntOperand<i8, "byte_sel"> {
   let Validator = "isUInt<2>";
