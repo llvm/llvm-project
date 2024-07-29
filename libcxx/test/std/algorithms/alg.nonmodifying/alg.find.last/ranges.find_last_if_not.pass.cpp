@@ -183,7 +183,7 @@ struct NonConstComparable {
   friend constexpr bool operator!=(NonConstComparable&, const NonConstComparable&) { return false; }
 };
 
-// note: this should really use `std::const_iterator`
+// TODO: this should really use `std::const_iterator`
 template <class T>
 struct add_const_to_ptr {
   using type = T;
