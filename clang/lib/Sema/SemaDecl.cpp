@@ -2176,7 +2176,9 @@ static void CheckPoppedLabel(LabelDecl *L, Sema &S,
 }
 
 void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
-  S->applyNRVO();
+  // NRVO is only valid in C++, not in C.
+  if (getLangOpts().CPlusPlus)
+    S->applyNRVO();
 
   if (S->decl_empty()) return;
   assert((S->getFlags() & (Scope::DeclScope | Scope::TemplateParamScope)) &&
