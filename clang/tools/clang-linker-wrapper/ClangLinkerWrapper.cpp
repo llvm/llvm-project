@@ -297,7 +297,8 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
 /// supported by the toolchain.
 bool linkerSupportsLTO(const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  return Triple.isNVPTX() || Triple.isAMDGPU();
+  return Triple.isNVPTX() || Triple.isAMDGPU() ||
+         Args.getLastArgValue(OPT_linker_path_EQ).ends_with("ld.lld");
 }
 
 /// Returns the hashed value for a constant string.
@@ -523,6 +524,13 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
                         : Args.MakeArgString("-march=" + Arch),
       Args.MakeArgString("-" + OptLevel),
   };
+
+  // Forward all of the `--offload-opt` and similar options to the device.
+  if (linkerSupportsLTO(Args)) {
+    for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
+      CmdArgs.push_back(
+          Args.MakeArgString("-Wl,--plugin-opt=" + StringRef(Arg->getValue())));
+  }
 
   if (!Triple.isNVPTX())
     CmdArgs.push_back("-Wl,--no-undefined");
@@ -1756,7 +1764,7 @@ int main(int Argc, char **Argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
-    NewArgv.push_back(Args.MakeArgString(StringRef("-") + Arg->getValue()));
+    NewArgv.push_back(Arg->getValue());
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);

@@ -1473,7 +1473,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SRA);
 
   if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM});
+    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
 
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
@@ -16682,6 +16682,25 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOpOfZExt(N, DAG))
       return V;
     break;
+  case ISD::FMUL: {
+    // fmul X, (copysign 1.0, Y) -> fsgnjx X, Y
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    if (N0->getOpcode() != ISD::FCOPYSIGN)
+      std::swap(N0, N1);
+    if (N0->getOpcode() != ISD::FCOPYSIGN)
+      return SDValue();
+    ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0->getOperand(0));
+    if (!C || !C->getValueAPF().isExactlyValue(+1.0))
+      return SDValue();
+    EVT VT = N->getValueType(0);
+    if (VT.isVector() || !isOperationLegal(ISD::FCOPYSIGN, VT))
+      return SDValue();
+    SDValue Sign = N0->getOperand(1);
+    if (Sign.getValueType() != VT)
+      return SDValue();
+    return DAG.getNode(RISCVISD::FSGNJX, SDLoc(N), VT, N1, N0->getOperand(1));
+  }
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
@@ -20232,6 +20251,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FP_EXTEND_BF16)
   NODE_NAME_CASE(FROUND)
   NODE_NAME_CASE(FCLASS)
+  NODE_NAME_CASE(FSGNJX)
   NODE_NAME_CASE(FMAX)
   NODE_NAME_CASE(FMIN)
   NODE_NAME_CASE(READ_COUNTER_WIDE)
@@ -21161,37 +21181,37 @@ bool RISCVTargetLowering::shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned)
 bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                  SDValue C) const {
   // Check integral scalar types.
-  const bool HasZmmul = Subtarget.hasStdExtZmmul();
   if (!VT.isScalarInteger())
     return false;
 
   // Omit the optimization if the sub target has the M extension and the data
   // size exceeds XLen.
+  const bool HasZmmul = Subtarget.hasStdExtZmmul();
   if (HasZmmul && VT.getSizeInBits() > Subtarget.getXLen())
     return false;
 
-  if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
-    // Break the MUL to a SLLI and an ADD/SUB.
-    const APInt &Imm = ConstNode->getAPIntValue();
-    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
-        (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
-      return true;
+  auto *ConstNode = cast<ConstantSDNode>(C);
+  const APInt &Imm = ConstNode->getAPIntValue();
 
-    // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
-    if (Subtarget.hasStdExtZba() && !Imm.isSignedIntN(12) &&
-        ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
-         (Imm - 8).isPowerOf2()))
-      return true;
+  // Break the MUL to a SLLI and an ADD/SUB.
+  if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
+      (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
+    return true;
 
-    // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
-    // a pair of LUI/ADDI.
-    if (!Imm.isSignedIntN(12) && Imm.countr_zero() < 12 &&
-        ConstNode->hasOneUse()) {
-      APInt ImmS = Imm.ashr(Imm.countr_zero());
-      if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
-          (1 - ImmS).isPowerOf2())
-        return true;
-    }
+  // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
+  if (Subtarget.hasStdExtZba() && !Imm.isSignedIntN(12) &&
+      ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
+       (Imm - 8).isPowerOf2()))
+    return true;
+
+  // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
+  // a pair of LUI/ADDI.
+  if (!Imm.isSignedIntN(12) && Imm.countr_zero() < 12 &&
+      ConstNode->hasOneUse()) {
+    APInt ImmS = Imm.ashr(Imm.countr_zero());
+    if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
+        (1 - ImmS).isPowerOf2())
+      return true;
   }
 
   return false;
