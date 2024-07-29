@@ -47,7 +47,7 @@ class ResourceInfo {
 
   struct StructInfo {
     uint32_t Stride;
-    MaybeAlign Alignment;
+    Align Alignment;
 
     bool operator==(const StructInfo &RHS) const {
       return std::tie(Stride, Alignment) == std::tie(RHS.Stride, RHS.Alignment);
@@ -138,7 +138,7 @@ public:
     CBufferSize = Size;
   }
   void setSampler(dxil::SamplerType Ty) { SamplerTy = Ty; }
-  void setStruct(uint32_t Stride, MaybeAlign Alignment) {
+  void setStruct(uint32_t Stride, Align Alignment) {
     assert(isStruct() && "Not a Struct");
     Struct.Stride = Stride;
     Struct.Alignment = Alignment;
@@ -164,7 +164,7 @@ public:
                           dxil::ResourceKind Kind);
   static ResourceInfo RawBuffer(Value *Symbol, StringRef Name);
   static ResourceInfo StructuredBuffer(Value *Symbol, StringRef Name,
-                                       uint32_t Stride, MaybeAlign Alignment);
+                                       uint32_t Stride, Align Alignment);
   static ResourceInfo Texture2DMS(Value *Symbol, StringRef Name,
                                   dxil::ElementType ElementTy,
                                   uint32_t ElementCount, uint32_t SampleCount);
@@ -180,9 +180,9 @@ public:
   static ResourceInfo RWRawBuffer(Value *Symbol, StringRef Name,
                                   bool GloballyCoherent, bool IsROV);
   static ResourceInfo RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                         uint32_t Stride, MaybeAlign Alignment,
-                                         bool GloballyCoherent, bool IsROV,
-                                         bool HasCounter);
+                                         uint32_t Stride,
+                                         Align Alignment, bool GloballyCoherent,
+                                         bool IsROV, bool HasCounter);
   static ResourceInfo RWTexture2DMS(Value *Symbol, StringRef Name,
                                     dxil::ElementType ElementTy,
                                     uint32_t ElementCount, uint32_t SampleCount,
