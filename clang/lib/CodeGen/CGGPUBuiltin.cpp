@@ -552,12 +552,3 @@ CodeGenFunction::EmitHostexecAllocAndExecFns(const CallExpr *E,
       hostexecVargsReturnsFnDeclaration(CGM, E->getType(), GPUStubFunctionName),
       {DataStructPtr, BufferLen}));
 }
-#if 0
-RValue CodeGenFunction::EmitOpenMPDevicePrintfCallExpr(const CallExpr *E) {
-  assert(getTarget().getTriple().isNVPTX() ||
-         getTarget().getTriple().isAMDGCN());
-  // This will result in a NOP on AMDGPU, unimplimented.
-  return EmitDevicePrintfCallExpr(E, this, GetOpenMPVprintfDeclaration(CGM),
-                                  true);
-}
-#endif

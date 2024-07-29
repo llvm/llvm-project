@@ -98,7 +98,7 @@ def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Arguments passed to LLVM, including Clang invocations, for which "
            "the '-mllvm' prefix is preserved. Use '-mllvm --help' for a list "
            "of options.">;
-def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=-">, Flags<[HelpHidden, WrapperOnlyOption]>,
+def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=">, Flags<[HelpHidden, WrapperOnlyOption]>,
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--offload-opt=--help' for a list of options.">;
 

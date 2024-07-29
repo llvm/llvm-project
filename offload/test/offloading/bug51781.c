@@ -32,7 +32,6 @@
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
-// XFAIL: amdgcn-amd-amdhsa
 
 #if ADD_REDUCTION
 #define REDUCTION(...) reduction(__VA_ARGS__)

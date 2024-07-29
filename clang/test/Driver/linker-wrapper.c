@@ -233,3 +233,13 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: | FileCheck %s --check-prefix=OVERRIDE
 // OVERRIDE-NOT: clang
 // OVERRIDE: /usr/bin/ld
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --offload-opt=-pass-remarks=foo \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OFFLOAD-OPT
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run -mllvm -pass-remarks=foo \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OFFLOAD-OPT
+
+// OFFLOAD-OPT: clang{{.*}}-Wl,--plugin-opt=-pass-remarks=foo

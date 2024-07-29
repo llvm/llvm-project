@@ -7,38 +7,17 @@ define void @test() {
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[IDX2]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr [[IDX2]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> [[TMP1]], i32 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i64> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> [[TMP1]], i32 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i64> [[TMP1]], i32 5
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i64> [[TMP1]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <2 x i32> <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <2 x i32> <i32 3, i32 1>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <2 x i32> <i32 4, i32 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <2 x i32> <i32 3, i32 0>
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX25:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x i64> [ [[TMP0]], [[ENTRY]] ], [ [[TMP1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <8 x i64> [[TMP6]], <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP2]], [[TMP13]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = add i64 [[TMP13]], [[TMP12]]
-; CHECK-NEXT:    [[OP_RDX10:%.*]] = add i64 [[TMP12]], [[TMP5]]
-; CHECK-NEXT:    [[OP_RDX15:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP7]])
-; CHECK-NEXT:    [[OP_RDX33:%.*]] = add i64 [[TMP10]], [[TMP9]]
-; CHECK-NEXT:    [[OP_RDX26:%.*]] = add i64 [[OP_RDX9]], [[OP_RDX10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add <2 x i64> [[TMP8]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[TMP20]], [[TMP11]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add <2 x i64> [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[OP_RDX28:%.*]] = add i64 [[OP_RDX15]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX29:%.*]] = add i64 [[OP_RDX33]], [[OP_RDX26]]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[TMP17]], i32 1
-; CHECK-NEXT:    [[OP_RDX30:%.*]] = add i64 [[TMP18]], [[TMP19]]
-; CHECK-NEXT:    [[OP_RDX31:%.*]] = add i64 [[OP_RDX29]], [[OP_RDX30]]
-; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[OP_RDX31]], [[OP_RDX28]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i64> [[TMP1]], <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
+; CHECK-NEXT:    [[OP_RDX16:%.*]] = add i64 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[OP_RDX16]], [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

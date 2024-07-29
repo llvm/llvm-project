@@ -21,7 +21,8 @@ namespace impl {
             implementation = {extension(match_any)})
 extern "C" int vprintf(const char *format, ...);
 int omp_vprintf(const char *Format, __builtin_va_list vlist) {
-  return vprintf(Format, vlist);
+  return -1;
+  //return vprintf(Format, vlist);
 }
 #pragma omp end declare variant
 

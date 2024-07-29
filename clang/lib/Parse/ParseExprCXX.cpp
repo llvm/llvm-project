@@ -158,8 +158,8 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
-    const IdentifierInfo **LastII, bool OnlyNamespace,
-    bool InUsingDeclaration) {
+    const IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration,
+    bool Disambiguation) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -527,13 +527,11 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       UnqualifiedId TemplateName;
       TemplateName.setIdentifier(&II, Tok.getLocation());
       bool MemberOfUnknownSpecialization;
-      if (TemplateNameKind TNK = Actions.isTemplateName(getCurScope(), SS,
-                                              /*hasTemplateKeyword=*/false,
-                                                        TemplateName,
-                                                        ObjectType,
-                                                        EnteringContext,
-                                                        Template,
-                                              MemberOfUnknownSpecialization)) {
+      if (TemplateNameKind TNK = Actions.isTemplateName(
+              getCurScope(), SS,
+              /*hasTemplateKeyword=*/false, TemplateName, ObjectType,
+              EnteringContext, Template, MemberOfUnknownSpecialization,
+              Disambiguation)) {
         // If lookup didn't find anything, we treat the name as a template-name
         // anyway. C++20 requires this, and in prior language modes it improves
         // error recovery. But before we commit to this, check that we actually
@@ -556,7 +554,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         continue;
       }
 
-      if (MemberOfUnknownSpecialization && (ObjectType || SS.isSet()) &&
+      if (MemberOfUnknownSpecialization && !Disambiguation &&
+          (ObjectType || SS.isSet()) &&
           (IsTypename || isTemplateArgumentList(1) == TPResult::True)) {
         // If we had errors before, ObjectType can be dependent even without any
         // templates. Do not report missing template keyword in that case.
