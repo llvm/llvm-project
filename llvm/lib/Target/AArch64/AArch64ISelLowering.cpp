@@ -1990,17 +1990,15 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const CallInst *CI) const {
-  const bool TargetLowers = false;
-  const bool GenericLowers = true;
 
   auto *I = dyn_cast<IntrinsicInst>(CI);
   if (!I)
-    return GenericLowers;
+    return true;
 
   ScalableVectorType *RetTy = dyn_cast<ScalableVectorType>(I->getType());
 
   if (!RetTy)
-    return GenericLowers;
+    return true;
 
   ScalableVectorType *InputTy = nullptr;
 
@@ -2012,7 +2010,7 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   }
 
   if (!InputTy)
-    return GenericLowers;
+    return true;
 
   Value *InputA;
   Value *InputB;
@@ -2022,7 +2020,7 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
                                 m_OneUse(m_ZExtOrSExt(m_Value(InputB))))));
 
   if (!match(I, Pattern))
-    return GenericLowers;
+    return true;
 
   auto Mul = cast<Instruction>(I->getOperand(1));
 
@@ -2031,12 +2029,12 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   };
 
   if (getOpcodeOfOperand(0) != getOpcodeOfOperand(1))
-    return GenericLowers;
+    return true;
 
   if (InputA->getType() != InputTy || InputB->getType() != InputTy)
-    return GenericLowers;
+    return true;
 
-  return TargetLowers;
+  return false;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
