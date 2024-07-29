@@ -2592,8 +2592,7 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
 void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
   // Perform a data flow analysis on the current scop statement to propagate the
   // uses of loaded values. Then check and mark the memory accesses which are
-  // part of reduction like chains.
-  
+  // part of reduction like chains.  
   // During the data flow analysis we use the State variable to keep track of
   // the used "load-instructions" for each instruction in the scop statement.
   // This includes the LLVM-IR of the load and the "number of uses" (or the
@@ -2668,7 +2667,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
       // Non load and store instructions are either binary operators or they
       // will invalidate all used loads.
       auto *BinOp = dyn_cast<BinaryOperator>(&Inst);
-      ReductionType CurRedType = getReductionType(BinOp);
+      MemoryAccess::ReductionType CurRedType = getReductionType(BinOp);
       POLLY_DEBUG(dbgs() << "CurInst: " << Inst << " RT: " << CurRedType
                          << "\n");
 
