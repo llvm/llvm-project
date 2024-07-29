@@ -799,8 +799,9 @@ void DWARFRewriter::updateUnitDebugInfo(
     switch (Die->getTag()) {
     case dwarf::DW_TAG_compile_unit:
     case dwarf::DW_TAG_skeleton_unit:
-      handleCompileUnit(*Die, Unit, DIEBldr, DebugLocWriter,
-                        RangesSectionWriter, AddressWriter, RangesBase);
+      handleCompileAndSkeletonUnit(*Die, Unit, DIEBldr, DebugLocWriter,
+                                   RangesSectionWriter, AddressWriter,
+                                   RangesBase);
       break;
     case dwarf::DW_TAG_subprogram:
       handleSubprogram(*Die, Unit, DIEBldr, RangesSectionWriter, AddressWriter,
@@ -810,8 +811,8 @@ void DWARFRewriter::updateUnitDebugInfo(
     case dwarf::DW_TAG_inlined_subroutine:
     case dwarf::DW_TAG_try_block:
     case dwarf::DW_TAG_catch_block:
-      handleLexicalBlock(*Die, Unit, DIEBldr, RangesSectionWriter,
-                         AddressWriter, CachedRanges);
+      handleSubroutineAndBlocks(*Die, Unit, DIEBldr, RangesSectionWriter,
+                                AddressWriter, CachedRanges);
       break;
     case dwarf::DW_TAG_call_site:
       handleCallSite(*Die, Unit, DIEBldr, AddressWriter);
@@ -828,7 +829,7 @@ void DWARFRewriter::updateUnitDebugInfo(
            << Twine::utohexstr(Unit.getOffset()) << '\n';
 }
 
-void DWARFRewriter::handleCompileUnit(
+void DWARFRewriter::handleCompileAndSkeletonUnit(
     DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
     DebugLocWriter &DebugLocWriter,
     DebugRangesSectionWriter &RangesSectionWriter,
@@ -908,6 +909,7 @@ void updateLowPCHighPC(DIE *Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
     DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
   }
 }
+
 void DWARFRewriter::handleSubprogram(
     DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
     DebugRangesSectionWriter &RangesSectionWriter,
@@ -939,29 +941,29 @@ void DWARFRewriter::handleSubprogram(
       FunctionRanges = Function->getOutputAddressRanges();
   }
 
-      // Clear cached ranges as the new function will have its own set.
-      CachedRanges.clear();
-      DIEValue LowPCVal = Die.findAttribute(dwarf::DW_AT_low_pc);
-      DIEValue HighPCVal = Die.findAttribute(dwarf::DW_AT_high_pc);
-      if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal)
-          FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        else
-          FunctionRanges.push_back({0, 1});
-      }
+  // Clear cached ranges as the new function will have its own set.
+  CachedRanges.clear();
+  DIEValue LowPCVal = Die.findAttribute(dwarf::DW_AT_low_pc);
+  DIEValue HighPCVal = Die.findAttribute(dwarf::DW_AT_high_pc);
+  if (FunctionRanges.empty()) {
+    if (LowPCVal && HighPCVal)
+      FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
+    else
+      FunctionRanges.push_back({0, 1});
+  }
 
-      if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
-        updateLowPCHighPC(&Die, Unit, DIEBldr, AddressWriter, LowPCVal,
-                          HighPCVal, FunctionRanges.back().LowPC,
-                          FunctionRanges.back().HighPC);
-        return;
-      }
+  if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
+    updateLowPCHighPC(&Die, Unit, DIEBldr, AddressWriter, LowPCVal, HighPCVal,
+                      FunctionRanges.back().LowPC,
+                      FunctionRanges.back().HighPC);
+    return;
+  }
 
-      updateDWARFObjectAddressRanges(
-          Unit, DIEBldr, Die, RangesSectionWriter.addRanges(FunctionRanges));
+  updateDWARFObjectAddressRanges(Unit, DIEBldr, Die,
+                                 RangesSectionWriter.addRanges(FunctionRanges));
 }
 
-void DWARFRewriter::handleLexicalBlock(
+void DWARFRewriter::handleSubroutineAndBlocks(
     DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
     DebugRangesSectionWriter &RangesSectionWriter,
     DebugAddrWriter &AddressWriter,

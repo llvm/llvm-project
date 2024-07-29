@@ -115,11 +115,12 @@ private:
                            DebugAddrWriter &AddressWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
-  void handleCompileUnit(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
-                         DebugLocWriter &DebugLocWriter,
-                         DebugRangesSectionWriter &RangesSectionWriter,
-                         DebugAddrWriter &AddressWriter,
-                         std::optional<uint64_t> &RangesBase);
+  void
+  handleCompileAndSkeletonUnit(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
+                               DebugLocWriter &DebugLocWriter,
+                               DebugRangesSectionWriter &RangesSectionWriter,
+                               DebugAddrWriter &AddressWriter,
+                               std::optional<uint64_t> &RangesBase);
 
   void
   handleSubprogram(DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
@@ -127,7 +128,7 @@ private:
                    DebugAddrWriter &AddressWriter,
                    std::map<DebugAddressRangesVector, uint64_t> &CachedRanges);
 
-  void handleLexicalBlock(
+  void handleSubroutineAndBlocks(
       DIE &Die, DWARFUnit &Unit, DIEBuilder &DIEBldr,
       DebugRangesSectionWriter &RangesSectionWriter,
       DebugAddrWriter &AddressWriter,
