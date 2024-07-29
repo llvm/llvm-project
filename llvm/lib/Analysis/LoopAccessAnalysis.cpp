@@ -1599,11 +1599,11 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
     // Otherwise compute the distance with SCEV between the base pointers.
     const SCEV *PtrSCEVA = SE.getSCEV(PtrA);
     const SCEV *PtrSCEVB = SE.getSCEV(PtrB);
-    const auto *Diff =
-        dyn_cast<SCEVConstant>(SE.getMinusSCEV(PtrSCEVB, PtrSCEVA));
+    std::optional<APInt> Diff =
+        SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
     if (!Diff)
       return std::nullopt;
-    Val = Diff->getAPInt().getSExtValue();
+    Val = Diff->getSExtValue();
   }
   int Size = DL.getTypeStoreSize(ElemTyA);
   int Dist = Val / Size;

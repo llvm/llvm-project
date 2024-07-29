@@ -11956,7 +11956,7 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
   APInt DiffMul(BW, 1);
   // Try various simplifications to reduce the difference to a constant. Limit
   // the number of allowed simplifications to keep compile-time low.
-  for (unsigned I = 0; I < 5; ++I) {
+  for (unsigned I = 0; I < 8; ++I) {
     if (More == Less)
       return Diff;
 
