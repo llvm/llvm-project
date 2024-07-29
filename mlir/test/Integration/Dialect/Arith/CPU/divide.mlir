@@ -49,7 +49,7 @@ func.func @divsi() {
   func.call @divsi_i8(%cn97, %c68) : (i8, i8) -> ()
 
   // divsi x x == 1
-  // note that i1 (booleans) are printed as:
+  // Note that i1 (booleans) are printed as:
   //  false/true -> 0/1
   // rather than as 0/-1
   // CHECK-LABEL: @divsi_i8
