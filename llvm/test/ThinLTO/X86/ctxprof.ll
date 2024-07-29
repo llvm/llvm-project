@@ -24,7 +24,8 @@
 ; RUN: mkdir -p %t_baseline
 ; RUN: mkdir -p %t_exp
 ;
-; Normal run. m1 shouldn't get m2_f1 because it's not referenced from there.
+; Normal run. m1 shouldn't get m2_f1 because it's not referenced from there, and
+; m1_f1 shouldn't go to m2.
 ;
 ; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc \
 ; RUN:  -o %t_baseline/result.o -save-temps \
