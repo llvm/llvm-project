@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -1224,8 +1225,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                  fir::BaseBoxType boxTy, mlir::Type inputType,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  unsigned rank, mlir::Value eleSize,
-                                 mlir::Value cfiTy,
-                                 mlir::Value typeDesc) const {
+                                 mlir::Value cfiTy, mlir::Value typeDesc,
+                                 int allocatorIdx = 0) const {
     auto llvmBoxTy = this->lowerTy().convertBoxTypeAsStruct(boxTy, rank);
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
     bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
@@ -1243,9 +1244,14 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                     this->genI32Constant(loc, rewriter, getCFIAttr(boxTy)));
 
     const bool hasAddendum = fir::boxHasAddendum(boxTy);
-    descriptor =
-        insertField(rewriter, loc, descriptor, {kExtraPosInBox},
-                    this->genI32Constant(loc, rewriter, hasAddendum ? 1 : 0));
+
+    Fortran::ISO::CFI_cdesc_t desc;
+    desc.extra = 0;
+    desc.SetAllocIdx(allocatorIdx);
+    if (hasAddendum)
+      desc.SetHasAddendum();
+    descriptor = insertField(rewriter, loc, descriptor, {kExtraPosInBox},
+                             this->genI32Constant(loc, rewriter, desc.extra));
 
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
@@ -1300,6 +1306,13 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         typeparams.push_back(substrParams[1]);
     }
 
+    int allocatorIdx = 0;
+    if constexpr (std::is_same_v<BOX, fir::EmboxOp> ||
+                  std::is_same_v<BOX, fir::cg::XEmboxOp>) {
+      if (box.getAllocatorIdx())
+        allocatorIdx = *box.getAllocatorIdx();
+    }
+
     // Write each of the fields with the appropriate values.
     // When emboxing an element to a polymorphic descriptor, use the
     // input type since the destination descriptor type has not the exact
@@ -1321,8 +1334,9 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                     cfiTy.getType(), rewriter, kTypePosInBox);
     }
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
-    mlir::Value descriptor = populateDescriptor(
-        loc, mod, boxTy, inputType, rewriter, rank, eleSize, cfiTy, typeDesc);
+    mlir::Value descriptor =
+        populateDescriptor(loc, mod, boxTy, inputType, rewriter, rank, eleSize,
+                           cfiTy, typeDesc, allocatorIdx);
 
     return {boxTy, descriptor, eleSize};
   }
