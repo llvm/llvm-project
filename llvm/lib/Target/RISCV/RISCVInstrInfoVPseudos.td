@@ -6790,10 +6790,9 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
         Constraints = "$rd = $rs1" in
     def "PseudoVFMV_S_" # f.FX :
-                                      Pseudo<(outs VR:$rd),
-                                             (ins VR:$rs1, f.fprclass:$rs2,
-                                                  AVL:$vl, ixlenimm:$sew),
-                                             []>,
+      Pseudo<(outs VR:$rd),
+             (ins VR:$rs1, f.fprclass:$rs2, AVL:$vl, ixlenimm:$sew),
+             []>,
       Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
       RISCVVPseudo;
   }
