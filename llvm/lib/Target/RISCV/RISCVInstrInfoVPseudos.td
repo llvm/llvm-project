@@ -6781,26 +6781,21 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 let Predicates = [HasVInstructionsAnyF] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach f = FPList in {
-    foreach m = f.MxList in {
-      defvar mx = m.MX;
-      let VLMul = m.value in {
-        let HasSEWOp = 1, BaseInstr = VFMV_F_S in
-        def "PseudoVFMV_" # f.FX # "_S_" # mx :
-          Pseudo<(outs f.fprclass:$rd),
-                 (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-          Sched<[WriteVMovFS, ReadVMovFS]>,
-          RISCVVPseudo;
-        let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
-            Constraints = "$rd = $rs1" in
-        def "PseudoVFMV_S_" # f.FX # "_" # mx :
-                                          Pseudo<(outs m.vrclass:$rd),
-                                                 (ins m.vrclass:$rs1, f.fprclass:$rs2,
-                                                      AVL:$vl, ixlenimm:$sew),
-                                                 []>,
-          Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
-          RISCVVPseudo;
-      }
-    }
+    let HasSEWOp = 1, BaseInstr = VFMV_F_S in
+    def "PseudoVFMV_" # f.FX # "_S" :
+      Pseudo<(outs f.fprclass:$rd),
+             (ins VR:$rs2, ixlenimm:$sew), []>,
+      Sched<[WriteVMovFS, ReadVMovFS]>,
+      RISCVVPseudo;
+    let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
+        Constraints = "$rd = $rs1" in
+    def "PseudoVFMV_S_" # f.FX :
+                                      Pseudo<(outs VR:$rd),
+                                             (ins VR:$rs1, f.fprclass:$rs2,
+                                                  AVL:$vl, ixlenimm:$sew),
+                                             []>,
+      Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
+      RISCVVPseudo;
   }
 }
 } // Predicates = [HasVInstructionsAnyF]
