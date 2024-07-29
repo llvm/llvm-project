@@ -692,12 +692,24 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                             Ty);
 
   // Add range attribute since known bits can't completely reflect what we know.
-  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
-      !II.getMetadata(LLVMContext::MD_range)) {
-    ConstantRange Range(APInt(BitWidth, Known.countMinPopulation()),
-                        APInt(BitWidth, Known.countMaxPopulation() + 1));
-    II.addRangeRetAttr(Range);
-    return &II;
+  if (BitWidth != 1) {
+    ConstantRange OldRange =
+        II.getRange().value_or(ConstantRange::getFull(BitWidth));
+
+    unsigned Lower = Known.countMinPopulation();
+    unsigned Upper = Known.countMaxPopulation() + 1;
+
+    if (Lower == 0 && OldRange.contains(APInt::getZero(BitWidth)) &&
+        isKnownNonZero(Op0, IC.getSimplifyQuery().getWithInstruction(&II)))
+      Lower = 1;
+
+    ConstantRange Range(APInt(BitWidth, Lower), APInt(BitWidth, Upper));
+    Range = Range.intersectWith(OldRange, ConstantRange::Unsigned);
+
+    if (Range != OldRange) {
+      II.addRangeRetAttr(Range);
+      return &II;
+    }
   }
 
   return nullptr;
