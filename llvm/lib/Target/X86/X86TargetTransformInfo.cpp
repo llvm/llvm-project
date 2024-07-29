@@ -4167,9 +4167,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::SMIN,       MVT::i64,     {  1,  3,  2,  3 } },
     { ISD::UMAX,       MVT::i64,     {  1,  3,  2,  3 } },
     { ISD::UMIN,       MVT::i64,     {  1,  3,  2,  3 } },
-    { ISD::SADDO,      MVT::i64,     {  1 } },
-    { ISD::UADDO,      MVT::i64,     {  1 } },
-    { ISD::UMULO,      MVT::i64,     {  2 } }, // mulq + seto
+    { ISD::SADDO,      MVT::i64,     {  2,  2,  4,  6 } },
+    { ISD::UADDO,      MVT::i64,     {  2,  2,  4,  6 } },
+    { ISD::SMULO,      MVT::i64,     {  4,  4,  4,  6 } },
+    { ISD::UMULO,      MVT::i64,     {  8,  8,  4,  7 } },
   };
   static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::ABS,        MVT::i32,     {  1,  2,  3,  3 } }, // SUB+XOR+SRA or SUB+CMOV
@@ -4231,15 +4232,18 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::UMIN,       MVT::i32,     {  1,  2,  2,  3 } },
     { ISD::UMIN,       MVT::i16,     {  1,  4,  2,  4 } },
     { ISD::UMIN,       MVT::i8,      {  1,  4,  2,  4 } },
-    { ISD::SADDO,      MVT::i32,     {  1 } },
-    { ISD::SADDO,      MVT::i16,     {  1 } },
-    { ISD::SADDO,      MVT::i8,      {  1 } },
-    { ISD::UADDO,      MVT::i32,     {  1 } },
-    { ISD::UADDO,      MVT::i16,     {  1 } },
-    { ISD::UADDO,      MVT::i8,      {  1 } },
-    { ISD::UMULO,      MVT::i32,     {  2 } }, // mul + seto
-    { ISD::UMULO,      MVT::i16,     {  2 } },
-    { ISD::UMULO,      MVT::i8,      {  2 } },
+    { ISD::SADDO,      MVT::i32,     {  2,  2,  4,  6 } },
+    { ISD::SADDO,      MVT::i16,     {  2,  2,  4,  6 } },
+    { ISD::SADDO,      MVT::i8,      {  2,  2,  4,  6 } },
+    { ISD::UADDO,      MVT::i32,     {  2,  2,  4,  6 } },
+    { ISD::UADDO,      MVT::i16,     {  2,  2,  4,  6 } },
+    { ISD::UADDO,      MVT::i8,      {  2,  2,  4,  6 } },
+    { ISD::SMULO,      MVT::i32,     {  2,  2,  4,  6 } },
+    { ISD::SMULO,      MVT::i16,     {  5,  5,  4,  6 } },
+    { ISD::SMULO,      MVT::i8,      {  6,  6,  4,  6 } },
+    { ISD::UMULO,      MVT::i32,     {  6,  6,  4,  8 } },
+    { ISD::UMULO,      MVT::i16,     {  6,  6,  4,  9 } },
+    { ISD::UMULO,      MVT::i8,      {  6,  6,  4,  6 } },
   };
 
   Type *RetTy = ICA.getReturnType();
@@ -4352,9 +4356,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::UADDO;
     OpTy = RetTy->getContainedType(0);
     break;
-  case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
-    // SMULO has same costs so don't duplicate.
+    ISD = ISD::SMULO;
+    OpTy = RetTy->getContainedType(0);
+    break;
+  case Intrinsic::umul_with_overflow:
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
