@@ -17,7 +17,6 @@ namespace dxil {
 
 #define DXIL_OP_ENUM
 #include "DXILOperation.inc"
-#undef DXIL_OP_ENUM
 
 } // namespace dxil
 } // namespace llvm
