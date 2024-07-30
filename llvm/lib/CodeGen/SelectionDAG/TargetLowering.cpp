@@ -8605,32 +8605,31 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   if (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros() ||
       DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)) {
     return MinMax;
-  } else {
-    SDValue LRound = LHS;
-    SDValue RRound = RHS;
-    EVT RCCVT = CCVT;
-    // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for
-    // this case.
-    if (!isOperationLegal (ISD::BITCAST, VT.changeTypeToInteger())) {
-      LRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, LHS,
-                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-      RRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, RHS,
-                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-      RCCVT =
-          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
-    }
-    SDValue TestZero =
-        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
-    SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, LRound, TestZero), LHS,
-        MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, RRound, TestZero), RHS,
-        LCmp, Flags);
-    return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
   }
+  SDValue LRound = LHS;
+  SDValue RRound = RHS;
+  EVT RCCVT = CCVT;
+  // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for
+  // this case.
+  if (!isOperationLegal(ISD::BITCAST, VT.changeTypeToInteger())) {
+    LRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, LHS,
+                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+    RRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, RHS,
+                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+    RCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+  }
+  SDValue TestZero =
+      DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
+  SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
+                                DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
+  SDValue LCmp = DAG.getSelect(
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, LRound, TestZero), LHS,
+      MinMax, Flags);
+  SDValue RCmp = DAG.getSelect(
+      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, RCCVT, RRound, TestZero), RHS,
+      LCmp, Flags);
+  return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
 }
 
 /// Returns a true value if if this FPClassTest can be performed with an ordered
