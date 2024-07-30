@@ -2201,7 +2201,7 @@ KernelAttr KernelAttr::appendMetadata(ArrayRef<NamedAttribute> attrs) const {
   if (attrs.empty())
     return *this;
   NamedAttrList attrList;
-  if (auto dict = getMetadata())
+  if (DictionaryAttr dict = getMetadata())
     attrList.append(dict);
   attrList.append(attrs);
   return KernelAttr::get(getName(), getFunctionType(), getArgAttrs(),
@@ -2227,21 +2227,60 @@ LogicalResult KernelAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // GPU KernelTableAttr
 //===----------------------------------------------------------------------===//
 
+KernelTableAttr KernelTableAttr::get(MLIRContext *context,
+                                     ArrayRef<KernelAttr> kernels,
+                                     bool isSorted) {
+  // Note that `is_sorted` is always only invoked once even with assertions ON.
+  assert((!isSorted || llvm::is_sorted(kernels)) &&
+         "expected a sorted kernel array");
+  // Immediately return the attribute if the array is sorted.
+  if (isSorted || llvm::is_sorted(kernels))
+    return Base::get(context, kernels);
+  // Sort the array.
+  SmallVector<KernelAttr> kernelsTmp(kernels);
+  llvm::array_pod_sort(kernelsTmp.begin(), kernelsTmp.end());
+  return Base::get(context, kernelsTmp);
+}
+
+KernelTableAttr
+KernelTableAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                            MLIRContext *context, ArrayRef<KernelAttr> kernels,
+                            bool isSorted) {
+  // Note that `is_sorted` is always only invoked once even with assertions ON.
+  assert((!isSorted || llvm::is_sorted(kernels)) &&
+         "expected a sorted kernel array");
+  // Immediately return the attribute if the array is sorted.
+  if (isSorted || llvm::is_sorted(kernels))
+    return Base::getChecked(emitError, context, kernels);
+  // Sort the array.
+  SmallVector<KernelAttr> kernelsTmp(kernels);
+  llvm::array_pod_sort(kernelsTmp.begin(), kernelsTmp.end());
+  return Base::getChecked(emitError, context, kernelsTmp);
+}
+
 LogicalResult
 KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                        DictionaryAttr dict) {
-  if (!dict)
-    return emitError() << "table cannot be null";
-  for (NamedAttribute attr : dict) {
-    auto kernel = llvm::dyn_cast<KernelAttr>(attr.getValue());
-    if (!kernel)
-      return emitError()
-             << "all the dictionary values must be `#gpu.kernel` attributes";
-    if (kernel.getName() != attr.getName())
-      return emitError() << "expected kernel to be named `" << attr.getName()
-                         << "` but got `" << kernel.getName() << "`";
+                        ArrayRef<KernelAttr> kernels) {
+  if (kernels.size() < 2)
+    return success();
+  // Check that the kernels are uniquely named.
+  if (std::adjacent_find(kernels.begin(), kernels.end(),
+                         [](KernelAttr l, KernelAttr r) {
+                           return l.getName() == r.getName();
+                         }) != kernels.end()) {
+    return emitError() << "expected all kernels to be uniquely named";
   }
   return success();
+}
+
+KernelAttr KernelTableAttr::lookup(StringRef key) const {
+  auto it = impl::findAttrSorted(begin(), end(), key);
+  return it.second ? *it.first : KernelAttr();
+}
+
+KernelAttr KernelTableAttr::lookup(StringAttr key) const {
+  auto it = impl::findAttrSorted(begin(), end(), key);
+  return it.second ? *it.first : KernelAttr();
 }
 
 //===----------------------------------------------------------------------===//

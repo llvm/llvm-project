@@ -37,8 +37,23 @@ bool mlirAttributeIsAGPUObjectAttr(MlirAttribute attr) {
 
 MlirAttribute mlirGPUObjectAttrGet(MlirContext mlirCtx, MlirAttribute target,
                                    uint32_t format, MlirStringRef objectStrRef,
-                                   MlirAttribute mlirObjectProps,
-                                   MlirAttribute mlirKernelsAttr) {
+                                   MlirAttribute mlirObjectProps) {
+  MLIRContext *ctx = unwrap(mlirCtx);
+  llvm::StringRef object = unwrap(objectStrRef);
+  DictionaryAttr objectProps;
+  if (mlirObjectProps.ptr != nullptr)
+    objectProps = llvm::cast<DictionaryAttr>(unwrap(mlirObjectProps));
+  return wrap(gpu::ObjectAttr::get(
+      ctx, unwrap(target), static_cast<gpu::CompilationTarget>(format),
+      StringAttr::get(ctx, object), objectProps, nullptr));
+}
+
+MlirAttribute mlirGPUObjectAttrGetWithKernels(MlirContext mlirCtx,
+                                              MlirAttribute target,
+                                              uint32_t format,
+                                              MlirStringRef objectStrRef,
+                                              MlirAttribute mlirObjectProps,
+                                              MlirAttribute mlirKernelsAttr) {
   MLIRContext *ctx = unwrap(mlirCtx);
   llvm::StringRef object = unwrap(objectStrRef);
   DictionaryAttr objectProps;

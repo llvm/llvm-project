@@ -166,6 +166,23 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
 
   MLIRContext context(registry);
 
+  // MLIR module used for the tests.
+  const std::string moduleStr = R"mlir(
+    gpu.module @rocdl_test {
+    llvm.func @rocdl_kernel_1(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+    llvm.func @rocdl_kernel_0(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+    llvm.func @rocdl_kernel_2(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+    llvm.func @a_kernel(%arg0: f32) attributes {gpu.kernel, rocdl.kernel} {
+      llvm.return
+    }
+  })mlir";
+
   OwningOpRef<ModuleOp> module =
       parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
@@ -189,11 +206,15 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
     gpu::KernelTableAttr metadata =
         ROCDL::getKernelMetadata(gpuModule, *object);
     ASSERT_TRUE(metadata != nullptr);
-    // There should be only a single kernel.
-    ASSERT_TRUE(metadata.size() == 1);
+    // There should be 4 kernels.
+    ASSERT_TRUE(metadata.size() == 4);
+    // Check that the lookup method returns finds the kernel.
+    ASSERT_TRUE(metadata.lookup("a_kernel") != nullptr);
+    ASSERT_TRUE(metadata.lookup("rocdl_kernel_0") != nullptr);
+    // Check that the kernel doesn't exist.
+    ASSERT_TRUE(metadata.lookup("not_existent_kernel") == nullptr);
     // Test the `ROCDLObjectMDAttr` iterators.
-    for (auto [name, kernel] : metadata) {
-      ASSERT_TRUE(name.getValue() == "rocdl_kernel");
+    for (gpu::KernelAttr kernel : metadata) {
       // Check that the ELF metadata is present.
       ASSERT_TRUE(kernel.getMetadata() != nullptr);
       // Verify that `sgpr_count` is present and it is an integer attribute.

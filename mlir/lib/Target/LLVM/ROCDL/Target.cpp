@@ -508,13 +508,10 @@ ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   // supported.
   if (format > gpu::CompilationTarget::Binary)
     format = gpu::CompilationTarget::Binary;
-
   DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  return builder.getAttr<gpu::ObjectAttr>(
-      attribute,
-      format > gpu::CompilationTarget::Binary ? gpu::CompilationTarget::Binary
-                                              : format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
-      properties, nullptr);
+  StringAttr objectStr =
+      builder.getStringAttr(StringRef(object.data(), object.size()));
+  return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
+                                          properties, nullptr);
 }
