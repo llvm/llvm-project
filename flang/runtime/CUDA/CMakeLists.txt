@@ -13,6 +13,7 @@ add_flang_library(CufRuntime
   allocator.cpp
 )
 target_link_libraries(CufRuntime
-PRIVATE
-${CUDA_RUNTIME_LIBRARY}
+  PRIVATE
+  FortranRuntime
+  ${CUDA_RUNTIME_LIBRARY}
 )
