@@ -272,6 +272,23 @@ public:
     rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, afterTry);
   }
 
+  mlir::ArrayAttr collectTypeSymbols(mlir::cir::TryOp tryOp) const {
+    mlir::ArrayAttr caseAttrList = tryOp.getCatchTypesAttr();
+    llvm::SmallVector<mlir::Attribute, 4> symbolList;
+
+    for (mlir::Attribute caseAttr : caseAttrList) {
+      auto typeIdGlobal = dyn_cast<mlir::cir::GlobalViewAttr>(caseAttr);
+      if (!typeIdGlobal)
+        continue;
+      symbolList.push_back(typeIdGlobal.getSymbol());
+    }
+
+    // Return an empty attribute instead of an empty list...
+    if (symbolList.empty())
+      return {};
+    return mlir::ArrayAttr::get(caseAttrList.getContext(), symbolList);
+  }
+
   mlir::Block *buildCatchers(mlir::cir::TryOp tryOp,
                              mlir::PatternRewriter &rewriter,
                              mlir::Block *afterBody,
@@ -292,8 +309,9 @@ public:
     auto exceptionPtrType = mlir::cir::PointerType::get(
         mlir::cir::VoidType::get(rewriter.getContext()));
     auto typeIdType = mlir::cir::IntType::get(getContext(), 32, false);
+    mlir::ArrayAttr symlist = collectTypeSymbols(tryOp);
     auto inflightEh = rewriter.create<mlir::cir::EhInflightOp>(
-        loc, exceptionPtrType, typeIdType);
+        loc, exceptionPtrType, typeIdType, symlist);
     auto selector = inflightEh.getTypeId();
     auto exceptionPtr = inflightEh.getExceptionPtr();
 
