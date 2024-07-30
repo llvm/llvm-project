@@ -23,7 +23,8 @@ static constexpr unsigned kManagedAllocatorPos = 3;
     cuGetErrorName(result, &name); \
     if (!name) \
       name = "<unknown>"; \
-    fprintf(stderr, "'%s' failed with '%s'\n", #expr, name); \
+    Terminator terminator{__FILE__, __LINE__}; \
+    terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 
 namespace Fortran::runtime::cuf {
