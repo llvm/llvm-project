@@ -112,7 +112,7 @@ mlir::Type LowerTypes::convertType(Type T) {
   /// keeping it here for parity's sake.
 
   // Certain CIR types are already ABI-specific, so we just return them.
-  if (isa<BoolType, IntType>(T)) {
+  if (isa<BoolType, IntType, SingleType, DoubleType>(T)) {
     return T;
   }
 
