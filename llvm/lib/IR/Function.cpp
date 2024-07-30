@@ -92,6 +92,7 @@ void Function::renumberBlocks() {
   NextBlockNum = 0;
   for (auto &BB : *this)
     BB.Number = NextBlockNum++;
+  BlockNumEpoch++;
 }
 
 void Function::validateBlockNumbers() const {

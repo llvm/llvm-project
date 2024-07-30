@@ -494,31 +494,43 @@ TEST(FunctionTest, BasicBlockNumbers) {
   std::unique_ptr<Function> Func(
       Function::Create(FuncType, GlobalValue::ExternalLinkage));
 
+  EXPECT_EQ(Func->getBlockNumberEpoch(), 0u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 0u);
+
   BasicBlock *BB1 = BasicBlock::Create(Context, "bb1", Func.get());
   EXPECT_EQ(BB1->getNumber(), 0u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 1u);
   BasicBlock *BB2 = BasicBlock::Create(Context, "bb2", Func.get());
   EXPECT_EQ(BB2->getNumber(), 1u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 2u);
   BasicBlock *BB3 = BasicBlock::Create(Context, "bb3", Func.get());
   EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 3u);
 
   BB2->eraseFromParent();
   // Erasing doesn't trigger renumbering
   EXPECT_EQ(BB1->getNumber(), 0u);
   EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 3u);
   // ... and number are assigned monotonically increasing
   BasicBlock *BB4 = BasicBlock::Create(Context, "bb4", Func.get());
   EXPECT_EQ(BB4->getNumber(), 3u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 4u);
   // ... even if inserted not at the end
   BasicBlock *BB5 = BasicBlock::Create(Context, "bb5", Func.get(), BB1);
   EXPECT_EQ(BB5->getNumber(), 4u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 5u);
 
   // Func is now: bb5, bb1, bb3, bb4
   // Renumbering assigns numbers in their order in the function
+  EXPECT_EQ(Func->getBlockNumberEpoch(), 0u);
   Func->renumberBlocks();
+  EXPECT_EQ(Func->getBlockNumberEpoch(), 1u);
   EXPECT_EQ(BB5->getNumber(), 0u);
   EXPECT_EQ(BB1->getNumber(), 1u);
   EXPECT_EQ(BB3->getNumber(), 2u);
   EXPECT_EQ(BB4->getNumber(), 3u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 4u);
 
   // Moving a block inside the function doesn't change numbers
   BB1->moveBefore(BB5);
@@ -526,6 +538,7 @@ TEST(FunctionTest, BasicBlockNumbers) {
   EXPECT_EQ(BB1->getNumber(), 1u);
   EXPECT_EQ(BB3->getNumber(), 2u);
   EXPECT_EQ(BB4->getNumber(), 3u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 4u);
 
   // Removing a block and adding it back assigns a new number, because the
   // block was temporarily without a parent.
@@ -535,20 +548,26 @@ TEST(FunctionTest, BasicBlockNumbers) {
   EXPECT_EQ(BB1->getNumber(), 1u);
   EXPECT_EQ(BB3->getNumber(), 2u);
   EXPECT_EQ(BB4->getNumber(), 4u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 5u);
 
   std::unique_ptr<Function> Func2(
       Function::Create(FuncType, GlobalValue::ExternalLinkage));
   BasicBlock *BB6 = BasicBlock::Create(Context, "bb6", Func2.get());
   EXPECT_EQ(BB6->getNumber(), 0u);
+  EXPECT_EQ(Func2->getMaxBlockNumber(), 1u);
   // Moving a block to a different function assigns a new number
   BB3->removeFromParent();
   BB3->insertInto(Func2.get(), BB6);
   EXPECT_EQ(BB3->getParent(), Func2.get());
   EXPECT_EQ(BB3->getNumber(), 1u);
+  EXPECT_EQ(Func2->getMaxBlockNumber(), 2u);
 
+  EXPECT_EQ(Func2->getBlockNumberEpoch(), 0u);
   Func2->renumberBlocks();
+  EXPECT_EQ(Func2->getBlockNumberEpoch(), 1u);
   EXPECT_EQ(BB3->getNumber(), 0u);
   EXPECT_EQ(BB6->getNumber(), 1u);
+  EXPECT_EQ(Func2->getMaxBlockNumber(), 2u);
 
   // splice works as expected and assigns new numbers
   Func->splice(Func->end(), Func2.get());
@@ -557,6 +576,7 @@ TEST(FunctionTest, BasicBlockNumbers) {
   EXPECT_EQ(BB4->getNumber(), 4u);
   EXPECT_EQ(BB3->getNumber(), 5u);
   EXPECT_EQ(BB6->getNumber(), 6u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 7u);
 }
 
 TEST(FunctionTest, UWTable) {

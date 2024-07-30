@@ -79,12 +79,28 @@ private:
   // Basic blocks need to get their number when added to a function.
   friend void BasicBlock::setParent(Function *);
   unsigned NextBlockNum = 0;
+  /// Epoch of block numbers. (Could be shrinked to uint8_t if required.)
+  unsigned BlockNumEpoch = 0;
 
 public:
+  /// Return a value larger than the largest block number. Intended to allocate
+  /// a vector that is sufficiently large to hold all blocks indexed by their
+  /// number.
+  unsigned getMaxBlockNumber() const { return NextBlockNum; }
+
   /// Renumber basic blocks into a dense value range starting from 0. Be aware
   /// that other data structures and analyses (e.g., DominatorTree) may depend
   /// on the value numbers and need to be updated or invalidated.
   void renumberBlocks();
+
+  /// Return the "epoch" of current block numbers. This will return a different
+  /// value after every renumbering. The intention is: if something (e.g., an
+  /// analysis) uses block numbers, it also stores the number epoch and then
+  /// can assert later on that the epoch didn't change (indicating that the
+  /// numbering is still valid). If the epoch changed, blocks might have been
+  /// assigned new numbers and previous uses of the numbers needs to be
+  /// invalidated. This is solely intended as a debugging feature.
+  unsigned getBlockNumberEpoch() const { return BlockNumEpoch; }
 
 private:
   /// Assert that all blocks have unique numbers within 0..NextBlockNum. This
