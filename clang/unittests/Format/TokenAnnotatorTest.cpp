@@ -577,7 +577,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsTernaryInTemplate) {
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
 
   // IsExpression = true
+
   Tokens = annotate("return foo<true ? 1 : 2>();");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[4], tok::question, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_ConditionalExpr);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("return foo<true ? 1 : 2>{};");
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[4], tok::question, TT_ConditionalExpr);

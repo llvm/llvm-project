@@ -207,7 +207,7 @@ private:
           return false;
         }
         if (InExpr && SeenTernaryOperator &&
-            (!Next || Next->isNot(tok::l_paren))) {
+            (!Next || !Next->isOneOf(tok::l_paren, tok::l_brace))) {
           return false;
         }
         Left->MatchingParen = CurrentToken;
