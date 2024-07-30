@@ -4843,25 +4843,43 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
     return false;
 
   // If we have a better order, also sort the base pointers by increasing
-  // (variable) values if possible, to try and keep the order more regular.
-  SmallVector<std::pair<Value *, Value *>> SortedBases;
-  for (auto &Base : Bases)
-    SortedBases.emplace_back(Base.first,
-                             Base.first->stripInBoundsConstantOffsets());
-  llvm::stable_sort(SortedBases, [](std::pair<Value *, Value *> V1,
-                                    std::pair<Value *, Value *> V2) {
-    const Value *V = V2.second;
-    while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
-      if (Gep->getOperand(0) == V1.second)
-        return true;
-      V = Gep->getOperand(0);
+  // (variable) values if possible, to try and keep the order more regular. In
+  // order to create a valid strict-weak order we cluster by the Root of gep
+  // chains and sort within each.
+  SmallVector<std::tuple<Value *, Value *, Value *>> SortedBases;
+  for (auto &Base : Bases) {
+    Value *Strip = Base.first->stripInBoundsConstantOffsets();
+    Value *Root = Strip;
+    while (auto *Gep = dyn_cast<GetElementPtrInst>(Root))
+      Root = Gep->getOperand(0);
+    SortedBases.emplace_back(Base.first, Strip, Root);
+  }
+  auto *Begin = SortedBases.begin();
+  auto *End = SortedBases.end();
+  while (Begin != End) {
+    Value *Root = std::get<2>(*Begin);
+    auto *Mid = std::stable_partition(
+        Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
+    DenseMap<Value *, DenseMap<Value *, bool>> LessThan;
+    for (auto I = Begin; I < Mid; ++I)
+      LessThan.try_emplace(std::get<1>(*I));
+    for (auto I = Begin; I < Mid; ++I) {
+      Value *V = std::get<1>(*I);
+      while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
+        V = Gep->getOperand(0);
+        if (LessThan.contains(V))
+          LessThan[V][std::get<1>(*I)] = true;
+      }
     }
-    return false;
-  });
+    std::stable_sort(Begin, Mid, [&LessThan](auto &V1, auto &V2) {
+      return LessThan[std::get<1>(V1)][std::get<1>(V2)];
+    });
+    Begin = Mid;
+  }
 
   // Collect the final order of sorted indices
   for (auto Base : SortedBases)
-    for (auto &T : Bases[Base.first])
+    for (auto &T : Bases[std::get<0>(Base)])
       SortedIndices.push_back(std::get<2>(T));
 
   assert(SortedIndices.size() == VL.size() &&
