@@ -3862,7 +3862,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
 
     // If the EEW of True is different from vmerge's SEW, then we cannot change
     // the VL or mask.
-    if (Log2_64(True.getSimpleValueType().getScalarSizeInBits()) !=
+    if (Log2_64(True.getScalarValueSizeInBits()) !=
         N->getConstantOperandVal(
             RISCVII::getSEWOpNum(TII->get(N->getMachineOpcode())) - 1))
       return false;
