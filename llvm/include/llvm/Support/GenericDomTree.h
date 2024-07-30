@@ -632,7 +632,7 @@ protected:
     DomTreeNodeBase<NodeT> *IDomNode = getNode(DomBB);
     assert(IDomNode && "Not immediate dominator specified for block!");
     DFSInfoValid = false;
-    return createChild(BB, IDomNode);
+    return createNode(BB, IDomNode);
   }
 
   /// Add a new node to the forward dominator tree and make it a new root.
@@ -826,17 +826,14 @@ public:
 protected:
   void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
-  DomTreeNodeBase<NodeT> *createChild(NodeT *BB, DomTreeNodeBase<NodeT> *IDom) {
+  DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
+                                     DomTreeNodeBase<NodeT> *IDom = nullptr) {
     auto Node = std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDom);
-    auto *NodePtr = (DomTreeNodes[BB] = std::move(Node)).get();
-    IDom->addChild(NodePtr);
+    auto *NodePtr = Node.get();
+    DomTreeNodes[BB] = std::move(Node);
+    if (IDom)
+      IDom->addChild(NodePtr);
     return NodePtr;
-  }
-
-  DomTreeNodeBase<NodeT> *createNode(NodeT *BB) {
-    return (DomTreeNodes[BB] =
-                std::make_unique<DomTreeNodeBase<NodeT>>(BB, nullptr))
-        .get();
   }
 
   // NewBB is split and now it has one successor. Update dominator tree to
