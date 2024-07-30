@@ -213,6 +213,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -373,6 +374,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl

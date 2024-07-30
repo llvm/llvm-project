@@ -2453,7 +2453,7 @@ For example:
   typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
   #endif
 
-Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+Creates a type ``fixed_vint8m1_t`` that is a fixed-length variant of
 ``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
 can be used in globals, structs, unions, and arrays, all of which are
 unsupported for sizeless types.
@@ -5983,6 +5983,16 @@ definition (
 For more information see
 `gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
+}]; }
+
+def HybridPatchableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hybrid_patchable`` attribute declares an ARM64EC function with an additional
+x86-64 thunk, which may be patched at runtime.
+
+For more information see
+`ARM64EC ABI documentation <https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi>`_.
 }]; }
 
 def WebAssemblyExportNameDocs : Documentation {

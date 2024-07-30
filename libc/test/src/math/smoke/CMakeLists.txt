@@ -941,6 +941,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf_test
   SUITE
     libc-math-smoke-tests
@@ -953,15 +965,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- exp_test
- SUITE
-   libc-math-smoke-tests
- SRCS
-   exp_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.src.math.exp
-   libc.src.__support.FPUtil.fp_bits
+  expf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.expf16
 )
 
 add_fp_unittest(
@@ -3532,6 +3545,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2_test.cpp
+  DEPENDS
+    libc.src.math.atan2
+)
+
+add_fp_unittest(
   scalblnf16_test
   SUITE
     libc-math-smoke-tests
@@ -3632,6 +3655,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalorder_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorder_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorder
+)
+
+add_fp_unittest(
+  totalorderf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf
+)
+
+add_fp_unittest(
   totalorderf16_test
   SUITE
     libc-math-smoke-tests
@@ -3641,6 +3688,18 @@ add_fp_unittest(
     TotalOrderTest.h
   DEPENDS
     libc.src.math.totalorderf16
+)
+
+add_fp_unittest(
+  totalorderf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf128_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf128
 )
 
 add_fp_unittest(

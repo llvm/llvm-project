@@ -10,12 +10,6 @@
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 
 #if LLDB_ENABLE_PYTHON
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-//clang-format on
-#endif
-
 
 #include <optional>
 #include <sstream>
@@ -26,8 +20,6 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "../PythonDataObjects.h"
 #include "../SWIGPythonBridge.h"

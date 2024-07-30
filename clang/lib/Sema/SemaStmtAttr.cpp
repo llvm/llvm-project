@@ -218,7 +218,6 @@ public:
 
 static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                SourceRange Range) {
-  NoMergeAttr NMA(S.Context, A);
   CallExprFinder CEF(S, St);
 
   if (!CEF.foundCallExpr() && !CEF.foundAsmStmt()) {
@@ -594,13 +593,6 @@ static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
   unsigned UnrollFactor = 0;
   if (A.getNumArgs() == 1) {
-
-    if (A.isArgIdent(0)) {
-      S.Diag(A.getLoc(), diag::err_attribute_argument_type)
-          << A << AANT_ArgumentIntegerConstant << A.getRange();
-      return nullptr;
-    }
-
     Expr *E = A.getArgAsExpr(0);
 
     if (S.CheckLoopHintExpr(E, St->getBeginLoc(),

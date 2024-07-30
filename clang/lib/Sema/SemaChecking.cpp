@@ -1477,6 +1477,18 @@ static bool BuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
   return false;
 }
 
+// In OpenCL, __builtin_alloca_* should return a pointer to address space
+// that corresponds to the stack address space i.e private address space.
+static void builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
+  QualType RT = TheCall->getType();
+  assert((RT->isPointerType() && !(RT->getPointeeType().hasAddressSpace())) &&
+         "__builtin_alloca has invalid address space");
+
+  RT = RT->getPointeeType();
+  RT = S.Context.getAddrSpaceQualType(RT, LangAS::opencl_private);
+  TheCall->setType(S.Context.getPointerType(RT));
+}
+
 namespace {
 enum PointerAuthOpKind {
   PAO_Strip,
@@ -2214,6 +2226,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_alloca_uninitialized:
     Diag(TheCall->getBeginLoc(), diag::warn_alloca)
         << TheCall->getDirectCallee();
+    if (getLangOpts().OpenCL) {
+      builtinAllocaAddrSpace(*this, TheCall);
+    }
     break;
   case Builtin::BI__arithmetic_fence:
     if (BuiltinArithmeticFence(TheCall))
@@ -6030,7 +6045,7 @@ static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
 Sema::FormatStringType Sema::GetFormatStringType(const FormatAttr *Format) {
   return llvm::StringSwitch<FormatStringType>(Format->getType()->getName())
       .Case("scanf", FST_Scanf)
-      .Cases("printf", "printf0", FST_Printf)
+      .Cases("printf", "printf0", "syslog", FST_Printf)
       .Cases("NSString", "CFString", FST_NSString)
       .Case("strftime", FST_Strftime)
       .Case("strfmon", FST_Strfmon)
@@ -6124,6 +6139,7 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     case FST_Kprintf:
     case FST_FreeBSDKPrintf:
     case FST_Printf:
+    case FST_Syslog:
       Diag(FormatLoc, diag::note_format_security_fixit)
         << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
       break;
@@ -7860,7 +7876,7 @@ static void CheckFormatString(
 
   if (Type == Sema::FST_Printf || Type == Sema::FST_NSString ||
       Type == Sema::FST_FreeBSDKPrintf || Type == Sema::FST_OSLog ||
-      Type == Sema::FST_OSTrace) {
+      Type == Sema::FST_OSTrace || Type == Sema::FST_Syslog) {
     CheckPrintfHandler H(
         S, FExpr, OrigFormatExpr, Type, firstDataArg, numDataArgs,
         (Type == Sema::FST_NSString || Type == Sema::FST_OSTrace), Str, APK,

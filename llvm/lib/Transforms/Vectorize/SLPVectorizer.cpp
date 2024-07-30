@@ -4842,10 +4842,45 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   if (!AnyConsecutive)
     return false;
 
+  // If we have a better order, also sort the base pointers by increasing
+  // (variable) values if possible, to try and keep the order more regular. In
+  // order to create a valid strict-weak order we cluster by the Root of gep
+  // chains and sort within each.
+  SmallVector<std::tuple<Value *, Value *, Value *>> SortedBases;
   for (auto &Base : Bases) {
-    for (auto &T : Base.second)
-      SortedIndices.push_back(std::get<2>(T));
+    Value *Strip = Base.first->stripInBoundsConstantOffsets();
+    Value *Root = Strip;
+    while (auto *Gep = dyn_cast<GetElementPtrInst>(Root))
+      Root = Gep->getOperand(0);
+    SortedBases.emplace_back(Base.first, Strip, Root);
   }
+  auto *Begin = SortedBases.begin();
+  auto *End = SortedBases.end();
+  while (Begin != End) {
+    Value *Root = std::get<2>(*Begin);
+    auto *Mid = std::stable_partition(
+        Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
+    DenseMap<Value *, DenseMap<Value *, bool>> LessThan;
+    for (auto I = Begin; I < Mid; ++I)
+      LessThan.try_emplace(std::get<1>(*I));
+    for (auto I = Begin; I < Mid; ++I) {
+      Value *V = std::get<1>(*I);
+      while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
+        V = Gep->getOperand(0);
+        if (LessThan.contains(V))
+          LessThan[V][std::get<1>(*I)] = true;
+      }
+    }
+    std::stable_sort(Begin, Mid, [&LessThan](auto &V1, auto &V2) {
+      return LessThan[std::get<1>(V1)][std::get<1>(V2)];
+    });
+    Begin = Mid;
+  }
+
+  // Collect the final order of sorted indices
+  for (auto Base : SortedBases)
+    for (auto &T : Bases[std::get<0>(Base)])
+      SortedIndices.push_back(std::get<2>(T));
 
   assert(SortedIndices.size() == VL.size() &&
          "Expected SortedIndices to be the size of VL");
@@ -8363,6 +8398,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                   : TTI.getStridedMemoryOpCost(
                         Instruction::Load, LoadTy, LI->getPointerOperand(),
                         /*VariableMask=*/false, Alignment, CostKind, LI);
+          // Add external uses costs.
+          for (auto [Idx, V] : enumerate(VL.slice(
+                   P.first, std::min<unsigned>(VL.size() - P.first, VF))))
+            if (!R.areAllUsersVectorized(cast<Instruction>(V)))
+              GatherCost += TTI.getVectorInstrCost(Instruction::ExtractElement,
+                                                   LoadTy, CostKind, Idx);
           // Estimate GEP cost.
           SmallVector<Value *> PointerOps(VF);
           for (auto [I, V] : enumerate(VL.slice(P.first, VF)))
@@ -13886,11 +13927,16 @@ Value *BoUpSLP::vectorizeTree(
         }
         if (!Ex) {
           // "Reuse" the existing extract to improve final codegen.
-          if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
+          if (auto *ES = dyn_cast<ExtractElementInst>(Scalar);
+              ES && isa<Instruction>(Vec)) {
             Value *V = ES->getVectorOperand();
             if (const TreeEntry *ETE = getTreeEntry(V))
               V = ETE->VectorizedValue;
-            Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+            if (auto *IV = dyn_cast<Instruction>(V);
+                !IV || IV == Vec || IV->comesBefore(cast<Instruction>(Vec)))
+              Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+            else
+              Ex = Builder.CreateExtractElement(Vec, Lane);
           } else if (ReplaceGEP) {
             // Leave the GEPs as is, they are free in most cases and better to
             // keep them as GEPs.
@@ -16638,8 +16684,6 @@ class HorizontalReduction {
   SmallVector<SmallVector<Value *>> ReducedVals;
   /// Maps reduced value to the corresponding reduction operation.
   DenseMap<Value *, SmallVector<Instruction *>> ReducedValsToOps;
-  // Use map vector to make stable output.
-  MapVector<Instruction *, Value *> ExtraArgs;
   WeakTrackingVH ReductionRoot;
   /// The type of reduction operation.
   RecurKind RdxKind;
@@ -16972,30 +17016,26 @@ public:
     // gather all the reduced values, sorting them by their value id.
     BasicBlock *BB = Root->getParent();
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
-    SmallVector<Instruction *> Worklist(1, Root);
+    SmallVector<std::pair<Instruction *, unsigned>> Worklist(
+        1, std::make_pair(Root, 0));
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
     // which is not part of the reduction.
     auto CheckOperands = [&](Instruction *TreeN,
-                             SmallVectorImpl<Value *> &ExtraArgs,
                              SmallVectorImpl<Value *> &PossibleReducedVals,
-                             SmallVectorImpl<Instruction *> &ReductionOps) {
+                             SmallVectorImpl<Instruction *> &ReductionOps,
+                             unsigned Level) {
       for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
                                     getNumberOfOperands(TreeN)))) {
         Value *EdgeVal = getRdxOperand(TreeN, I);
         ReducedValsToOps[EdgeVal].push_back(TreeN);
         auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
-        // Edge has wrong parent - mark as an extra argument.
-        if (EdgeInst && !isVectorLikeInstWithConstOps(EdgeInst) &&
-            !hasSameParent(EdgeInst, BB)) {
-          ExtraArgs.push_back(EdgeVal);
-          continue;
-        }
         // If the edge is not an instruction, or it is different from the main
         // reduction opcode or has too many uses - possible reduced value.
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
-        if (!EdgeInst || getRdxKind(EdgeInst) != RdxKind ||
+        if (!EdgeInst || Level > RecursionMaxDepth ||
+            getRdxKind(EdgeInst) != RdxKind ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
             !isVectorizable(RdxKind, EdgeInst) ||
@@ -17019,6 +17059,7 @@ public:
     SmallSet<size_t, 2> LoadKeyUsed;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
+      Key = hash_combine(hash_value(LI->getParent()), Key);
       Value *Ptr = getUnderlyingObject(LI->getPointerOperand());
       if (LoadKeyUsed.contains(Key)) {
         auto LIt = LoadsMap.find(Ptr);
@@ -17049,40 +17090,23 @@ public:
     };
 
     while (!Worklist.empty()) {
-      Instruction *TreeN = Worklist.pop_back_val();
-      SmallVector<Value *> Args;
+      auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
-      CheckOperands(TreeN, Args, PossibleRedVals, PossibleReductionOps);
-      // If too many extra args - mark the instruction itself as a reduction
-      // value, not a reduction operation.
-      if (Args.size() < 2) {
-        addReductionOps(TreeN);
-        // Add extra args.
-        if (!Args.empty()) {
-          assert(Args.size() == 1 && "Expected only single argument.");
-          ExtraArgs[TreeN] = Args.front();
-        }
-        // Add reduction values. The values are sorted for better vectorization
-        // results.
-        for (Value *V : PossibleRedVals) {
-          size_t Key, Idx;
-          std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
-                                                 /*AllowAlternate=*/false);
-          ++PossibleReducedVals[Key][Idx]
-                .insert(std::make_pair(V, 0))
-                .first->second;
-        }
-        Worklist.append(PossibleReductionOps.rbegin(),
-                        PossibleReductionOps.rend());
-      } else {
+      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
+      addReductionOps(TreeN);
+      // Add reduction values. The values are sorted for better vectorization
+      // results.
+      for (Value *V : PossibleRedVals) {
         size_t Key, Idx;
-        std::tie(Key, Idx) = generateKeySubkey(TreeN, &TLI, GenerateLoadsSubkey,
+        std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
                                                /*AllowAlternate=*/false);
         ++PossibleReducedVals[Key][Idx]
-              .insert(std::make_pair(TreeN, 0))
+              .insert(std::make_pair(V, 0))
               .first->second;
       }
+      for (Instruction *I : reverse(PossibleReductionOps))
+        Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
     }
     auto PossibleReducedValsVect = PossibleReducedVals.takeVector();
     // Sort values by the total number of values kinds to start the reduction
@@ -17159,18 +17183,9 @@ public:
 
     // Track the reduced values in case if they are replaced by extractelement
     // because of the vectorization.
-    DenseMap<Value *, WeakTrackingVH> TrackedVals(
-        ReducedVals.size() * ReducedVals.front().size() + ExtraArgs.size());
-    BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
+    DenseMap<Value *, WeakTrackingVH> TrackedVals(ReducedVals.size() *
+                                                  ReducedVals.front().size());
     SmallVector<std::pair<Value *, Value *>> ReplacedExternals;
-    ExternallyUsedValues.reserve(ExtraArgs.size() + 1);
-    // The same extra argument may be used several times, so log each attempt
-    // to use it.
-    for (const std::pair<Instruction *, Value *> &Pair : ExtraArgs) {
-      assert(Pair.first && "DebugLoc must be set.");
-      ExternallyUsedValues[Pair.second].push_back(Pair.first);
-      TrackedVals.try_emplace(Pair.second, Pair.second);
-    }
 
     // The compare instruction of a min/max is the insertion point for new
     // instructions and may be replaced with a new compare instruction.
@@ -17205,13 +17220,9 @@ public:
       // Initialize the final value in the reduction.
       return Res;
     };
-    bool AnyBoolLogicOp =
-        any_of(ReductionOps.back(), [](Value *V) {
-          return isBoolLogicOp(cast<Instruction>(V));
-        });
-    // The reduction root is used as the insertion point for new instructions,
-    // so set it as externally used to prevent it from being deleted.
-    ExternallyUsedValues[ReductionRoot];
+    bool AnyBoolLogicOp = any_of(ReductionOps.back(), [](Value *V) {
+      return isBoolLogicOp(cast<Instruction>(V));
+    });
     SmallDenseSet<Value *> IgnoreList(ReductionOps.size() *
                                       ReductionOps.front().size());
     for (ReductionOpsType &RdxOps : ReductionOps)
@@ -17433,8 +17444,11 @@ public:
         V.reorderBottomToTop(/*IgnoreReorder=*/true);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
-        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
-            ExternallyUsedValues);
+        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues;
+        // The reduction root is used as the insertion point for new
+        // instructions, so set it as externally used to prevent it from being
+        // deleted.
+        LocalExternallyUsedValues[ReductionRoot];
         for (unsigned Cnt = 0, Sz = ReducedVals.size(); Cnt < Sz; ++Cnt) {
           if (Cnt == I || (ShuffledExtracts && Cnt == I - 1))
             continue;
@@ -17481,23 +17495,6 @@ public:
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
             LocalExternallyUsedValues[RdxVal];
-        // Update LocalExternallyUsedValues for the scalar, replaced by
-        // extractelement instructions.
-        DenseMap<Value *, Value *> ReplacementToExternal;
-        for (const std::pair<Value *, Value *> &Pair : ReplacedExternals)
-          ReplacementToExternal.try_emplace(Pair.second, Pair.first);
-        for (const std::pair<Value *, Value *> &Pair : ReplacedExternals) {
-          Value *Ext = Pair.first;
-          auto RIt = ReplacementToExternal.find(Ext);
-          while (RIt != ReplacementToExternal.end()) {
-            Ext = RIt->second;
-            RIt = ReplacementToExternal.find(Ext);
-          }
-          auto *It = ExternallyUsedValues.find(Ext);
-          if (It == ExternallyUsedValues.end())
-            continue;
-          LocalExternallyUsedValues[Pair.second].append(It->second);
-        }
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();
@@ -17699,11 +17696,6 @@ public:
             ExtraReductions.emplace_back(RedOp, RdxVal);
         }
       }
-      for (auto &Pair : ExternallyUsedValues) {
-        // Add each externally used value to the final reduction.
-        for (auto *I : Pair.second)
-          ExtraReductions.emplace_back(I, Pair.first);
-      }
       // Iterate through all not-vectorized reduction values/extra arguments.
       bool InitStep = true;
       while (ExtraReductions.size() > 1) {
@@ -17855,6 +17847,8 @@ private:
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
+    if (Cnt == 1)
+      return VectorizedValue;
     switch (RdxKind) {
     case RecurKind::Add: {
       // res = mul vv, n
