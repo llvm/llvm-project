@@ -8542,7 +8542,6 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   bool IsMax = Opc == ISD::FMAXIMUMNUM;
   const TargetOptions &Options = DAG.getTarget().Options;
   SDNodeFlags Flags = Node->getFlags();
-  const Triple &TT = DAG.getTarget().getTargetTriple();
 
   unsigned NewOp =
       Opc == ISD::FMINIMUMNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
@@ -8612,8 +8611,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
     EVT RCCVT = CCVT;
     // expandIS_FPCLASS is buggy for GPR32+FPR64. Let's round them to single for
     // this case.
-    if (TT.isArch32Bit() && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT) &&
-        VT.getSizeInBits() > TT.getArchPointerBitWidth() && !TT.isX32()) {
+    if (!isOperationLegal (ISD::BITCAST, VT.changeTypeToInteger())) {
       LRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, LHS,
                            DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
       RRound = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, RHS,
