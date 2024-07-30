@@ -1019,7 +1019,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 
   // Put BiasLI onto the entry block.
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
-  Function *Fn = I->getParent()->getParent();
+  Function *Fn = I->getFunction();
   IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
   auto *Bias = getOrCreateBiasVar(getInstrProfBitmapBiasVarName());
   auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");

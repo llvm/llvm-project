@@ -292,7 +292,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
       FileOffsetToCounters + CountersSize + PaddingBytesAfterCounters;
   /* Update the profile fields based on the current mapping. */
   INSTR_PROF_PROFILE_BITMAP_BIAS_VAR =
-      (intptr_t)Profile - (uintptr_t)BitmapBegin + FileOffsetToBitmap;
+      (uintptr_t)Profile - (uintptr_t)BitmapBegin + FileOffsetToBitmap;
 
   /* Return the memory allocated for counters to OS. */
   lprofReleaseMemoryPagesToOS((uintptr_t)BitmapBegin, (uintptr_t)BitmapEnd);
