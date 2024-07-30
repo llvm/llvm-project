@@ -1088,6 +1088,8 @@ declare i32 @vsscanf(ptr, ptr, ptr)
 ; CHECK: declare noundef i64 @write(i32 noundef, ptr nocapture noundef readonly, i64 noundef) [[NOFREE]]
 declare i64 @write(i32, ptr, i64)
 
+; CHECK: declare void @abort()
+declare void @abort()
 
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
