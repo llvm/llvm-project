@@ -477,7 +477,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
-      m_can_jit(eCanJITDontKnow) {
+      m_can_jit(eCanJITDontKnow), 
+      m_crash_info_dict_sp(new StructuredData::Dictionary()) {
   CheckInWithManager();
 
   Log *log = GetLog(LLDBLog::Object);
@@ -3263,6 +3264,10 @@ Status Process::PrivateResume() {
   // If signals handing status changed we might want to update our signal
   // filters before resuming.
   UpdateAutomaticSignalFiltering();
+  // Clear any crash info we accumulated for this stop, but don't do so if we
+  // are running functions; we don't want to wipe out the real stop's info.
+  if (!GetModID().IsLastResumeForUserExpression())
+    ResetExtendedCrashInfoDict();
 
   Status error(WillResume());
   // Tell the process it is about to resume before the thread list
