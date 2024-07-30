@@ -51,7 +51,7 @@ void f()
     }
     catch (std::system_error& e)
     {
-        assert(e.code() == std::errc::resource_deadlock_would_occur);
+      assert(e.code() == std::errc::resource_deadlock_would_occur);
     }
 #endif
     lk.unlock();
@@ -64,7 +64,7 @@ void f()
     }
     catch (std::system_error& e)
     {
-        assert(e.code() == std::errc::operation_not_permitted);
+      assert(e.code() == std::errc::operation_not_permitted);
     }
 #endif
 }
