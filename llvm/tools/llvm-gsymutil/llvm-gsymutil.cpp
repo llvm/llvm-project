@@ -357,6 +357,11 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   if (auto Err = DT.convert(ThreadCount, Out))
     return Err;
 
+  // Organize overlapping functions as children of top-level functions. Do this
+  // right after loading the DWARF data so we don't have to deal with functions
+  // from the symbol table.
+  Gsym.prepareMergedFunctions(Out);
+
   // Get the UUID and convert symbol table to GSYM.
   if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
     return Err;
