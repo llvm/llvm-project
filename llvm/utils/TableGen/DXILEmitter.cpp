@@ -151,9 +151,10 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
         assert(knownType && "Specification of multiple differing overload "
                             "parameter types not yet supported");
       } else {
-        // Skip the return value - nothing is overloaded on only return, and it
-        // makes it harder to determine the overload from an argument list
-        // later.
+        // Skip the return value - having the overload index point at the return
+        // value makes it hard to determine the overload from an argument list,
+        // and we treat unoverloaded functions and those overloaded on return
+        // identically anyway.
         if (i != 0)
           OverloadParamIndices.push_back(i);
       }
