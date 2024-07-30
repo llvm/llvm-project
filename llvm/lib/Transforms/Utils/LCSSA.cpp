@@ -340,7 +340,7 @@ static void computeBlocksDominatingExits(
     SmallSetVector<BasicBlock *, 8> &BlocksDominatingExits) {
   // We start from the exit blocks, as every block trivially dominates itself
   // (not strictly).
-  SmallVector<BasicBlock *, 1> BBWorklist(ExitBlocks.begin(), ExitBlocks.end());
+  SmallVector<BasicBlock *, 8> BBWorklist(ExitBlocks.begin(), ExitBlocks.end());
 
   while (!BBWorklist.empty()) {
     BasicBlock *BB = BBWorklist.pop_back_val();
