@@ -1150,6 +1150,11 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
           add_compile_definitions(_XOPEN_SOURCE=700)
           add_compile_definitions(_LARGE_FILE_API)
 
+  # Make functions, like errno, thread safe.
+  if (LLVM_ENABLE_THREADS)
+    add_compile_definitions(_THREAD_SAFE)
+  endif()
+
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.
   string(APPEND CMAKE_MODULE_LINKER_FLAGS " -shared -Wl,-G")
