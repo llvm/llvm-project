@@ -12,7 +12,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/Casting.h"
 #include <iterator>
 
 namespace clang {
