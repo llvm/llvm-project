@@ -1033,7 +1033,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // FIXME: Need to compute legalizing cost for illegal types.  The current
   // code handles only legal types and those which can be trivially
   // promoted to legal.
-  if (Src->getScalarSizeInBits() > ST->getELen() ||
+  if (!ST->hasVInstructions() || Src->getScalarSizeInBits() > ST->getELen() ||
       Dst->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
