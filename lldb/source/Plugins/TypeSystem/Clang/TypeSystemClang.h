@@ -536,7 +536,8 @@ public:
   // Array Types
 
   CompilerType CreateArrayType(const CompilerType &element_type,
-                               size_t element_count, bool is_vector);
+                               std::optional<size_t> element_count,
+                               bool is_vector);
 
   // Enumeration Types
   clang::EnumDecl *CreateEnumerationDecl(llvm::StringRef name,

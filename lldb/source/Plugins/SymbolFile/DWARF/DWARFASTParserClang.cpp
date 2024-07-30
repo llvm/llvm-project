@@ -1512,20 +1512,20 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   uint64_t array_element_bit_stride = byte_stride * 8 + bit_stride;
   CompilerType clang_type;
   if (array_info && array_info->element_orders.size() > 0) {
-    uint64_t num_elements = 0;
     auto end = array_info->element_orders.rend();
     for (auto pos = array_info->element_orders.rbegin(); pos != end; ++pos) {
-      num_elements = *pos;
-      clang_type = m_ast.CreateArrayType(array_element_type, num_elements,
-                                         attrs.is_vector);
+      clang_type = m_ast.CreateArrayType(
+          array_element_type, /*element_count=*/*pos, attrs.is_vector);
+
+      uint64_t num_elements = pos->value_or(0);
       array_element_type = clang_type;
       array_element_bit_stride = num_elements
                                      ? array_element_bit_stride * num_elements
                                      : array_element_bit_stride;
     }
   } else {
-    clang_type =
-        m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
+    clang_type = m_ast.CreateArrayType(
+        array_element_type, /*element_count=*/std::nullopt, attrs.is_vector);
   }
   ConstString empty_name;
   TypeSP type_sp =
