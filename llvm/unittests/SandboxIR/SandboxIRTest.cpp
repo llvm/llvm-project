@@ -1453,3 +1453,123 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   EXPECT_EQ(NewGEP2->getPrevNode(), Ret);
   EXPECT_EQ(NewGEP2->getNextNode(), nullptr);
 }
+
+TEST_F(SandboxIRTest, PHINode) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+bb1:
+  br label %bb2
+
+bb2:
+  %phi = phi i32 [ %arg, %bb1 ], [ 0, %bb2 ]
+  br label %bb2
+
+bb3:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB1 = getBasicBlockByName(LLVMF, "bb1");
+  auto *LLVMBB2 = getBasicBlockByName(LLVMF, "bb2");
+  auto *LLVMBB3 = getBasicBlockByName(LLVMF, "bb3");
+  auto LLVMIt = LLVMBB2->begin();
+  auto *LLVMPHI = cast<llvm::PHINode>(&*LLVMIt++);
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB1 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB1));
+  auto *BB2 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB2));
+  auto *BB3 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB3));
+  auto It = BB2->begin();
+  // Check classof().
+  auto *PHI = cast<sandboxir::PHINode>(&*It++);
+  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  // Check blocks().
+  EXPECT_EQ(range_size(PHI->blocks()), range_size(LLVMPHI->blocks()));
+  auto BlockIt = PHI->block_begin();
+  for (llvm::BasicBlock *LLVMBB : LLVMPHI->blocks()) {
+    sandboxir::BasicBlock *BB = *BlockIt++;
+    EXPECT_EQ(BB, Ctx.getValue(LLVMBB));
+  }
+  // Check incoming_values().
+  EXPECT_EQ(range_size(PHI->incoming_values()),
+            range_size(LLVMPHI->incoming_values()));
+  auto IncIt = PHI->incoming_values().begin();
+  for (llvm::Value *LLVMV : LLVMPHI->incoming_values()) {
+    sandboxir::Value *IncV = *IncIt++;
+    EXPECT_EQ(IncV, Ctx.getValue(LLVMV));
+  }
+  // Check getNumIncomingValues().
+  EXPECT_EQ(PHI->getNumIncomingValues(), LLVMPHI->getNumIncomingValues());
+  // Check getIncomingValue().
+  EXPECT_EQ(PHI->getIncomingValue(0),
+            Ctx.getValue(LLVMPHI->getIncomingValue(0)));
+  EXPECT_EQ(PHI->getIncomingValue(1),
+            Ctx.getValue(LLVMPHI->getIncomingValue(1)));
+  // Check setIncomingValue().
+  auto *OrigV = PHI->getIncomingValue(0);
+  PHI->setIncomingValue(0, PHI);
+  EXPECT_EQ(PHI->getIncomingValue(0), PHI);
+  PHI->setIncomingValue(0, OrigV);
+  // Check getOperandNumForIncomingValue().
+  EXPECT_EQ(sandboxir::PHINode::getOperandNumForIncomingValue(0),
+            llvm::PHINode::getOperandNumForIncomingValue(0));
+  // Check getIncomingValueNumForOperand().
+  EXPECT_EQ(sandboxir::PHINode::getIncomingValueNumForOperand(0),
+            llvm::PHINode::getIncomingValueNumForOperand(0));
+  // Check getIncomingBlock(unsigned).
+  EXPECT_EQ(PHI->getIncomingBlock(0),
+            Ctx.getValue(LLVMPHI->getIncomingBlock(0)));
+  // Check getIncomingBlock(Use).
+  llvm::Use &LLVMUse = LLVMPHI->getOperandUse(0);
+  sandboxir::Use Use = PHI->getOperandUse(0);
+  EXPECT_EQ(PHI->getIncomingBlock(Use),
+            Ctx.getValue(LLVMPHI->getIncomingBlock(LLVMUse)));
+  // Check setIncomingBlock().
+  sandboxir::BasicBlock *OrigBB = PHI->getIncomingBlock(0);
+  EXPECT_NE(OrigBB, BB2);
+  PHI->setIncomingBlock(0, BB2);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB2);
+  PHI->setIncomingBlock(0, OrigBB);
+  EXPECT_EQ(PHI->getIncomingBlock(0), OrigBB);
+  // Check addIncoming().
+  unsigned OrigNumIncoming = PHI->getNumIncomingValues();
+  PHI->addIncoming(Arg, BB3);
+  EXPECT_EQ(PHI->getNumIncomingValues(), LLVMPHI->getNumIncomingValues());
+  EXPECT_EQ(PHI->getNumIncomingValues(), OrigNumIncoming + 1);
+  EXPECT_EQ(PHI->getIncomingValue(OrigNumIncoming), Arg);
+  EXPECT_EQ(PHI->getIncomingBlock(OrigNumIncoming), BB3);
+  // Check removeIncomingValue(unsigned).
+  PHI->removeIncomingValue(OrigNumIncoming);
+  EXPECT_EQ(PHI->getNumIncomingValues(), OrigNumIncoming);
+  // Check removeIncomingValue(BasicBlock *).
+  PHI->addIncoming(Arg, BB3);
+  PHI->removeIncomingValue(BB3);
+  EXPECT_EQ(PHI->getNumIncomingValues(), OrigNumIncoming);
+  // Check getBasicBlockIndex().
+  EXPECT_EQ(PHI->getBasicBlockIndex(BB1), LLVMPHI->getBasicBlockIndex(LLVMBB1));
+  // Check getIncomingValueForBlock().
+  EXPECT_EQ(PHI->getIncomingValueForBlock(BB1),
+            Ctx.getValue(LLVMPHI->getIncomingValueForBlock(LLVMBB1)));
+  // Check hasConstantValue().
+  llvm::Value *ConstV = LLVMPHI->hasConstantValue();
+  EXPECT_EQ(PHI->hasConstantValue(),
+            ConstV != nullptr ? Ctx.getValue(ConstV) : nullptr);
+  // Check hasConstantOrUndefValue().
+  EXPECT_EQ(PHI->hasConstantOrUndefValue(), LLVMPHI->hasConstantOrUndefValue());
+  // Check isComplete().
+  EXPECT_EQ(PHI->isComplete(), LLVMPHI->isComplete());
+
+  // Check create().
+  auto *NewPHI = cast<sandboxir::PHINode>(
+      sandboxir::PHINode::create(PHI->getType(), 0, Br, Ctx, "NewPHI"));
+  EXPECT_EQ(NewPHI->getType(), PHI->getType());
+  EXPECT_EQ(NewPHI->getNextNode(), Br);
+  EXPECT_EQ(NewPHI->getName(), "NewPHI");
+  EXPECT_EQ(NewPHI->getNumIncomingValues(), 0u);
+  for (auto [Idx, V] : enumerate(PHI->incoming_values())) {
+    sandboxir::BasicBlock *IncBB = PHI->getIncomingBlock(Idx);
+    NewPHI->addIncoming(V, IncBB);
+  }
+  EXPECT_EQ(NewPHI->getNumIncomingValues(), PHI->getNumIncomingValues());
+}
