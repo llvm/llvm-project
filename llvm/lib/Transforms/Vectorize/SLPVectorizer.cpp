@@ -13909,11 +13909,16 @@ Value *BoUpSLP::vectorizeTree(
         }
         if (!Ex) {
           // "Reuse" the existing extract to improve final codegen.
-          if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
+          if (auto *ES = dyn_cast<ExtractElementInst>(Scalar);
+              ES && isa<Instruction>(Vec)) {
             Value *V = ES->getVectorOperand();
             if (const TreeEntry *ETE = getTreeEntry(V))
               V = ETE->VectorizedValue;
-            Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+            if (auto *IV = dyn_cast<Instruction>(V);
+                !IV || IV == Vec || IV->comesBefore(cast<Instruction>(Vec)))
+              Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+            else
+              Ex = Builder.CreateExtractElement(Vec, Lane);
           } else if (ReplaceGEP) {
             // Leave the GEPs as is, they are free in most cases and better to
             // keep them as GEPs.
