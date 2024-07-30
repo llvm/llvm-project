@@ -3666,18 +3666,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  totalorderl_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    totalorderl_test.cpp
-  HDRS
-    TotalOrderTest.h
-  DEPENDS
-    libc.src.math.totalorderl
-)
-
-add_fp_unittest(
   totalorderf16_test
   SUITE
     libc-math-smoke-tests

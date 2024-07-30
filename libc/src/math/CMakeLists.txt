@@ -435,7 +435,6 @@ add_math_entrypoint_object(tgammaf)
 
 add_math_entrypoint_object(totalorder)
 add_math_entrypoint_object(totalorderf)
-add_math_entrypoint_object(totalorderl)
 add_math_entrypoint_object(totalorderf16)
 add_math_entrypoint_object(totalorderf128)
 

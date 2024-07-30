@@ -723,7 +723,6 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"totalorder", RetValSpec<IntType>, [ArgSpec<DoublePtr>, ArgSpec<DoublePtr>]>,
 	  FunctionSpec<"totalorderf", RetValSpec<IntType>, [ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]>,
-	  FunctionSpec<"totalorderl", RetValSpec<IntType>, [ArgSpec<LongDoublePtr>, ArgSpec<LongDoublePtr>]>,
 	  GuardedFunctionSpec<"totalorderf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
 	  GuardedFunctionSpec<"totalorderf128", RetValSpec<IntType>, [ArgSpec<Float128Ptr>, ArgSpec<Float128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
 
