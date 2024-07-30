@@ -251,9 +251,8 @@ static void RegisterGlobal(const Global *g) {
 
   AddGlobalToList(list_of_all_globals, g);
 
-  if (UseODRIndicator(g) && g->odr_indicator != UINTPTR_MAX) {
+  if (UseODRIndicator(g) && g->odr_indicator != UINTPTR_MAX)
     AddGlobalToMap(map_of_globals_by_indicator, g);
-  }
 
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
