@@ -5820,8 +5820,8 @@ static void buildImplicitMapper(Sema &S, QualType BaseType, DSAStackTy *Stack,
   DeclarationName MapperId;
   auto &DeclNames = Ctx.DeclarationNames;
   MapperId = DeclNames.getIdentifier(&Ctx.Idents.get("default"));
-  auto *DMD = OMPDeclareMapperDecl::Create(
-      Ctx, DCT, SourceLocation(), MapperId, BaseType, MapperId, Maps, nullptr);
+  auto *DMD = OMPDeclareMapperDecl::Create(Ctx, DCT, SourceLocation(), MapperId,
+                                           BaseType, MapperId, Maps, nullptr);
   Scope *Scope = S.getScopeForContext(DCT);
   if (Scope)
     S.PushOnScopeChains(DMD, Scope, /*AddToContext*/ false);
