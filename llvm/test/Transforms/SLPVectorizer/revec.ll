@@ -296,3 +296,28 @@ for.body13:                                       ; preds = %for.body13, %entry
   store <4 x i32> %vmovl.i110, ptr %add.ptr29, align 4
   br label %for.body13
 }
+
+define void @test10() {
+entry:
+  %0 = load <16 x i8>, ptr null, align 1
+  %shuffle.i = shufflevector <16 x i8> %0, <16 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shuffle.i107 = shufflevector <16 x i8> %0, <16 x i8> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %vmovl.i106 = sext <8 x i8> %shuffle.i to <8 x i16>
+  %vmovl.i = sext <8 x i8> %shuffle.i107 to <8 x i16>
+  %shuffle.i113 = shufflevector <8 x i16> %vmovl.i106, <8 x i16> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i115 = shufflevector <8 x i16> %vmovl.i106, <8 x i16> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shuffle.i112 = shufflevector <8 x i16> %vmovl.i, <8 x i16> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i114 = shufflevector <8 x i16> %vmovl.i, <8 x i16> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vmovl.i111 = sext <4 x i16> %shuffle.i113 to <4 x i32>
+  %vmovl.i110 = sext <4 x i16> %shuffle.i115 to <4 x i32>
+  %vmovl.i109 = sext <4 x i16> %shuffle.i112 to <4 x i32>
+  %vmovl.i108 = sext <4 x i16> %shuffle.i114 to <4 x i32>
+  %add.ptr29 = getelementptr i8, ptr null, i64 16
+  %add.ptr32 = getelementptr i8, ptr null, i64 32
+  %add.ptr35 = getelementptr i8, ptr null, i64 48
+  store <4 x i32> %vmovl.i111, ptr null, align 4
+  store <4 x i32> %vmovl.i110, ptr %add.ptr29, align 4
+  store <4 x i32> %vmovl.i109, ptr %add.ptr32, align 4
+  store <4 x i32> %vmovl.i108, ptr %add.ptr35, align 4
+  ret void
+}
