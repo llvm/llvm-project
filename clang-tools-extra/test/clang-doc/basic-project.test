@@ -158,8 +158,7 @@
 // HTML-CIRCLE:   <a href="Shape.html">Shape</a>
 // HTML-CIRCLE: </p>
 // HTML-CIRCLE: <h2 id="Members">Members</h2>
-// HTML-CIRCLE: <p> Radius of the circle.</p>
-// HTML-CIRCLE: <div>private double radius_</div>
+// HTML-CIRCLE: <li>private double radius_</li>
 // HTML-CIRCLE: <h2 id="Functions">Functions</h2>
 // HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
 // HTML-CIRCLE: <p>public void Circle(double radius)</p>
