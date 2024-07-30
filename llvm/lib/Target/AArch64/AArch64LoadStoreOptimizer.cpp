@@ -1956,7 +1956,7 @@ maybeMoveCFI(MachineInstr &MI, MachineBasicBlock::iterator MaybeCFI) {
       MaybeCFI->getOpcode() != TargetOpcode::CFI_INSTRUCTION ||
       !(MI.getFlag(MachineInstr::FrameSetup) ||
         MI.getFlag(MachineInstr::FrameDestroy)) ||
-      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP)
+      MI.getOperand(0).getReg() != AArch64::SP)
     return End;
 
   const MachineFunction &MF = *MI.getParent()->getParent();
@@ -2006,7 +2006,7 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
   if (!AArch64InstrInfo::isPairedLdSt(*I)) {
     // Non-paired instruction.
     MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(NewOpc))
-              .add(getLdStRegOp(*Update))
+              .add(Update->getOperand(0))
               .add(getLdStRegOp(*I))
               .add(AArch64InstrInfo::getLdStBaseOp(*I))
               .addImm(Value / Scale)
@@ -2015,7 +2015,7 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
   } else {
     // Paired instruction.
     MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(NewOpc))
-              .add(getLdStRegOp(*Update))
+              .add(Update->getOperand(0))
               .add(getLdStRegOp(*I, 0))
               .add(getLdStRegOp(*I, 1))
               .add(AArch64InstrInfo::getLdStBaseOp(*I))
