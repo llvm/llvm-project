@@ -15,11 +15,14 @@ entry:
   br i1 %0, label %then, label %exit
 
 then:                                             ; preds = %entry
-  %cmp1 = icmp eq i32 0, 0
+  ; The donothing() is needed to make make this block less interesting to
+  ; SimplifyCFG. Otherwise we may not get the csel that we want to test.
+  call void @llvm.donothing()
   br i1 %cmp, label %true, label %exit
 
 true:                                             ; preds = %then
-  %and.i = lshr i64 0, 0
+  ; Same as above
+  call void @llvm.donothing()
   br label %exit
 
 exit: ; preds = %true, %then, %entry
