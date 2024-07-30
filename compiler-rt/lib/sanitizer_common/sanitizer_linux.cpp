@@ -2121,7 +2121,7 @@ bool SignalContext::IsTrueFaultingAddress() const {
 UNUSED
 static const char *RegNumToRegName(int reg) {
   switch (reg) {
-#  if SANITIZER_LINUX
+#  if SANITIZER_LINUX && SANITIZER_GLIBC
 #    if defined(__x86_64__)
     case REG_RAX:
       return "rax";
@@ -2240,14 +2240,14 @@ static const char *RegNumToRegName(int reg) {
     case 31:
       return "sp";
 #    endif
-#  endif  // SANITIZER_LINUX
+#  endif  // SANITIZER_LINUX && SANITIZER_GLIBC
     default:
       return NULL;
   }
   return NULL;
 }
 
-#  if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+#  if SANITIZER_LINUX && SANITIZER_GLIBC && (defined(__arm__) || defined(__aarch64__))
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
 #    if defined(__arm__)
@@ -2289,7 +2289,7 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   }
   return 0;
 }
-#  endif  // SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__))
+#  endif  // SANITIZER_LINUX && SANITIZER_GLIBC && (defined(__arm__) || defined(__aarch64__))
 
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
@@ -2312,7 +2312,7 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
 
 void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t *)context;
-#  if SANITIZER_LINUX
+#  if SANITIZER_LINUX && SANITIZER_GLIBC
 #    if defined(__x86_64__)
   Report("Register values:\n");
   DumpSingleReg(ucontext, REG_RAX);
