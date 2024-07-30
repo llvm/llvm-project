@@ -994,7 +994,7 @@ public:
     auto v2Type = shuffleOp.getV2VectorType();
     auto vectorType = shuffleOp.getResultVectorType();
     Type llvmType = typeConverter->convertType(vectorType);
-    auto mask = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
 
     // Bail if result type cannot be lowered.
     if (!llvmType)
@@ -1014,7 +1014,8 @@ public:
     // type, there is direct shuffle support in LLVM. Use it!
     if (rank <= 1 && v1Type == v2Type) {
       Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
-          loc, adaptor.getV1(), adaptor.getV2(), SmallVector<int32_t>(mask));
+          loc, adaptor.getV1(), adaptor.getV2(),
+          llvm::to_vector_of<int32_t>(mask));
       rewriter.replaceOp(shuffleOp, llvmShuffleOp);
       return success();
     }
