@@ -10,4 +10,4 @@
 
 #include "src/math/ffmal.h"
 
-LIST_NARROWING_FMA_TESTS(float, double, LIBC_NAMESPACE::ffmal)
+LIST_NARROWING_FMA_TESTS(float, long double, LIBC_NAMESPACE::ffmal)
