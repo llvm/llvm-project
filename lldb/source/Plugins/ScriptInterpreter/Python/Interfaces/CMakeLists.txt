@@ -21,6 +21,7 @@ endif()
 
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
   ScriptedPythonInterface.cpp
+  ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
 
   LINK_LIBS
@@ -37,9 +38,5 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
 
 add_subdirectory(OperatingSystemPythonInterface)
 add_subdirectory(ScriptedPlatformPythonInterface)
-set(ORIGINAL_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "${ORIGINAL_CMAKE_CXX_FLAGS} -H -MM")
-add_subdirectory(ScriptedProcessPythonInterface)
-set(CMAKE_CXX_FLAGS "${ORIGINAL_CMAKE_CXX_FLAGS}")
 add_subdirectory(ScriptedThreadPlanPythonInterface)
 
