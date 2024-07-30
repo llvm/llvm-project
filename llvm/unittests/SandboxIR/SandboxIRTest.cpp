@@ -755,7 +755,7 @@ define void @foo(ptr %arg0, ptr %arg1) {
 
   // Check isVolatile()
   EXPECT_FALSE(Ld->isVolatile());
-  // Check isVolatile() 
+  // Check isVolatile()
   EXPECT_TRUE(Vld->isVolatile());
   // Check getPointerOperand()
   EXPECT_EQ(Ld->getPointerOperand(), Arg0);

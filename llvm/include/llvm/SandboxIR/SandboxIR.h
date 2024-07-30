@@ -760,7 +760,7 @@ class LoadInst final : public Instruction {
 
 public:
   /// Return true if this is a load from a volatile memory location.
-  bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }  
+  bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }
 
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
