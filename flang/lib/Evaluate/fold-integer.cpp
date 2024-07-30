@@ -347,7 +347,8 @@ public:
     bool back{false};
     if (arg_[backArg]) {
       const auto *backConst{
-          Folder<LogicalResult>{context_}.Folding(arg_[backArg])};
+          Folder<LogicalResult>{context_, /*forOptionalArgument=*/true}.Folding(
+              arg_[backArg])};
       if (backConst) {
         back = backConst->GetScalarValue().value().IsTrue();
       } else {
@@ -910,8 +911,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     const auto *argCon{Folder<T>(context).Folding(args[0])};
     const auto *shiftCon{Folder<Int4>(context).Folding(args[1])};
     const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
-    const auto *sizeCon{
-        args.size() == 3 ? Folder<Int4>(context).Folding(args[2]) : nullptr};
+    const auto *sizeCon{args.size() == 3
+            ? Folder<Int4>{context, /*forOptionalArgument=*/true}.Folding(
+                  args[2])
+            : nullptr};
     const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
     if ((argCon && argCon->empty()) || !shiftVals || shiftVals->empty() ||
         (sizeVals && sizeVals->empty())) {
@@ -985,7 +988,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 auto shiftVal{static_cast<int>(shift.ToInt64())};
                 auto sizeVal{static_cast<int>(size.ToInt64())};
                 return i.ISHFTC(shiftVal, sizeVal);
-              }));
+              }),
+          /*hasOptionalArgument=*/true);
     }
   } else if (name == "izext" || name == "jzext") {
     if (args.size() == 1) {
