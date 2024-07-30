@@ -99,9 +99,6 @@ class MachineModuleInfo {
   /// want.
   MachineModuleInfoImpl *ObjFileMMI;
 
-  /// True if debugging information is available in this module.
-  bool DbgInfoAvailable = false;
-
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
   /// Next unique number available for a MachineFunction.
@@ -167,9 +164,6 @@ public:
   const Ty &getObjFileInfo() const {
     return const_cast<MachineModuleInfo*>(this)->getObjFileInfo<Ty>();
   }
-
-  /// Returns true if valid debug info is present.
-  bool hasDebugInfo() const { return DbgInfoAvailable; }
 
   /// \}
 }; // End class MachineModuleInfo

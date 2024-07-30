@@ -72,7 +72,7 @@ unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
 DIExprBuilder::Iterator AMDGPUFrameLowering::insertFrameLocation(
     const MachineFunction &MF, DIExprBuilder &Builder,
     DIExprBuilder::Iterator BI, Type *ResultType) const {
-  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  LLVMContext &Context = MF.getFunction().getParent()->getContext();
   const auto &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned AllocaAddrSpace = MF.getDataLayout().getAllocaAddrSpace();
   Type *IntPtrTy = IntegerType::getIntNTy(

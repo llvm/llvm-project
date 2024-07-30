@@ -226,7 +226,7 @@ int main(int argc, char *argv[]) {
 
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
                                DataAction, DataSetReloc, DataSetOut);
-  checkLogs("LINK_RELOCATABLE_TO_EXECUTABLE", DataSetOut, "unexpected EOF");
+  checkLogs("LINK_RELOCATABLE_TO_EXECUTABLE", DataSetOut, "unknown directive");
 
   Status =
       amd_comgr_action_data_count(DataSetOut, AMD_COMGR_DATA_KIND_LOG, &Count);

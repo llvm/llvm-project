@@ -162,9 +162,9 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
 }
 
 MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
-                                 const TargetSubtargetInfo &STI,
-                                 unsigned FunctionNum, MachineModuleInfo &mmi)
-    : F(F), Target(Target), STI(&STI), Ctx(mmi.getContext()), MMI(mmi) {
+                                 const TargetSubtargetInfo &STI, MCContext &Ctx,
+                                 unsigned FunctionNum)
+    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -338,7 +338,7 @@ MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
 
 void MachineFunction::replaceFrameInstRegister(Register FromReg,
                                                Register ToReg) {
-  const MCRegisterInfo *MCRI = getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo *MCRI = Ctx.getRegisterInfo();
   unsigned DwarfFromReg = MCRI->getDwarfRegNum(FromReg, false);
   unsigned DwarfToReg = MCRI->getDwarfRegNum(ToReg, false);
 
@@ -669,9 +669,9 @@ bool MachineFunction::needsFrameMoves() const {
   // under this switch, we'd like .debug_frame to be precise when using -g. At
   // this moment, there's no way to specify that some CFI directives go into
   // .eh_frame only, while others go into .debug_frame only.
-  return getMMI().hasDebugInfo() ||
-         getTarget().Options.ForceDwarfFrameSection ||
-         F.needsUnwindTableEntry();
+  return getTarget().Options.ForceDwarfFrameSection ||
+         F.needsUnwindTableEntry() ||
+         !F.getParent()->debug_compile_units().empty();
 }
 
 namespace llvm {

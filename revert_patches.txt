@@ -132,11 +132,3 @@ dfeb3991fb48 Remove the `x86_mmx` IR type. (#98505)
 b7e4fba6e5dc Cleanup x86_mmx after removing IR type  (#100646) (Reason: dependent on dfeb3991fb48)
 Ron
 ---
-revert : needs downstream rework on MMI removal
-63e1647827f3 CodeGen: Remove MachineModuleInfo reference from MachineFunction (#100357)
-Ron, Scott
----
-breaks hipBlenderClassrom and oclBlenderBarbershop
-revert: ba45453c0a5d [SimplifyCFG] Skip threading if the target may have divergent branches       
-Ron
----

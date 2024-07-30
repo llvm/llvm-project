@@ -100,7 +100,7 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
                                  MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
 
   MCRegister DwarfStackPtrReg = MCRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
@@ -479,7 +479,7 @@ public:
       : MI(MI), MBB(MBB), MF(*MBB.getParent()),
         ST(MF.getSubtarget<GCNSubtarget>()), MFI(MF.getFrameInfo()),
         FuncInfo(MF.getInfo<SIMachineFunctionInfo>()), TII(TII), TRI(TRI),
-        MCRI(MF.getMMI().getContext().getRegisterInfo()),
+        MCRI(MF.getContext().getRegisterInfo()),
         TFI(ST.getFrameLowering()), SuperReg(Reg), SI(SI), LiveUnits(LiveUnits),
         DL(DL), FrameReg(FrameReg),
         IsFramePtrPrologSpill(IsFramePtrPrologSpill) {
@@ -761,7 +761,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
-  const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
@@ -1073,7 +1073,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
                                            const DebugLoc &DL) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
   Register StackPtrReg =
@@ -1158,7 +1158,7 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
-  const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
 
   // Spill Whole-Wave Mode VGPRs. Save only the inactive lanes of the scratch
   // registers. However, save all lanes of callee-saved VGPRs. Due to this, we
@@ -2192,7 +2192,7 @@ MachineInstr *SIFrameLowering::buildCFIForVRegToVRegSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const Register Reg, const Register RegCopy) const {
   MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   unsigned MaskReg = MCRI.getDwarfRegNum(
@@ -2209,7 +2209,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     const DebugLoc &DL, const Register SGPR, const Register VGPR,
     const int Lane) const {
   const MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
 
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
@@ -2230,7 +2230,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     const DebugLoc &DL, Register SGPR,
     ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const {
   const MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
 
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   assert(DwarfSGPR != -1);
@@ -2256,7 +2256,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVMEMSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, unsigned SGPR, int64_t Offset) const {
   MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   return buildCFI(MBB, MBBI, DL,
                   llvm::MCCFIInstruction::createOffset(
                       nullptr, MCRI.getDwarfRegNum(SGPR, false), Offset));
@@ -2266,7 +2266,7 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, unsigned VGPR, int64_t Offset) const {
   const MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
@@ -2284,7 +2284,7 @@ MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const Register Reg, const Register SGPRPair) const {
   const MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
 

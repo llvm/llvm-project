@@ -381,4 +381,4 @@
 // RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LIBC-GPU %s
-// LIBC-GPU: clang-linker-wrapper{{.*}}"--device-linker=-nolibc"
+// LIBC-GPU: clang-linker-wrapper{{.*}}"--device-compiler=-nolibc"

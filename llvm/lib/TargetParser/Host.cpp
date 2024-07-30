@@ -1819,7 +1819,9 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["ppx"] = HasAPXF;
   Features["ndd"] = HasAPXF;
   Features["ccmp"] = HasAPXF;
+  Features["nf"] = HasAPXF;
   Features["cf"] = HasAPXF;
+  Features["zu"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

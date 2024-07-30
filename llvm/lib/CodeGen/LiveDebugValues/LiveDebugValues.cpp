@@ -123,7 +123,7 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   LDVImpl *TheImpl = &*VarLocImpl;
 
   MachineDominatorTree *DomTree = nullptr;
-  if (!llvm::isHeterogeneousDebug(*MF.getMMI().getModule())) {
+  if (!llvm::isHeterogeneousDebug(*MF.getFunction().getParent())) {
     if (InstrRefBased) {
       DomTree = &MDT;
       MDT.calculate(MF);

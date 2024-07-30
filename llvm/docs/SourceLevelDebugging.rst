@@ -389,12 +389,12 @@ Compiled to LLVM, this function would be represented like this:
     %X = alloca i32, align 4
     %Y = alloca i32, align 4
     %Z = alloca i32, align 4
-      #dbg_declare(ptr %X, !11, !DIExpression(), !14)
-    store i32 21, i32* %X, align 4, !dbg !14
-      #dbg_declare(ptr %Y, !15, !DIExpression(), !16)
-    store i32 22, i32* %Y, align 4, !dbg !16
-      #dbg_declare(ptr %Z, !17, !DIExpression(), !19)
-    store i32 23, i32* %Z, align 4, !dbg !19
+      #dbg_declare(ptr %X, !11, !DIExpression(), !13)
+    store i32 21, i32* %X, align 4, !dbg !13
+      #dbg_declare(ptr %Y, !14, !DIExpression(), !15)
+    store i32 22, i32* %Y, align 4, !dbg !15
+      #dbg_declare(ptr %Z, !16, !DIExpression(), !18)
+    store i32 23, i32* %Z, align 4, !dbg !18
     %0 = load i32, i32* %X, align 4, !dbg !20
     store i32 %0, i32* %Z, align 4, !dbg !21
     %1 = load i32, i32* %Y, align 4, !dbg !22
@@ -427,9 +427,9 @@ Compiled to LLVM, this function would be represented like this:
   !15 = !DILocation(line: 3, column: 9, scope: !4)
   !16 = !DILocalVariable(name: "Z", scope: !18, file: !1, line: 5, type: !12)
   !17 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
-  !18 = !DILocation(line: 5, column: 11, scope: !18)
-  !29 = !DILocation(line: 6, column: 11, scope: !18)
-  !20 = !DILocation(line: 6, column: 9, scope: !18)
+  !18 = !DILocation(line: 5, column: 11, scope: !17)
+  !29 = !DILocation(line: 6, column: 11, scope: !17)
+  !20 = !DILocation(line: 6, column: 9, scope: !17)
   !21 = !DILocation(line: 8, column: 9, scope: !4)
   !22 = !DILocation(line: 8, column: 7, scope: !4)
   !23 = !DILocation(line: 9, column: 3, scope: !4)
@@ -443,11 +443,11 @@ variable definitions, and the code used to implement the function.
 
 .. code-block:: llvm
 
-    #dbg_declare(ptr %X, !11, !DIExpression(), !14)
-    ; [debug line = 2:7] [debug variable = X]
+    #dbg_declare(ptr %X, !11, !DIExpression(), !13)
+    ; [debug line = 2:9] [debug variable = X]
 
 The first record ``#dbg_declare`` encodes debugging information for the
-variable ``X``.  The location ``!14`` at the end of the record provides
+variable ``X``.  The location ``!13`` at the end of the record provides
 scope information for the variable ``X``.
 
 .. code-block:: text
@@ -467,19 +467,11 @@ Now lets take another example.
 
 .. code-block:: llvm
 
-<<<<<<< HEAD
-  call void @llvm.dbg.declare(metadata i32* %Z, metadata !16, metadata !DIExpression()), !dbg !18
-    ; [debug line = 5:9] [debug variable = Z]
-
-The third intrinsic ``%llvm.dbg.declare`` encodes debugging information for
-variable ``Z``.  The metadata ``!dbg !18`` attached to the intrinsic provides
-=======
-    #dbg_declare(ptr %Z, !17, !DIExpression(), !19)
-    ; [debug line = 5:9] [debug variable = Z]
+    #dbg_declare(ptr %Z, !16, !DIExpression(), !18)
+    ; [debug line = 5:11] [debug variable = Z]
 
 The third record ``#dbg_declare`` encodes debugging information for
-variable ``Z``.  The metadata ``!19`` at the end of the record provides
->>>>>>> 38ccee00346300c87abc34860398bc950c65eaec
+variable ``Z``.  The metadata ``!18`` at the end of the record provides
 scope information for the variable ``Z``.
 
 .. code-block:: text
@@ -921,13 +913,8 @@ presents several difficulties:
     br label %exit, !dbg !26
 
   truebr:
-<<<<<<< HEAD
-    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !23
-    call void @llvm.dbg.value(metadata i32 1, metadata !22, metadata !DIExpression()), !dbg !23
-=======
       #dbg_value(i32 %input, !30, !DIExpression(), !24)
       #dbg_value(i32 1, !23, !DIExpression(), !24)
->>>>>>> 38ccee00346300c87abc34860398bc950c65eaec
     %value1 = add i32 %input, 1
     br label %bb1
 
@@ -944,7 +931,7 @@ presents several difficulties:
 Here the difficulties are:
 
 * The control flow is roughly the opposite of basic block order
-* The value of the ``!22`` variable merges into ``%bb1``, but there is no PHI
+* The value of the ``!23`` variable merges into ``%bb1``, but there is no PHI
   node
 
 As mentioned above, the ``#dbg_value`` records essentially form an
@@ -957,9 +944,9 @@ location, which would lead to a large number of debugging records being
 generated.
 
 Examining the example above, variable ``!30`` is assigned ``%input`` on both
-conditional paths through the function, while ``!22`` is assigned differing
+conditional paths through the function, while ``!23`` is assigned differing
 constant values on either path. Where control flow merges in ``%bb1`` we would
-want ``!30`` to keep its location (``%input``), but ``!22`` to become undefined
+want ``!30`` to keep its location (``%input``), but ``!23`` to become undefined
 as we cannot determine at runtime what value it should have in %bb1 without
 inserting a PHI node. mem2reg does not insert the PHI node to avoid changing
 codegen when debugging is enabled, and does not insert the other #dbg_values
@@ -978,7 +965,7 @@ DbgEntityHistoryCalculator) to build a map of each instruction to every
 valid variable location, without the need to consider control flow. From
 the example above, it is otherwise difficult to determine that the location
 of variable ``!30`` should flow "up" into block ``%bb1``, but that the location
-of variable ``!22`` should not flow "down" into the ``%exit`` block.
+of variable ``!23`` should not flow "down" into the ``%exit`` block.
 
 .. _ccxx_frontend:
 
