@@ -685,7 +685,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
     return true;
   } else if (IsPointer(symbol)) {
     return !ignorePointer;
-  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol)) {
+  } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && object->type()) {
