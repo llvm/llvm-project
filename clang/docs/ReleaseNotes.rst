@@ -54,6 +54,11 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Parts of the interface returning string results will now return
+  the empty string `""` when no result is available, instead of `None`.
+- Calling a property on the `CompletionChunk` or `CompletionString` class
+  statically now leads to an error, instead of returning a `CachedProperty` object
+  that is used internally. Properties are only available on instances.
 
 What's New in Clang |release|?
 ==============================
@@ -116,6 +121,9 @@ Attribute Changes in Clang
 
 - Introduced a new format attribute ``__attribute__((format(syslog, 1, 2)))`` from OpenBSD.
 
+- The ``hybrid_patchable`` attribute is now supported on ARM64EC targets. It can be used to specify
+  that a function requires an additional x86-64 thunk, which may be patched at runtime.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -128,6 +136,8 @@ Improvements to Clang's diagnostics
      struct S {
       template <typename> int i; // error: non-static data member 'i' cannot be declared as a template
      };
+
+- Clang now has improved diagnostics for functions with explicit 'this' parameters. Fixes #GH97878
 
 - Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
 
@@ -158,6 +168,8 @@ Bug Fixes to C++ Support
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
+- Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
+- Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -244,6 +256,9 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
+  inline namespaces with an enclosing namespace of the same name.
+
 clang-format
 ------------
 
@@ -266,6 +281,10 @@ Crash and bug fixes
 
 Improvements
 ^^^^^^^^^^^^
+
+- Improved the handling of the ``ownership_returns`` attribute. Now, Clang reports an
+  error if the attribute is attached to a function that returns a non-pointer value.
+  Fixes (#GH99501)
 
 Moved checkers
 ^^^^^^^^^^^^^^

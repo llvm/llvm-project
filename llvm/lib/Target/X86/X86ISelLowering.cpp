@@ -3435,12 +3435,9 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   if (BaseCost >= 0 && Subtarget.hasCCMP())
     BaseCost += BrMergingCcmpBias;
   // a == b && a == c is a fast pattern on x86.
-  ICmpInst::Predicate Pred;
   if (BaseCost >= 0 && Opc == Instruction::And &&
-      match(Lhs, m_ICmp(Pred, m_Value(), m_Value())) &&
-      Pred == ICmpInst::ICMP_EQ &&
-      match(Rhs, m_ICmp(Pred, m_Value(), m_Value())) &&
-      Pred == ICmpInst::ICMP_EQ)
+      match(Lhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())) &&
+      match(Rhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())))
     BaseCost += 1;
   return {BaseCost, BrMergingLikelyBias.getValue(),
           BrMergingUnlikelyBias.getValue()};
@@ -30760,10 +30757,12 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -30771,10 +30770,12 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op))))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -30785,18 +30786,21 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
              Pred == CmpInst::ICMP_SLT;
-    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-      return Pred == CmpInst::ICMP_SGT;
+    if (match(I->user_back(),
+              m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+      return true;
     return false;
   }
   if (Opc == AtomicRMWInst::Xor) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }

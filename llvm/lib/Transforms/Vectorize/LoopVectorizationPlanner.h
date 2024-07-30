@@ -411,6 +411,9 @@ public:
   VectorizationFactor
   selectEpilogueVectorizationFactor(const ElementCount MaxVF, unsigned IC);
 
+  /// Emit remarks for recipes with invalid costs in the available VPlans.
+  void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is

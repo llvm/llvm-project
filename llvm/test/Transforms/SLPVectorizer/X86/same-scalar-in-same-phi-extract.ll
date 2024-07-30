@@ -5,6 +5,7 @@ define void @test(i32 %arg) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[ARG]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i32 0
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
@@ -14,8 +15,6 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    switch i32 0, label [[BB10]] [
 ; CHECK-NEXT:      i32 18, label [[BB7:%.*]]
 ; CHECK-NEXT:      i32 1, label [[BB7]]

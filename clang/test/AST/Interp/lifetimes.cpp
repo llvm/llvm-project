@@ -33,3 +33,30 @@ struct S {
 constexpr int k1 = S().t; // both-error {{must be initialized by a constant expression}} \
                           // ref-note {{in call to}} \
                           // expected-note {{in call to}}
+
+
+namespace MoveFnWorks {
+  template<typename T> constexpr T &&ref(T &&t) { return (T&&)t; }
+
+  struct Buf {};
+
+  struct A {
+    constexpr A(Buf &buf) : buf(buf) { }
+    Buf &buf;
+  };
+
+  constexpr bool dtor_calls_dtor() {
+    struct B {
+      A &&d;
+      constexpr B(Buf &buf) : d(ref(A(buf))) {}
+    };
+
+    Buf buf;
+    {
+      B b(buf);
+    }
+
+    return true;
+  }
+  static_assert(dtor_calls_dtor(), "");
+}

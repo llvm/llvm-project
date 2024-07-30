@@ -1236,10 +1236,10 @@ define void @crash_no_tracked_instructions(ptr %arg, ptr %arg.2, ptr %arg.3, i1 
 ; CHECK:       bb22:
 ; CHECK-NEXT:    [[T23:%.*]] = fmul float [[T20]], 9.900000e+01
 ; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds float, ptr [[T19]], i64 2
+; CHECK-NEXT:    [[T26:%.*]] = fmul float [[T23]], 1.000000e+01
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[T23]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], <float 9.900000e+01, float 1.000000e+01>
-; CHECK-NEXT:    [[T26:%.*]] = fmul float [[T23]], 1.000000e+01
 ; CHECK-NEXT:    store float [[T26]], ptr [[T25]], align 4
 ; CHECK-NEXT:    [[T27:%.*]] = load float, ptr [[ARG_2:%.*]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP3]], <float 2.000000e+01, float 2.000000e+01>

@@ -2602,24 +2602,22 @@ define i1 @issubnormal_or_nan_f(float %x) {
 define i1 @issubnormal_or_zero_or_nan_f(float %x) {
 ; X86-LABEL: issubnormal_or_zero_or_nan_f:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    sete %cl
-; X86-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X86-NEXT:    setge %al
-; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fabs
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fxch %st(1)
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: issubnormal_or_zero_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    sete %cl
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X64-NEXT:    setge %al
-; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 243)  ; 0xf0|0x3 = "subnormal|zero|nan"
   ret i1 %class
@@ -2773,24 +2771,22 @@ define i1 @not_issubnormal_or_nan_f(float %x) {
 define i1 @not_issubnormal_or_zero_or_nan_f(float %x) {
 ; X86-LABEL: not_issubnormal_or_zero_or_nan_f:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setne %cl
-; X86-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X86-NEXT:    setl %al
-; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fabs
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fxch %st(1)
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: not_issubnormal_or_zero_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setne %cl
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
-; X64-NEXT:    setl %al
-; X64-NEXT:    andb %cl, %al
+; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 780)  ; ~(0xf0|0x3) = ~"subnormal|zero|nan"
   ret i1 %class
