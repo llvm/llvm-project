@@ -5820,7 +5820,7 @@ static void buildImplicitMapper(Sema &S, QualType BaseType, DSAStackTy *Stack,
   DeclarationName MapperId;
   auto &DeclNames = Ctx.DeclarationNames;
   MapperId = DeclNames.getIdentifier(&Ctx.Idents.get("default"));
-  OMPDeclareMapperDecl *DMD = OMPDeclareMapperDecl::Create(
+  auto *DMD = OMPDeclareMapperDecl::Create(
       Ctx, DCT, SourceLocation(), MapperId, BaseType, MapperId, Maps, nullptr);
   Scope *Scope = S.getScopeForContext(DCT);
   if (Scope)
@@ -5848,7 +5848,7 @@ processImplicitMapperWithMaps(Sema &S, DSAStackTy *Stack,
     // declare mapper.
     return;
 
-  for (int Cnt = 0, EndCnt = Clauses.size(); Cnt < EndCnt; ++Cnt) {
+  for (int Cnt : llvm::seq<int>(0, Clauses.size())) {
     auto *C = dyn_cast<OMPMapClause>(Clauses[Cnt]);
     if (!C || C->isImplicit())
       continue;
@@ -5895,7 +5895,8 @@ processImplicitMapperWithMaps(Sema &S, DSAStackTy *Stack,
       buildImplicitMapper(S, BaseType, Stack, UDMapperRefs);
     }
     if (!UDMapperRefs.empty()) {
-      assert(UDMapperRefs.size() == C->varlist_size());
+      assert(UDMapperRefs.size() == C->varlist_size() &&
+             "Unexpected number of default mappers.");
       // Update mapper in C->mapper_lists.
       C->setUDMapperRefs(UDMapperRefs);
     }

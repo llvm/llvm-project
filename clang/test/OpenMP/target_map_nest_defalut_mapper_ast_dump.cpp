@@ -18,8 +18,8 @@ void foo() {
 
 #pragma omp target map(tofrom : sa [0:2])
   {
-    sa[1].e = 333;
-    sa[2].f.a = 444;
+    sa[0].e = 333;
+    sa[1].f.a = 444;
   }
 }
 
