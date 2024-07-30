@@ -1,5 +1,5 @@
 // RUN: %clang -### %s 2>&1 | FileCheck %s -check-prefix CHECK-0
-// RUN: %clang -### -falign-functions %s 2>&1 | FileCheck %s -check-prefix CHECK-1
+// RUN: %clang -### -falign-functions %s 2>&1 | FileCheck %s -check-prefix CHECK-16
 // RUN: %clang -### -falign-functions=1 %s 2>&1 | FileCheck %s -check-prefix CHECK-1
 // RUN: %clang -### -falign-functions=2 %s 2>&1 | FileCheck %s -check-prefix CHECK-2
 // RUN: %clang -### -falign-functions=3 %s 2>&1 | FileCheck %s -check-prefix CHECK-3
@@ -8,6 +8,7 @@
 // RUN: not %clang -### -falign-functions=a %s 2>&1 | FileCheck %s -check-prefix CHECK-ERR-A
 
 // CHECK-0-NOT: "-function-alignment"
+// CHECK-16: "-function-alignment" "4"
 // CHECK-1-NOT: "-function-alignment"
 // CHECK-2: "-function-alignment" "1"
 // CHECK-3: "-function-alignment" "2"

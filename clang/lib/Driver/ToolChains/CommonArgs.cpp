@@ -1982,7 +1982,7 @@ unsigned tools::ParseFunctionAlignment(const ToolChain &TC,
     return 0;
 
   if (A->getOption().matches(options::OPT_falign_functions))
-    return 0;
+    return 4; // log2(16)
 
   unsigned Value = 0;
   if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
