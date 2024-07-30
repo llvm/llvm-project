@@ -284,14 +284,12 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       FD->setInvalidDecl();
     }
     if (const auto *NT = FD->getAttr<HLSLWaveSizeAttr>()) {
-      if (Ver.getMajor() < 6u ||
-          (Ver.getMajor() == 6u && Ver.getMinor() < 6u)) {
+      if (Ver < VersionTuple(6, 6)) {
         Diag(NT->getLocation(), diag::err_hlsl_attribute_in_wrong_shader_model)
             << "wavesize"
             << "6.6";
         FD->setInvalidDecl();
-      } else if (NT->getSpelledArgsCount() > 1 &&
-                 (Ver.getMajor() == 6u && Ver.getMinor() < 8u)) {
+      } else if (NT->getSpelledArgsCount() > 1 && Ver < VersionTuple(6, 8)) {
         Diag(NT->getLocation(),
              diag::err_hlsl_wavesize_insufficient_shader_model);
         FD->setInvalidDecl();
