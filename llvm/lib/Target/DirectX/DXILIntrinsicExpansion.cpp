@@ -181,17 +181,17 @@ static bool expandLengthIntrinsic(CallInst *Orig) {
     }
     Value *Result = Builder.CreateIntrinsic(
         EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum}, nullptr, "elt.sqrt");
-      
-		Orig->replaceAllUsesWith(Result);
+
+    Orig->replaceAllUsesWith(Result);
     Orig->eraseFromParent();
-    return true;   
+    return true;
   } else {
-		Value *Result = Builder.CreateIntrinsic(
-				EltTy, Intrinsic::fabs, ArrayRef<Value *>{Elt}, nullptr, "elt.abs");
-		Orig->replaceAllUsesWith(Result);
-		Orig->eraseFromParent();
-		return true;
-	}
+    Value *Result = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::fabs, ArrayRef<Value *>{Elt}, nullptr, "elt.abs");
+    Orig->replaceAllUsesWith(Result);
+    Orig->eraseFromParent();
+    return true;
+  }
 }
 
 static bool expandLerpIntrinsic(CallInst *Orig) {

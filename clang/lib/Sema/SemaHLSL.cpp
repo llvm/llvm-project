@@ -1083,19 +1083,18 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
-      return true;   
+      return true;
 
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
     QualType RetTy;
 
-    if (auto *VTy = ArgTyA->getAs<VectorType>()) 
+    if (auto *VTy = ArgTyA->getAs<VectorType>())
       RetTy = VTy->getElementType();
-		else 
+    else
       RetTy = TheCall->getArg(0)->getType();
 
-    TheCall->setType(RetTy);     
-
+    TheCall->setType(RetTy);
 
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
       return true;

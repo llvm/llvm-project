@@ -908,7 +908,6 @@ float3 lerp(float3, float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
 float4 lerp(float4, float4, float4);
 
-
 //===----------------------------------------------------------------------===//
 // length builtins
 //===----------------------------------------------------------------------===//

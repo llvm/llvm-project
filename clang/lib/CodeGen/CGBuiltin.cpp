@@ -18462,7 +18462,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_elementwise_length: {
     Value *X = EmitScalarExpr(E->getArg(0));
-    
+
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("length operand must have a float representation");
     // if the operand is a scalar, we can use the fabs llvm intrinsic directly
@@ -18473,8 +18473,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     }
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType()->getScalarType(),
-        CGM.getHLSLRuntime().getLengthIntrinsic(),
-        ArrayRef<Value *>{X}, nullptr, "hlsl.length");
+        CGM.getHLSLRuntime().getLengthIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.length");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
