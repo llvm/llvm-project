@@ -597,11 +597,14 @@ void SCEVUnknown::allUsesReplacedWith(Value *New) {
 ///
 /// Since we do not continue running this routine on expression trees once we
 /// have seen unequal values, there is no need to track them in the cache.
-static int
+static std::optional<int>
 CompareValueComplexity(EquivalenceClasses<const Value *> &EqCacheValue,
                        const LoopInfo *const LI, Value *LV, Value *RV,
                        unsigned Depth) {
-  if (Depth > MaxValueCompareDepth || EqCacheValue.isEquivalent(LV, RV))
+  if (Depth > MaxValueCompareDepth)
+    return std::nullopt;
+
+  if (EqCacheValue.isEquivalent(LV, RV))
     return 0;
 
   // Order pointer values after integer values. This helps SCEVExpander form
@@ -660,7 +663,7 @@ CompareValueComplexity(EquivalenceClasses<const Value *> &EqCacheValue,
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned Idx : seq(LNumOps)) {
-      int Result =
+      std::optional<int> Result =
           CompareValueComplexity(EqCacheValue, LI, LInst->getOperand(Idx),
                                  RInst->getOperand(Idx), Depth + 1);
       if (Result != 0)
@@ -705,8 +708,8 @@ CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
     const SCEVUnknown *LU = cast<SCEVUnknown>(LHS);
     const SCEVUnknown *RU = cast<SCEVUnknown>(RHS);
 
-    int X = CompareValueComplexity(EqCacheValue, LI, LU->getValue(),
-                                   RU->getValue(), Depth + 1);
+    std::optional<int> X = CompareValueComplexity(
+        EqCacheValue, LI, LU->getValue(), RU->getValue(), Depth + 1);
     if (X == 0)
       EqCacheSCEV.unionSets(LHS, RHS);
     return X;
