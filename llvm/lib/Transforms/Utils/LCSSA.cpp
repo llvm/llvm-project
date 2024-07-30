@@ -71,6 +71,9 @@ static bool isExitBlock(BasicBlock *BB,
   return is_contained(ExitBlocks, BB);
 }
 
+// Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
+// lot of instructions within the same loops, computing the exit blocks is
+// expensive, and we're not mutating the loop structure.
 using LoopExitBlocksTy = SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>>;
 
 /// For every instruction from the worklist, check to see if it has any uses
@@ -324,9 +327,6 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     ScalarEvolution *SE,
                                     SmallVectorImpl<PHINode *> *PHIsToRemove,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
-  // Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
-  // lot of instructions within the same loops, computing the exit blocks is
-  // expensive, and we're not mutating the loop structure.
   LoopExitBlocksTy LoopExitBlocks;
 
   return formLCSSAForInstructionsImpl(Worklist, DT, LI, SE, PHIsToRemove,
@@ -335,11 +335,11 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
 // Compute the set of BasicBlocks in the loop `L` dominating at least one exit.
 static void computeBlocksDominatingExits(
-    Loop &L, const DominatorTree &DT, SmallVector<BasicBlock *, 8> &ExitBlocks,
+    Loop &L, const DominatorTree &DT, SmallVector<BasicBlock *, 1> &ExitBlocks,
     SmallSetVector<BasicBlock *, 8> &BlocksDominatingExits) {
   // We start from the exit blocks, as every block trivially dominates itself
   // (not strictly).
-  SmallVector<BasicBlock *, 8> BBWorklist(ExitBlocks);
+  SmallVector<BasicBlock *, 1> BBWorklist(ExitBlocks);
 
   while (!BBWorklist.empty()) {
     BasicBlock *BB = BBWorklist.pop_back_val();
@@ -389,10 +389,9 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
   }
 #endif
 
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  L.getExitBlocks(ExitBlocks);
   if (!LoopExitBlocks.count(&L))
     L.getExitBlocks(LoopExitBlocks[&L]);
+  auto &ExitBlocks = LoopExitBlocks[&L];
   if (ExitBlocks.empty())
     return false;
 
@@ -443,9 +442,6 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 
 bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
                      ScalarEvolution *SE) {
-  // Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
-  // lot of instructions within the same loops, computing the exit blocks is
-  // expensive, and we're not mutating the loop structure.
   LoopExitBlocksTy LoopExitBlocks;
 
   return formLCSSAImpl(L, DT, LI, SE, LoopExitBlocks);
@@ -468,9 +464,6 @@ static bool formLCSSARecursivelyImpl(Loop &L, const DominatorTree &DT,
 /// Process a loop nest depth first.
 bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
                                 const LoopInfo *LI, ScalarEvolution *SE) {
-  // Cache the Loop ExitBlocks computed during the analysis.  We expect to get a
-  // lot of instructions within the same loops, computing the exit blocks is
-  // expensive, and we're not mutating the loop structure.
   LoopExitBlocksTy LoopExitBlocks;
 
   return formLCSSARecursivelyImpl(L, DT, LI, SE, LoopExitBlocks);
