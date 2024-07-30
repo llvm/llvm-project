@@ -85,8 +85,6 @@ void has_ptrauth_type_info_vtable_pointer_discrimination() {}
 void no_ptrauth_type_info_vtable_pointer_discrimination() {}
 #endif
 
-#include <ptrauth.h>
-
 #if __has_feature(ptrauth_function_pointer_type_discrimination)
 // FUNC: has_ptrauth_function_pointer_type_discrimination
 void has_ptrauth_function_pointer_type_discrimination() {}

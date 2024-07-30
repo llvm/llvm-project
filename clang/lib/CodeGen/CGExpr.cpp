@@ -2191,7 +2191,7 @@ RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   // Load from __ptrauth.
-  if (auto PtrAuth = LV.getQuals().getPointerAuth()) {
+  if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth()) {
     LV.getQuals().removePointerAuth();
     auto value = EmitLoadOfLValue(LV, Loc).getScalarVal();
     return RValue::get(EmitPointerAuthUnqualify(PtrAuth, value, LV.getType(),
@@ -2427,7 +2427,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   }
 
   // Handle __ptrauth qualification by re-signing the value.
-  if (auto PointerAuth = Dst.getQuals().getPointerAuth()) {
+  if (PointerAuthQualifier PointerAuth = Dst.getQuals().getPointerAuth()) {
     Src = RValue::get(EmitPointerAuthQualify(PointerAuth, Src.getScalarVal(),
                                              Dst.getType(), Dst.getAddress(),
                                              /*known nonnull*/ false));
@@ -5654,7 +5654,8 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 
   switch (getEvaluationKind(E->getType())) {
   case TEK_Scalar: {
-    if (auto PtrAuth = E->getLHS()->getType().getPointerAuth()) {
+    if (PointerAuthQualifier PtrAuth =
+            E->getLHS()->getType().getPointerAuth()) {
       LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
       LValue CopiedLV = LV;
       CopiedLV.getQuals().removePointerAuth();

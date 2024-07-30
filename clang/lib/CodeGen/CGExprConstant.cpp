@@ -2068,7 +2068,7 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
   }
 
   // Apply pointer-auth signing from the destination type.
-  if (auto PointerAuth = DestType.getPointerAuth()) {
+  if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth()) {
     if (!result.HasDestPointerAuth) {
       value = Emitter.tryEmitConstantSignedPointer(value, PointerAuth);
       if (!value)
@@ -2119,7 +2119,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       return CGM.GetWeakRefReference(D).getPointer();
 
     auto PtrAuthSign = [&](llvm::Constant *C) {
-      if (auto PointerAuth = DestType.getPointerAuth()) {
+      if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth()) {
         C = applyOffset(C);
         C = Emitter.tryEmitConstantSignedPointer(C, PointerAuth);
         return ConstantLValue(C, /*applied offset*/ true, /*signed*/ true);

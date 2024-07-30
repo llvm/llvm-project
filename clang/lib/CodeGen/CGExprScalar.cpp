@@ -4850,7 +4850,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   Value *RHS;
   LValue LHS;
 
-  if (auto PtrAuth = E->getLHS()->getType().getPointerAuth()) {
+  if (PointerAuthQualifier PtrAuth = E->getLHS()->getType().getPointerAuth()) {
     LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
     LV.getQuals().removePointerAuth();
     llvm::Value *RV =

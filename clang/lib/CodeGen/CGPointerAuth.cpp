@@ -198,7 +198,7 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
                             SourceLocation Loc) {
   auto *Value = CGF.EmitLoadOfScalar(LV, Loc);
   CGPointerAuthInfo AuthInfo;
-  if (auto PtrAuth = LV.getQuals().getPointerAuth()) {
+  if (PointerAuthQualifier PtrAuth = LV.getQuals().getPointerAuth()) {
     AuthInfo = CGF.EmitPointerAuthInfo(PtrAuth, LV.getAddress());
   } else {
     AuthInfo = getPointerAuthInfoForType(CGF.CGM, LV.getType());
@@ -206,6 +206,8 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
   return {Value, AuthInfo};
 }
 
+/// Retrieve a pointer rvalue and its ptrauth info. When possible, avoid
+/// needlessly resigning the pointer.
 std::pair<llvm::Value *, CGPointerAuthInfo>
 CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
   assert(E->getType()->isSignableType());
@@ -232,18 +234,6 @@ CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
       // Otherwise, load and use the pointer
       auto LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
       return emitLoadOfOrigPointerRValue(*this, LV, E->getExprLoc());
-    }
-  }
-
-  // Emit direct references to functions without authentication.
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-    if (auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-      return {CGM.getRawFunctionPointer(FD), CGPointerAuthInfo()};
-    }
-  } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
-    if (auto *FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
-      EmitIgnoredExpr(ME->getBase());
-      return {CGM.getRawFunctionPointer(FD), CGPointerAuthInfo()};
     }
   }
 

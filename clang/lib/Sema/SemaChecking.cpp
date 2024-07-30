@@ -3843,7 +3843,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     return ExprError();
   }
 
-  auto PointerAuth = AtomTy.getPointerAuth();
+  PointerAuthQualifier PointerAuth = AtomTy.getPointerAuth();
   if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
     Diag(ExprRange.getBegin(),
          diag::err_atomic_op_needs_non_address_discriminated_pointer)
@@ -4217,7 +4217,7 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
         << FirstArg->getType() << 0 << FirstArg->getSourceRange();
     return ExprError();
   }
-  auto PointerAuth = ValType.getPointerAuth();
+  PointerAuthQualifier PointerAuth = ValType.getPointerAuth();
   if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
     Diag(FirstArg->getBeginLoc(),
          diag::err_atomic_op_needs_non_address_discriminated_pointer)
