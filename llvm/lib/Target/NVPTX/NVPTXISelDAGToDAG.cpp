@@ -714,6 +714,8 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
   return NVPTX::PTXLdStInstCode::GENERIC;
 }
 
+namespace {
+
 struct OperationOrderings {
   NVPTX::OrderingUnderlyingType InstrOrdering;
   NVPTX::OrderingUnderlyingType FenceOrdering;
@@ -907,11 +909,11 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
     // This sets the ordering of the fence to SequentiallyConsistent, and
     // sets the corresponding ordering for the instruction.
     NVPTX::Ordering InstrOrder;
-    if (N->readMem()) {
+    if (N->readMem())
       InstrOrder = NVPTX::Ordering::Acquire;
-    } else if (N->writeMem()) {
+    else if (N->writeMem())
       InstrOrder = NVPTX::Ordering::Release;
-    } else {
+    else {
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
       OS << "NVPTX does not support SequentiallyConsistent Ordering on "
@@ -933,6 +935,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
      << toIRString(Ordering) << "\" yet.";
   report_fatal_error(OS.str());
 }
+
+} // namespace
 
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
                           unsigned CodeAddrSpace, MachineFunction *F) {
