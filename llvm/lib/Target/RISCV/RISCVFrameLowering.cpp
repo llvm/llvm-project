@@ -1075,7 +1075,6 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
                    RVVCSI[RVVCSI.size() - 1].getFrameIdx() + 1);
   pushRVVObjects(0, MFI.getObjectIndexEnd() - RVVCSI.size());
 
-  // The minimum alignment is 16 bytes.
   Align RVVStackAlign = getABIStackAlignment(STI.getTargetABI());
   if (!STI.hasVInstructions()) {
     assert(ObjectsToAllocate.empty() &&
