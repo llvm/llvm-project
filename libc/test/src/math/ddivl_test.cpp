@@ -10,4 +10,4 @@
 
 #include "src/math/ddivl.h"
 
-LIST_ADD_TESTS(double, long double, LIBC_NAMESPACE::ddivl)
+LIST_DIV_TESTS(double, long double, LIBC_NAMESPACE::ddivl)
