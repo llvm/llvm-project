@@ -2380,6 +2380,60 @@ add_fp_unittest(
     libc.src.stdlib.srand
 )
 
+add_fp_unittest(
+  fdiv_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fdiv_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.fdiv
+)
+
+add_fp_unittest(
+  fdivl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fdivl_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.fdivl
+)
+
+
+add_fp_unittest(
+  ffma_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ffma_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ffma
+)
+
+add_fp_unittest(
+  ffmal_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ffmal_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.ffmal
+)
+
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 

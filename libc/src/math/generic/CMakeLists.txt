@@ -3022,7 +3022,45 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.div
+)
+
+add_entrypoint_object(
+  ffma
+  SRCS
+    ffma.cpp
+  HDRS
+    ../ffma.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
+  ffmal
+  SRCS
+    ffmal.cpp
+  HDRS
+    ../ffmal.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
+  ffmaf128
+  SRCS
+    ffmaf128.cpp
+  HDRS
+    ../ffmaf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
 )
 
 add_entrypoint_object(
