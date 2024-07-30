@@ -33,9 +33,8 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override {
     OS << "\t.section\t\"" << getName() << "\"\n";
-    if (Subsection) {
+    if (Subsection)
       OS << "\t.subsection\t" << Subsection << '\n';
-    }
   }
 
   bool useCodeAlign() const override { return false; }
