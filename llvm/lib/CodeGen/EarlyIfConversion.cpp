@@ -235,7 +235,7 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
 
     // We never speculate stores, so an AA pointer isn't necessary.
     bool DontMoveAcrossStore = true;
-    if (!MI.isSafeToMove(nullptr, DontMoveAcrossStore)) {
+    if (!MI.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "Can't speculate: " << MI);
       return false;
     }
@@ -797,8 +797,8 @@ void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineTraceMetrics>();
   AU.addPreserved<MachineTraceMetrics>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -1087,7 +1087,7 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   SchedModel = STI.getSchedModel();
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 
@@ -1150,8 +1150,8 @@ void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -1221,7 +1221,7 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&STI);
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;

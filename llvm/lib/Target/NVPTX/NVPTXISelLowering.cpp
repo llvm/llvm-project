@@ -629,6 +629,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
@@ -859,6 +860,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
   }
 
+  // Custom lowering for inline asm with 128-bit operands
+  setOperationAction(ISD::CopyToReg, MVT::i128, Custom);
+  setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
+
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.
 
@@ -868,6 +873,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setMinCmpXchgSizeInBits(32);
   setMaxAtomicSizeInBitsSupported(64);
+  setMaxDivRemBitWidthSupported(64);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1423,7 +1429,6 @@ std::string NVPTXTargetLowering::getPrototype(
 
   bool first = true;
 
-  const Function *F = CB.getFunction();
   unsigned NumArgs = VAInfo ? VAInfo->first : Args.size();
   for (unsigned i = 0, OIdx = 0; i != NumArgs; ++i, ++OIdx) {
     Type *Ty = Args[i].Ty;
@@ -1434,10 +1439,8 @@ std::string NVPTXTargetLowering::getPrototype(
 
     if (!Outs[OIdx].Flags.isByVal()) {
       if (IsTypePassedAsArray(Ty)) {
-        const CallInst *CallI = cast<CallInst>(&CB);
         Align ParamAlign =
-            getAlign(*CallI, i + AttributeList::FirstArgIndex)
-                .value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
+            getArgumentAlignment(&CB, Ty, i + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 ";
         O << "_";
         O << "[" << DL.getTypeAllocSize(Ty) << "]";
@@ -1467,10 +1470,12 @@ std::string NVPTXTargetLowering::getPrototype(
       continue;
     }
 
+    // Indirect calls need strict ABI alignment so we disable optimizations by
+    // not providing a function to optimize.
     Type *ETy = Args[i].IndirectType;
     Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
     Align ParamByValAlign =
-        getFunctionByValParamAlign(F, ETy, InitialAlign, DL);
+        getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
     O << ".param .align " << ParamByValAlign.value() << " .b8 ";
     O << "_";
@@ -2804,6 +2809,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVectorArith(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::CopyToReg:
+    return LowerCopyToReg_128(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -2915,9 +2922,10 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
   assert(LD->getExtensionType() == ISD::NON_EXTLOAD);
   assert(Node->getValueType(0) == MVT::i1 &&
          "Custom lowering for i1 load only");
-  SDValue newLD = DAG.getLoad(MVT::i16, dl, LD->getChain(), LD->getBasePtr(),
-                              LD->getPointerInfo(), LD->getAlign(),
-                              LD->getMemOperand()->getFlags());
+  SDValue newLD = DAG.getExtLoad(ISD::ZEXTLOAD, dl, MVT::i16, LD->getChain(),
+                                 LD->getBasePtr(), LD->getPointerInfo(),
+                                 MVT::i8, LD->getAlign(),
+                                 LD->getMemOperand()->getFlags());
   SDValue result = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, newLD);
   // The legalizer (the caller) is expecting two values from the legalized
   // load, so we build a MergeValues node for it. See ExpandUnalignedLoad()
@@ -3092,6 +3100,54 @@ SDValue NVPTXTargetLowering::LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const {
       DAG.getTruncStore(Tmp1, dl, Tmp3, Tmp2, ST->getPointerInfo(), MVT::i8,
                         ST->getAlign(), ST->getMemOperand()->getFlags());
   return Result;
+}
+
+SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  // Change the CopyToReg to take in two 64-bit operands instead of a 128-bit
+  // operand so that it can pass the legalization.
+
+  assert(Op.getOperand(1).getValueType() == MVT::i128 &&
+         "Custom lowering for 128-bit CopyToReg only");
+
+  SDNode *Node = Op.getNode();
+  SDLoc DL(Node);
+
+  SDValue Cast = DAG.getBitcast(MVT::v2i64, Op->getOperand(2));
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                           DAG.getIntPtrConstant(0, DL));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                           DAG.getIntPtrConstant(1, DL));
+
+  SmallVector<SDValue, 5> NewOps(Op->getNumOperands() + 1);
+  SmallVector<EVT, 3> ResultsType(Node->values());
+
+  NewOps[0] = Op->getOperand(0); // Chain
+  NewOps[1] = Op->getOperand(1); // Dst Reg
+  NewOps[2] = Lo;                // Lower 64-bit
+  NewOps[3] = Hi;                // Higher 64-bit
+  if (Op.getNumOperands() == 4)
+    NewOps[4] = Op->getOperand(3); // Glue if exists
+
+  return DAG.getNode(ISD::CopyToReg, DL, ResultsType, NewOps);
+}
+
+unsigned NVPTXTargetLowering::getNumRegisters(
+    LLVMContext &Context, EVT VT,
+    std::optional<MVT> RegisterVT = std::nullopt) const {
+  if (VT == MVT::i128 && RegisterVT == MVT::i128)
+    return 1;
+  return TargetLoweringBase::getNumRegisters(Context, VT, RegisterVT);
+}
+
+bool NVPTXTargetLowering::splitValueIntoRegisterParts(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
+  if (Val.getValueType() == MVT::i128 && NumParts == 1) {
+    Parts[0] = Val;
+    return true;
+  }
+  return false;
 }
 
 // This creates target external symbol for a function parameter.
@@ -5112,9 +5168,12 @@ bool NVPTXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // - [areg+immoff]
   // - [immAddr]
 
-  if (AM.BaseGV) {
+  // immoff must fit in a signed 32-bit int
+  if (!APInt(64, AM.BaseOffs).isSignedIntN(32))
+    return false;
+
+  if (AM.BaseGV)
     return !AM.BaseOffs && !AM.HasBaseReg && !AM.Scale;
-  }
 
   switch (AM.Scale) {
   case 0: // "r", "r+i" or "i" is allowed
@@ -5150,6 +5209,7 @@ NVPTXTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'l':
     case 'f':
     case 'd':
+    case 'q':
     case '0':
     case 'N':
       return C_RegisterClass;
@@ -5175,6 +5235,12 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'l':
     case 'N':
       return std::make_pair(0U, &NVPTX::Int64RegsRegClass);
+    case 'q': {
+      if (STI.getSmVersion() < 70)
+        report_fatal_error("Inline asm with 128 bit operands is only "
+                           "supported for sm_70 and higher!");
+      return std::make_pair(0U, &NVPTX::Int128RegsRegClass);
+    }
     case 'f':
       return std::make_pair(0U, &NVPTX::Float32RegsRegClass);
     case 'd':
@@ -5345,15 +5411,26 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue PerformStoreCombineHelper(SDNode *N, std::size_t Front,
+                                         std::size_t Back) {
+  if (all_of(N->ops().drop_front(Front).drop_back(Back),
+             [](const SDUse &U) { return U.get()->isUndef(); }))
+    // Operand 0 is the previous value in the chain. Cannot return EntryToken
+    // as the previous value will become unused and eliminated later.
+    return N->getOperand(0);
+
+  return SDValue();
+}
+
+static SDValue PerformStoreParamCombine(SDNode *N) {
+  // Operands from the 3rd to the 2nd last one are the values to be stored.
+  //   {Chain, ArgID, Offset, Val, Glue}
+  return PerformStoreCombineHelper(N, 3, 1);
+}
+
 static SDValue PerformStoreRetvalCombine(SDNode *N) {
   // Operands from the 2nd to the last one are the values to be stored
-  for (std::size_t I = 2, OpsCount = N->ops().size(); I != OpsCount; ++I)
-    if (!N->getOperand(I).isUndef())
-      return SDValue();
-
-  // Operand 0 is the previous value in the chain. Cannot return EntryToken
-  // as the previous value will become unused and eliminated later.
-  return N->getOperand(0);
+  return PerformStoreCombineHelper(N, 2, 0);
 }
 
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
@@ -5822,6 +5899,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
       VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
+  // Don't mess with undef values as sra may be simplified to 0, not undef.
+  if (Vector->isUndef() || ISD::allOperandsUndef(Vector.getNode()))
+    return SDValue();
+
   uint64_t VectorBits = VectorVT.getSizeInBits();
   // We only handle the types we can extract in-register.
   if (!(VectorBits == 16 || VectorBits == 32 || VectorBits == 64))
@@ -5950,6 +6031,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
       return PerformStoreRetvalCombine(N);
+    case NVPTXISD::StoreParam:
+    case NVPTXISD::StoreParamV2:
+    case NVPTXISD::StoreParamV4:
+      return PerformStoreParamCombine(N);
     case ISD::EXTRACT_VECTOR_ELT:
       return PerformEXTRACTCombine(N, DCI);
     case ISD::VSELECT:
@@ -6242,6 +6327,30 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   }
 }
 
+static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
+                                   SmallVectorImpl<SDValue> &Results) {
+  // Change the CopyFromReg to output 2 64-bit results instead of a 128-bit
+  // result so that it can pass the legalization
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Reg = N->getOperand(1);
+  SDValue Glue = N->getOperand(2);
+
+  assert(Reg.getValueType() == MVT::i128 &&
+         "Custom lowering for CopyFromReg with 128-bit reg only");
+  SmallVector<EVT, 4> ResultsType = {MVT::i64, MVT::i64, N->getValueType(1),
+                                     N->getValueType(2)};
+  SmallVector<SDValue, 3> NewOps = {Chain, Reg, Glue};
+
+  SDValue NewValue = DAG.getNode(ISD::CopyFromReg, DL, ResultsType, NewOps);
+  SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128,
+                             {NewValue.getValue(0), NewValue.getValue(1)});
+
+  Results.push_back(Pair);
+  Results.push_back(NewValue.getValue(2));
+  Results.push_back(NewValue.getValue(3));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -6252,6 +6361,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::INTRINSIC_W_CHAIN:
     ReplaceINTRINSIC_W_CHAIN(N, DAG, Results);
+    return;
+  case ISD::CopyFromReg:
+    ReplaceCopyFromReg_128(N, DAG, Results);
     return;
   }
 }

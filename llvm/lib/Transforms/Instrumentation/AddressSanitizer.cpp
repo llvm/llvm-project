@@ -108,7 +108,7 @@ static const uint64_t kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const uint64_t kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 36;
 static const uint64_t kLoongArch64_ShadowOffset64 = 1ULL << 46;
-static const uint64_t kRISCV64_ShadowOffset64 = 0xd55550000;
+static const uint64_t kRISCV64_ShadowOffset64 = kDynamicShadowSentinel;
 static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kFreeBSDAArch64_ShadowOffset64 = 1ULL << 47;
@@ -2947,6 +2947,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
   if (F.getName().starts_with("__asan_")) return false;
+  if (F.isPresplitCoroutine())
+    return false;
 
   bool FunctionModified = false;
 

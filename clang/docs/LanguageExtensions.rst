@@ -1546,6 +1546,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__array_extent(type, dim)`` (Embarcadero):
   The ``dim``'th array bound in the type ``type``, or ``0`` if
   ``dim >= __array_rank(type)``.
+* ``__builtin_is_virtual_base_of`` (C++, GNU, Microsoft)
 * ``__can_pass_in_regs`` (C++)
   Returns whether a class can be passed in registers under the current
   ABI. This type can only be applied to unqualified class types.
@@ -3977,7 +3978,10 @@ standard library ``<stdarg.h>`` header:
 
 * ``__builtin_va_list``
 
-A predefined typedef for the target-specific ``va_list`` type.
+A predefined typedef for the target-specific ``va_list`` type. It is undefined
+behavior to use a byte-wise copy of this type produced by calling ``memcpy``,
+``memmove``, or similar. Valid explicit copies are only produced by calling
+``va_copy`` or ``__builtin_va_copy``.
 
 * ``void __builtin_va_start(__builtin_va_list list, <parameter-name>)``
 

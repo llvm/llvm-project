@@ -44,6 +44,11 @@ $ perf2bolt -p perf.data -o perf.fdata vmlinux
 
 Under a high load, `perf.data` should be several gigabytes in size and you should expect the converted `perf.fdata` not to exceed 100 MB.
 
+Profiles collected from multiple workloads could be joined into a single profile using `merge-fdata` utility:
+```bash
+$ merge-fdata perf.1.fdata perf.2.fdata ... perf.<N>.fdata > perf.merged.fdata
+```
+
 Two changes are required for the kernel build. The first one is optional but highly recommended. It introduces a BOLT-reserved space into `vmlinux` code section:
 
 

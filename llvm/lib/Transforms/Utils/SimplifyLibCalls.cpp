@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -1958,24 +1959,52 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
 Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
-  if (!CI->isFast())
-    return nullptr;
+  Value *Real, *Imag;
+
+  if (CI->arg_size() == 1) {
+
+    if (!CI->isFast())
+      return nullptr;
+
+    Value *Op = CI->getArgOperand(0);
+    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
+
+    Real = B.CreateExtractValue(Op, 0, "real");
+    Imag = B.CreateExtractValue(Op, 1, "imag");
+
+  } else {
+    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
+
+    Real = CI->getArgOperand(0);
+    Imag = CI->getArgOperand(1);
+
+    // if real or imaginary part is zero, simplify to abs(cimag(z))
+    // or abs(creal(z))
+    Value *AbsOp = nullptr;
+    if (ConstantFP *ConstReal = dyn_cast<ConstantFP>(Real)) {
+      if (ConstReal->isZero())
+        AbsOp = Imag;
+
+    } else if (ConstantFP *ConstImag = dyn_cast<ConstantFP>(Imag)) {
+      if (ConstImag->isZero())
+        AbsOp = Real;
+    }
+
+    if (AbsOp) {
+      IRBuilderBase::FastMathFlagGuard Guard(B);
+      B.setFastMathFlags(CI->getFastMathFlags());
+
+      return copyFlags(
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
+    }
+
+    if (!CI->isFast())
+      return nullptr;
+  }
 
   // Propagate fast-math flags from the existing call to new instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(CI->getFastMathFlags());
-
-  Value *Real, *Imag;
-  if (CI->arg_size() == 1) {
-    Value *Op = CI->getArgOperand(0);
-    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
-    Real = B.CreateExtractValue(Op, 0, "real");
-    Imag = B.CreateExtractValue(Op, 1, "imag");
-  } else {
-    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
-    Real = CI->getArgOperand(0);
-    Imag = CI->getArgOperand(1);
-  }
 
   Value *RealReal = B.CreateFMul(Real, Real);
   Value *ImagImag = B.CreateFMul(Imag, Imag);
@@ -2989,6 +3018,37 @@ void LibCallSimplifier::classifyArgUse(
   }
 }
 
+/// Constant folds remquo
+Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
+  const APFloat *X, *Y;
+  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
+      !match(CI->getArgOperand(1), m_APFloat(Y)))
+    return nullptr;
+
+  APFloat::opStatus Status;
+  APFloat Quot = *X;
+  Status = Quot.divide(*Y, APFloat::rmNearestTiesToEven);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
+    return nullptr;
+  APFloat Rem = *X;
+  if (Rem.remainder(*Y) != APFloat::opOK)
+    return nullptr;
+
+  // TODO: We can only keep at least the three of the last bits of x/y
+  unsigned IntBW = TLI->getIntSize();
+  APSInt QuotInt(IntBW, /*isUnsigned=*/false);
+  bool IsExact;
+  Status =
+      Quot.convertToInteger(QuotInt, APFloat::rmNearestTiesToEven, &IsExact);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
+    return nullptr;
+
+  B.CreateAlignedStore(
+      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      CI->getArgOperand(2), CI->getParamAlign(2));
+  return ConstantFP::get(CI->getType(), Rem);
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -3669,6 +3729,17 @@ Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeExit(CallInst *CI) {
+
+  // Mark 'exit' as cold if its not exit(0) (success).
+  const APInt *C;
+  if (!CI->hasFnAttr(Attribute::Cold) &&
+      match(CI->getArgOperand(0), m_APInt(C)) && !C->isZero()) {
+    CI->addFnAttr(Attribute::Cold);
+  }
+  return nullptr;
+}
+
 Value *LibCallSimplifier::optimizeBCopy(CallInst *CI, IRBuilderBase &B) {
   // bcopy(src, dst, n) -> llvm.memmove(dst, src, n)
   return copyFlags(*CI, B.CreateMemMove(CI->getArgOperand(1), Align(1),
@@ -3897,6 +3968,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cabsf:
   case LibFunc_cabsl:
     return optimizeCAbs(CI, Builder);
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    return optimizeRemquo(CI, Builder);
   default:
     return nullptr;
   }
@@ -4020,6 +4095,9 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     case LibFunc_vfprintf:
     case LibFunc_fiprintf:
       return optimizeErrorReporting(CI, Builder, 0);
+    case LibFunc_exit:
+    case LibFunc_Exit:
+      return optimizeExit(CI);
     default:
       return nullptr;
     }

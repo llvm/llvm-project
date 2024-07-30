@@ -961,7 +961,7 @@ bool CXXNameMangler::isStd(const NamespaceDecl *NS) {
   if (!Context.getEffectiveParentContext(NS)->isTranslationUnit())
     return false;
 
-  const IdentifierInfo *II = NS->getOriginalNamespace()->getIdentifier();
+  const IdentifierInfo *II = NS->getFirstDecl()->getIdentifier();
   return II && II->isStr("std");
 }
 
@@ -5177,6 +5177,14 @@ recurse:
           Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                 "cannot yet mangle __datasizeof expression");
       Diags.Report(DiagID);
+      return;
+    }
+    case UETT_PtrAuthTypeDiscriminator: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet mangle __builtin_ptrauth_type_discriminator expression");
+      Diags.Report(E->getExprLoc(), DiagID);
       return;
     }
     case UETT_VecStep: {

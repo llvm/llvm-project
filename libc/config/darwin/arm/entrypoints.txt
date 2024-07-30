@@ -120,9 +120,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -132,6 +135,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cospif
+    libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf
@@ -230,11 +235,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sinhf
     libc.src.math.sin
     libc.src.math.sinf
+    libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

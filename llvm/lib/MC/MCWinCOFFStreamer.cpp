@@ -27,6 +27,8 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbolCOFF.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -45,7 +47,15 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCCodeEmitter> CE,
                                      std::unique_ptr<MCObjectWriter> OW)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
-      CurSymbol(nullptr) {}
+      CurSymbol(nullptr) {
+  auto *TO = Context.getTargetOptions();
+  if (TO && TO->MCIncrementalLinkerCompatible)
+    getWriter().setIncrementalLinkerCompatible(true);
+}
+
+WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
+  return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
+}
 
 void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
@@ -205,9 +215,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   changeSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
-  auto *F = getContext().allocFragment<MCSymbolIdFragment>(Symbol);
-  F->setParent(SXData);
-  SXData->addFragment(*F);
+  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();
 
@@ -352,7 +360,7 @@ void MCWinCOFFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                            uint64_t Count) {
   // Ignore temporary symbols for now.
   if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-    getAssembler().CGProfile.push_back({From, To, Count});
+    getWriter().getCGProfile().push_back({From, To, Count});
 }
 
 void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
@@ -368,8 +376,8 @@ void MCWinCOFFStreamer::finishImpl() {
     switchSection(Asm.getContext().getCOFFSection(".llvm_addrsig",
                                                   COFF::IMAGE_SCN_LNK_REMOVE));
   }
-  if (!Asm.CGProfile.empty()) {
-    for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+  if (!Asm.getWriter().getCGProfile().empty()) {
+    for (auto &E : Asm.getWriter().getCGProfile()) {
       finalizeCGProfileEntry(E.From);
       finalizeCGProfileEntry(E.To);
     }

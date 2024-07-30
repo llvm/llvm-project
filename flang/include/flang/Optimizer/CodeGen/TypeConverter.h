@@ -60,7 +60,7 @@ public:
   mlir::Type indexType() const;
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  std::optional<mlir::LogicalResult>
+  std::optional<llvm::LogicalResult>
   convertRecordType(fir::RecordType derived,
                     llvm::SmallVectorImpl<mlir::Type> &results);
 

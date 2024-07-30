@@ -16,6 +16,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/StringExtras.h"
@@ -217,7 +218,6 @@ public:
 
 static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                SourceRange Range) {
-  NoMergeAttr NMA(S.Context, A);
   CallExprFinder CEF(S, St);
 
   if (!CEF.foundCallExpr() && !CEF.foundAsmStmt()) {
@@ -584,6 +584,39 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) OpenCLUnrollHintAttr(S.Context, A, UnrollFactor);
 }
 
+static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                    SourceRange Range) {
+
+  if (A.getSemanticSpelling() == HLSLLoopHintAttr::Spelling::Microsoft_loop &&
+      !A.checkAtMostNumArgs(S, 0))
+    return nullptr;
+
+  unsigned UnrollFactor = 0;
+  if (A.getNumArgs() == 1) {
+
+    if (A.isArgIdent(0)) {
+      S.Diag(A.getLoc(), diag::err_attribute_argument_type)
+          << A << AANT_ArgumentIntegerConstant << A.getRange();
+      return nullptr;
+    }
+
+    Expr *E = A.getArgAsExpr(0);
+
+    if (S.CheckLoopHintExpr(E, St->getBeginLoc(),
+                            /*AllowZero=*/false))
+      return nullptr;
+
+    std::optional<llvm::APSInt> ArgVal = E->getIntegerConstantExpr(S.Context);
+    // CheckLoopHintExpr handles non int const cases
+    assert(ArgVal != std::nullopt && "ArgVal should be an integer constant.");
+    int Val = ArgVal->getSExtValue();
+    // CheckLoopHintExpr handles negative and zero cases
+    assert(Val > 0 && "Val should be a positive integer greater than zero.");
+    UnrollFactor = static_cast<unsigned>(Val);
+  }
+  return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -618,6 +651,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
+  case ParsedAttr::AT_HLSLLoopHint:
+    return handleHLSLLoopHintAttr(S, St, A, Range);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:

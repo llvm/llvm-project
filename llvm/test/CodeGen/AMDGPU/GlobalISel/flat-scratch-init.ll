@@ -1,6 +1,8 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,RW-FLAT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch < %s | FileCheck -check-prefixes=GCN,RO-FLAT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 < %s | FileCheck -check-prefixes=GCN,RO-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -mcpu=gfx900 | FileCheck -check-prefixes=GCN,RW-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=+architected-flat-scratch < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx940 < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; Make sure flat_scratch_init is set
 

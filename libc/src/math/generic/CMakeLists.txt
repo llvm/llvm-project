@@ -70,6 +70,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -82,6 +84,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -107,6 +111,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -120,6 +127,31 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  dsqrtl
+  SRCS
+    dsqrtl.cpp
+  HDRS
+    ../dsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  dsqrtf128
+  SRCS
+    dsqrtf128.cpp
+  HDRS
+    ../dsqrtf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_header_library(
@@ -218,6 +250,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cospif
+  SRCS
+    cospif.cpp
+  HDRS
+    ../cospif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sin
   SRCS
     sin.cpp
@@ -284,6 +333,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinpif
+  SRCS
+    sinpif.cpp
+  HDRS
+    ../sinpif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sincosf
   SRCS
     sincosf.cpp
@@ -299,6 +367,27 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  tan
+  SRCS
+    tan.cpp
+  HDRS
+    ../tan.h
+  DEPENDS
+    .range_reduction_double
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
@@ -335,7 +424,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -347,7 +438,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -359,7 +452,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -371,8 +464,12 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -389,6 +486,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fadd
+  SRCS
+    fadd.cpp
+  HDRS
+    ../fadd.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   trunc
   SRCS
     trunc.cpp
@@ -398,6 +507,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -410,6 +521,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -435,6 +548,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -460,6 +576,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -472,6 +590,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -497,6 +617,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -522,6 +645,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -534,6 +659,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -559,6 +686,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -584,6 +714,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -596,6 +728,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -621,6 +755,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -770,6 +907,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -782,6 +921,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -807,6 +948,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -1307,6 +1451,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -1319,6 +1465,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -1344,6 +1492,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -1915,7 +2065,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -1927,7 +2079,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -1939,7 +2093,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -1966,6 +2120,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 
@@ -1978,7 +2134,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -1990,7 +2148,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2002,7 +2162,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2029,6 +2189,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2040,7 +2202,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2052,7 +2216,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2064,7 +2230,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2078,6 +2244,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2102,7 +2270,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2114,7 +2284,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2126,7 +2298,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2140,6 +2312,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2288,7 +2462,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2300,7 +2476,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2312,7 +2490,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2326,6 +2504,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2350,7 +2530,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2362,7 +2544,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2374,7 +2558,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2388,6 +2572,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O3
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -2534,11 +2720,32 @@ add_entrypoint_object(
   HDRS
     ../fmul.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.uint128
-    libc.src.__support.CPP.bit
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmull
+  SRCS
+    fmull.cpp
+  HDRS
+    ../fmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmulf128
+  SRCS
+    fmulf128.cpp
+  HDRS
+    ../fmulf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
   COMPILE_OPTIONS
     -O3
 )
@@ -2710,9 +2917,12 @@ add_entrypoint_object(
   HDRS
     ../hypotf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
 )
@@ -2787,6 +2997,36 @@ add_entrypoint_object(
     ../hypot.h
   DEPENDS
     libc.src.__support.FPUtil.hypot
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnan
+  SRCS
+    isnan.cpp
+  HDRS
+    ../isnan.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnanf
+  SRCS
+    isnanf.cpp
+  HDRS
+    ../isnanf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnanl
+  SRCS
+    isnanl.cpp
+  HDRS
+    ../isnanl.h
   COMPILE_OPTIONS
     -O3
 )
@@ -3609,6 +3849,26 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atan2
+  SRCS
+    atan2.cpp
+  HDRS
+    ../atan2.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
   scalblnf16
   SRCS
     scalblnf16.cpp
@@ -3726,6 +3986,42 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  totalordermag
+  SRCS
+    totalordermag.cpp
+  HDRS
+    ../totalordermag.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  totalordermagf
+  SRCS
+    totalordermagf.cpp
+  HDRS
+    ../totalordermagf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  totalordermagl
+  SRCS
+    totalordermagl.cpp
+  HDRS
+    ../totalordermagl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   totalordermagf16
   SRCS
     totalordermagf16.cpp
@@ -3733,6 +4029,19 @@ add_entrypoint_object(
     ../totalordermagf16.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  totalordermagf128
+  SRCS
+    totalordermagf128.cpp
+  HDRS
+    ../totalordermagf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
@@ -3777,11 +4086,154 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16add
+  SRCS
+    f16add.cpp
+  HDRS
+    ../f16add.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16addf
+  SRCS
+    f16addf.cpp
+  HDRS
+    ../f16addf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16addl
+  SRCS
+    f16addl.cpp
+  HDRS
+    ../f16addl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16addf128
+  SRCS
+    f16addf128.cpp
+  HDRS
+    ../f16addf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sub
+  SRCS
+    f16sub.cpp
+  HDRS
+    ../f16sub.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16subf
+  SRCS
+    f16subf.cpp
+  HDRS
+    ../f16subf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16subl
+  SRCS
+    f16subl.cpp
+  HDRS
+    ../f16subl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16subf128
+  SRCS
+    f16subf128.cpp
+  HDRS
+    ../f16subf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16div
+  SRCS
+    f16div.cpp
+  HDRS
+    ../f16div.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16divf
   SRCS
     f16divf.cpp
   HDRS
     ../f16divf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16divl
+  SRCS
+    f16divl.cpp
+  HDRS
+    ../f16divl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16divf128
+  SRCS
+    f16divf128.cpp
+  HDRS
+    ../f16divf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.div
@@ -3799,7 +4251,7 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
-    -O0 -ggdb3
+    -O3
 )
 
 add_entrypoint_object(
@@ -3842,6 +4294,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16sqrt
+  SRCS
+    f16sqrt.cpp
+  HDRS
+    ../f16sqrt.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16sqrtf
   SRCS
     f16sqrtf.cpp
@@ -3850,6 +4315,182 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sqrtl
+  SRCS
+    f16sqrtl.cpp
+  HDRS
+    ../f16sqrtl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sqrtf128
+  SRCS
+    f16sqrtf128.cpp
+  HDRS
+    ../f16sqrtf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsqrt
+  SRCS
+    fsqrt.cpp
+  HDRS
+    ../fsqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsqrtl
+  SRCS
+    fsqrtl.cpp
+  HDRS
+    ../fsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsqrtf128
+  SRCS
+    fsqrtf128.cpp
+  HDRS
+    ../fsqrtf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  cbrtf
+  SRCS
+    cbrtf.cpp
+  HDRS
+    ../cbrtf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
+  cbrt
+  SRCS
+    cbrt.cpp
+  HDRS
+    ../cbrt.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+    libc.src.__support.integer_literals
+)
+
+add_entrypoint_object(
+  dmull
+  SRCS
+    dmull.cpp
+  HDRS
+    ../dmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  dmulf128
+  SRCS
+    dmulf128.cpp
+  HDRS
+    ../dmulf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mul
+  SRCS
+    f16mul.cpp
+  HDRS
+    ../f16mul.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mulf
+  SRCS
+    f16mulf.cpp
+  HDRS
+    ../f16mulf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mull
+  SRCS
+    f16mull.cpp
+  HDRS
+    ../f16mull.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16mulf128
+  SRCS
+    f16mulf128.cpp
+  HDRS
+    ../f16mulf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.mul
   COMPILE_OPTIONS
     -O3
 )

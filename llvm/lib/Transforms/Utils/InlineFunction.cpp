@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
@@ -56,6 +57,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1672,8 +1674,9 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   if (ByValAlignment)
     Alignment = std::max(Alignment, *ByValAlignment);
 
-  AllocaInst *NewAlloca = new AllocaInst(ByValType, DL.getAllocaAddrSpace(),
-                                         nullptr, Alignment, Arg->getName());
+  AllocaInst *NewAlloca =
+      new AllocaInst(ByValType, Arg->getType()->getPointerAddressSpace(),
+                     nullptr, Alignment, Arg->getName());
   NewAlloca->insertBefore(Caller->begin()->begin());
   IFI.StaticAllocas.push_back(NewAlloca);
 
@@ -1812,10 +1815,9 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
 
   // Iterate over all instructions, updating metadata and debug-info records.
   for (; FI != Fn->end(); ++FI) {
-    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
-         ++BI) {
-      UpdateInst(*BI);
-      for (DbgRecord &DVR : BI->getDbgRecordRange()) {
+    for (Instruction &I : *FI) {
+      UpdateInst(I);
+      for (DbgRecord &DVR : I.getDbgRecordRange()) {
         UpdateDVR(&DVR);
       }
     }
@@ -1976,16 +1978,28 @@ void llvm::updateProfileCallee(
           ? 0
           : PriorEntryCount + EntryDelta;
 
+  auto updateVTableProfWeight = [](CallBase *CB, const uint64_t NewEntryCount,
+                                   const uint64_t PriorEntryCount) {
+    Instruction *VPtr = PGOIndirectCallVisitor::tryGetVTableInstruction(CB);
+    if (VPtr)
+      scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+  };
+
   // During inlining ?
   if (VMap) {
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
     for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
-        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
+        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(CI, CloneEntryCount, PriorEntryCount);
+        }
+
       if (isa<InvokeInst>(Entry.first))
-        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second))
+        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
           II->updateProfWeight(CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(II, CloneEntryCount, PriorEntryCount);
+        }
     }
   }
 
@@ -1996,10 +2010,14 @@ void llvm::updateProfileCallee(
       // No need to update the callsite if it is pruned during inlining.
       if (!VMap || VMap->count(&BB))
         for (Instruction &I : BB) {
-          if (CallInst *CI = dyn_cast<CallInst>(&I))
+          if (CallInst *CI = dyn_cast<CallInst>(&I)) {
             CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-          if (InvokeInst *II = dyn_cast<InvokeInst>(&I))
+            updateVTableProfWeight(CI, NewEntryCount, PriorEntryCount);
+          }
+          if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
             II->updateProfWeight(NewEntryCount, PriorEntryCount);
+            updateVTableProfWeight(II, NewEntryCount, PriorEntryCount);
+          }
         }
   }
 }
@@ -2612,8 +2630,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
     IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
-    for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
-      AllocaInst *AI = IFI.StaticAllocas[ai];
+    for (AllocaInst *AI : IFI.StaticAllocas) {
       // Don't mark swifterror allocas. They can't have bitcast uses.
       if (AI->isSwiftError())
         continue;
@@ -2950,8 +2967,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // Loop over all of the return instructions adding entries to the PHI node
     // as appropriate.
     if (PHI) {
-      for (unsigned i = 0, e = Returns.size(); i != e; ++i) {
-        ReturnInst *RI = Returns[i];
+      for (ReturnInst *RI : Returns) {
         assert(RI->getReturnValue()->getType() == PHI->getType() &&
                "Ret value not consistent in function!");
         PHI->addIncoming(RI->getReturnValue(), RI->getParent());
@@ -2960,9 +2976,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add a branch to the merge points and remove return instructions.
     DebugLoc Loc;
-    for (unsigned i = 0, e = Returns.size(); i != e; ++i) {
-      ReturnInst *RI = Returns[i];
-      BranchInst* BI = BranchInst::Create(AfterCallBB, RI->getIterator());
+    for (ReturnInst *RI : Returns) {
+      BranchInst *BI = BranchInst::Create(AfterCallBB, RI->getIterator());
       Loc = RI->getDebugLoc();
       BI->setDebugLoc(Loc);
       RI->eraseFromParent();

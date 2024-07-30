@@ -77,6 +77,7 @@ namespace format {
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
+  TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
@@ -101,6 +102,7 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \

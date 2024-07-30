@@ -818,8 +818,8 @@ defm MOVAZ_ZMI  : sme2p1_movaz_tile_to_vec<"movaz", int_aarch64_sme_readz_horiz,
                                            int_aarch64_sme_readz_q_horiz, int_aarch64_sme_readz_q_vert>;
 defm MOVAZ_2ZMI  : sme2p1_movaz_tile_to_vec_vg2<"movaz">;
 defm MOVAZ_4ZMI  : sme2p1_movaz_tile_to_vec_vg4<"movaz">;
-defm MOVAZ_VG2_2ZM : sme2_mova_array_to_vec_vg2_multi<0b010, "movaz">;
-defm MOVAZ_VG4_4ZM : sme2_mova_array_to_vec_vg4_multi<0b1100, "movaz">;
+defm MOVAZ_VG2_2ZMXI : sme2_movaz_array_to_vec_vg2_multi<"movaz">;
+defm MOVAZ_VG4_4ZMXI : sme2_movaz_array_to_vec_vg4_multi<"movaz">;
 
 defm ZERO_MXI :  sme2p1_zero_matrix<"zero">;
 

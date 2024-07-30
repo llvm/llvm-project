@@ -98,9 +98,9 @@ namespace {
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -126,7 +126,7 @@ INITIALIZE_PASS_BEGIN(HexagonPacketizer, "hexagon-packetizer",
                       "Hexagon Packetizer", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(HexagonPacketizer, "hexagon-packetizer",
                     "Hexagon Packetizer", false, false)
@@ -211,7 +211,7 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();
-  auto &MLI = getAnalysis<MachineLoopInfo>();
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *MBPI =
       &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();

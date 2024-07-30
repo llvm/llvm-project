@@ -79,13 +79,13 @@ char LiveDebugVariables::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveDebugVariables, DEBUG_TYPE,
                 "Debug Variable Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(LiveDebugVariables, DEBUG_TYPE,
                 "Debug Variable Analysis", false, false)
 
 void LiveDebugVariables::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<LiveIntervals>();
+  AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -1263,7 +1263,7 @@ void LDVImpl::computeIntervals() {
 bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
   clear();
   MF = &mf;
-  LIS = &pass.getAnalysis<LiveIntervals>();
+  LIS = &pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TRI = mf.getSubtarget().getRegisterInfo();
   LLVM_DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
                     << mf.getName() << " **********\n");

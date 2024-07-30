@@ -148,12 +148,12 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define internal void @[[OMP_OUTLINED_FN_NUM_THREADS_3_1]]
   // CHECK: call void @__kmpc_barrier
 
-// CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_VAR_1:.*]])
+// CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_EXPR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
   %0 = llvm.mlir.constant(0 : index) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
-// CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_VAR_1]], 0
+// CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_EXPR_1]], 0
 
 
 // CHECK: %[[GTN_IF_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[SI_VAR_IF_1:.*]])
@@ -164,7 +164,7 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
 // CHECK: [[OUTLINED_EXIT_IF_1]]:
 // CHECK: br label %[[RETURN_BLOCK_IF_1:.*]]
-  omp.parallel if(%1 : i1) {
+  omp.parallel if(%1) {
     omp.barrier
     omp.terminator
   }
@@ -301,6 +301,26 @@ llvm.func @test_omp_master() -> () {
       omp.master {
         omp.terminator
       }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @test_omp_masked({{.*}})
+llvm.func @test_omp_masked(%arg0: i32)-> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @{{.*}})
+// CHECK: omp.par.region1:
+  omp.parallel {
+    omp.masked filter(%arg0: i32) {
+// CHECK: [[OMP_THREAD_3_4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
+// CHECK: {{[0-9]+}} = call i32 @__kmpc_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]], i32 %{{[0-9]+}})
+// CHECK: omp.masked.region
+// CHECK: call void @__kmpc_end_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]])
+// CHECK: br label %omp_region.end
       omp.terminator
     }
     omp.terminator
@@ -726,6 +746,7 @@ llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -749,6 +770,7 @@ llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -769,6 +791,7 @@ llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -788,6 +811,7 @@ llvm.func @simd_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 :
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -816,6 +840,7 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
       llvm.store %arg2, %1 : i32, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -836,6 +861,7 @@ llvm.func @simd_order() {
       llvm.store %arg0, %2 : i64, !llvm.ptr
       omp.yield
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -1304,14 +1330,14 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP2:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR]], i64 0, i64 0
       // CHECK: [[OMP_THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_wait(ptr @[[GLOB3]], i32 [[OMP_THREAD2]], ptr [[TMP2]])
-      omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {doacross_num_loops = 1 : i64}
 
       // CHECK: [[TMP3:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR3]], i64 0, i64 0
       // CHECK: store i64 [[ARG0]], ptr [[TMP3]], align 8
       // CHECK: [[TMP4:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR3]], i64 0, i64 0
       // CHECK: [[OMP_THREAD4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB5:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_post(ptr @[[GLOB5]], i32 [[OMP_THREAD4]], ptr [[TMP4]])
-      omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {doacross_num_loops = 1 : i64}
 
       omp.yield
     }
@@ -1334,7 +1360,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP10:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR7]], i64 0, i64 0
       // CHECK: [[OMP_THREAD8:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB7]])
       // CHECK: call void @__kmpc_doacross_wait(ptr @[[GLOB7]], i32 [[OMP_THREAD8]], ptr [[TMP10]])
-      omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {doacross_num_loops = 2 : i64}
 
       // CHECK: [[TMP11:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR9]], i64 0, i64 0
       // CHECK: store i64 [[ARG0]], ptr [[TMP11]], align 8
@@ -1343,7 +1369,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP13:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR9]], i64 0, i64 0
       // CHECK: [[OMP_THREAD10:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB9:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_post(ptr @[[GLOB9]], i32 [[OMP_THREAD10]], ptr [[TMP13]])
-      omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {num_loops_val = 2 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {doacross_num_loops = 2 : i64}
 
       omp.yield
     }
@@ -2093,6 +2119,8 @@ llvm.func @omp_sections_empty() -> () {
   omp.sections {
     omp.terminator
   }
+  // CHECK-NEXT: br label %entry
+  // CHECK: entry:
   // CHECK-NEXT: ret void
   llvm.return
 }

@@ -739,7 +739,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
       bool SawStore = false;
       // Check if it's safe to remove the instruction due to side effects.
       // We can, and want to, remove Phis here.
-      if (!MI->isSafeToMove(nullptr, SawStore) && !MI->isPHI()) {
+      if (!MI->isSafeToMove(SawStore) && !MI->isPHI()) {
         ++MI;
         continue;
       }
@@ -2763,8 +2763,8 @@ public:
   void runOnLoop(MachineFunction &MF, MachineLoop &L);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -2774,13 +2774,13 @@ char ModuloScheduleTest::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ModuloScheduleTest, "modulo-schedule-test",
                       "Modulo Schedule test pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(ModuloScheduleTest, "modulo-schedule-test",
                     "Modulo Schedule test pass", false, false)
 
 bool ModuloScheduleTest::runOnMachineFunction(MachineFunction &MF) {
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   for (auto *L : MLI) {
     if (L->getTopBlock() != L->getBottomBlock())
       continue;
@@ -2810,7 +2810,7 @@ static void parseSymbolString(StringRef S, int &Cycle, int &Stage) {
 }
 
 void ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineBasicBlock *BB = L.getTopBlock();
   dbgs() << "--- ModuloScheduleTest running on BB#" << BB->getNumber() << "\n";
 

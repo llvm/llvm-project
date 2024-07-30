@@ -1616,7 +1616,7 @@ std::string DevirtModule::getGlobalName(VTableSlot Slot,
   for (uint64_t Arg : Args)
     OS << '_' << Arg;
   OS << '_' << Name;
-  return OS.str();
+  return FullName;
 }
 
 bool DevirtModule::shouldExportConstantsAsAbsoluteSymbols() {

@@ -88,10 +88,8 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();
   // Emit closing brace for DWARF sections only.
-  if (isDwarfSection(FI, CurSection) && HasDWARFSections) {
-    HasDWARFSections = false;
+  if (isDwarfSection(FI, CurSection))
     OS << "\t}\n";
-  }
   if (isDwarfSection(FI, Section)) {
     // Emit DWARF .file directives in the outermost scope.
     outputDwarfFileDirectives();
@@ -102,7 +100,6 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
     // DWARF sections are enclosed into braces - emit the open one.
     OS << "\t{\n";
     HasSections = true;
-    HasDWARFSections = true;
   }
 }
 

@@ -911,6 +911,18 @@ MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
   return buildInstr(TargetOpcode::G_FCMP, Res, {Pred, Op0, Op1}, Flags);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildSCmp(const DstOp &Res,
+                                                const SrcOp &Op0,
+                                                const SrcOp &Op1) {
+  return buildInstr(TargetOpcode::G_SCMP, Res, {Op0, Op1});
+}
+
+MachineInstrBuilder MachineIRBuilder::buildUCmp(const DstOp &Res,
+                                                const SrcOp &Op0,
+                                                const SrcOp &Op1) {
+  return buildInstr(TargetOpcode::G_UCMP, Res, {Op0, Op1});
+}
+
 MachineInstrBuilder
 MachineIRBuilder::buildSelect(const DstOp &Res, const SrcOp &Tst,
                               const SrcOp &Op0, const SrcOp &Op1,

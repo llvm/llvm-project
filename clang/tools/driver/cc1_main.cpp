@@ -14,7 +14,7 @@
 
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -25,6 +25,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -147,7 +148,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
     DescMap.insert({feature.Key, feature.Desc});
 
   if (MachineTriple.isRISCV())
-    llvm::riscvExtensionsHelp(DescMap);
+    llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
   else if (MachineTriple.isAArch64())
     llvm::AArch64::PrintSupportedExtensions();
   else if (MachineTriple.isARM())
@@ -190,13 +191,20 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   for (const llvm::SubtargetFeatureKV &feature : Features)
     EnabledFeatureNames.insert(feature.Key);
 
-  if (!MachineTriple.isAArch64()) {
+  if (MachineTriple.isAArch64())
+    llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
+  else if (MachineTriple.isRISCV()) {
+    llvm::StringMap<llvm::StringRef> DescMap;
+    for (const llvm::SubtargetFeatureKV &feature : Features)
+      DescMap.insert({feature.Key, feature.Desc});
+    llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
+                                               EnabledFeatureNames, DescMap);
+  } else {
     // The option was already checked in Driver::HandleImmediateArgs,
     // so we do not expect to get here if we are not a supported architecture.
     assert(0 && "Unhandled triple for --print-enabled-extensions option.");
     return 1;
   }
-  llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
 
   return 0;
 }
@@ -234,7 +242,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
-        Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
+        Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
+        Clang->getFrontendOpts().TimeTraceVerbose);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)

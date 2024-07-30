@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstdint>
 #include <iterator>
 #include <ranges>
 #include <stdexcept>
@@ -338,60 +339,92 @@ cpp20_random_access_iterator(It) -> cpp20_random_access_iterator<It>;
 
 static_assert(std::random_access_iterator<cpp20_random_access_iterator<int*>>);
 
-template <class It>
-class contiguous_iterator
-{
-    static_assert(std::is_pointer_v<It>, "Things probably break in this case");
+template <std::contiguous_iterator It>
+class contiguous_iterator {
+  It it_;
 
-    It it_;
+  template <std::contiguous_iterator U>
+  friend class contiguous_iterator;
 
-    template <class U> friend class contiguous_iterator;
 public:
-    typedef          std::contiguous_iterator_tag              iterator_category;
-    typedef typename std::iterator_traits<It>::value_type      value_type;
-    typedef typename std::iterator_traits<It>::difference_type difference_type;
-    typedef It                                                 pointer;
-    typedef typename std::iterator_traits<It>::reference       reference;
-    typedef typename std::remove_pointer<It>::type             element_type;
+  using iterator_category = std::contiguous_iterator_tag;
+  using value_type        = typename std::iterator_traits<It>::value_type;
+  using difference_type   = typename std::iterator_traits<It>::difference_type;
+  using pointer           = typename std::iterator_traits<It>::pointer;
+  using reference         = typename std::iterator_traits<It>::reference;
+  using element_type      = value_type;
 
-    TEST_CONSTEXPR_CXX14 It base() const {return it_;}
+  constexpr It base() const { return it_; }
 
-    TEST_CONSTEXPR_CXX14 contiguous_iterator() : it_() {}
-    TEST_CONSTEXPR_CXX14 explicit contiguous_iterator(It it) : it_(it) {}
+  constexpr contiguous_iterator() : it_() {}
+  constexpr explicit contiguous_iterator(It it) : it_(it) {}
 
-    template <class U>
-    TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+  template <class U>
+  constexpr contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
 
-    template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
-    constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) { u.it_ = U(); }
+  template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+  constexpr contiguous_iterator(contiguous_iterator<U>&& u) : it_(u.it_) {
+    u.it_ = U();
+  }
 
-    TEST_CONSTEXPR reference operator*() const {return *it_;}
-    TEST_CONSTEXPR pointer operator->() const {return it_;}
-    TEST_CONSTEXPR reference operator[](difference_type n) const {return it_[n];}
+  constexpr reference operator*() const { return *it_; }
+  constexpr pointer operator->() const { return it_; }
+  constexpr reference operator[](difference_type n) const { return it_[n]; }
 
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator++() {++it_; return *this;}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator--() {--it_; return *this;}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator operator++(int) {return contiguous_iterator(it_++);}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator operator--(int) {return contiguous_iterator(it_--);}
+  constexpr contiguous_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr contiguous_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+  constexpr contiguous_iterator operator++(int) { return contiguous_iterator(it_++); }
+  constexpr contiguous_iterator operator--(int) { return contiguous_iterator(it_--); }
 
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator+=(difference_type n) {it_ += n; return *this;}
-    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator-=(difference_type n) {it_ -= n; return *this;}
-    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator+(contiguous_iterator x, difference_type n) {x += n; return x;}
-    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator+(difference_type n, contiguous_iterator x) {x += n; return x;}
-    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator-(contiguous_iterator x, difference_type n) {x -= n; return x;}
-    friend TEST_CONSTEXPR difference_type operator-(contiguous_iterator x, contiguous_iterator y) {return x.it_ - y.it_;}
+  constexpr contiguous_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+  constexpr contiguous_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+  friend constexpr contiguous_iterator operator+(contiguous_iterator x, difference_type n) {
+    x += n;
+    return x;
+  }
+  friend constexpr contiguous_iterator operator+(difference_type n, contiguous_iterator x) {
+    x += n;
+    return x;
+  }
+  friend constexpr contiguous_iterator operator-(contiguous_iterator x, difference_type n) {
+    x -= n;
+    return x;
+  }
+  friend constexpr difference_type operator-(contiguous_iterator x, contiguous_iterator y) { return x.it_ - y.it_; }
 
-    friend TEST_CONSTEXPR bool operator==(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ == y.it_;}
-    friend TEST_CONSTEXPR bool operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ != y.it_;}
-    friend TEST_CONSTEXPR bool operator< (const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ <  y.it_;}
-    friend TEST_CONSTEXPR bool operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ <= y.it_;}
-    friend TEST_CONSTEXPR bool operator> (const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ >  y.it_;}
-    friend TEST_CONSTEXPR bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {return x.it_ >= y.it_;}
+  friend constexpr bool operator==(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ == y.it_;
+  }
+  friend constexpr bool operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ != y.it_;
+  }
+  friend constexpr bool operator<(const contiguous_iterator& x, const contiguous_iterator& y) { return x.it_ < y.it_; }
+  friend constexpr bool operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ <= y.it_;
+  }
+  friend constexpr bool operator>(const contiguous_iterator& x, const contiguous_iterator& y) { return x.it_ > y.it_; }
+  friend constexpr bool operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {
+    return x.it_ >= y.it_;
+  }
 
-    friend TEST_CONSTEXPR It base(const contiguous_iterator& i) { return i.it_; }
+    // Note no operator<=>, use three_way_contiguous_iterator for testing operator<=>
 
-    template <class T>
-    void operator,(T const &) = delete;
+  friend constexpr It base(const contiguous_iterator& i) { return i.it_; }
+
+  template <class T>
+  void operator,(T const&) = delete;
 };
 template <class It>
 contiguous_iterator(It) -> contiguous_iterator<It>;
@@ -724,17 +757,18 @@ struct common_input_iterator {
 
 #  endif // TEST_STD_VER >= 20
 
-// Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
-// operation or an equality comparison operation called. Has three recorders:
-// * `stride_count`, which records the total number of calls to an op++, op--, op+=, or op-=.
-// * `stride_displacement`, which records the displacement of the calls. This means that both
-//   op++/op+= will increase the displacement counter by 1, and op--/op-= will decrease the
-//   displacement counter by 1.
-// * `equals_count`, which records the total number of calls to an op== or op!=. If compared
-//   against a sentinel object, that sentinel object must call the `record_equality_comparison`
-//   function so that the comparison is counted correctly.
+struct IteratorOpCounts {
+  std::size_t increments = 0; ///< Number of times the iterator moved forward (++it, it++, it+=positive, it-=negative).
+  std::size_t decrements = 0; ///< Number of times the iterator moved backward (--it, it--, it-=positive, it+=negative).
+  std::size_t zero_moves = 0; ///< Number of times a call was made to move the iterator by 0 positions (it+=0, it-=0).
+  std::size_t equal_cmps = 0; ///< Total number of calls to op== or op!=. If compared against a sentinel object, that
+                              ///  sentinel object must call the `record_equality_comparison` function so that the
+                              ///  comparison is counted correctly.
+};
+
+// Iterator adaptor that records its operation counts in a IteratorOpCounts
 template <class It>
-class stride_counting_iterator {
+class operation_counting_iterator {
 public:
     using value_type = typename iter_value_or_void<It>::type;
     using difference_type = std::iter_difference_t<It>;
@@ -746,147 +780,160 @@ public:
         std::conditional_t<std::input_iterator<It>,         std::input_iterator_tag,
         /* else */                                          std::output_iterator_tag
     >>>>>;
+    using iterator_category = iterator_concept;
 
-    stride_counting_iterator() requires std::default_initializable<It> = default;
+    operation_counting_iterator()
+      requires std::default_initializable<It>
+    = default;
 
-    constexpr explicit stride_counting_iterator(It const& it) : base_(base(it)) { }
+    constexpr explicit operation_counting_iterator(It const& it, IteratorOpCounts* counts = nullptr)
+        : base_(base(it)), counts_(counts) {}
 
-    friend constexpr It base(stride_counting_iterator const& it) { return It(it.base_); }
+    constexpr operation_counting_iterator(const operation_counting_iterator& o) { *this = o; }
+    constexpr operation_counting_iterator(operation_counting_iterator&& o) { *this = o; }
 
-    constexpr difference_type stride_count() const { return stride_count_; }
+    constexpr operation_counting_iterator& operator=(const operation_counting_iterator& o) = default;
+    constexpr operation_counting_iterator& operator=(operation_counting_iterator&& o) { return *this = o; }
 
-    constexpr difference_type stride_displacement() const { return stride_displacement_; }
-
-    constexpr difference_type equals_count() const { return equals_count_; }
+    friend constexpr It base(operation_counting_iterator const& it) { return It(it.base_); }
 
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
     constexpr decltype(auto) operator[](difference_type n) const { return It(base_)[n]; }
 
-    constexpr stride_counting_iterator& operator++() {
-        It tmp(base_);
-        base_ = base(++tmp);
-        ++stride_count_;
-        ++stride_displacement_;
-        return *this;
+    constexpr operation_counting_iterator& operator++() {
+      It tmp(base_);
+      base_ = base(++tmp);
+      moved_by(1);
+      return *this;
     }
 
     constexpr void operator++(int) { ++*this; }
 
-    constexpr stride_counting_iterator operator++(int)
-        requires std::forward_iterator<It>
+    constexpr operation_counting_iterator operator++(int)
+      requires std::forward_iterator<It>
     {
-        auto temp = *this;
-        ++*this;
-        return temp;
+      auto temp = *this;
+      ++*this;
+      return temp;
     }
 
-    constexpr stride_counting_iterator& operator--()
-        requires std::bidirectional_iterator<It>
+    constexpr operation_counting_iterator& operator--()
+      requires std::bidirectional_iterator<It>
     {
-        It tmp(base_);
-        base_ = base(--tmp);
-        ++stride_count_;
-        --stride_displacement_;
-        return *this;
+      It tmp(base_);
+      base_ = base(--tmp);
+      moved_by(-1);
+      return *this;
     }
 
-    constexpr stride_counting_iterator operator--(int)
-        requires std::bidirectional_iterator<It>
+    constexpr operation_counting_iterator operator--(int)
+      requires std::bidirectional_iterator<It>
     {
-        auto temp = *this;
-        --*this;
-        return temp;
+      auto temp = *this;
+      --*this;
+      return temp;
     }
 
-    constexpr stride_counting_iterator& operator+=(difference_type const n)
-        requires std::random_access_iterator<It>
+    constexpr operation_counting_iterator& operator+=(difference_type const n)
+      requires std::random_access_iterator<It>
     {
-        It tmp(base_);
-        base_ = base(tmp += n);
-        ++stride_count_;
-        ++stride_displacement_;
-        return *this;
+      It tmp(base_);
+      base_ = base(tmp += n);
+      moved_by(n);
+      return *this;
     }
 
-    constexpr stride_counting_iterator& operator-=(difference_type const n)
-        requires std::random_access_iterator<It>
+    constexpr operation_counting_iterator& operator-=(difference_type const n)
+      requires std::random_access_iterator<It>
     {
-        It tmp(base_);
-        base_ = base(tmp -= n);
-        ++stride_count_;
-        --stride_displacement_;
-        return *this;
+      It tmp(base_);
+      base_ = base(tmp -= n);
+      moved_by(-n);
+      return *this;
     }
 
-    friend constexpr stride_counting_iterator operator+(stride_counting_iterator it, difference_type n)
-        requires std::random_access_iterator<It>
+    friend constexpr operation_counting_iterator operator+(operation_counting_iterator it, difference_type n)
+      requires std::random_access_iterator<It>
     {
-        return it += n;
+      return it += n;
     }
 
-    friend constexpr stride_counting_iterator operator+(difference_type n, stride_counting_iterator it)
-        requires std::random_access_iterator<It>
+    friend constexpr operation_counting_iterator operator+(difference_type n, operation_counting_iterator it)
+      requires std::random_access_iterator<It>
     {
-        return it += n;
+      return it += n;
     }
 
-    friend constexpr stride_counting_iterator operator-(stride_counting_iterator it, difference_type n)
-        requires std::random_access_iterator<It>
+    friend constexpr operation_counting_iterator operator-(operation_counting_iterator it, difference_type n)
+      requires std::random_access_iterator<It>
     {
-        return it -= n;
+      return it -= n;
     }
 
-    friend constexpr difference_type operator-(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::sized_sentinel_for<It, It>
+    friend constexpr difference_type
+    operator-(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::sized_sentinel_for<It, It>
     {
-        return base(x) - base(y);
+      return base(x) - base(y);
     }
 
-    constexpr void record_equality_comparison() const { ++equals_count_; }
+    constexpr void record_equality_comparison() const {
+      if (counts_ != nullptr)
+        ++counts_->equal_cmps;
+    }
 
-    constexpr bool operator==(stride_counting_iterator const& other) const
-        requires std::sentinel_for<It, It>
+    constexpr bool operator==(operation_counting_iterator const& other) const
+      requires std::sentinel_for<It, It>
     {
       record_equality_comparison();
       return It(base_) == It(other.base_);
     }
 
-    friend constexpr bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator<(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) < It(y.base_);
+      return It(x.base_) < It(y.base_);
     }
 
-    friend constexpr bool operator>(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator>(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) > It(y.base_);
+      return It(x.base_) > It(y.base_);
     }
 
-    friend constexpr bool operator<=(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator<=(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) <= It(y.base_);
+      return It(x.base_) <= It(y.base_);
     }
 
-    friend constexpr bool operator>=(stride_counting_iterator const& x, stride_counting_iterator const& y)
-        requires std::random_access_iterator<It>
+    friend constexpr bool operator>=(operation_counting_iterator const& x, operation_counting_iterator const& y)
+      requires std::random_access_iterator<It>
     {
-        return It(x.base_) >= It(y.base_);
+      return It(x.base_) >= It(y.base_);
     }
 
     template <class T>
     void operator,(T const &) = delete;
 
 private:
+  constexpr void moved_by(difference_type n) {
+    if (counts_ == nullptr)
+      return;
+    if (n > 0)
+      ++counts_->increments;
+    else if (n < 0)
+      ++counts_->decrements;
+    else
+      ++counts_->zero_moves;
+  }
+
     decltype(base(std::declval<It>())) base_;
-    difference_type stride_count_ = 0;
-    difference_type stride_displacement_ = 0;
-    mutable difference_type equals_count_ = 0;
+    IteratorOpCounts* counts_ = nullptr;
 };
 template <class It>
-stride_counting_iterator(It) -> stride_counting_iterator<It>;
+operation_counting_iterator(It) -> operation_counting_iterator<It>;
 
 #endif // TEST_STD_VER > 17
 

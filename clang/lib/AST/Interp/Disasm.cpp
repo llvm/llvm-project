@@ -156,15 +156,28 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
     Desc->dump(OS);
 
-    if (Desc->IsTemporary) {
+    if (GP.isInitialized() && Desc->IsTemporary) {
       if (const auto *MTE =
               dyn_cast_if_present<MaterializeTemporaryExpr>(Desc->asExpr());
           MTE && MTE->getLifetimeExtendedTemporaryDecl()) {
-        const APValue *V = MTE->getLifetimeExtendedTemporaryDecl()->getValue();
-        if (V->isInt())
-          OS << " (global temporary value: " << V->getInt() << ")";
-        else
-          OS << " (huh?)";
+        if (const APValue *V =
+                MTE->getLifetimeExtendedTemporaryDecl()->getValue()) {
+          OS << " (global temporary value: ";
+          {
+            ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_MAGENTA, true});
+            std::string VStr;
+            llvm::raw_string_ostream SS(VStr);
+            V->dump(SS, Ctx.getASTContext());
+
+            for (unsigned I = 0; I != VStr.size(); ++I) {
+              if (VStr[I] == '\n')
+                VStr[I] = ' ';
+            }
+            VStr.pop_back(); // Remove the newline (or now space) at the end.
+            OS << VStr;
+          }
+          OS << ')';
+        }
       }
     }
 
@@ -205,7 +218,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
       ND->printQualifiedName(OS);
     else if (asExpr())
-      OS << "expr (TODO)";
+      OS << "Expr " << (const void *)asExpr();
   }
 
   // Print a few interesting bits about the descriptor.
@@ -265,10 +278,15 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
   OS << "\n";
   OS.indent(Spaces) << "This: " << getThis() << "\n";
   OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  OS.indent(Spaces) << "Depth: " << Depth << "\n";
+  OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
+  OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
+  OS.indent(Spaces) << "FrameOffset: " << FrameOffset << "\n";
+  OS.indent(Spaces) << "FrameSize: " << (Func ? Func->getFrameSize() : 0)
+                    << "\n";
 
-  while (const InterpFrame *F = this->Caller) {
+  for (const InterpFrame *F = this->Caller; F; F = F->Caller) {
     F->dump(OS, Indent + 1);
-    F = F->Caller;
   }
 }
 
@@ -312,8 +330,11 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
 LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
-    OS << "Block " << (const void *)this << "\n";
+    OS << "Block " << (const void *)this;
   }
+  OS << " (";
+  Desc->dump(OS);
+  OS << ")\n";
   unsigned NPointers = 0;
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;
@@ -350,9 +371,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
 
     OS << "LValue: ";
     if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     OS << "\n";
     break;
   }

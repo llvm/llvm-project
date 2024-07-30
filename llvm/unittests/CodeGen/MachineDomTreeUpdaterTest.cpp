@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/SourceMgr.h"
@@ -179,7 +180,6 @@ body:             |
   DTU.deleteBB(&*BB4);
   EXPECT_EQ(BB1->succ_size(), 1u);
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB2));
-  ASSERT_EQ(DT.getNode(&*BB4), nullptr);
 }
 
 TEST_F(MachineDomTreeUpdaterTest, LazyUpdateBasicOperations) {
@@ -268,9 +268,9 @@ body:             |
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB4));
   BB1->removeSuccessor(&*BB4);
   DTU.deleteBB(&*BB4);
+  ASSERT_TRUE(DTU.hasPendingDeletedBB());
   EXPECT_EQ(BB1->succ_size(), 1u);
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB2));
   ASSERT_NE(DT.getNode(&*BB4), nullptr);
   DTU.flush();
-  ASSERT_EQ(DT.getNode(&*BB4), nullptr);
 }

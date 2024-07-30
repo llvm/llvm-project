@@ -37,10 +37,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(70), GIMT_Encode2(74), /*)*//*default:*//*Label 2*/ GIMT_Encode4(84),
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2([[#LOWER:]]), GIMT_Encode2([[#UPPER:]]), /*)*//*default:*//*Label 2*/ GIMT_Encode4([[#DEFAULT:]]),
 // CHECK-NEXT:     /*TargetOpcode::G_UNMERGE_VALUES*//*Label 0*/ GIMT_Encode4(26), GIMT_Encode4(0), GIMT_Encode4(0),
 // CHECK-NEXT:     /*TargetOpcode::G_BUILD_VECTOR*//*Label 1*/ GIMT_Encode4(55),
-// CHECK-NEXT:     // Label 0: @26
+// CHECK-NEXT:     // Label 0: @[[#%u, mul(UPPER-LOWER, 4) + 10]]
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(40), // Rule ID 2 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule2Enabled),
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
@@ -92,8 +92,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 6: @83
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 2: @84
+// CHECK-NEXT:     // Label 2: @[[#%u, DEFAULT]]
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     }; // Size: 85 bytes
+// CHECK-NEXT:     }; // Size: [[#%u, DEFAULT + 1]] bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

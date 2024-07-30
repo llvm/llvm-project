@@ -57,6 +57,7 @@ def int_aarch64_frint64x
     : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
                             [ IntrNoMem ]>;
 
+
 //===----------------------------------------------------------------------===//
 // HINT
 
@@ -65,6 +66,8 @@ def int_aarch64_hint : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 def int_aarch64_break : Intrinsic<[], [llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
+def int_aarch64_hlt : Intrinsic<[], [llvm_i32_ty],
+    [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
 def int_aarch64_prefetch : Intrinsic<[],
     [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -88,6 +91,23 @@ def int_aarch64_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
 // takes up, the second and return value are essentially chains, used to force
 // ordering during ISel.
 def int_aarch64_space : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i64_ty], []>;
+
+//===----------------------------------------------------------------------===//
+// Guarded Control Stack
+
+def int_aarch64_chkfeat : ClangBuiltin<"__builtin_arm_chkfeat">,
+                          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                                [IntrNoMem]>;
+
+// FIXME: This should be marked as [IntrReadMem, IntrHasSideEffects], as it has
+// the side-effect of updating gcspr, but this combination doesn't work
+// correctly.
+def int_aarch64_gcspopm : ClangBuiltin<"__builtin_arm_gcspopm">,
+                          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                                []>;
+
+def int_aarch64_gcsss : ClangBuiltin<"__builtin_arm_gcsss">,
+                        DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], []>;
 
 }
 
@@ -2868,6 +2888,16 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_readz_q_horiz : SME_MOVAZ_TileToVector_Intrinsic;
   def int_aarch64_sme_readz_q_vert  : SME_MOVAZ_TileToVector_Intrinsic;
+
+  def int_aarch64_sme_readz_x2
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+          [llvm_i32_ty],
+          [IntrNoMem, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_readz_x4
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+          [llvm_i32_ty],
+          [IntrNoMem, IntrHasSideEffects]>;
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 

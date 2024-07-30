@@ -203,7 +203,26 @@ int kmp_hw_thread_t::compare_ids(const void *a, const void *b) {
   const kmp_hw_thread_t *bhwthread = (const kmp_hw_thread_t *)b;
   int depth = __kmp_topology->get_depth();
   for (int level = 0; level < depth; ++level) {
-    if (ahwthread->ids[level] < bhwthread->ids[level])
+    // Reverse sort (higher efficiencies earlier in list) cores by core
+    // efficiency if available.
+    if (__kmp_is_hybrid_cpu() &&
+        __kmp_topology->get_type(level) == KMP_HW_CORE &&
+        ahwthread->attrs.is_core_eff_valid() &&
+        bhwthread->attrs.is_core_eff_valid()) {
+      if (ahwthread->attrs.get_core_eff() < bhwthread->attrs.get_core_eff())
+        return 1;
+      if (ahwthread->attrs.get_core_eff() > bhwthread->attrs.get_core_eff())
+        return -1;
+    }
+    if (ahwthread->ids[level] == bhwthread->ids[level])
+      continue;
+    // If the hardware id is unknown for this level, then place hardware thread
+    // further down in the sorted list as it should take last priority
+    if (ahwthread->ids[level] == UNKNOWN_ID)
+      return 1;
+    else if (bhwthread->ids[level] == UNKNOWN_ID)
+      return -1;
+    else if (ahwthread->ids[level] < bhwthread->ids[level])
       return -1;
     else if (ahwthread->ids[level] > bhwthread->ids[level])
       return 1;
@@ -246,7 +265,7 @@ void kmp_hw_thread_t::print() const {
   int depth = __kmp_topology->get_depth();
   printf("%4d ", os_id);
   for (int i = 0; i < depth; ++i) {
-    printf("%4d ", ids[i]);
+    printf("%4d (%d) ", ids[i], sub_ids[i]);
   }
   if (attrs) {
     if (attrs.is_core_type_valid())
@@ -264,7 +283,7 @@ void kmp_hw_thread_t::print() const {
 
 // Add a layer to the topology based on the ids. Assume the topology
 // is perfectly nested (i.e., so no object has more than one parent)
-void kmp_topology_t::_insert_layer(kmp_hw_t type, const int *ids) {
+void kmp_topology_t::insert_layer(kmp_hw_t type, const int *ids) {
   // Figure out where the layer should go by comparing the ids of the current
   // layers with the new ids
   int target_layer;
@@ -325,7 +344,7 @@ void kmp_topology_t::_insert_windows_proc_groups() {
     ids[i] = __kmp_get_proc_group(mask);
   }
   KMP_CPU_FREE(mask);
-  _insert_layer(KMP_HW_PROC_GROUP, ids);
+  insert_layer(KMP_HW_PROC_GROUP, ids);
   __kmp_free(ids);
 
   // sort topology after adding proc groups
@@ -465,10 +484,13 @@ void kmp_topology_t::_gather_enumeration_information() {
       int id = hw_thread.ids[layer];
       if (id != previous_id[layer]) {
         // Add an additional increment to each count
-        for (int l = layer; l < depth; ++l)
-          count[l]++;
+        for (int l = layer; l < depth; ++l) {
+          if (hw_thread.ids[l] != kmp_hw_thread_t::UNKNOWN_ID)
+            count[l]++;
+        }
         // Keep track of topology layer ratio statistics
-        max[layer]++;
+        if (hw_thread.ids[layer] != kmp_hw_thread_t::UNKNOWN_ID)
+          max[layer]++;
         for (int l = layer + 1; l < depth; ++l) {
           if (max[l] > ratio[l])
             ratio[l] = max[l];
@@ -833,6 +855,8 @@ void kmp_topology_t::print(const char *env_var) const {
   for (int i = 0; i < num_hw_threads; i++) {
     __kmp_str_buf_clear(&buf);
     for (int level = 0; level < depth; ++level) {
+      if (hw_threads[i].ids[level] == kmp_hw_thread_t::UNKNOWN_ID)
+        continue;
       kmp_hw_t type = types[level];
       __kmp_str_buf_print(&buf, "%s ", __kmp_hw_get_catalog_string(type));
       __kmp_str_buf_print(&buf, "%d ", hw_threads[i].ids[level]);
@@ -1354,7 +1378,8 @@ bool kmp_topology_t::filter_hw_subset() {
           sub_id = abs_sub_ids[level];
         else
           sub_id = hw_thread.sub_ids[level];
-        if (sub_id < offset ||
+        if (hw_thread.ids[level] == kmp_hw_thread_t::UNKNOWN_ID ||
+            sub_id < offset ||
             (num != kmp_hw_subset_t::USE_ALL && sub_id >= offset + num)) {
           should_be_filtered = true;
           break;
@@ -1904,6 +1929,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       hw_thread.clear();
       hw_thread.ids[index] = pu->logical_index;
       hw_thread.os_id = pu->os_index;
+      hw_thread.original_idx = hw_thread_index;
       // If multiple core types, then set that attribute for the hardware thread
 #if HWLOC_API_VERSION >= 0x00020400
       if (cpukinds) {
@@ -2017,6 +2043,7 @@ static bool __kmp_affinity_create_flat_map(kmp_i18n_id_t *const msg_id) {
     kmp_hw_thread_t &hw_thread = __kmp_topology->at(avail_ct);
     hw_thread.clear();
     hw_thread.os_id = i;
+    hw_thread.original_idx = avail_ct;
     hw_thread.ids[0] = i;
     hw_thread.ids[1] = 0;
     hw_thread.ids[2] = 0;
@@ -2062,11 +2089,13 @@ static bool __kmp_affinity_create_proc_group_map(kmp_i18n_id_t *const msg_id) {
     if (!KMP_CPU_ISSET(i, __kmp_affin_fullMask)) {
       continue;
     }
-    kmp_hw_thread_t &hw_thread = __kmp_topology->at(avail_ct++);
+    kmp_hw_thread_t &hw_thread = __kmp_topology->at(avail_ct);
     hw_thread.clear();
     hw_thread.os_id = i;
+    hw_thread.original_idx = avail_ct;
     hw_thread.ids[0] = i / BITS_PER_GROUP;
     hw_thread.ids[1] = hw_thread.ids[2] = i % BITS_PER_GROUP;
+    avail_ct++;
   }
   return true;
 }
@@ -2122,16 +2151,43 @@ static int __kmp_affinity_cmp_apicThreadInfo_phys_id(const void *a,
   return 0;
 }
 
-class kmp_cache_info_t {
+class cpuid_cache_info_t {
 public:
   struct info_t {
     unsigned level = 0;
     unsigned mask = 0;
+    bool operator==(const info_t &rhs) const {
+      return level == rhs.level && mask == rhs.mask;
+    }
+    bool operator!=(const info_t &rhs) const { return !operator==(rhs); }
   };
-  kmp_cache_info_t() : depth(0) { get_leaf4_levels(); }
+  cpuid_cache_info_t() : depth(0) {
+    table[MAX_CACHE_LEVEL].level = 0;
+    table[MAX_CACHE_LEVEL].mask = 0;
+  }
   size_t get_depth() const { return depth; }
   info_t &operator[](size_t index) { return table[index]; }
   const info_t &operator[](size_t index) const { return table[index]; }
+  bool operator==(const cpuid_cache_info_t &rhs) const {
+    if (rhs.depth != depth)
+      return false;
+    for (size_t i = 0; i < depth; ++i)
+      if (table[i] != rhs.table[i])
+        return false;
+    return true;
+  }
+  bool operator!=(const cpuid_cache_info_t &rhs) const {
+    return !operator==(rhs);
+  }
+  // Get cache information assocaited with L1, L2, L3 cache, etc.
+  // If level does not exist, then return the "NULL" level (level 0)
+  const info_t &get_level(unsigned level) const {
+    for (size_t i = 0; i < depth; ++i) {
+      if (table[i].level == level)
+        return table[i];
+    }
+    return table[MAX_CACHE_LEVEL];
+  }
 
   static kmp_hw_t get_topology_type(unsigned level) {
     KMP_DEBUG_ASSERT(level >= 1 && level <= MAX_CACHE_LEVEL);
@@ -2145,13 +2201,6 @@ public:
     }
     return KMP_HW_UNKNOWN;
   }
-
-private:
-  static const int MAX_CACHE_LEVEL = 3;
-
-  size_t depth;
-  info_t table[MAX_CACHE_LEVEL];
-
   void get_leaf4_levels() {
     unsigned level = 0;
     while (depth < MAX_CACHE_LEVEL) {
@@ -2176,6 +2225,11 @@ private:
       level++;
     }
   }
+  static const int MAX_CACHE_LEVEL = 3;
+
+private:
+  size_t depth;
+  info_t table[MAX_CACHE_LEVEL + 1];
 };
 
 // On IA-32 architecture and Intel(R) 64 architecture, we attempt to use
@@ -2483,6 +2537,7 @@ static bool __kmp_affinity_create_apicid_map(kmp_i18n_id_t *const msg_id) {
       hw_thread.ids[idx++] = threadInfo[i].threadId;
     }
     hw_thread.os_id = os;
+    hw_thread.original_idx = i;
   }
 
   __kmp_free(threadInfo);
@@ -2543,10 +2598,8 @@ enum {
   INTEL_LEVEL_TYPE_DIE = 5,
   INTEL_LEVEL_TYPE_LAST = 6,
 };
-
-struct cpuid_level_info_t {
-  unsigned level_type, mask, mask_width, nitems, cache_mask;
-};
+KMP_BUILD_ASSERT(INTEL_LEVEL_TYPE_LAST < sizeof(unsigned) * CHAR_BIT);
+#define KMP_LEAF_1F_KNOWN_LEVELS ((1u << INTEL_LEVEL_TYPE_LAST) - 1u)
 
 static kmp_hw_t __kmp_intel_type_2_topology_type(int intel_type) {
   switch (intel_type) {
@@ -2566,16 +2619,77 @@ static kmp_hw_t __kmp_intel_type_2_topology_type(int intel_type) {
   return KMP_HW_UNKNOWN;
 }
 
-// This function takes the topology leaf, a levels array to store the levels
-// detected and a bitmap of the known levels.
-// Returns the number of levels in the topology
-static unsigned
-__kmp_x2apicid_get_levels(int leaf,
-                          cpuid_level_info_t levels[INTEL_LEVEL_TYPE_LAST],
-                          kmp_uint64 known_levels) {
+static int __kmp_topology_type_2_intel_type(kmp_hw_t type) {
+  switch (type) {
+  case KMP_HW_SOCKET:
+    return INTEL_LEVEL_TYPE_INVALID;
+  case KMP_HW_THREAD:
+    return INTEL_LEVEL_TYPE_SMT;
+  case KMP_HW_CORE:
+    return INTEL_LEVEL_TYPE_CORE;
+  case KMP_HW_TILE:
+    return INTEL_LEVEL_TYPE_TILE;
+  case KMP_HW_MODULE:
+    return INTEL_LEVEL_TYPE_MODULE;
+  case KMP_HW_DIE:
+    return INTEL_LEVEL_TYPE_DIE;
+  }
+  return INTEL_LEVEL_TYPE_INVALID;
+}
+
+struct cpuid_level_info_t {
+  unsigned level_type, mask, mask_width, nitems, cache_mask;
+};
+
+class cpuid_topo_desc_t {
+  unsigned desc = 0;
+
+public:
+  void clear() { desc = 0; }
+  bool contains(int intel_type) const {
+    KMP_DEBUG_ASSERT(intel_type >= 0 && intel_type < INTEL_LEVEL_TYPE_LAST);
+    if ((1u << intel_type) & desc)
+      return true;
+    return false;
+  }
+  bool contains_topology_type(kmp_hw_t type) const {
+    KMP_DEBUG_ASSERT(type >= 0 && type < KMP_HW_LAST);
+    int intel_type = __kmp_topology_type_2_intel_type(type);
+    return contains(intel_type);
+  }
+  bool contains(cpuid_topo_desc_t rhs) const {
+    return ((desc | rhs.desc) == desc);
+  }
+  void add(int intel_type) { desc |= (1u << intel_type); }
+  void add(cpuid_topo_desc_t rhs) { desc |= rhs.desc; }
+};
+
+struct cpuid_proc_info_t {
+  // Topology info
+  int os_id;
+  unsigned apic_id;
+  unsigned depth;
+  // Hybrid info
+  unsigned native_model_id;
+  int efficiency;
+  kmp_hw_core_type_t type;
+  cpuid_topo_desc_t description;
+
+  cpuid_level_info_t levels[INTEL_LEVEL_TYPE_LAST];
+};
+
+// This function takes the topology leaf, an info pointer to store the levels
+// detected, and writable descriptors for the total topology.
+// Returns whether total types, depth, or description were modified.
+static bool __kmp_x2apicid_get_levels(int leaf, cpuid_proc_info_t *info,
+                                      kmp_hw_t total_types[KMP_HW_LAST],
+                                      int *total_depth,
+                                      cpuid_topo_desc_t *total_description) {
   unsigned level, levels_index;
   unsigned level_type, mask_width, nitems;
   kmp_cpuid buf;
+  cpuid_level_info_t(&levels)[INTEL_LEVEL_TYPE_LAST] = info->levels;
+  bool retval = false;
 
   // New algorithm has known topology layers act as highest unknown topology
   // layers when unknown topology layers exist.
@@ -2590,10 +2704,12 @@ __kmp_x2apicid_get_levels(int leaf,
     level_type = __kmp_extract_bits<8, 15>(buf.ecx);
     mask_width = __kmp_extract_bits<0, 4>(buf.eax);
     nitems = __kmp_extract_bits<0, 15>(buf.ebx);
-    if (level_type != INTEL_LEVEL_TYPE_INVALID && nitems == 0)
-      return 0;
+    if (level_type != INTEL_LEVEL_TYPE_INVALID && nitems == 0) {
+      info->depth = 0;
+      return retval;
+    }
 
-    if (known_levels & (1ull << level_type)) {
+    if (KMP_LEAF_1F_KNOWN_LEVELS & (1u << level_type)) {
       // Add a new level to the topology
       KMP_ASSERT(levels_index < INTEL_LEVEL_TYPE_LAST);
       levels[levels_index].level_type = level_type;
@@ -2609,6 +2725,22 @@ __kmp_x2apicid_get_levels(int leaf,
     }
     level++;
   } while (level_type != INTEL_LEVEL_TYPE_INVALID);
+  KMP_ASSERT(levels_index <= INTEL_LEVEL_TYPE_LAST);
+  info->description.clear();
+  info->depth = levels_index;
+
+  // If types, depth, and total_description are uninitialized,
+  // then initialize them now
+  if (*total_depth == 0) {
+    *total_depth = info->depth;
+    total_description->clear();
+    for (int i = *total_depth - 1, j = 0; i >= 0; --i, ++j) {
+      total_types[j] =
+          __kmp_intel_type_2_topology_type(info->levels[i].level_type);
+      total_description->add(info->levels[i].level_type);
+    }
+    retval = true;
+  }
 
   // Ensure the INTEL_LEVEL_TYPE_INVALID (Socket) layer isn't first
   if (levels_index == 0 || levels[0].level_type == INTEL_LEVEL_TYPE_INVALID)
@@ -2626,36 +2758,59 @@ __kmp_x2apicid_get_levels(int leaf,
       levels[i].mask = (-1) << levels[i - 1].mask_width;
       levels[i].cache_mask = 0;
     }
+    info->description.add(info->levels[i].level_type);
   }
-  return levels_index;
+
+  // If this processor has level type not on other processors, then make
+  // sure to include it in total types, depth, and description.
+  // One assumption here is that the first type, i.e. socket, is known.
+  // Another assumption is that types array is always large enough to fit any
+  // new layers since its length is KMP_HW_LAST.
+  if (!total_description->contains(info->description)) {
+    for (int i = info->depth - 1, j = 0; i >= 0; --i, ++j) {
+      // If this level is known already, then skip it.
+      if (total_description->contains(levels[i].level_type))
+        continue;
+      // Unknown level, insert before last known level
+      kmp_hw_t curr_type =
+          __kmp_intel_type_2_topology_type(levels[i].level_type);
+      KMP_ASSERT(j != 0 && "Bad APIC Id information");
+      // Move over all known levels to make room for new level
+      for (int k = info->depth - 1; k >= j; --k) {
+        KMP_DEBUG_ASSERT(k + 1 < KMP_HW_LAST);
+        total_types[k + 1] = total_types[k];
+      }
+      // Insert new level
+      total_types[j] = curr_type;
+      (*total_depth)++;
+    }
+    total_description->add(info->description);
+    retval = true;
+  }
+  return retval;
 }
 
 static bool __kmp_affinity_create_x2apicid_map(kmp_i18n_id_t *const msg_id) {
 
-  cpuid_level_info_t levels[INTEL_LEVEL_TYPE_LAST];
   kmp_hw_t types[INTEL_LEVEL_TYPE_LAST];
-  unsigned levels_index;
   kmp_cpuid buf;
-  kmp_uint64 known_levels;
-  int topology_leaf, highest_leaf, apic_id;
+  int topology_leaf, highest_leaf;
   int num_leaves;
+  int depth = 0;
+  cpuid_topo_desc_t total_description;
   static int leaves[] = {0, 0};
 
-  kmp_i18n_id_t leaf_message_id;
+  // If affinity is disabled, __kmp_avail_proc may be zero
+  int ninfos = (__kmp_avail_proc > 0 ? __kmp_avail_proc : 1);
+  cpuid_proc_info_t *proc_info = (cpuid_proc_info_t *)__kmp_allocate(
+      (sizeof(cpuid_proc_info_t) + sizeof(cpuid_cache_info_t)) * ninfos);
+  cpuid_cache_info_t *cache_info = (cpuid_cache_info_t *)(proc_info + ninfos);
 
-  KMP_BUILD_ASSERT(sizeof(known_levels) * CHAR_BIT > KMP_HW_LAST);
+  kmp_i18n_id_t leaf_message_id;
 
   *msg_id = kmp_i18n_null;
   if (__kmp_affinity.flags.verbose) {
     KMP_INFORM(AffInfoStr, "KMP_AFFINITY", KMP_I18N_STR(Decodingx2APIC));
-  }
-
-  // Figure out the known topology levels
-  known_levels = 0ull;
-  for (int i = 0; i < INTEL_LEVEL_TYPE_LAST; ++i) {
-    if (__kmp_intel_type_2_topology_type(i) != KMP_HW_UNKNOWN) {
-      known_levels |= (1ull << i);
-    }
   }
 
   // Get the highest cpuid leaf supported
@@ -2691,16 +2846,18 @@ static bool __kmp_affinity_create_x2apicid_map(kmp_i18n_id_t *const msg_id) {
     if (buf.ebx == 0)
       continue;
     topology_leaf = leaf;
-    levels_index = __kmp_x2apicid_get_levels(leaf, levels, known_levels);
-    if (levels_index == 0)
+    __kmp_x2apicid_get_levels(leaf, &proc_info[0], types, &depth,
+                              &total_description);
+    if (depth == 0)
       continue;
     break;
   }
-  if (topology_leaf == -1 || levels_index == 0) {
+  if (topology_leaf == -1 || depth == 0) {
     *msg_id = leaf_message_id;
+    __kmp_free(proc_info);
     return false;
   }
-  KMP_ASSERT(levels_index <= INTEL_LEVEL_TYPE_LAST);
+  KMP_ASSERT(depth <= INTEL_LEVEL_TYPE_LAST);
 
   // The algorithm used starts by setting the affinity to each available thread
   // and retrieving info from the cpuid instruction, so if we are not capable of
@@ -2711,40 +2868,17 @@ static bool __kmp_affinity_create_x2apicid_map(kmp_i18n_id_t *const msg_id) {
     // Hack to try and infer the machine topology using only the data
     // available from cpuid on the current thread, and __kmp_xproc.
     KMP_ASSERT(__kmp_affinity.type == affinity_none);
-    for (unsigned i = 0; i < levels_index; ++i) {
-      if (levels[i].level_type == INTEL_LEVEL_TYPE_SMT) {
-        __kmp_nThreadsPerCore = levels[i].nitems;
-      } else if (levels[i].level_type == INTEL_LEVEL_TYPE_CORE) {
-        nCoresPerPkg = levels[i].nitems;
+    for (int i = 0; i < depth; ++i) {
+      if (proc_info[0].levels[i].level_type == INTEL_LEVEL_TYPE_SMT) {
+        __kmp_nThreadsPerCore = proc_info[0].levels[i].nitems;
+      } else if (proc_info[0].levels[i].level_type == INTEL_LEVEL_TYPE_CORE) {
+        nCoresPerPkg = proc_info[0].levels[i].nitems;
       }
     }
     __kmp_ncores = __kmp_xproc / __kmp_nThreadsPerCore;
     nPackages = (__kmp_xproc + nCoresPerPkg - 1) / nCoresPerPkg;
+    __kmp_free(proc_info);
     return true;
-  }
-
-  // Allocate the data structure to be returned.
-  int depth = levels_index;
-  for (int i = depth - 1, j = 0; i >= 0; --i, ++j)
-    types[j] = __kmp_intel_type_2_topology_type(levels[i].level_type);
-  __kmp_topology =
-      kmp_topology_t::allocate(__kmp_avail_proc, levels_index, types);
-
-  // Insert equivalent cache types if they exist
-  kmp_cache_info_t cache_info;
-  for (size_t i = 0; i < cache_info.get_depth(); ++i) {
-    const kmp_cache_info_t::info_t &info = cache_info[i];
-    unsigned cache_mask = info.mask;
-    unsigned cache_level = info.level;
-    for (unsigned j = 0; j < levels_index; ++j) {
-      unsigned hw_cache_mask = levels[j].cache_mask;
-      kmp_hw_t cache_type = kmp_cache_info_t::get_topology_type(cache_level);
-      if (hw_cache_mask == cache_mask && j < levels_index - 1) {
-        kmp_hw_t type =
-            __kmp_intel_type_2_topology_type(levels[j + 1].level_type);
-        __kmp_topology->set_equivalent_type(cache_type, type);
-      }
-    }
   }
 
   // From here on, we can assume that it is safe to call
@@ -2758,56 +2892,167 @@ static bool __kmp_affinity_create_x2apicid_map(kmp_i18n_id_t *const msg_id) {
   // to it, and obtaining the pertinent information using the cpuid instr.
   unsigned int proc;
   int hw_thread_index = 0;
-  KMP_CPU_SET_ITERATE(proc, __kmp_affin_fullMask) {
-    cpuid_level_info_t my_levels[INTEL_LEVEL_TYPE_LAST];
-    unsigned my_levels_index;
+  bool uniform_caches = true;
 
+  KMP_CPU_SET_ITERATE(proc, __kmp_affin_fullMask) {
     // Skip this proc if it is not included in the machine model.
     if (!KMP_CPU_ISSET(proc, __kmp_affin_fullMask)) {
       continue;
     }
     KMP_DEBUG_ASSERT(hw_thread_index < __kmp_avail_proc);
 
+    // Gather topology information
     __kmp_affinity_dispatch->bind_thread(proc);
-
-    // New algorithm
     __kmp_x86_cpuid(topology_leaf, 0, &buf);
-    apic_id = buf.edx;
-    kmp_hw_thread_t &hw_thread = __kmp_topology->at(hw_thread_index);
-    my_levels_index =
-        __kmp_x2apicid_get_levels(topology_leaf, my_levels, known_levels);
-    if (my_levels_index == 0 || my_levels_index != levels_index) {
+    proc_info[hw_thread_index].os_id = proc;
+    proc_info[hw_thread_index].apic_id = buf.edx;
+    __kmp_x2apicid_get_levels(topology_leaf, &proc_info[hw_thread_index], types,
+                              &depth, &total_description);
+    if (proc_info[hw_thread_index].depth == 0) {
       *msg_id = kmp_i18n_str_InvalidCpuidInfo;
+      __kmp_free(proc_info);
       return false;
     }
-    hw_thread.clear();
-    hw_thread.os_id = proc;
-    // Put in topology information
-    for (unsigned j = 0, idx = depth - 1; j < my_levels_index; ++j, --idx) {
-      hw_thread.ids[idx] = apic_id & my_levels[j].mask;
-      if (j > 0) {
-        hw_thread.ids[idx] >>= my_levels[j - 1].mask_width;
-      }
-    }
+    // Gather cache information and insert afterwards
+    cache_info[hw_thread_index].get_leaf4_levels();
+    if (uniform_caches && hw_thread_index > 0)
+      if (cache_info[0] != cache_info[hw_thread_index])
+        uniform_caches = false;
     // Hybrid information
     if (__kmp_is_hybrid_cpu() && highest_leaf >= 0x1a) {
-      kmp_hw_core_type_t type;
-      unsigned native_model_id;
-      int efficiency;
-      __kmp_get_hybrid_info(&type, &efficiency, &native_model_id);
-      hw_thread.attrs.set_core_type(type);
-      hw_thread.attrs.set_core_eff(efficiency);
+      __kmp_get_hybrid_info(&proc_info[hw_thread_index].type,
+                            &proc_info[hw_thread_index].efficiency,
+                            &proc_info[hw_thread_index].native_model_id);
     }
     hw_thread_index++;
   }
   KMP_ASSERT(hw_thread_index > 0);
+  previous_affinity.restore();
+
+  // Allocate the data structure to be returned.
+  __kmp_topology = kmp_topology_t::allocate(__kmp_avail_proc, depth, types);
+
+  // Create topology Ids and hybrid types in __kmp_topology
+  for (int i = 0; i < __kmp_topology->get_num_hw_threads(); ++i) {
+    kmp_hw_thread_t &hw_thread = __kmp_topology->at(i);
+    hw_thread.clear();
+    hw_thread.os_id = proc_info[i].os_id;
+    hw_thread.original_idx = i;
+    unsigned apic_id = proc_info[i].apic_id;
+    // Put in topology information
+    for (int j = 0, idx = depth - 1; j < depth; ++j, --idx) {
+      if (!(proc_info[i].description.contains_topology_type(
+              __kmp_topology->get_type(j)))) {
+        hw_thread.ids[idx] = kmp_hw_thread_t::UNKNOWN_ID;
+      } else {
+        hw_thread.ids[idx] = apic_id & proc_info[i].levels[j].mask;
+        if (j > 0) {
+          hw_thread.ids[idx] >>= proc_info[i].levels[j - 1].mask_width;
+        }
+      }
+    }
+    hw_thread.attrs.set_core_type(proc_info[i].type);
+    hw_thread.attrs.set_core_eff(proc_info[i].efficiency);
+  }
+
   __kmp_topology->sort_ids();
+
+  // Change Ids to logical Ids
+  for (int j = 0; j < depth - 1; ++j) {
+    int new_id = 0;
+    int prev_id = __kmp_topology->at(0).ids[j];
+    int curr_id = __kmp_topology->at(0).ids[j + 1];
+    __kmp_topology->at(0).ids[j + 1] = new_id;
+    for (int i = 1; i < __kmp_topology->get_num_hw_threads(); ++i) {
+      kmp_hw_thread_t &hw_thread = __kmp_topology->at(i);
+      if (hw_thread.ids[j] == prev_id && hw_thread.ids[j + 1] == curr_id) {
+        hw_thread.ids[j + 1] = new_id;
+      } else if (hw_thread.ids[j] == prev_id &&
+                 hw_thread.ids[j + 1] != curr_id) {
+        curr_id = hw_thread.ids[j + 1];
+        hw_thread.ids[j + 1] = ++new_id;
+      } else {
+        prev_id = hw_thread.ids[j];
+        curr_id = hw_thread.ids[j + 1];
+        hw_thread.ids[j + 1] = ++new_id;
+      }
+    }
+  }
+
+  // First check for easy cache placement. This occurs when caches are
+  // equivalent to a layer in the CPUID leaf 0xb or 0x1f topology.
+  if (uniform_caches) {
+    for (size_t i = 0; i < cache_info[0].get_depth(); ++i) {
+      unsigned cache_mask = cache_info[0][i].mask;
+      unsigned cache_level = cache_info[0][i].level;
+      KMP_ASSERT(cache_level <= cpuid_cache_info_t::MAX_CACHE_LEVEL);
+      kmp_hw_t cache_type = cpuid_cache_info_t::get_topology_type(cache_level);
+      __kmp_topology->set_equivalent_type(cache_type, cache_type);
+      for (int j = 0; j < depth; ++j) {
+        unsigned hw_cache_mask = proc_info[0].levels[j].cache_mask;
+        if (hw_cache_mask == cache_mask && j < depth - 1) {
+          kmp_hw_t type = __kmp_intel_type_2_topology_type(
+              proc_info[0].levels[j + 1].level_type);
+          __kmp_topology->set_equivalent_type(cache_type, type);
+        }
+      }
+    }
+  } else {
+    // If caches are non-uniform, then record which caches exist.
+    for (int i = 0; i < __kmp_topology->get_num_hw_threads(); ++i) {
+      for (size_t j = 0; j < cache_info[i].get_depth(); ++j) {
+        unsigned cache_level = cache_info[i][j].level;
+        kmp_hw_t cache_type =
+            cpuid_cache_info_t::get_topology_type(cache_level);
+        if (__kmp_topology->get_equivalent_type(cache_type) == KMP_HW_UNKNOWN)
+          __kmp_topology->set_equivalent_type(cache_type, cache_type);
+      }
+    }
+  }
+
+  // See if any cache level needs to be added manually through cache Ids
+  bool unresolved_cache_levels = false;
+  for (unsigned level = 1; level <= cpuid_cache_info_t::MAX_CACHE_LEVEL;
+       ++level) {
+    kmp_hw_t cache_type = cpuid_cache_info_t::get_topology_type(level);
+    // This also filters out caches which may not be in the topology
+    // since the equivalent type might be KMP_HW_UNKNOWN.
+    if (__kmp_topology->get_equivalent_type(cache_type) == cache_type) {
+      unresolved_cache_levels = true;
+      break;
+    }
+  }
+
+  // Insert unresolved cache layers into machine topology using cache Ids
+  if (unresolved_cache_levels) {
+    int num_hw_threads = __kmp_topology->get_num_hw_threads();
+    int *ids = (int *)__kmp_allocate(sizeof(int) * num_hw_threads);
+    for (unsigned l = 1; l <= cpuid_cache_info_t::MAX_CACHE_LEVEL; ++l) {
+      kmp_hw_t cache_type = cpuid_cache_info_t::get_topology_type(l);
+      if (__kmp_topology->get_equivalent_type(cache_type) != cache_type)
+        continue;
+      for (int i = 0; i < num_hw_threads; ++i) {
+        int original_idx = __kmp_topology->at(i).original_idx;
+        ids[i] = kmp_hw_thread_t::UNKNOWN_ID;
+        const cpuid_cache_info_t::info_t &info =
+            cache_info[original_idx].get_level(l);
+        // if cache level not in topology for this processor, then skip
+        if (info.level == 0)
+          continue;
+        ids[i] = info.mask & proc_info[original_idx].apic_id;
+      }
+      __kmp_topology->insert_layer(cache_type, ids);
+    }
+  }
+
   if (!__kmp_topology->check_ids()) {
     kmp_topology_t::deallocate(__kmp_topology);
     __kmp_topology = nullptr;
     *msg_id = kmp_i18n_str_x2ApicIDsNotUnique;
+    __kmp_free(proc_info);
     return false;
   }
+  __kmp_free(proc_info);
   return true;
 }
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
@@ -3571,6 +3816,7 @@ restart_radix_check:
     kmp_hw_thread_t &hw_thread = __kmp_topology->at(i);
     hw_thread.clear();
     hw_thread.os_id = os;
+    hw_thread.original_idx = i;
 
     idx = 0;
     for (src_index = maxIndex; src_index >= threadIdIndex; src_index--) {
@@ -3594,6 +3840,32 @@ restart_radix_check:
   __kmp_free(counts);
   CLEANUP_THREAD_INFO;
   __kmp_topology->sort_ids();
+
+  int tlevel = __kmp_topology->get_level(KMP_HW_THREAD);
+  if (tlevel > 0) {
+    // If the thread level does not have ids, then put them in.
+    if (__kmp_topology->at(0).ids[tlevel] == kmp_hw_thread_t::UNKNOWN_ID) {
+      __kmp_topology->at(0).ids[tlevel] = 0;
+    }
+    for (int i = 1; i < __kmp_topology->get_num_hw_threads(); ++i) {
+      kmp_hw_thread_t &hw_thread = __kmp_topology->at(i);
+      if (hw_thread.ids[tlevel] != kmp_hw_thread_t::UNKNOWN_ID)
+        continue;
+      kmp_hw_thread_t &prev_hw_thread = __kmp_topology->at(i - 1);
+      // Check if socket, core, anything above thread level changed.
+      // If the ids did change, then restart thread id at 0
+      // Otherwise, set thread id to prev thread's id + 1
+      for (int j = 0; j < tlevel; ++j) {
+        if (hw_thread.ids[j] != prev_hw_thread.ids[j]) {
+          hw_thread.ids[tlevel] = 0;
+          break;
+        }
+      }
+      if (hw_thread.ids[tlevel] == kmp_hw_thread_t::UNKNOWN_ID)
+        hw_thread.ids[tlevel] = prev_hw_thread.ids[tlevel] + 1;
+    }
+  }
+
   if (!__kmp_topology->check_ids()) {
     kmp_topology_t::deallocate(__kmp_topology);
     __kmp_topology = nullptr;
@@ -3620,8 +3892,8 @@ static void __kmp_create_os_id_masks(unsigned *numUnique,
   KMP_ASSERT(depth);
 
   i = find_next(-1);
-  // If could not find HW thread location with attributes, then return and
-  // fallback to increment find_next and disregard core attributes.
+  // If could not find HW thread location that satisfies find_next conditions,
+  // then return and fallback to increment find_next.
   if (i >= numAddrs)
     return;
 
@@ -4739,15 +5011,32 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
     }
   }
   // If core attributes did not work, or none were specified,
-  // then make OS Id mask table using typical incremental way.
+  // then make OS Id mask table using typical incremental way with
+  // checking for validity of each id at granularity level specified.
+  if (!affinity.os_id_masks) {
+    int gran = affinity.gran_levels;
+    int gran_level = depth - 1 - affinity.gran_levels;
+    if (gran >= 0 && gran_level >= 0 && gran_level < depth) {
+      __kmp_create_os_id_masks(
+          &numUnique, affinity, [depth, numAddrs, &affinity](int idx) {
+            KMP_ASSERT(idx >= -1);
+            int gran = affinity.gran_levels;
+            int gran_level = depth - 1 - affinity.gran_levels;
+            for (int i = idx + 1; i < numAddrs; ++i)
+              if ((gran >= depth) ||
+                  (gran < depth && __kmp_topology->at(i).ids[gran_level] !=
+                                       kmp_hw_thread_t::UNKNOWN_ID))
+                return i;
+            return numAddrs;
+          });
+    }
+  }
+  // Final attempt to make OS Id mask table using typical incremental way.
   if (!affinity.os_id_masks) {
     __kmp_create_os_id_masks(&numUnique, affinity, [](int idx) {
       KMP_ASSERT(idx >= -1);
       return idx + 1;
     });
-  }
-  if (affinity.gran_levels == 0) {
-    KMP_DEBUG_ASSERT((int)numUnique == __kmp_avail_proc);
   }
 
   switch (affinity.type) {
@@ -4894,6 +5183,8 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
         int osId = __kmp_topology->at(i).os_id;
 
         kmp_affin_mask_t *src = KMP_CPU_INDEX(affinity.os_id_masks, osId);
+        if (KMP_CPU_ISEMPTY(src))
+          continue;
         kmp_affin_mask_t *dest = KMP_CPU_INDEX(affinity.masks, j);
         KMP_ASSERT(KMP_CPU_ISSET(osId, src));
         KMP_CPU_COPY(dest, src);

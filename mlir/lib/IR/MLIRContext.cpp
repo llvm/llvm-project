@@ -222,6 +222,7 @@ public:
 
   /// Cached Type Instances.
   Float8E5M2Type f8E5M2Ty;
+  Float8E4M3Type f8E4M3Ty;
   Float8E4M3FNType f8E4M3FNTy;
   Float8E5M2FNUZType f8E5M2FNUZTy;
   Float8E4M3FNUZType f8E4M3FNUZTy;
@@ -312,6 +313,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   //// Types.
   /// Floating-point Types.
   impl->f8E5M2Ty = TypeUniquer::get<Float8E5M2Type>(this);
+  impl->f8E4M3Ty = TypeUniquer::get<Float8E4M3Type>(this);
   impl->f8E4M3FNTy = TypeUniquer::get<Float8E4M3FNType>(this);
   impl->f8E5M2FNUZTy = TypeUniquer::get<Float8E5M2FNUZType>(this);
   impl->f8E4M3FNUZTy = TypeUniquer::get<Float8E4M3FNUZType>(this);
@@ -1011,6 +1013,9 @@ StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
 Float8E5M2Type Float8E5M2Type::get(MLIRContext *context) {
   return context->getImpl().f8E5M2Ty;
+}
+Float8E4M3Type Float8E4M3Type::get(MLIRContext *context) {
+  return context->getImpl().f8E4M3Ty;
 }
 Float8E4M3FNType Float8E4M3FNType::get(MLIRContext *context) {
   return context->getImpl().f8E4M3FNTy;

@@ -17,6 +17,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # dlfcn.h entrypoints
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -302,6 +308,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup3
     libc.src.unistd.execve
     libc.src.unistd.fchdir
+    libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
@@ -313,6 +320,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pathconf
     libc.src.unistd.pipe
     libc.src.unistd.pread
     libc.src.unistd.pwrite
@@ -356,12 +364,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -371,6 +382,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.cospif
+    libc.src.math.dmull
+    libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -384,6 +398,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd 
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -426,6 +441,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.fmodl
     libc.src.math.fmul
+    libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -435,11 +451,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -514,12 +535,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sinhf
+    libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
@@ -537,11 +562,24 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.f16add
+    libc.src.math.f16addf
+    libc.src.math.f16addl
+    libc.src.math.f16div
     libc.src.math.f16divf
+    libc.src.math.f16divl
     libc.src.math.f16fma
     libc.src.math.f16fmaf
     libc.src.math.f16fmal
+    libc.src.math.f16mul
+    libc.src.math.f16mulf
+    libc.src.math.f16mull
+    libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
+    libc.src.math.f16sqrtl
+    libc.src.math.f16sub
+    libc.src.math.f16subf
+    libc.src.math.f16subl
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
@@ -594,7 +632,12 @@ if(LIBC_TYPES_HAS_FLOAT16)
   if(LIBC_TYPES_HAS_FLOAT128)
     list(APPEND TARGET_LIBM_ENTRYPOINTS
       # math.h C23 mixed _Float16 and _Float128 entrypoints
+      libc.src.math.f16addf128
+      libc.src.math.f16divf128
       libc.src.math.f16fmaf128
+      libc.src.math.f16mulf128
+      libc.src.math.f16sqrtf128
+      libc.src.math.f16subf128
     )
   endif()
 endif()
@@ -605,6 +648,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.dmulf128
+    libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -619,9 +664,11 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fminimum_numf128
     libc.src.math.fminimumf128
     libc.src.math.fmodf128
+    libc.src.math.fmulf128
     libc.src.math.frexpf128
     libc.src.math.fromfpf128
     libc.src.math.fromfpxf128
+    libc.src.math.fsqrtf128
     libc.src.math.ilogbf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -642,6 +689,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundf128
     libc.src.math.scalbnf128
     libc.src.math.sqrtf128
+    libc.src.math.totalordermagf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
@@ -742,6 +790,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlock_clockrdlock
+    libc.src.pthread.pthread_rwlock_clockwrlock
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
     libc.src.pthread.pthread_rwlock_rdlock

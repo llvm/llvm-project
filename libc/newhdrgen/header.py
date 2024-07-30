@@ -17,7 +17,6 @@ class HeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
-        self.includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -34,34 +33,55 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
-    def add_include(self, include):
-        self.includes.append(include)
-
     def __str__(self):
         content = [""]
 
-        for include in self.includes:
-            content.append(str(include))
-
         for macro in self.macros:
-            content.append(str(macro))
+            content.append(f"{macro}\n")
+
+        for type_ in self.types:
+            content.append(f"{type_}")
+
+        if self.enumerations:
+            combined_enum_content = ",\n  ".join(
+                str(enum) for enum in self.enumerations
+            )
+            content.append(f"\nenum {{\n  {combined_enum_content},\n}};")
+
+        content.append("\n__BEGIN_C_DECLS\n")
+
+        current_guard = None
+        for function in self.functions:
+            if function.guard == None:
+                content.append(str(function) + " __NOEXCEPT;")
+                content.append("")
+            else:
+                if current_guard == None:
+                    current_guard = function.guard
+                    content.append(f"#ifdef {current_guard}")
+                    content.append(str(function) + " __NOEXCEPT;")
+                    content.append("")
+                elif current_guard == function.guard:
+                    content.append(str(function) + " __NOEXCEPT;")
+                    content.append("")
+                else:
+                    content.pop()
+                    content.append(f"#endif // {current_guard}")
+                    content.append("")
+                    current_guard = function.guard
+                    content.append(f"#ifdef {current_guard}")
+                    content.append(str(function) + " __NOEXCEPT;")
+                    content.append("")
+        if current_guard != None:
+            content.pop()
+            content.append(f"#endif // {current_guard}")
+            content.append("")
 
         for object in self.objects:
             content.append(str(object))
+        if self.objects:
+            content.append("\n__END_C_DECLS")
+        else:
+            content.append("__END_C_DECLS")
 
-        for type_ in self.types:
-            content.append(str(type_))
-
-        if self.enumerations:
-            content.append("enum {")
-            for enum in self.enumerations:
-                content.append(f"\t{str(enum)},")
-            content.append("};")
-
-        # TODO: replace line below with common.h functionality
-        content.append("__BEGIN_C_DECLS\n")
-        for function in self.functions:
-            content.append(str(function))
-            content.append("")
-        content.append("__END_C_DECLS\n")
         return "\n".join(content)

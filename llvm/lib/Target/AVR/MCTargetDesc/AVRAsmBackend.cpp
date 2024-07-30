@@ -13,6 +13,7 @@
 #include "MCTargetDesc/AVRAsmBackend.h"
 #include "MCTargetDesc/AVRFixupKinds.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"

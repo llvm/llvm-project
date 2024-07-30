@@ -414,8 +414,13 @@ private:
     return selectAddrModeIndexed(Root, Width / 8);
   }
 
+  std::optional<bool>
+  isWorthFoldingIntoAddrMode(MachineInstr &MI,
+                             const MachineRegisterInfo &MRI) const;
+
   bool isWorthFoldingIntoExtendedReg(MachineInstr &MI,
-                                     const MachineRegisterInfo &MRI) const;
+                                     const MachineRegisterInfo &MRI,
+                                     bool IsAddrOperand) const;
   ComplexRendererFns
   selectAddrModeShiftedExtendXReg(MachineOperand &Root,
                                   unsigned SizeInBytes) const;
@@ -2001,7 +2006,7 @@ bool AArch64InstructionSelector::selectVaStartDarwin(
 
   int FrameIdx = FuncInfo->getVarArgsStackIndex();
   if (MF.getSubtarget<AArch64Subtarget>().isCallingConvWin64(
-          MF.getFunction().getCallingConv())) {
+          MF.getFunction().getCallingConv(), MF.getFunction().isVarArg())) {
     FrameIdx = FuncInfo->getVarArgsGPRSize() > 0
                    ? FuncInfo->getVarArgsGPRIndex()
                    : FuncInfo->getVarArgsStackIndex();
@@ -2279,8 +2284,9 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     Register Dst = I.getOperand(0).getReg();
     auto *CV = ConstantDataVector::getSplat(
         MRI.getType(Dst).getNumElements(),
-        ConstantInt::get(Type::getIntNTy(Ctx, MRI.getType(Src).getSizeInBits()),
-                         ValAndVReg->Value));
+        ConstantInt::get(
+            Type::getIntNTy(Ctx, MRI.getType(Dst).getScalarSizeInBits()),
+            ValAndVReg->Value.trunc(MRI.getType(Dst).getScalarSizeInBits())));
     if (!emitConstantVector(Dst, CV, MIB, MRI))
       return false;
     I.eraseFromParent();
@@ -2547,6 +2553,16 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectCompareBranch(I, MF, MRI);
 
   case TargetOpcode::G_BRINDIRECT: {
+    const Function &Fn = MF.getFunction();
+    if (std::optional<uint16_t> BADisc =
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
+      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
+      MI.addImm(AArch64PACKey::IA);
+      MI.addImm(*BADisc);
+      MI.addReg(/*AddrDisc=*/AArch64::XZR);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    }
     I.setDesc(TII.get(AArch64::BR));
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
@@ -3461,6 +3477,23 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
   case TargetOpcode::G_BLOCK_ADDR: {
+    Function *BAFn = I.getOperand(1).getBlockAddress()->getFunction();
+    if (std::optional<uint16_t> BADisc =
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(*BAFn)) {
+      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X16}, {});
+      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
+      MIB.buildInstr(AArch64::MOVaddrPAC)
+          .addBlockAddress(I.getOperand(1).getBlockAddress())
+          .addImm(AArch64PACKey::IA)
+          .addReg(/*AddrDisc=*/AArch64::XZR)
+          .addImm(*BADisc)
+          .constrainAllUses(TII, TRI, RBI);
+      MIB.buildCopy(I.getOperand(0).getReg(), Register(AArch64::X16));
+      RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                                   AArch64::GPR64RegClass, MRI);
+      I.eraseFromParent();
+      return true;
+    }
     if (TM.getCodeModel() == CodeModel::Large && !TM.isPositionIndependent()) {
       materializeLargeCMVal(I, I.getOperand(1).getBlockAddress(), 0);
       I.eraseFromParent();
@@ -3597,10 +3630,33 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
   unsigned JTI = I.getOperand(1).getIndex();
   Register Index = I.getOperand(2).getReg();
 
+  MF->getInfo<AArch64FunctionInfo>()->setJumpTableEntryInfo(JTI, 4, nullptr);
+
+  // With aarch64-jump-table-hardening, we only expand the jump table dispatch
+  // sequence later, to guarantee the integrity of the intermediate values.
+  if (MF->getFunction().hasFnAttribute("aarch64-jump-table-hardening")) {
+    CodeModel::Model CM = TM.getCodeModel();
+    if (STI.isTargetMachO()) {
+      if (CM != CodeModel::Small && CM != CodeModel::Large)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    } else {
+      // Note that COFF support would likely also need JUMP_TABLE_DEBUG_INFO.
+      assert(STI.isTargetELF() &&
+             "jump table hardening only supported on MachO/ELF");
+      if (CM != CodeModel::Small)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    }
+
+    MIB.buildCopy({AArch64::X16}, I.getOperand(2).getReg());
+    MIB.buildInstr(AArch64::BR_JumpTable)
+        .addJumpTableIndex(I.getOperand(1).getIndex());
+    I.eraseFromParent();
+    return true;
+  }
+
   Register TargetReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
   Register ScratchReg = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
 
-  MF->getInfo<AArch64FunctionInfo>()->setJumpTableEntryInfo(JTI, 4, nullptr);
   auto JumpTableInst = MIB.buildInstr(AArch64::JumpTableDest32,
                                       {TargetReg, ScratchReg}, {JTAddr, Index})
                            .addJumpTableIndex(JTI);
@@ -3653,7 +3709,15 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
   // silly).
-  MIB.buildInstr(getBLRCallOpcode(MF), {}, {Load})
+  unsigned Opcode = getBLRCallOpcode(MF);
+
+  // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
+  if (MF.getFunction().hasFnAttribute("ptrauth-calls")) {
+    assert(Opcode == AArch64::BLR);
+    Opcode = AArch64::BLRAAZ;
+  }
+
+  MIB.buildInstr(Opcode, {}, {Load})
       .addUse(AArch64::X0, RegState::Implicit)
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
@@ -5551,7 +5615,8 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
   }
 
   if (CV->getSplatValue()) {
-    APInt DefBits = APInt::getSplat(DstSize, CV->getUniqueInteger());
+    APInt DefBits = APInt::getSplat(
+        DstSize, CV->getUniqueInteger().trunc(DstTy.getScalarSizeInBits()));
     auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
       MachineInstr *NewOp;
       bool Inv = false;
@@ -6494,6 +6559,64 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::ptrauth_resign: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+    uint64_t PACKey = I.getOperand(5).getImm();
+    Register PACDisc = I.getOperand(6).getReg();
+
+    Register AUTAddrDisc = AUTDisc;
+    uint16_t AUTConstDiscC = 0;
+    std::tie(AUTConstDiscC, AUTAddrDisc) =
+        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
+
+    Register PACAddrDisc = PACDisc;
+    uint16_t PACConstDiscC = 0;
+    std::tie(PACConstDiscC, PACAddrDisc) =
+        extractPtrauthBlendDiscriminators(PACDisc, MRI);
+
+    MIB.buildCopy({AArch64::X16}, {ValReg});
+    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
+    MIB.buildInstr(AArch64::AUTPAC)
+        .addImm(AUTKey)
+        .addImm(AUTConstDiscC)
+        .addUse(AUTAddrDisc)
+        .addImm(PACKey)
+        .addImm(PACConstDiscC)
+        .addUse(PACAddrDisc)
+        .constrainAllUses(TII, TRI, RBI);
+    MIB.buildCopy({DstReg}, Register(AArch64::X16));
+
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::ptrauth_auth: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+
+    Register AUTAddrDisc = AUTDisc;
+    uint16_t AUTConstDiscC = 0;
+    std::tie(AUTConstDiscC, AUTAddrDisc) =
+        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
+
+    MIB.buildCopy({AArch64::X16}, {ValReg});
+    MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
+    MIB.buildInstr(AArch64::AUT)
+        .addImm(AUTKey)
+        .addImm(AUTConstDiscC)
+        .addUse(AUTAddrDisc)
+        .constrainAllUses(TII, TRI, RBI);
+    MIB.buildCopy({DstReg}, Register(AArch64::X16));
+
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::frameaddress:
   case Intrinsic::returnaddress: {
     MachineFunction &MF = *I.getParent()->getParent();
@@ -6636,8 +6759,8 @@ bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
         "constant discriminator in ptrauth global out of range [0, 0xffff]");
 
   // Choosing between 3 lowering alternatives is target-specific.
-  if (!STI.isTargetELF())
-    report_fatal_error("ptrauth global lowering is only implemented for ELF");
+  if (!STI.isTargetELF() && !STI.isTargetMachO())
+    report_fatal_error("ptrauth global lowering only supported on MachO/ELF");
 
   if (!MRI.hasOneDef(Addr))
     return false;
@@ -6861,19 +6984,70 @@ AArch64InstructionSelector::selectNegArithImmed(MachineOperand &Root) const {
   return select12BitValueWithLeftShift(Immed);
 }
 
+/// Checks if we are sure that folding MI into load/store addressing mode is
+/// beneficial or not.
+///
+/// Returns:
+/// - true if folding MI would be beneficial.
+/// - false if folding MI would be bad.
+/// - std::nullopt if it is not sure whether folding MI is beneficial.
+///
+/// \p MI can be the offset operand of G_PTR_ADD, e.g. G_SHL in the example:
+///
+/// %13:gpr(s64) = G_CONSTANT i64 1
+/// %8:gpr(s64) = G_SHL %6, %13(s64)
+/// %9:gpr(p0) = G_PTR_ADD %0, %8(s64)
+/// %12:gpr(s32) = G_LOAD %9(p0) :: (load (s16))
+std::optional<bool> AArch64InstructionSelector::isWorthFoldingIntoAddrMode(
+    MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+  if (MI.getOpcode() == AArch64::G_SHL) {
+    // Address operands with shifts are free, except for running on subtargets
+    // with AddrLSLSlow14.
+    if (const auto ValAndVeg = getIConstantVRegValWithLookThrough(
+            MI.getOperand(2).getReg(), MRI)) {
+      const APInt ShiftVal = ValAndVeg->Value;
+
+      // Don't fold if we know this will be slow.
+      return !(STI.hasAddrLSLSlow14() && (ShiftVal == 1 || ShiftVal == 4));
+    }
+  }
+  return std::nullopt;
+}
+
 /// Return true if it is worth folding MI into an extended register. That is,
 /// if it's safe to pull it into the addressing mode of a load or store as a
 /// shift.
+/// \p IsAddrOperand whether the def of MI is used as an address operand
+/// (e.g. feeding into an LDR/STR).
 bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
-    MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+    MachineInstr &MI, const MachineRegisterInfo &MRI,
+    bool IsAddrOperand) const {
+
   // Always fold if there is one use, or if we're optimizing for size.
   Register DefReg = MI.getOperand(0).getReg();
   if (MRI.hasOneNonDBGUse(DefReg) ||
       MI.getParent()->getParent()->getFunction().hasOptSize())
     return true;
 
-  // FIXME: Consider checking HasAddrLSLSlow14 and HasALULSLFast as
-  // appropriate.
+  if (IsAddrOperand) {
+    // If we are already sure that folding MI is good or bad, return the result.
+    if (const auto Worth = isWorthFoldingIntoAddrMode(MI, MRI))
+      return *Worth;
+
+    // Fold G_PTR_ADD if its offset operand can be folded
+    if (MI.getOpcode() == AArch64::G_PTR_ADD) {
+      MachineInstr *OffsetInst =
+          getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+
+      // Note, we already know G_PTR_ADD is used by at least two instructions.
+      // If we are also sure about whether folding is beneficial or not,
+      // return the result.
+      if (const auto Worth = isWorthFoldingIntoAddrMode(*OffsetInst, MRI))
+        return *Worth;
+    }
+  }
+
+  // FIXME: Consider checking HasALULSLFast as appropriate.
 
   // We have a fastpath, so folding a shift in and potentially computing it
   // many times may be beneficial. Check if this is only used in memory ops.
@@ -6921,7 +7095,7 @@ AArch64InstructionSelector::selectExtendedSHL(
   int64_t LegalShiftVal = Log2_32(SizeInBytes);
   if (LegalShiftVal == 0)
     return std::nullopt;
-  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI, true))
     return std::nullopt;
 
   // Now, try to find the specific G_CONSTANT. Start by assuming that the
@@ -7028,7 +7202,7 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   // Check if we can find the G_PTR_ADD.
   MachineInstr *PtrAdd =
       getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
-  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI))
+  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI, true))
     return std::nullopt;
 
   // Now, try to match an opcode which will match our specific offset.
@@ -7162,7 +7336,7 @@ AArch64InstructionSelector::selectAddrModeWRO(MachineOperand &Root,
 
   MachineInstr *PtrAdd =
       getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
-  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI))
+  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI, true))
     return std::nullopt;
 
   MachineOperand &LHS = PtrAdd->getOperand(1);
@@ -7193,7 +7367,7 @@ AArch64InstructionSelector::selectAddrModeWRO(MachineOperand &Root,
   //
   // e.g.
   // ldr something, [base_reg, ext_reg, sxtw]
-  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI, true))
     return std::nullopt;
 
   // Check if this is an extend. We'll get an extend type if it is.
@@ -7388,7 +7562,7 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root,
     return std::nullopt;
   if (ShType == AArch64_AM::ROR && !AllowROR)
     return std::nullopt;
-  if (!isWorthFoldingIntoExtendedReg(*ShiftInst, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*ShiftInst, MRI, false))
     return std::nullopt;
 
   // Need an immediate on the RHS.
@@ -7502,7 +7676,7 @@ AArch64InstructionSelector::selectArithExtendedRegister(
   if (!RootDef)
     return std::nullopt;
 
-  if (!isWorthFoldingIntoExtendedReg(*RootDef, MRI))
+  if (!isWorthFoldingIntoExtendedReg(*RootDef, MRI, false))
     return std::nullopt;
 
   // Check if we can fold a shift and an extend.
@@ -7790,8 +7964,8 @@ void AArch64InstructionSelector::processPHIs(MachineFunction &MF) {
 namespace llvm {
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &TM,
-                                 AArch64Subtarget &Subtarget,
-                                 AArch64RegisterBankInfo &RBI) {
+                                 const AArch64Subtarget &Subtarget,
+                                 const AArch64RegisterBankInfo &RBI) {
   return new AArch64InstructionSelector(TM, Subtarget, RBI);
 }
 }

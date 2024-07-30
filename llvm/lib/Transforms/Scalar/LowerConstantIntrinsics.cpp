@@ -85,8 +85,11 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
     if (Target && Target != Other) {
       BasicBlock *Source = BI->getParent();
       Other->removePredecessor(Source);
+
+      Instruction *NewBI = BranchInst::Create(Target, Source);
+      NewBI->setDebugLoc(BI->getDebugLoc());
       BI->eraseFromParent();
-      BranchInst::Create(Target, Source);
+
       if (DTU)
         DTU->applyUpdates({{DominatorTree::Delete, Source, Other}});
       if (pred_empty(Other))

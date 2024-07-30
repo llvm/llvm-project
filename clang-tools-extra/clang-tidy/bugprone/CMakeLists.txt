@@ -48,6 +48,7 @@ add_clang_library(clangTidyBugproneModule
   NotNullTerminatedResultCheck.cpp
   OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
+  PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp

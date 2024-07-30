@@ -3840,6 +3840,8 @@ extern void __kmpc_dispatch_fini_8(ident_t *loc, kmp_int32 gtid);
 extern void __kmpc_dispatch_fini_4u(ident_t *loc, kmp_int32 gtid);
 extern void __kmpc_dispatch_fini_8u(ident_t *loc, kmp_int32 gtid);
 
+extern void __kmpc_dispatch_deinit(ident_t *loc, kmp_int32 gtid);
+
 #ifdef KMP_GOMP_COMPAT
 
 extern void __kmp_aux_dispatch_init_4(ident_t *loc, kmp_int32 gtid,
