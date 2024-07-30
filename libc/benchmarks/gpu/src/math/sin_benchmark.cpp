@@ -23,7 +23,6 @@ uint64_t get_bits(double x) {
 // easily register NVPTX benchmarks.
 #define BM_RANDOM_INPUT(Func)                                                  \
   []() {                                                                       \
-    LIBC_NAMESPACE::srand(LIBC_NAMESPACE::gpu::processor_clock());             \
     double x = LIBC_NAMESPACE::benchmarks::get_rand_input<double>();           \
     return LIBC_NAMESPACE::latency(Func, x);                                   \
   }

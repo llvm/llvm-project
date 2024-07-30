@@ -11,7 +11,6 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/rand.h"
-#include "src/stdlib/srand.h"
 #include "src/time/clock.h"
 
 #include <stdint.h>
