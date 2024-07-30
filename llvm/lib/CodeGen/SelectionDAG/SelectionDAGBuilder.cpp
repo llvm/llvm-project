@@ -1248,9 +1248,7 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       SmallVector<Value *> Values(It->Values.location_ops());
       if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
                             It->Values.hasArgList())) {
-        SmallVector<Value *, 4> Vals;
-        for (Value *V : It->Values.location_ops())
-          Vals.push_back(V);
+        SmallVector<Value *, 4> Vals(It->Values.location_ops());
         addDanglingDebugInfo(Vals,
                              FnVarLocs->getDILocalVariable(It->VariableID),
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
