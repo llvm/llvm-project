@@ -1922,9 +1922,15 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPScalarStoreRecipe::execute(VPTransformState &State) {
+  [[maybe_unused]] bool IsAllOperandsUniformAfterVectorization =
+      all_of(operands(), [](VPValue *Op) {
+        return vputils::isUniformAfterVectorization(Op);
+      });
+  assert(IsAllOperandsUniformAfterVectorization &&
+         "ScalarStore requests uniform operands");
   IRBuilderBase &Builder = State.Builder;
-  Value *StoredVal = State.get(getStoredVal(), 0, /*IsScalar*/ true);
-  Value *Addr = State.get(getAddress(), 0, /*IsScalar*/ true);
+  Value *StoredVal = State.get(getStoredVal(), State.UF - 1, /*IsScalar*/ true);
+  Value *Addr = State.get(getAddress(), State.UF - 1, /*IsScalar*/ true);
   StoreInst *NewSI =
       Builder.CreateAlignedStore(StoredVal, Addr, getLoadStoreAlignment(&SI));
   NewSI->setDebugLoc(getDebugLoc());
