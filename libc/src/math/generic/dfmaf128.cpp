@@ -11,8 +11,8 @@
 
 #include "src/math/dfmaf128.h"
 #include "src/__support/FPUtil/FMA.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
