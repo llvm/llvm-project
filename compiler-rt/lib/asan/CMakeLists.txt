@@ -131,7 +131,11 @@ append_list_if(WIN32 INTERCEPTION_DYNAMIC_CRT ASAN_DYNAMIC_DEFINITIONS)
 set(ASAN_DYNAMIC_CFLAGS ${ASAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
-append_list_if(MSVC /DEBUG ASAN_DYNAMIC_LINK_FLAGS)
+
+# LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
+# we _REALLY_ need to turn it back off for ASAN, because the way
+# asan emulates weak functions from DLLs requires NOICF
+append_list_if(MSVC "/DEBUG;/OPT:NOICF" ASAN_DYNAMIC_LINK_FLAGS)
 
 set(ASAN_DYNAMIC_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
