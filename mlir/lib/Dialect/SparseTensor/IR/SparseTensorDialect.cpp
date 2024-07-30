@@ -2267,6 +2267,19 @@ LogicalResult ExtractIterSpaceOp::verify() {
   return success();
 }
 
+LogicalResult ExtractValOp::verify() {
+  auto stt = getSparseTensorType(getTensor());
+  auto itTp = getIterator().getType();
+
+  if (stt.getEncoding() != itTp.getEncoding())
+    return emitOpError("mismatch in tensor encoding and iterator encoding.");
+
+  if (stt.getLvlRank() != itTp.getHiLvl())
+    return emitOpError("must use last-level iterator to extract values. ");
+
+  return success();
+}
+
 struct RemoveUnusedLvlCrds : public OpRewritePattern<IterateOp> {
   using OpRewritePattern::OpRewritePattern;
 
