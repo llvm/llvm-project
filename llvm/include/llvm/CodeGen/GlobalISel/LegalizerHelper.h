@@ -22,7 +22,7 @@
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
 namespace llvm {
@@ -280,6 +280,9 @@ private:
   LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
                                          MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
+  LegalizeResult createFCMPLibcall(MachineIRBuilder &MIRBuilder,
+                                   MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver);
 
   MachineInstrBuilder
   getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,
@@ -402,6 +405,7 @@ public:
 
   LegalizeResult lowerISFPCLASS(MachineInstr &MI);
 
+  LegalizeResult lowerThreewayCompare(MachineInstr &MI);
   LegalizeResult lowerMinMax(MachineInstr &MI);
   LegalizeResult lowerFCopySign(MachineInstr &MI);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);

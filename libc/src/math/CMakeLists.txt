@@ -89,6 +89,9 @@ add_math_entrypoint_object(cospif)
 add_math_entrypoint_object(dmull)
 add_math_entrypoint_object(dmulf128)
 
+add_math_entrypoint_object(dsqrtl)
+add_math_entrypoint_object(dsqrtf128)
+
 add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
 
@@ -130,6 +133,10 @@ add_math_entrypoint_object(f16sqrt)
 add_math_entrypoint_object(f16sqrtf)
 add_math_entrypoint_object(f16sqrtl)
 add_math_entrypoint_object(f16sqrtf128)
+
+add_math_entrypoint_object(fsqrt)
+add_math_entrypoint_object(fsqrtl)
+add_math_entrypoint_object(fsqrtf128)
 
 add_math_entrypoint_object(f16sub)
 add_math_entrypoint_object(f16subf)
@@ -428,7 +435,11 @@ add_math_entrypoint_object(tgammaf)
 
 add_math_entrypoint_object(totalorderf16)
 
+add_math_entrypoint_object(totalordermag)
+add_math_entrypoint_object(totalordermagf)
+add_math_entrypoint_object(totalordermagl)
 add_math_entrypoint_object(totalordermagf16)
+add_math_entrypoint_object(totalordermagf128)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

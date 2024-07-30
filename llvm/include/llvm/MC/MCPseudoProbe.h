@@ -280,8 +280,6 @@ class MCDecodedPseudoProbeInlineTree
                                          MCDecodedPseudoProbeInlineTree> {
 public:
   InlineSite ISite;
-  // Used for decoding
-  uint32_t ChildrenToProcess = 0;
 
   MCDecodedPseudoProbeInlineTree() = default;
   MCDecodedPseudoProbeInlineTree(const InlineSite &Site) : ISite(Site){};

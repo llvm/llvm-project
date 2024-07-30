@@ -101,11 +101,14 @@ void Ctx::reset() {
   lazyBitcodeFiles.clear();
   inputSections.clear();
   ehInputSections.clear();
+
+  symAux.clear();
   duplicates.clear();
   nonPrevailingSyms.clear();
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  tar.reset();
   internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
@@ -136,9 +139,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
     symtab = SymbolTable();
 
     outputSections.clear();
-    symAux.clear();
 
-    tar = nullptr;
     in.reset();
 
     partitions.clear();
@@ -153,7 +154,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   config = ConfigWrapper();
   script = ScriptWrapper();
 
-  symAux.emplace_back();
+  elf::ctx.symAux.emplace_back();
 
   partitions.clear();
   partitions.emplace_back();
@@ -224,14 +225,15 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 
   std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
-  bool addToTar = file->isThin() && tar;
+  bool addToTar = file->isThin() && ctx.tar;
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      tar->append(relativeToRoot(check(c.getFullName())), mbref.getBuffer());
+      ctx.tar->append(relativeToRoot(check(c.getFullName())),
+                      mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -640,9 +642,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
         TarWriter::create(path, path::stem(path));
     if (errOrWriter) {
-      tar = std::move(*errOrWriter);
-      tar->append("response.txt", createResponseFile(args));
-      tar->append("version.txt", getLLDVersion() + "\n");
+      ctx.tar = std::move(*errOrWriter);
+      ctx.tar->append("response.txt", createResponseFile(args));
+      ctx.tar->append("version.txt", getLLDVersion() + "\n");
       StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
       if (!ltoSampleProfile.empty())
         readFile(ltoSampleProfile);
@@ -1911,13 +1913,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       hasInput = true;
       break;
     case OPT_defsym: {
-      StringRef from;
-      StringRef to;
-      std::tie(from, to) = StringRef(arg->getValue()).split('=');
-      if (from.empty() || to.empty())
-        error("--defsym: syntax error: " + StringRef(arg->getValue()));
-      else
-        readDefsym(from, MemoryBufferRef(to, "--defsym"));
+      readDefsym(MemoryBufferRef(arg->getValue(), "--defsym"));
       break;
     }
     case OPT_script:
@@ -2884,9 +2880,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);

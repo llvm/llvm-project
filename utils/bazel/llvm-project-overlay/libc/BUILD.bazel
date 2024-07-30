@@ -675,6 +675,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_macros_optimization",
@@ -3019,17 +3020,6 @@ libc_function(
     name = "geteuid",
     srcs = ["src/unistd/linux/geteuid.cpp"],
     hdrs = ["src/unistd/geteuid.h"],
-    deps = [
-        ":__support_common",
-        ":__support_osutil_syscall",
-        ":errno",
-    ],
-)
-
-libc_function(
-    name = "getpid",
-    srcs = ["src/unistd/linux/getpid.cpp"],
-    hdrs = ["src/unistd/getpid.h"],
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",

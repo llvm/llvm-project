@@ -386,13 +386,12 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                   std::move(Emitter));
 }
 
-static MCStreamer *createMachOStreamer(MCContext &Ctx,
-                                       std::unique_ptr<MCAsmBackend> &&TAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool DWARFMustBeAtTheEnd) {
+static MCStreamer *
+createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter), DWARFMustBeAtTheEnd,
+                             std::move(Emitter), /*ignore=*/false,
                              /*LabelSections*/ true);
 }
 

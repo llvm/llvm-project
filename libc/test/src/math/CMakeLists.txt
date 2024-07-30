@@ -2045,6 +2045,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atan2_test.cpp
+  DEPENDS
+    libc.src.math.atan2
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   f16add_test
   NEED_MPFR
   SUITE
@@ -2243,6 +2255,45 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.f16sqrtl
+)
+
+add_fp_unittest(
+  fsqrt_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsqrt_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrt
+)
+
+add_fp_unittest(
+  fsqrtl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrtl
+)
+
+add_fp_unittest(
+  dsqrtl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    dsqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.dsqrtl
 )
 
 add_fp_unittest(

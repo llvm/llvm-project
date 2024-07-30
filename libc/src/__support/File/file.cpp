@@ -282,7 +282,7 @@ int File::ungetc_unlocked(int c) {
   return c;
 }
 
-ErrorOr<int> File::seek(long offset, int whence) {
+ErrorOr<int> File::seek(off_t offset, int whence) {
   FileLock lock(this);
   if (prev_op == FileOp::WRITE && pos > 0) {
 

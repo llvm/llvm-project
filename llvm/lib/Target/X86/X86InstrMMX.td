@@ -576,3 +576,13 @@ def : Pat<(x86mmx (MMX_X86movdq2q
                    (bc_v2i64 (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
           (MMX_CVTTPD2PIrr VR128:$src)>;
 }
+
+let AddedComplexity = 400 in { // Prefer non-temporal version
+
+// Non-temporal store (no alignment required).
+let Predicates = [HasMMX] in {
+  def : Pat<(nontemporalstore (x86mmx VR64:$src), addr:$dst),
+            (MMX_MOVNTQmr addr:$dst, VR64:$src)>;
+}
+
+} // AddedComplexity

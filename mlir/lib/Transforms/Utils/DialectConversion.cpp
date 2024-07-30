@@ -293,10 +293,9 @@ public:
 /// original location.
 class EraseBlockRewrite : public BlockRewrite {
 public:
-  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-                    Region *region, Block *insertBeforeBlock)
-      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block), region(region),
-        insertBeforeBlock(insertBeforeBlock) {}
+  EraseBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block)
+      : BlockRewrite(Kind::EraseBlock, rewriterImpl, block),
+        region(block->getParent()), insertBeforeBlock(block->getNextNode()) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::EraseBlock;
@@ -1371,7 +1370,8 @@ Value ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
 
   // Create an unresolved materialization. We use a new OpBuilder to avoid
   // tracking the materialization like we do for other operations.
-  OpBuilder builder(insertBlock, insertPt);
+  OpBuilder builder(outputType.getContext());
+  builder.setInsertionPoint(insertBlock, insertPt);
   auto convertOp =
       builder.create<UnrealizedConversionCastOp>(loc, outputType, inputs);
   appendRewrite<UnresolvedMaterializationRewrite>(convertOp, converter, kind);
@@ -1440,9 +1440,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
 }
 
 void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
-  Region *region = block->getParent();
-  Block *origNextBlock = block->getNextNode();
-  appendRewrite<EraseBlockRewrite>(block, region, origNextBlock);
+  appendRewrite<EraseBlockRewrite>(block);
 }
 
 void ConversionPatternRewriterImpl::notifyBlockInserted(

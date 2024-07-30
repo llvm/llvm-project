@@ -15,13 +15,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/MachO.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/VersionTuple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -56,24 +52,9 @@ class MCValue;
 
 class MCAssembler {
 public:
+  friend class MCObjectWriter;
   using SectionListType = SmallVector<MCSection *, 0>;
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
-
-  /// MachO specific deployment target version info.
-  // A Major version of 0 indicates that no version information was supplied
-  // and so the corresponding load command should not be emitted.
-  using VersionInfoType = struct {
-    bool EmitBuildVersion;
-    union {
-      MCVersionMinType Type;          ///< Used when EmitBuildVersion==false.
-      MachO::PlatformType Platform;   ///< Used when EmitBuildVersion==true.
-    } TypeOrPlatform;
-    unsigned Major;
-    unsigned Minor;
-    unsigned Update;
-    /// An optional version of the SDK that was used to build the source.
-    VersionTuple SDKVersion;
-  };
 
 private:
   MCContext &Context;
@@ -84,20 +65,10 @@ private:
 
   bool HasLayout = false;
   bool RelaxAll = false;
-  bool SubsectionsViaSymbols = false;
-  bool IncrementalLinkerCompatible = false;
 
   SectionListType Sections;
 
   SmallVector<const MCSymbol *, 0> Symbols;
-
-  /// The list of linker options to propagate into the object file.
-  std::vector<std::vector<std::string>> LinkerOptions;
-
-  /// List of declared file names
-  std::vector<std::pair<std::string, size_t>> FileNames;
-  // Optional compiler version.
-  std::string CompilerVersion;
 
   MCDwarfLineTableParams LTParams;
 
@@ -114,20 +85,6 @@ private:
   ///
   /// By default it's 0, which means bundling is disabled.
   unsigned BundleAlignSize = 0;
-
-  /// ELF specific e_header flags
-  // It would be good if there were an MCELFAssembler class to hold this.
-  // ELF header flags are used both by the integrated and standalone assemblers.
-  // Access to the flags is necessary in cases where assembler directives affect
-  // which flags to be set.
-  unsigned ELFHeaderEFlags = 0;
-
-  /// Used to communicate Linker Optimization Hint information between
-  /// the Streamer and the .o writer
-  MCLOHContainer LOHContainer;
-
-  VersionInfoType VersionInfo;
-  VersionInfoType DarwinTargetVariantVersionInfo;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
@@ -154,6 +111,7 @@ private:
   /// Check whether the given fragment needs relaxation.
   bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF) const;
 
+  void layoutSection(MCSection &Sec);
   /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
   bool layoutOnce();
@@ -174,15 +132,6 @@ private:
   handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
-  struct Symver {
-    SMLoc Loc;
-    const MCSymbol *Sym;
-    StringRef Name;
-    // True if .symver *, *@@@* or .symver *, *, remove.
-    bool KeepOriginalSym;
-  };
-  std::vector<Symver> Symvers;
-
   /// Construct a new assembler instance.
   //
   // FIXME: How are we going to parameterize this? Two obvious options are stay
@@ -194,16 +143,14 @@ public:
               std::unique_ptr<MCObjectWriter> Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
-  ~MCAssembler();
 
   /// Compute the effective fragment size.
   uint64_t computeFragmentSize(const MCFragment &F) const;
 
   void layoutBundle(MCFragment *Prev, MCFragment *F) const;
-  void ensureValid(MCSection &Sec) const;
 
   // Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment &F) const;
+  uint64_t getFragmentOffset(const MCFragment &F) const { return F.Offset; }
 
   uint64_t getSectionAddressSize(const MCSection &Sec) const;
   uint64_t getSectionFileSize(const MCSection &Sec) const;
@@ -228,48 +175,6 @@ public:
   /// Flag a function symbol as the target of a .thumb_func directive.
   void setIsThumbFunc(const MCSymbol *Func) { ThumbFuncs.insert(Func); }
 
-  /// ELF e_header flags
-  unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
-  void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
-
-  /// MachO deployment target version information.
-  const VersionInfoType &getVersionInfo() const { return VersionInfo; }
-  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
-                     unsigned Update,
-                     VersionTuple SDKVersion = VersionTuple()) {
-    VersionInfo.EmitBuildVersion = false;
-    VersionInfo.TypeOrPlatform.Type = Type;
-    VersionInfo.Major = Major;
-    VersionInfo.Minor = Minor;
-    VersionInfo.Update = Update;
-    VersionInfo.SDKVersion = SDKVersion;
-  }
-  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
-                       unsigned Minor, unsigned Update,
-                       VersionTuple SDKVersion = VersionTuple()) {
-    VersionInfo.EmitBuildVersion = true;
-    VersionInfo.TypeOrPlatform.Platform = Platform;
-    VersionInfo.Major = Major;
-    VersionInfo.Minor = Minor;
-    VersionInfo.Update = Update;
-    VersionInfo.SDKVersion = SDKVersion;
-  }
-
-  const VersionInfoType &getDarwinTargetVariantVersionInfo() const {
-    return DarwinTargetVariantVersionInfo;
-  }
-  void setDarwinTargetVariantBuildVersion(MachO::PlatformType Platform,
-                                          unsigned Major, unsigned Minor,
-                                          unsigned Update,
-                                          VersionTuple SDKVersion) {
-    DarwinTargetVariantVersionInfo.EmitBuildVersion = true;
-    DarwinTargetVariantVersionInfo.TypeOrPlatform.Platform = Platform;
-    DarwinTargetVariantVersionInfo.Major = Major;
-    DarwinTargetVariantVersionInfo.Minor = Minor;
-    DarwinTargetVariantVersionInfo.Update = Update;
-    DarwinTargetVariantVersionInfo.SDKVersion = SDKVersion;
-  }
-
   /// Reuse an assembler instance
   ///
   void reset();
@@ -280,8 +185,6 @@ public:
 
   MCCodeEmitter *getEmitterPtr() const { return Emitter.get(); }
 
-  MCObjectWriter *getWriterPtr() const { return Writer.get(); }
-
   MCAsmBackend &getBackend() const { return *Backend; }
 
   MCCodeEmitter &getEmitter() const { return *Emitter; }
@@ -289,7 +192,6 @@ public:
   MCObjectWriter &getWriter() const { return *Writer; }
 
   MCDwarfLineTableParams getDWARFLinetableParams() const { return LTParams; }
-  void setDWARFLinetableParams(MCDwarfLineTableParams P) { LTParams = P; }
 
   /// Finish - Do final processing and write the object to the output stream.
   /// \p Writer is used for custom object writer (as the MCJIT does),
@@ -298,17 +200,6 @@ public:
 
   // Layout all section and prepare them for emission.
   void layout();
-
-  // FIXME: This does not belong here.
-  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
-  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
-
-  bool isIncrementalLinkerCompatible() const {
-    return IncrementalLinkerCompatible;
-  }
-  void setIncrementalLinkerCompatible(bool Value) {
-    IncrementalLinkerCompatible = Value;
-  }
 
   bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
@@ -333,55 +224,13 @@ public:
     return make_pointee_range(Symbols);
   }
 
-  /// @}
-  /// \name Linker Option List Access
-  /// @{
-
-  std::vector<std::vector<std::string>> &getLinkerOptions() {
-    return LinkerOptions;
-  }
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  MCLOHContainer &getLOHContainer() { return LOHContainer; }
-  const MCLOHContainer &getLOHContainer() const {
-    return const_cast<MCAssembler *>(this)->getLOHContainer();
-  }
-
-  struct CGProfileEntry {
-    const MCSymbolRefExpr *From;
-    const MCSymbolRefExpr *To;
-    uint64_t Count;
-  };
-  std::vector<CGProfileEntry> CGProfile;
-  /// @}
-  /// \name Backend Data Access
-  /// @{
-
   bool registerSection(MCSection &Section);
   bool registerSymbol(const MCSymbol &Symbol);
-
-  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
-    return FileNames;
-  }
-
-  void addFileName(StringRef FileName) {
-    FileNames.emplace_back(std::string(FileName), Symbols.size());
-  }
-
-  void setCompilerVersion(std::string CompilerVers) {
-    if (CompilerVersion.empty())
-      CompilerVersion = std::move(CompilerVers);
-  }
-  StringRef getCompilerVersion() { return CompilerVersion; }
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
   void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
                             uint64_t FSize) const;
-
-  /// @}
 
   void dump() const;
 };

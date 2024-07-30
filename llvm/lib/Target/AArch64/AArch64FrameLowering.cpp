@@ -1900,8 +1900,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
@@ -2307,8 +2306,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.
   int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                              MF.getFunction().isVarArg());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   int64_t AfterCSRPopSize = ArgumentStackToRestore;
@@ -2605,6 +2604,41 @@ AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 }
 
 StackOffset
+AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const {
+  // This function serves to provide a comparable offset from a single reference
+  // point (the value of SP at function entry) that can be used for analysis,
+  // e.g. the stack-frame-layout analysis pass. It is not guaranteed to be
+  // correct for all objects in the presence of VLA-area objects or dynamic
+  // stack re-alignment.
+
+  const auto &MFI = MF.getFrameInfo();
+
+  int64_t ObjectOffset = MFI.getObjectOffset(FI);
+
+  // This is correct in the absence of any SVE stack objects.
+  StackOffset SVEStackSize = getSVEStackSize(MF);
+  if (!SVEStackSize)
+    return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
+
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
+                            ObjectOffset);
+  }
+
+  bool IsFixed = MFI.isFixedObjectIndex(FI);
+  bool IsCSR =
+      !IsFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+
+  StackOffset ScalableOffset = {};
+  if (!IsFixed && !IsCSR)
+    ScalableOffset = -SVEStackSize;
+
+  return StackOffset::getFixed(ObjectOffset) + ScalableOffset;
+}
+
+StackOffset
 AArch64FrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
                                                      int FI) const {
   return StackOffset::getFixed(getSEHFrameIndexOffset(MF, FI));
@@ -2614,8 +2648,8 @@ static StackOffset getFPOffset(const MachineFunction &MF,
                                int64_t ObjectOffset) {
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  bool IsWin64 =
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+  const Function &F = MF.getFunction();
+  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject =
       getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet=*/false);
   int64_t CalleeSaveSize = AFI->getCalleeSavedStackSize(MF.getFrameInfo());
@@ -2721,9 +2755,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // via the frame pointer, so we have to use the FP in the parent
         // function.
         (void) Subtarget;
-        assert(
-            Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv()) &&
-            "Funclets should only be present on Win64");
+        assert(Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                            MF.getFunction().isVarArg()) &&
+               "Funclets should only be present on Win64");
         UseFP = true;
       } else {
         // We have the choice between FP and (SP or BP).
