@@ -30,7 +30,7 @@ int main(int, char**) {
     lk.unlock();
     assert(false);
   } catch (std::system_error& e) {
-    assert(e.code().value() == EPERM);
+    assert(e.code() == std::errc::operation_not_permitted);
   }
 #endif
   lk.release();
@@ -39,7 +39,7 @@ int main(int, char**) {
     lk.unlock();
     assert(false);
   } catch (std::system_error& e) {
-    assert(e.code().value() == EPERM);
+    assert(e.code() == std::errc::operation_not_permitted);
   }
 #endif
 
