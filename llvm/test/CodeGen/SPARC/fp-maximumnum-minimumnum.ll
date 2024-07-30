@@ -331,31 +331,35 @@ define double @maximumnum_double(double %x, double %y) {
 ; SPARC64-NEXT:    mov %g0, %o1
 ; SPARC64-NEXT:    fcmpd %fcc0, %f0, %f0
 ; SPARC64-NEXT:    fmovdu %fcc0, %f2, %f0
-; SPARC64-NEXT:    std %f0, [%sp+2183]
+; SPARC64-NEXT:    fdtos %f0, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2187]
 ; SPARC64-NEXT:    fcmpd %fcc0, %f2, %f2
 ; SPARC64-NEXT:    fmovdu %fcc0, %f0, %f2
-; SPARC64-NEXT:    std %f2, [%sp+2175]
+; SPARC64-NEXT:    fdtos %f2, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2183]
 ; SPARC64-NEXT:    fcmpd %fcc0, %f0, %f2
 ; SPARC64-NEXT:    fmovd %f2, %f4
 ; SPARC64-NEXT:    fmovdg %fcc0, %f0, %f4
-; SPARC64-NEXT:    ldx [%sp+2183], %o2
+; SPARC64-NEXT:    ld [%sp+2187], %o2
 ; SPARC64-NEXT:    faddd %f4, %f4, %f6
 ; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f4
 ; SPARC64-NEXT:    fmovdu %fcc0, %f6, %f4
-; SPARC64-NEXT:    movrz %o2, 1, %o0
+; SPARC64-NEXT:    cmp %o2, 0
+; SPARC64-NEXT:    ld [%sp+2183], %o2
+; SPARC64-NEXT:    move %icc, 1, %o0
 ; SPARC64-NEXT:    cmp %o0, 0
-; SPARC64-NEXT:    ldx [%sp+2175], %o0
-; SPARC64-NEXT:    sethi %h44(.LCPI3_0), %o2
-; SPARC64-NEXT:    add %o2, %m44(.LCPI3_0), %o2
-; SPARC64-NEXT:    sllx %o2, 12, %o2
-; SPARC64-NEXT:    ldd [%o2+%l44(.LCPI3_0)], %f6
-; SPARC64-NEXT:    fmovd %f4, %f8
-; SPARC64-NEXT:    fmovdne %icc, %f0, %f8
-; SPARC64-NEXT:    movrz %o0, 1, %o1
+; SPARC64-NEXT:    fmovd %f4, %f6
+; SPARC64-NEXT:    fmovdne %icc, %f0, %f6
+; SPARC64-NEXT:    cmp %o2, 0
+; SPARC64-NEXT:    sethi %h44(.LCPI3_0), %o0
+; SPARC64-NEXT:    add %o0, %m44(.LCPI3_0), %o0
+; SPARC64-NEXT:    sllx %o0, 12, %o0
+; SPARC64-NEXT:    ldd [%o0+%l44(.LCPI3_0)], %f0
+; SPARC64-NEXT:    move %icc, 1, %o1
 ; SPARC64-NEXT:    cmp %o1, 0
-; SPARC64-NEXT:    fmovdne %icc, %f2, %f8
-; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f6
-; SPARC64-NEXT:    fmovde %fcc0, %f8, %f4
+; SPARC64-NEXT:    fmovdne %icc, %f2, %f6
+; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f0
+; SPARC64-NEXT:    fmovde %fcc0, %f6, %f4
 ; SPARC64-NEXT:    fmovd %f4, %f0
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    add %sp, 144, %sp
@@ -554,24 +558,28 @@ define double @maximumnum_double_nnan(double %x, double %y) {
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
-; SPARC64-NEXT:    std %f2, [%sp+2175]
-; SPARC64-NEXT:    std %f0, [%sp+2183]
-; SPARC64-NEXT:    ldx [%sp+2183], %o0
+; SPARC64-NEXT:    fdtos %f0, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2187]
+; SPARC64-NEXT:    fdtos %f2, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2183]
+; SPARC64-NEXT:    ld [%sp+2187], %o0
 ; SPARC64-NEXT:    mov %g0, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
-; SPARC64-NEXT:    movrz %o0, 1, %o1
-; SPARC64-NEXT:    ldx [%sp+2175], %o0
 ; SPARC64-NEXT:    fcmpd %fcc0, %f0, %f2
 ; SPARC64-NEXT:    fmovd %f2, %f4
 ; SPARC64-NEXT:    fmovdg %fcc0, %f0, %f4
+; SPARC64-NEXT:    cmp %o0, 0
+; SPARC64-NEXT:    ld [%sp+2183], %o0
+; SPARC64-NEXT:    move %icc, 1, %o1
 ; SPARC64-NEXT:    cmp %o1, 0
 ; SPARC64-NEXT:    fmovd %f4, %f6
 ; SPARC64-NEXT:    fmovdne %icc, %f0, %f6
-; SPARC64-NEXT:    sethi %h44(.LCPI5_0), %o1
-; SPARC64-NEXT:    add %o1, %m44(.LCPI5_0), %o1
-; SPARC64-NEXT:    sllx %o1, 12, %o1
-; SPARC64-NEXT:    ldd [%o1+%l44(.LCPI5_0)], %f0
-; SPARC64-NEXT:    movrz %o0, 1, %o2
+; SPARC64-NEXT:    cmp %o0, 0
+; SPARC64-NEXT:    sethi %h44(.LCPI5_0), %o0
+; SPARC64-NEXT:    add %o0, %m44(.LCPI5_0), %o0
+; SPARC64-NEXT:    sllx %o0, 12, %o0
+; SPARC64-NEXT:    ldd [%o0+%l44(.LCPI5_0)], %f0
+; SPARC64-NEXT:    move %icc, 1, %o2
 ; SPARC64-NEXT:    cmp %o2, 0
 ; SPARC64-NEXT:    fmovdne %icc, %f2, %f6
 ; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f0
@@ -997,35 +1005,32 @@ define double @minimumnum_double(double %x, double %y) {
 ; SPARC64-NEXT:    mov %g0, %o1
 ; SPARC64-NEXT:    fcmpd %fcc0, %f0, %f0
 ; SPARC64-NEXT:    fmovdu %fcc0, %f2, %f0
-; SPARC64-NEXT:    std %f0, [%sp+2183]
+; SPARC64-NEXT:    fdtos %f0, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2187]
 ; SPARC64-NEXT:    fcmpd %fcc0, %f2, %f2
 ; SPARC64-NEXT:    fmovdu %fcc0, %f0, %f2
-; SPARC64-NEXT:    std %f2, [%sp+2175]
+; SPARC64-NEXT:    fdtos %f2, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2183]
 ; SPARC64-NEXT:    fcmpd %fcc0, %f0, %f2
 ; SPARC64-NEXT:    fmovd %f2, %f4
 ; SPARC64-NEXT:    fmovdl %fcc0, %f0, %f4
-; SPARC64-NEXT:    sethi 0, %o2
-; SPARC64-NEXT:    or %o2, 0, %o2
-; SPARC64-NEXT:    sethi 2097152, %o3
-; SPARC64-NEXT:    or %o3, 0, %o3
-; SPARC64-NEXT:    sllx %o3, 32, %o3
-; SPARC64-NEXT:    or %o3, %o2, %o2
-; SPARC64-NEXT:    ldx [%sp+2183], %o3
 ; SPARC64-NEXT:    faddd %f4, %f4, %f6
+; SPARC64-NEXT:    ld [%sp+2187], %o2
 ; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f4
 ; SPARC64-NEXT:    fmovdu %fcc0, %f6, %f4
-; SPARC64-NEXT:    cmp %o3, %o2
-; SPARC64-NEXT:    ldx [%sp+2175], %o3
-; SPARC64-NEXT:    move %xcc, 1, %o0
+; SPARC64-NEXT:    sethi 2097152, %o3
+; SPARC64-NEXT:    cmp %o2, %o3
+; SPARC64-NEXT:    ld [%sp+2183], %o2
+; SPARC64-NEXT:    move %icc, 1, %o0
 ; SPARC64-NEXT:    cmp %o0, 0
 ; SPARC64-NEXT:    fmovd %f4, %f6
 ; SPARC64-NEXT:    fmovdne %icc, %f0, %f6
-; SPARC64-NEXT:    cmp %o3, %o2
+; SPARC64-NEXT:    cmp %o2, %o3
 ; SPARC64-NEXT:    sethi %h44(.LCPI9_0), %o0
 ; SPARC64-NEXT:    add %o0, %m44(.LCPI9_0), %o0
 ; SPARC64-NEXT:    sllx %o0, 12, %o0
 ; SPARC64-NEXT:    ldd [%o0+%l44(.LCPI9_0)], %f0
-; SPARC64-NEXT:    move %xcc, 1, %o1
+; SPARC64-NEXT:    move %icc, 1, %o1
 ; SPARC64-NEXT:    cmp %o1, 0
 ; SPARC64-NEXT:    fmovdne %icc, %f2, %f6
 ; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f0
@@ -1237,35 +1242,32 @@ define double @minimumnum_double_nnan(double %x, double %y) {
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
-; SPARC64-NEXT:    mov %g0, %o0
+; SPARC64-NEXT:    fdtos %f2, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2183]
+; SPARC64-NEXT:    fdtos %f0, %f4
+; SPARC64-NEXT:    st %f4, [%sp+2187]
+; SPARC64-NEXT:    ld [%sp+2183], %o0
 ; SPARC64-NEXT:    mov %g0, %o1
-; SPARC64-NEXT:    std %f2, [%sp+2175]
-; SPARC64-NEXT:    std %f0, [%sp+2183]
-; SPARC64-NEXT:    ldx [%sp+2183], %o2
-; SPARC64-NEXT:    sethi 0, %o3
-; SPARC64-NEXT:    or %o3, 0, %o3
+; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    ld [%sp+2187], %o3
 ; SPARC64-NEXT:    sethi 2097152, %o4
-; SPARC64-NEXT:    or %o4, 0, %o4
-; SPARC64-NEXT:    sllx %o4, 32, %o4
-; SPARC64-NEXT:    or %o4, %o3, %o3
-; SPARC64-NEXT:    cmp %o2, %o3
-; SPARC64-NEXT:    ldx [%sp+2175], %o2
-; SPARC64-NEXT:    move %xcc, 1, %o0
+; SPARC64-NEXT:    cmp %o0, %o4
+; SPARC64-NEXT:    move %icc, 1, %o1
+; SPARC64-NEXT:    cmp %o3, %o4
+; SPARC64-NEXT:    move %icc, 1, %o2
 ; SPARC64-NEXT:    fcmpd %fcc0, %f0, %f2
 ; SPARC64-NEXT:    fmovd %f2, %f4
 ; SPARC64-NEXT:    fmovdl %fcc0, %f0, %f4
-; SPARC64-NEXT:    cmp %o0, 0
+; SPARC64-NEXT:    cmp %o2, 0
 ; SPARC64-NEXT:    fmovd %f4, %f6
-; SPARC64-NEXT:    fmovdne %icc, %f0, %f6
-; SPARC64-NEXT:    cmp %o2, %o3
 ; SPARC64-NEXT:    sethi %h44(.LCPI11_0), %o0
 ; SPARC64-NEXT:    add %o0, %m44(.LCPI11_0), %o0
 ; SPARC64-NEXT:    sllx %o0, 12, %o0
-; SPARC64-NEXT:    ldd [%o0+%l44(.LCPI11_0)], %f0
-; SPARC64-NEXT:    move %xcc, 1, %o1
+; SPARC64-NEXT:    ldd [%o0+%l44(.LCPI11_0)], %f8
+; SPARC64-NEXT:    fmovdne %icc, %f0, %f6
 ; SPARC64-NEXT:    cmp %o1, 0
 ; SPARC64-NEXT:    fmovdne %icc, %f2, %f6
-; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f0
+; SPARC64-NEXT:    fcmpd %fcc0, %f4, %f8
 ; SPARC64-NEXT:    fmovde %fcc0, %f6, %f4
 ; SPARC64-NEXT:    fmovd %f4, %f0
 ; SPARC64-NEXT:    retl
