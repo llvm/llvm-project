@@ -2580,7 +2580,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 // get to lane space, or a left shift of the offset to get to
                 // wavespace. We can right shift after the computation to get
                 // back to the desired per-lane value.
-                // we are using the mad_u32_u24 primarily as an add with no
+                // We are using the mad_u32_u24 primarily as an add with no
                 // carry out clobber.
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)
