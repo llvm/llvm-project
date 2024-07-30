@@ -989,7 +989,7 @@ def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", [CExpression]> {
     Example:
 
     ```mlir
-    %0 = emitc.unary_plus %arg0 : (i32) -> i32
+    %0 = emitc.unary_minus %arg0 : (i32) -> i32
     ```
     ```c++
     // Code emitted for the operation above.
