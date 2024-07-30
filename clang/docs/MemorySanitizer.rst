@@ -8,10 +8,17 @@ MemorySanitizer
 Introduction
 ============
 
-MemorySanitizer is a detector of uninitialized reads. It consists of a
+MemorySanitizer is a detector of uninitialized memory use. It consists of a
 compiler instrumentation module and a run-time library.
 
 Typical slowdown introduced by MemorySanitizer is **3x**.
+
+Here is a not comprehensive list cases when MemorySanitizer will report an error:
+
+* Conditional branches controlled by uninitialized values.
+* Using uninitalized pointers for memory accesses.
+* Passing and returning uninitialized values to/from function calls. Can be disabled with ``-fno-sanitize-memory-param-retval``.
+* Passing uninitialized data into libc calls.
 
 How to build
 ============
