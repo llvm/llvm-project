@@ -1168,6 +1168,11 @@ private:
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
 
+  /// Stack of cached tokens/initial number of cached tokens pairs, allowing
+  /// nested unannotated backtracks.
+  std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
+      UnannotatedBacktrackTokens;
+
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
   ///
@@ -1737,8 +1742,16 @@ public:
   /// at some point after EnableBacktrackAtThisPos. If you don't, caching of
   /// tokens will continue indefinitely.
   ///
-  void EnableBacktrackAtThisPos();
+  /// \param Unannotated Whether token annotations are reverted upon calling
+  /// Backtrack().
+  void EnableBacktrackAtThisPos(bool Unannotated = false);
 
+private:
+  std::pair<CachedTokensTy::size_type, bool> LastBacktrackPos();
+
+  CachedTokensTy PopUnannotatedBacktrackTokens();
+
+public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
@@ -1749,6 +1762,12 @@ public:
   /// True if EnableBacktrackAtThisPos() was called and
   /// caching of tokens is on.
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
+
+  /// True if EnableBacktrackAtThisPos() was called and
+  /// caching of unannotated tokens is on.
+  bool isUnannotatedBacktrackEnabled() const {
+    return !UnannotatedBacktrackTokens.empty();
+  }
 
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
@@ -1856,8 +1875,9 @@ public:
   void RevertCachedTokens(unsigned N) {
     assert(isBacktrackEnabled() &&
            "Should only be called when tokens are cached for backtracking");
-    assert(signed(CachedLexPos) - signed(N) >= signed(BacktrackPositions.back())
-         && "Should revert tokens up to the last backtrack position, not more");
+    assert(signed(CachedLexPos) - signed(N) >=
+               signed(LastBacktrackPos().first) &&
+           "Should revert tokens up to the last backtrack position, not more");
     assert(signed(CachedLexPos) - signed(N) >= 0 &&
            "Corrupted backtrack positions ?");
     CachedLexPos -= N;
