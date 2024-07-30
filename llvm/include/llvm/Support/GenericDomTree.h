@@ -695,7 +695,8 @@ protected:
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
-      IDom->Children.erase(I);
+      std::swap(*I, IDom->Children.back());
+      IDom->Children.pop_back();
     }
 
     DomTreeNodes.erase(BB);
