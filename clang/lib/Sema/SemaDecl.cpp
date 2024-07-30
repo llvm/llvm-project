@@ -4031,7 +4031,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
     // HLSL check parameters for matching ABI specifications.
     if (getLangOpts().HLSL) {
-      if(HLSL().CheckCompatibleParameterABI(New, Old))
+      if (HLSL().CheckCompatibleParameterABI(New, Old))
         return true;
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
     }
