@@ -94,7 +94,6 @@
 #include <bitset>
 #include <cassert>
 #include <cctype>
-#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
@@ -13830,7 +13829,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   if (EltSize > 1) {
     auto DiffDiv = LaneMask.getOperand(2);
     auto DiffDivConst = dyn_cast<ConstantSDNode>(DiffDiv.getOperand(1));
-    if (!DiffDivConst || DiffDivConst->getZExtValue() != std::log2(EltSize))
+    if (!DiffDivConst || DiffDivConst->getZExtValue() != Log2_64(EltSize))
       return SDValue();
   } else if (LaneMask.getOperand(2) != Diff)
     return SDValue();
