@@ -13814,7 +13814,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
     return SDValue();
   unsigned CompValue = std::abs(ComparatorConst->getSExtValue());
   unsigned EltSize = CompValue + 1;
-  if (!isPowerOf2_64(EltSize) || EltSize > 64)
+  if (!isPowerOf2_64(EltSize) || EltSize > 8)
     return SDValue();
 
   SDValue Diff = Cmp.getOperand(0);

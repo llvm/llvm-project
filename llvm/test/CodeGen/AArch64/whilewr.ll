@@ -153,3 +153,56 @@ entry:
   %active.lane.mask.alias = or <vscale x 2 x i1> %ptr.diff.lane.mask, %.splat
   ret <vscale x 2 x i1> %active.lane.mask.alias
 }
+
+define dso_local <vscale x 1 x i1> @no_whilewr_128(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+; CHECK-LABEL: no_whilewr_128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub x8, x1, x2
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    add x9, x8, #15
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    csel x9, x9, x8, lt
+; CHECK-NEXT:    cmn x8, #15
+; CHECK-NEXT:    asr x9, x9, #4
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    mov z1.d, x9
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    ret
+;
+; CHECK-NOSVE2-LABEL: no_whilewr_128:
+; CHECK-NOSVE2:       // %bb.0: // %entry
+; CHECK-NOSVE2-NEXT:    sub x8, x1, x2
+; CHECK-NOSVE2-NEXT:    index z0.d, #0, #1
+; CHECK-NOSVE2-NEXT:    ptrue p0.d
+; CHECK-NOSVE2-NEXT:    add x9, x8, #15
+; CHECK-NOSVE2-NEXT:    cmp x8, #0
+; CHECK-NOSVE2-NEXT:    csel x9, x9, x8, lt
+; CHECK-NOSVE2-NEXT:    cmn x8, #15
+; CHECK-NOSVE2-NEXT:    asr x9, x9, #4
+; CHECK-NOSVE2-NEXT:    cset w8, lt
+; CHECK-NOSVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NOSVE2-NEXT:    mov z1.d, x9
+; CHECK-NOSVE2-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NOSVE2-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
+; CHECK-NOSVE2-NEXT:    punpklo p1.h, p1.b
+; CHECK-NOSVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-NOSVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NOSVE2-NEXT:    ret
+entry:
+  %b12 = ptrtoint ptr %b to i64
+  %c13 = ptrtoint ptr %c to i64
+  %sub.diff = sub i64 %b12, %c13
+  %diff = sdiv i64 %sub.diff, 16
+  %neg.compare = icmp slt i64 %sub.diff, -15
+  %.splatinsert = insertelement <vscale x 1 x i1> poison, i1 %neg.compare, i64 0
+  %.splat = shufflevector <vscale x 1 x i1> %.splatinsert, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  %ptr.diff.lane.mask = tail call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i64(i64 0, i64 %diff)
+  %active.lane.mask.alias = or <vscale x 1 x i1> %ptr.diff.lane.mask, %.splat
+  ret <vscale x 1 x i1> %active.lane.mask.alias
+}
