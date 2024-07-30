@@ -94,8 +94,10 @@
 // HTML-RECTANGLE:   <a href="Shape.html">Shape</a>
 // HTML-RECTANGLE: </p>
 // HTML-RECTANGLE: <h2 id="Members">Members</h2>
-// HTML-RECTANGLE: <li>private double width_</li>
-// HTML-RECTANGLE: <li>private double height_</li>
+// HTML-RECTANGLE: <p> Width of the rectangle.</p>
+// HTML-RECTANGLE: <div>private double width_</div>
+// HTML-RECTANGLE: <p> Height of the rectangle.</p>
+// HTML-RECTANGLE: <div>private double height_</div>
 // HTML-RECTANGLE: <h2 id="Functions">Functions</h2>
 // HTML-RECTANGLE: <h3 id="{{([0-9A-F]{40})}}">Rectangle</h3>
 // HTML-RECTANGLE: <p>public void Rectangle(double width, double height)</p>
@@ -115,7 +117,8 @@
 // HTML-CIRCLE:   <a href="Shape.html">Shape</a>
 // HTML-CIRCLE: </p>
 // HTML-CIRCLE: <h2 id="Members">Members</h2>
-// HTML-CIRCLE: <li>private double radius_</li>
+// HTML-CIRCLE: <p> Radius of the circle.</p>
+// HTML-CIRCLE: <div>private double radius_</div>
 // HTML-CIRCLE: <h2 id="Functions">Functions</h2>
 // HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
 // HTML-CIRCLE: <p>public void Circle(double radius)</p>
