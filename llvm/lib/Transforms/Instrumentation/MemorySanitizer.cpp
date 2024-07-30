@@ -3904,9 +3904,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Second-last operand is the lane number (for vst{2,3,4}lane)
     if (useLane) {
-      skipTrailingOperands ++;
+      skipTrailingOperands++;
       assert(numArgOperands >= (int)skipTrailingOperands);
-      assert(isa<IntegerType>(I.getArgOperand(numArgOperands - skipTrailingOperands)->getType()));
+      assert(isa<IntegerType>(
+          I.getArgOperand(numArgOperands - skipTrailingOperands)->getType()));
     }
 
     SmallVector<Value *, 8> ShadowArgs;
@@ -3935,7 +3936,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *OutputShadowTy = getShadowTy(OutputVectorTy);
 
     if (useLane)
-      ShadowArgs.append(1, I.getArgOperand(numArgOperands - skipTrailingOperands));
+      ShadowArgs.append(1,
+                        I.getArgOperand(numArgOperands - skipTrailingOperands));
 
     Value *OutputShadowPtr, *OutputOriginPtr;
     // AArch64 NEON does not need alignment (unless OS requires it)
