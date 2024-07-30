@@ -28,7 +28,7 @@
 //                                      |
 //                                      +- BranchInst
 //                                      |
-//                                      +- CastInst
+//                                      +- CastInst ------------- PtrToIntInst
 //                                      |
 //                                      +- CallBase -----------+- CallBrInst
 //                                      |                      |
@@ -95,6 +95,7 @@ class InvokeInst;
 class CallBrInst;
 class GetElementPtrInst;
 class CastInst;
+class PtrToIntInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -1331,6 +1332,7 @@ class CastInst : public Instruction {
   CastInst(llvm::CastInst *CI, Context &Ctx)
       : Instruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI, Ctx) {}
   friend Context; // for SBCastInstruction()
+  friend class PtrToInt; // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
   }
@@ -1363,6 +1365,25 @@ public:
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
 #endif
+};
+
+class PtrToIntInst final : public CastInst {
+public:
+  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) &&
+           cast<Instruction>(From)->getOpcode() == Opcode::PtrToInt;
+  }
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
 };
 
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
