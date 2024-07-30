@@ -1479,7 +1479,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
 
   if ((Subtarget.hasStdExtZbs() && Subtarget.is64Bit()) ||
-      Subtarget.hasStdExtV())
+      Subtarget.hasVInstructions())
     setTargetDAGCombine(ISD::TRUNCATE);
 
   if (Subtarget.hasStdExtZbkb())
@@ -1892,7 +1892,7 @@ bool RISCVTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
 bool RISCVTargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
   EVT SrcVT = Val.getValueType();
   // free truncate from vnsrl and vnsra
-  if (Subtarget.hasStdExtV() &&
+  if (Subtarget.hasVInstructions() &&
       (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA) &&
       SrcVT.isVector() && VT2.isVector()) {
     unsigned SrcBits = SrcVT.getVectorElementType().getSizeInBits();
