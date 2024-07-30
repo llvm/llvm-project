@@ -142,7 +142,7 @@ struct SemiNCAInfo {
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return DT.createChild(BB, IDomNode);
+    return DT.createNode(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -595,7 +595,7 @@ struct SemiNCAInfo {
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      DT.createChild(W, IDomNode);
+      DT.createNode(W, IDomNode);
     }
   }
 
@@ -644,7 +644,7 @@ struct SemiNCAInfo {
 
       // The unreachable node becomes a new root -- a tree node for it.
       TreeNodePtr VirtualRoot = DT.getNode(nullptr);
-      FromTN = DT.createChild(From, VirtualRoot);
+      FromTN = DT.createNode(From, VirtualRoot);
       DT.Roots.push_back(From);
     }
 
