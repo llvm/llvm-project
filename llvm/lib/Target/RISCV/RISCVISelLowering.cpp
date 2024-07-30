@@ -3329,8 +3329,8 @@ struct VIDSequence {
   int64_t Addend;
 };
 
-static std::optional<uint64_t> getExactInteger(const APFloat &APF,
-                                               uint32_t BitWidth) {
+static std::optional<APInt> getExactInteger(const APFloat &APF,
+                                            uint32_t BitWidth) {
   // We will use a SINT_TO_FP to materialize this constant so we should use a
   // signed APSInt here.
   APSInt ValInt(BitWidth, /*IsUnsigned*/ false);
@@ -3346,7 +3346,7 @@ static std::optional<uint64_t> getExactInteger(const APFloat &APF,
        APFloatBase::opInvalidOp) ||
       !IsExact)
     return std::nullopt;
-  return ValInt.extractBitsAsZExtValue(BitWidth, 0);
+  return ValInt.extractBits(BitWidth, 0);
 }
 
 // Try to match an arithmetic-sequence BUILD_VECTOR [X,X+S,X+2*S,...,X+(N-1)*S]
@@ -3359,6 +3359,9 @@ static std::optional<uint64_t> getExactInteger(const APFloat &APF,
 // Note that this method will also match potentially unappealing index
 // sequences, like <i32 0, i32 50939494>, however it is left to the caller to
 // determine whether this is worth generating code for.
+//
+// EltSizeInBits is the size of the type that the sequence will be calculated
+// in, i.e. SEW for build_vectors or XLEN for address calculations.
 static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
                                                       unsigned EltSizeInBits) {
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unexpected BUILD_VECTOR");
@@ -3367,13 +3370,14 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
   bool IsInteger = Op.getValueType().isInteger();
 
   std::optional<unsigned> SeqStepDenom;
-  std::optional<int64_t> SeqStepNum, SeqAddend;
-  std::optional<std::pair<uint64_t, unsigned>> PrevElt;
+  std::optional<APInt> SeqStepNum;
+  std::optional<APInt> SeqAddend;
+  std::optional<std::pair<APInt, unsigned>> PrevElt;
   assert(EltSizeInBits >= Op.getValueType().getScalarSizeInBits());
 
   // First extract the ops into a list of constant integer values. This may not
   // be possible for floats if they're not all representable as integers.
-  SmallVector<std::optional<uint64_t>> Elts(Op.getNumOperands());
+  SmallVector<std::optional<APInt>> Elts(Op.getNumOperands());
   const unsigned OpSize = Op.getScalarValueSizeInBits();
   for (auto [Idx, Elt] : enumerate(Op->op_values())) {
     if (Elt.isUndef()) {
@@ -3381,7 +3385,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
       continue;
     }
     if (IsInteger) {
-      Elts[Idx] = Elt->getAsZExtVal() & maskTrailingOnes<uint64_t>(OpSize);
+      Elts[Idx] = Elt->getAsAPIntVal().trunc(OpSize).zext(EltSizeInBits);
     } else {
       auto ExactInteger =
           getExactInteger(cast<ConstantFPSDNode>(Elt)->getValueAPF(), OpSize);
@@ -3401,7 +3405,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
       // Calculate the step since the last non-undef element, and ensure
       // it's consistent across the entire sequence.
       unsigned IdxDiff = Idx - PrevElt->second;
-      int64_t ValDiff = SignExtend64(*Elt - PrevElt->first, EltSizeInBits);
+      APInt ValDiff = *Elt - PrevElt->first;
 
       // A zero-value value difference means that we're somewhere in the middle
       // of a fractional step, e.g. <0,0,0*,0,1,1,1,1>. Wait until we notice a
@@ -3409,13 +3413,13 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
       if (ValDiff == 0)
         continue;
 
-      int64_t Remainder = ValDiff % IdxDiff;
+      int64_t Remainder = ValDiff.srem(IdxDiff);
       // Normalize the step if it's greater than 1.
-      if (Remainder != ValDiff) {
+      if (Remainder != ValDiff.getSExtValue()) {
         // The difference must cleanly divide the element span.
         if (Remainder != 0)
           return std::nullopt;
-        ValDiff /= IdxDiff;
+        ValDiff = ValDiff.sdiv(IdxDiff);
         IdxDiff = 1;
       }
 
@@ -3444,9 +3448,10 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
   for (auto [Idx, Elt] : enumerate(Elts)) {
     if (!Elt)
       continue;
-    uint64_t ExpectedVal =
-        (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
-    int64_t Addend = SignExtend64(*Elt - ExpectedVal, EltSizeInBits);
+    APInt ExpectedVal =
+        (APInt(EltSizeInBits, Idx) * *SeqStepNum).sdiv(*SeqStepDenom);
+
+    APInt Addend = *Elt - ExpectedVal;
     if (!SeqAddend)
       SeqAddend = Addend;
     else if (Addend != SeqAddend)
@@ -3455,7 +3460,8 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
 
   assert(SeqAddend && "Must have an addend if we have a step");
 
-  return VIDSequence{*SeqStepNum, *SeqStepDenom, *SeqAddend};
+  return VIDSequence{SeqStepNum->getSExtValue(), *SeqStepDenom,
+                     SeqAddend->getSExtValue()};
 }
 
 // Match a splatted value (SPLAT_VECTOR/BUILD_VECTOR) of an EXTRACT_VECTOR_ELT
