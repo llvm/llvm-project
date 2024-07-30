@@ -850,7 +850,7 @@ void NumericalStabilitySanitizer::populateShadowStack(
   IRBuilder<> Builder(&CI);
   SmallVector<Value *, 8> ArgShadows;
   const bool ShouldCheckArgs = shouldCheckArgs(CI, TLI, CheckFunctionsFilter);
-  for (auto [ArgIdx, Arg] : enumerate(CI.operands())) {
+  for (auto &[ArgIdx, Arg] : enumerate(CI.operands())) {
     if (Config.getExtendedFPType(Arg->getType()) == nullptr)
       continue; // Not an FT value.
     Value *ArgShadow = Map.getShadow(Arg);
@@ -1715,7 +1715,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
                                Map.getShadow(BinOp->getOperand(1)));
 
   if (isa<UIToFPInst>(&Inst) || isa<SIToFPInst>(&Inst)) {
-    auto *Cast = dyn_cast<CastInst>(&Inst);
+    auto *Cast = cast<CastInst>(&Inst);
     return Builder.CreateCast(Cast->getOpcode(), Cast->getOperand(0),
                               ExtendedVT);
   }
@@ -2168,7 +2168,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
 
   // The last pass populates shadow phis with shadow values.
   for (PHINode *Phi : OriginalPhis) {
-    PHINode *ShadowPhi = dyn_cast<PHINode>(ValueToShadow.getShadow(Phi));
+    PHINode *ShadowPhi = cast<PHINode>(ValueToShadow.getShadow(Phi));
     for (unsigned I : seq(Phi->getNumOperands())) {
       Value *V = Phi->getOperand(I);
       Value *Shadow = ValueToShadow.getShadow(V);
