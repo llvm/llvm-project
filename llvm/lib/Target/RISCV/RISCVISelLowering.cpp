@@ -250,14 +250,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (RV64LegalI32 && Subtarget.is64Bit())
     setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
-  if (!Subtarget.hasVendorXCValu())
-    setCondCodeAction(ISD::SETLE, XLenVT, Expand);
   setCondCodeAction(ISD::SETGT, XLenVT, Custom);
   setCondCodeAction(ISD::SETGE, XLenVT, Expand);
-  if (!Subtarget.hasVendorXCValu())
-    setCondCodeAction(ISD::SETULE, XLenVT, Expand);
   setCondCodeAction(ISD::SETUGT, XLenVT, Custom);
   setCondCodeAction(ISD::SETUGE, XLenVT, Expand);
+  if (!(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
+    setCondCodeAction(ISD::SETULE, XLenVT, Expand);
+    setCondCodeAction(ISD::SETLE, XLenVT, Expand);
+  }
 
   if (RV64LegalI32 && Subtarget.is64Bit())
     setOperationAction(ISD::SETCC, MVT::i32, Promote);
@@ -343,7 +343,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Custom);
-  } else if (Subtarget.hasVendorXCVbitmanip()) {
+  } else if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::ROTL, XLenVT, Expand);
   } else {
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
@@ -366,7 +366,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                            : Expand);
 
 
-  if (Subtarget.hasVendorXCVbitmanip()) {
+  if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
   } else {
     // Zbkb can use rev8+brev8 to implement bitreverse.
@@ -387,14 +387,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       else
         setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
     }
-  } else if (!Subtarget.hasVendorXCVbitmanip()) {
+  } else if (!(Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
     setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTPOP}, MVT::i32, Expand);
   }
 
   if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-      Subtarget.hasVendorXCVbitmanip()) {
+      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
     if (Subtarget.is64Bit()) {
@@ -1439,7 +1439,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasVendorXCVmem()) {
+  if (Subtarget.hasVendorXCVmem() && !Subtarget.is64Bit()) {
     setIndexedLoadAction(ISD::POST_INC, MVT::i8, Legal);
     setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
     setIndexedLoadAction(ISD::POST_INC, MVT::i32, Legal);
@@ -1449,7 +1449,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
   }
 
-  if (Subtarget.hasVendorXCValu()) {
+  if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
     setOperationAction(ISD::SMIN, XLenVT, Legal);
     setOperationAction(ISD::UMIN, XLenVT, Legal);
@@ -1928,12 +1928,13 @@ bool RISCVTargetLowering::signExtendConstant(const ConstantInt *CI) const {
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXCVbitmanip();
+  return Subtarget.hasStdExtZbb() ||
+         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-         Subtarget.hasVendorXCVbitmanip();
+         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
 }
 
 bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -21088,7 +21089,7 @@ bool RISCVTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                      SDValue &Offset,
                                                      ISD::MemIndexedMode &AM,
                                                      SelectionDAG &DAG) const {
-  if (Subtarget.hasVendorXCVmem()) {
+  if (Subtarget.hasVendorXCVmem() && !Subtarget.is64Bit()) {
     if (Op->getOpcode() != ISD::ADD)
       return false;
 
