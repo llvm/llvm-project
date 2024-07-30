@@ -2066,12 +2066,6 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
     return false;
   Loop *L = LI->getLoopFor(Rem->getParent());
 
-  // If we have add/sub create initial value for remainder.
-  // The logic here is:
-  // (urem (add/sub nuw Start, IncrLoopInvariant), RemAmtLoopInvariant
-  //
-  // Only proceed if the expression simplifies (otherwise we can't fully
-  // optimize out the urem).
   Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
 
   // Create new remainder with induction variable.
