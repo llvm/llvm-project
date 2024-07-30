@@ -34,7 +34,7 @@ namespace LIBC_NAMESPACE_DECL {
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
   uint32_t result = 0.0;
-  asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result) :);
+  asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result));
   asm("" ::"s"(start));
   uint64_t stop = gpu::processor_clock();
   return stop - start;
@@ -100,8 +100,7 @@ template <typename F, typename T1, typename T2>
   auto result = f(arg1, arg2);
 
   asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(
-          static_cast<uint32_t>(result))
-      :);
+      static_cast<uint32_t>(result)));
 
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
