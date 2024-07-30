@@ -103,11 +103,8 @@ private:
   /// Reset mode to default.
   void resetMode(MachineBasicBlock::instr_iterator I) { setMode(ModeTy(), I); }
 
-  /// If \p MO is a high VGPR \returns offset MSBs and a corresponding low VGPR.
-  /// If \p MO is a low VGPR \returns 0 and that register.
-  /// Otherwise \returns 0 and NoRegister.
-  std::pair<unsigned, MCRegister>
-  getLowRegister(const MachineOperand &MO) const;
+  /// If \p MO references VGPRs, return the MSBs. Otherwise, return nullopt.
+  std::optional<unsigned> getMSBs(const MachineOperand &MO) const;
 
   /// Handle single \p MI. \return true if changed.
   bool runOnMachineInstr(MachineInstr &MI);
@@ -139,24 +136,18 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   return true;
 }
 
-std::pair<unsigned, MCRegister>
-AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
+std::optional<unsigned>
+AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
   if (!MO.isReg())
-    return std::pair(0, MCRegister());
+    return std::nullopt;
 
   MCRegister Reg = MO.getReg();
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
   if (!RC || !TRI->isVGPRClass(RC))
-    return std::pair(0, MCRegister());
+    return std::nullopt;
 
   unsigned Idx = TRI->getHWRegIndex(Reg);
-  if (Idx <= 255)
-    return std::pair(0, Reg);
-
-  unsigned Align = TRI->getRegClassAlignmentNumBits(RC) / 32;
-  assert(Align == 1 || Align == 2);
-  unsigned RegNum = (Idx & 0xff) >> (Align - 1);
-  return std::pair(Idx >> 8, RC->getRegister(RegNum));
+  return Idx >> 8;
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
@@ -167,32 +158,30 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
   for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
-    MCRegister Reg;
-    unsigned MSBits;
+    std::optional<unsigned> MSBits;
     if (Op)
-      std::tie(MSBits, Reg) = getLowRegister(*Op);
+      MSBits = getMSBs(*Op);
 
 #if !defined(NDEBUG)
-    if (Reg && Ops2) {
+    if (MSBits.has_value() && Ops2) {
       auto Op2 = TII->getNamedOperand(MI, Ops2[I]);
       if (Op2) {
-        unsigned MSBits2;
-        MCRegister Reg2;
-        std::tie(MSBits2, Reg2) = getLowRegister(*Op2);
-        if (Reg2 && MSBits != MSBits2)
+        std::optional<unsigned> MSBits2;
+        MSBits2 = getMSBs(*Op2);
+        if (MSBits2.has_value() && MSBits != MSBits2)
           llvm_unreachable("Invalid VOPD pair was created");
       }
     }
 #endif
 
-    if (!Reg && Ops2) {
+    if (!MSBits.has_value() && Ops2) {
       Op = TII->getNamedOperand(MI, Ops2[I]);
       if (Op)
-        std::tie(MSBits, Reg) = getLowRegister(*Op);
+        MSBits = getMSBs(*Op);
     }
 
     // Keep unused bits from the old mask to minimize switches.
-    if (!Reg)
+    if (!MSBits.has_value())
       continue;
 
     // Skip tied uses of src2 of VOP2, these will be handled along with defs and
@@ -204,7 +193,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
           TII->hasVALU32BitEncoding(MI.getOpcode()))))
       continue;
 
-    NewMode[I] = MSBits;
+    NewMode[I] = MSBits.value();
   }
 
   return setMode(NewMode, MI.getIterator());
