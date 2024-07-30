@@ -203,12 +203,13 @@ private:
   /// Update references once the layout is finalized.
   void updateReferences();
 
-  /// Update the Offset and Size of DIE, populate DebugNames table.
+  /// Update the Offset and Size of DIE.
   /// Along with current CU, and DIE being processed and the new DIE offset to
   /// be updated, it takes in Parents vector that can be empty if this DIE has
   /// no parents.
   uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
 
+  /// Populates DebugNames table
   void populateDebugNamesTable(DWARFUnit &CU, DIE &Die,
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
