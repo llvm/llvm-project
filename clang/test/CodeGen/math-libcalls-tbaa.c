@@ -8,6 +8,8 @@ double remainder(double, double);
 double fabs(double);
 double frexp(double, int *exp);
 void sincos(float a, float *s, float *c);
+float _Complex cacoshf(float _Complex);
+float crealf(float _Complex);
 
 // Emit int TBAA metadata on FP math libcalls, which is useful for alias analysis
 
@@ -22,6 +24,21 @@ void sincos(float a, float *s, float *c);
 //
 float foo (float num[]) {
    const float expm2 = expf(num[10]);  // Emit TBAA metadata on @expf
+   float tmp = expm2 * num[10];
+   return tmp;
+}
+
+// CHECK-LABEL: define dso_local float @foo_buildin(
+// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 40
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]], !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
+// CHECK-NEXT:    ret float [[MUL]]
+//
+float foo_buildin (float num[]) {
+   const float expm2 = __builtin_expf(num[10]);  // Emit TBAA metadata on @expf
    float tmp = expm2 * num[10];
    return tmp;
 }
@@ -61,7 +78,7 @@ double foo_remainder (double num[], double a) {
 //
 // Negative test: frexp is not subject to any errors.
 // CHECK-LABEL: define dso_local double @foo_frexp(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[E]]) #[[ATTR9]]
@@ -72,7 +89,7 @@ double foo_remainder (double num[], double a) {
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[E]]) #[[ATTR9]]
 // CHECK-NEXT:    ret double [[MUL]]
 //
-double foo_frexp (double num[], double a) {
+double foo_frexp (double num[]) {
    int e;
    double expm2 = frexp(num[2], &e);  // Don't emit TBAA metadata
    double tmp = expm2 * num[2];
@@ -83,7 +100,7 @@ double foo_frexp (double num[], double a) {
 // Negative test: sincos is a library function, but is not a builtin function
 // checked in CodeGenFunction::EmitCallExpr.
 // CHECK-LABEL: define dso_local float @foo_sincos(
-// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]], float noundef [[A:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SIN:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[COS:%.*]] = alloca float, align 4
@@ -101,10 +118,30 @@ double foo_frexp (double num[], double a) {
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[SIN]]) #[[ATTR9]]
 // CHECK-NEXT:    ret float [[ADD]]
 //
-float foo_sincos (float num[], float a) {
+float foo_sincos (float num[]) {
    float sin, cos;
    sincos(num[2], &sin, &cos);  // Don't emit TBAA metadata
    float tmp = sin * cos + num[2];
+   return tmp;
+}
+
+// TODO: The builtin return a complex type
+// CHECK-LABEL: define dso_local float @foo_cacoshf(
+// CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x float] poison, float [[TMP0]], 0
+// CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x float] [[DOTFCA_0_INSERT]], float 0.000000e+00, 1
+// CHECK-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[CALL]], 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
+// CHECK-NEXT:    ret float [[ADD]]
+//
+float foo_cacoshf (float num[]) {
+   float _Complex z = cacoshf(num[2]);  // Don't emit TBAA metadata
+   float tmp = crealf(z) + num[2];
    return tmp;
 }
 
