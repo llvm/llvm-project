@@ -391,7 +391,7 @@ bool Operation::isBeforeInBlock(Operation *other) {
   // parent.
   if (!block->isOpOrderValid()) {
     block->recomputeOpOrder();
-  } else {
+  } else if (block->getOperations().size() > 1) {
     // Update the order either operation if necessary.
     updateOrderIfNecessary();
     other->updateOrderIfNecessary();
