@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setpayload, (double *res, double pl)) {
-    return static_cast<int>(fputil::setpayload</*IsSignaling=*/false>(*res, pl));
+  return static_cast<int>(fputil::setpayload</*IsSignaling=*/false>(*res, pl));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

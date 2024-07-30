@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, setpayloadf128, (float128 *res, float128 pl)) {
+LLVM_LIBC_FUNCTION(int, setpayloadf128, (float128 * res, float128 pl)) {
   return static_cast<int>(fputil::setpayload</*IsSignaling=*/false>(*res, pl));
 }
 
