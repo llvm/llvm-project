@@ -48,7 +48,8 @@ public:
 private:
   Module &M;
   IRBuilderBase &B;
-  Triple TargetTriple;
+  VersionTuple DXILVersion;
+  Triple::EnvironmentType ShaderStage;
 };
 
 } // namespace dxil

@@ -316,9 +316,11 @@ template <typename T>
 static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
                                           const VersionTuple DXILVer) {
   size_t Index = PropList.size() - 1;
-  for (auto Iter = PropList.rbegin(); Iter != PropList.rend(); Iter++, Index--) {
-    const T& Prop = *Iter;
-    if (VersionTuple(Prop.DXILVersion.Major, Prop.DXILVersion.Minor) <= DXILVer) {
+  for (auto Iter = PropList.rbegin(); Iter != PropList.rend();
+       Iter++, Index--) {
+    const T &Prop = *Iter;
+    if (VersionTuple(Prop.DXILVersion.Major, Prop.DXILVersion.Minor) <=
+        DXILVer) {
       return Index;
     }
   }
@@ -332,21 +334,30 @@ namespace dxil {
 // Triple is well-formed or that the target is supported since these checks
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
-DXILOpBuilder::DXILOpBuilder(Module &M, IRBuilderBase &B)
-    : M(M), B(B), TargetTriple(Triple(M.getTargetTriple())) {}
+DXILOpBuilder::DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {
+  Triple TT(Triple(M.getTargetTriple()));
+  DXILVersion = TT.getDXILVersion();
+  ShaderStage = TT.getEnvironment();
+  // Ensure Environment type is known
+  if (ShaderStage == Triple::UnknownEnvironment) {
+    report_fatal_error(
+        Twine(DXILVersion.getAsString()) +
+            ": Unknown Compilation Target Shader Stage specified ",
+        /*gen_crash_diag*/ false);
+  }
+}
 
 CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                                           Type *OverloadTy,
                                           SmallVector<Value *> Args) {
 
-  VersionTuple DXILVer = TargetTriple.getDXILVersion();
-
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
-  auto OlIndexOrErr = getPropIndex(ArrayRef(Prop->Overloads), DXILVer);
+  std::optional<size_t> OlIndexOrErr =
+      getPropIndex(ArrayRef(Prop->Overloads), DXILVersion);
   if (!OlIndexOrErr.has_value()) {
     report_fatal_error(Twine(getOpCodeName(OpCode)) +
                            ": No valid overloads found for DXIL Version - " +
-                           DXILVer.getAsString(),
+                           DXILVersion.getAsString(),
                        /*gen_crash_diag*/ false);
   }
   uint16_t ValidTyMask = Prop->Overloads[*OlIndexOrErr].ValidTys;
@@ -362,32 +373,22 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                        /* gen_crash_diag=*/false);
   }
 
-  // Get Shader Stage Kind
-  Triple::EnvironmentType ShaderEnv = TargetTriple.getEnvironment();
-  // Ensure Environment type is known
-  if (ShaderEnv == Triple::UnknownEnvironment) {
-    report_fatal_error(
-        Twine(DXILVer.getAsString()) +
-            ": Unknown Compilation Target Shader Stage specified ",
-        /*gen_crash_diag*/ false);
-  }
-
   // Perform necessary checks to ensure Opcode is valid in the targeted shader
   // kind
-  auto StIndexOrErr = getPropIndex(ArrayRef(Prop->Stages), DXILVer);
+  std::optional<size_t> StIndexOrErr =
+      getPropIndex(ArrayRef(Prop->Stages), DXILVersion);
   if (!StIndexOrErr.has_value()) {
     report_fatal_error(Twine(getOpCodeName(OpCode)) +
                            ": No valid stages found for DXIL Version - " +
-                           DXILVer.getAsString(),
+                           DXILVersion.getAsString(),
                        /*gen_crash_diag*/ false);
   }
   uint16_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
-  ShaderKind ModuleStagekind = getShaderKindEnum(ShaderEnv);
 
   // Ensure valid shader stage properties are specified
   if (ValidShaderKindMask == ShaderKind::removed) {
     report_fatal_error(
-        Twine(DXILVer.getAsString()) +
+        Twine(DXILVersion.getAsString()) +
             ": Unsupported Target Shader Stage for DXIL operation - " +
             getOpCodeName(OpCode),
         /*gen_crash_diag*/ false);
@@ -397,12 +398,13 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
   // for unknown shader stage.
 
   // Verify the target shader stage is valid for the DXIL operation
+  ShaderKind ModuleStagekind = getShaderKindEnum(ShaderStage);
   if (!(ValidShaderKindMask & ModuleStagekind)) {
-    auto ShaderEnvStr = TargetTriple.getEnvironmentName();
+    auto ShaderEnvStr = Triple::getEnvironmentTypeName(ShaderStage);
     report_fatal_error(Twine(ShaderEnvStr) +
                            " : Invalid Shader Stage for DXIL operation - " +
                            getOpCodeName(OpCode) + " for DXIL Version " +
-                           DXILVer.getAsString(),
+                           DXILVersion.getAsString(),
                        /*gen_crash_diag*/ false);
   }
 

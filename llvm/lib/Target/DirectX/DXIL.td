@@ -37,7 +37,6 @@ defvar i64Ty = llvm_i64_ty;
 defvar halfTy = llvm_half_ty;
 defvar floatTy = llvm_float_ty;
 defvar doubleTy = llvm_double_ty;
-defvar anyfloatTy = llvm_anyfloat_ty;
 
 class DXILOpClass;
 
@@ -329,7 +328,7 @@ def Abs :  DXILOp<6, unary> {
 def IsInf :  DXILOp<9, isSpecialFloat> {
   let Doc = "Determines if the specified value is infinite.";
   let LLVMIntrinsic = int_dx_isinf;
-  let arguments = [anyfloatTy];
+  let arguments = [overloadTy];
   let result = i1Ty;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -640,8 +639,8 @@ def Dot2 :  DXILOp<54, dot2> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
             "a[n]*b[n] where n is between 0 and 1";
   let LLVMIntrinsic = int_dx_dot2;
-  let arguments = !listsplat(anyfloatTy, 4);
-  let result = anyfloatTy;
+  let arguments = !listsplat(overloadTy, 4);
+  let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
@@ -651,8 +650,8 @@ def Dot3 :  DXILOp<55, dot3> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
             "a[n]*b[n] where n is between 0 and 2";
   let LLVMIntrinsic = int_dx_dot3;
-  let arguments = !listsplat(anyfloatTy, 6);
-  let result = anyfloatTy;
+  let arguments = !listsplat(overloadTy, 6);
+  let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
@@ -662,8 +661,8 @@ def Dot4 :  DXILOp<56, dot4> {
   let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
             "a[n]*b[n] where n is between 0 and 3";
   let LLVMIntrinsic = int_dx_dot4;
-  let arguments = !listsplat(anyfloatTy, 8);
-  let result = anyfloatTy;
+  let arguments = !listsplat(overloadTy, 8);
+  let result = overloadTy;
   let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];

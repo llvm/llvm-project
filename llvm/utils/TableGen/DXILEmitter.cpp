@@ -21,6 +21,7 @@
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -190,9 +191,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   Recs = R->getValueAsListOfDefs("stages");
 
   if (Recs.empty()) {
-    report_fatal_error(Twine("Atleast one specification of valid stage for ") +
-                           OpName + " is required",
-                       /* gen_crash_diag=*/false);
+    PrintFatalError(R, Twine("Atleast one specification of valid stage for ") +
+                           OpName + " is required");
   }
 
   // Sort records in ascending order of DXIL version
@@ -216,9 +216,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   OpClass = R->getValueAsDef("OpClass")->getName();
 
   if (!OpClass.str().compare("UnknownOpClass")) {
-    report_fatal_error(Twine("Unspecified DXIL OpClass for DXIL operation - ") +
-                           OpName,
-                       /* gen_crash_diag=*/false);
+    PrintFatalError(R, Twine("Unspecified DXIL OpClass for DXIL operation - ") +
+                           OpName);
   }
 
   const RecordVal *RV = R->getValue("LLVMIntrinsic");
@@ -359,9 +358,8 @@ static std::string getStageMaskString(const SmallVector<Record *> Recs) {
   MaskString.append("{");
   // Atleast one stage information record is expected to be specified.
   if (Recs.empty()) {
-    report_fatal_error("Atleast one specification of valid stages for "
-                       "operation must be specified",
-                       /*gen_crash_diag*/ false);
+    PrintFatalError("Atleast one specification of valid stages for "
+                    "operation must be specified");
   }
 
   for (auto Rec : Recs) {
@@ -376,8 +374,7 @@ static std::string getStageMaskString(const SmallVector<Record *> Recs) {
     std::string PipePrefix = "";
     auto Stages = Rec->getValueAsListOfDefs("shader_stages");
     if (Stages.empty()) {
-      report_fatal_error("No valid stages for operation specified",
-                         /*gen_crash_diag*/ false);
+      PrintFatalError("No valid stages for operation specified");
     }
     for (const auto *S : Stages) {
       MaskString.append(PipePrefix).append("ShaderKind::").append(S->getName());
