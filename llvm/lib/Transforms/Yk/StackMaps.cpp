@@ -106,12 +106,6 @@ public:
           // Update the stackmap id passed into the control point.
           unsigned ArgSize = CI.arg_size();
           CI.setArgOperand(ArgSize - 1, SMID);
-          assert(isa<IntrinsicInst>(Args.back()) &&
-                 cast<IntrinsicInst>(Args.back())->getIntrinsicID() ==
-                     Intrinsic::frameaddress);
-          // Remove the last live argument which is the frameaddr which we have
-          // no use for and is difficult to remove during tracing.
-          Args.pop_back();
         }
       }
       Bldr.CreateCall(SMFunc->getFunctionType(), SMFunc,

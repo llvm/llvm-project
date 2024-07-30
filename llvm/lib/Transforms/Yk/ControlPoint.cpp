@@ -142,19 +142,6 @@ public:
       return false;
     }
 
-    // Generate the YkCtrlPointVars struct. This struct is used to package up a
-    // copy of all LLVM variables that are live just before the call to the
-    // control point. These are passed in to the patched control point so that
-    // they can be used as inputs and outputs to JITted trace code. The control
-    // point returns a new YkCtrlPointVars whose members may have been mutated
-    // by JITted trace code (if a trace was executed).
-    std::vector<Type *> TypeParams;
-    for (Value *V : LiveVals) {
-      TypeParams.push_back(V->getType());
-    }
-    StructType *CtrlPointVarsTy =
-        StructType::create(TypeParams, "YkCtrlPointVars");
-
     // The old control point should be of the form:
     //    control_point(YkMT*, YkLocation*)
     assert(OldCtrlPointCall->arg_size() == YK_OLD_CONTROL_POINT_NUM_ARGS);
@@ -165,46 +152,25 @@ public:
             ->getType();
 
     // Create the new control point, which is of the form:
-    //   void new_control_point(YkMT*, YkLocation*, CtrlPointVars*, void*)
-    PointerType *VoidPtr = PointerType::get(Context, 0);
+    //   void new_control_point(YkMT*, YkLocation*, i64)
     Type *Int64Ty = Type::getInt64Ty(Context);
-    FunctionType *FType = FunctionType::get(
-        Type::getVoidTy(Context),
-        {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(), VoidPtr, Int64Ty},
-        false);
+    FunctionType *FType = FunctionType::get(Type::getVoidTy(Context),
+                                            {YkMTTy, YkLocTy, Int64Ty}, false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
     // At the top of the function, instantiate a `YkCtrlPointStruct` to pass in
     // to the control point. We do so on the stack, so that we can pass the
     // struct by pointer.
-    IRBuilder<> Builder(Caller->getEntryBlock().getFirstNonPHI());
-    Value *InputStruct = Builder.CreateAlloca(CtrlPointVarsTy, 0, "");
-
-    Builder.SetInsertPoint(OldCtrlPointCall);
-    unsigned LvIdx = 0;
-    for (Value *LV : LiveVals) {
-      Value *FieldPtr =
-          Builder.CreateGEP(CtrlPointVarsTy, InputStruct,
-                            {Builder.getInt32(0), Builder.getInt32(LvIdx)});
-      Builder.CreateStore(LV, FieldPtr);
-      assert(LvIdx != UINT_MAX);
-      LvIdx++;
-    }
-
-    // Create a call to the llvm.frameaddress intrinsic, which we pass into the
-    // control point. This is later required for stack reconstruction.
-    Function *FrameAddress =
-        Intrinsic::getDeclaration(&M, Intrinsic::frameaddress, {VoidPtr});
-    Value *FAddr = Builder.CreateCall(FrameAddress, {Builder.getInt32(0)});
+    IRBuilder<> Builder(OldCtrlPointCall);
 
     // Insert call to the new control point. The last argument is the stackmap
     // id belonging to the control point. This is temporarily set to INT_MAX
     // and overwritten by the stackmap pass.
-    Instruction *NewCtrlPointCallInst = Builder.CreateCall(
+    Builder.CreateCall(
         NF, {OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
              OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-             InputStruct, FAddr, Builder.getInt64(UINT64_MAX)});
+             Builder.getInt64(UINT64_MAX)});
 
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();
