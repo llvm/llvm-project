@@ -1140,12 +1140,20 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
   if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
     return false;
 
-  // TODO: If no flag is specified, don't default to false, but instead:
-  //   - default false on   <   ios14
-  //   - default true  on   >=  ios14
-  // For now, until this feature is confirmed stable, default to false if no
-  // flag is explicitly specified
-  return false;
+  // If no flag is specified:
+  //   - default true  on   >=  ios14/macos11
+  //   - default false on everything else
+  PlatformType platform = config->platformInfo.target.Platform;
+  switch (platform) {
+    case PLATFORM_IOS:
+    case PLATFORM_IOSSIMULATOR:
+      return config->platformInfo.target.MinDeployment >= VersionTuple(14, 0);
+    case PLATFORM_MACOS:
+      return config->platformInfo.target.MinDeployment >= VersionTuple(11, 0);
+    default:
+      return false;
+  };
+  llvm_unreachable("Shouldn't be here");
 }
 
 void SymbolPatterns::clear() {
