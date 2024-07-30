@@ -24,7 +24,6 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
@@ -138,9 +137,6 @@ private:
 
   // True if a script being read is in the --sysroot directory.
   bool isUnderSysroot = false;
-
-  // A set to detect an INCLUDE() cycle.
-  StringSet<> seen;
 
   // If we are currently parsing a PROVIDE|PROVIDE_HIDDEN command,
   // then this member is set to the PROVIDE symbol name.
@@ -406,7 +402,7 @@ void ScriptParser::readGroup() {
 
 void ScriptParser::readInclude() {
   StringRef name = readName();
-  if (!seen.insert(name).second) {
+  if (!activeFilenames.insert(name).second) {
     setError("there is a cycle in linker script INCLUDEs");
     return;
   }
