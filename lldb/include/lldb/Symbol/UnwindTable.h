@@ -64,7 +64,7 @@ public:
 private:
   void Dump(Stream &s);
 
-  void Initialize();
+  void Initialize(bool force = false);
   std::optional<AddressRange> GetAddressRange(const Address &addr,
                                               const SymbolContext &sc);
 
