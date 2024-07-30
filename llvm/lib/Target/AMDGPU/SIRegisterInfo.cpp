@@ -2553,7 +2553,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
 
               MachineInstrBuilder Add;
-              if (Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS)) {
+              if ((Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS))) {
                 BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
                         TmpResultReg)
                     .addImm(ST.getWavefrontSizeLog2())
@@ -2580,6 +2580,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 // get to lane space, or a left shift of the offset to get to
                 // wavespace. We can right shift after the computation to get
                 // back to the desired per-lane value.
+                // we are using the mad_u32_u24 primarily as an add with no
+                // carry out clobber.
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)
                           .addReg(TmpResultReg, RegState::Kill)
