@@ -172,7 +172,7 @@
 "`3221 <https://wg21.link/LWG3221>`__","Result of ``year_month``\  arithmetic with ``months``\  is ambiguous","Belfast","|Complete|","8.0"
 "`3235 <https://wg21.link/LWG3235>`__","``parse``\  manipulator without abbreviation is not callable","Belfast","",""
 "`3246 <https://wg21.link/LWG3246>`__","What are the constraints on the template parameter of ``basic_format_arg``\ ?","Belfast","","","|format|"
-"`3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","Belfast","",""
+"`3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","Belfast","|Complete|","19.0"
 "`3245 <https://wg21.link/LWG3245>`__","Unnecessary restriction on ``'%p'``\  parse specifier","Belfast","","","|chrono|"
 "`3244 <https://wg21.link/LWG3244>`__","Constraints for ``Source``\  in |sect|\ [fs.path.req] insufficiently constrainty","Belfast","",""
 "`3241 <https://wg21.link/LWG3241>`__","``chrono-spec``\  grammar ambiguity in |sect|\ [time.format]","Belfast","|Complete|","16.0","|chrono| |format|"
