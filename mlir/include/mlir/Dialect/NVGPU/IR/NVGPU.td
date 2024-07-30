@@ -20,6 +20,7 @@
 #ifndef NVGPU
 #define NVGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -815,9 +816,7 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
 }
 
 def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
-                                   SameOperandsAndResultShape,
-                                   PredOpTrait<"in and out have same element type",
-                                            TCresVTEtIsSameAsOp<0, 0>>]> {
+                                   SameOperandsAndResultType]> {
   let summary = "The reciprocal calculation for vector types";
   let description = [{
     Reciprocal calculation for `vector` types using `nvvm.rcp` OPs.
@@ -832,7 +831,7 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
   let results = (outs VectorOf<[F32]>:$out);
   let assemblyFormat = [{
     $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
-    attr-dict `:` type($in) `->` type($out)
+    attr-dict `:` type($out)
   }];
   let hasVerifier = 1;
 }

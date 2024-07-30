@@ -340,17 +340,17 @@ func.func @tma_generate_descriptor_incorrect_last_dim(%desc: !desc,  %buffer2: m
 
 func.func @rcp_unsupported_rounding_0(%in : vector<16xf32>) {
   // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rn> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = rn, ftz} : vector<16xf32> -> vector<16xf32>
+  %out = nvgpu.rcp %in {rounding = rn, ftz} : vector<16xf32>
 }
 // -----
 
 func.func @rcp_unsupported_rounding_1(%in : vector<16xf32>) {
   // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rz> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = rz} : vector<16xf32> -> vector<16xf32>
+  %out = nvgpu.rcp %in {rounding = rz} : vector<16xf32>
 }
 // -----
 
 func.func @rcp_unsupported_ftz(%in : vector<16xf32>) {
   // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode approx> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = approx} : vector<16xf32> -> vector<16xf32>
+  %out = nvgpu.rcp %in {rounding = approx} : vector<16xf32>
 }
