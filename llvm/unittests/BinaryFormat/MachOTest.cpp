@@ -13,9 +13,9 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-#if defined(__sparc__)
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 // As discussed in Issue #86793, this test cannot work on a strict-alignment
-// targets like SPARC.  The test may even be invalid.
+// targets like SPARC.  Besides, it's undefined behaviour on big-endian hosts.
 #define MAYBE_UnalignedLC DISABLED_UnalignedLC
 #else
 #define MAYBE_UnalignedLC UnalignedLC
