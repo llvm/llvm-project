@@ -2120,6 +2120,12 @@ example:
     making stack traces less useful for debugging. This attribute gives the
     user control over the tradeoff between code size and debug information
     precision.
+``nonblocking``
+    This attribute indicates that a function should not block and should only
+    call other non-blocking functions. Such functions are often subject to
+    "real-time constraints", operate on a fixed deadline, and must not call
+    blocking functions such as malloc, free, or syscalls. RealtimeSanitizer
+    utilizes this attribute to catch real-time safety violations at runtime.
 ``nonlazybind``
     This attribute suppresses lazy symbol binding for the function. This
     may make calls to the function faster, at the cost of extra program
