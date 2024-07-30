@@ -109,10 +109,10 @@ int main(int, char**) {
   {
     std::shared_timed_mutex mutex;
     std::vector<std::thread> threads;
-    constexpr int n_threads           = 5;
-    std::atomic<int> holders          = 0;
+    constexpr int n_threads = 5;
+    std::atomic<int> holders(0);
     int concurrent_holders[n_threads] = {};
-    std::atomic<bool> ready           = false;
+    std::atomic<bool> ready(false);
 
     for (int i = 0; i != n_threads; ++i) {
       threads.push_back(support::make_test_thread([&, i] {

@@ -86,7 +86,7 @@ int main(int, char**) {
 
   // Make sure that at most one thread can acquire the mutex concurrently.
   {
-    std::atomic<int> counter = 0;
+    std::atomic<int> counter(0);
     std::shared_timed_mutex mutex;
 
     std::vector<std::thread> threads;
