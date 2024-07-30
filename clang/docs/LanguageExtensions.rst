@@ -6033,7 +6033,9 @@ MSVC Reference Binding
 
   A& a = A();
 
-Please see the `MSDN doc<https://learn.microsoft.com/en-us/cpp/build/reference/zc-referencebinding-enforce-reference-binding-rules>`_ for more information on this non-conforming C++ extension.
+Please see the `MSDN doc
+<https://learn.microsoft.com/en-us/cpp/build/reference/zc-referencebinding-enforce-reference-binding-rules>`_
+for more information on this non-conforming C++ extension.
 
 MSVC allows user-defined type temporaries to be bound to non-const lvalue references when ``/permissive``
 or ``/Zc:referenceBinding-`` are given on the command line.
