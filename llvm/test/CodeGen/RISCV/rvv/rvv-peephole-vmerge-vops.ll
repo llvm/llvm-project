@@ -1197,13 +1197,14 @@ define <vscale x 2 x i32> @true_mask_vmerge_implicit_passthru(<vscale x 2 x i32>
   ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 2 x i32> @unfoldable_mismatched_sew_mask(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 2 x i1> %mask, i64 %avl) {
-; CHECK-LABEL: unfoldable_mismatched_sew_mask:
+
+define <vscale x 2 x i32> @unfoldable_mismatched_sew(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 2 x i1> %mask, i64 %avl) {
+; CHECK-LABEL: unfoldable_mismatched_sew:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v9, v9, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, i64 %avl)
   %a.bitcast = bitcast <vscale x 1 x i64> %a to <vscale x 2 x i32>
@@ -1211,28 +1212,8 @@ define <vscale x 2 x i32> @unfoldable_mismatched_sew_mask(<vscale x 2 x i32> %pa
     <vscale x 2 x i32> %passthru,
     <vscale x 2 x i32> %passthru,
     <vscale x 2 x i32> %a.bitcast,
-    <vscale x 2 x i1> %mask,
-    i64 %avl
-  )
-  ret <vscale x 2 x i32> %b
-}
-
-define <vscale x 2 x i32> @unfoldable_mismatched_sew_avl(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y) {
-; CHECK-LABEL: unfoldable_mismatched_sew_avl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 5, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v9, v10
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v9
-; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, i64 5)
-  %a.bitcast = bitcast <vscale x 1 x i64> %a to <vscale x 2 x i32>
-  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
-    <vscale x 2 x i32> %passthru,
-    <vscale x 2 x i32> %passthru,
-    <vscale x 2 x i32> %a.bitcast,
     <vscale x 2 x i1> splat (i1 true),
-    i64 3
+    i64 %avl
   )
   ret <vscale x 2 x i32> %b
 }

@@ -3733,6 +3733,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   assert(!Mask || cast<RegisterSDNode>(Mask)->getReg() == RISCV::V0);
   assert(!Glue || Glue.getValueType() == MVT::Glue);
 
+  // If the EEW of True is different from vmerge's SEW, then we can't fold.
+  if (True.getSimpleValueType() != N->getSimpleValueType(0))
+    return false;
+
   // We require that either passthru and false are the same, or that passthru
   // is undefined.
   if (Passthru != False && !isImplicitDef(Passthru))
@@ -3855,18 +3859,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // If we end up changing the VL or mask of True, then we need to make sure it
   // doesn't raise any observable fp exceptions, since changing the active
   // elements will affect how fflags is set.
-  if (TrueVL != VL || !IsMasked) {
+  if (TrueVL != VL || !IsMasked)
     if (mayRaiseFPException(True.getNode()) &&
         !True->getFlags().hasNoFPExcept())
       return false;
-
-    // If the EEW of True is different from vmerge's SEW, then we cannot change
-    // the VL or mask.
-    if (Log2_64(True.getScalarValueSizeInBits()) !=
-        N->getConstantOperandVal(
-            RISCVII::getSEWOpNum(TII->get(N->getMachineOpcode())) - 1))
-      return false;
-  }
 
   SDLoc DL(N);
 
