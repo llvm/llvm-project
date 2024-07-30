@@ -1076,6 +1076,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_length: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;   
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    QualType RetTy;
+
+    if (auto *VTy = ArgTyA->getAs<VectorType>()) 
+      RetTy = VTy->getElementType();
+		else 
+      RetTy = TheCall->getArg(0)->getType();
+
+    TheCall->setType(RetTy);     
+
+
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_hlsl_mad: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;

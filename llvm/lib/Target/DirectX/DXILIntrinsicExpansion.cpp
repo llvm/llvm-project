@@ -42,6 +42,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
+  case Intrinsic::dx_length:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return true;
@@ -155,6 +156,42 @@ static bool expandAnyIntrinsic(CallInst *Orig) {
   }
   Orig->eraseFromParent();
   return true;
+}
+
+static bool expandLengthIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  Type *Ty = X->getType();
+  Type *EltTy = Ty->getScalarType();
+
+  // Though dx.length does work on scalar type, we can optimize it to just emit
+  // fabs, in CGBuiltin.cpp. We shouldn't see a scalar type here because
+  // CGBuiltin.cpp should have emitted a fabs call.
+  assert(Ty->isVectorTy() && "dx.length only works on vector type");
+  Value *Elt = Builder.CreateExtractElement(X, (uint64_t)0);
+  auto *XVec = dyn_cast<FixedVectorType>(Ty);
+  unsigned size = XVec->getNumElements();
+  if (size > 1) {
+    Value *Sum = Builder.CreateFMul(Elt, Elt);
+    for (unsigned i = 1; i < size; i++) {
+      Elt = Builder.CreateExtractElement(X, i);
+      Value *Mul = Builder.CreateFMul(Elt, Elt);
+      Sum = Builder.CreateFAdd(Sum, Mul);
+    }
+    Value *Result = Builder.CreateIntrinsic(
+        EltTy, Intrinsic::sqrt, ArrayRef<Value *>{Sum}, nullptr, "elt.sqrt");
+      
+		Orig->replaceAllUsesWith(Result);
+    Orig->eraseFromParent();
+    return true;   
+  } else {
+		Value *Result = Builder.CreateIntrinsic(
+				EltTy, Intrinsic::fabs, ArrayRef<Value *>{Elt}, nullptr, "elt.abs");
+		Orig->replaceAllUsesWith(Result);
+		Orig->eraseFromParent();
+		return true;
+	}
 }
 
 static bool expandLerpIntrinsic(CallInst *Orig) {
@@ -280,6 +317,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandClampIntrinsic(Orig, F.getIntrinsicID());
   case Intrinsic::dx_lerp:
     return expandLerpIntrinsic(Orig);
+  case Intrinsic::dx_length:
+    return expandLengthIntrinsic(Orig);
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return expandIntegerDot(Orig, F.getIntrinsicID());

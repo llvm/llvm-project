@@ -1248,12 +1248,6 @@ def ElementwiseBitreverse : Builtin {
   let Prototype = "void(...)";
 }
 
-def ElementwiseLength : Builtin, F16F128MathTemplate {
-  let Spellings = ["__builtin_elementwise_length"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
-  let Prototype = "T(float, T)";
-}
-
 def ElementwiseMax : Builtin {
   let Spellings = ["__builtin_elementwise_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -4709,6 +4703,12 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLLength : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_length"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

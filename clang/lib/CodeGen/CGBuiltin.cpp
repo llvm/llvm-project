@@ -3815,9 +3815,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_exp2:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::exp2, "elt.exp2"));
-  case Builtin::BI__builtin_elementwise_length:
-    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
-        *this, E, llvm::Intrinsic::length, "elt.length"));
   case Builtin::BI__builtin_elementwise_log:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::log, "elt.log"));
@@ -18462,6 +18459,22 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
         ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_length: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("length operand must have a float representation");
+    // if the operand is a scalar, we can use the fabs llvm intrinsic directly
+    if (!E->getArg(0)->getType()->isVectorType()) {
+      llvm::Type *ResultType = ConvertType(E->getType());
+      Function *F = CGM.getIntrinsic(Intrinsic::fabs, ResultType);
+      return Builder.CreateCall(F, X);
+    }
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType()->getScalarType(),
+        CGM.getHLSLRuntime().getLengthIntrinsic(),
+        ArrayRef<Value *>{X}, nullptr, "hlsl.length");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
