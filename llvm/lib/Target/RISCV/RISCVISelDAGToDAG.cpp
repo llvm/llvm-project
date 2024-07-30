@@ -1540,7 +1540,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (tryIndexedLoad(Node))
       return;
 
-    if (Subtarget->hasVendorXCVmem()) {
+    if (Subtarget->hasVendorXCVmem() && !Subtarget->is64Bit()) {
       // We match post-incrementing load here
       LoadSDNode *Load = cast<LoadSDNode>(Node);
       if (Load->getAddressingMode() != ISD::POST_INC)
@@ -3633,7 +3633,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 #endif
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the merge operand at index 0 if !UseTUPseudo.
+  // Skip the passthru operand at index 0 if !UseTUPseudo.
   for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);
@@ -3696,9 +3696,9 @@ static unsigned GetVMSetForLMul(RISCVII::VLMUL LMUL) {
 // ->
 // %x = PseudoVADD_VV_MASK %false, ..., %mask
 //
-// We can only fold if vmerge's merge operand, vmerge's false operand and
-// %true's merge operand (if it has one) are the same. This is because we have
-// to consolidate them into one merge operand in the result.
+// We can only fold if vmerge's passthru operand, vmerge's false operand and
+// %true's passthru operand (if it has one) are the same. This is because we
+// have to consolidate them into one passthru operand in the result.
 //
 // If %true is masked, then we can use its mask instead of vmerge's if vmerge's
 // mask is all ones.
@@ -3709,12 +3709,12 @@ static unsigned GetVMSetForLMul(RISCVII::VLMUL LMUL) {
 // The resulting VL is the minimum of the two VLs.
 //
 // The resulting policy is the effective policy the vmerge would have had,
-// i.e. whether or not it's merge operand was implicit-def.
+// i.e. whether or not it's passthru operand was implicit-def.
 bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
-  SDValue Merge, False, True, VL, Mask, Glue;
+  SDValue Passthru, False, True, VL, Mask, Glue;
   // A vmv.v.v is equivalent to a vmerge with an all-ones mask.
   if (IsVMv(N)) {
-    Merge = N->getOperand(0);
+    Passthru = N->getOperand(0);
     False = N->getOperand(0);
     True = N->getOperand(1);
     VL = N->getOperand(2);
@@ -3722,7 +3722,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     // mask later below.
   } else {
     assert(IsVMerge(N));
-    Merge = N->getOperand(0);
+    Passthru = N->getOperand(0);
     False = N->getOperand(1);
     True = N->getOperand(2);
     Mask = N->getOperand(3);
@@ -3733,9 +3733,9 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   assert(!Mask || cast<RegisterSDNode>(Mask)->getReg() == RISCV::V0);
   assert(!Glue || Glue.getValueType() == MVT::Glue);
 
-  // We require that either merge and false are the same, or that merge
+  // We require that either passthru and false are the same, or that passthru
   // is undefined.
-  if (Merge != False && !isImplicitDef(Merge))
+  if (Passthru != False && !isImplicitDef(Passthru))
     return false;
 
   assert(True.getResNo() == 0 &&
@@ -3765,11 +3765,11 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (!Info)
     return false;
 
-  // If True has a merge operand then it needs to be the same as vmerge's False,
-  // since False will be used for the result's merge operand.
+  // If True has a passthru operand then it needs to be the same as vmerge's
+  // False, since False will be used for the result's passthru operand.
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
-    SDValue MergeOpTrue = True->getOperand(0);
-    if (False != MergeOpTrue)
+    SDValue PassthruOpTrue = True->getOperand(0);
+    if (False != PassthruOpTrue)
       return false;
   }
 
@@ -3777,7 +3777,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // 1s mask, since we're going to keep the mask from True.
   if (IsMasked && Mask) {
     // FIXME: Support mask agnostic True instruction which would have an
-    // undef merge operand.
+    // undef passthru operand.
     SDValue TrueMask =
         getMaskSetter(True->getOperand(Info->MaskOpIdx),
                       True->getOperand(True->getNumOperands() - 1));
@@ -3835,8 +3835,8 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     return CLHS->getZExtValue() <= CRHS->getZExtValue() ? LHS : RHS;
   };
 
-  // Because N and True must have the same merge operand (or True's operand is
-  // implicit_def), the "effective" body is the minimum of their VLs.
+  // Because N and True must have the same passthru operand (or True's operand
+  // is implicit_def), the "effective" body is the minimum of their VLs.
   SDValue OrigVL = VL;
   VL = GetMinVL(TrueVL, VL);
   if (!VL)
@@ -3895,7 +3895,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
          "Expected instructions with mask have a tied dest.");
 #endif
 
-  // Use a tumu policy, relaxing it to tail agnostic provided that the merge
+  // Use a tumu policy, relaxing it to tail agnostic provided that the passthru
   // operand is undefined.
   //
   // However, if the VL became smaller than what the vmerge had originally, then
@@ -3903,7 +3903,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // to the tail. In that case we always need to use tail undisturbed to
   // preserve them.
   bool MergeVLShrunk = VL != OrigVL;
-  uint64_t Policy = (isImplicitDef(Merge) && !MergeVLShrunk)
+  uint64_t Policy = (isImplicitDef(Passthru) && !MergeVLShrunk)
                         ? RISCVII::TAIL_AGNOSTIC
                         : /*TUMU*/ 0;
   SDValue PolicyOp =
