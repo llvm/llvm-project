@@ -1100,30 +1100,33 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   }
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    // For fp vector to mask, we use:
+    // vfncvt.rtz.x.f.w v9, v8
+    // vand.vi v8, v9, 1
+    // vmsne.vi v0, v8, 0
+    if (Dst->getScalarSizeInBits() == 1)
+      return 3;
+
+    if (std::abs(PowDiff) <= 1)
+      return 1;
+
+    // Counts of narrow/widen instructions.
+    return std::abs(PowDiff);
+
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    if (Src->getScalarSizeInBits() == 1 || Dst->getScalarSizeInBits() == 1) {
-      // The cost of convert from or to mask vector is different from other
-      // cases. We could not use PowDiff to calculate it.
-      // For mask vector to fp, we should use the following instructions:
-      // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      // vfcvt.f.x.v v8, v8
-
-      // And for fp vector to mask, we use:
-      // vfncvt.rtz.x.f.w v9, v8
-      // vand.vi v8, v9, 1
-      // vmsne.vi v0, v8, 0
+    // For mask vector to fp, we should use the following instructions:
+    // vmv.v.i v8, 0
+    // vmerge.vim v8, v8, -1, v0
+    // vfcvt.f.x.v v8, v8
+    if (Src->getScalarSizeInBits() == 1)
       return 3;
-    }
+
     if (std::abs(PowDiff) <= 1)
       return 1;
     // Backend could lower (v[sz]ext i8 to double) to vfcvt(v[sz]ext.f8 i8),
     // so it only need two conversion.
-    if (Src->isIntOrIntVectorTy())
-      return 2;
-    // Counts of narrow/widen instructions.
-    return std::abs(PowDiff);
+    return 2;
   }
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
@@ -1390,14 +1393,32 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getStoreImmCost(Src, OpInfo, CostKind);
-  InstructionCost BaseCost =
-    BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                           CostKind, OpInfo, I);
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+  InstructionCost BaseCost = [&]() {
+    InstructionCost Cost = LT.first;
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return Cost;
+
+    // Our actual lowering for the case where a wider legal type is available
+    // uses the a VL predicated load on the wider type.  This is reflected in
+    // the result of getTypeLegalizationCost, but BasicTTI assumes the
+    // widened cases are scalarized.
+    const DataLayout &DL = this->getDataLayout();
+    if (Src->isVectorTy() && LT.second.isVector() &&
+        TypeSize::isKnownLT(DL.getTypeStoreSizeInBits(Src),
+                            LT.second.getSizeInBits()))
+      return Cost;
+
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+  }();
+
   // Assume memory ops cost scale with the number of vector registers
   // possible accessed by the instruction.  Note that BasicTTI already
   // handles the LT.first term for us.
-  if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
-      LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
+  if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
     BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 

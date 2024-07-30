@@ -4508,11 +4508,19 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
   // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  SDLoc DL(Op);
+  SDValue SrcVal2;
   if ((SrcElementVT == MVT::f16 &&
        (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
       SrcElementVT == MVT::bf16) {
     MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
-    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal);
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
+    // If we are extending to a v8f32, split into two v4f32 to produce legal
+    // types.
+    if (F32VT.getSizeInBits() > 128) {
+      std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
+      F32VT = F32VT.getHalfNumVectorElementsVT();
+    }
     SrcVT = F32VT;
     SrcElementVT = MVT::f32;
     SrcElementWidth = 32;
@@ -4520,9 +4528,8 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
              SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
     return SDValue();
 
-  SDLoc DL(Op);
-  // Expand to f64 if we are saturating to i64, to help produce keep the lanes
-  // the same width and produce a fcvtzu.
+  // Expand to f64 if we are saturating to i64, to help keep the lanes the same
+  // width and produce a fcvtzu.
   if (SatWidth == 64 && SrcElementWidth < 64) {
     MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
@@ -4531,9 +4538,16 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcElementWidth = 64;
   }
   // Cases that we can emit directly.
-  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
-    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
-                       DAG.getValueType(DstVT.getScalarType()));
+  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth) {
+    SDValue Res = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                              DAG.getValueType(DstVT.getScalarType()));
+    if (SrcVal2) {
+      SDValue Res2 = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal2,
+                                 DAG.getValueType(DstVT.getScalarType()));
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Res, Res2);
+    }
+    return Res;
+  }
 
   // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
   // result. This is only valid if the legal cvt is larger than the saturate
@@ -4545,19 +4559,33 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
   SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
                                   DAG.getValueType(IntVT.getScalarType()));
-  SDValue Sat;
+  SDValue NativeCvt2 =
+      SrcVal2 ? DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal2,
+                            DAG.getValueType(IntVT.getScalarType()))
+              : SDValue();
+  SDValue Sat, Sat2;
   if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
         APInt::getSignedMaxValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
+    SDValue Min2 = SrcVal2 ? DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt2, MinC)
+                           : SDValue();
     SDValue MaxC = DAG.getConstant(
         APInt::getSignedMinValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
+    Sat2 = SrcVal2 ? DAG.getNode(ISD::SMAX, DL, IntVT, Min2, MaxC) : SDValue();
   } else {
     SDValue MinC = DAG.getConstant(
         APInt::getAllOnes(SatWidth).zext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
+    Sat2 = SrcVal2 ? DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt2, MinC)
+                   : SDValue();
   }
+
+  if (SrcVal2)
+    Sat = DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                      IntVT.getDoubleNumVectorElementsVT(*DAG.getContext()),
+                      Sat, Sat2);
 
   return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }

@@ -944,6 +944,9 @@ public:
     return Result();
   }
 };
+
+/// Common option used by multiple tools to print pipeline passes
+extern cl::opt<bool> PrintPipelinePasses;
 }
 
 #endif

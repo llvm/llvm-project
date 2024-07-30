@@ -30,6 +30,11 @@ using LIBC_NAMESPACE::freelist_heap;
 #define TEST_FOR_EACH_ALLOCATOR(TestCase, BufferSize)                          \
   class LlvmLibcFreeListHeapTest##TestCase : public testing::Test {            \
   public:                                                                      \
+    FreeListHeapBuffer<BufferSize> fake_global_buffer;                         \
+    void SetUp() override {                                                    \
+      freelist_heap =                                                          \
+          new (&fake_global_buffer) FreeListHeapBuffer<BufferSize>;            \
+    }                                                                          \
     void RunTest(FreeListHeap<> &allocator, [[maybe_unused]] size_t N);        \
   };                                                                           \
   TEST_F(LlvmLibcFreeListHeapTest##TestCase, TestCase) {                       \
@@ -37,7 +42,7 @@ using LIBC_NAMESPACE::freelist_heap;
         cpp::byte buf[BufferSize] = {cpp::byte(0)};                            \
     FreeListHeap<> allocator(buf);                                             \
     RunTest(allocator, BufferSize);                                            \
-    RunTest(*freelist_heap, freelist_heap->region_size());                     \
+    RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \
   void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap<> &allocator,  \
                                                    size_t N)
