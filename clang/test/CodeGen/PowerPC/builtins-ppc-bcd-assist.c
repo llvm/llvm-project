@@ -4,13 +4,15 @@
 // RUN:   -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -O2 -target-cpu pwr7 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s
+// RUN: not %clang_cc1 -triple powerpc-unknown-aix -O2 -target-cpu pwr7 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-32-ERROR
 
 // CHECK-LABEL: define{{.*}} i64 @cdtbcd_test(i64
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:  [[TMP0:%.*]] = tail call i64  @llvm.ppc.cdtbcdd(i64
 // CHECK-NEXT:  ret i64 [[TMP0]]
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-32-ERROR: #define __cdtbcd __builtin_ppc_cdtbcd
 long long cdtbcd_test(long long ll) {
     return __cdtbcd (ll);
 }
@@ -21,6 +23,8 @@ long long cdtbcd_test(long long ll) {
 // CHECK-NEXT:  [[TMP0:%.*]] = tail call i64 @llvm.ppc.cdtbcdd(i64 [[CONV]])
 // CHECK-NEXT:  [[CONV1:%.*]] = trunc i64 [[TMP0]] to i32
 // CHECK-NEXT:  ret i32 [[CONV1]]
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-32-ERROR: #define __cdtbcd __builtin_ppc_cdtbcd
 unsigned int cdtbcd_test_ui(unsigned int ui) {
     return __cdtbcd (ui);
 }
@@ -29,6 +33,8 @@ unsigned int cdtbcd_test_ui(unsigned int ui) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:  [[TMP0:%.*]] = tail call i64 @llvm.ppc.cbcdtdd(i64
 // CHECK-NEXT:  ret i64 [[TMP0]]
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-32-ERROR: #define __cbcdtd __builtin_ppc_cbcdtd
 long long cbcdtd_test(long long ll) {
     return __cbcdtd (ll);
 }
@@ -39,6 +45,8 @@ long long cbcdtd_test(long long ll) {
 // CHECK-NEXT:  [[TMP0:%.*]] = tail call i64 @llvm.ppc.cbcdtdd(i64 [[CONV]])
 // CHECK-NEXT:  [[CONV1:%.*]] = trunc i64 [[TMP0]] to i32
 // CHECK-NEXT:  ret i32 [[CONV1]]
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-32-ERROR: #define __cbcdtd __builtin_ppc_cbcdtd
 unsigned int cbcdtd_test_ui(unsigned int ui) {
     return __cbcdtd (ui);
 }
@@ -47,6 +55,8 @@ unsigned int cbcdtd_test_ui(unsigned int ui) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:  [[TMP0:%.*]] = tail call i64 @llvm.ppc.addg6sd(i64 {{.*}}, i64 {{.*}})
 // CHECK-NEXT:  ret i64 [[TMP0]]
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-32-ERROR: #define __addg6s __builtin_ppc_addg6s
 long long addg6s_test(long long ll, long long ll2) {
     return __addg6s (ll, ll2);
 }
@@ -58,6 +68,8 @@ long long addg6s_test(long long ll, long long ll2) {
 // CHECK-NEXT:  [[TMP0:%.*]] = tail call i64 @llvm.ppc.addg6sd(i64 {{.*}}, i64
 // CHECK-NEXT:  [[CONV2:%.*]] = trunc i64 [[TMP0]] to i32
 // CHECK-NEXT:  ret i32 [[CONV2]]
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-32-ERROR: #define __addg6s __builtin_ppc_addg6s
 unsigned int addg6s_test_ui(unsigned int ui, unsigned int ui2) {
     return __addg6s (ui, ui2);
 }
