@@ -2864,9 +2864,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.HLSL().mergeNumThreadsAttr(D, *NT, NT->getX(), NT->getY(),
                                            NT->getZ());
   else if (const auto *NT = dyn_cast<HLSLWaveSizeAttr>(Attr))
-    NewAttr =
-        S.HLSL().mergeWaveSizeAttr(D, *NT, NT->getMin(), NT->getMax(),
-                                   NT->getPreferred(), NT->getSpelledArgsCount());
+    NewAttr = S.HLSL().mergeWaveSizeAttr(D, *NT, NT->getMin(), NT->getMax(),
+                                         NT->getPreferred(),
+                                         NT->getSpelledArgsCount());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))
