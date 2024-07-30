@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -1138,14 +1139,38 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   if (!FoundSrcAgg)
     return nullptr;
 
+  // Do some sanity check if we need to add insertvalue into predecessors.
+  Loop *OrigLoop, *UseLoop;
+  if (LI) {
+    OrigLoop = LI->getLoopFor(OrigIVI.getParent());
+    UseLoop = LI->getLoopFor(UseBB);
+  }
+  for (auto &It : SourceAggregates) {
+    if (Describe(It.second) == AggregateDescription::Found)
+      continue;
+
+    // Element is defined in UseBB, so it can't be used in predecessors.
+    if (EltDefinedInUseBB)
+      return nullptr;
+
+    if (LI) {
+      // Don't add insertvalue into inner loops.
+      Loop *PredLoop = LI->getLoopFor(It.first);
+      if (OrigLoop != PredLoop && (!OrigLoop || OrigLoop->contains(PredLoop)))
+        return nullptr;
+
+      // Don't cross loop header.
+      if (UseLoop && UseLoop->getHeader() == UseBB &&
+          UseLoop->contains(It.first))
+        return nullptr;
+    }
+  }
+
   // For predecessors without appropriate source aggregate, create one in the
   // predecessor.
   for (auto &It : SourceAggregates) {
     if (Describe(It.second) == AggregateDescription::Found)
       continue;
-
-    if (EltDefinedInUseBB)
-      return nullptr;
 
     BasicBlock *Pred = It.first;
     Builder.SetInsertPoint(Pred, Pred->getTerminator()->getIterator());
