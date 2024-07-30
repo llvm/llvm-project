@@ -3455,9 +3455,8 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op,
   for (auto [Idx, Elt] : enumerate(Elts)) {
     if (!Elt)
       continue;
-    APInt ExpectedVal(EltSizeInBits, Idx);
-    ExpectedVal *= *SeqStepNum;
-    ExpectedVal = ExpectedVal.sdiv(*SeqStepDenom);
+    APInt ExpectedVal =
+        (APInt(EltSizeInBits, Idx) * *SeqStepNum).sdiv(*SeqStepDenom);
 
     APInt Addend = *Elt - ExpectedVal;
     if (!SeqAddend)
