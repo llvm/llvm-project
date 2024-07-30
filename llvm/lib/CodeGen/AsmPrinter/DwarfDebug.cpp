@@ -3715,3 +3715,21 @@ bool DwarfDebug::alwaysUseRanges(const DwarfCompileUnit &CU) const {
     return true;
   return false;
 }
+
+void DwarfDebug::beginCodeAlignment(const MachineBasicBlock &MBB) {
+  if (MBB.getAlignment() == Align(1))
+    return;
+
+  auto *SP = MBB.getParent()->getFunction().getSubprogram();
+  bool NoDebug =
+      !SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug;
+
+  if (NoDebug)
+    return;
+
+  auto PrevLoc = Asm->OutStreamer->getContext().getCurrentDwarfLoc();
+  Asm->OutStreamer->emitDwarfLocDirective(
+      PrevLoc.getFileNum(), 0, PrevLoc.getColumn(), 0, 0, 0, StringRef());
+  MCDwarfLineEntry::make(Asm->OutStreamer.get(),
+                         Asm->OutStreamer->getCurrentSectionOnly());
+}
