@@ -698,8 +698,9 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
     bool ConstWithoutErrnoAndExceptions =
         Context.BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
     // Restrict to target with errno, for example, MacOS doesn't set errno.
+    // TODO: Support builtin function with complex type returned, eg: cacosh
     if (ConstWithoutErrnoAndExceptions && CGF.CGM.getLangOpts().MathErrno &&
-        !CGF.Builder.getIsFPConstrained()) {
+        !CGF.Builder.getIsFPConstrained() && Call.isScalar()) {
       // Emit "int" TBAA metadata on FP math libcalls.
       clang::QualType IntTy = Context.IntTy;
       TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
