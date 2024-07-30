@@ -17,7 +17,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace jmpbuf {} // namespace jmpbuf
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   register __UINT64_TYPE__ rcx __asm__("rcx");
