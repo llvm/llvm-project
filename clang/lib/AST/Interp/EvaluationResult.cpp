@@ -10,6 +10,7 @@
 #include "InterpState.h"
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include <iterator>
 
@@ -123,8 +124,7 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   }
 
   // Check Fields in all bases
-  for (unsigned I = 0, E = R->getNumBases(); I != E; ++I) {
-    const auto &B = *R->getBase(I);
+  for (auto [I, B] : llvm::enumerate(R->bases())) {
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
       const Descriptor *Desc = BasePtr.getDeclDesc();
