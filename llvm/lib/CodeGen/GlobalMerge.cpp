@@ -664,7 +664,7 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     if (!(Opt.MergeExternal && GV.hasExternalLinkage()) &&
-        !GV.hasInternalLinkage())
+        !GV.hasInternalLinkage() && !GV.hasPrivateLinkage())
       continue;
 
     PointerType *PT = dyn_cast<PointerType>(GV.getType());
