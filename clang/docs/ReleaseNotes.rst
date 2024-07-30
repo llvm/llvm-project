@@ -767,6 +767,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
+- Clang now diagnoses dangling references to fields of temporary objects. Fixes #GH81589.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
