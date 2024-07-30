@@ -2332,9 +2332,6 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip,
   if (!TryConsumeToken(tok::less))
     return TPResult::False;
 
-  bool IsNestedTemplateArgumentList = !GreaterThanIsOperator;
-  GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
-
   auto TrySkipTemplateArgument = [&]() {
     bool NextIsTemplateId = false;
     unsigned TemplateDepth = 0;
@@ -2348,10 +2345,22 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip,
       case tok::semi:
         return TPResult::False;
 
-      case tok::comma:
-      case tok::greater:
-      case tok::greatergreater:
       case tok::greatergreatergreater:
+        if (TemplateDepth)
+          --TemplateDepth;
+        [[fallthrough]];
+      case tok::greatergreater:
+        if (TemplateDepth)
+          --TemplateDepth;
+        [[fallthrough]];
+      case tok::greater:
+        if (TemplateDepth) {
+          ConsumeToken();
+          --TemplateDepth;
+          break;
+        }
+        [[fallthrough]];
+      case tok::comma:
         return TPResult::True;
 
       case tok::l_paren:
@@ -2359,65 +2368,53 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip,
         if (!SkipUntil(tok::r_paren, StopAtSemi))
           return TPResult::Error;
         break;
+
       case tok::l_brace:
         ConsumeBrace();
         if (!SkipUntil(tok::r_brace, StopAtSemi))
           return TPResult::Error;
         break;
+
       case tok::l_square:
         ConsumeBracket();
         if (!SkipUntil(tok::r_square, StopAtSemi))
           return TPResult::Error;
         break;
+
       case tok::question:
         ConsumeToken();
         if (!SkipUntil(tok::colon, StopAtSemi))
           return TPResult::Error;
         break;
 
-#if 0
-        case tok::kw_template:
-          ConsumeToken();
-          NextIsTemplateId = true;
-          continue;
-#endif
+      case tok::kw_template:
+        ConsumeToken();
+        NextIsTemplateId = true;
+        continue;
+
       case tok::identifier:
         ConsumeToken();
-#if 0
-          if (Tok.is(tok::less)) {
-            if (!NextIsTemplateId)
-              return TPResult::Ambiguous;
-            ConsumeToken();
-            if (!SkipUntil({tok::greater, tok::greatergreater, tok::greatergreatergreater}, StopAtSemi))
-              return TPResult::Error;
-            break;
-          }
-#else
-        if (Tok.is(tok::less))
-          return TPResult::Ambiguous;
+        if (Tok.is(tok::less)) {
+          if (!NextIsTemplateId)
+            return TPResult::Ambiguous;
+          ConsumeToken();
+          ++TemplateDepth;
+        }
         break;
-#endif
 
       case tok::kw_operator:
         if (TPResult TPR = TryParseNonConversionOperatorId();
             TPR == TPResult::Error) {
           return TPResult::Error;
         } else if (TPR == TPResult::True) {
-          if (Tok.is(tok::less))
-            return TPResult::Ambiguous;
-        }
-        break;
-
-#if 0
           if (Tok.is(tok::less)) {
             if (!NextIsTemplateId)
               return TPResult::Ambiguous;
             ConsumeToken();
-            if (!SkipUntil({tok::greater, tok::greatergreater, tok::greatergreatergreater}, StopAtSemi))
-              return TPResult::Error;
+            ++TemplateDepth;
           }
-          break;
-#endif
+        }
+        break;
 
       case tok::kw_const_cast:
       case tok::kw_dynamic_cast:
@@ -2457,6 +2454,9 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip,
       NextIsTemplateId = false;
     }
   };
+
+  bool IsNestedTemplateArgumentList = !GreaterThanIsOperator;
+  GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
 
   while (true) {
     // An expression cannot be followed by a braced-init-list unless
