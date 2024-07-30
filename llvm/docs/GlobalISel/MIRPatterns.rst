@@ -164,7 +164,7 @@ Type Parameters:
 Semantics:
 
 * ``GIVariadic<>`` operands can only appear on variadic instructions.
-* ``GIVariadic<>`` operands can not be defs.
+* ``GIVariadic<>`` operands cannot be defs.
 * ``GIVariadic<>`` operands can only appear as the last operand in a 'match' pattern.
 * Each instance within a 'match' pattern must be uniquely named.
 * Re-using a ``GIVariadic<>`` operand in an 'apply' pattern will result in all
