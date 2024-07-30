@@ -3244,26 +3244,6 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
   }
 
-  // HLSL parameter declarations for inout and out must match between
-  // declarations. In HLSL inout and out are ambiguous at the call site, but
-  // have different calling behavior, so you cannot overload a method based on a
-  // difference between inout and out annotations.
-  if (S.getLangOpts().HLSL) {
-    const auto *NDAttr = newDecl->getAttr<HLSLParamModifierAttr>();
-    const auto *ODAttr = oldDecl->getAttr<HLSLParamModifierAttr>();
-    // We don't need to cover the case where one declaration doesn't have an
-    // attribute. The only possible case there is if one declaration has an `in`
-    // attribute and the other declaration has no attribute. This case is
-    // allowed since parameters are `in` by default.
-    if (NDAttr && ODAttr &&
-        NDAttr->getSpellingListIndex() != ODAttr->getSpellingListIndex()) {
-      S.Diag(newDecl->getLocation(), diag::err_hlsl_param_qualifier_mismatch)
-          << NDAttr << newDecl;
-      S.Diag(oldDecl->getLocation(), diag::note_previous_declaration_as)
-          << ODAttr;
-    }
-  }
-
   if (!oldDecl->hasAttrs())
     return;
 
@@ -4049,16 +4029,19 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       }
     }
 
+    // HLSL check parameters for matching ABI specifications.
+    if (getLangOpts().HLSL) {
+      if(HLSL().CheckCompatibleParameterABI(New, Old))
+        return true;
+      return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
+    }
+
     // If the function types are compatible, merge the declarations. Ignore the
     // exception specifier because it was already checked above in
     // CheckEquivalentExceptionSpec, and we don't want follow-on diagnostics
     // about incompatible types under -fms-compatibility.
     if (Context.hasSameFunctionTypeIgnoringExceptionSpec(OldQTypeForComparison,
                                                          NewQType))
-      return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
-
-    if (getLangOpts().HLSL && Context.hasSameFunctionTypeIgnoringParamABI(
-                                  OldQTypeForComparison, NewQType))
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
 
     // If the types are imprecise (due to dependent constructs in friends or

@@ -1122,6 +1122,38 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
+bool SemaHLSL::CheckCompatibleParameterABI(FunctionDecl *New,
+                                           FunctionDecl *Old) {
+  if (New->getNumParams() != Old->getNumParams())
+    return true;
+
+  bool HadError = false;
+
+  for (unsigned i = 0, e = New->getNumParams(); i != e; ++i) {
+    ParmVarDecl *NewParam = New->getParamDecl(i);
+    ParmVarDecl *OldParam = Old->getParamDecl(i);
+
+    // HLSL parameter declarations for inout and out must match between
+    // declarations. In HLSL inout and out are ambiguous at the call site,
+    // but have different calling behavior, so you cannot overload a
+    // method based on a difference between inout and out annotations.
+    const auto *NDAttr = NewParam->getAttr<HLSLParamModifierAttr>();
+    unsigned NSpellingIdx = (NDAttr ? NDAttr->getSpellingListIndex() : 0);
+    const auto *ODAttr = OldParam->getAttr<HLSLParamModifierAttr>();
+    unsigned OSpellingIdx = (ODAttr ? ODAttr->getSpellingListIndex() : 0);
+
+    if (NSpellingIdx != OSpellingIdx) {
+      SemaRef.Diag(NewParam->getLocation(),
+                   diag::err_hlsl_param_qualifier_mismatch)
+          << NDAttr << NewParam;
+      SemaRef.Diag(OldParam->getLocation(), diag::note_previous_declaration_as)
+          << ODAttr;
+      HadError = true;
+    }
+  }
+  return HadError;
+}
+
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   assert(Param->hasAttr<HLSLParamModifierAttr>() &&
          "We should not get here without a parameter modifier expression");

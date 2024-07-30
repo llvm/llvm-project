@@ -35,7 +35,7 @@ void fn(in float f); // #fn-in
 void failOverloadResolution() {
   float f = 1.0;
   fn(f); // expected-error{{call to 'fn' is ambiguous}}
-  // expected-note@#fn-def{{candidate function}}
+  // expected-note@#fn{{candidate function}}
   // expected-note@#fn-in{{candidate function}}
 }
 
