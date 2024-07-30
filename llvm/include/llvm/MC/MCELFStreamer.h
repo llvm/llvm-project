@@ -11,11 +11,11 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 
 namespace llvm {
 
+class ELFObjectWriter;
 class MCContext;
 class MCDataFragment;
 class MCFragment;

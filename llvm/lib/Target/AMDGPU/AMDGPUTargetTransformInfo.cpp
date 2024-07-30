@@ -686,7 +686,9 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
 // instructions for an intrinsic, even if it requires nontrivial legalization.
 static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::fma: // TODO: fmuladd
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::copysign:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
   case Intrinsic::uadd_sat:
@@ -730,9 +732,16 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   switch (ICA.getID()) {
   case Intrinsic::fma:
-    InstRate = ST->hasFastFMAF32() ? getHalfRateInstrCost(CostKind)
-                                   : getQuarterRateInstrCost(CostKind);
+  case Intrinsic::fmuladd:
+    if ((SLT == MVT::f32 && ST->hasFastFMAF32()) || SLT == MVT::f16)
+      InstRate = getFullRateInstrCost();
+    else {
+      InstRate = ST->hasFastFMAF32() ? getHalfRateInstrCost(CostKind)
+                                     : getQuarterRateInstrCost(CostKind);
+    }
     break;
+  case Intrinsic::copysign:
+    return NElts * getFullRateInstrCost();
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:

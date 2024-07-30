@@ -650,7 +650,10 @@ class DiagnoseHLSLAvailability
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
 
 public:
-  DiagnoseHLSLAvailability(Sema &SemaRef) : SemaRef(SemaRef) {}
+  DiagnoseHLSLAvailability(Sema &SemaRef)
+      : SemaRef(SemaRef),
+        CurrentShaderEnvironment(llvm::Triple::UnknownEnvironment),
+        CurrentShaderStageBit(0), ReportOnlyShaderStageIssues(false) {}
 
   // AST traversal methods
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);

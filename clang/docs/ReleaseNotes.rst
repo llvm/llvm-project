@@ -54,6 +54,11 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Parts of the interface returning string results will now return
+  the empty string `""` when no result is available, instead of `None`.
+- Calling a property on the `CompletionChunk` or `CompletionString` class
+  statically now leads to an error, instead of returning a `CachedProperty` object
+  that is used internally. Properties are only available on instances.
 
 What's New in Clang |release|?
 ==============================
@@ -164,6 +169,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
+- Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -250,6 +256,9 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+
+- Fixed an issue with the `hasName` and `hasAnyName` matcher when matching
+  inline namespaces with an enclosing namespace of the same name.
 
 clang-format
 ------------
