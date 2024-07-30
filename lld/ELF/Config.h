@@ -459,6 +459,15 @@ struct ConfigWrapper {
 
 LLVM_LIBRARY_VISIBILITY extern ConfigWrapper config;
 
+// Some index properties of a symbol are stored separately in this auxiliary
+// struct to decrease sizeof(SymbolUnion) in the majority of cases.
+struct SymbolAux {
+  uint32_t gotIdx = -1;
+  uint32_t pltIdx = -1;
+  uint32_t tlsDescIdx = -1;
+  uint32_t tlsGdIdx = -1;
+};
+
 struct DuplicateSymbol {
   const Symbol *sym;
   const InputFile *file;
@@ -476,6 +485,8 @@ struct Ctx {
   SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
   SmallVector<InputSectionBase *, 0> inputSections;
   SmallVector<EhInputSection *, 0> ehInputSections;
+
+  SmallVector<SymbolAux, 0> symAux;
   // Duplicate symbol candidates.
   SmallVector<DuplicateSymbol, 0> duplicates;
   // Symbols in a non-prevailing COMDAT group which should be changed to an
