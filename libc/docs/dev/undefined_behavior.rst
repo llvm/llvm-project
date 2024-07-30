@@ -93,3 +93,8 @@ direction in this case.
 Non-const Constant Return Values
 --------------------------------
 Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to to modify this value. Any modification of this value is undefined behavior.
+
+Unrecognized ``clockid_t`` values for ``pthread_rwlock_clock*`` APIs
+----------------------------------------------------------------------
+POSIX.1-2024 only demands support for ``CLOCK_REALTIME`` and ``CLOCK_MONOTONIC``. Currently,
+as in LLVM libc, if other clock ids are used, they will be treated as monotonic clocks.
