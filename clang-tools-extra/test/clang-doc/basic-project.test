@@ -125,8 +125,8 @@
 // HTML-RECTANGLE:   <a href="Shape.html">Shape</a>
 // HTML-RECTANGLE: </p>
 // HTML-RECTANGLE: <h2 id="Members">Members</h2>
-// HTML-RECTANGLE: <div>private double width_</div>
-// HTML-RECTANGLE: <div>private double height_</div>
+// HTML-RECTANGLE: <li>private double width_</li>
+// HTML-RECTANGLE: <li>private double height_</li>
 // HTML-RECTANGLE: <h2 id="Functions">Functions</h2>
 // HTML-RECTANGLE: <h3 id="{{([0-9A-F]{40})}}">Rectangle</h3>
 // HTML-RECTANGLE: <p>public void Rectangle(double width, double height)</p>
