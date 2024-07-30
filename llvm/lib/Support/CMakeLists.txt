@@ -298,6 +298,21 @@ add_llvm_component_library(LLVMSupport
 
 set(llvm_system_libs ${system_libs})
 
+if (LLVM_ENABLE_LIB_PRECOMPILED_HEADERS)
+  # CMake cannot use a C++ PCH in source targets that are non-C++
+  # Ideally this would be handled by LLVMPrecompiledHeaders.cmake
+  set(non_cpp_sources 
+    regcomp.c
+    regerror.c
+    regexec.c
+    regfree.c
+    regstrlcpy.c
+  )
+  foreach(source ${non_cpp_sources})
+    set_source_files_properties(${source} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+  endforeach()
+endif()
+
 # This block is only needed for llvm-config. When we deprecate llvm-config and
 # move to using CMake export, this block can be removed.
 if(LLVM_ENABLE_ZLIB)
