@@ -13785,8 +13785,8 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
 
 /// Try to lower the construction of a pointer alias mask to a WHILEWR.
 /// The mask's enabled lanes represent the elements that will not overlap across
-/// one loop iteration. This tries to match: or (splat (setcc_lt (sub ptrA,
-/// ptrB), -(element_size - 1))),
+/// one loop iteration. This tries to match:
+/// or (splat (setcc_lt (sub ptrA, ptrB), -(element_size - 1))),
 ///    (get_active_lane_mask 0, (div (sub ptrA, ptrB), element_size))
 SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   if (!DAG.getSubtarget<AArch64Subtarget>().hasSVE2())
