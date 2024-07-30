@@ -673,9 +673,8 @@ void DWARFRewriter::updateDebugInfo() {
                             DebugRangesSectionWriter &TempRangesSectionWriter,
                             DebugAddrWriter &AddressWriter,
                             const std::string &DWOName,
-                            const std::optional<std::string> &DwarfOutputPath) {
-    DIEBuilder DWODIEBuilder(BC, &(SplitCU).getContext(), DebugNamesTable,
-                             &Unit);
+                            const std::optional<std::string> &DwarfOutputPath,
+                            DIEBuilder &DWODIEBuilder) {
     DWODIEBuilder.buildDWOUnit(SplitCU);
     DebugStrOffsetsWriter DWOStrOffstsWriter(BC);
     DebugStrWriter DWOStrWriter((SplitCU).getContext(), true);
@@ -740,6 +739,7 @@ void DWARFRewriter::updateDebugInfo() {
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
 
   CUPartitionVector PartVec = partitionCUs(*BC.DwCtx);
+  llvm::DenseMap<uint64_t, std::unique_ptr<DIEBuilder>> DWODIEBuildersByCU;
   for (std::vector<DWARFUnit *> &Vec : PartVec) {
     DIEBlder.buildCompileUnits(Vec);
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs()) {
@@ -761,13 +761,23 @@ void DWARFRewriter::updateDebugInfo() {
               : std::optional<std::string>(opts::DwarfOutputPath.c_str());
       std::string DWOName = DIEBlder.updateDWONameCompDir(
           *StrOffstsWriter, *StrWriter, *CU, DwarfOutputPath, std::nullopt);
+      auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
+          BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
+      DWODIEBuildersByCU[CU->getOffset()] = std::move(DWODIEBuilderPtr);
+      DIEBuilder &DWODIEBuilder = *DWODIEBuildersByCU[CU->getOffset()].get();
       if (CU->getVersion() >= 5)
         StrOffstsWriter->finalizeSection(*CU, DIEBlder);
       processSplitCU(*CU, **SplitCU, DIEBlder, *TempRangesSectionWriter,
-                     AddressWriter, DWOName, DwarfOutputPath);
+                     AddressWriter, DWOName, DwarfOutputPath, DWODIEBuilder);
     }
-    for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
+    for (DWARFUnit *CU : DIEBlder.getProcessedCUs()) {
+      auto DWODIEBuilderIterator = DWODIEBuildersByCU.find(CU->getOffset());
+      if (DWODIEBuilderIterator != DWODIEBuildersByCU.end()) {
+        DIEBuilder &DWODIEBuilder = *DWODIEBuilderIterator->second.get();
+        DWODIEBuilder.updateDebugNamesTable();
+      }
       processMainBinaryCU(*CU, DIEBlder);
+    }
     finalizeCompileUnits(DIEBlder, *Streamer, OffsetMap,
                          DIEBlder.getProcessedCUs(), *FinalAddrWriter);
   }
@@ -1468,6 +1478,7 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   // generate and populate abbrevs here
   DIEBlder.generateAbbrevs();
   DIEBlder.finish();
+  DIEBlder.updateDebugNamesTable();
   SmallVector<char, 20> OutBuffer;
   std::shared_ptr<raw_svector_ostream> ObjOS =
       std::make_shared<raw_svector_ostream>(OutBuffer);
@@ -1672,6 +1683,7 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
   }
   DIEBlder.generateAbbrevs();
   DIEBlder.finish();
+  DIEBlder.updateDebugNamesTable();
   // generate debug_info and CUMap
   for (DWARFUnit *CU : CUs) {
     emitUnit(DIEBlder, Streamer, *CU);
