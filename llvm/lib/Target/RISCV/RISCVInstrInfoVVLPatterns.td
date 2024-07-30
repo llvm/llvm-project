@@ -2673,7 +2673,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16] in
+  let Predicates = [HasVInstructionsBF16Minimal] in
   def : Pat<(fwti.Vector (any_riscv_fpextend_vl
                              (fvti.Vector fvti.RegClass:$rs1),
                              (fvti.Mask V0),
@@ -2731,7 +2731,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16] in
+  let Predicates = [HasVInstructionsBF16Minimal] in
     def : Pat<(fvti.Vector (any_riscv_fpround_vl
                                (fwti.Vector fwti.RegClass:$rs1),
                                (fwti.Mask V0), VLOpFrag)),
