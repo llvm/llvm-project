@@ -174,8 +174,9 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
-/// \returns true if the result in each element depends on the active elements
-/// e.g. non-elementwise instructions like vredsum.vs/vcompress.vm/viota.m
+/// \returns true if the resulting elements' values may depend on the active
+/// elements e.g. non-elementwise instructions like
+/// vredsum.vs/vcompress.vm/viota.m
 static inline bool activeElementsAffectResult(uint64_t TSFlags) {
   return TSFlags & ActiveElementsAffectResultMask;
 }

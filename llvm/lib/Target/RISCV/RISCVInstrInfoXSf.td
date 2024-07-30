@@ -407,7 +407,7 @@ multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
                                                        UsesVXRM=0>;
 }
 
-let ActiveElementsAffectRes = true in {
+let ActiveElementsAffectResult = true in {
 
 let Predicates = [HasVendorXSfvcp] in {
   foreach m = MxList in {
