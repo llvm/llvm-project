@@ -89,7 +89,6 @@ if TYPE_CHECKING:
         "tuple[str, Optional[list[Any]], Any]",
         "tuple[str, Optional[list[Any]], Any, Callable[..., Any]]",
     ]
-    CObjP: TypeAlias = _Pointer[Any]
 
     TSeq = TypeVar("TSeq", covariant=True)
 
@@ -148,7 +147,7 @@ def b(x: str | bytes) -> bytes:
 # object. This is a problem, because it means that from_parameter will see an
 # integer and pass the wrong value on platforms where int != void*. Work around
 # this by marshalling object arguments as void**.
-c_object_p: TType[CObjP] = POINTER(c_void_p)
+c_object_p: TType[_Pointer[Any]] = POINTER(c_void_p)
 
 ### Exception Classes ###
 
