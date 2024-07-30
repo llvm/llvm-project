@@ -11264,7 +11264,8 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
   }
 
   // If we're doing LR signing, we need to fixup ReturnAddr: strip it.
-  if (MF.getFunction().hasFnAttribute("ptrauth-returns"))
+  if (Subtarget->isTargetMachO() &&
+      MF.getFunction().hasFnAttribute("ptrauth-returns"))
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
                        DAG.getConstant(Intrinsic::ptrauth_strip, DL, MVT::i32),
                        ReturnAddress,
