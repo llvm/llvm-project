@@ -1,8 +1,8 @@
 ; Validate that vector types are accepted for llvm.lround/llvm.llround intrinsic
 ; RUN: llvm-as < %s -disable-output 2>&1| FileCheck -allow-empty %s
 
-; CHECK-NOT:assembly parsed, but does not verify as correct
-; CHECK-NOT:Intrinsic does not support vectors
+; CHECK-NOT: assembly parsed, but does not verify as correct
+; CHECK-NOT: Intrinsic does not support vectors
 
 define <2 x i32> @intrinsic_lround_v2i32_v2f32(<2 x float> %arg) {
 entry:
