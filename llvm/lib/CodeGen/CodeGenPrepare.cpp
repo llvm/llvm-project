@@ -1993,7 +1993,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   Value *AddOrSubOffset;
   // Find out loop increment PHI.
   auto *PN = dyn_cast<PHINode>(Incr);
-  if (PN != nullptr) {
+  if (PN) {
     AddOrSub = std::nullopt;
     AddOrSubOffset = nullptr;
   } else {
