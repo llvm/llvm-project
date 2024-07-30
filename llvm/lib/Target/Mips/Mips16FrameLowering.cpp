@@ -54,8 +54,7 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   // No need to allocate space on the stack.
   if (StackSize == 0 && !MFI.adjustsStack()) return;
 
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
 
   // Adjust stack.
   TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);

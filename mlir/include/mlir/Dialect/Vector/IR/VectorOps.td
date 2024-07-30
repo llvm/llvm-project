@@ -300,9 +300,9 @@ def Vector_MultiDimReductionOp :
 
     ```mlir
     %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
-      vector<4x8x16x32xf32> into vector<4x16xf32>
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
-      vector<4x16xf32> into f32
+      vector<4x16xf32> to f32
     ```
   }];
   let builders = [
@@ -421,7 +421,7 @@ def Vector_ShuffleOp :
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
      Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
-                    I64ArrayAttr:$mask)>,
+                    DenseI64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
   let description = [{
@@ -459,11 +459,7 @@ def Vector_ShuffleOp :
                : vector<f32>, vector<f32>           ; yields vector<2xf32>
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayRef<int64_t>")>
-  ];
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
@@ -475,7 +471,10 @@ def Vector_ShuffleOp :
       return ::llvm::cast<VectorType>(getVector().getType());
     }
   }];
+
   let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
+
+  let hasFolder = 1;
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
@@ -2443,7 +2442,7 @@ def Vector_TypeCastOp :
 
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [Pure]>,
-    Arguments<(ins I64ArrayAttr:$mask_dim_sizes)>,
+    Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
   let description = [{

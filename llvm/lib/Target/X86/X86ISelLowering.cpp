@@ -849,8 +849,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEARBYINT, MVT::f80, Expand);
     setOperationAction(ISD::FROUNDEVEN, MVT::f80, Expand);
     setOperationAction(ISD::FMA, MVT::f80, Expand);
-    setOperationAction(ISD::LROUND, MVT::f80, Expand);
-    setOperationAction(ISD::LLROUND, MVT::f80, Expand);
+    setOperationAction(ISD::LROUND, MVT::f80, LibCall);
+    setOperationAction(ISD::LLROUND, MVT::f80, LibCall);
     setOperationAction(ISD::LRINT, MVT::f80, Custom);
     setOperationAction(ISD::LLRINT, MVT::f80, Custom);
 
@@ -2554,7 +2554,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FP_EXTEND,
                        ISD::STRICT_FP_EXTEND,
                        ISD::FP_ROUND,
-                       ISD::STRICT_FP_ROUND});
+                       ISD::STRICT_FP_ROUND,
+                       ISD::INTRINSIC_VOID,
+                       ISD::INTRINSIC_WO_CHAIN,
+                       ISD::INTRINSIC_W_CHAIN});
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
@@ -3432,12 +3435,9 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   if (BaseCost >= 0 && Subtarget.hasCCMP())
     BaseCost += BrMergingCcmpBias;
   // a == b && a == c is a fast pattern on x86.
-  ICmpInst::Predicate Pred;
   if (BaseCost >= 0 && Opc == Instruction::And &&
-      match(Lhs, m_ICmp(Pred, m_Value(), m_Value())) &&
-      Pred == ICmpInst::ICMP_EQ &&
-      match(Rhs, m_ICmp(Pred, m_Value(), m_Value())) &&
-      Pred == ICmpInst::ICMP_EQ)
+      match(Lhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())) &&
+      match(Rhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())))
     BaseCost += 1;
   return {BaseCost, BrMergingLikelyBias.getValue(),
           BrMergingUnlikelyBias.getValue()};
@@ -25446,9 +25446,8 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
 
   // Get an MCSymbol that will ultimately resolve to the frame offset of the EH
   // registration, or the .set_setframe offset.
-  MCSymbol *OffsetSym =
-      MF.getMMI().getContext().getOrCreateParentFrameOffsetSymbol(
-          GlobalValue::dropLLVMManglingEscape(Fn->getName()));
+  MCSymbol *OffsetSym = MF.getContext().getOrCreateParentFrameOffsetSymbol(
+      GlobalValue::dropLLVMManglingEscape(Fn->getName()));
   SDValue OffsetSymVal = DAG.getMCSymbol(OffsetSym, PtrVT);
   SDValue ParentFrameOffset =
       DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT, OffsetSymVal);
@@ -26340,7 +26339,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     MachineFunction &MF = DAG.getMachineFunction();
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-    auto &Context = MF.getMMI().getContext();
+    auto &Context = MF.getContext();
     MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
                                             Twine(MF.getFunctionNumber()));
     return DAG.getNode(getGlobalWrapperKind(nullptr, /*OpFlags=*/0), dl, VT,
@@ -26352,7 +26351,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     MachineFunction &MF = DAG.getMachineFunction();
     SDValue Op1 = Op.getOperand(1);
     auto *Fn = cast<Function>(cast<GlobalAddressSDNode>(Op1)->getGlobal());
-    MCSymbol *LSDASym = MF.getMMI().getContext().getOrCreateLSDASymbol(
+    MCSymbol *LSDASym = MF.getContext().getOrCreateLSDASymbol(
         GlobalValue::dropLLVMManglingEscape(Fn->getName()));
 
     // Generate a simple absolute symbol reference. This intrinsic is only
@@ -27270,6 +27269,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       llvm_unreachable("Unsupported truncstore intrinsic");
     }
   }
+  case INTR_TYPE_CAST_MMX:
+    return SDValue(); // handled in combineINTRINSIC_*
   }
 }
 
@@ -29096,6 +29097,20 @@ uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
   llvm_unreachable("Unsupported GFNI opcode");
 }
 
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL, MVT VT,
+                        unsigned Amt = 0) {
+  assert(VT.getVectorElementType() == MVT::i8 &&
+         (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
+  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
+  SmallVector<SDValue> MaskBits;
+  for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
+    uint64_t Bits = (Imm >> (I % 64)) & 255;
+    MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
+  }
+  return DAG.getBuildVector(VT, DL, MaskBits);
+}
+
 // Return true if the required (according to Opcode) shift-imm form is natively
 // supported by the Subtarget
 static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
@@ -29284,9 +29299,7 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
       return SDValue();
 
     if (Subtarget.hasGFNI()) {
-      uint64_t ShiftMask = getGFNICtrlImm(Op.getOpcode(), ShiftAmt);
-      MVT MaskVT = MVT::getVectorVT(MVT::i64, NumElts / 8);
-      SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(ShiftMask, dl, MaskVT));
+      SDValue Mask = getGFNICtrlMask(Op.getOpcode(), DAG, dl, VT, ShiftAmt);
       return DAG.getNode(X86ISD::GF2P8AFFINEQB, dl, VT, R, Mask,
                          DAG.getTargetConstant(0, dl, MVT::i8));
     }
@@ -30191,9 +30204,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (IsCstSplat && Subtarget.hasGFNI() && VT.getScalarType() == MVT::i8 &&
       DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
     uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
-    uint64_t RotMask = getGFNICtrlImm(Opcode, RotAmt);
-    MVT MaskVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(RotMask, DL, MaskVT));
+    SDValue Mask = getGFNICtrlMask(Opcode, DAG, DL, VT, RotAmt);
     return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, R, Mask,
                        DAG.getTargetConstant(0, DL, MVT::i8));
   }
@@ -30746,10 +30757,12 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -30757,10 +30770,12 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op))))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -30771,18 +30786,21 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
     if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
              Pred == CmpInst::ICMP_SLT;
-    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-      return Pred == CmpInst::ICMP_SGT;
+    if (match(I->user_back(),
+              m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+      return true;
     return false;
   }
   if (Opc == AtomicRMWInst::Xor) {
     if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
       return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
     if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value())))) {
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-        return Pred == CmpInst::ICMP_SLT;
-      if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_AllOnes())))
-        return Pred == CmpInst::ICMP_SGT;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
+        return true;
+      if (match(I->user_back(),
+                m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
+        return true;
     }
     return false;
   }
@@ -31528,10 +31546,7 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
 
   // If we have GFNI, we can use GF2P8AFFINEQB to reverse the bits.
   if (Subtarget.hasGFNI()) {
-    MVT MatrixVT = MVT::getVectorVT(MVT::i64, NumElts / 8);
-    SDValue Matrix =
-        DAG.getConstant(getGFNICtrlImm(ISD::BITREVERSE), DL, MatrixVT);
-    Matrix = DAG.getBitcast(VT, Matrix);
+    SDValue Matrix = getGFNICtrlMask(ISD::BITREVERSE, DAG, DL, VT);
     return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, In, Matrix,
                        DAG.getTargetConstant(0, DL, MVT::i8));
   }
@@ -35876,7 +35891,7 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
     MIB.addMBB(restoreMBB);
   MIB.setMemRefs(MMOs);
 
-  if (MF->getMMI().getModule()->getModuleFlag("cf-protection-return")) {
+  if (MF->getFunction().getParent()->getModuleFlag("cf-protection-return")) {
     emitSetJmpShadowStackFix(MI, thisMBB);
   }
 
@@ -36152,7 +36167,7 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   MachineBasicBlock *thisMBB = MBB;
 
   // When CET and shadow stack is enabled, we need to fix the Shadow Stack.
-  if (MF->getMMI().getModule()->getModuleFlag("cf-protection-return")) {
+  if (MF->getFunction().getParent()->getModuleFlag("cf-protection-return")) {
     thisMBB = emitLongJmpShadowStackFix(MI, thisMBB);
   }
 
@@ -43309,6 +43324,9 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE vector multiplies are either inbounds or saturate.
+  case X86ISD::VPMADDUBSW:
+  case X86ISD::VPMADDWD:
   // SSE vector shifts handle out of bounds shift amounts.
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
@@ -43319,6 +43337,16 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::UNPCKH:
   case X86ISD::UNPCKL:
     return false;
+  case ISD::INTRINSIC_WO_CHAIN:
+    switch (Op->getConstantOperandVal(0)) {
+    case Intrinsic::x86_sse2_pmadd_wd:
+    case Intrinsic::x86_avx2_pmadd_wd:
+    case Intrinsic::x86_avx512_pmaddw_d_512:
+    case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+    case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddubs_w_512:
+      return false;
+    }
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
@@ -53473,13 +53501,6 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
-  // Fold for better commutativity:
-  // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
-  if (N1->hasOneUse())
-    if (SDValue Not = IsNOT(N1, DAG))
-      return DAG.getNOT(
-          DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
-
   // Constant Folding
   APInt Undefs0, Undefs1;
   SmallVector<APInt> EltBits0, EltBits1;
@@ -53554,6 +53575,28 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
       if (N->getOpcode() != ISD::DELETED_NODE)
         DCI.AddToWorklist(N);
       return SDValue(N, 0);
+    }
+  }
+
+  // Folds for better commutativity:
+  if (N1->hasOneUse()) {
+    // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
+    if (SDValue Not = IsNOT(N1, DAG))
+      return DAG.getNOT(
+          DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
+
+    // ANDNP(x,PSHUFB(y,z)) -> PSHUFB(y,OR(z,x))
+    // Zero out elements by setting the PSHUFB mask value to 0xFF.
+    if (DAG.ComputeNumSignBits(N0) == EltSizeInBits) {
+      SDValue BC1 = peekThroughOneUseBitcasts(N1);
+      if (BC1.getOpcode() == X86ISD::PSHUFB) {
+        EVT ShufVT = BC1.getValueType();
+        SDValue NewMask = DAG.getNode(ISD::OR, DL, ShufVT, BC1.getOperand(1),
+                                      DAG.getBitcast(ShufVT, N0));
+        SDValue NewShuf =
+            DAG.getNode(X86ISD::PSHUFB, DL, ShufVT, BC1.getOperand(0), NewMask);
+        return DAG.getBitcast(VT, NewShuf);
+      }
     }
   }
 
@@ -56159,6 +56202,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       SmallVector<SDValue> Subs;
       for (SDValue SubOp : SubOps)
         Subs.push_back(SubOp.getOperand(I));
+      // Attempt to peek through bitcasts and concat the original subvectors.
+      EVT SubVT = peekThroughBitcasts(Subs[0]).getValueType();
+      if (SubVT.isSimple() && SubVT.isVector()) {
+        EVT ConcatVT =
+            EVT::getVectorVT(*DAG.getContext(), SubVT.getScalarType(),
+                             SubVT.getVectorElementCount() * Subs.size());
+        for (SDValue &Sub : Subs)
+          Sub = DAG.getBitcast(SubVT, Sub);
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
+      }
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
     auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
@@ -57716,6 +57770,86 @@ static SDValue combinePDEP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Fixup the MMX intrinsics' types: in IR they are expressed with <1 x i64>,
+// and so SelectionDAGBuilder creates them with v1i64 types, but they need to
+// use x86mmx instead.
+static SDValue FixupMMXIntrinsicTypes(SDNode *N, SelectionDAG &DAG) {
+  SDLoc dl(N);
+
+  bool MadeChange = false, CastReturnVal = false;
+  SmallVector<SDValue, 8> Args;
+  for (const SDValue &Arg : N->op_values()) {
+    if (Arg.getValueType() == MVT::v1i64) {
+      MadeChange = true;
+      Args.push_back(DAG.getBitcast(MVT::x86mmx, Arg));
+    } else
+      Args.push_back(Arg);
+  }
+  SDVTList VTs = N->getVTList();
+  SDVTList NewVTs = VTs;
+  if (VTs.NumVTs > 0 && VTs.VTs[0] == MVT::v1i64) {
+    SmallVector<EVT> NewVTArr(ArrayRef<EVT>(VTs.VTs, VTs.NumVTs));
+    NewVTArr[0] = MVT::x86mmx;
+    NewVTs = DAG.getVTList(NewVTArr);
+    MadeChange = true;
+    CastReturnVal = true;
+  }
+
+  if (MadeChange) {
+    SDValue Result = DAG.getNode(N->getOpcode(), dl, NewVTs, Args);
+    if (CastReturnVal) {
+      SmallVector<SDValue, 2> Returns;
+      for (unsigned i = 0, e = Result->getNumValues(); i != e; ++i)
+        Returns.push_back(Result.getValue(i));
+      Returns[0] = DAG.getBitcast(MVT::v1i64, Returns[0]);
+      return DAG.getMergeValues(Returns, dl);
+    }
+    return Result;
+  }
+  return SDValue();
+}
+static SDValue combineINTRINSIC_WO_CHAIN(SDNode *N, SelectionDAG &DAG,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  unsigned IntNo = N->getConstantOperandVal(0);
+  const IntrinsicData *IntrData = getIntrinsicWithoutChain(IntNo);
+
+  if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
+    return FixupMMXIntrinsicTypes(N, DAG);
+
+  return SDValue();
+}
+
+static SDValue combineINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  unsigned IntNo = N->getConstantOperandVal(1);
+  const IntrinsicData *IntrData = getIntrinsicWithChain(IntNo);
+
+  if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
+    return FixupMMXIntrinsicTypes(N, DAG);
+
+  return SDValue();
+}
+
+static SDValue combineINTRINSIC_VOID(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  unsigned IntNo = N->getConstantOperandVal(1);
+  const IntrinsicData *IntrData = getIntrinsicWithChain(IntNo);
+
+  if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
+    return FixupMMXIntrinsicTypes(N, DAG);
+
+  return SDValue();
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -57906,7 +58040,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
-  // clang-format on
+  case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
+  case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
+  case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
+    // clang-format on
   }
 
   return SDValue();
@@ -57976,7 +58113,7 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                   SDValue Value, SDValue Addr,
                                                   int JTI,
                                                   SelectionDAG &DAG) const {
-  const Module *M = DAG.getMachineFunction().getMMI().getModule();
+  const Module *M = DAG.getMachineFunction().getFunction().getParent();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
   if (IsCFProtectionSupported) {
     // In case control-flow branch protection is enabled, we need to add
@@ -58358,7 +58495,7 @@ X86TargetLowering::getSingleConstraintMatchWeight(
       Wt = CW_SpecificReg;
     break;
   case 'y':
-    if (Ty->isX86_MMXTy() && Subtarget.hasMMX())
+    if (Ty->getPrimitiveSizeInBits() == 64 && Subtarget.hasMMX())
       Wt = CW_SpecificReg;
     break;
   case 'Y':
@@ -58381,8 +58518,8 @@ X86TargetLowering::getSingleConstraintMatchWeight(
       return CW_Invalid;
     // Any MMX reg
     case 'm':
-      if (Ty->isX86_MMXTy() && Subtarget.hasMMX())
-        return Wt;
+      if (Ty->getPrimitiveSizeInBits() == 64 && Subtarget.hasMMX())
+        return CW_SpecificReg;
       return CW_Invalid;
     // Any SSE reg when ISA >= SSE2, same as 'x'
     case 'i':

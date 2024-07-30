@@ -45,10 +45,6 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace llvm;
 
 static cl::opt<std::string>

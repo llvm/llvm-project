@@ -439,7 +439,10 @@ struct CandidateComparer {
 
     const FunctionSamples *LCS = LHS.CalleeSamples;
     const FunctionSamples *RCS = RHS.CalleeSamples;
-    assert(LCS && RCS && "Expect non-null FunctionSamples");
+    // In inline replay mode, CalleeSamples may be null and the order doesn't
+    // matter.
+    if (!LCS || !RCS)
+      return LCS;
 
     // Tie breaker using number of samples try to favor smaller functions first
     if (LCS->getBodySamples().size() != RCS->getBodySamples().size())

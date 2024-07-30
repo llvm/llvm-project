@@ -268,7 +268,7 @@ public:
     Cygnus,
     CoreCLR,
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
-    MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
+    MacABI,    // Mac Catalyst variant of Apple's iOS deployment target.
 
     // Shader Stages
     // The order of these values matters, and must be kept in sync with the
@@ -292,7 +292,9 @@ public:
     OpenCL,
     OpenHOS,
 
-    LastEnvironmentType = OpenHOS
+    PAuthTest,
+
+    LastEnvironmentType = PAuthTest
   };
   enum ObjectFormatType {
     UnknownObjectFormat,

@@ -1667,15 +1667,15 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  StmtResult RebuildOMPExecutableDirective(
-      OpenMPDirectiveKind Kind, DeclarationNameInfo DirName,
-      OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
-      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
-      OpenMPDirectiveKind PrevMappedDirective = OMPD_unknown) {
+  StmtResult RebuildOMPExecutableDirective(OpenMPDirectiveKind Kind,
+                                           DeclarationNameInfo DirName,
+                                           OpenMPDirectiveKind CancelRegion,
+                                           ArrayRef<OMPClause *> Clauses,
+                                           Stmt *AStmt, SourceLocation StartLoc,
+                                           SourceLocation EndLoc) {
 
     return getSema().OpenMP().ActOnOpenMPExecutableDirective(
-        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc,
-        PrevMappedDirective);
+        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'if' clause.
@@ -9182,8 +9182,7 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
 
   return getDerived().RebuildOMPExecutableDirective(
       D->getDirectiveKind(), DirName, CancelRegion, TClauses,
-      AssociatedStmt.get(), D->getBeginLoc(), D->getEndLoc(),
-      D->getMappedDirective());
+      AssociatedStmt.get(), D->getBeginLoc(), D->getEndLoc());
 }
 
 template <typename Derived>
@@ -9231,6 +9230,28 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPReverseDirective(OMPReverseDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
+    OMPInterchangeDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
@@ -10288,7 +10309,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
 
   OMPInteropInfo InteropInfo(C->getIsTarget(), C->getIsTargetSync());
   InteropInfo.PreferTypes.reserve(C->varlist_size() - 1);
-  for (Expr *E : llvm::drop_begin(C->varlists())) {
+  for (Expr *E : llvm::drop_begin(C->varlist())) {
     ExprResult ER = getDerived().TransformExpr(cast<Expr>(E));
     if (ER.isInvalid())
       return nullptr;
@@ -10426,7 +10447,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPPrivateClause(OMPPrivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10441,7 +10462,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPFirstprivateClause(
     OMPFirstprivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10456,7 +10477,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPLastprivateClause(OMPLastprivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10472,7 +10493,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPSharedClause(OMPSharedClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10487,7 +10508,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10534,7 +10555,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPTaskReductionClause(
     OMPTaskReductionClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10580,7 +10601,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPInReductionClause(OMPInReductionClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10626,7 +10647,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPLinearClause(OMPLinearClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10646,7 +10667,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPAlignedClause(OMPAlignedClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10665,7 +10686,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPCopyinClause(OMPCopyinClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10680,7 +10701,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPCopyprivateClause(OMPCopyprivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10694,7 +10715,7 @@ template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFlushClause(OMPFlushClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10726,7 +10747,7 @@ TreeTransform<Derived>::TransformOMPDependClause(OMPDependClause *C) {
     DepModifier = DepModRes.get();
   }
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10757,7 +10778,7 @@ bool transformOMPMappableExprListClause(
     llvm::SmallVectorImpl<Expr *> &UnresolvedMappers) {
   // Transform expressions in the list.
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = TT.getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return true;
@@ -10837,7 +10858,7 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
   }
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10969,7 +10990,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPUseDevicePtrClause(
     OMPUseDevicePtrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10984,7 +11005,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPUseDeviceAddrClause(
     OMPUseDeviceAddrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -10999,7 +11020,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11014,7 +11035,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPHasDeviceAddrClause(
     OMPHasDeviceAddrClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11029,7 +11050,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPNontemporalClause(OMPNontemporalClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11044,7 +11065,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPInclusiveClause(OMPInclusiveClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11059,7 +11080,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPExclusiveClause(OMPExclusiveClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;
@@ -11106,7 +11127,7 @@ TreeTransform<Derived>::TransformOMPAffinityClause(OMPAffinityClause *C) {
     if (ModifierRes.isInvalid())
       return nullptr;
   }
-  for (Expr *E : C->varlists()) {
+  for (Expr *E : C->varlist()) {
     ExprResult Locator = getDerived().TransformExpr(E);
     if (Locator.isInvalid())
       continue;
@@ -11146,7 +11167,7 @@ OMPClause *
 TreeTransform<Derived>::TransformOMPDoacrossClause(OMPDoacrossClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
     if (EVar.isInvalid())
       return nullptr;

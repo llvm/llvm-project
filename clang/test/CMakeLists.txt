@@ -78,6 +78,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-installapi
   clang-scan-deps
   clang-linker-wrapper
+  clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
   diagtool

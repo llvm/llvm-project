@@ -23,7 +23,7 @@ entry:
   ret i64 %1
 }
 
-define i64 @test_vleff_nxv8i8_tu(<vscale x 8 x i8> %merge, ptr %p, i64 %vl) {
+define i64 @test_vleff_nxv8i8_tu(<vscale x 8 x i8> %passthru, ptr %p, i64 %vl) {
   ; CHECK-LABEL: name: test_vleff_nxv8i8_tu
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $v8, $x10, $x11
@@ -35,7 +35,7 @@ define i64 @test_vleff_nxv8i8_tu(<vscale x 8 x i8> %merge, ptr %p, i64 %vl) {
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLE8FF_V_M1_1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:
-  %0 = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8(<vscale x 8 x i8> %merge, ptr %p, i64 %vl)
+  %0 = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8(<vscale x 8 x i8> %passthru, ptr %p, i64 %vl)
   %1 = extractvalue { <vscale x 8 x i8>, i64 } %0, 1
   ret i64 %1
 }

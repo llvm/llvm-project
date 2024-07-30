@@ -278,6 +278,11 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
         return UI && UI->getParent() == Then2;
       });
 
+      // Remove phi recipes that are unused after merging the regions.
+      if (Phi1ToMove.getVPSingleValue()->getNumUsers() == 0) {
+        Phi1ToMove.eraseFromParent();
+        continue;
+      }
       Phi1ToMove.moveBefore(*Merge2, Merge2->begin());
     }
 
@@ -1483,13 +1488,13 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
       if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(CurRecipe)) {
         VPValue *NewMask = GetNewMask(MemR->getMask());
         if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR))
-          NewRecipe = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+          NewRecipe = new VPWidenLoadEVLRecipe(*L, *VPEVL, NewMask);
         else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR))
-          NewRecipe = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+          NewRecipe = new VPWidenStoreEVLRecipe(*S, *VPEVL, NewMask);
         else
           llvm_unreachable("unsupported recipe");
       } else if (auto *RedR = dyn_cast<VPReductionRecipe>(CurRecipe)) {
-        NewRecipe = new VPReductionEVLRecipe(RedR, VPEVL,
+        NewRecipe = new VPReductionEVLRecipe(*RedR, *VPEVL,
                                              GetNewMask(RedR->getCondOp()));
       }
 

@@ -59,10 +59,10 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -97,7 +97,7 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
 
   uint32_t properties = 0;
   if (target_arch.IsValid()) {
-    strm.Printf("%sarch=", properties++ > 0 ? ", " : " ( ");
+    strm.Printf(" ( arch=");
     target_arch.DumpTriple(strm.AsRawOstream());
     properties++;
   }

@@ -91,7 +91,6 @@ private:
   bool selectG_TRUNC(MachineInstr &I) const;
   bool selectG_SZA_EXT(MachineInstr &I) const;
   bool selectG_FPEXT(MachineInstr &I) const;
-  bool selectG_CONSTANT(MachineInstr &I) const;
   bool selectG_FNEG(MachineInstr &I) const;
   bool selectG_FABS(MachineInstr &I) const;
   bool selectG_AND_OR_XOR(MachineInstr &I) const;
@@ -112,7 +111,6 @@ private:
   bool selectDivScale(MachineInstr &MI) const;
   bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
-  bool selectInverseBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
   bool selectReturnAddress(MachineInstr &I) const;
@@ -334,8 +332,17 @@ private:
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
-  void renderBitcastImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
+  void renderBitcastFPImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
+
+  void renderBitcastFPImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                            int OpIdx) const {
+    renderBitcastFPImm(MIB, MI, OpIdx);
+  }
+  void renderBitcastFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                            int OpIdx) const {
+    renderBitcastFPImm(MIB, MI, OpIdx);
+  }
 
   void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;

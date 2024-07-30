@@ -2516,6 +2516,10 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
   if (AddrReg == 0)
     return false;
 
+  // Authenticated indirectbr is not implemented yet.
+  if (FuncInfo.MF->getFunction().hasFnAttribute("ptrauth-indirect-gotos"))
+    return false;
+
   // Emit the indirect branch.
   const MCInstrDesc &II = TII.get(AArch64::BR);
   AddrReg = constrainOperandRegClass(II, AddrReg,  II.getNumDefs());

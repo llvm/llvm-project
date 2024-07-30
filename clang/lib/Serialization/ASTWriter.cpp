@@ -6543,9 +6543,6 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
-  DefinitionBits.addBit(ShouldSkipCheckingODR);
-
 #define FIELD(Name, Width, Merge)                                              \
   if (!DefinitionBits.canWriteNextNBits(Width)) {                              \
     Record->push_back(DefinitionBits);                                         \
@@ -6558,11 +6555,9 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   Record->push_back(DefinitionBits);
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!ShouldSkipCheckingODR)
-    // getODRHash will compute the ODRHash if it has not been previously
-    // computed.
-    Record->push_back(D->getODRHash());
+  // getODRHash will compute the ODRHash if it has not been previously
+  // computed.
+  Record->push_back(D->getODRHash());
 
   bool ModulesDebugInfo =
       Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
@@ -7225,7 +7220,7 @@ void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
 void OMPClauseWriter::VisitOMPInitClause(OMPInitClause *C) {
   Record.push_back(C->varlist_size());
-  for (Expr *VE : C->varlists())
+  for (Expr *VE : C->varlist())
     Record.AddStmt(VE);
   Record.writeBool(C->getIsTarget());
   Record.writeBool(C->getIsTargetSync());
@@ -7271,7 +7266,7 @@ void OMPClauseWriter::VisitOMPAlignClause(OMPAlignClause *C) {
 void OMPClauseWriter::VisitOMPPrivateClause(OMPPrivateClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     Record.AddStmt(VE);
   }
   for (auto *VE : C->private_copies()) {
@@ -7283,7 +7278,7 @@ void OMPClauseWriter::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
   Record.push_back(C->varlist_size());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     Record.AddStmt(VE);
   }
   for (auto *VE : C->private_copies()) {
@@ -7301,7 +7296,7 @@ void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
   Record.writeEnum(C->getKind());
   Record.AddSourceLocation(C->getKindLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->private_copies())
     Record.AddStmt(E);
@@ -7316,7 +7311,7 @@ void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
 void OMPClauseWriter::VisitOMPSharedClause(OMPSharedClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7329,7 +7324,7 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *VE : C->privates())
     Record.AddStmt(VE);
@@ -7356,7 +7351,7 @@ void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *VE : C->privates())
     Record.AddStmt(VE);
@@ -7375,7 +7370,7 @@ void OMPClauseWriter::VisitOMPInReductionClause(OMPInReductionClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
   Record.AddDeclarationNameInfo(C->getNameInfo());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *VE : C->privates())
     Record.AddStmt(VE);
@@ -7396,7 +7391,7 @@ void OMPClauseWriter::VisitOMPLinearClause(OMPLinearClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   Record.push_back(C->getModifier());
   Record.AddSourceLocation(C->getModifierLoc());
-  for (auto *VE : C->varlists()) {
+  for (auto *VE : C->varlist()) {
     Record.AddStmt(VE);
   }
   for (auto *VE : C->privates()) {
@@ -7421,7 +7416,7 @@ void OMPClauseWriter::VisitOMPAlignedClause(OMPAlignedClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   Record.AddStmt(C->getAlignment());
 }
@@ -7429,7 +7424,7 @@ void OMPClauseWriter::VisitOMPAlignedClause(OMPAlignedClause *C) {
 void OMPClauseWriter::VisitOMPCopyinClause(OMPCopyinClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->source_exprs())
     Record.AddStmt(E);
@@ -7442,7 +7437,7 @@ void OMPClauseWriter::VisitOMPCopyinClause(OMPCopyinClause *C) {
 void OMPClauseWriter::VisitOMPCopyprivateClause(OMPCopyprivateClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->source_exprs())
     Record.AddStmt(E);
@@ -7455,7 +7450,7 @@ void OMPClauseWriter::VisitOMPCopyprivateClause(OMPCopyprivateClause *C) {
 void OMPClauseWriter::VisitOMPFlushClause(OMPFlushClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7473,7 +7468,7 @@ void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
   Record.AddSourceLocation(C->getDependencyLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddSourceLocation(C->getOmpAllMemoryLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
     Record.AddStmt(C->getLoopData(I));
@@ -7505,7 +7500,7 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
   Record.push_back(C->getMapType());
   Record.AddSourceLocation(C->getMapLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
@@ -7528,7 +7523,7 @@ void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddStmt(C->getAllocator());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7601,7 +7596,7 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
@@ -7631,7 +7626,7 @@ void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
@@ -7654,7 +7649,7 @@ void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *VE : C->private_copies())
     Record.AddStmt(VE);
@@ -7678,7 +7673,7 @@ void OMPClauseWriter::VisitOMPUseDeviceAddrClause(OMPUseDeviceAddrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
@@ -7698,7 +7693,7 @@ void OMPClauseWriter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
@@ -7718,7 +7713,7 @@ void OMPClauseWriter::VisitOMPHasDeviceAddrClause(OMPHasDeviceAddrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *E : C->varlists())
+  for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
@@ -7770,7 +7765,7 @@ void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
 void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (auto *E : C->private_refs())
     Record.AddStmt(E);
@@ -7779,14 +7774,14 @@ void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
 void OMPClauseWriter::VisitOMPInclusiveClause(OMPInclusiveClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPExclusiveClause(OMPExclusiveClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
 
@@ -7815,7 +7810,7 @@ void OMPClauseWriter::VisitOMPAffinityClause(OMPAffinityClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddStmt(C->getModifier());
   Record.AddSourceLocation(C->getColonLoc());
-  for (Expr *E : C->varlists())
+  for (Expr *E : C->varlist())
     Record.AddStmt(E);
 }
 
@@ -7838,7 +7833,7 @@ void OMPClauseWriter::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
   Record.push_back(C->getDependenceType());
   Record.AddSourceLocation(C->getDependenceLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *VE : C->varlists())
+  for (auto *VE : C->varlist())
     Record.AddStmt(VE);
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
     Record.AddStmt(C->getLoopData(I));

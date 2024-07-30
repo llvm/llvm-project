@@ -2451,8 +2451,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
       int FI = getOrCreateFrameIndex(*cast<AllocaInst>(Arg));
       MCSymbol *FrameAllocSym =
-          MF->getMMI().getContext().getOrCreateFrameAllocSymbol(EscapedName,
-                                                                Idx);
+          MF->getContext().getOrCreateFrameAllocSymbol(EscapedName, Idx);
 
       // This should be inserted at the start of the entry block.
       auto LocalEscape =
@@ -2561,6 +2560,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);
     return true;
   }
+  case Intrinsic::scmp:
+    MIRBuilder.buildSCmp(getOrCreateVReg(CI),
+                         getOrCreateVReg(*CI.getOperand(0)),
+                         getOrCreateVReg(*CI.getOperand(1)));
+    return true;
+  case Intrinsic::ucmp:
+    MIRBuilder.buildUCmp(getOrCreateVReg(CI),
+                         getOrCreateVReg(*CI.getOperand(0)),
+                         getOrCreateVReg(*CI.getOperand(1)));
+    return true;
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();

@@ -15,6 +15,9 @@
 // XFAIL: apple-clang
 // XFAIL: using-built-library-before-llvm-11
 
+// AIX, z/OS, and MinGW default to -fno-sized-deallocation.
+// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}, target={{.+}}-windows-gnu
+
 #include <new>
 #include <cstddef>
 #include <cstdlib>

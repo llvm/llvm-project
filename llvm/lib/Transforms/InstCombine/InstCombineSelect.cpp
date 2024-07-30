@@ -1247,8 +1247,11 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
   if (Depth == 2)
     return false;
 
+  assert(!isa<Constant>(Old) && "Only replace non-constant values");
+
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !I->hasOneUse() || !isSafeToSpeculativelyExecute(I))
+  if (!I || !I->hasOneUse() ||
+      !isSafeToSpeculativelyExecuteWithVariableReplaced(I))
     return false;
 
   bool Changed = false;
@@ -1331,7 +1334,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // profitability is not clear for other cases.
     // FIXME: Support vectors.
     if (OldOp == CmpLHS && match(NewOp, m_ImmConstant()) &&
-        !match(OldOp, m_ImmConstant()) && !Cmp.getType()->isVectorTy() &&
+        !match(OldOp, m_Constant()) && !Cmp.getType()->isVectorTy() &&
         isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
       if (replaceInInstruction(TrueVal, OldOp, NewOp))
         return &Sel;
@@ -2481,9 +2484,8 @@ static Instruction *foldSelectFunnelShift(SelectInst &Sel,
 
   // Finally, see if the select is filtering out a shift-by-zero.
   Value *Cond = Sel.getCondition();
-  ICmpInst::Predicate Pred;
-  if (!match(Cond, m_OneUse(m_ICmp(Pred, m_Specific(ShAmt), m_ZeroInt()))) ||
-      Pred != ICmpInst::ICMP_EQ)
+  if (!match(Cond, m_OneUse(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(ShAmt),
+                                           m_ZeroInt()))))
     return nullptr;
 
   // If this is not a rotate then the select was blocking poison from the

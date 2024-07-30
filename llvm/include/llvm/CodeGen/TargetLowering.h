@@ -3431,15 +3431,19 @@ public:
 
   /// Override the default CondCode to be used to test the result of the
   /// comparison libcall against zero.
+  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
   void setCmpLibcallCC(RTLIB::Libcall Call, ISD::CondCode CC) {
-    Libcalls.setCmpLibcallCC(Call, CC);
+    CmpLibcallCCs[Call] = CC;
   }
+
 
   /// Get the CondCode that's to be used to test the result of the comparison
   /// libcall against zero.
+  /// FIXME: This can't be merged with 'RuntimeLibcallsInfo' because of the ISD.
   ISD::CondCode getCmpLibcallCC(RTLIB::Libcall Call) const {
-    return Libcalls.getCmpLibcallCC(Call);
+    return CmpLibcallCCs[Call];
   }
+
 
   /// Set the CallingConv that should be used for the specified libcall.
   void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
@@ -3629,6 +3633,10 @@ private:
 
   /// The list of libcalls that the target will use.
   RTLIB::RuntimeLibcallsInfo Libcalls;
+
+  /// The ISD::CondCode that should be used to test the result of each of the
+  /// comparison libcall against zero.
+  ISD::CondCode CmpLibcallCCs[RTLIB::UNKNOWN_LIBCALL];
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.

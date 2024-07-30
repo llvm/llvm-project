@@ -416,7 +416,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
 
     // We never speculate stores, so an AA pointer isn't necessary.
     bool DontMoveAcrossStore = true;
-    if (!I.isSafeToMove(nullptr, DontMoveAcrossStore)) {
+    if (!I.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "Can't speculate: " << I);
       return false;
     }

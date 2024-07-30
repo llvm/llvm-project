@@ -532,17 +532,18 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$arg,
     OptionalParameter<"unsigned">:$alignInBits,
-    OptionalParameter<"DITypeAttr">:$type
+    OptionalParameter<"DITypeAttr">:$type,
+    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DIScopeAttr":$scope, "StringRef":$name, "DIFileAttr":$file,
       "unsigned":$line, "unsigned":$arg, "unsigned":$alignInBits,
-      "DITypeAttr":$type
+      "DITypeAttr":$type, "DIFlags":$flags
     ), [{
       MLIRContext *ctx = scope.getContext();
       return $_get(ctx, scope, StringAttr::get(ctx, name), file, line,
-                   arg, alignInBits, type);
+                   arg, alignInBits, type, flags);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";

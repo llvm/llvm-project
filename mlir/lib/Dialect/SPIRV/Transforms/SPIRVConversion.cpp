@@ -20,17 +20,21 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <functional>
@@ -40,17 +44,11 @@
 
 using namespace mlir;
 
+namespace {
+
 //===----------------------------------------------------------------------===//
 // Utility functions
 //===----------------------------------------------------------------------===//
-
-static int getComputeVectorSize(int64_t size) {
-  for (int i : {4, 3, 2}) {
-    if (size % i == 0)
-      return i;
-  }
-  return 1;
-}
 
 static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
   LLVM_DEBUG(llvm::dbgs() << "Get target shape\n");
@@ -60,8 +58,8 @@ static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
     return std::nullopt;
   }
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
-  std::optional<SmallVector<int64_t>> targetShape =
-      SmallVector<int64_t>(1, getComputeVectorSize(vecType.getShape().back()));
+  std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(
+      1, mlir::spirv::getComputeVectorSize(vecType.getShape().back()));
   if (!targetShape) {
     LLVM_DEBUG(llvm::dbgs() << "--no unrolling target shape defined\n");
     return std::nullopt;
@@ -169,18 +167,6 @@ static spirv::ScalarType getIndexType(MLIRContext *ctx,
                                       const SPIRVConversionOptions &options) {
   return cast<spirv::ScalarType>(
       IntegerType::get(ctx, options.use64bitIndex ? 64 : 32));
-}
-
-Type SPIRVTypeConverter::getIndexType() const {
-  return ::getIndexType(getContext(), options);
-}
-
-MLIRContext *SPIRVTypeConverter::getContext() const {
-  return targetEnv.getAttr().getContext();
-}
-
-bool SPIRVTypeConverter::allows(spirv::Capability capability) const {
-  return targetEnv.allows(capability);
 }
 
 // TODO: This is a utility function that should probably be exposed by the
@@ -673,9 +659,9 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
 /// This function is meant to handle the **compute** side; so it does not
 /// involve storage classes in its logic. The storage side is expected to be
 /// handled by MemRef conversion logic.
-std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
-                                      OpBuilder &builder, Type type,
-                                      ValueRange inputs, Location loc) {
+static std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
+                                             OpBuilder &builder, Type type,
+                                             ValueRange inputs, Location loc) {
   // We can only cast one value in SPIR-V.
   if (inputs.size() != 1) {
     auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
@@ -731,140 +717,185 @@ std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
 }
 
 //===----------------------------------------------------------------------===//
-// SPIRVTypeConverter
+// Builtin Variables
 //===----------------------------------------------------------------------===//
 
-SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
-                                       const SPIRVConversionOptions &options)
-    : targetEnv(targetAttr), options(options) {
-  // Add conversions. The order matters here: later ones will be tried earlier.
+static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
+                                                  spirv::BuiltIn builtin) {
+  // Look through all global variables in the given `body` block and check if
+  // there is a spirv.GlobalVariable that has the same `builtin` attribute.
+  for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
+    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
+            spirv::SPIRVDialect::getAttributeName(
+                spirv::Decoration::BuiltIn))) {
+      auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
+      if (varBuiltIn && *varBuiltIn == builtin) {
+        return varOp;
+      }
+    }
+  }
+  return nullptr;
+}
 
-  // Allow all SPIR-V dialect specific types. This assumes all builtin types
-  // adopted in the SPIR-V dialect (i.e., IntegerType, FloatType, VectorType)
-  // were tried before.
-  //
-  // TODO: This assumes that the SPIR-V types are valid to use in the given
-  // target environment, which should be the case if the whole pipeline is
-  // driven by the same target environment. Still, we probably still want to
-  // validate and convert to be safe.
-  addConversion([](spirv::SPIRVType type) { return type; });
+/// Gets name of global variable for a builtin.
+std::string getBuiltinVarName(spirv::BuiltIn builtin, StringRef prefix,
+                              StringRef suffix) {
+  return Twine(prefix).concat(stringifyBuiltIn(builtin)).concat(suffix).str();
+}
 
-  addConversion([this](IndexType /*indexType*/) { return getIndexType(); });
+/// Gets or inserts a global variable for a builtin within `body` block.
+static spirv::GlobalVariableOp
+getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
+                           Type integerType, OpBuilder &builder,
+                           StringRef prefix, StringRef suffix) {
+  if (auto varOp = getBuiltinVariable(body, builtin))
+    return varOp;
 
-  addConversion([this](IntegerType intType) -> std::optional<Type> {
-    if (auto scalarType = dyn_cast<spirv::ScalarType>(intType))
-      return convertScalarType(this->targetEnv, this->options, scalarType);
-    if (intType.getWidth() < 8)
-      return convertSubByteIntegerType(this->options, intType);
-    return Type();
-  });
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&body);
 
-  addConversion([this](FloatType floatType) -> std::optional<Type> {
-    if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
-      return convertScalarType(this->targetEnv, this->options, scalarType);
-    return Type();
-  });
+  spirv::GlobalVariableOp newVarOp;
+  switch (builtin) {
+  case spirv::BuiltIn::NumWorkgroups:
+  case spirv::BuiltIn::WorkgroupSize:
+  case spirv::BuiltIn::WorkgroupId:
+  case spirv::BuiltIn::LocalInvocationId:
+  case spirv::BuiltIn::GlobalInvocationId: {
+    auto ptrType = spirv::PointerType::get(VectorType::get({3}, integerType),
+                                           spirv::StorageClass::Input);
+    std::string name = getBuiltinVarName(builtin, prefix, suffix);
+    newVarOp =
+        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+    break;
+  }
+  case spirv::BuiltIn::SubgroupId:
+  case spirv::BuiltIn::NumSubgroups:
+  case spirv::BuiltIn::SubgroupSize: {
+    auto ptrType =
+        spirv::PointerType::get(integerType, spirv::StorageClass::Input);
+    std::string name = getBuiltinVarName(builtin, prefix, suffix);
+    newVarOp =
+        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+    break;
+  }
+  default:
+    emitError(loc, "unimplemented builtin variable generation for ")
+        << stringifyBuiltIn(builtin);
+  }
+  return newVarOp;
+}
 
-  addConversion([this](ComplexType complexType) {
-    return convertComplexType(this->targetEnv, this->options, complexType);
-  });
+//===----------------------------------------------------------------------===//
+// Push constant storage
+//===----------------------------------------------------------------------===//
 
-  addConversion([this](VectorType vectorType) {
-    return convertVectorType(this->targetEnv, this->options, vectorType);
-  });
+/// Returns the pointer type for the push constant storage containing
+/// `elementCount` 32-bit integer values.
+static spirv::PointerType getPushConstantStorageType(unsigned elementCount,
+                                                     Builder &builder,
+                                                     Type indexType) {
+  auto arrayType = spirv::ArrayType::get(indexType, elementCount,
+                                         /*stride=*/4);
+  auto structType = spirv::StructType::get({arrayType}, /*offsetInfo=*/0);
+  return spirv::PointerType::get(structType, spirv::StorageClass::PushConstant);
+}
 
-  addConversion([this](TensorType tensorType) {
-    return convertTensorType(this->targetEnv, this->options, tensorType);
-  });
+/// Returns the push constant varible containing `elementCount` 32-bit integer
+/// values in `body`. Returns null op if such an op does not exit.
+static spirv::GlobalVariableOp getPushConstantVariable(Block &body,
+                                                       unsigned elementCount) {
+  for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
+    auto ptrType = dyn_cast<spirv::PointerType>(varOp.getType());
+    if (!ptrType)
+      continue;
 
-  addConversion([this](MemRefType memRefType) {
-    return convertMemrefType(this->targetEnv, this->options, memRefType);
-  });
+    // Note that Vulkan requires "There must be no more than one push constant
+    // block statically used per shader entry point." So we should always reuse
+    // the existing one.
+    if (ptrType.getStorageClass() == spirv::StorageClass::PushConstant) {
+      auto numElements = cast<spirv::ArrayType>(
+                             cast<spirv::StructType>(ptrType.getPointeeType())
+                                 .getElementType(0))
+                             .getNumElements();
+      if (numElements == elementCount)
+        return varOp;
+    }
+  }
+  return nullptr;
+}
 
-  // Register some last line of defense casting logic.
-  addSourceMaterialization(
-      [this](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
-        return castToSourceType(this->targetEnv, builder, type, inputs, loc);
-      });
-  addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
-                              Location loc) {
-    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return std::optional<Value>(cast.getResult(0));
-  });
+/// Gets or inserts a global variable for push constant storage containing
+/// `elementCount` 32-bit integer values in `block`.
+static spirv::GlobalVariableOp
+getOrInsertPushConstantVariable(Location loc, Block &block,
+                                unsigned elementCount, OpBuilder &b,
+                                Type indexType) {
+  if (auto varOp = getPushConstantVariable(block, elementCount))
+    return varOp;
+
+  auto builder = OpBuilder::atBlockBegin(&block, b.getListener());
+  auto type = getPushConstantStorageType(elementCount, builder, indexType);
+  const char *name = "__push_constant_var__";
+  return builder.create<spirv::GlobalVariableOp>(loc, type, name,
+                                                 /*initializer=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
 // func::FuncOp Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-namespace {
 /// A pattern for rewriting function signature to convert arguments of functions
 /// to be of valid SPIR-V types.
-class FuncOpConversion final : public OpConversionPattern<func::FuncOp> {
-public:
+struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
   using OpConversionPattern<func::FuncOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override;
+                  ConversionPatternRewriter &rewriter) const override {
+    FunctionType fnType = funcOp.getFunctionType();
+    if (fnType.getNumResults() > 1)
+      return failure();
+
+    TypeConverter::SignatureConversion signatureConverter(
+        fnType.getNumInputs());
+    for (const auto &argType : enumerate(fnType.getInputs())) {
+      auto convertedType = getTypeConverter()->convertType(argType.value());
+      if (!convertedType)
+        return failure();
+      signatureConverter.addInputs(argType.index(), convertedType);
+    }
+
+    Type resultType;
+    if (fnType.getNumResults() == 1) {
+      resultType = getTypeConverter()->convertType(fnType.getResult(0));
+      if (!resultType)
+        return failure();
+    }
+
+    // Create the converted spirv.func op.
+    auto newFuncOp = rewriter.create<spirv::FuncOp>(
+        funcOp.getLoc(), funcOp.getName(),
+        rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
+                                 resultType ? TypeRange(resultType)
+                                            : TypeRange()));
+
+    // Copy over all attributes other than the function name and type.
+    for (const auto &namedAttr : funcOp->getAttrs()) {
+      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
+          namedAttr.getName() != SymbolTable::getSymbolAttrName())
+        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+    }
+
+    rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                                newFuncOp.end());
+    if (failed(rewriter.convertRegionTypes(
+            &newFuncOp.getBody(), *getTypeConverter(), &signatureConverter)))
+      return failure();
+    rewriter.eraseOp(funcOp);
+    return success();
+  }
 };
-} // namespace
 
-LogicalResult
-FuncOpConversion::matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
-                                  ConversionPatternRewriter &rewriter) const {
-  auto fnType = funcOp.getFunctionType();
-  if (fnType.getNumResults() > 1)
-    return failure();
-
-  TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
-  for (const auto &argType : enumerate(fnType.getInputs())) {
-    auto convertedType = getTypeConverter()->convertType(argType.value());
-    if (!convertedType)
-      return failure();
-    signatureConverter.addInputs(argType.index(), convertedType);
-  }
-
-  Type resultType;
-  if (fnType.getNumResults() == 1) {
-    resultType = getTypeConverter()->convertType(fnType.getResult(0));
-    if (!resultType)
-      return failure();
-  }
-
-  // Create the converted spirv.func op.
-  auto newFuncOp = rewriter.create<spirv::FuncOp>(
-      funcOp.getLoc(), funcOp.getName(),
-      rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
-                               resultType ? TypeRange(resultType)
-                                          : TypeRange()));
-
-  // Copy over all attributes other than the function name and type.
-  for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-        namedAttr.getName() != SymbolTable::getSymbolAttrName())
-      newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-  }
-
-  rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
-                              newFuncOp.end());
-  if (failed(rewriter.convertRegionTypes(
-          &newFuncOp.getBody(), *getTypeConverter(), &signatureConverter)))
-    return failure();
-  rewriter.eraseOp(funcOp);
-  return success();
-}
-
-void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                              RewritePatternSet &patterns) {
-  patterns.add<FuncOpConversion>(typeConverter, patterns.getContext());
-}
-
-//===----------------------------------------------------------------------===//
-// func::FuncOp Conversion Patterns
-//===----------------------------------------------------------------------===//
-
-namespace {
 /// A pattern for rewriting function signature to convert vector arguments of
 /// functions to be of valid types
 struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
@@ -1015,17 +1046,11 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     return success();
   }
 };
-} // namespace
-
-void mlir::populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns) {
-  patterns.add<FuncOpVectorUnroll>(patterns.getContext());
-}
 
 //===----------------------------------------------------------------------===//
 // func::ReturnOp Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-namespace {
 /// A pattern for rewriting function signature and the return op to convert
 /// vectors to be of valid types.
 struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
@@ -1069,13 +1094,20 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       // the original operand of illegal type.
       auto originalShape =
           llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
-      SmallVector<int64_t> strides(targetShape->size(), 1);
+      SmallVector<int64_t> strides(originalShape.size(), 1);
+      SmallVector<int64_t> extractShape(originalShape.size(), 1);
+      extractShape.back() = targetShape->back();
       SmallVector<Type> newTypes;
       Value returnValue = returnOp.getOperand(origResultNo);
       for (SmallVector<int64_t> offsets :
            StaticTileOffsetRange(originalShape, *targetShape)) {
         Value result = rewriter.create<vector::ExtractStridedSliceOp>(
-            loc, returnValue, offsets, *targetShape, strides);
+            loc, returnValue, offsets, extractShape, strides);
+        if (originalShape.size() > 1) {
+          SmallVector<int64_t> extractIndices(originalShape.size() - 1, 0);
+          result =
+              rewriter.create<vector::ExtractOp>(loc, result, extractIndices);
+        }
         newOperands.push_back(result);
         newTypes.push_back(unrolledType);
       }
@@ -1097,80 +1129,12 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
     return success();
   }
 };
+
 } // namespace
 
-void mlir::populateReturnOpVectorRewritePatterns(RewritePatternSet &patterns) {
-  patterns.add<ReturnOpVectorUnroll>(patterns.getContext());
-}
-
 //===----------------------------------------------------------------------===//
-// Builtin Variables
+// Public function for builtin variables
 //===----------------------------------------------------------------------===//
-
-static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
-                                                  spirv::BuiltIn builtin) {
-  // Look through all global variables in the given `body` block and check if
-  // there is a spirv.GlobalVariable that has the same `builtin` attribute.
-  for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
-            spirv::SPIRVDialect::getAttributeName(
-                spirv::Decoration::BuiltIn))) {
-      auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
-      if (varBuiltIn && *varBuiltIn == builtin) {
-        return varOp;
-      }
-    }
-  }
-  return nullptr;
-}
-
-/// Gets name of global variable for a builtin.
-static std::string getBuiltinVarName(spirv::BuiltIn builtin, StringRef prefix,
-                                     StringRef suffix) {
-  return Twine(prefix).concat(stringifyBuiltIn(builtin)).concat(suffix).str();
-}
-
-/// Gets or inserts a global variable for a builtin within `body` block.
-static spirv::GlobalVariableOp
-getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
-                           Type integerType, OpBuilder &builder,
-                           StringRef prefix, StringRef suffix) {
-  if (auto varOp = getBuiltinVariable(body, builtin))
-    return varOp;
-
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(&body);
-
-  spirv::GlobalVariableOp newVarOp;
-  switch (builtin) {
-  case spirv::BuiltIn::NumWorkgroups:
-  case spirv::BuiltIn::WorkgroupSize:
-  case spirv::BuiltIn::WorkgroupId:
-  case spirv::BuiltIn::LocalInvocationId:
-  case spirv::BuiltIn::GlobalInvocationId: {
-    auto ptrType = spirv::PointerType::get(VectorType::get({3}, integerType),
-                                           spirv::StorageClass::Input);
-    std::string name = getBuiltinVarName(builtin, prefix, suffix);
-    newVarOp =
-        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
-    break;
-  }
-  case spirv::BuiltIn::SubgroupId:
-  case spirv::BuiltIn::NumSubgroups:
-  case spirv::BuiltIn::SubgroupSize: {
-    auto ptrType =
-        spirv::PointerType::get(integerType, spirv::StorageClass::Input);
-    std::string name = getBuiltinVarName(builtin, prefix, suffix);
-    newVarOp =
-        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
-    break;
-  }
-  default:
-    emitError(loc, "unimplemented builtin variable generation for ")
-        << stringifyBuiltIn(builtin);
-  }
-  return newVarOp;
-}
 
 Value mlir::spirv::getBuiltinVariableValue(Operation *op,
                                            spirv::BuiltIn builtin,
@@ -1190,59 +1154,8 @@ Value mlir::spirv::getBuiltinVariableValue(Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
-// Push constant storage
+// Public function for pushing constant storage
 //===----------------------------------------------------------------------===//
-
-/// Returns the pointer type for the push constant storage containing
-/// `elementCount` 32-bit integer values.
-static spirv::PointerType getPushConstantStorageType(unsigned elementCount,
-                                                     Builder &builder,
-                                                     Type indexType) {
-  auto arrayType = spirv::ArrayType::get(indexType, elementCount,
-                                         /*stride=*/4);
-  auto structType = spirv::StructType::get({arrayType}, /*offsetInfo=*/0);
-  return spirv::PointerType::get(structType, spirv::StorageClass::PushConstant);
-}
-
-/// Returns the push constant varible containing `elementCount` 32-bit integer
-/// values in `body`. Returns null op if such an op does not exit.
-static spirv::GlobalVariableOp getPushConstantVariable(Block &body,
-                                                       unsigned elementCount) {
-  for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    auto ptrType = dyn_cast<spirv::PointerType>(varOp.getType());
-    if (!ptrType)
-      continue;
-
-    // Note that Vulkan requires "There must be no more than one push constant
-    // block statically used per shader entry point." So we should always reuse
-    // the existing one.
-    if (ptrType.getStorageClass() == spirv::StorageClass::PushConstant) {
-      auto numElements = cast<spirv::ArrayType>(
-                             cast<spirv::StructType>(ptrType.getPointeeType())
-                                 .getElementType(0))
-                             .getNumElements();
-      if (numElements == elementCount)
-        return varOp;
-    }
-  }
-  return nullptr;
-}
-
-/// Gets or inserts a global variable for push constant storage containing
-/// `elementCount` 32-bit integer values in `block`.
-static spirv::GlobalVariableOp
-getOrInsertPushConstantVariable(Location loc, Block &block,
-                                unsigned elementCount, OpBuilder &b,
-                                Type indexType) {
-  if (auto varOp = getPushConstantVariable(block, elementCount))
-    return varOp;
-
-  auto builder = OpBuilder::atBlockBegin(&block, b.getListener());
-  auto type = getPushConstantStorageType(elementCount, builder, indexType);
-  const char *name = "__push_constant_var__";
-  return builder.create<spirv::GlobalVariableOp>(loc, type, name,
-                                                 /*initializer=*/nullptr);
-}
 
 Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
                                   unsigned offset, Type integerType,
@@ -1267,7 +1180,7 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
 }
 
 //===----------------------------------------------------------------------===//
-// Index calculation
+// Public functions for index calculation
 //===----------------------------------------------------------------------===//
 
 Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
@@ -1376,6 +1289,193 @@ Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
 }
 
 //===----------------------------------------------------------------------===//
+// Public functions for vector unrolling
+//===----------------------------------------------------------------------===//
+
+int mlir::spirv::getComputeVectorSize(int64_t size) {
+  for (int i : {4, 3, 2}) {
+    if (size % i == 0)
+      return i;
+  }
+  return 1;
+}
+
+SmallVector<int64_t>
+mlir::spirv::getNativeVectorShapeImpl(vector::ReductionOp op) {
+  VectorType srcVectorType = op.getSourceVectorType();
+  assert(srcVectorType.getRank() == 1); // Guaranteed by semantics
+  int64_t vectorSize =
+      mlir::spirv::getComputeVectorSize(srcVectorType.getDimSize(0));
+  return {vectorSize};
+}
+
+SmallVector<int64_t>
+mlir::spirv::getNativeVectorShapeImpl(vector::TransposeOp op) {
+  VectorType vectorType = op.getResultVectorType();
+  SmallVector<int64_t> nativeSize(vectorType.getRank(), 1);
+  nativeSize.back() =
+      mlir::spirv::getComputeVectorSize(vectorType.getShape().back());
+  return nativeSize;
+}
+
+std::optional<SmallVector<int64_t>>
+mlir::spirv::getNativeVectorShape(Operation *op) {
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
+    if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
+      SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
+      nativeSize.back() =
+          mlir::spirv::getComputeVectorSize(vecType.getShape().back());
+      return nativeSize;
+    }
+  }
+
+  return TypeSwitch<Operation *, std::optional<SmallVector<int64_t>>>(op)
+      .Case<vector::ReductionOp, vector::TransposeOp>(
+          [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
+      .Default([](Operation *) { return std::nullopt; });
+}
+
+LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
+  MLIRContext *context = op->getContext();
+  RewritePatternSet patterns(context);
+  populateFuncOpVectorRewritePatterns(patterns);
+  populateReturnOpVectorRewritePatterns(patterns);
+  // We only want to apply signature conversion once to the existing func ops.
+  // Without specifying strictMode, the greedy pattern rewriter will keep
+  // looking for newly created func ops.
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingOps;
+  return applyPatternsAndFoldGreedily(op, std::move(patterns), config);
+}
+
+LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
+  MLIRContext *context = op->getContext();
+
+  // Unroll vectors in function bodies to native vector size.
+  {
+    RewritePatternSet patterns(context);
+    auto options = vector::UnrollVectorOptions().setNativeShapeFn(
+        [](auto op) { return mlir::spirv::getNativeVectorShape(op); });
+    populateVectorUnrollPatterns(patterns, options);
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      return failure();
+  }
+
+  // Convert transpose ops into extract and insert pairs, in preparation of
+  // further transformations to canonicalize/cancel.
+  {
+    RewritePatternSet patterns(context);
+    auto options = vector::VectorTransformsOptions().setVectorTransposeLowering(
+        vector::VectorTransposeLowering::EltWise);
+    vector::populateVectorTransposeLoweringPatterns(patterns, options);
+    vector::populateVectorShapeCastLoweringPatterns(patterns);
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      return failure();
+  }
+
+  // Run canonicalization to cast away leading size-1 dimensions.
+  {
+    RewritePatternSet patterns(context);
+
+    // We need to pull in casting way leading one dims.
+    vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+    vector::ReductionOp::getCanonicalizationPatterns(patterns, context);
+    vector::TransposeOp::getCanonicalizationPatterns(patterns, context);
+
+    // Decompose different rank insert_strided_slice and n-D
+    // extract_slided_slice.
+    vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
+        patterns);
+    vector::InsertOp::getCanonicalizationPatterns(patterns, context);
+    vector::ExtractOp::getCanonicalizationPatterns(patterns, context);
+
+    // Trimming leading unit dims may generate broadcast/shape_cast ops. Clean
+    // them up.
+    vector::BroadcastOp::getCanonicalizationPatterns(patterns, context);
+    vector::ShapeCastOp::getCanonicalizationPatterns(patterns, context);
+
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      return failure();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V TypeConverter
+//===----------------------------------------------------------------------===//
+
+SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
+                                       const SPIRVConversionOptions &options)
+    : targetEnv(targetAttr), options(options) {
+  // Add conversions. The order matters here: later ones will be tried earlier.
+
+  // Allow all SPIR-V dialect specific types. This assumes all builtin types
+  // adopted in the SPIR-V dialect (i.e., IntegerType, FloatType, VectorType)
+  // were tried before.
+  //
+  // TODO: This assumes that the SPIR-V types are valid to use in the given
+  // target environment, which should be the case if the whole pipeline is
+  // driven by the same target environment. Still, we probably still want to
+  // validate and convert to be safe.
+  addConversion([](spirv::SPIRVType type) { return type; });
+
+  addConversion([this](IndexType /*indexType*/) { return getIndexType(); });
+
+  addConversion([this](IntegerType intType) -> std::optional<Type> {
+    if (auto scalarType = dyn_cast<spirv::ScalarType>(intType))
+      return convertScalarType(this->targetEnv, this->options, scalarType);
+    if (intType.getWidth() < 8)
+      return convertSubByteIntegerType(this->options, intType);
+    return Type();
+  });
+
+  addConversion([this](FloatType floatType) -> std::optional<Type> {
+    if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
+      return convertScalarType(this->targetEnv, this->options, scalarType);
+    return Type();
+  });
+
+  addConversion([this](ComplexType complexType) {
+    return convertComplexType(this->targetEnv, this->options, complexType);
+  });
+
+  addConversion([this](VectorType vectorType) {
+    return convertVectorType(this->targetEnv, this->options, vectorType);
+  });
+
+  addConversion([this](TensorType tensorType) {
+    return convertTensorType(this->targetEnv, this->options, tensorType);
+  });
+
+  addConversion([this](MemRefType memRefType) {
+    return convertMemrefType(this->targetEnv, this->options, memRefType);
+  });
+
+  // Register some last line of defense casting logic.
+  addSourceMaterialization(
+      [this](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
+        return castToSourceType(this->targetEnv, builder, type, inputs, loc);
+      });
+  addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) {
+    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return std::optional<Value>(cast.getResult(0));
+  });
+}
+
+Type SPIRVTypeConverter::getIndexType() const {
+  return ::getIndexType(getContext(), options);
+}
+
+MLIRContext *SPIRVTypeConverter::getContext() const {
+  return targetEnv.getAttr().getContext();
+}
+
+bool SPIRVTypeConverter::allows(spirv::Capability capability) const {
+  return targetEnv.allows(capability);
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V ConversionTarget
 //===----------------------------------------------------------------------===//
 
@@ -1467,4 +1567,21 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   }
 
   return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Public functions for populating patterns
+//===----------------------------------------------------------------------===//
+
+void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                              RewritePatternSet &patterns) {
+  patterns.add<FuncOpConversion>(typeConverter, patterns.getContext());
+}
+
+void mlir::populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns) {
+  patterns.add<FuncOpVectorUnroll>(patterns.getContext());
+}
+
+void mlir::populateReturnOpVectorRewritePatterns(RewritePatternSet &patterns) {
+  patterns.add<ReturnOpVectorUnroll>(patterns.getContext());
 }

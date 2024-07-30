@@ -1246,9 +1246,7 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       SmallVector<Value *> Values(It->Values.location_ops());
       if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
                             It->Values.hasArgList())) {
-        SmallVector<Value *, 4> Vals;
-        for (Value *V : It->Values.location_ops())
-          Vals.push_back(V);
+        SmallVector<Value *, 4> Vals(It->Values.location_ops());
         addDanglingDebugInfo(Vals,
                              FnVarLocs->getDILocalVariable(It->VariableID),
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
@@ -3730,8 +3728,8 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     // ValueTracking's select pattern matching does not account for -0.0,
     // so we can't lower to FMINIMUM/FMAXIMUM because those nodes specify that
     // -0.0 is less than +0.0.
-    Value *LHS, *RHS;
-    auto SPR = matchSelectPattern(const_cast<User*>(&I), LHS, RHS);
+    const Value *LHS, *RHS;
+    auto SPR = matchSelectPattern(&I, LHS, RHS);
     ISD::NodeType Opc = ISD::DELETED_NODE;
     switch (SPR.Flavor) {
     case SPF_UMAX:    Opc = ISD::UMAX; break;
@@ -6707,11 +6705,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0))));
     return;
   case Intrinsic::eh_sjlj_callsite: {
-    MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
     ConstantInt *CI = cast<ConstantInt>(I.getArgOperand(0));
-    assert(MMI.getCurrentCallSite() == 0 && "Overlapping call sites!");
+    assert(FuncInfo.getCurrentCallSite() == 0 && "Overlapping call sites!");
 
-    MMI.setCurrentCallSite(CI->getZExtValue());
+    FuncInfo.setCurrentCallSite(CI->getZExtValue());
     return;
   }
   case Intrinsic::eh_sjlj_functioncontext: {
@@ -7375,8 +7372,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::codeview_annotation: {
     // Emit a label associated with this metadata.
     MachineFunction &MF = DAG.getMachineFunction();
-    MCSymbol *Label =
-        MF.getMMI().getContext().createTempSymbol("annotation", true);
+    MCSymbol *Label = MF.getContext().createTempSymbol("annotation", true);
     Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
     MF.addCodeViewAnnotation(Label, cast<MDNode>(MD));
     Res = DAG.getLabelNode(ISD::ANNOTATION_LABEL, sdl, getRoot(), Label);
@@ -7644,9 +7640,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       assert(FuncInfo.StaticAllocaMap.count(Slot) &&
              "can only escape static allocas");
       int FI = FuncInfo.StaticAllocaMap[Slot];
-      MCSymbol *FrameAllocSym =
-          MF.getMMI().getContext().getOrCreateFrameAllocSymbol(
-              GlobalValue::dropLLVMManglingEscape(MF.getName()), Idx);
+      MCSymbol *FrameAllocSym = MF.getContext().getOrCreateFrameAllocSymbol(
+          GlobalValue::dropLLVMManglingEscape(MF.getName()), Idx);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, dl,
               TII->get(TargetOpcode::LOCAL_ESCAPE))
           .addSym(FrameAllocSym)
@@ -7665,9 +7660,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     auto *Idx = cast<ConstantInt>(I.getArgOperand(2));
     unsigned IdxVal =
         unsigned(Idx->getLimitedValue(std::numeric_limits<int>::max()));
-    MCSymbol *FrameAllocSym =
-        MF.getMMI().getContext().getOrCreateFrameAllocSymbol(
-            GlobalValue::dropLLVMManglingEscape(Fn->getName()), IdxVal);
+    MCSymbol *FrameAllocSym = MF.getContext().getOrCreateFrameAllocSymbol(
+        GlobalValue::dropLLVMManglingEscape(Fn->getName()), IdxVal);
 
     Value *FP = I.getArgOperand(1);
     SDValue FPVal = getValue(FP);
@@ -8622,21 +8616,20 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
                                           const BasicBlock *EHPadBB,
                                           MCSymbol *&BeginLabel) {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
 
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
-  BeginLabel = MMI.getContext().createTempSymbol();
+  BeginLabel = MF.getContext().createTempSymbol();
 
   // For SjLj, keep track of which landing pads go with which invokes
   // so as to maintain the ordering of pads in the LSDA.
-  unsigned CallSiteIndex = MMI.getCurrentCallSite();
+  unsigned CallSiteIndex = FuncInfo.getCurrentCallSite();
   if (CallSiteIndex) {
     MF.setCallSiteBeginLabel(BeginLabel, CallSiteIndex);
     LPadToCallSiteMap[FuncInfo.MBBMap[EHPadBB]].push_back(CallSiteIndex);
 
     // Now that the call site is handled, stop tracking it.
-    MMI.setCurrentCallSite(0);
+    FuncInfo.setCurrentCallSite(0);
   }
 
   return DAG.getEHLabel(getCurSDLoc(), Chain, BeginLabel);
@@ -8648,11 +8641,10 @@ SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
   assert(BeginLabel && "BeginLabel should've been set");
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
 
   // Insert a label at the end of the invoke call to mark the try range.  This
   // can be used to detect deletion of the invoke via the MachineModuleInfo.
-  MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
+  MCSymbol *EndLabel = MF.getContext().createTempSymbol();
   Chain = DAG.getEHLabel(getCurSDLoc(), Chain, EndLabel);
 
   // Inform MachineModuleInfo of range.
@@ -9570,10 +9562,15 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
   // Otherwise, create a stack slot and emit a store to it before the asm.
   Type *Ty = OpVal->getType();
   auto &DL = DAG.getDataLayout();
-  uint64_t TySize = DL.getTypeAllocSize(Ty);
+  TypeSize TySize = DL.getTypeAllocSize(Ty);
   MachineFunction &MF = DAG.getMachineFunction();
-  int SSFI = MF.getFrameInfo().CreateStackObject(
-      TySize, DL.getPrefTypeAlign(Ty), false);
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  int StackID = 0;
+  if (TySize.isScalable())
+    StackID = TFI->getStackIDForScalableVectors();
+  int SSFI = MF.getFrameInfo().CreateStackObject(TySize.getKnownMinValue(),
+                                                 DL.getPrefTypeAlign(Ty), false,
+                                                 nullptr, StackID);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DL));
   Chain = DAG.getTruncStore(Chain, Location, OpInfo.CallOperand, StackSlot,
                             MachinePointerInfo::getFixedStack(MF, SSFI),

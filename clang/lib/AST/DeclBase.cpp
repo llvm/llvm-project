@@ -879,8 +879,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;
-    case IndirectField:
-      return IDNS_Ordinary | IDNS_Member;
 
     case Binding:
     case NonTypeTemplateParm:
@@ -918,6 +916,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_ObjCProtocol;
 
     case Field:
+    case IndirectField:
     case ObjCAtDefsField:
     case ObjCIvar:
       return IDNS_Member;
