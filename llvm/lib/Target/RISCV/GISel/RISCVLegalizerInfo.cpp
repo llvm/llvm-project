@@ -279,13 +279,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
-  auto &LoadStoreActions = getActionDefinitionsBuilder({G_LOAD, G_STORE});
+  auto &LoadStoreActions =
+      getActionDefinitionsBuilder({G_LOAD, G_STORE})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                     {s32, p0, s16, 16},
+                                     {s32, p0, s32, 32},
+                                     {p0, p0, sXLen, XLen}});
   if (ST.hasVInstructions())
-    LoadStoreActions.legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                               {s32, p0, s16, 16},
-                                               {s32, p0, s32, 32},
-                                               {p0, p0, sXLen, XLen},
-                                               {nxv2s8, p0, nxv2s8, 8},
+    LoadStoreActions.legalForTypesWithMemDesc({{nxv2s8, p0, nxv2s8, 8},
                                                {nxv4s8, p0, nxv4s8, 8},
                                                {nxv8s8, p0, nxv8s8, 8},
                                                {nxv16s8, p0, nxv16s8, 8},
@@ -321,19 +322,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   if (ST.hasVInstructionsI64())
     LoadStoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+
                                                {nxv2s64, p0, nxv2s64, 64},
                                                {nxv4s64, p0, nxv4s64, 64},
                                                {nxv8s64, p0, nxv8s64, 64}});
 
   LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
-      .customIf(all(LegalityPredicate([=](const LegalityQuery &Query) {
-                      LLT Type = Query.Types[0];
-                      return Type.isScalableVector();
-                    }),
-                    LegalityPredicate(LegalityPredicates::any(
-                        typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                        typeIsLegalPtrVec(0, PtrVecTys, ST)))))
+      // we will take the custom lowering logic if we have scalable vector types
+      // with non-standard alignments
+      .customIf(LegalityPredicate(
+          LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                                  typeIsLegalPtrVec(0, PtrVecTys, ST))))
       .clampScalar(0, s32, sXLen)
       .lower();
 
@@ -743,10 +743,7 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
       DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
   LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
 
-  if (isa<GLoad>(MI))
-    Helper.bitcast(MI, 0, NewDataTy);
-  else
-    Helper.bitcast(MI, 0, NewDataTy);
+  Helper.bitcast(MI, 0, NewDataTy);
 
   return true;
 }
