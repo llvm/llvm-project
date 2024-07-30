@@ -4,7 +4,7 @@
 ; RUN:   -o %t2.index \
 ; RUN:   -r=%t.o,_use_arc,px
 
-; RUN: %clang_cc1 -triple x86_64-apple-darwin \
+; RUN: %clang_cc1 -O2 -triple x86_64-apple-darwin \
 ; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -o %t.native.o -x ir %t.o
 

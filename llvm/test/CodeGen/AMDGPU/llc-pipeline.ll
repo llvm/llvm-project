@@ -87,9 +87,6 @@
 ; GCN-O0-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O0-NEXT:        LCSSA Verifier
 ; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
-; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O0-NEXT:        Function Alias Analysis Results
-; GCN-O0-NEXT:        ObjC ARC contraction
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Prepare callbr
