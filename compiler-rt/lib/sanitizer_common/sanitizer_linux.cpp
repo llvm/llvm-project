@@ -2154,7 +2154,8 @@ bool SignalContext::IsTrueFaultingAddress() const {
 UNUSED
 static const char *RegNumToRegName(int reg) {
   switch (reg) {
-#  if (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) || SANITIZER_NETBSD
+#  if (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) || \
+      SANITIZER_NETBSD
 #    if defined(__x86_64__)
 #      if SANITIZER_NETBSD
 #        define REG_RAX _REG_RAX
@@ -2351,13 +2352,14 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   }
   return 0;
 }
-#  endif  // (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) && (defined(__arm__) ||
-          // defined(__aarch64__))
+#  endif  // (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) &&
+          // (defined(__arm__) || defined(__aarch64__))
 
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#  if (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) || SANITIZER_NETBSD
+#  if (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) || \
+      SANITIZER_NETBSD
 #    if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName,
@@ -2391,7 +2393,8 @@ static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
 
 void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t *)context;
-#  if (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) || SANITIZER_NETBSD
+#  if (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) || \
+      SANITIZER_NETBSD
 #    if defined(__x86_64__)
   Report("Register values:\n");
   DumpSingleReg(ucontext, REG_RAX);
