@@ -430,14 +430,16 @@ TEST(SmallPtrSetTest, Reserve) {
   Set.reserve(4);
   EXPECT_EQ(Set.capacity(), 4u);
   EXPECT_EQ(Set.size(), 4u);
-  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
+  EXPECT_THAT(Set,
+              UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
 
   // Reserving further should lead to a reallocation. And matching the existing
   // insertion approach, we immediately allocate up to 128 elements.
   Set.reserve(5);
   EXPECT_EQ(Set.capacity(), 128u);
   EXPECT_EQ(Set.size(), 4u);
-  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
+  EXPECT_THAT(Set,
+              UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
 
   // And we should be able to insert another two or three elements without
   // reallocating.
