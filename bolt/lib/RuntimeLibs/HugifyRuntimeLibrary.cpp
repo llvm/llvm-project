@@ -63,7 +63,14 @@ void HugifyRuntimeLibrary::link(BinaryContext &BC, StringRef ToolPath,
                                 BOLTLinker &Linker,
                                 BOLTLinker::SectionsMapper MapSections) {
 
-  std::string LibPath = getLibPath(ToolPath, opts::RuntimeHugifyLib);
+  // If the default filename is selected, add architecture-specific Target
+  // subdirectory to it.
+  std::string ToolSubPath = "";
+  if (opts::RuntimeHugifyLib == "libbolt_rt_hugify.a") {
+    ToolSubPath = createToolSubPath(BC.TheTriple->getArchName().str().c_str());
+  }
+  std::string LibPath =
+      getLibPath(ToolPath, ToolSubPath, opts::RuntimeHugifyLib);
   loadLibrary(LibPath, Linker, MapSections);
 
   assert(!RuntimeStartAddress &&

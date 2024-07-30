@@ -197,7 +197,15 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
 void InstrumentationRuntimeLibrary::link(
     BinaryContext &BC, StringRef ToolPath, BOLTLinker &Linker,
     BOLTLinker::SectionsMapper MapSections) {
-  std::string LibPath = getLibPath(ToolPath, opts::RuntimeInstrumentationLib);
+
+  // If the default filename is selected, add architecture-specific Target
+  // subdirectory to it.
+  std::string ToolSubPath = "";
+  if (opts::RuntimeInstrumentationLib == "libbolt_rt_instr.a") {
+    ToolSubPath = createToolSubPath(BC.TheTriple->getArchName().str().c_str());
+  }
+  std::string LibPath =
+      getLibPath(ToolPath, ToolSubPath, opts::RuntimeInstrumentationLib);
   loadLibrary(LibPath, Linker, MapSections);
 
   if (BC.isMachO())
