@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
+#include "../../../runtime/terminator.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/allocatable.h"
-#include "../../../runtime/terminator.h"
 
 #include "cuda.h"
 

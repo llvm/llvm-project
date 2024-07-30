@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../terminator.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "../allocator-registry.h"
 #include "../derived.h"
 #include "../stat.h"
+#include "../terminator.h"
 #include "../type-info.h"
 #include "flang/Common/Fortran.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
@@ -34,9 +34,7 @@ void *CUFAllocPinned(std::size_t sizeInBytes) {
   return p;
 }
 
-void CUFFreePinned(void *p) {
-  CUDA_REPORT_IF_ERROR(cuMemFreeHost(p));
-}
+void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cuMemFreeHost(p)); }
 
 void *CUFAllocDevice(std::size_t sizeInBytes) {
   CUdeviceptr p = 0;
