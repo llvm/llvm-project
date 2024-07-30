@@ -238,8 +238,11 @@ ScriptLexer::Token ScriptLexer::readNameTill(StringRef tok) {
   assert(tok[0] != '"');
 
   StringRef str = next();
-  if (str.starts_with("\""))
+  if (str.starts_with("\"")) {
     str = str.substr(1, str.size() - 2);
+    if (str != tok)
+      return {str};
+  }
   if (str == tok)
     return {};
   if (str == ")" || str == "}")
