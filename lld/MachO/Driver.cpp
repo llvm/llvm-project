@@ -1146,7 +1146,7 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
   switch (config->platformInfo.target.Platform) {
   case PLATFORM_IOS:
   case PLATFORM_IOSSIMULATOR:
-      return config->platformInfo.target.MinDeployment >= VersionTuple(14, 0);
+    return config->platformInfo.target.MinDeployment >= VersionTuple(14, 0);
   case PLATFORM_MACOS:
     return config->platformInfo.target.MinDeployment >= VersionTuple(11, 0);
   default:
