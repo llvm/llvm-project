@@ -25,7 +25,7 @@ const char CountingEnumSuffixesOptionName[] = "CountingEnumSuffixes";
 TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.get(StrictModeOptionName, true)),
+      StrictMode(Options.get(StrictModeOptionName, false)),
       EnableCountingEnumHeuristic(
           Options.get(EnableCountingEnumHeuristicOptionName, true)),
       RawCountingEnumPrefixes(Options.get(CountingEnumPrefixesOptionName, "")),
