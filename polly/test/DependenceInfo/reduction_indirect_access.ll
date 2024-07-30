@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-dependences -polly-allow-nonaffine -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-dependences>' -polly-allow-nonaffine -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Reduction dependences:
 ; CHECK:   [N] -> { Stmt_for_body[i0] -> Stmt_for_body[1 + i0] : 0 <= i0 <= -2 + N }
