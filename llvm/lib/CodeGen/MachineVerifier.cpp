@@ -2067,7 +2067,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid())
       break;
     if (SrcTy.isPointer() || DstTy.isPointer()) {
-      StringRef Op = SrcTy.isPointer() ? "Source" : "Destination";
+      std::string Op = SrcTy.isPointer() ? "Source" : "Destination";
       report(Twine(Op, " operand must not be a pointer type"), MI);
     } else if (SrcTy.isScalar()) {
       verifyAllRegOpsScalar(*MI, *MRI);
