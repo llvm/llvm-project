@@ -14655,20 +14655,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     Params = FPTL.getParams();
   }
 
-  Expr *TrailingRequiresExpr =
-      E->getCallOperator()->getTrailingRequiresClause();
-  if (TrailingRequiresExpr) {
-    // If we're in an expansion, do not propagate up this flag. Otherwise we
-    // would fail to unexpand the surrounding CXXFoldExpr.
-    if (getSema().ArgumentPackSubstitutionIndex == -1)
-      LSI->ContainsUnexpandedParameterPack |=
-          TrailingRequiresExpr->containsUnexpandedParameterPack();
-  }
-
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
-      E->getCallOperator()->getInnerLocStart(), TrailingRequiresExpr,
-      NewCallOpTSI, E->getCallOperator()->getConstexprKind(),
+      E->getCallOperator()->getInnerLocStart(),
+      E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
+      E->getCallOperator()->getConstexprKind(),
       E->getCallOperator()->getStorageClass(), Params,
       E->hasExplicitResultType());
 
