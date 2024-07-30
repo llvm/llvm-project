@@ -12,23 +12,43 @@
 #include <rtsan/rtsan_context.h>
 #include <rtsan/rtsan_interceptors.h>
 
-using namespace __rtsan;
+#include "sanitizer_common/sanitizer_atomic.h"
 
-bool __rtsan::rtsan_initialized;
-bool __rtsan::rtsan_init_is_running;
+using namespace __rtsan;
+using namespace __sanitizer;
+
+static atomic_uint8_t rtsan_initialized{0};
+static atomic_uint8_t rtsan_init_is_running{0};
+
+static void SetInitIsRunning(bool is_running) {
+  atomic_store(&rtsan_init_is_running, is_running, memory_order_release);
+}
+
+static bool IsInitRunning() {
+  return atomic_load(&rtsan_init_is_running, memory_order_acquire) == 1;
+}
+
+static void SetInitialized() {
+  atomic_store(&rtsan_initialized, 1, memory_order_release);
+}
 
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
-  CHECK(!rtsan_init_is_running);
-  if (rtsan_initialized)
+  CHECK(!IsInitRunning());
+  if (__rtsan_is_initialized())
     return;
-  rtsan_init_is_running = true;
+
+  SetInitIsRunning(true);
 
   InitializeInterceptors();
 
-  rtsan_init_is_running = false;
-  rtsan_initialized = true;
+  SetInitIsRunning(false);
+  SetInitialized();
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized() {
+  return atomic_load(&rtsan_initialized, memory_order_acquire) == 1;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter() {
