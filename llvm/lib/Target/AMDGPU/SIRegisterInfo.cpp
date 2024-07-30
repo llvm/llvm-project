@@ -2570,15 +2570,21 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               } else {
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
                         TmpResultReg)
-                    .addImm(Offset * ST.getWavefrontSize());
+                    .addImm(Offset);
                 assert(Offset > 0 &&
                        isUInt<24>(2 * ST.getMaxWaveScratchSize()) &&
                        "offset is unsafe for v_mad_u32_u24");
+                // We start with a frame pointer with a wave space value, and an
+                // offset in lane-space. We are materializing a lane space
+                // value. We can either do a right shift of the frame pointer to
+                // get to lane space, or a left shift of the offset to get to
+                // wavespace. We can right shift after the computation to get
+                // back to the desired per-lane value.
                 Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
                               TmpResultReg)
-                          .addReg(FrameReg)
-                          .addImm(ST.getWavefrontSize())
                           .addReg(TmpResultReg, RegState::Kill)
+                          .addImm(ST.getWavefrontSize())
+                          .addReg(FrameReg)
                           .addImm(0);
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
                         TmpResultReg)
