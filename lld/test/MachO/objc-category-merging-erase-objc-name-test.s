@@ -1,3 +1,6 @@
+# TODO: `-objc_relative_method_lists` is turned on by default.
+# Adding `-no_objc_relative_method_lists` explicitly here to avoid crashing.
+
 ; REQUIRES: aarch64
 
 ; Here we test that if we defined a protocol MyTestProtocol and also a category MyTestProtocol

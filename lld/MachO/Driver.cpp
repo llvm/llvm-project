@@ -338,15 +338,15 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           StringRef reason;
           switch (loadType) {
-          case LoadType::LCLinkerOption:
-            reason = "LC_LINKER_OPTION";
-            break;
-          case LoadType::CommandLineForce:
-            reason = "-force_load";
-            break;
-          case LoadType::CommandLine:
-            reason = "-all_load";
-            break;
+            case LoadType::LCLinkerOption:
+              reason = "LC_LINKER_OPTION";
+              break;
+            case LoadType::CommandLineForce:
+              reason = "-force_load";
+              break;
+            case LoadType::CommandLine:
+              reason = "-all_load";
+              break;
           }
           if (Error e = file->fetch(c, reason)) {
             if (config->warnThinArchiveMissingMembers)
@@ -1152,7 +1152,8 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
   default:
     return false;
   };
-  llvm_unreachable("Shouldn't be here");
+  llvm_unreachable("RelativeMethodList should default to false, control flow "
+                  "should not reach here");
 }
 
 void SymbolPatterns::clear() {

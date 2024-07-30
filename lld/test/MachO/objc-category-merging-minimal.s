@@ -1,3 +1,6 @@
+# TODO: `-objc_relative_method_lists` is turned on by default.
+# Adding `-no_objc_relative_method_lists` explicitly here to avoid crashing.
+
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t && cd %t
 

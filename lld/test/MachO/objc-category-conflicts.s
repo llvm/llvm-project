@@ -1,3 +1,6 @@
+# TODO: `-objc_relative_method_lists` is turned on by default.
+# Adding `-no_objc_relative_method_lists` explicitly here to avoid crashing.
+
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s -o %t/cat1.o
