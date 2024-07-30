@@ -1481,7 +1481,7 @@ def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 // Function call with 'Medium' code model.
-let isCall = 1, Defs = [R1, R20], Size = 8 in
+let isCall = 1, Defs = [R1] in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
 let Predicates = [IsLA64] in {
@@ -1492,7 +1492,7 @@ def : Pat<(loongarch_call_medium texternalsym:$func),
 } // Predicates = [IsLA64]
 
 // Function call with 'Large' code model.
-let isCall = 1, Defs = [R1, R20], Size = 24 in
+let isCall = 1, Defs = [R1] in
 def PseudoCALL_LARGE: Pseudo<(outs), (ins bare_symbol:$func)>;
 
 let Predicates = [IsLA64] in {
@@ -1530,8 +1530,7 @@ def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
 // Tail call with 'Medium' code model.
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    Uses = [R3], Defs = [R20], Size = 8 in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 let Predicates = [IsLA64] in {
@@ -1542,8 +1541,7 @@ def : Pat<(loongarch_tail_medium (iPTR texternalsym:$dst)),
 } // Predicates = [IsLA64]
 
 // Tail call with 'Large' code model.
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    Uses = [R3], Defs = [R19, R20], Size = 24 in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAIL_LARGE : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 let Predicates = [IsLA64] in {
@@ -1575,12 +1573,12 @@ def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
 
 /// call36/taill36 macro instructions
 let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
-    Defs = [R1], Size = 8, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
 def PseudoCALL36 : Pseudo<(outs), (ins bare_symbol:$dst), [],
                           "call36", "$dst">,
                    Requires<[IsLA64]>;
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
-    isCodeGenOnly = 0, isAsmParserOnly = 1, Size = 8, hasSideEffects = 0,
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
                           "tail36", "$tmp, $dst">,
@@ -1617,7 +1615,6 @@ def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ld", "$dst, $src">;
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
-let Defs = [R20], Size = 20 in {
 def PseudoLA_PCREL_LARGE : Pseudo<(outs GPR:$dst),
                                   (ins GPR:$tmp, bare_symbol:$src), [],
                                   "la.pcrel", "$dst, $tmp, $src">,
@@ -1632,7 +1629,6 @@ def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.gd", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
-} // Defs = [R20], Size = 20
 }
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in {
@@ -1640,7 +1636,6 @@ def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                           "la.got", "$dst, $src">;
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
-let Defs = [R20], Size = 20 in {
 def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
                                 (ins GPR:$tmp, bare_symbol:$src), [],
                                 "la.got", "$dst, $tmp, $src">,
@@ -1649,7 +1644,6 @@ def PseudoLA_TLS_IE_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.ie", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
-} // Defs = [R20], Size = 20
 }
 
 // Used for expand PseudoLA_TLS_DESC_* instructions.
@@ -1674,7 +1668,7 @@ def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
 }
 
 let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
-    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4, R20], Size = 32 in
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4] in
 def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
                                         (ins GPR:$tmp, bare_symbol:$src), [],
                                         "la.tls.desc", "$dst, $tmp, $src">,
