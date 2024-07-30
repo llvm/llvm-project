@@ -1016,8 +1016,7 @@ Parser::TPResult Parser::TryParseNonConversionOperatorId() {
   return TPResult::False;
 }
 Parser::TPResult Parser::TryParseOperatorId() {
-  if (TPResult TPR = TryParseNonConversionOperatorId();
-      TPR != TPResult::False)
+  if (TPResult TPR = TryParseNonConversionOperatorId(); TPR != TPResult::False)
     return TPR;
 
   // Maybe this is a conversion-function-id.
@@ -2314,7 +2313,8 @@ Parser::TPResult Parser::TryParseBracketDeclarator() {
 /// of a template-id or simple-template-id, rather than a less-than comparison.
 /// This will often fail and produce an ambiguity, but should never be wrong
 /// if it returns True or False.
-Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateNameKind TNK) {
+Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip,
+                                                TemplateNameKind TNK) {
   if (!TokensToSkip) {
     if (Tok.isNot(tok::less))
       return TPResult::False;
@@ -2340,50 +2340,50 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
     unsigned TemplateDepth = 0;
     while (true) {
       switch (Tok.getKind()) {
-        case tok::eof:
-        case tok::annot_module_begin:
-        case tok::annot_module_end:
-        case tok::annot_module_include:
-        case tok::annot_repl_input_end:
-        case tok::semi:
-          return TPResult::False;
+      case tok::eof:
+      case tok::annot_module_begin:
+      case tok::annot_module_end:
+      case tok::annot_module_include:
+      case tok::annot_repl_input_end:
+      case tok::semi:
+        return TPResult::False;
 
-        case tok::comma:
-        case tok::greater:
-        case tok::greatergreater:
-        case tok::greatergreatergreater:
-          return TPResult::True;
+      case tok::comma:
+      case tok::greater:
+      case tok::greatergreater:
+      case tok::greatergreatergreater:
+        return TPResult::True;
 
-        case tok::l_paren:
-          ConsumeParen();
-          if (!SkipUntil(tok::r_paren, StopAtSemi))
-            return TPResult::Error;
-          break;
-        case tok::l_brace:
-          ConsumeBrace();
-          if (!SkipUntil(tok::r_brace, StopAtSemi))
-            return TPResult::Error;
-          break;
-        case tok::l_square:
-          ConsumeBracket();
-          if (!SkipUntil(tok::r_square, StopAtSemi))
-            return TPResult::Error;
-          break;
-        case tok::question:
+      case tok::l_paren:
+        ConsumeParen();
+        if (!SkipUntil(tok::r_paren, StopAtSemi))
+          return TPResult::Error;
+        break;
+      case tok::l_brace:
+        ConsumeBrace();
+        if (!SkipUntil(tok::r_brace, StopAtSemi))
+          return TPResult::Error;
+        break;
+      case tok::l_square:
+        ConsumeBracket();
+        if (!SkipUntil(tok::r_square, StopAtSemi))
+          return TPResult::Error;
+        break;
+      case tok::question:
         ConsumeToken();
         if (!SkipUntil(tok::colon, StopAtSemi))
-            return TPResult::Error;
+          return TPResult::Error;
         break;
 
-        #if 0
+#if 0
         case tok::kw_template:
           ConsumeToken();
           NextIsTemplateId = true;
           continue;
-        #endif
-        case tok::identifier:
-          ConsumeToken();
-          #if 0
+#endif
+      case tok::identifier:
+        ConsumeToken();
+#if 0
           if (Tok.is(tok::less)) {
             if (!NextIsTemplateId)
               return TPResult::Ambiguous;
@@ -2392,23 +2392,23 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
               return TPResult::Error;
             break;
           }
-          #else
+#else
+        if (Tok.is(tok::less))
+          return TPResult::Ambiguous;
+        break;
+#endif
+
+      case tok::kw_operator:
+        if (TPResult TPR = TryParseNonConversionOperatorId();
+            TPR == TPResult::Error) {
+          return TPResult::Error;
+        } else if (TPR == TPResult::True) {
           if (Tok.is(tok::less))
             return TPResult::Ambiguous;
-          break;
-          #endif
+        }
+        break;
 
-        case tok::kw_operator:
-          if (TPResult TPR = TryParseNonConversionOperatorId();
-              TPR == TPResult::Error) {
-            return TPResult::Error;
-          } else if (TPR == TPResult::True) {
-            if (Tok.is(tok::less))
-              return TPResult::Ambiguous;
-          }
-          break;
-
-          #if 0
+#if 0
           if (Tok.is(tok::less)) {
             if (!NextIsTemplateId)
               return TPResult::Ambiguous;
@@ -2417,40 +2417,42 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
               return TPResult::Error;
           }
           break;
-          #endif
+#endif
 
-        case tok::kw_const_cast:
-        case tok::kw_dynamic_cast:
-        case tok::kw_reinterpret_cast:
-        case tok::kw_static_cast: {
-          ConsumeToken();
-          if (!TryConsumeToken(tok::less))
+      case tok::kw_const_cast:
+      case tok::kw_dynamic_cast:
+      case tok::kw_reinterpret_cast:
+      case tok::kw_static_cast: {
+        ConsumeToken();
+        if (!TryConsumeToken(tok::less))
+          return TPResult::Error;
+        bool MayHaveTrailingReturnType = Tok.is(tok::kw_auto);
+
+        while (true) {
+          TPResult TPR =
+              isCXXDeclarationSpecifier(ImplicitTypenameContext::Yes);
+          if (TPR == TPResult::False)
+            break;
+          if (TPR == TPResult::Error ||
+              TryConsumeDeclarationSpecifier() == TPResult::Error)
             return TPResult::Error;
-          bool MayHaveTrailingReturnType = Tok.is(tok::kw_auto);
-
-          while (true) {
-            TPResult TPR = isCXXDeclarationSpecifier(ImplicitTypenameContext::Yes);
-            if (TPR == TPResult::False)
-              break;
-            if (TPR == TPResult::Error ||
-                TryConsumeDeclarationSpecifier() == TPResult::Error)
-              return TPResult::Error;
-          }
-
-          if (TryParseDeclarator(
-              /*mayBeAbstract=*/true,
-              /*mayHaveIdentifier=*/false,
-              /*mayHaveDirectInit=*/false,
-              /*mayHaveTrailingReturnType=*/MayHaveTrailingReturnType) == TPResult::Error)
-            return TPResult::Error;
-
-          if (!TryConsumeToken(tok::greater))
-            return TPResult::Error;
-          break;
         }
-        default:
-          ConsumeAnyToken();
-          break;
+
+        if (TryParseDeclarator(
+                /*mayBeAbstract=*/true,
+                /*mayHaveIdentifier=*/false,
+                /*mayHaveDirectInit=*/false,
+                /*mayHaveTrailingReturnType=*/MayHaveTrailingReturnType) ==
+            TPResult::Error)
+          return TPResult::Error;
+
+        if (!TryConsumeToken(tok::greater))
+          return TPResult::Error;
+        break;
+      }
+      default:
+        ConsumeAnyToken();
+        break;
       }
       NextIsTemplateId = false;
     }
@@ -2466,9 +2468,10 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
       return TPResult::Error;
 
     bool InvalidAsTemplateArgumentList = false;
-    TPResult TPR = isCXXDeclarationSpecifier(ImplicitTypenameContext::No,
-                                             /*BracedCastResult=*/TPResult::Ambiguous,
-                                             &InvalidAsTemplateArgumentList);
+    TPResult TPR =
+        isCXXDeclarationSpecifier(ImplicitTypenameContext::No,
+                                  /*BracedCastResult=*/TPResult::Ambiguous,
+                                  &InvalidAsTemplateArgumentList);
     if (InvalidAsTemplateArgumentList)
       return TPResult::False;
 
@@ -2505,7 +2508,7 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
     }
   }
 
-  #if 0
+#if 0
   // We can't do much to tell an expression apart from a template-argument,
   // but one good distinguishing factor is that a "decl-specifier" not
   // followed by '(' or '{' can't appear in an expression.
@@ -2516,7 +2519,7 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip, TemplateN
     return TPResult::True;
   if (InvalidAsTemplateArgumentList)
     return TPResult::False;
-  #endif
+#endif
 
   // FIXME: In many contexts, X<thing1, Type> can only be a
   // template-argument-list. But that's not true in general:

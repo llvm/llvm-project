@@ -560,7 +560,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
       if (MemberOfUnknownSpecialization && !Disambiguation &&
           (ObjectType || SS.isSet()) &&
-          (IsTypename || isTemplateArgumentList(1, TNK_Non_template) == TPResult::True)) {
+          (IsTypename ||
+           isTemplateArgumentList(1, TNK_Non_template) == TPResult::True)) {
         // If we had errors before, ObjectType can be dependent even without any
         // templates. Do not report missing template keyword in that case.
         if (!ObjectHadErrors) {
