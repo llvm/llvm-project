@@ -29,6 +29,34 @@ entry:
   ret <vscale x 16 x i1> %active.lane.mask.alias
 }
 
+define dso_local <vscale x 16 x i1> @whilewr_commutative(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+; CHECK-LABEL: whilewr_commutative:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    whilewr p0.b, x1, x2
+; CHECK-NEXT:    ret
+;
+; CHECK-NOSVE2-LABEL: whilewr_commutative:
+; CHECK-NOSVE2:       // %bb.0: // %entry
+; CHECK-NOSVE2-NEXT:    sub x8, x1, x2
+; CHECK-NOSVE2-NEXT:    cmp x8, #0
+; CHECK-NOSVE2-NEXT:    cset w9, lt
+; CHECK-NOSVE2-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NOSVE2-NEXT:    sbfx x8, x9, #0, #1
+; CHECK-NOSVE2-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-NOSVE2-NEXT:    mov p0.b, p1/m, p1.b
+; CHECK-NOSVE2-NEXT:    ret
+entry:
+  %c14 = ptrtoint ptr %c to i64
+  %b15 = ptrtoint ptr %b to i64
+  %sub.diff = sub i64 %b15, %c14
+  %neg.compare = icmp slt i64 %sub.diff, 0
+  %.splatinsert = insertelement <vscale x 16 x i1> poison, i1 %neg.compare, i64 0
+  %.splat = shufflevector <vscale x 16 x i1> %.splatinsert, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
+  %ptr.diff.lane.mask = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %sub.diff)
+  %active.lane.mask.alias = or <vscale x 16 x i1> %.splat, %ptr.diff.lane.mask
+  ret <vscale x 16 x i1> %active.lane.mask.alias
+}
+
 define dso_local <vscale x 8 x i1> @whilewr_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_16:
 ; CHECK:       // %bb.0: // %entry

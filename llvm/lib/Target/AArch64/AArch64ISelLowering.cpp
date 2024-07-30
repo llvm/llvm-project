@@ -13794,6 +13794,9 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   SDValue LaneMask = Op.getOperand(0);
   SDValue Splat = Op.getOperand(1);
 
+  if (Splat.getOpcode() != ISD::SPLAT_VECTOR)
+    std::swap(LaneMask, Splat);
+
   if (LaneMask.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
       LaneMask.getConstantOperandVal(0) != Intrinsic::get_active_lane_mask ||
       Splat.getOpcode() != ISD::SPLAT_VECTOR)
