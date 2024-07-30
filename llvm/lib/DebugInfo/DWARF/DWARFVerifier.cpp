@@ -1481,9 +1481,9 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
 
 unsigned
 DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
-  if (NI.getLocalTUCount() + NI.getForeignTUCount() > 0) {
-    warn() << formatv("Name Index @ {0:x}: Verifying indexes of type units is "
-                      "not currently supported.\n",
+  if (NI.getForeignTUCount() > 0) {
+    warn() << formatv("Name Index @ {0:x}: Verifying indexes of foreign type "
+                      "units is not currently supported.\n",
                       NI.getUnitOffset());
     return 0;
   }
@@ -1512,7 +1512,8 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
       NumErrors += verifyNameIndexAttribute(NI, Abbrev, AttrEnc);
     }
 
-    if (NI.getCUCount() > 1 && !Attributes.count(dwarf::DW_IDX_compile_unit)) {
+    if (NI.getCUCount() > 1 && !Attributes.count(dwarf::DW_IDX_compile_unit) &&
+        !Attributes.count(dwarf::DW_IDX_type_unit)) {
       ErrorCategory.Report("Abbreviation contains no attribute", [&]() {
         error() << formatv("NameIndex @ {0:x}: Indexing multiple compile units "
                            "and abbreviation {1:x} has no {2} attribute.\n",
@@ -1574,8 +1575,8 @@ static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
 unsigned DWARFVerifier::verifyNameIndexEntries(
     const DWARFDebugNames::NameIndex &NI,
     const DWARFDebugNames::NameTableEntry &NTE) {
-  // Verifying type unit indexes not supported.
-  if (NI.getLocalTUCount() + NI.getForeignTUCount() > 0)
+  // Verifying foreign type unit indexes not supported.
+  if (NI.getForeignTUCount() > 0)
     return 0;
 
   const char *CStr = NTE.getString();
@@ -1596,18 +1597,35 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
   Expected<DWARFDebugNames::Entry> EntryOr = NI.getEntry(&NextEntryID);
   for (; EntryOr; ++NumEntries, EntryID = NextEntryID,
                                 EntryOr = NI.getEntry(&NextEntryID)) {
-    uint32_t CUIndex = *EntryOr->getCUIndex();
-    if (CUIndex > NI.getCUCount()) {
+
+    std::optional<uint64_t> CUIndex = EntryOr->getCUIndex();
+    std::optional<uint64_t> TUIndex = EntryOr->getLocalTUIndex();
+    if (CUIndex && *CUIndex >= NI.getCUCount()) {
       ErrorCategory.Report("Name Index entry contains invalid CU index", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
                            "invalid CU index ({2}).\n",
-                           NI.getUnitOffset(), EntryID, CUIndex);
+                           NI.getUnitOffset(), EntryID, *CUIndex);
       });
       ++NumErrors;
       continue;
     }
-    uint64_t CUOffset = NI.getCUOffset(CUIndex);
-    uint64_t DIEOffset = CUOffset + *EntryOr->getDIEUnitOffset();
+    if (TUIndex && *TUIndex >= NI.getLocalTUCount()) {
+      ErrorCategory.Report("Name Index entry contains invalid TU index", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
+                           "invalid TU index ({2}).\n",
+                           NI.getUnitOffset(), EntryID, *TUIndex);
+      });
+      ++NumErrors;
+      continue;
+    }
+    std::optional<uint64_t> UnitOffset;
+    if (TUIndex)
+      UnitOffset = NI.getLocalTUOffset(*TUIndex);
+    else if (CUIndex)
+      UnitOffset = NI.getCUOffset(*CUIndex);
+    if (!UnitOffset)
+      continue;
+    uint64_t DIEOffset = *UnitOffset + *EntryOr->getDIEUnitOffset();
     DWARFDie DIE = DCtx.getDIEForOffset(DIEOffset);
     if (!DIE) {
       ErrorCategory.Report("NameIndex references nonexistent DIE", [&]() {
@@ -1618,12 +1636,12 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       ++NumErrors;
       continue;
     }
-    if (DIE.getDwarfUnit()->getOffset() != CUOffset) {
+    if (DIE.getDwarfUnit()->getOffset() != *UnitOffset) {
       ErrorCategory.Report("Name index contains mismatched CU of DIE", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x}: mismatched CU of "
             "DIE @ {2:x}: index - {3:x}; debug_info - {4:x}.\n",
-            NI.getUnitOffset(), EntryID, DIEOffset, CUOffset,
+            NI.getUnitOffset(), EntryID, DIEOffset, *UnitOffset,
             DIE.getDwarfUnit()->getOffset());
       });
       ++NumErrors;
