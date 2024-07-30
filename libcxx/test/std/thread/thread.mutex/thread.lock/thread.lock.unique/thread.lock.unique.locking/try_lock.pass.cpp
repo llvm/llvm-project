@@ -34,7 +34,7 @@ int main(int, char**) {
     TEST_IGNORE_NODISCARD lk.try_lock();
     assert(false);
   } catch (std::system_error& e) {
-    assert(e.code().value() == EDEADLK);
+    assert(e.code() == std::errc::resource_deadlock_would_occur);
   }
 #endif
   lk.unlock();
@@ -47,7 +47,7 @@ int main(int, char**) {
     TEST_IGNORE_NODISCARD lk.try_lock();
     assert(false);
   } catch (std::system_error& e) {
-    assert(e.code().value() == EPERM);
+    assert(e.code() == std::errc::operation_not_permitted);
   }
 #endif
 
