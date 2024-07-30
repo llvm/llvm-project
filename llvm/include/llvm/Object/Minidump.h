@@ -103,6 +103,15 @@ public:
         minidump::StreamType::MemoryList);
   }
 
+  /// Returns the header to the memory 64 list stream. An error is returned if
+  /// the file does not contain this stream.
+  Expected<minidump::Memory64ListHeader> getMemoryList64Header() const {
+    return getStream<minidump::Memory64ListHeader>(
+        minidump::StreamType::Memory64List);
+  }
+
+  Expected<ArrayRef<minidump::MemoryDescriptor_64>> getMemory64List() const;
+
   class MemoryInfoIterator
       : public iterator_facade_base<MemoryInfoIterator,
                                     std::forward_iterator_tag,
@@ -152,15 +161,15 @@ private:
   }
 
   /// Return a slice of the given data array, with bounds checking.
-  static Expected<ArrayRef<uint8_t>> getDataSlice(ArrayRef<uint8_t> Data,
-                                                  size_t Offset, size_t Size);
+  static Expected<ArrayRef<uint8_t>>
+  getDataSlice(ArrayRef<uint8_t> Data, uint64_t Offset, uint64_t Size);
 
   /// Return the slice of the given data array as an array of objects of the
   /// given type. The function checks that the input array is large enough to
   /// contain the correct number of objects of the given type.
   template <typename T>
   static Expected<ArrayRef<T>> getDataSliceAs(ArrayRef<uint8_t> Data,
-                                              size_t Offset, size_t Count);
+                                              uint64_t Offset, uint64_t Count);
 
   MinidumpFile(MemoryBufferRef Source, const minidump::Header &Header,
                ArrayRef<minidump::Directory> Streams,
@@ -208,6 +217,7 @@ Expected<ArrayRef<T>> MinidumpFile::getDataSliceAs(ArrayRef<uint8_t> Data,
       getDataSlice(Data, Offset, sizeof(T) * Count);
   if (!Slice)
     return Slice.takeError();
+
   return ArrayRef<T>(reinterpret_cast<const T *>(Slice->data()), Count);
 }
 
