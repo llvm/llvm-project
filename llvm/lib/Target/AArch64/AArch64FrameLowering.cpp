@@ -474,7 +474,9 @@ bool AArch64FrameLowering::shouldAuthenticateLR(
     const MachineFunction &MF) const {
   // Return address authentication can be enabled at the function level, using
   // the "ptrauth-returns" attribute.
-  return MF.getFunction().hasFnAttribute("ptrauth-returns");
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  return Subtarget.isTargetMachO() &&
+         MF.getFunction().hasFnAttribute("ptrauth-returns");
 }
 
 /// hasFP - Return true if the specified function should have a dedicated frame

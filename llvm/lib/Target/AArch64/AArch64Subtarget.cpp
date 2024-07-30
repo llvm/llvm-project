@@ -569,7 +569,8 @@ AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
     const MachineFunction &MF) const {
   // TODO: Check subtarget for the scheme. Present variant is a default for
   // pauthtest ABI.
-  if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
+  if (!getTargetTriple().isOSBinFormatMachO() &&
+      MF.getFunction().hasFnAttribute("ptrauth-returns") &&
       MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
     return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
   if (AuthenticatedLRCheckMethod.getNumOccurrences())
