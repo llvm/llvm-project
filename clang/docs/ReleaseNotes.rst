@@ -273,6 +273,10 @@ Crash and bug fixes
 Improvements
 ^^^^^^^^^^^^
 
+- Improved the handling of the ``ownership_returns`` attribute. Now, Clang reports an
+  error if the attribute is attached to a function that returns a non-pointer value.
+  Fixes (#GH99501)
+
 Moved checkers
 ^^^^^^^^^^^^^^
 
