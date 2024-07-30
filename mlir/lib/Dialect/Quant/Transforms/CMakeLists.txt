@@ -9,8 +9,18 @@ add_mlir_dialect_library(MLIRQuantTransforms
   MLIRQuantTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRQuantDialect
+  MLIRArithDialect
+  MLIRFuncDialect
+  MLIRFuncTransforms
+  MLIRIndexDialect
+  MLIRIR
+  MLIRLinalgDialect
+  MLIRLinalgUtils
   MLIRPass
+  MLIRQuantDialect
+  MLIRShapeDialect
+  MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils
+
   )
