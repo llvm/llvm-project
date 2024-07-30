@@ -3,8 +3,8 @@
 
 // RUN: %clang_cl /permissive -### -- %s 2>&1 | FileCheck -check-prefix=PERMISSIVE %s
 // PERMISSIVE: "-fno-operator-names"
-// PERMISSIVE: "-fms-reference-binding"
 // PERMISSIVE: "-fdelayed-template-parsing"
+// PERMISSIVE: "-fms-reference-binding"
 // RUN: %clang_cl /permissive- -### -- %s 2>&1 | FileCheck -check-prefix=PERMISSIVE-MINUS %s
 // PERMISSIVE-MINUS-NOT: "-fno-operator-names"
 // PERMISSIVE-MINUS-NOT: "-fms-reference-binding"
