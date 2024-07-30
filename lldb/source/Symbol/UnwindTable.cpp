@@ -36,19 +36,20 @@ UnwindTable::UnwindTable(Module &module)
 
 // We can't do some of this initialization when the ObjectFile is running its
 // ctor; delay doing it until needed for something.
-
-void UnwindTable::Initialize(bool force) {
-  if (m_initialized && !force)
+void UnwindTable::Initialize() {
+  if (m_initialized)
     return;
 
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  if (m_initialized && !force) // check again once we've acquired the lock
+  if (m_initialized) // check again once we've acquired the lock
     return;
-  m_initialized = true;
+
   ObjectFile *object_file = m_module.GetObjectFile();
   if (!object_file)
     return;
+
+  m_initialized = true;
 
   if (!m_object_file_unwind_up)
     m_object_file_unwind_up = object_file->CreateCallFrameInfo();
@@ -82,7 +83,10 @@ void UnwindTable::Initialize(bool force) {
   }
 }
 
-void UnwindTable::Update() { Initialize(true /*force*/); }
+void UnwindTable::ModuleWasUpdated() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_initialized = false;
+}
 
 UnwindTable::~UnwindTable() = default;
 

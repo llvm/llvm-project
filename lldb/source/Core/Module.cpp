@@ -328,7 +328,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
           // we are unable to extract the os/environment from memory.
           m_arch.MergeFrom(process_sp->GetTarget().GetArchitecture());
 
-          m_unwind_table.Update();
+          m_unwind_table.ModuleWasUpdated();
         } else {
           error.SetErrorString("unable to find suitable object file plug-in");
         }
@@ -1015,7 +1015,7 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
         m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symfile = true;
-        m_unwind_table.Update();
+        m_unwind_table.ModuleWasUpdated();
       }
     }
   }
@@ -1216,7 +1216,7 @@ ObjectFile *Module::GetObjectFile() {
           // those values that overwrite unspecified unknown values.
           m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
 
-          m_unwind_table.Update();
+          m_unwind_table.ModuleWasUpdated();
         } else {
           ReportError("failed to load objfile for {0}\nDebugging will be "
                       "degraded for this module.",

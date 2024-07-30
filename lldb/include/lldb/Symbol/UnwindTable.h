@@ -57,14 +57,14 @@ public:
 
   ArchSpec GetArchitecture();
 
-  /// Called after a SymbolFile has been added to a Module to add any new
-  /// unwind sections that may now be available.
-  void Update();
+  /// Called after an ObjectFile/SymbolFile has been added to a Module to add
+  /// any new unwind sections that may now be available.
+  void ModuleWasUpdated();
 
 private:
   void Dump(Stream &s);
 
-  void Initialize(bool force = false);
+  void Initialize();
   std::optional<AddressRange> GetAddressRange(const Address &addr,
                                               const SymbolContext &sc);
 
