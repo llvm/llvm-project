@@ -57,7 +57,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXCustomAction_GICombiner1:{
 // CHECK-NEXT:     // Apply Patterns
-// CHECK-NEXT:     getVariadicOperands(*State.MIs[0], 1)
+// CHECK-NEXT:     getRemainingOperands(*State.MIs[0], 1)
 // CHECK-NEXT:     return true;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   }

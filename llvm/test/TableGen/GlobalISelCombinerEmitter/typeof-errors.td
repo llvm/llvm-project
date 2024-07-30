@@ -66,8 +66,8 @@ def TypeOfApplyTmp : GICombineRule<
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: type 'GITypeOf<$src>' is ill-formed: 'src' is a variadic pack operand
 def TypeOfVariadic : GICombineRule<
   (defs root:$dst),
-  (match (G_ZEXT $dst,  GIVariadic<>:$src)),
-  (apply (G_ANYEXT GITypeOf<"$src">:$tmp, $src),
+  (match (G_BUILD_VECTOR $dst,  $x, GIVariadic<>:$src)),
+  (apply (G_ANYEXT GITypeOf<"$src">:$tmp, $x),
          (G_ANYEXT $dst, $tmp))>;
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse one or more rules

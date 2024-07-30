@@ -100,7 +100,7 @@ void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
 void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
                              StringRef Name) {
   if (OM.isVariadic()) {
-    CE.declare(Name, "getVariadicOperands(*State.MIs[" +
+    CE.declare(Name, "getRemainingOperands(*State.MIs[" +
                          to_string(OM.getInsnVarID()) + "], " +
                          to_string(OM.getOpIdx()) + ")");
   } else {
@@ -1169,9 +1169,12 @@ bool CombineRuleBuilder::checkSemantics() {
 
   const auto CheckVariadicOperands = [&](const InstructionPattern &IP,
                                          bool IsMatch) {
+    bool HasVariadic = false;
     for (auto &Op : IP.operands()) {
       if (!Op.getType().isVariadicPack())
         continue;
+
+      HasVariadic = true;
 
       if (IsMatch && &Op != &IP.operands_back()) {
         PrintError("'" + IP.getInstName() +
@@ -1185,6 +1188,13 @@ bool CombineRuleBuilder::checkSemantics() {
                    PatternType::VariadicClassName + " cannot be used on defs");
         return false;
       }
+    }
+
+    if (HasVariadic && !IP.isVariadic()) {
+      PrintError("cannot use a " + PatternType::VariadicClassName +
+                 " operand on non-variadic instruction '" + IP.getInstName() +
+                 "'");
+      return false;
     }
 
     return true;

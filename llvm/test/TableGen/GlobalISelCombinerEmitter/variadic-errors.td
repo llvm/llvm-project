@@ -63,6 +63,18 @@ def UseInPF: GICombineRule<
   (match (PFWithVariadic $dst)),
   (apply (G_ANYEXT $dst, (i32 0)))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error:  cannot use a GIVariadic operand on non-variadic instruction 'G_MUL'
+def NotVariadicInstMatch : GICombineRule<
+  (defs root:$a),
+  (match (G_MUL $a, $c, GIVariadic<2, 4>:$b)),
+  (apply (G_MERGE_VALUES $a, $b, $c))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error:  cannot use a GIVariadic operand on non-variadic instruction 'G_MUL'
+def NotVariadicInstApply : GICombineRule<
+  (defs root:$a),
+  (match (G_BUILD_VECTOR $a, GIVariadic<2, 4>:$b)),
+  (apply (G_MUL $a, $b, $c))>;
+
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse one or more rules
 def MyCombiner: GICombiner<"GenMyCombiner", [
   VariadicNotLastInList,
@@ -71,5 +83,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   InvalidBounds0,
   InvalidBounds1,
   VariadicTypeTestEqOp,
-  UseInPF
+  UseInPF,
+  NotVariadicInstMatch,
+  NotVariadicInstApply
 ]>;

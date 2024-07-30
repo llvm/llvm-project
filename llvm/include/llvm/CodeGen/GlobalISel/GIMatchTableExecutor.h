@@ -731,8 +731,8 @@ protected:
     return Ret;
   }
 
-  static ArrayRef<MachineOperand> getVariadicOperands(const MachineInstr &MI,
-                                                      unsigned FirstVarOp) {
+  static ArrayRef<MachineOperand> getRemainingOperands(const MachineInstr &MI,
+                                                       unsigned FirstVarOp) {
     auto Operands = drop_begin(MI.operands(), FirstVarOp);
     return {Operands.begin(), Operands.end()};
   }
