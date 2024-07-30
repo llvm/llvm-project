@@ -10,8 +10,6 @@
 #include "InterpState.h"
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include <iterator>
 
