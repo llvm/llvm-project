@@ -2177,15 +2177,17 @@ def : GCNPat <
 
 // FIXME: Remove VGPRImm. Should be inferrable from register bank.
 
-def : GCNPat <
-  (VGPRImm<(i32 imm)>:$imm),
-  (V_MOV_B32_e32 imm:$imm)
->;
+foreach vt = [i32, p3, p5, p6, p2] in {
+  def : GCNPat <
+    (VGPRImm<(vt imm)>:$imm),
+    (V_MOV_B32_e32 imm:$imm)
+  >;
 
-def : GCNPat <
-  (i32 imm:$imm),
-  (S_MOV_B32 imm:$imm)
->;
+  def : GCNPat <
+    (vt imm:$imm),
+    (S_MOV_B32 imm:$imm)
+  >;
+}
 
 def : GCNPat <
   (p5 frameindex:$fi),
@@ -2294,20 +2296,22 @@ def : GCNPat <
   (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
-def : GCNPat <
-  (VGPRImm<(i64 imm)>:$imm),
-  (V_MOV_B64_PSEUDO imm:$imm)
->;
+foreach vt = [i64, p1, p0, p4] in { // FIXME: Should accept arbitrary addrspace
+  def : GCNPat <
+    (VGPRImm<(vt imm)>:$imm),
+    (V_MOV_B64_PSEUDO imm:$imm)
+  >;
 
-def : GCNPat <
-  (i64 InlineImm64:$imm),
-  (S_MOV_B64 InlineImm64:$imm)
->;
+  def : GCNPat <
+    (vt InlineImm64:$imm),
+    (S_MOV_B64 InlineImm64:$imm)
+  >;
 
-def : GCNPat <
-  (i64 imm:$imm),
-  (S_MOV_B64_IMM_PSEUDO imm:$imm)
->;
+  def : GCNPat <
+    (vt imm:$imm),
+    (S_MOV_B64_IMM_PSEUDO imm:$imm)
+  >;
+}
 
 def : GCNPat <
   (VGPRImm<(f64 fpimm)>:$imm),
