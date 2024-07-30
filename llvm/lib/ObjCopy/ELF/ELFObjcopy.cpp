@@ -745,6 +745,56 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
+  if (!Config.ChangeSectionAddress.empty()) {
+    if (Obj.Type != ELF::ET_REL)
+      return createStringError(
+          object_error::invalid_file_type,
+          "cannot change section address in a non-relocatable file");
+
+    StringMap<AddressUpdate> SectionsToUpdateAddress;
+    for (const SectionPatternAddressUpdate &PatternUpdate :
+         make_range(Config.ChangeSectionAddress.rbegin(),
+                    Config.ChangeSectionAddress.rend())) {
+      for (SectionBase &Sec : Obj.sections()) {
+        if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
+            SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)
+                .second) {
+          if (PatternUpdate.Update.Kind == AdjustKind::Subtract &&
+              Sec.Addr < PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be decreased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would underflow");
+          }
+          if (PatternUpdate.Update.Kind == AdjustKind::Add &&
+              Sec.Addr > std::numeric_limits<uint64_t>::max() -
+                             PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be increased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would overflow");
+          }
+
+          switch (PatternUpdate.Update.Kind) {
+          case (AdjustKind::Set):
+            Sec.Addr = PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Subtract):
+            Sec.Addr -= PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Add):
+            Sec.Addr += PatternUpdate.Update.Value;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
