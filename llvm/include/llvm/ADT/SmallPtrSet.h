@@ -93,6 +93,7 @@ public:
 
   [[nodiscard]] bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
+  size_type capacity() const { return CurArraySize; }
 
   void clear() {
     incrementEpoch();
@@ -111,17 +112,22 @@ public:
 
   void reserve(size_type NumEntries) {
     incrementEpoch();
+    // Do nothing if we're given zero as a reservation size.
+    if (!NumEntries)
+      return;
     // No need to expand if we're small and NumEntries will fit in the space.
     if (isSmall() && NumEntries <= CurArraySize)
       return;
     // insert_imp_big will reallocate if stores is more than 75% full, on the
     // /final/ insertion.
-    if (!isSmall() && ((NumEntries-1) * 4) < (CurArraySize * 3))
+    if (!isSmall() && ((NumEntries - 1) * 4) < (CurArraySize * 3))
       return;
     // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
     size_type NewSize = NumEntries + (NumEntries / 3);
     NewSize = 1 << (Log2_32_Ceil(NewSize) + 1);
+    // Like insert_imp_big, always allocate at least 128 elements.
+    NewSize = std::max(128u, NewSize);
     Grow(NewSize);
   }
 

@@ -14,9 +14,11 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using testing::UnorderedElementsAre;
 
 TEST(SmallPtrSetTest, Assignment) {
   int buf[8];
@@ -418,6 +420,7 @@ TEST(SmallPtrSetTest, Reserve) {
 
   // We shouldn't reallocate when this happens.
   Set.reserve(4);
+  EXPECT_EQ(Set.capacity(), 4u);
 
   Set.insert(&Vals[1]);
   Set.insert(&Vals[2]);
@@ -425,19 +428,16 @@ TEST(SmallPtrSetTest, Reserve) {
 
   // We shouldn't reallocate this time either.
   Set.reserve(4);
+  EXPECT_EQ(Set.capacity(), 4u);
   EXPECT_EQ(Set.size(), 4u);
-  EXPECT_TRUE(Set.contains(&Vals[0]));
-  EXPECT_TRUE(Set.contains(&Vals[1]));
-  EXPECT_TRUE(Set.contains(&Vals[2]));
-  EXPECT_TRUE(Set.contains(&Vals[3]));
+  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
 
-  // Reserving further should lead to a reallocation.
+  // Reserving further should lead to a reallocation. And matching the existing
+  // insertion approach, we immediately allocate up to 128 elements.
   Set.reserve(5);
+  EXPECT_EQ(Set.capacity(), 128u);
   EXPECT_EQ(Set.size(), 4u);
-  EXPECT_TRUE(Set.contains(&Vals[0]));
-  EXPECT_TRUE(Set.contains(&Vals[1]));
-  EXPECT_TRUE(Set.contains(&Vals[2]));
-  EXPECT_TRUE(Set.contains(&Vals[3]));
+  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
 
   // And we should be able to insert another two or three elements without
   // reallocating.
@@ -446,11 +446,12 @@ TEST(SmallPtrSetTest, Reserve) {
 
   // Calling a smaller reserve size should have no effect.
   Set.reserve(1);
+  EXPECT_EQ(Set.capacity(), 128u);
   EXPECT_EQ(Set.size(), 6u);
-  EXPECT_TRUE(Set.contains(&Vals[0]));
-  EXPECT_TRUE(Set.contains(&Vals[1]));
-  EXPECT_TRUE(Set.contains(&Vals[2]));
-  EXPECT_TRUE(Set.contains(&Vals[3]));
-  EXPECT_TRUE(Set.contains(&Vals[4]));
-  EXPECT_TRUE(Set.contains(&Vals[5]));
+
+  // Reserving zero should have no effect either.
+  Set.reserve(0);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 6u);
+  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3], &Vals[4], &Vals[5]));
 }
