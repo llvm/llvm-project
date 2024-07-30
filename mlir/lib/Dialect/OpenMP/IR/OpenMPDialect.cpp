@@ -2047,7 +2047,7 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse "inclusive" flag.
   if (succeeded(parser.parseOptionalKeyword("inclusive")))
-    result.addAttribute("inclusive",
+    result.addAttribute("loop_inclusive",
                         UnitAttr::get(parser.getBuilder().getContext()));
 
   // Parse step values.
@@ -2075,28 +2075,28 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   Region &region = getRegion();
   auto args = region.getArguments();
   p << " (" << args << ") : " << args[0].getType() << " = ("
-    << getCollapseLowerBounds() << ") to (" << getCollapseUpperBounds() << ") ";
-  if (getInclusive())
+    << getLoopLowerBounds() << ") to (" << getLoopUpperBounds() << ") ";
+  if (getLoopInclusive())
     p << "inclusive ";
-  p << "step (" << getCollapseSteps() << ") ";
+  p << "step (" << getLoopSteps() << ") ";
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 void LoopNestOp::build(OpBuilder &builder, OperationState &state,
                        const LoopNestOperands &clauses) {
-  LoopNestOp::build(builder, state, clauses.collapseLowerBounds,
-                    clauses.collapseUpperBounds, clauses.collapseSteps,
+  LoopNestOp::build(builder, state, clauses.loopLowerBounds,
+                    clauses.loopUpperBounds, clauses.loopSteps,
                     clauses.loopInclusive);
 }
 
 LogicalResult LoopNestOp::verify() {
-  if (getCollapseLowerBounds().empty())
+  if (getLoopLowerBounds().empty())
     return emitOpError() << "must represent at least one loop";
 
-  if (getCollapseLowerBounds().size() != getIVs().size())
+  if (getLoopLowerBounds().size() != getIVs().size())
     return emitOpError() << "number of range arguments and IVs do not match";
 
-  for (auto [lb, iv] : llvm::zip_equal(getCollapseLowerBounds(), getIVs())) {
+  for (auto [lb, iv] : llvm::zip_equal(getLoopLowerBounds(), getIVs())) {
     if (lb.getType() != iv.getType())
       return emitOpError()
              << "range argument type does not match corresponding IV type";
