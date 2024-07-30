@@ -1835,6 +1835,10 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
+  // None of our addressing modes allows a scalable offset
+  if (AM.ScalableOffset)
+    return false;
+
   // RVV instructions only support register addressing.
   if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
     return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
