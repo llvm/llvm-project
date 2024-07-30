@@ -345,6 +345,19 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                             HeaderFirstNonPHI, AC, &DT);
 }
 
+static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
+  const Function &F = *CtxI.getFunction();
+  // Speculative load may create a race that did not exist in the source.
+  return F.hasFnAttribute(Attribute::SanitizeThread) ||
+         // Speculative load may load data from dirty regions.
+         F.hasFnAttribute(Attribute::SanitizeAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeHWAddress);
+}
+
+bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
+  return !LI.isUnordered() || suppressSpeculativeLoadForSanitizers(LI);
+}
+
 /// Check if executing a load of this pointer value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
