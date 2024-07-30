@@ -142,12 +142,12 @@ SECTIONS {
 }
 
 # RUN: not ld.lld -T unreferenced.lds matching.o 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=UNREFERENCED
+# RUN:   FileCheck %s --check-prefix=UNREFERENCED -implicit-check-not=error:
 # RUN: ld.lld -T unreferenced.lds matching.o -o out --noinhibit-exec 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=UNREFERENCED-WARN
+# RUN:   FileCheck %s --check-prefix=UNREFERENCED-WARN -implicit-check-not=error:
 
-# UNREFERENCED: error: section '.rodata.a' assigned to class 'a' but unreferenced by any output section
-# UNREFERENCED-WARN: warning: section '.rodata.a' assigned to class 'a' but unreferenced by any output section
+# UNREFERENCED: error: section class 'a' is unreferenced
+# UNREFERENCED-WARN: warning: section class 'a' is unreferenced
 
 #--- class-references-class.lds
 ## One section class references another.

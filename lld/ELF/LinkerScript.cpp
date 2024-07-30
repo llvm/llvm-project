@@ -808,13 +808,18 @@ void LinkerScript::processSectionCommands() {
 
   // Input sections cannot have a section class parent past this point; they
   // must have been assigned to an output section.
-  for (const auto &[_, sc] : sectionClasses)
-    for (InputSectionDescription *isd : sc->sc.commands)
-      for (InputSectionBase *sec : isd->sectionBases)
-        if (sec->parent && isa<SectionClass>(sec->parent))
-          errorOrWarn("section '" + sec->name + "' assigned to class '" +
-                      sec->parent->name +
-                      "' but unreferenced by any output section");
+  for (const auto &[_, sc] : sectionClasses) {
+    for (InputSectionDescription *isd : sc->sc.commands) {
+      for (InputSectionBase *sec : isd->sectionBases) {
+        if (sec->parent && isa<SectionClass>(sec->parent)) {
+          errorOrWarn("section class '" + sec->parent->name +
+                      "' is unreferenced");
+          goto nextClass;
+        }
+      }
+    }
+  nextClass:;
+  }
 }
 
 void LinkerScript::processSymbolAssignments() {
