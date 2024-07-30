@@ -581,22 +581,7 @@ void SCEVUnknown::allUsesReplacedWith(Value *New) {
 
 /// Compare the two values \p LV and \p RV in terms of their "complexity" where
 /// "complexity" is a partial (and somewhat ad-hoc) relation used to order
-/// operands in SCEV expressions.  \p EqCache is a set of pairs of values that
-/// have been previously deemed to be "equally complex" by this routine.  It is
-/// intended to avoid exponential time complexity in cases like:
-///
-///   %a = f(%x, %y)
-///   %b = f(%a, %a)
-///   %c = f(%b, %b)
-///
-///   %d = f(%x, %y)
-///   %e = f(%d, %d)
-///   %f = f(%e, %e)
-///
-///   CompareValueComplexity(%f, %c)
-///
-/// Since we do not continue running this routine on expression trees once we
-/// have seen unequal values, there is no need to track them in the cache.
+/// operands in SCEV expressions.
 static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
                                   Value *RV, unsigned Depth) {
   if (Depth > MaxValueCompareDepth)
