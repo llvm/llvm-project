@@ -124,3 +124,15 @@ entry:
   store <8 x i1> %6, ptr %7, align 1
   ret void
 }
+
+define void @test5(ptr %ptr0, ptr %ptr1) {
+entry:
+  %getelementptr0 = getelementptr i8, ptr null, i64 0
+  %0 = insertelement <4 x ptr> <ptr null, ptr null, ptr undef, ptr undef>, ptr %getelementptr0, i32 2
+  %1 = insertelement <4 x ptr> %0, ptr null, i32 3
+  %2 = icmp ult <4 x ptr> zeroinitializer, %1
+  %3 = insertelement <4 x ptr> <ptr poison, ptr null, ptr null, ptr null>, ptr %ptr0, i32 0
+  %4 = insertelement <4 x ptr> %1, ptr %ptr1, i32 3
+  %5 = icmp ult <4 x ptr> %3, %4
+  ret void
+}
