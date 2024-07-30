@@ -2,15 +2,15 @@
 # UNSUPPORTED: target=arm{{.*}}-unknown-linux-gnueabihf
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
-## Compile a64_rel_dylib.o
-# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_rel_dylib.o a64_simple_class.s
+## Compile a64_rel_dylib.o with MacOS 11
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11 -o a64_rel_dylib.o a64_simple_class.s
 
 ## Test arm64 + relative method lists
-# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -objc_relative_method_lists
+# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_REL
 
 ## Test arm64 + relative method lists + dead-strip
-# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -objc_relative_method_lists -dead_strip
+# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -dead_strip
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_REL
 
 ## Test arm64 + traditional method lists (no relative offsets)
