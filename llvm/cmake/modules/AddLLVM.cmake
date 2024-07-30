@@ -1452,6 +1452,7 @@ macro(llvm_add_tool project name)
   endif()
   get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Tools")
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro(llvm_add_tool project name)
 
 macro(add_llvm_tool name)
