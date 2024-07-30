@@ -4854,24 +4854,27 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
       Root = Gep->getOperand(0);
     SortedBases.emplace_back(Base.first, Strip, Root);
   }
-  if (SortedBases.size() <= 16) {
-    auto Begin = SortedBases.begin();
-    auto End = SortedBases.end();
-    while (Begin != End) {
-      Value *Root = std::get<2>(*Begin);
-      auto Mid = std::stable_partition(
-          Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
-      std::stable_sort(Begin, Mid, [](auto V1, auto V2) {
-        const Value *V = std::get<1>(V2);
-        while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
-          if (Gep->getOperand(0) == std::get<1>(V1))
-            return true;
-          V = Gep->getOperand(0);
-        }
-        return false;
-      });
-      Begin = Mid;
+  auto *Begin = SortedBases.begin();
+  auto *End = SortedBases.end();
+  while (Begin != End) {
+    Value *Root = std::get<2>(*Begin);
+    auto *Mid = std::stable_partition(
+        Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
+    DenseMap<Value *, DenseMap<Value *, bool>> LessThan;
+    for (auto I = Begin; I < Mid; ++I)
+      LessThan.try_emplace(std::get<1>(*I));
+    for (auto I = Begin; I < Mid; ++I) {
+      Value *V = std::get<1>(*I);
+      while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
+        V = Gep->getOperand(0);
+        if (LessThan.contains(V))
+          LessThan[V][std::get<1>(*I)] = true;
+      }
     }
+    std::stable_sort(Begin, Mid, [&LessThan](auto &V1, auto &V2) {
+      return LessThan[std::get<1>(V1)][std::get<1>(V2)];
+    });
+    Begin = Mid;
   }
 
   // Collect the final order of sorted indices
