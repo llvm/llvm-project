@@ -13806,8 +13806,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   if (Cmp.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  CondCodeSDNode *Cond = dyn_cast<CondCodeSDNode>(Cmp.getOperand(2));
-  assert(Cond && "SETCC doesn't have a condition code");
+  CondCodeSDNode *Cond = cast<CondCodeSDNode>(Cmp.getOperand(2));
 
   auto ComparatorConst = dyn_cast<ConstantSDNode>(Cmp.getOperand(1));
   if (!ComparatorConst || ComparatorConst->getSExtValue() > 0 ||
