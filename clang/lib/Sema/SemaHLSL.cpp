@@ -21,7 +21,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLWaveSize.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <iterator>
@@ -153,6 +155,25 @@ HLSLNumThreadsAttr *SemaHLSL::mergeNumThreadsAttr(Decl *D,
       HLSLNumThreadsAttr(getASTContext(), AL, X, Y, Z);
 }
 
+HLSLWaveSizeAttr *SemaHLSL::mergeWaveSizeAttr(Decl *D,
+                                              const AttributeCommonInfo &AL,
+                                              int Min, int Max, int Preferred,
+                                              int SpelledArgsCount) {
+  if (HLSLWaveSizeAttr *NT = D->getAttr<HLSLWaveSizeAttr>()) {
+    if (NT->getMin() != Min || NT->getMax() != Max ||
+        NT->getPreferred() != Preferred ||
+        NT->getSpelledArgsCount() != SpelledArgsCount) {
+      Diag(NT->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
+      Diag(AL.getLoc(), diag::note_conflicting_attribute);
+    }
+    return nullptr;
+  }
+  HLSLWaveSizeAttr *Result = ::new (getASTContext())
+      HLSLWaveSizeAttr(getASTContext(), AL, Min, Max, Preferred);
+  Result->setSpelledArgsCount(SpelledArgsCount);
+  return Result;
+}
+
 HLSLShaderAttr *
 SemaHLSL::mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                           llvm::Triple::EnvironmentType ShaderType) {
@@ -224,7 +245,8 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
-
+  auto &TargetInfo = getASTContext().getTargetInfo();
+  VersionTuple Ver = TargetInfo.getTriple().getOSVersion();
   switch (ST) {
   case llvm::Triple::Pixel:
   case llvm::Triple::Vertex:
@@ -244,6 +266,13 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
                                  llvm::Triple::Mesh});
       FD->setInvalidDecl();
     }
+    if (const auto *NT = FD->getAttr<HLSLWaveSizeAttr>()) {
+      DiagnoseAttrStageMismatch(NT, ST,
+                                {llvm::Triple::Compute,
+                                 llvm::Triple::Amplification,
+                                 llvm::Triple::Mesh});
+      FD->setInvalidDecl();
+    }
     break;
 
   case llvm::Triple::Compute:
@@ -253,6 +282,20 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       Diag(FD->getLocation(), diag::err_hlsl_missing_numthreads)
           << llvm::Triple::getEnvironmentTypeName(ST);
       FD->setInvalidDecl();
+    }
+    if (const auto *NT = FD->getAttr<HLSLWaveSizeAttr>()) {
+      if (Ver.getMajor() < 6u ||
+          (Ver.getMajor() == 6u && Ver.getMinor() < 6u)) {
+        Diag(NT->getLocation(), diag::err_hlsl_attribute_in_wrong_shader_model)
+            << "wavesize"
+            << "6.6";
+        FD->setInvalidDecl();
+      } else if (NT->getSpelledArgsCount() > 1 &&
+                 (Ver.getMajor() == 6u && Ver.getMinor() < 8u)) {
+        Diag(NT->getLocation(),
+             diag::err_hlsl_wavesize_insufficient_shader_model);
+        FD->setInvalidDecl();
+      }
     }
     break;
   default:
@@ -353,6 +396,77 @@ void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   HLSLNumThreadsAttr *NewAttr = mergeNumThreadsAttr(D, AL, X, Y, Z);
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
+void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
+  // validate that the wavesize argument is a power of 2 between 4 and 128
+  // inclusive
+  unsigned SpelledArgsCount = AL.getNumArgs();
+  if (SpelledArgsCount == 0 || SpelledArgsCount > 3)
+    return;
+
+  uint32_t Min;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Min))
+    return;
+
+  uint32_t Max = 0;
+  if (SpelledArgsCount > 1 &&
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), Max))
+    return;
+
+  uint32_t Preferred = 0;
+  if (SpelledArgsCount > 2 &&
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(2), Preferred))
+    return;
+  llvm::hlsl::WaveSize WaveSize(Min, Max, Preferred);
+  llvm::hlsl::WaveSize::ValidationResult ValidationResult = WaveSize.validate();
+  // WaveSize validation succeeds when not defined, but since we have an
+  // attribute, this means min was zero, which is invalid for min.
+  if (ValidationResult == llvm::hlsl::WaveSize::ValidationResult::Success &&
+      !WaveSize.isDefined())
+    ValidationResult = llvm::hlsl::WaveSize::ValidationResult::InvalidMin;
+
+  // It is invalid to explicitly specify degenerate cases.
+  if (SpelledArgsCount > 1 && WaveSize.Max == 0)
+    ValidationResult = llvm::hlsl::WaveSize::ValidationResult::InvalidMax;
+  else if (SpelledArgsCount > 2 && WaveSize.Preferred == 0)
+    ValidationResult = llvm::hlsl::WaveSize::ValidationResult::InvalidPreferred;
+
+  switch (ValidationResult) {
+  case llvm::hlsl::WaveSize::ValidationResult::Success:
+    break;
+  case llvm::hlsl::WaveSize::ValidationResult::InvalidMin:
+  case llvm::hlsl::WaveSize::ValidationResult::InvalidMax:
+  case llvm::hlsl::WaveSize::ValidationResult::InvalidPreferred:
+  case llvm::hlsl::WaveSize::ValidationResult::NoRangeOrMin:
+    Diag(AL.getLoc(), diag::err_hlsl_wavesize_size)
+        << llvm::dxil::MinWaveSize << llvm::dxil::MaxWaveSize;
+    break;
+  case llvm::hlsl::WaveSize::ValidationResult::MaxEqualsMin:
+    Diag(AL.getLoc(), diag::warn_hlsl_wavesize_min_eq_max)
+        << WaveSize.Min << WaveSize.Max;
+    break;
+  case llvm::hlsl::WaveSize::ValidationResult::MaxLessThanMin:
+    Diag(AL.getLoc(), diag::err_hlsl_wavesize_min_geq_max)
+        << WaveSize.Min << WaveSize.Max;
+    break;
+  case llvm::hlsl::WaveSize::ValidationResult::PreferredOutOfRange:
+    Diag(AL.getLoc(), diag::err_hlsl_wavesize_pref_size_out_of_range)
+        << WaveSize.Preferred << WaveSize.Min << WaveSize.Max;
+    break;
+  case llvm::hlsl::WaveSize::ValidationResult::MaxOrPreferredWhenUndefined:
+  case llvm::hlsl::WaveSize::ValidationResult::PreferredWhenNoRange:
+    llvm_unreachable("Should have hit InvalidMax or InvalidPreferred instead.");
+    break;
+  }
+
+  if (ValidationResult != llvm::hlsl::WaveSize::ValidationResult::Success)
+    return;
+
+  HLSLWaveSizeAttr *NewAttr =
+      mergeWaveSizeAttr(D, AL, Min, Max, Preferred, SpelledArgsCount);
   if (NewAttr)
     D->addAttr(NewAttr);
 }

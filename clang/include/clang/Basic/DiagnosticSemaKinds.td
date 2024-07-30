@@ -12384,6 +12384,21 @@ def warn_hlsl_availability_unavailable :
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;
 
+def err_hlsl_attribute_in_wrong_shader_model: Error<
+  "attribute %0 requires shader model %1 or greater">;
+
+def err_hlsl_wavesize_size: Error<
+  "wavesize arguments must be between 4 and 128 and a power of 2">;
+def err_hlsl_wavesize_min_geq_max: Error<
+  "minimum wavesize value %0 must be less than maximum wavesize value %1">;
+def warn_hlsl_wavesize_min_eq_max:  Warning<
+  "wave size range minimum and maximum are equal">,
+  InGroup<HLSLAttributeStatement>, DefaultError;
+def err_hlsl_wavesize_pref_size_out_of_range: Error<
+  "preferred wavesize value %0 must be between %1 and %2">;
+def err_hlsl_wavesize_insufficient_shader_model: Error<
+  "wavesize only takes multiple arguments in shader model 6.8 or higher">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
