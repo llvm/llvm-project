@@ -140,7 +140,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
     if (isAny == 1) {
       // All overload types in a DXIL Op are required to be of the same type.
       if (!OverloadParamIndices.empty()) {
-        bool knownType = true;
+        [[maybe_unused]] bool knownType = true;
         // Ensure that the same overload type registered earlier is being used
         for (auto Idx : OverloadParamIndices) {
           if (TR != ParamTypeRecs[Idx]) {
