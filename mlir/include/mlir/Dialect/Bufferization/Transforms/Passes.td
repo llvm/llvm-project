@@ -321,6 +321,11 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     This optimization applies on the returned memref which has static shape and
     is allocated by memref.alloc in the function. It will use the memref given
     in function argument to replace the allocated memref.
+
+    If the hoist-static-allocs option is on, and a function returns a memref
+    from the function argument, the pass will avoid the memory-copy from
+    the input function argument to the "out param", and leave the "out param"
+    unused. 
   }];
   let options = [
     Option<"addResultAttribute", "add-result-attr", "bool",
