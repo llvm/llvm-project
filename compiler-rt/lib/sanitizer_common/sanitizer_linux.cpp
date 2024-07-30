@@ -2247,7 +2247,8 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
-#  if SANITIZER_LINUX && SANITIZER_GLIBC && (defined(__arm__) || defined(__aarch64__))
+#  if SANITIZER_LINUX && SANITIZER_GLIBC && \
+      (defined(__arm__) || defined(__aarch64__))
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
 #    if defined(__arm__)
@@ -2289,7 +2290,8 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   }
   return 0;
 }
-#  endif  // SANITIZER_LINUX && SANITIZER_GLIBC && (defined(__arm__) || defined(__aarch64__))
+#  endif  // SANITIZER_LINUX && SANITIZER_GLIBC && (defined(__arm__) ||
+          // defined(__aarch64__))
 
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
