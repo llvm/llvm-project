@@ -41,6 +41,11 @@ class PointerSubChecker
       "Indexing the address of a variable with other than 1 at this place "
       "is undefined behavior.";
 
+  /// Check that an array is indexed in the allowed range that is 0 to "one
+  /// after the end". The "array" can be address of a non-array variable.
+  /// @param E Expression of the pointer subtraction.
+  /// @param ElemReg An indexed region in the subtraction expression.
+  /// @param Reg Region of the other side of the expression.
   bool checkArrayBounds(CheckerContext &C, const Expr *E,
                         const ElementRegion *ElemReg,
                         const MemRegion *Reg) const;
@@ -84,6 +89,7 @@ bool PointerSubChecker::checkArrayBounds(CheckerContext &C, const Expr *E,
   SValBuilder &SVB = C.getSValBuilder();
 
   if (SuperReg == Reg) {
+    // Case like `(&x + 1) - &x`. Only 1 or 0 is allowed as index.
     if (const llvm::APSInt *I = SVB.getKnownValue(State, ElemReg->getIndex());
         I && (!I->isOne() && !I->isZero()))
       ReportBug(Msg_BadVarIndex);
