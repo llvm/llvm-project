@@ -3208,7 +3208,7 @@ void ObjectFileELF::Dump(Stream *s) {
   DumpDependentModules(s);
   s->EOL();
   DumpELFDynamic(s);
-  s->EOL();  
+  s->EOL();
 }
 
 // DumpELFHeader
@@ -3797,8 +3797,8 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
   if (section_list) {
     // Find the SHT_DYNAMIC section.
     Section *dynamic =
-      section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
-          .get();
+        section_list->FindSectionByType(eSectionTypeELFDynamicLinkInfo, true)
+            .get();
     if (dynamic) {
       assert(dynamic->GetObjectFile() == this);
       const ELFSectionHeaderInfo *header =

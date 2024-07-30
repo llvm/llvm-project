@@ -436,8 +436,6 @@ private:
   /// \return The bytes that represent the string table data or \c std::nullopt
   ///         if an error occured.
   std::optional<lldb_private::DataExtractor> GetDynstrData();
-
-
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
