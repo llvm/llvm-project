@@ -4060,11 +4060,48 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setpayload
+  SRCS
+    setpayload.cpp
+  HDRS
+    ../setpayload.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  setpayloadf
+  SRCS
+    setpayloadf.cpp
+  HDRS
+    ../setpayloadf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   setpayloadf16
   SRCS
     setpayloadf16.cpp
   HDRS
     ../setpayloadf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  setpayloadf128
+  SRCS
+    setpayloadf128.cpp
+  HDRS
+    ../setpayloadf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
