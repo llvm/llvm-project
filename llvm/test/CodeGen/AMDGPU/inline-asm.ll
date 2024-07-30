@@ -314,3 +314,21 @@ exit:
   tail call void asm sideeffect "; use $0", "v"(i64 %v1)
   ret void
 }
+
+; CHECK-LABEL: {{^}}scc_as_i32:
+; CHECK: ; def scc
+; CHECK: ; use scc
+define void @scc_as_i32() {
+  %scc = call i32 asm sideeffect "; def $0", "={scc}"()
+  call void asm sideeffect "; use $0 ", "{scc}"(i32 %scc)
+  ret void
+}
+
+; CHECK-LABEL: {{^}}scc_as_i1:
+; CHECK: ; def scc
+; CHECK: ; use scc
+define void @scc_as_i1() {
+  %scc = call i1 asm sideeffect "; def $0", "={scc}"()
+  call void asm sideeffect "; use $0 ", "{scc}"(i1 %scc)
+  ret void
+}

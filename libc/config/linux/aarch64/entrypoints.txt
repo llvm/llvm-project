@@ -346,6 +346,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.canonicalize
+    libc.src.math.canonicalizef
+    libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
@@ -366,6 +369,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.exp2m1f
     libc.src.math.expf
     libc.src.math.expm1
     libc.src.math.expm1f
@@ -425,6 +429,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -494,11 +500,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rintf
     libc.src.math.rintl
     libc.src.math.round
-    libc.src.math.roundf
-    libc.src.math.roundl
     libc.src.math.roundeven
     libc.src.math.roundevenf
     libc.src.math.roundevenl
+    libc.src.math.roundf
+    libc.src.math.roundl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -514,6 +520,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl
@@ -640,6 +648,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundevenf128
     libc.src.math.scalbnf128
     libc.src.math.sqrtf128
+    libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
