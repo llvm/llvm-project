@@ -239,7 +239,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s8>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s8>), [[COPY2]](p0) :: (store (<vscale x 1 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s8>), [[COPY3]](p0) :: (store (<vscale x 1 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx1i8
@@ -248,7 +249,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s8>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s8>), [[COPY2]](p0) :: (store (<vscale x 1 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s8>), [[COPY3]](p0) :: (store (<vscale x 1 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 1 x s8>) = COPY $v8
@@ -271,7 +273,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s8>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s8>), [[COPY2]](p0) :: (store (<vscale x 2 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s8>), [[COPY3]](p0) :: (store (<vscale x 2 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i8
@@ -280,7 +283,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s8>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s8>), [[COPY2]](p0) :: (store (<vscale x 2 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s8>), [[COPY3]](p0) :: (store (<vscale x 2 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s8>) = COPY $v8
@@ -303,7 +307,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s8>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s8>), [[COPY2]](p0) :: (store (<vscale x 4 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s8>), [[COPY3]](p0) :: (store (<vscale x 4 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i8
@@ -312,7 +317,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s8>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s8>), [[COPY2]](p0) :: (store (<vscale x 4 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s8>), [[COPY3]](p0) :: (store (<vscale x 4 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s8>) = COPY $v8
@@ -335,7 +341,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s8>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s8>), [[COPY2]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s8>), [[COPY3]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx8i8
@@ -344,7 +351,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s8>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s8>), [[COPY2]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s8>), [[COPY3]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 8 x s8>) = COPY $v8
@@ -367,7 +375,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i8
@@ -376,7 +385,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -399,7 +409,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 32 x s8>) = COPY $v8m4
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s8>), [[COPY2]](p0) :: (store (<vscale x 32 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s8>), [[COPY3]](p0) :: (store (<vscale x 32 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx32i8
@@ -408,7 +419,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 32 x s8>) = COPY $v8m4
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s8>), [[COPY2]](p0) :: (store (<vscale x 32 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s8>), [[COPY3]](p0) :: (store (<vscale x 32 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 32 x s8>) = COPY $v8m4
@@ -431,7 +443,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 64 x s8>) = COPY $v8m8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 64 x s8>), [[COPY2]](p0) :: (store (<vscale x 64 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 64 x s8>), [[COPY3]](p0) :: (store (<vscale x 64 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx64i8
@@ -440,7 +453,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 64 x s8>) = COPY $v8m8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 64 x s8>), [[COPY2]](p0) :: (store (<vscale x 64 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 64 x s8>), [[COPY3]](p0) :: (store (<vscale x 64 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 64 x s8>) = COPY $v8m8
@@ -463,7 +477,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s16>), [[COPY2]](p0) :: (store (<vscale x 1 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s16>), [[COPY3]](p0) :: (store (<vscale x 1 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx1i16
@@ -472,7 +487,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s16>), [[COPY2]](p0) :: (store (<vscale x 1 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s16>), [[COPY3]](p0) :: (store (<vscale x 1 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 1 x s16>) = COPY $v8
@@ -495,7 +511,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s16>), [[COPY2]](p0) :: (store (<vscale x 2 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s16>), [[COPY3]](p0) :: (store (<vscale x 2 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i16
@@ -504,7 +521,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s16>), [[COPY2]](p0) :: (store (<vscale x 2 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s16>), [[COPY3]](p0) :: (store (<vscale x 2 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s16>) = COPY $v8
@@ -527,7 +545,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i16
@@ -536,7 +555,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -559,7 +579,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s16>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s16>), [[COPY2]](p0) :: (store (<vscale x 8 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s16>), [[COPY3]](p0) :: (store (<vscale x 8 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx8i16
@@ -568,7 +589,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s16>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s16>), [[COPY2]](p0) :: (store (<vscale x 8 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s16>), [[COPY3]](p0) :: (store (<vscale x 8 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 8 x s16>) = COPY $v8m2
@@ -591,7 +613,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s16>) = COPY $v8m4
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s16>), [[COPY2]](p0) :: (store (<vscale x 16 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s16>), [[COPY3]](p0) :: (store (<vscale x 16 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i16
@@ -600,7 +623,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s16>) = COPY $v8m4
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s16>), [[COPY2]](p0) :: (store (<vscale x 16 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s16>), [[COPY3]](p0) :: (store (<vscale x 16 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s16>) = COPY $v8m4
@@ -623,7 +647,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 32 x s16>) = COPY $v8m8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s16>), [[COPY2]](p0) :: (store (<vscale x 32 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s16>), [[COPY3]](p0) :: (store (<vscale x 32 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx32i16
@@ -632,7 +657,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 32 x s16>) = COPY $v8m8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s16>), [[COPY2]](p0) :: (store (<vscale x 32 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 32 x s16>), [[COPY3]](p0) :: (store (<vscale x 32 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 32 x s16>) = COPY $v8m8
@@ -655,7 +681,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s32>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s32>), [[COPY2]](p0) :: (store (<vscale x 1 x s32>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s32>), [[COPY3]](p0) :: (store (<vscale x 1 x s32>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx1i32
@@ -664,7 +691,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s32>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s32>), [[COPY2]](p0) :: (store (<vscale x 1 x s32>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s32>), [[COPY3]](p0) :: (store (<vscale x 1 x s32>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 1 x s32>) = COPY $v8
@@ -687,7 +715,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i32
@@ -696,7 +725,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -719,7 +749,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s32>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s32>), [[COPY2]](p0) :: (store (<vscale x 4 x s32>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s32>), [[COPY3]](p0) :: (store (<vscale x 4 x s32>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i32
@@ -728,7 +759,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s32>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s32>), [[COPY2]](p0) :: (store (<vscale x 4 x s32>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s32>), [[COPY3]](p0) :: (store (<vscale x 4 x s32>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s32>) = COPY $v8m2
@@ -751,7 +783,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s32>) = COPY $v8m4
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s32>), [[COPY2]](p0) :: (store (<vscale x 8 x s32>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s32>), [[COPY3]](p0) :: (store (<vscale x 8 x s32>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx8i32
@@ -760,7 +793,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s32>) = COPY $v8m4
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s32>), [[COPY2]](p0) :: (store (<vscale x 8 x s32>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s32>), [[COPY3]](p0) :: (store (<vscale x 8 x s32>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 8 x s32>) = COPY $v8m4
@@ -783,7 +817,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s32>) = COPY $v8m8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s32>), [[COPY2]](p0) :: (store (<vscale x 16 x s32>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s32>), [[COPY3]](p0) :: (store (<vscale x 16 x s32>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i32
@@ -792,7 +827,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s32>) = COPY $v8m8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s32>), [[COPY2]](p0) :: (store (<vscale x 16 x s32>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s32>), [[COPY3]](p0) :: (store (<vscale x 16 x s32>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s32>) = COPY $v8m8
@@ -815,7 +851,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s64>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s64>), [[COPY2]](p0) :: (store (<vscale x 1 x s64>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s64>), [[COPY3]](p0) :: (store (<vscale x 1 x s64>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx1i64
@@ -824,7 +861,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x s64>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s64>), [[COPY2]](p0) :: (store (<vscale x 1 x s64>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x s64>), [[COPY3]](p0) :: (store (<vscale x 1 x s64>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 1 x s64>) = COPY $v8
@@ -847,7 +885,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i64
@@ -856,7 +895,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -879,7 +919,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s64>) = COPY $v8m4
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s64>), [[COPY2]](p0) :: (store (<vscale x 4 x s64>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s64>), [[COPY3]](p0) :: (store (<vscale x 4 x s64>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i64
@@ -888,7 +929,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s64>) = COPY $v8m4
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s64>), [[COPY2]](p0) :: (store (<vscale x 4 x s64>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s64>), [[COPY3]](p0) :: (store (<vscale x 4 x s64>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s64>) = COPY $v8m4
@@ -911,7 +953,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s64>) = COPY $v8m8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s64>), [[COPY2]](p0) :: (store (<vscale x 8 x s64>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s64>), [[COPY3]](p0) :: (store (<vscale x 8 x s64>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx8i64
@@ -920,7 +963,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x s64>) = COPY $v8m8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s64>), [[COPY2]](p0) :: (store (<vscale x 8 x s64>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x s64>), [[COPY3]](p0) :: (store (<vscale x 8 x s64>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 8 x s64>) = COPY $v8m8
@@ -943,7 +987,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 1)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 1)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i8_align1
@@ -952,7 +997,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 1)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 1)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -975,7 +1021,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 2)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 2)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i8_align2
@@ -984,7 +1031,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 2)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 2)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -1007,7 +1055,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i8_align16
@@ -1016,7 +1065,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -1039,7 +1089,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 64)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 64)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx16i8_align64
@@ -1048,7 +1099,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 16 x s8>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 64)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 64)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -1072,7 +1124,8 @@ body:             |
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV32I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_BITCAST [[COPY1]](<vscale x 4 x s16>)
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY2]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 1)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY3]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 1)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i16_align1
@@ -1082,7 +1135,8 @@ body:             |
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV64I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_BITCAST [[COPY1]](<vscale x 4 x s16>)
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY2]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 1)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY3]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 1)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -1106,7 +1160,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 2)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 2)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i16_align2
@@ -1115,7 +1170,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 2)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 2)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -1138,7 +1194,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 4)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 4)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i16_align4
@@ -1147,7 +1204,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 4)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 4)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -1170,7 +1228,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i16_align8
@@ -1179,7 +1238,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -1202,7 +1262,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 16)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 16)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx4i16_align16
@@ -1211,7 +1272,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 4 x s16>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY2]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 16)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 4 x s16>), [[COPY3]](p0) :: (store (<vscale x 4 x s16>) into %ir.pa, align 16)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -1235,7 +1297,8 @@ body:             |
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV32I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_BITCAST [[COPY1]](<vscale x 2 x s32>)
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY2]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 2)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY3]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 2)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i32_align2
@@ -1245,7 +1308,8 @@ body:             |
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV64I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_BITCAST [[COPY1]](<vscale x 2 x s32>)
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY2]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 2)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[BITCAST]](<vscale x 8 x s8>), [[COPY3]](p0) :: (store (<vscale x 8 x s8>) into %ir.pa, align 2)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -1269,7 +1333,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 4)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 4)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i32_align4
@@ -1278,7 +1343,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 4)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 4)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -1301,7 +1367,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i32_align8
@@ -1310,7 +1377,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -1333,7 +1401,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 16)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 16)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i32_align16
@@ -1342,7 +1411,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 16)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 16)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -1365,7 +1435,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 256)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 256)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i32_align256
@@ -1374,7 +1445,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s32>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY2]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 256)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s32>), [[COPY3]](p0) :: (store (<vscale x 2 x s32>) into %ir.pa, align 256)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -1398,7 +1470,8 @@ body:             |
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV32I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_BITCAST [[COPY1]](<vscale x 2 x s64>)
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[BITCAST]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 4)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[BITCAST]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 4)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i64_align4
@@ -1408,7 +1481,8 @@ body:             |
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV64I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_BITCAST [[COPY1]](<vscale x 2 x s64>)
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[BITCAST]](<vscale x 16 x s8>), [[COPY2]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 4)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[BITCAST]](<vscale x 16 x s8>), [[COPY3]](p0) :: (store (<vscale x 16 x s8>) into %ir.pa, align 4)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -1432,7 +1506,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 8)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 8)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i64_align8
@@ -1441,7 +1516,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 8)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 8)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -1464,7 +1540,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i64_align16
@@ -1473,7 +1550,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -1496,7 +1574,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 32)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 32)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2i64_align32
@@ -1505,7 +1584,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x s64>) = COPY $v8m2
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY2]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 32)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x s64>), [[COPY3]](p0) :: (store (<vscale x 2 x s64>) into %ir.pa, align 32)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x s64>) = COPY $v8m2
@@ -1528,7 +1608,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x p0>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x p0>), [[COPY2]](p0) :: (store (<vscale x 1 x p0>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 1 x p0>), [[COPY3]](p0) :: (store (<vscale x 1 x p0>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx1ptr
@@ -1537,7 +1618,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 1 x p0>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x p0>), [[COPY2]](p0) :: (store (<vscale x 1 x p0>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 1 x p0>), [[COPY3]](p0) :: (store (<vscale x 1 x p0>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 1 x p0>) = COPY $v8
@@ -1560,7 +1642,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x p0>) = COPY $v8
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY2]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY3]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx2ptr
@@ -1569,7 +1652,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 2 x p0>) = COPY $v8
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY2]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 2 x p0>), [[COPY3]](p0) :: (store (<vscale x 2 x p0>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 2 x p0>) = COPY $v8
@@ -1592,7 +1676,8 @@ body:             |
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x p0>) = COPY $v8m4
     ; RV32I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY2]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
+    ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV32I-NEXT: G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY3]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
     ; RV32I-NEXT: PseudoRET
     ;
     ; RV64I-LABEL: name: vstore_nx8ptr
@@ -1601,7 +1686,8 @@ body:             |
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(<vscale x 8 x p0>) = COPY $v8m4
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY2]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
+    ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gprb(p0) = COPY [[COPY2]](p0)
+    ; RV64I-NEXT: G_STORE [[COPY1]](<vscale x 8 x p0>), [[COPY3]](p0) :: (store (<vscale x 8 x p0>) into %ir.pa)
     ; RV64I-NEXT: PseudoRET
     %0:gprb(p0) = COPY $x10
     %1:vrb(<vscale x 8 x p0>) = COPY $v8m4
