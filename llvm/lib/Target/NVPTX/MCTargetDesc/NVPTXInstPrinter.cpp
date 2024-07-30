@@ -19,6 +19,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include <cctype>
 using namespace llvm;
@@ -249,12 +250,9 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
         O << ".mmio.relaxed.sys";
         break;
       default:
-        SmallString<256> Msg;
-        raw_svector_ostream OS(Msg);
-        OS << "NVPTX LdStCode Printer does not support \"" << Ordering
-           << "\" sem modifier.";
-        report_fatal_error(OS.str());
-        break;
+        report_fatal_error(formatv(
+            "NVPTX LdStCode Printer does not support \"{}\" sem modifier.",
+            toCString(Ordering)));
       }
     } else if (!strcmp(Modifier, "addsp")) {
       switch (Imm) {

@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 
@@ -828,12 +829,11 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
         Ordering == AtomicOrdering::Unordered ||
         Ordering == AtomicOrdering::Monotonic) &&
       !HasMemoryOrdering) {
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "PTX does not support \"atomic\" for orderings different than"
-          "\"NotAtomic\" or \"Monotonic\" for sm_60 or older, but order is: \""
-       << toIRString(Ordering) << "\".";
-    report_fatal_error(OS.str());
+    report_fatal_error(
+        formatv("PTX does not support \"atomic\" for orderings different than"
+                "\"NotAtomic\" or \"Monotonic\" for sm_60 or older, but order "
+                "is: \"{}\".",
+                toIRString(Ordering)));
   }
 
   // [3]: TODO: these should eventually use .mmio<.atomic sem>; for now we drop
@@ -870,35 +870,25 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // case AtomicOrdering::Consume: // If LLVM ever provides this, lower it to
   // Acquire.
   case AtomicOrdering::Acquire:
-    if (!N->readMem()) {
-      SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
-      OS << "PTX only supports Acquire Ordering on reads: "
-         << N->getOperationName();
-      N->print(OS);
-      report_fatal_error(OS.str());
-    }
+    if (!N->readMem())
+      report_fatal_error(
+          formatv("PTX only supports Acquire Ordering on reads: {}",
+                  N->getOperationName()));
     return AddrGenericOrGlobalOrShared ? NVPTX::Ordering::Acquire
                                        : NVPTX::Ordering::NotAtomic;
   case AtomicOrdering::Release:
-    if (!N->writeMem()) {
-      SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
-      OS << "PTX only supports Release Ordering on writes: "
-         << N->getOperationName();
-      N->print(OS);
-      report_fatal_error(OS.str());
-    }
+    if (!N->writeMem())
+      report_fatal_error(
+          formatv("PTX only supports Release Ordering on writes: {}",
+                  N->getOperationName()));
     return AddrGenericOrGlobalOrShared ? NVPTX::Ordering::Release
                                        : NVPTX::Ordering::NotAtomic;
   case AtomicOrdering::AcquireRelease: {
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "NVPTX does not support AcquireRelease Ordering on read-modify-write "
-          "yet and PTX does not support it on loads or stores: "
-       << N->getOperationName();
-    N->print(OS);
-    report_fatal_error(OS.str());
+    report_fatal_error(
+        formatv("NVPTX does not support AcquireRelease Ordering on "
+                "read-modify-write "
+                "yet and PTX does not support it on loads or stores: {}",
+                N->getOperationName()));
   }
   case AtomicOrdering::SequentiallyConsistent: {
     // LLVM-IR SequentiallyConsistent atomics map to a two-instruction PTX
@@ -913,27 +903,20 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
       InstrOrder = NVPTX::Ordering::Acquire;
     else if (N->writeMem())
       InstrOrder = NVPTX::Ordering::Release;
-    else {
-      SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
-      OS << "NVPTX does not support SequentiallyConsistent Ordering on "
-            "read-modify-writes yet: "
-         << N->getOperationName();
-      N->print(OS);
-      report_fatal_error(OS.str());
-    }
+    else
+      report_fatal_error(
+          formatv("NVPTX does not support SequentiallyConsistent Ordering on "
+                  "read-modify-writes yet: {}",
+                  N->getOperationName()));
     return AddrGenericOrGlobalOrShared
                ? OperationOrderings(InstrOrder,
                                     NVPTX::Ordering::SequentiallyConsistent)
                : OperationOrderings(NVPTX::Ordering::NotAtomic);
   }
   }
-
-  SmallString<256> Msg;
-  raw_svector_ostream OS(Msg);
-  OS << "NVPTX backend does not support AtomicOrdering \""
-     << toIRString(Ordering) << "\" yet.";
-  report_fatal_error(OS.str());
+  report_fatal_error(
+      formatv("NVPTX backend does not support AtomicOrdering \"{}\" yet.",
+              toIRString(Ordering)));
 }
 
 } // namespace
@@ -1166,11 +1149,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
     break;
   }
   default:
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
-       << "\".";
-    report_fatal_error(OS.str());
+    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
+                               toCString(NVPTX::Ordering(FenceOrdering))));
   }
 
   // Type Setting: fromType + fromTypeWidth
@@ -1329,11 +1309,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     break;
   }
   default:
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
-       << "\".";
-    report_fatal_error(OS.str());
+    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
+                               toCString(NVPTX::Ordering(FenceOrdering))));
   }
 
   // Vector Setting
@@ -2001,11 +1978,8 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     break;
   }
   default:
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
-       << "\".";
-    report_fatal_error(OS.str());
+    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
+                               toCString(NVPTX::Ordering(FenceOrdering))));
   }
 
   // Vector Setting
@@ -2161,11 +2135,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     break;
   }
   default:
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
-       << "\".";
-    report_fatal_error(OS.str());
+    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
+                               toCString(NVPTX::Ordering(FenceOrdering))));
   }
 
   // Type Setting: toType + toTypeWidth
