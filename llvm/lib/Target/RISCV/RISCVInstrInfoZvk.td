@@ -278,6 +278,8 @@ multiclass VPseudoBinaryV_S_NoMask_Zvk<LMULInfo m> {
       def "_VS_" # m.MX # "_" # vs2_lmul.MX : VPseudoBinaryNoMask_Zvk<m.vrclass, vs2_lmul.vrclass>;
 }
 
+let ActiveElementsAffectResult = true in {
+
 multiclass VPseudoVGMUL {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
@@ -396,6 +398,8 @@ multiclass VPseudoVSM3ME {
                            forceMergeOpRead=true>;
   }
 }
+
+} // ActiveElementsAffectResult = true
 
 multiclass VPseudoVCLMUL_VV_VX {
   foreach m = MxList in {

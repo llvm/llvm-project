@@ -123,6 +123,9 @@ enum {
   // 3 -> widening case
   TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
   TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
+
+  ActiveElementsAffectResultShift = TargetOverlapConstraintTypeShift + 2,
+  ActiveElementsAffectResultMask = 1 << ActiveElementsAffectResultShift,
 };
 
 // Helper functions to read TSFlags.
@@ -170,6 +173,12 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
 
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
+
+/// \returns true if the result in each element depends on the active elements
+/// e.g. non-elementwise instructions like vredsum.vs/vcompress.vm/viota.m
+static inline bool activeElementsAffectResult(uint64_t TSFlags) {
+  return TSFlags & ActiveElementsAffectResultMask;
+}
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;

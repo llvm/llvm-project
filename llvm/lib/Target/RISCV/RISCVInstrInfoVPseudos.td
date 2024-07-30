@@ -561,17 +561,16 @@ def RISCVVIntrinsicsTable : GenericTable {
 //    unmasked variant.  For all but compares, both the masked and
 //    unmasked variant have a passthru and policy operand.  For compares,
 //    neither has a policy op, and only the masked version has a passthru.
-class RISCVMaskedPseudo<bits<4> MaskIdx, bit ActiveAffectsRes=false> {
+class RISCVMaskedPseudo<bits<4> MaskIdx> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
   bits<4> MaskOpIdx = MaskIdx;
-  bit ActiveElementsAffectResult = ActiveAffectsRes;
 }
 
 def RISCVMaskedPseudosTable : GenericTable {
   let FilterClass = "RISCVMaskedPseudo";
   let CppTypeName = "RISCVMaskedPseudoInfo";
-  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "ActiveElementsAffectResult"];
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx"];
   let PrimaryKey = ["MaskedPseudo"];
   let PrimaryKeyName = "getMaskedPseudoInfo";
 }
@@ -2021,7 +2020,7 @@ multiclass VPseudoVSFS_M {
   defvar constraint = "@earlyclobber $rd";
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
-    let VLMul = mti.LMul.value in {
+    let VLMul = mti.LMul.value, ActiveElementsAffectResult = true in {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskNoPolicy<VR, VR, constraint>,
                            SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                       forceMergeOpRead=true>;
@@ -2060,12 +2059,12 @@ multiclass VPseudoVIOTA_M {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList in {
     defvar mx = m.MX;
-    let VLMul = m.value in {
+    let VLMul = m.value, ActiveElementsAffectResult = 1 in {
       def "_" # mx : VPseudoUnaryNoMask<m.vrclass, VR, constraint>,
                        SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
-                                 RISCVMaskedPseudo<MaskIdx=2, ActiveAffectsRes=true>,
+                                 RISCVMaskedPseudo<MaskIdx=2>,
                                  SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                             forceMergeOpRead=true>;
     }
@@ -2076,7 +2075,7 @@ multiclass VPseudoVCPR_V {
   foreach m = MxList in {
     defvar mx = m.MX;
     defvar sews = SchedSEWSet<mx>.val;
-    let VLMul = m.value in
+    let VLMul = m.value, ActiveElementsAffectResult = true in
       foreach e = sews in {
         defvar suffix = "_" # m.MX # "_E" # e;
         let SEW = e in
@@ -3158,11 +3157,11 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
                                           DAGOperand Op2Class,
                                           LMULInfo MInfo,
                                           int sew> {
-  let VLMul = MInfo.value, SEW=sew in {
+  let VLMul = MInfo.value, SEW=sew, ActiveElementsAffectResult = true in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
-                                          RISCVMaskedPseudo<MaskIdx=3, ActiveAffectsRes=true>;
+                                          RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
 
@@ -3171,7 +3170,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                                     DAGOperand Op2Class,
                                                     LMULInfo MInfo,
                                                     int sew> {
-  let VLMul = MInfo.value, SEW=sew in {
+  let VLMul = MInfo.value, SEW=sew, ActiveElementsAffectResult = true in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew
         : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class,
@@ -3179,7 +3178,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
                                                Op2Class>,
-          RISCVMaskedPseudo<MaskIdx=3, ActiveAffectsRes=true>;
+          RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
 
@@ -6712,14 +6711,14 @@ defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 //===----------------------------------------------------------------------===//
 // 15.2. Vector mask population count vcpop
 //===----------------------------------------------------------------------===//
-let IsSignExtendingOpW = 1 in
+let IsSignExtendingOpW = 1, ActiveElementsAffectResult = 1 in
 defm PseudoVCPOP: VPseudoVPOP_M;
 
 //===----------------------------------------------------------------------===//
 // 15.3. vfirst find-first-set mask bit
 //===----------------------------------------------------------------------===//
 
-let IsSignExtendingOpW = 1 in
+let IsSignExtendingOpW = 1, ActiveElementsAffectResult = 1 in
 defm PseudoVFIRST: VPseudoV1ST_M;
 
 //===----------------------------------------------------------------------===//

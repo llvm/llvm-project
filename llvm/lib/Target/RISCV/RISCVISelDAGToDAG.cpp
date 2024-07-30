@@ -3845,7 +3845,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // Some operations produce different elementwise results depending on the
   // active elements, like viota.m or vredsum. This transformation is illegal
   // for these if we change the active elements (i.e. mask or VL).
-  if (Info->ActiveElementsAffectResult) {
+  if (RISCVII::activeElementsAffectResult(TrueTSFlags)) {
     if (Mask && !usesAllOnesMask(Mask, Glue))
       return false;
     if (TrueVL != VL)

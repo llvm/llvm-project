@@ -407,6 +407,8 @@ multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
                                                        UsesVXRM=0>;
 }
 
+let ActiveElementsAffectRes = true in {
+
 let Predicates = [HasVendorXSfvcp] in {
   foreach m = MxList in {
     defm X : VPseudoVC_X<m, GPR>;
@@ -457,6 +459,8 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }
+
+} // ActiveElementsAffectResult = true
 
 // SDNode
 def SDT_SF_VC_V_X : SDTypeProfile<1, 4, [SDTCisVec<0>,
