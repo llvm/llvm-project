@@ -743,6 +743,7 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
     * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
+    * ``OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -1170,6 +1171,12 @@ This environment variable can be used to control how the OpenMP runtime assigns
 blocks to loops with high trip counts. By default we reuse existing blocks
 rather than spawning new blocks.
 
+OFFLOAD_TRACK_ALLOCATION_TRACES
+"""""""""""""""""""""""""""""""
+
+This environment variable determines if the stack traces of allocations and
+deallocations are tracked to aid in error reporting, e.g., in case of
+double-free.
 
 .. _libomptarget_plugin:
 
