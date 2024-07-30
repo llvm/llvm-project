@@ -411,8 +411,10 @@
 
 // RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
 // RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
 // NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
-// NON-APX:      error: unsupported option '-mapx-features=' for target 'i386'
+// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s

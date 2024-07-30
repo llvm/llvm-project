@@ -281,9 +281,12 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
       for (StringRef Value : A->getValues()) {
         if (SubFeaturesOfAPX.contains(Value)) {
-          if (Not64Bit && FeaturesIn64BitOnly.contains(Value))
+          if (Not64Bit && FeaturesIn64BitOnly.contains(Value)) {
+            std::string ArgOrAlias = A->getSpelling().str() + "|-mapxf";
             D.Diag(diag::err_drv_unsupported_opt_for_target)
-                << A->getSpelling() << Triple.getTriple();
+                << ArgOrAlias << Triple.getTriple();
+            break;
+          }
 
           Features.push_back(
               Args.MakeArgString((IsNegative ? "-" : "+") + Value));
