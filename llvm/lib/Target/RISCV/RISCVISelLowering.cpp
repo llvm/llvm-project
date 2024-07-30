@@ -7486,7 +7486,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // Loads the function address into t0. Note that we are using offsets
   // pc-relative to the first instruction of the trampoline.
   MCInst LD_X5_TargetFunctionOffset_Inst =
-      MCInstBuilder(RISCV::LD).addReg(RISCV::X5).addReg(RISCV::X7).addImm(24);
+      MCInstBuilder(RISCV::LD).addReg(RISCV::X5).addReg(RISCV::X7).addImm(FunctionAddressOffset);
   uint32_t LD_X5_TargetFunctionOffset =
       GetEncoding(LD_X5_TargetFunctionOffset_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
@@ -7498,7 +7498,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // ld t2, 16(t2)
   // Load the value of the static chain.
   MCInst LD_X7_StaticChainOffset_Inst =
-      MCInstBuilder(RISCV::LD).addReg(RISCV::X7).addReg(RISCV::X7).addImm(16);
+      MCInstBuilder(RISCV::LD).addReg(RISCV::X7).addReg(RISCV::X7).addImm(StaticChainOffset);
   uint32_t LD_X7_StaticChainOffset = GetEncoding(LD_X7_StaticChainOffset_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(8, dl, MVT::i64));
