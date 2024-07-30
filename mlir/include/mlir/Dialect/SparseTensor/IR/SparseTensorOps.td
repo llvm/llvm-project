@@ -1536,10 +1536,10 @@ def ExtractValOp : SparseTensor_Op<"extract_value", [
     TypesMatchWith<"result type matches element type of tensor",
                    "tensor", "result",
                    "::llvm::cast<TensorType>($_self).getElementType()">]> {
-  let summary = "Extracts a value from a sparse tensor.";
+  let summary = "Extracts a value from a sparse tensor using an iterator.";
   let description = [{
-      The `sparse_tensor.extract_value` operation extract the value
-      pointed by a sparse iterator from a sparse tensor.
+      The `sparse_tensor.extract_value` operation extracts the value
+      pointed to by a sparse iterator from a sparse tensor.
 
       Example:
 
