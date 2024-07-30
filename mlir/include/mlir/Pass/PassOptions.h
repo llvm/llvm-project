@@ -142,15 +142,14 @@ private:
   /// This is the parser that is used by pass options that wrap PassOptions
   /// instances. Like GenericOptionParser, this is a thin wrapper around
   /// llvm::cl::basic_parser.
-  template <typename PassOptionsT, typename std::enable_if_t<std::is_base_of_v<
-                                       PassOptions, PassOptionsT>> * = 0>
-  struct PassOptionsParser
-      : public llvm::cl::basic_parser<PassOptionsParser<PassOptionsT>> {
+  template <typename PassOptionsT>
+  struct PassOptionsParser : public llvm::cl::basic_parser<PassOptionsT> {
+    using llvm::cl::basic_parser<PassOptionsT>::basic_parser;
     // Parse the options object by delegating to
     // `PassOptionsT::parseFromString`.
     bool parse(llvm::cl::Option &, StringRef, StringRef arg,
                PassOptionsT &value) {
-      return succeeded(value.parseFromString(arg));
+      return failed(value.parseFromString(arg));
     }
 
     // Print the options object by delegating to `PassOptionsT::print`.
@@ -173,33 +172,23 @@ private:
     detail::pass_options::printOptionValue<ParserT>(os, value);
   }
 
+public:
   /// The specific parser to use depending on llvm::cl parser used. This is only
   /// necessary because we need to provide additional methods for certain data
   /// type parsers.
   /// TODO: We should upstream the methods in GenericOptionParser to avoid the
   /// need to do this.
-
-  template <typename DataType, typename = void>
-  struct OptionParserFrom {
-    using type = llvm::cl::parser<DataType>;
-  };
-
   template <typename DataType>
-  struct OptionParserFrom<
-      DataType,
-      typename std::enable_if_t<std::is_base_of_v<
-          llvm::cl::generic_parser_base, llvm::cl::parser<DataType>>>> {
-    using type = GenericOptionParser<DataType>;
-  };
-
-  template <typename DataType>
-  struct OptionParserFrom<DataType, decltype(PassOptionsParser<DataType>{})> {
-    using type = PassOptionsParser<DataType>;
-  };
-
-public:
-  template <typename DataType>
-  using OptionParser = typename OptionParserFrom<DataType>::type;
+  using OptionParser = std::conditional_t<
+      // If the data type is derived from PassOptions, use the
+      // PassOptionsParser.
+      std::is_base_of_v<PassOptions, DataType>, PassOptionsParser<DataType>,
+      // Otherwise, use GenericOptionParser where it is well formed, and fall
+      // back to llvm::cl::parser otherwise.
+      std::conditional_t<std::is_base_of<llvm::cl::generic_parser_base,
+                                         llvm::cl::parser<DataType>>::value,
+                         GenericOptionParser<DataType>,
+                         llvm::cl::parser<DataType>>>;
 
   /// This class represents a specific pass option, with a provided
   /// data type.
@@ -314,11 +303,12 @@ public:
       if ((**this).empty())
         return;
 
-      os << this->ArgStr << '=';
+      os << this->ArgStr << "={";
       auto printElementFn = [&](const DataType &value) {
         printValue(os, this->getParser(), value);
       };
       llvm::interleave(*this, os, printElementFn, ",");
+      os << "}";
     }
 
     /// Copy the value from the given option into this one.
