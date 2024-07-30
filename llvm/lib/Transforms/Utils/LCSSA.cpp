@@ -335,7 +335,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
 // Compute the set of BasicBlocks in the loop `L` dominating at least one exit.
 static void computeBlocksDominatingExits(
-    Loop &L, const DominatorTree &DT, const SmallVectorImpl<BasicBlock *> &ExitBlocks,
+    Loop &L, const DominatorTree &DT,
+    const SmallVectorImpl<BasicBlock *> &ExitBlocks,
     SmallSetVector<BasicBlock *, 8> &BlocksDominatingExits) {
   // We start from the exit blocks, as every block trivially dominates itself
   // (not strictly).
