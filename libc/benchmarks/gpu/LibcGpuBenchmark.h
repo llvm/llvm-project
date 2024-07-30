@@ -120,7 +120,12 @@ template <typename T> static T get_rand_input() {
   // Required to correctly instantiate FPBits for floats and doubles.
   using RandType = typename cpp::conditional_t<(cpp::is_same_v<T, double>),
                                                uint64_t, uint32_t>;
-  RandType bits = LIBC_NAMESPACE::rand();
+  RandType bits;
+  if constexpr (cpp::is_same_v<T, uint64_t>)
+    bits = (static_cast<uint64_t>(LIBC_NAMESPACE::rand()) << 32) |
+           static_cast<uint64_t>(LIBC_NAMESPACE::rand());
+  else
+    bits = LIBC_NAMESPACE::rand();
   double scale = 0.5 + LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN / 2048.0;
   FPBits fp(bits);
   fp.set_biased_exponent(
