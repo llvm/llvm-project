@@ -8,18 +8,16 @@
 //  This file implements semantic analysis for C++0x variadic templates.
 //===----------------------------------------------------------------------===/
 
+#include "clang/Sema/Sema.h"
 #include "TypeLocBuilder.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 using namespace clang;
@@ -41,10 +39,6 @@ namespace {
     bool InLambda = false;
     unsigned DepthLimit = (unsigned)-1;
 
-    FunctionDecl *CurrentFunction = nullptr;
-    bool InConstraint = false;
-    SmallVectorImpl<UnexpandedParameterPack> *UnexpandedFromConstraints;
-
     void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
       if (auto *VD = dyn_cast<VarDecl>(ND)) {
         // For now, the only problematic case is a generic lambda's templated
@@ -57,31 +51,18 @@ namespace {
       } else if (getDepthAndIndex(ND).first >= DepthLimit)
         return;
 
-      if (InConstraint && UnexpandedFromConstraints) {
-        UnexpandedFromConstraints->push_back({ND, Loc});
-        return;
-      }
-
       Unexpanded.push_back({ND, Loc});
     }
     void addUnexpanded(const TemplateTypeParmType *T,
                        SourceLocation Loc = SourceLocation()) {
-      if (T->getDepth() < DepthLimit) {
-        if (InConstraint && UnexpandedFromConstraints) {
-          UnexpandedFromConstraints->push_back({T, Loc});
-          return;
-        }
+      if (T->getDepth() < DepthLimit)
         Unexpanded.push_back({T, Loc});
-      }
     }
 
   public:
     explicit CollectUnexpandedParameterPacksVisitor(
-        SmallVectorImpl<UnexpandedParameterPack> &Unexpanded,
-        SmallVectorImpl<UnexpandedParameterPack> *UnexpandedFromConstraints =
-            nullptr)
-        : Unexpanded(Unexpanded),
-          UnexpandedFromConstraints(UnexpandedFromConstraints) {}
+        SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
+        : Unexpanded(Unexpanded) {}
 
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
@@ -156,10 +137,6 @@ namespace {
     bool TraverseStmt(Stmt *S) {
       Expr *E = dyn_cast_or_null<Expr>(S);
 
-      llvm::SaveAndRestore _(InConstraint);
-      if (CurrentFunction && CurrentFunction->getTrailingRequiresClause() == S)
-        InConstraint = true;
-
       if ((E && E->containsUnexpandedParameterPack()) || InLambda)
         return inherited::TraverseStmt(S);
 
@@ -193,17 +170,6 @@ namespace {
       // pack that contains any references to other packs.
       if (D && D->isParameterPack())
         return true;
-
-      if (D && D->isFunctionOrFunctionTemplate()) {
-        FunctionDecl *FD;
-        if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
-          FD = FTD->getTemplatedDecl();
-        else
-          FD = cast<FunctionDecl>(D);
-
-        llvm::SaveAndRestore _(CurrentFunction, FD);
-        return inherited::TraverseDecl(D);
-      }
 
       return inherited::TraverseDecl(D);
     }
@@ -569,14 +535,6 @@ void Sema::collectUnexpandedParameterPacks(TemplateArgument Arg,
                    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
   CollectUnexpandedParameterPacksVisitor(Unexpanded)
     .TraverseTemplateArgument(Arg);
-}
-
-void Sema::collectUnexpandedParameterPacksForFoldExprs(
-    Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded,
-    SmallVectorImpl<UnexpandedParameterPack> &UnexpandedFromConstraints) {
-  CollectUnexpandedParameterPacksVisitor Visitor(Unexpanded,
-                                                 &UnexpandedFromConstraints);
-  Visitor.TraverseTemplateArgument(E);
 }
 
 void Sema::collectUnexpandedParameterPacks(TemplateArgumentLoc Arg,

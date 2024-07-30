@@ -14042,15 +14042,6 @@ public:
   ///
   /// \param Arg The template argument that will be traversed to find
   /// unexpanded parameter packs.
-  void collectUnexpandedParameterPacksForFoldExprs(
-      Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded,
-      SmallVectorImpl<UnexpandedParameterPack> &UnexpandedFromConstraints);
-
-  /// Collect the set of unexpanded parameter packs within the given
-  /// template argument.
-  ///
-  /// \param Arg The template argument that will be traversed to find
-  /// unexpanded parameter packs.
   void collectUnexpandedParameterPacks(
       TemplateArgumentLoc Arg,
       SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);

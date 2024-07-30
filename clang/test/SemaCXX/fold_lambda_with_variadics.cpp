@@ -7,9 +7,6 @@ struct identity {
   using type = T;
 };
 
-template <class... T>
-concept C = false; // #concept-C
-
 template <class = void> void f() {
 
   static_assert([]<class... Is>(Is... x) {
@@ -26,26 +23,8 @@ template <class = void> void f() {
   }(1);
 
   []<class... Is>() {
-    ([]()               // expected-error {{no matching function}}
-       requires C<Is>   // expected-note {{because 'float' does not satisfy 'C'}} \
-                        // expected-note@-1 {{constraints not satisfied}}         \
-                        // expected-note@#concept-C {{evaluated to false}}        \
-                        // expected-note@#instantiate-f {{requested here}}
-     {}(),
-     ...);
-  }.template operator()<char, int, float>(); // expected-note {{requested here}}
-
-
-  []<class... Is>() {
-    ([](Is)
-       requires (!C<Is>)
-     {}(Is()),
-     ...);
-  }.template operator()<char, int, float>();
-
-  []<class... Is>() {
     ([]<class = Is>(Is)
-       noexcept(bool(Is())) requires (!C<Is>)
+       noexcept(bool(Is()))
      {}(Is()),
      ...);
   }.template operator()<char, int, float>();

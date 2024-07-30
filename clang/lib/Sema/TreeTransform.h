@@ -288,8 +288,7 @@ public:
                                SourceRange PatternRange,
                                ArrayRef<UnexpandedParameterPack> Unexpanded,
                                bool &ShouldExpand, bool &RetainExpansion,
-                               std::optional<unsigned> &NumExpansions,
-                               bool ForConstraints = false) {
+                               std::optional<unsigned> &NumExpansions) {
     ShouldExpand = false;
     return false;
   }
@@ -15306,11 +15305,9 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
 
   Expr *Pattern = E->getPattern();
 
-  SmallVector<UnexpandedParameterPack, 2> Unexpanded, UnexpandedFromConstraints;
-  getSema().collectUnexpandedParameterPacksForFoldExprs(
-      Pattern, Unexpanded, UnexpandedFromConstraints);
-  assert((!Unexpanded.empty() || !UnexpandedFromConstraints.empty()) &&
-         "Pack expansion without parameter packs?");
+  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+  getSema().collectUnexpandedParameterPacks(Pattern, Unexpanded);
+  assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
 
   // Determine whether the set of unexpanded parameter packs can and should
   // be expanded.
@@ -15324,15 +15321,6 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
                                            Expand, RetainExpansion,
                                            NumExpansions))
     return true;
-
-  // Only constraints contain unexpanded packs.
-  if (Unexpanded.empty() && !UnexpandedFromConstraints.empty()) {
-    if (getDerived().TryExpandParameterPacks(
-            E->getEllipsisLoc(), Pattern->getSourceRange(),
-            UnexpandedFromConstraints, Expand, RetainExpansion, NumExpansions,
-            /*ForConstraints=*/true))
-      return true;
-  }
 
   if (!Expand) {
     // Do not expand any packs here, just transform and rebuild a fold

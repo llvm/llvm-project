@@ -1395,20 +1395,7 @@ namespace {
                                  SourceRange PatternRange,
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,
                                  bool &ShouldExpand, bool &RetainExpansion,
-                                 std::optional<unsigned> &NumExpansions,
-                                 bool ForConstraints = false) {
-      if (ForConstraints) {
-        MultiLevelTemplateArgumentList MLTAL =
-            getSema().getTemplateInstantiationArgs(
-                cast<NamedDecl>(getSema().CurContext), /*DC=*/nullptr,
-                /*Final=*/false,
-                /*Innermost=*/std::nullopt, /*RelativeToPrimary=*/true,
-                /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
-        return getSema().CheckParameterPacksForExpansion(
-            EllipsisLoc, PatternRange, Unexpanded, MLTAL, ShouldExpand,
-            RetainExpansion, NumExpansions);
-      }
-
+                                 std::optional<unsigned> &NumExpansions) {
       return getSema().CheckParameterPacksForExpansion(EllipsisLoc,
                                                        PatternRange, Unexpanded,
                                                        TemplateArgs,
@@ -1688,8 +1675,8 @@ namespace {
           // RecoveryExpr that wraps the uninstantiated default argument so
           // that downstream diagnostics are omitted.
           ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
-              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(), {UninstExpr},
-              UninstExpr->getType());
+              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(),
+              { UninstExpr }, UninstExpr->getType());
           if (ErrorResult.isUsable())
             PVD->setDefaultArg(ErrorResult.get());
         }
