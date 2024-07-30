@@ -13791,15 +13791,15 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
 SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   if (!DAG.getSubtarget<AArch64Subtarget>().hasSVE2())
     return SDValue();
-  auto LaneMask = Op.getOperand(0);
-  auto Splat = Op.getOperand(1);
+  SDValue LaneMask = Op.getOperand(0);
+  SDValue Splat = Op.getOperand(1);
 
   if (LaneMask.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
       LaneMask.getConstantOperandVal(0) != Intrinsic::get_active_lane_mask ||
       Splat.getOpcode() != ISD::SPLAT_VECTOR)
     return SDValue();
 
-  auto Cmp = Splat.getOperand(0);
+  SDValue Cmp = Splat.getOperand(0);
   if (Cmp.getOpcode() != ISD::SETCC)
     return SDValue();
 
@@ -13815,7 +13815,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   if (!isPowerOf2_64(EltSize) || EltSize > 64)
     return SDValue();
 
-  auto Diff = Cmp.getOperand(0);
+  SDValue Diff = Cmp.getOperand(0);
   if (Diff.getOpcode() != ISD::SUB || Diff.getValueType() != MVT::i64)
     return SDValue();
 
@@ -13827,15 +13827,15 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   // An alias mask for i8 elements omits the division because it would just
   // divide by 1
   if (EltSize > 1) {
-    auto DiffDiv = LaneMask.getOperand(2);
+    SDValue DiffDiv = LaneMask.getOperand(2);
     auto DiffDivConst = dyn_cast<ConstantSDNode>(DiffDiv.getOperand(1));
     if (!DiffDivConst || DiffDivConst->getZExtValue() != Log2_64(EltSize))
       return SDValue();
   } else if (LaneMask.getOperand(2) != Diff)
     return SDValue();
 
-  auto StorePtr = Diff.getOperand(0);
-  auto ReadPtr = Diff.getOperand(1);
+  SDValue StorePtr = Diff.getOperand(0);
+  SDValue ReadPtr = Diff.getOperand(1);
 
   unsigned IntrinsicID = 0;
   switch (EltSize) {
@@ -13856,9 +13856,8 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   }
   SDLoc DL(Op);
   SDValue ID = DAG.getConstant(IntrinsicID, DL, MVT::i32);
-  auto N = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(), ID,
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(), ID,
                        StorePtr, ReadPtr);
-  return N;
 }
 
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
