@@ -11,14 +11,14 @@ define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegr
 ; CHECK-NEXT:    .type _Z3foov$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 9
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s6
+; CHECK-NEXT:    s_add_co_u32 s1, s1, 0x46
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    s_add_co_u32 s33, s33, 0x118
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_mov_b32 s7, 0
-; CHECK-NEXT:    s_mov_b32 s8, 0
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
@@ -29,33 +29,38 @@ define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegr
 ; CHECK-NEXT:    ; implicit-def: $vgpr7
 ; CHECK-NEXT:  .LBB0_1: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    scratch_load_b32 v8, off, s7
-; CHECK-NEXT:    s_and_b32 s6, s8, 7
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 7
+; CHECK-NEXT:    s_and_b32 s4, s3, 7
+; CHECK-NEXT:    s_lshr_b32 s0, s2, 2
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 7
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 6
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 6
+; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_mov_b32_e32 v8, v0
 ; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 5
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 5
 ; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 4
-; CHECK-NEXT:    s_cselect_b32 s2, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 3
-; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 2
-; CHECK-NEXT:    s_cselect_b32 s4, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 1
-; CHECK-NEXT:    s_cselect_b32 s5, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 0
-; CHECK-NEXT:    s_cselect_b32 s6, -1, 0
-; CHECK-NEXT:    s_add_co_i32 s8, s8, 1
-; CHECK-NEXT:    s_add_co_i32 s7, s7, 4
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 0x46
-; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 4
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_dual_cndmask_b32 v7, v7, v8, vcc_lo :: v_dual_cndmask_b32 v6, v6, v8, s0
-; CHECK-NEXT:    v_dual_cndmask_b32 v5, v5, v8, s1 :: v_dual_cndmask_b32 v4, v4, v8, s2
-; CHECK-NEXT:    v_dual_cndmask_b32 v3, v3, v8, s3 :: v_dual_cndmask_b32 v2, v2, v8, s4
-; CHECK-NEXT:    v_dual_cndmask_b32 v1, v1, v8, s5 :: v_dual_cndmask_b32 v0, v0, v8, s6
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 3
+; CHECK-NEXT:    v_dual_cndmask_b32 v5, v5, v8, s1 :: v_dual_cndmask_b32 v4, v4, v8, vcc_lo
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 2
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc_lo
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 1
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, v2, v8, vcc_lo
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v1, v8, vcc_lo
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; CHECK-NEXT:    s_add_co_i32 s3, s3, 1
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v8, vcc_lo
+; CHECK-NEXT:    s_add_co_i32 s2, s2, 4
+; CHECK-NEXT:    s_cmp_lg_u32 s3, 0x46
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %for.body8.preheader
 ; CHECK-NEXT:    s_mov_b32 s0, 0
@@ -84,14 +89,19 @@ define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegr
 ; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v5, vcc_lo
 ; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 7
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v6, vcc_lo
 ; CHECK-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; CHECK-NEXT:    s_lshr_b32 s2, s0, 2
 ; CHECK-NEXT:    s_add_co_i32 s1, s1, 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v7, vcc_lo
-; CHECK-NEXT:    scratch_store_b32 off, v8, s0
 ; CHECK-NEXT:    s_add_co_i32 s0, s0, 4
+; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v7, vcc_lo
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s2
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 0x46
+; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v8
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
 ; CHECK-NEXT:  ; %bb.4: ; %for.cond.cleanup6
 ; CHECK-NEXT:    s_endpgm
