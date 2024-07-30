@@ -359,50 +359,45 @@ static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
       break;
     }
   }
-  return From.isSafeToMove(nullptr, SawStore);
+  return From.isSafeToMove(SawStore);
 }
 
-static const RISCV::RISCVMaskedPseudoInfo *
-lookupMaskedPseudoInfo(const MachineInstr &MI) {
+static std::optional<bool>
+lookupActiveElementsAffectsResult(const MachineInstr &MI) {
   const RISCV::RISCVMaskedPseudoInfo *Info =
       RISCV::lookupMaskedIntrinsicByUnmasked(MI.getOpcode());
   if (!Info)
     Info = RISCV::getMaskedPseudoInfo(MI.getOpcode());
-  return Info;
+  if (!Info)
+    return std::nullopt;
+  return Info->ActiveElementsAffectResult;
 }
 
-/// If a PseudoVMV_V_V is the only user of it's input, fold its passthru and VL
+/// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
 /// into it.
 ///
-/// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl, sew, policy
-/// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl, sew, policy
+/// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl1, sew, policy
+/// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl2, sew, policy
 ///
 /// ->
 ///
-/// %y = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl, sew, policy
+/// %y = PseudoVADD_V_V_M1 %passthru, %a, %b, min(vl1, vl2), sew, policy
 bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
     return false;
 
   MachineOperand &Passthru = MI.getOperand(1);
-  MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
 
   if (!MRI->hasOneUse(MI.getOperand(2).getReg()))
     return false;
 
+  MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
   if (!Src || Src->hasUnmodeledSideEffects() ||
-      Src->getParent() != MI.getParent())
+      Src->getParent() != MI.getParent() || Src->getNumDefs() != 1 ||
+      !RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) ||
+      !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
+      !RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags))
     return false;
-
-  // Src needs to be a pseudo that's opted into this transform.
-  const RISCV::RISCVMaskedPseudoInfo *Info = lookupMaskedPseudoInfo(*Src);
-  if (!Info)
-    return false;
-
-  assert(Src->getNumDefs() == 1 &&
-         RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) &&
-         RISCVII::hasVLOp(Src->getDesc().TSFlags) &&
-         RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags));
 
   // Src needs to have the same passthru as VMV_V_V
   if (Src->getOperand(1).getReg() != RISCV::NoRegister &&
@@ -429,21 +424,27 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   bool VLChanged = !MinVL->isIdenticalTo(SrcVL);
   bool RaisesFPExceptions = MI.getDesc().mayRaiseFPException() &&
                             !MI.getFlag(MachineInstr::MIFlag::NoFPExcept);
-  if (VLChanged && (Info->ActiveElementsAffectResult || RaisesFPExceptions))
+  auto ActiveElementsAffectResult = lookupActiveElementsAffectsResult(*Src);
+  if (!ActiveElementsAffectResult)
+    return false;
+  if (VLChanged && (*ActiveElementsAffectResult || RaisesFPExceptions))
     return false;
 
   if (!isSafeToMove(*Src, MI))
     return false;
 
-  // Move Src down to MI, then replace all uses of MI with it.
+  // Move Src down to MI so it can access its passthru/VL, then replace all uses
+  // of MI with it.
   Src->moveBefore(&MI);
 
-  Src->getOperand(1).setReg(Passthru.getReg());
-  // If Src is masked then its passthru needs to be in VRNoV0.
-  if (Passthru.getReg() != RISCV::NoRegister)
-    MRI->constrainRegClass(Passthru.getReg(),
-                           TII->getRegClass(Src->getDesc(), 1, TRI,
-                                            *Src->getParent()->getParent()));
+  if (Src->getOperand(1).getReg() != Passthru.getReg()) {
+    Src->getOperand(1).setReg(Passthru.getReg());
+    // If Src is masked then its passthru needs to be in VRNoV0.
+    if (Passthru.getReg() != RISCV::NoRegister)
+      MRI->constrainRegClass(Passthru.getReg(),
+                             TII->getRegClass(Src->getDesc(), 1, TRI,
+                                              *Src->getParent()->getParent()));
+  }
 
   if (MinVL->isImm())
     SrcVL.ChangeToImmediate(MinVL->getImm());
