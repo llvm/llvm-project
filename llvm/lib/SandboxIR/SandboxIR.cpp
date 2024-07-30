@@ -667,21 +667,32 @@ void LoadInst::dump() const {
 #endif // NDEBUG
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
                              Instruction *InsertBefore, Context &Ctx) {
+  return create(V, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx);
+}
+
+StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
+                             Instruction *InsertBefore, bool IsVolatile,
+                             Context &Ctx) {
   llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(BeforeIR);
-  auto *NewSI =
-      Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, /*isVolatile=*/false);
+  auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
   auto *NewSBI = Ctx.createStoreInst(NewSI);
   return NewSBI;
 }
+
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
                              BasicBlock *InsertAtEnd, Context &Ctx) {
+  return create(V, Ptr, Align, InsertAtEnd, /*IsVolatile=*/false, Ctx);
+}
+
+StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
+                             BasicBlock *InsertAtEnd, bool IsVolatile,
+                             Context &Ctx) {
   auto *InsertAtEndIR = cast<llvm::BasicBlock>(InsertAtEnd->Val);
   auto &Builder = Ctx.getLLVMIRBuilder();
   Builder.SetInsertPoint(InsertAtEndIR);
-  auto *NewSI =
-      Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, /*isVolatile=*/false);
+  auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
   auto *NewSBI = Ctx.createStoreInst(NewSI);
   return NewSBI;
 }
@@ -996,6 +1007,60 @@ void CallBrInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
+                                 ArrayRef<Value *> IdxList,
+                                 BasicBlock::iterator WhereIt,
+                                 BasicBlock *WhereBB, Context &Ctx,
+                                 const Twine &NameStr) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  SmallVector<llvm::Value *> LLVMIdxList;
+  LLVMIdxList.reserve(IdxList.size());
+  for (Value *Idx : IdxList)
+    LLVMIdxList.push_back(Idx->Val);
+  llvm::Value *NewV = Builder.CreateGEP(Ty, Ptr->Val, LLVMIdxList, NameStr);
+  if (auto *NewGEP = dyn_cast<llvm::GetElementPtrInst>(NewV))
+    return Ctx.createGetElementPtrInst(NewGEP);
+  assert(isa<llvm::Constant>(NewV) && "Expected constant");
+  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
+}
+
+Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
+                                 ArrayRef<Value *> IdxList,
+                                 Instruction *InsertBefore, Context &Ctx,
+                                 const Twine &NameStr) {
+  return GetElementPtrInst::create(Ty, Ptr, IdxList,
+                                   InsertBefore->getIterator(),
+                                   InsertBefore->getParent(), Ctx, NameStr);
+}
+
+Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
+                                 ArrayRef<Value *> IdxList,
+                                 BasicBlock *InsertAtEnd, Context &Ctx,
+                                 const Twine &NameStr) {
+  return GetElementPtrInst::create(Ty, Ptr, IdxList, InsertAtEnd->end(),
+                                   InsertAtEnd, Ctx, NameStr);
+}
+
+Value *GetElementPtrInst::getPointerOperand() const {
+  return Ctx.getValue(cast<llvm::GetElementPtrInst>(Val)->getPointerOperand());
+}
+
+#ifndef NDEBUG
+void GetElementPtrInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void GetElementPtrInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
@@ -1165,6 +1230,12 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<CallBrInst>(new CallBrInst(LLVMCallBr, *this));
     return It->second.get();
   }
+  case llvm::Instruction::GetElementPtr: {
+    auto *LLVMGEP = cast<llvm::GetElementPtrInst>(LLVMV);
+    It->second = std::unique_ptr<GetElementPtrInst>(
+        new GetElementPtrInst(LLVMGEP, *this));
+    return It->second.get();
+  }
   default:
     break;
   }
@@ -1221,6 +1292,13 @@ InvokeInst *Context::createInvokeInst(llvm::InvokeInst *I) {
 CallBrInst *Context::createCallBrInst(llvm::CallBrInst *I) {
   auto NewPtr = std::unique_ptr<CallBrInst>(new CallBrInst(I, *this));
   return cast<CallBrInst>(registerValue(std::move(NewPtr)));
+}
+
+GetElementPtrInst *
+Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
+  auto NewPtr =
+      std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
+  return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
 }
 
 Value *Context::getValue(llvm::Value *V) const {

@@ -3343,6 +3343,20 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
+    case Intrinsic::amdgcn_tensor_load_to_lds:
+    case Intrinsic::amdgcn_tensor_store_from_lds: {
+      constrainOpWithReadfirstlane(B, MI, 1);
+      constrainOpWithReadfirstlane(B, MI, 2);
+      constrainOpWithReadfirstlane(B, MI, 3);
+      constrainOpWithReadfirstlane(B, MI, 4);
+      return;
+    }
+    case Intrinsic::amdgcn_tensor_load_to_lds_d2:
+    case Intrinsic::amdgcn_tensor_store_from_lds_d2: {
+      constrainOpWithReadfirstlane(B, MI, 1);
+      constrainOpWithReadfirstlane(B, MI, 2);
+      return;
+    }
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
