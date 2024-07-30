@@ -3776,9 +3776,9 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   if (X86::optimizeShiftRotateWithImmediateOne(Inst))
     return true;
 
-  auto replaceWithCCMPCTEST = [&] (unsigned Opcode) -> bool {
-  if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {
-      Inst.setFlags(~(X86::IP_USE_EVEX) & Inst.getFlags());
+  auto replaceWithCCMPCTEST = [&](unsigned Opcode) -> bool {
+    if (ForcedOpcodePrefix == OpcodePrefix_EVEX) {
+      Inst.setFlags(~(X86::IP_USE_EVEX)&Inst.getFlags());
       Inst.setOpcode(Opcode);
       Inst.addOperand(MCOperand::createImm(0));
       Inst.addOperand(MCOperand::createImm(10));
@@ -3820,7 +3820,9 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   }
   // `{evex} cmp <>, <>` is alias of `ccmpt {dfv=} <>, <>`, and
   // `{evex} test <>, <>` is alias of `ctest {dfv=} <>, <>`
-#define FROM_TO(FROM, TO) case X86::FROM: return replaceWithCCMPCTEST(X86::TO);
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    return replaceWithCCMPCTEST(X86::TO);
     FROM_TO(CMP64rr, CCMP64rr)
     FROM_TO(CMP64mi32, CCMP64mi32)
     FROM_TO(CMP64mi8, CCMP64mi8)
