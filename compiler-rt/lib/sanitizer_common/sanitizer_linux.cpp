@@ -2302,7 +2302,8 @@ static const char *RegNumToRegName(int reg) {
     case 31:
       return "sp";
 #    endif
-#  endif  // (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID)
+#  endif  // (SANITIZER_LINUX && SANITIZER_GLIBC && !SANITIZER_ANDROID) ||
+          // SANITIZER_NETBSD
     default:
       return NULL;
   }
