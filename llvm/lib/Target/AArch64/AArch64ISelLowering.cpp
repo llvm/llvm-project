@@ -13859,7 +13859,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue ID = DAG.getConstant(IntrinsicID, DL, MVT::i32);
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(), ID,
-                       StorePtr, ReadPtr);
+                     StorePtr, ReadPtr);
 }
 
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
