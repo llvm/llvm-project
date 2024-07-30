@@ -37,10 +37,6 @@ public:
     return StmtToBlock.lookup(&ignoreCFGOmittedNodes(S));
   }
 
-  const llvm::DenseMap<const Stmt *, const CFGBlock *> &getMap() const {
-    return StmtToBlock;
-  }
-
 private:
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
 };
@@ -66,14 +62,6 @@ public:
 
   /// Returns the CFG that is stored in this context.
   const CFG &getCFG() const { return *Cfg; }
-
-  /// Returns a mapping from statements to basic blocks that contain them.
-  /// Deprecated. Use `blockForStmt()` instead (which prevents the potential
-  /// error of forgetting to call `ignoreCFGOmittedNodes()` on the statement to
-  /// look up).
-  const llvm::DenseMap<const Stmt *, const CFGBlock *> &getStmtToBlock() const {
-    return StmtToBlock.getMap();
-  }
 
   /// Returns the basic block that contains `S`, or null if no basic block
   /// containing `S` is found.
