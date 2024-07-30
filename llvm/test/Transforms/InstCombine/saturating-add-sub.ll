@@ -1398,9 +1398,7 @@ define i32 @uadd_sat(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_flipped(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -11
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ugt i32 %x, -11
@@ -1411,9 +1409,7 @@ define i32 @uadd_sat_flipped(i32 %x) {
 
 define i32 @uadd_sat_flipped2(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -10
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ugt i32 %x, -10
@@ -1452,9 +1448,7 @@ define i32 @uadd_sat_flipped3_neg_no_nuw(i32 %x) {
 
 define i32 @uadd_sat_negative_one(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_negative_one(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 1)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp eq i32 %x, -1
@@ -1476,9 +1470,7 @@ define <2 x i8> @uadd_sat_flipped4_vector(<2 x i8> %x) {
 
 define <2 x i8> @uadd_sat_flipped4_poison_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @uadd_sat_flipped4_poison_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X:%.*]], <i8 -10, i8 poison>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 9, i8 9>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 9, i8 9>)
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %cmp = icmp ult <2 x i8> %x, <i8 -10, i8 poison>
@@ -1489,9 +1481,7 @@ define <2 x i8> @uadd_sat_flipped4_poison_vector(<2 x i8> %x) {
 
 define <2 x i8> @uadd_sat_flipped4_poison_vector_compare(<2 x i8> %x) {
 ; CHECK-LABEL: @uadd_sat_flipped4_poison_vector_compare(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X:%.*]], <i8 -10, i8 poison>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 9, i8 poison>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 9, i8 9>)
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %cmp = icmp ult <2 x i8> %x, <i8 -10, i8 poison>
@@ -1986,9 +1976,7 @@ define i32 @uadd_sat_not_commute_select_uge_commute_add(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_constant(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_constant(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X]], -43
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 42)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 42
@@ -2054,9 +2042,7 @@ define i32 @uadd_sat_canon_y_nuw(i32 %x, i32 %y) {
 
 define <4 x i32> @uadd_sat_constant_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <4 x i32> [[X]], <i32 -43, i32 -43, i32 -43, i32 -43>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[X:%.*]], <4 x i32> <i32 42, i32 42, i32 42, i32 42>)
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
@@ -2078,9 +2064,7 @@ define <4 x i32> @uadd_sat_constant_vec_commute(<4 x i32> %x) {
 
 define <4 x i32> @uadd_sat_constant_vec_commute_undefs(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec_commute_undefs(
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 poison>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i32> [[X]], <i32 -43, i32 -43, i32 poison, i32 -43>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> [[A]], <4 x i32> <i32 -1, i32 poison, i32 -1, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[X:%.*]], <4 x i32> <i32 42, i32 42, i32 42, i32 42>)
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 poison>
