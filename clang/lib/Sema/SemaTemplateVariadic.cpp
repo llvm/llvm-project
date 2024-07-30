@@ -136,7 +136,6 @@ namespace {
     /// do not contain unexpanded parameter packs.
     bool TraverseStmt(Stmt *S) {
       Expr *E = dyn_cast_or_null<Expr>(S);
-
       if ((E && E->containsUnexpandedParameterPack()) || InLambda)
         return inherited::TraverseStmt(S);
 
