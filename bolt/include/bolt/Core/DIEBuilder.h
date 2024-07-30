@@ -127,6 +127,7 @@ private:
   DWARFContext *DwarfContext{nullptr};
   DWARFUnit *SkeletonCU{nullptr};
   uint64_t UnitSize{0};
+  uint64_t DebugNamesUnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
   DWARF5AcceleratorTable &DebugNamesTable;
   // Unordered map to handle name collision if output DWO directory is

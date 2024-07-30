@@ -739,9 +739,9 @@ void DWARFRewriter::updateDebugInfo() {
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
 
   CUPartitionVector PartVec = partitionCUs(*BC.DwCtx);
-  llvm::DenseMap<uint64_t, std::unique_ptr<DIEBuilder>> DWODIEBuildersByCU;
   for (std::vector<DWARFUnit *> &Vec : PartVec) {
     DIEBlder.buildCompileUnits(Vec);
+    llvm::SmallVector<std::unique_ptr<DIEBuilder>> DWODIEBuildersByCU;
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs()) {
       createRangeLocListAddressWriters(*CU);
       std::optional<DWARFUnit *> SplitCU;
@@ -763,21 +763,27 @@ void DWARFRewriter::updateDebugInfo() {
           *StrOffstsWriter, *StrWriter, *CU, DwarfOutputPath, std::nullopt);
       auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
           BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
-      DWODIEBuildersByCU[CU->getOffset()] = std::move(DWODIEBuilderPtr);
-      DIEBuilder &DWODIEBuilder = *DWODIEBuildersByCU[CU->getOffset()].get();
+      DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr));
+      DIEBuilder &DWODIEBuilder = *DWODIEBuildersByCU.back().get();
       if (CU->getVersion() >= 5)
         StrOffstsWriter->finalizeSection(*CU, DIEBlder);
       processSplitCU(*CU, **SplitCU, DIEBlder, *TempRangesSectionWriter,
                      AddressWriter, DWOName, DwarfOutputPath, DWODIEBuilder);
     }
+    unsigned DWODIEBuilderIndex = 0;
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs()) {
-      auto DWODIEBuilderIterator = DWODIEBuildersByCU.find(CU->getOffset());
-      if (DWODIEBuilderIterator != DWODIEBuildersByCU.end()) {
-        DIEBuilder &DWODIEBuilder = *DWODIEBuilderIterator->second.get();
-        DWODIEBuilder.updateDebugNamesTable();
-      }
-      processMainBinaryCU(*CU, DIEBlder);
+      std::optional<DWARFUnit *> SplitCU;
+      std::optional<uint64_t> DWOId = CU->getDWOId();
+      if (DWOId)
+        SplitCU = BC.getDWOCU(*DWOId);
+      if (!SplitCU)
+        continue;
+      DIEBuilder &DWODIEBuilder =
+          *DWODIEBuildersByCU[DWODIEBuilderIndex++].get();
+      DWODIEBuilder.updateDebugNamesTable();
     }
+    for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
+      processMainBinaryCU(*CU, DIEBlder);
     finalizeCompileUnits(DIEBlder, *Streamer, OffsetMap,
                          DIEBlder.getProcessedCUs(), *FinalAddrWriter);
   }

@@ -523,12 +523,11 @@ void DIEBuilder::finish() {
     finalizeCU(*CU, TypeUnitStartOffset);
   }
 
-  uint64_t UnitSizes = UnitSize;
   for (DWARFUnit *CU : getState().DUList) {
     // Skipping DWARF4 types.
     if (CU->getVersion() < 5 && CU->isTypeUnit())
       continue;
-    finalizeCU(*CU, UnitSizes);
+    finalizeCU(*CU, DebugNamesUnitSize);
   }
   if (opts::Verbosity >= 1) {
     if (!getState().DWARFDieAddressesParsed.empty())
