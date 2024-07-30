@@ -691,7 +691,8 @@ public:
         // Replace CI with a clone with an added funclet OperandBundle
         OperandBundleDef OB("funclet", EHPad);
         auto *NewCall =
-            CallBase::addOperandBundle(CI, LLVMContext::OB_funclet, OB, CI);
+            CallBase::addOperandBundle(CI, LLVMContext::OB_funclet, OB,
+                                       CI->getIterator());
         NewCall->copyMetadata(*CI);
         CI->replaceAllUsesWith(NewCall);
         CI->eraseFromParent();

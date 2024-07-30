@@ -2633,7 +2633,7 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
 
   // Create phi nodes to merge from the  backedge-taken check block.
   PHINode *BCResumeVal = PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
-                                         LoopScalarPreHeader->getFirstNonPHI());
+                                         LoopScalarPreHeader->getFirstNonPHIIt());
   // Copy original phi DL over to the new one.
   BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
 
