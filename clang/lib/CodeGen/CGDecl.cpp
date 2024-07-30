@@ -2796,7 +2796,7 @@ void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
 }
 
 void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
-  for (const Expr *E : D->varlists()) {
+  for (const Expr *E : D->varlist()) {
     const auto *DE = cast<DeclRefExpr>(E);
     const auto *VD = cast<VarDecl>(DE->getDecl());
 
