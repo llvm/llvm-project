@@ -11923,8 +11923,9 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
   // fairly deep in the call stack (i.e. is called many times).
 
   // X - X = 0.
+  unsigned BW = getTypeSizeInBits(More->getType());
   if (More == Less)
-    return APInt(getTypeSizeInBits(More->getType()), 0);
+    return APInt(BW, 0);
 
   if (isa<SCEVAddRecExpr>(Less) && isa<SCEVAddRecExpr>(More)) {
     const auto *LAR = cast<SCEVAddRecExpr>(Less);
@@ -11947,33 +11948,31 @@ ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
     // fall through
   }
 
-  if (isa<SCEVConstant>(Less) && isa<SCEVConstant>(More)) {
-    const auto &M = cast<SCEVConstant>(More)->getAPInt();
-    const auto &L = cast<SCEVConstant>(Less)->getAPInt();
-    return M - L;
-  }
+  // Try to cancel out common factors in two add expressions.
+  SmallDenseMap<const SCEV *, int, 8> Multiplicity;
+  APInt Diff(BW, 0);
+  auto Add = [&](const SCEV *S, int Mul) {
+    if (auto *C = dyn_cast<SCEVConstant>(S))
+      Diff += C->getAPInt() * Mul;
+    else
+      Multiplicity[S] += Mul;
+  };
+  auto Decompose = [&](const SCEV *S, int Mul) {
+    if (isa<SCEVAddExpr>(S)) {
+      for (const SCEV *Op : S->operands())
+        Add(Op, Mul);
+    } else
+      Add(S, Mul);
+  };
+  Decompose(More, 1);
+  Decompose(Less, -1);
 
-  SCEV::NoWrapFlags Flags;
-  const SCEV *LLess = nullptr, *RLess = nullptr;
-  const SCEV *LMore = nullptr, *RMore = nullptr;
-  const SCEVConstant *C1 = nullptr, *C2 = nullptr;
-  // Compare (X + C1) vs X.
-  if (splitBinaryAdd(Less, LLess, RLess, Flags))
-    if ((C1 = dyn_cast<SCEVConstant>(LLess)))
-      if (RLess == More)
-        return -(C1->getAPInt());
+  // Check whether all the non-constants cancel out.
+  for (const auto [_, Mul] : Multiplicity)
+    if (Mul != 0)
+      return std::nullopt;
 
-  // Compare X vs (X + C2).
-  if (splitBinaryAdd(More, LMore, RMore, Flags))
-    if ((C2 = dyn_cast<SCEVConstant>(LMore)))
-      if (RMore == Less)
-        return C2->getAPInt();
-
-  // Compare (X + C1) vs (X + C2).
-  if (C1 && C2 && RLess == RMore)
-    return C2->getAPInt() - C1->getAPInt();
-
-  return std::nullopt;
+  return Diff;
 }
 
 bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
