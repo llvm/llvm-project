@@ -8659,8 +8659,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         // Only create recipe for the last intermediate store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
           auto *Recipe = new VPScalarStoreRecipe(
-              *SI, /* StoredVal = */ Operands[0], /* Address = */ Operands[1],
-              SI->getDebugLoc());
+              *SI, /* StoredVal = */ Operands[0], /* Address = */ Operands[1]);
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
         continue;

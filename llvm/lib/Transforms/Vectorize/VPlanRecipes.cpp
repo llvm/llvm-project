@@ -1931,10 +1931,9 @@ void VPScalarStoreRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
   Value *StoredVal = State.get(getStoredVal(), State.UF - 1, /*IsScalar*/ true);
   Value *Addr = State.get(getAddress(), State.UF - 1, /*IsScalar*/ true);
-  StoreInst *NewSI =
-      Builder.CreateAlignedStore(StoredVal, Addr, getLoadStoreAlignment(&SI));
+  StoreInst *NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
   NewSI->setDebugLoc(getDebugLoc());
-  State.addMetadata(NewSI, &SI);
+  State.addMetadata(NewSI, SI);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

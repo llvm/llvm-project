@@ -2970,17 +2970,28 @@ public:
 /// Both the stored value and the address must be uniform, and finally, only a
 /// single store instance will be generated.
 class VPScalarStoreRecipe : public VPRecipeBase {
-  StoreInst &SI;
+  /// The alignment information of this store.
+  MaybeAlign Alignment = std::nullopt;
+  /// The ingredient store of this recipe.
+  StoreInst *SI = nullptr;
 
 public:
-  VPScalarStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr,
-                      DebugLoc DL)
-      : VPRecipeBase(VPDef::VPScalarStoreSC, {StoredVal, Addr}, DL), SI(SI) {}
+  VPScalarStoreRecipe(VPValue *StoredVal, VPValue *Addr,
+                      MaybeAlign Align = std::nullopt, DebugLoc DL = {})
+      : VPRecipeBase(VPDef::VPScalarStoreSC, {StoredVal, Addr}, DL),
+        Alignment(Align) {}
+
+  VPScalarStoreRecipe(StoreInst &SI, VPValue *StoredVal, VPValue *Addr)
+      : VPRecipeBase(VPDef::VPScalarStoreSC, {StoredVal, Addr},
+                     SI.getDebugLoc()),
+        Alignment(getLoadStoreAlignment(&SI)), SI(&SI) {}
 
   ~VPScalarStoreRecipe() override = default;
 
   VPScalarStoreRecipe *clone() override {
-    return new VPScalarStoreRecipe(SI, getStoredVal(), getAddress(),
+    if (SI)
+      return new VPScalarStoreRecipe(*SI, getStoredVal(), getAddress());
+    return new VPScalarStoreRecipe(getStoredVal(), getAddress(), Alignment,
                                    getDebugLoc());
   }
 
