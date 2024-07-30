@@ -2504,10 +2504,19 @@ bool AMDGPUInstructionSelector::selectG_FPEXT(MachineInstr &I) const {
 }
 
 bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
+  if (selectImpl(I, *CoverageInfo))
+    return true;
+
+  // FIXME: Relying on manual selection for 64-bit case, and pointer typed
+  // constants.
   MachineBasicBlock *BB = I.getParent();
   MachineOperand &ImmOp = I.getOperand(1);
   Register DstReg = I.getOperand(0).getReg();
-  unsigned Size = MRI->getType(DstReg).getSizeInBits();
+  LLT Ty = MRI->getType(DstReg);
+  unsigned Size = Ty.getSizeInBits();
+  assert((Size == 64 || Ty.isPointer()) &&
+         "patterns should have selected this");
+
   bool IsFP = false;
 
   // The AMDGPU backend only supports Imm operands and not CImm or FPImm.
@@ -5606,18 +5615,12 @@ void AMDGPUInstructionSelector::renderNegateImm(MachineInstrBuilder &MIB,
   MIB.addImm(-MI.getOperand(1).getCImm()->getSExtValue());
 }
 
-void AMDGPUInstructionSelector::renderBitcastImm(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
-  assert(OpIdx == -1);
-
+void AMDGPUInstructionSelector::renderBitcastFPImm(MachineInstrBuilder &MIB,
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
   const MachineOperand &Op = MI.getOperand(1);
-  if (MI.getOpcode() == TargetOpcode::G_FCONSTANT)
-    MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
-  else {
-    assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
-    MIB.addImm(Op.getCImm()->getSExtValue());
-  }
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1);
+  MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
 }
 
 void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
