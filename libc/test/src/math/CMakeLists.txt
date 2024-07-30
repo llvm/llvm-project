@@ -66,7 +66,7 @@ add_fp_unittest(
   SRCS
     ddivl_test.cpp
   HDRS
-    AddTest.h
+    DivTest.h
   DEPENDS
     libc.src.math.ddivl
 )
