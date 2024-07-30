@@ -126,4 +126,4 @@ func.func @_QPtest_allocator2() {
   return
 }
 
-// %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 9, i8 0, i8 6, [1 x [3 x i64]] [[3 x i64] [i64 1, i64 20, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64)]] }
+// CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 9, i8 0, i8 6
