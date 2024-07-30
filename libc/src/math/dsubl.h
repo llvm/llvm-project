@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_MATH_DSUBL_H
 
 #include "src/__support/macros/config.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 double dsubl(long double x, long double y);

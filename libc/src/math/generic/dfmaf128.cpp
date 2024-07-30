@@ -1,4 +1,4 @@
-//===-- Implementation header for dfmaf128 ----------------------*- C++ -*-===//
+//===-- Implementation of dfmaf128 header -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, dfmaf128, (float128 x, float128 y, float128 z)) {
-  return fputil::generic::fma<double>(x, y, z);
+  return fputil::fma<double>(x, y, z);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

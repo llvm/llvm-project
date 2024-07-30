@@ -368,6 +368,8 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.dfmal
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 add_fp_unittest(
@@ -377,9 +379,11 @@ add_fp_unittest(
   SRCS
     dfmaf128_test.cpp
   HDRS
-    SubTest.h
+    FmaTest.h
   DEPENDS
     libc.src.math.dfmaf128
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 add_fp_unittest(
@@ -391,6 +395,8 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
+    libc.src.errno.errno
+    libc.hdr.fenv_macros
     libc.src.math.dsubl
 )
 
@@ -403,6 +409,8 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
+    libc.src.errno.errno
+    libc.hdr.fenv_macros
     libc.src.math.dsubf128
 )
 

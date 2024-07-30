@@ -398,12 +398,8 @@ def StdC : StandardSpec<"stdc"> {
           GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"dfmal", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
-          FunctionSpec<"dfmaf128", RetValSpec<DoubleType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<Float128Type]>,
           FunctionSpec<"dsubl", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
           
-
-
-
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
