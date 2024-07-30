@@ -114,7 +114,7 @@ PHDRS { text PT_LOAD
 PHDRS {all PT_LOAD FILEHDR PHDRS }
 
 # RUN: not ld.lld -T unclosed3.lds a.o 2>&1 | FileCheck --check-prefix=UNCLOSED3 %s
-# UNCLOSED3: error: unclosed3.lds:1: ; is missing before }
+# UNCLOSED3: error: unclosed3.lds:1: ';' is missing before '}'
 
 #--- a.s
 .global _start

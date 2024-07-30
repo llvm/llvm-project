@@ -234,13 +234,16 @@ ScriptLexer::Token ScriptLexer::till(StringRef tok) {
 ScriptLexer::Token ScriptLexer::readNameTill(StringRef tok) {
   // this behaves like till but expects that token to be an
   // identify of quoted string
+  assert(tok.size() > 0);
+  assert(tok[0] != '"');
+
   StringRef str = next();
   if (str.starts_with("\""))
     str = str.substr(1, str.size() - 2);
   if (str == tok)
     return {};
-  if (str == "(" || str == ")" || str == "}")
-    setError(tok + " is missing before " + str);
+  if (str == ")" || str == "}")
+    setError("'" + tok + "' is missing before '" + str + "'");
   if (!atEOF())
     return {str};
   prevTok = {};
