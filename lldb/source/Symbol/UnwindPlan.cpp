@@ -156,7 +156,7 @@ void UnwindPlan::Row::RegisterLocation::Dump(Stream &s,
       s.PutChar(']');
   } break;
   case isConstant:
-    s.Printf("=%x", m_location.offset);
+    s.Printf("=0x%" PRIx64, m_location.constant_value);
     break;
   }
 }
