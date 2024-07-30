@@ -13,7 +13,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, totalorderf128, (const float128 *x, const float128 *y)) {
+LLVM_LIBC_FUNCTION(int, totalorderf128,
+                   (const float128 *x, const float128 *y)) {
   return static_cast<int>(fputil::totalorder(*x, *y));
 }
 
