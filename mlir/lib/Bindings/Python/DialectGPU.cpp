@@ -53,7 +53,7 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
             py::buffer_info info(py::buffer(object).request());
             MlirStringRef objectStrRef =
                 mlirStringRefCreate(static_cast<char *>(info.ptr), info.size);
-            return cls(mlirGPUObjectAttrGet(
+            return cls(mlirGPUObjectAttrGetWithKernels(
                 mlirAttributeGetContext(target), target, format, objectStrRef,
                 mlirObjectProps.has_value() ? *mlirObjectProps
                                             : MlirAttribute{nullptr},
