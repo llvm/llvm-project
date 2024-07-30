@@ -86,13 +86,8 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumSGPRs(
 }
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
-    const GCNSubtarget &ST, int32_t ArgNumAGPR, int32_t ArgNumVGPR) const {
-  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), ArgNumAGPR, ArgNumVGPR);
-}
-
-int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
     const GCNSubtarget &ST) const {
-  return getTotalNumVGPRs(ST, NumAGPR, NumVGPR);
+  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPR, NumVGPR);
 }
 
 bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {

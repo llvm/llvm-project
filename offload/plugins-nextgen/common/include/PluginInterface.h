@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "ExclusiveAccess.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -414,6 +415,35 @@ protected:
 
   /// If the kernel is a bare kernel.
   bool IsBareKernel = false;
+};
+
+/// Information about an allocation, when it has been allocated, and when/if it
+/// has been deallocated, for error reporting purposes.
+struct AllocationTraceInfoTy {
+
+  /// The stack trace of the allocation itself.
+  std::string AllocationTrace;
+
+  /// The stack trace of the deallocation, or empty.
+  std::string DeallocationTrace;
+
+  /// The allocated device pointer.
+  void *DevicePtr = nullptr;
+
+  /// The corresponding host pointer (can be null).
+  void *HostPtr = nullptr;
+
+  /// The size of the allocation.
+  uint64_t Size = 0;
+
+  /// The kind of the allocation.
+  TargetAllocTy Kind = TargetAllocTy::TARGET_ALLOC_DEFAULT;
+
+  /// Information about the last allocation at this address, if any.
+  AllocationTraceInfoTy *LastAllocationInfo = nullptr;
+
+  /// Lock to keep accesses race free.
+  std::mutex Lock;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -979,6 +1009,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
 
+  /// Map to record when allocations have been performed, and when they have
+  /// been deallocated, both for error reporting purposes.
+  ProtectedObj<DenseMap<void *, AllocationTraceInfoTy *>> AllocationTraces;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1028,6 +1062,11 @@ protected:
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
+
+  /// Environment variable to determine if stack traces for allocations and
+  /// deallocations are tracked.
+  BoolEnvar OMPX_TrackAllocationTraces =
+      BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
