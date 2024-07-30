@@ -41,8 +41,6 @@ define void @generic_acq_rel(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnam
   ; CHECK: st.release.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr %e release, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -83,8 +81,6 @@ define void @generic_acq_rel_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) lo
   %f.add = fadd double %f.load, 1.
   ; CHECK: st.release.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr %e release, align 8
-
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
 
   ret void
 }
@@ -139,8 +135,6 @@ define void @generic_sc(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_ad
   ; CHECK: st.release.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -194,8 +188,6 @@ define void @generic_sc_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_u
   ; CHECK: st.release.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -239,8 +231,6 @@ define void @global_acq_rel(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrsp
   ; CHECK: st.release.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr addrspace(1) %e release, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -281,8 +271,6 @@ define void @global_acq_rel_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, p
   %f.add = fadd double %f.load, 1.
   ; CHECK: st.release.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr addrspace(1) %e release, align 8
-
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
 
   ret void
 }
@@ -337,8 +325,6 @@ define void @global_seq_cst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrsp
   ; CHECK: st.release.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr addrspace(1) %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -392,8 +378,6 @@ define void @global_seq_cst_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, p
   ; CHECK: st.release.sys.global.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr addrspace(1) %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -437,8 +421,6 @@ define void @shared_acq_rel(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrsp
   ; CHECK: st.release.sys.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr addrspace(3) %e release, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -479,8 +461,6 @@ define void @shared_acq_rel_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, p
   %f.add = fadd double %f.load, 1.
   ; CHECK: st.release.sys.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr addrspace(3) %e release, align 8
-
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
 
   ret void
 }
@@ -535,8 +515,6 @@ define void @shared_seq_cst(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrsp
   ; CHECK: st.release.sys.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr addrspace(3) %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -590,8 +568,6 @@ define void @shared_seq_cst_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, p
   ; CHECK: st.release.sys.shared.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr addrspace(3) %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
@@ -599,7 +575,8 @@ define void @shared_seq_cst_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, p
 
 ; CHECK-LABEL: local_acq_rel
 define void @local_acq_rel(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-  ; TODO: this codegen looses Concurrent Forward Progress
+  ; TODO: generate PTX that preserves Concurrent Forward Progress
+  ;       by using PTX atomic operations.
 
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, ptr addrspace(5) %a acquire, align 1
@@ -637,14 +614,13 @@ define void @local_acq_rel(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspa
   ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr addrspace(5) %e release, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
 ; CHECK-LABEL: local_acq_rel_volatile
 define void @local_acq_rel_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-  ; TODO: this codegen looses Concurrent Forward Progress
+  ; TODO: generate PTX that preserves Concurrent Forward Progress
+  ;       by using PTX atomic operations.
 
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr addrspace(5) %a acquire, align 1
@@ -682,14 +658,13 @@ define void @local_acq_rel_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, pt
   ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic volatile double %f.add, ptr addrspace(5) %e release, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
 ; CHECK-LABEL: local_seq_cst
 define void @local_seq_cst(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-  ; TODO: this codegen looses Concurrent Forward Progress
+  ; TODO: generate PTX that preserves Concurrent Forward Progress
+  ;       by using PTX atomic operations.
 
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic i8, ptr addrspace(5) %a seq_cst, align 1
@@ -727,14 +702,13 @@ define void @local_seq_cst(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspa
   ; CHECK: st.local.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
   store atomic double %f.add, ptr addrspace(5) %e seq_cst, align 8
 
-  ; TODO: LLVM IR Verifier does not support atomics on vector types.
-
   ret void
 }
 
 ; CHECK-LABEL: local_seq_cst_volatile
 define void @local_seq_cst_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-  ; TODO: this codegen looses Concurrent Forward Progress
+  ; TODO: generate PTX that preserves Concurrent Forward Progress
+  ;       by using PTX atomic operations.
 
   ; CHECK: ld.local.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
   %a.load = load atomic volatile i8, ptr addrspace(5) %a seq_cst, align 1
@@ -777,5 +751,5 @@ define void @local_seq_cst_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, pt
   ret void
 }
 
-; TODO: missing .const statespace tests
-; TODO: missing .param statespace tests
+; TODO: add plain,atomic,volatile,atomic volatile tests
+;       for .const and .param statespaces
