@@ -688,6 +688,7 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::copysign:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
   case Intrinsic::uadd_sat:
@@ -739,6 +740,8 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      : getQuarterRateInstrCost(CostKind);
     }
     break;
+  case Intrinsic::copysign:
+    return NElts * getFullRateInstrCost();
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
