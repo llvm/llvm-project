@@ -507,8 +507,8 @@ define float @global_agent_atomic_fmax_ret_f32__amdgpu_no_fine_grained_memory(pt
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64
-; GFX7-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX7-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX7-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX7-NEXT:  .LBB4_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -718,8 +718,8 @@ define void @global_agent_atomic_fmax_noret_f32__amdgpu_no_fine_grained_memory(p
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64
-; GFX7-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX7-NEXT:    v_mul_f32_e32 v4, 1.0, v2
+; GFX7-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX7-NEXT:  .LBB5_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -946,7 +946,7 @@ define double @global_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory(p
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[4:7], 0 addr64
 ; GFX7-NEXT:    v_max_f64 v[6:7], v[2:3], v[2:3]
-; GFX7-NEXT:    s_mov_b64 s[8:9], 0
+; GFX7-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX7-NEXT:  .LBB6_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -1162,7 +1162,7 @@ define void @global_agent_atomic_fmax_noret_f64__amdgpu_no_fine_grained_memory(p
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:    buffer_load_dwordx2 v[4:5], v[0:1], s[4:7], 0 addr64
 ; GFX7-NEXT:    v_max_f64 v[6:7], v[2:3], v[2:3]
-; GFX7-NEXT:    s_mov_b64 s[8:9], 0
+; GFX7-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX7-NEXT:  .LBB7_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
