@@ -184,8 +184,10 @@ define <vscale x 2 x i32> @unfoldable_vredsum(<vscale x 2 x i32> %passthru, <vsc
 define <vscale x 2 x i32> @unfoldable_mismatched_sew_diff_vl(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y) {
 ; CHECK-LABEL: unfoldable_mismatched_sew_diff_vl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e64, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    vsetivli zero, 6, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen 6)
   %a.bitcast = bitcast <vscale x 1 x i64> %a to <vscale x 2 x i32>
