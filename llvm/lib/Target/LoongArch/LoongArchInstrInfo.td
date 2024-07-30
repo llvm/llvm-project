@@ -1123,7 +1123,7 @@ def : PatGprGpr<urem, MOD_WU>;
 def : PatGprGpr<mul, MUL_W>;
 def : PatGprGpr<mulhs, MULH_W>;
 def : PatGprGpr<mulhu, MULH_WU>;
-def : PatGprGpr<rotr, ROTR_W>;
+def : PatGprGpr<shiftop<rotr>, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_W, uimm5>;
 
 foreach Idx = 1...3 in {
@@ -1146,8 +1146,8 @@ def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
-def : PatGprGpr<rotr, ROTR_D>;
-def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
+def : PatGprGpr<shiftop<rotr>, ROTR_D>;
+def : PatGprGpr<shiftopw<loongarch_rotr_w>, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
 def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;
