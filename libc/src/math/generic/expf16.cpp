@@ -70,7 +70,7 @@ LLVM_LIBC_FUNCTION(float16, expf16, (float16 x)) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
-  // When |x| <= 2^(-5), or |x| >= 12, or x is NaN.
+  // When 0 < |x| <= 2^(-5), or |x| >= 12, or x is NaN.
   if (LIBC_UNLIKELY(x_abs <= 0x2800U || x_abs >= 0x4a00U)) {
     // exp(NaN) = NaN
     if (x_bits.is_nan()) {
@@ -116,6 +116,7 @@ LLVM_LIBC_FUNCTION(float16, expf16, (float16 x)) {
       }
     }
 
+    // When 0 < |x| <= 2^(-5).
     if (x_abs <= 0x2800U && !x_bits.is_zero()) {
       if (auto r = EXPF16_EXCEPTS_LO.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
         return r.value();
