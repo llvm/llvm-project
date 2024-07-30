@@ -119,18 +119,18 @@ static Attribute convertNode(Builder &builder,
 
 static Attribute convertNode(Builder &builder,
                              llvm::msgpack::ArrayDocNode &node) {
-  using NodeKind = llvm::msgpack::Type;
   // Use `DenseIntAttr` if we know all the attrs are ints.
   if (llvm::all_of(node, [](llvm::msgpack::DocNode &n) {
-        auto kind = n.getKind();
-        return kind == NodeKind::Int || kind == NodeKind::UInt;
+        llvm::msgpack::Type kind = n.getKind();
+        return kind == llvm::msgpack::Type::Int ||
+               kind == llvm::msgpack::Type::UInt;
       })) {
     SmallVector<int64_t> values;
     for (llvm::msgpack::DocNode &n : node) {
       llvm::msgpack::Type kind = n.getKind();
-      if (kind == NodeKind::Int)
+      if (kind == llvm::msgpack::Type::Int)
         values.push_back(n.getInt());
-      else if (kind == NodeKind::UInt)
+      else if (kind == llvm::msgpack::Type::UInt)
         values.push_back(n.getUInt());
     }
     return builder.getDenseI64ArrayAttr(values);
@@ -148,19 +148,18 @@ static Attribute convertNode(Builder &builder,
 
 static Attribute convertNode(Builder &builder, llvm::msgpack::DocNode &node) {
   using namespace llvm::msgpack;
-  using NodeKind = llvm::msgpack::Type;
   switch (node.getKind()) {
-  case NodeKind::Int:
+  case llvm::msgpack::Type::Int:
     return builder.getI64IntegerAttr(node.getInt());
-  case NodeKind::UInt:
+  case llvm::msgpack::Type::UInt:
     return builder.getI64IntegerAttr(node.getUInt());
-  case NodeKind::Boolean:
+  case llvm::msgpack::Type::Boolean:
     return builder.getI64IntegerAttr(node.getBool());
-  case NodeKind::String:
+  case llvm::msgpack::Type::String:
     return builder.getStringAttr(node.getString());
-  case NodeKind::Array:
+  case llvm::msgpack::Type::Array:
     return convertNode(builder, node.getArray());
-  case NodeKind::Map:
+  case llvm::msgpack::Type::Map:
     return convertNode(builder, node.getMap());
   default:
     return nullptr;

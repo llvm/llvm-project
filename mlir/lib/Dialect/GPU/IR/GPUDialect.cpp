@@ -2274,12 +2274,14 @@ KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 KernelAttr KernelTableAttr::lookup(StringRef key) const {
-  auto it = impl::findAttrSorted(begin(), end(), key);
+  std::pair<ArrayRef<KernelAttr>::iterator, bool> it =
+      impl::findAttrSorted(begin(), end(), key);
   return it.second ? *it.first : KernelAttr();
 }
 
 KernelAttr KernelTableAttr::lookup(StringAttr key) const {
-  auto it = impl::findAttrSorted(begin(), end(), key);
+  std::pair<ArrayRef<KernelAttr>::iterator, bool> it =
+      impl::findAttrSorted(begin(), end(), key);
   return it.second ? *it.first : KernelAttr();
 }
 
