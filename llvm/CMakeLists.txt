@@ -1152,7 +1152,7 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 
   # Make functions, like errno, thread safe.
   if (LLVM_ENABLE_THREADS)
-    add_compile_definitions(_THREAD_SAFE)
+    append("-pthread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
   endif()
 
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
