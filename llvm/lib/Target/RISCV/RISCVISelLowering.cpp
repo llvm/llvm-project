@@ -7475,47 +7475,52 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 
   // auipc t2, 0
   // Loads the current PC into t2.
-  MCInst AUIPC_X7_0_Inst =
-      MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X7).addImm(0);
-  uint32_t AUIPC_X7_0 = GetEncoding(AUIPC_X7_0_Inst);
-  OutChains[0] =
-      DAG.getTruncStore(Root, dl, DAG.getConstant(AUIPC_X7_0, dl, MVT::i64),
-                        Addr, MachinePointerInfo(TrmpAddr), MVT::i32);
+  OutChains[0] = DAG.getTruncStore(
+      Root, dl,
+      DAG.getConstant(
+          GetEncoding(MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X7).addImm(0)),
+          dl, MVT::i64),
+      Addr, MachinePointerInfo(TrmpAddr), MVT::i32);
 
   // ld t0, 24(t2)
   // Loads the function address into t0. Note that we are using offsets
   // pc-relative to the first instruction of the trampoline.
-  MCInst LD_X5_TargetFunctionOffset_Inst =
-      MCInstBuilder(RISCV::LD).addReg(RISCV::X5).addReg(RISCV::X7).addImm(FunctionAddressOffset);
-  uint32_t LD_X5_TargetFunctionOffset =
-      GetEncoding(LD_X5_TargetFunctionOffset_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(4, dl, MVT::i64));
   OutChains[1] = DAG.getTruncStore(
-      Root, dl, DAG.getConstant(LD_X5_TargetFunctionOffset, dl, MVT::i64), Addr,
-      MachinePointerInfo(TrmpAddr, 4), MVT::i32);
+      Root, dl,
+      DAG.getConstant(GetEncoding(MCInstBuilder(RISCV::LD)
+                                      .addReg(RISCV::X5)
+                                      .addReg(RISCV::X7)
+                                      .addImm(FunctionAddressOffset)),
+                      dl, MVT::i64),
+      Addr, MachinePointerInfo(TrmpAddr, 4), MVT::i32);
 
   // ld t2, 16(t2)
   // Load the value of the static chain.
-  MCInst LD_X7_StaticChainOffset_Inst =
-      MCInstBuilder(RISCV::LD).addReg(RISCV::X7).addReg(RISCV::X7).addImm(StaticChainOffset);
-  uint32_t LD_X7_StaticChainOffset = GetEncoding(LD_X7_StaticChainOffset_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(8, dl, MVT::i64));
   OutChains[2] = DAG.getTruncStore(
-      Root, dl, DAG.getConstant(LD_X7_StaticChainOffset, dl, MVT::i64), Addr,
-      MachinePointerInfo(TrmpAddr, 8), MVT::i32);
+      Root, dl,
+      DAG.getConstant(GetEncoding(MCInstBuilder(RISCV::LD)
+                                      .addReg(RISCV::X7)
+                                      .addReg(RISCV::X7)
+                                      .addImm(StaticChainOffset)),
+                      dl, MVT::i64),
+      Addr, MachinePointerInfo(TrmpAddr, 8), MVT::i32);
 
   // jalr t0
   // Jump to the function.
-  MCInst JALR_X5_Inst =
-      MCInstBuilder(RISCV::JALR).addReg(RISCV::X0).addReg(RISCV::X5).addImm(0);
-  uint32_t JALR_X5 = GetEncoding(JALR_X5_Inst);
   Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                      DAG.getConstant(12, dl, MVT::i64));
   OutChains[3] =
-      DAG.getTruncStore(Root, dl, DAG.getConstant(JALR_X5, dl, MVT::i64), Addr,
-                        MachinePointerInfo(TrmpAddr, 12), MVT::i32);
+      DAG.getTruncStore(Root, dl,
+                        DAG.getConstant(GetEncoding(MCInstBuilder(RISCV::JALR)
+                                                        .addReg(RISCV::X0)
+                                                        .addReg(RISCV::X5)
+                                                        .addImm(0)),
+                                        dl, MVT::i64),
+                        Addr, MachinePointerInfo(TrmpAddr, 12), MVT::i32);
 
   // Now store the variable part of the trampoline.
   SDValue FunctionAddress = Op.getOperand(2);
