@@ -33,6 +33,7 @@ DEF_INSTR(Ret, OP(Ret), ReturnInst)
 DEF_INSTR(Call, OP(Call), CallInst)
 DEF_INSTR(Invoke, OP(Invoke), InvokeInst)
 DEF_INSTR(CallBr, OP(CallBr), CallBrInst)
+DEF_INSTR(PHI, OP(PHI), PHINode)
 
 #ifdef DEF_VALUE
 #undef DEF_VALUE

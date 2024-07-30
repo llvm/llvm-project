@@ -488,3 +488,127 @@ define void @foo(i8 %arg0, i8 %arg1) {
   Ctx.revert();
   EXPECT_EQ(Call->getCalledFunction(), Bar1F);
 }
+
+TEST_F(TrackerTest, PHINodeSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1, i8 %arg2) {
+bb0:
+  br label %bb2
+
+bb1:
+  %phi = phi i8 [ %arg0, %bb0 ], [ %arg1, %bb1 ]
+  br label %bb1
+
+bb2:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  unsigned ArgIdx = 0;
+  auto *Arg0 = F.getArg(ArgIdx++);
+  auto *Arg1 = F.getArg(ArgIdx++);
+  auto *Arg2 = F.getArg(ArgIdx++);
+  auto *BB0 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb0")));
+  auto *BB1 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb1")));
+  auto *BB2 = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb2")));
+  auto *PHI = cast<sandboxir::PHINode>(&*BB1->begin());
+
+  // Check setIncomingValue().
+  Ctx.save();
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  PHI->setIncomingValue(0, Arg2);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg2);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check setIncomingBlock().
+  Ctx.save();
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  PHI->setIncomingBlock(0, BB2);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB2);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check addIncoming().
+  Ctx.save();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  PHI->addIncoming(Arg1, BB2);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 3u);
+  EXPECT_EQ(PHI->getIncomingBlock(2), BB2);
+  EXPECT_EQ(PHI->getIncomingValue(2), Arg1);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue(1).
+  Ctx.save();
+  PHI->removeIncomingValue(1);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue(0).
+  Ctx.save();
+  PHI->removeIncomingValue(0u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg1);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue() remove all.
+  Ctx.save();
+  PHI->removeIncomingValue(0u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg1);
+  PHI->removeIncomingValue(0u);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 0u);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+
+  // Check removeIncomingValue(BasicBlock *).
+  Ctx.save();
+  PHI->removeIncomingValue(BB1);
+  EXPECT_EQ(PHI->getNumIncomingValues(), 1u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  Ctx.revert();
+  EXPECT_EQ(PHI->getNumIncomingValues(), 2u);
+  EXPECT_EQ(PHI->getIncomingBlock(0), BB0);
+  EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
+  EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
+  EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+}
