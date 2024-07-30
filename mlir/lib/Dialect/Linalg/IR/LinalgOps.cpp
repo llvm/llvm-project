@@ -879,15 +879,66 @@ struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// Fold a concat with all elements being fills of the same value
+/// into a fill of the concat result shape.
+struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    auto concatOperands = concatOp.getInputs();
+    if (concatOperands.empty()) {
+      return failure();
+    }
+
+    auto firstFillOp = concatOperands.front().getDefiningOp<linalg::FillOp>();
+    if (!firstFillOp) {
+      return failure();
+    }
+    // Prefetch the fill value.
+    OpFoldResult firstFillVal =
+        getAsOpFoldResult(firstFillOp.getDpsInputOperand(0)->get());
+    // Collect all the outs values for the fill operations.
+    SmallVector<Value> allOuts;
+    allOuts.push_back(firstFillOp.getDpsInitOperand(0)->get());
+
+    auto isDefinedByCompatibleFillOp = [&](Value v) -> bool {
+      auto fillOp = v.getDefiningOp<linalg::FillOp>();
+      if (!fillOp) {
+        return false;
+      }
+
+      OpFoldResult fillVal =
+          getAsOpFoldResult(fillOp.getDpsInputOperand(0)->get());
+      if (fillVal != firstFillVal)
+        return false;
+
+      allOuts.push_back(fillOp.getDpsInitOperand(0)->get());
+      return true;
+    };
+    if (!llvm::all_of(concatOperands.drop_front(),
+                      isDefinedByCompatibleFillOp)) {
+      return rewriter.notifyMatchFailure(
+          concatOp, "not all operands are defined by a compatible fill op");
+    }
+
+    Value outsConcat = rewriter.create<tensor::ConcatOp>(
+        concatOp.getLoc(), concatOp.getDim(), allOuts);
+    rewriter.replaceOpWithNewOp<linalg::FillOp>(
+        concatOp, firstFillOp.getDpsInputOperand(0)->get(), outsConcat);
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results
-      .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
-           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
+  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithTensorExtract,
+              FoldFillWithPack, FoldFillWithPad,
+              FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+              FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+              FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
 }
 
 //===----------------------------------------------------------------------===//
