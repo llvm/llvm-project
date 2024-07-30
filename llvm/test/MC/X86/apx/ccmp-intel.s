@@ -1219,79 +1219,79 @@
 
 # CHECK: ccmpt	{dfv=}	byte ptr [r8 + 4*rax + 123], 123
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x80,0x7c,0x80,0x7b,0x7b]
-         ccmpt	{dfv=}	byte ptr [r8 + 4*rax + 123], 123
+         {evex} cmp	byte ptr [r8 + 4*rax + 123], 123
 # CHECK: ccmpt	{dfv=}	word ptr [r8 + 4*rax + 123], 123
 # CHECK: encoding: [0x62,0xd4,0x05,0x0a,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpt	{dfv=}	word ptr [r8 + 4*rax + 123], 123
+         {evex} cmp	word ptr [r8 + 4*rax + 123], 123
 # CHECK: ccmpt	{dfv=}	word ptr [r8 + 4*rax + 123], 1234
 # CHECK: encoding: [0x62,0xd4,0x05,0x0a,0x81,0x7c,0x80,0x7b,0xd2,0x04]
-         ccmpt	{dfv=}	word ptr [r8 + 4*rax + 123], 1234
+         {evex} cmp	word ptr [r8 + 4*rax + 123], 1234
 # CHECK: ccmpt	{dfv=}	dword ptr [r8 + 4*rax + 123], 123
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpt	{dfv=}	dword ptr [r8 + 4*rax + 123], 123
+         {evex} cmp	dword ptr [r8 + 4*rax + 123], 123
 # CHECK: ccmpt	{dfv=}	dword ptr [r8 + 4*rax + 123], 123456
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpt	{dfv=}	dword ptr [r8 + 4*rax + 123], 123456
+         {evex} cmp	dword ptr [r8 + 4*rax + 123], 123456
 # CHECK: ccmpt	{dfv=}	qword ptr [r8 + 4*rax + 123], 123
 # CHECK: encoding: [0x62,0xd4,0x84,0x0a,0x83,0x7c,0x80,0x7b,0x7b]
-         ccmpt	{dfv=}	qword ptr [r8 + 4*rax + 123], 123
+         {evex} cmp	qword ptr [r8 + 4*rax + 123], 123
 # CHECK: ccmpt	{dfv=}	qword ptr [r8 + 4*rax + 123], 123456
 # CHECK: encoding: [0x62,0xd4,0x84,0x0a,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ccmpt	{dfv=}	qword ptr [r8 + 4*rax + 123], 123456
+         {evex} cmp	qword ptr [r8 + 4*rax + 123], 123456
 # CHECK: ccmpt	{dfv=}	byte ptr [r8 + 4*rax + 123], bl
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x38,0x5c,0x80,0x7b]
-         ccmpt	{dfv=}	byte ptr [r8 + 4*rax + 123], bl
+         {evex} cmp	byte ptr [r8 + 4*rax + 123], bl
 # CHECK: ccmpt	{dfv=}	word ptr [r8 + 4*rax + 123], dx
 # CHECK: encoding: [0x62,0xd4,0x05,0x0a,0x39,0x54,0x80,0x7b]
-         ccmpt	{dfv=}	word ptr [r8 + 4*rax + 123], dx
+         {evex} cmp	word ptr [r8 + 4*rax + 123], dx
 # CHECK: ccmpt	{dfv=}	dword ptr [r8 + 4*rax + 123], ecx
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x39,0x4c,0x80,0x7b]
-         ccmpt	{dfv=}	dword ptr [r8 + 4*rax + 123], ecx
+         {evex} cmp	dword ptr [r8 + 4*rax + 123], ecx
 # CHECK: ccmpt	{dfv=}	qword ptr [r8 + 4*rax + 123], r9
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x39,0x4c,0x80,0x7b]
-         ccmpt	{dfv=}	qword ptr [r8 + 4*rax + 123], r9
+         {evex} cmp	qword ptr [r8 + 4*rax + 123], r9
 # CHECK: ccmpt	{dfv=}	bl, byte ptr [r8 + 4*rax + 123]
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x3a,0x5c,0x80,0x7b]
-         ccmpt	{dfv=}	bl, byte ptr [r8 + 4*rax + 123]
+         {evex} cmp	bl, byte ptr [r8 + 4*rax + 123]
 # CHECK: ccmpt	{dfv=}	dx, word ptr [r8 + 4*rax + 123]
 # CHECK: encoding: [0x62,0xd4,0x05,0x0a,0x3b,0x54,0x80,0x7b]
-         ccmpt	{dfv=}	dx, word ptr [r8 + 4*rax + 123]
+         {evex} cmp	dx, word ptr [r8 + 4*rax + 123]
 # CHECK: ccmpt	{dfv=}	ecx, dword ptr [r8 + 4*rax + 123]
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x3b,0x4c,0x80,0x7b]
-         ccmpt	{dfv=}	ecx, dword ptr [r8 + 4*rax + 123]
+         {evex} cmp	ecx, dword ptr [r8 + 4*rax + 123]
 # CHECK: ccmpt	{dfv=}	r9, qword ptr [r8 + 4*rax + 123]
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x3b,0x4c,0x80,0x7b]
-         ccmpt	{dfv=}	r9, qword ptr [r8 + 4*rax + 123]
+         {evex} cmp	r9, qword ptr [r8 + 4*rax + 123]
 # CHECK: ccmpt	{dfv=}	bl, 123
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x80,0xfb,0x7b]
-         ccmpt	{dfv=}	bl, 123
+         {evex} cmp	bl, 123
 # CHECK: ccmpt	{dfv=}	dx, 123
 # CHECK: encoding: [0x62,0xf4,0x05,0x0a,0x83,0xfa,0x7b]
-         ccmpt	{dfv=}	dx, 123
+         {evex} cmp	dx, 123
 # CHECK: ccmpt	{dfv=}	ecx, 123
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x83,0xf9,0x7b]
-         ccmpt	{dfv=}	ecx, 123
+         {evex} cmp	ecx, 123
 # CHECK: ccmpt	{dfv=}	r9, 123
 # CHECK: encoding: [0x62,0xd4,0x84,0x0a,0x83,0xf9,0x7b]
-         ccmpt	{dfv=}	r9, 123
+         {evex} cmp	r9, 123
 # CHECK: ccmpt	{dfv=}	dx, 1234
 # CHECK: encoding: [0x62,0xf4,0x05,0x0a,0x81,0xfa,0xd2,0x04]
-         ccmpt	{dfv=}	dx, 1234
+         {evex} cmp	dx, 1234
 # CHECK: ccmpt	{dfv=}	ecx, 123456
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpt	{dfv=}	ecx, 123456
+         {evex} cmp	ecx, 123456
 # CHECK: ccmpt	{dfv=}	r9, 123456
 # CHECK: encoding: [0x62,0xd4,0x84,0x0a,0x81,0xf9,0x40,0xe2,0x01,0x00]
-         ccmpt	{dfv=}	r9, 123456
+         {evex} cmp	r9, 123456
 # CHECK: ccmpt	{dfv=}	dl, bl
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x38,0xda]
-         ccmpt	{dfv=}	dl, bl
+         {evex} cmp	dl, bl
 # CHECK: ccmpt	{dfv=}	ax, dx
 # CHECK: encoding: [0x62,0xf4,0x05,0x0a,0x39,0xd0]
-         ccmpt	{dfv=}	ax, dx
+         {evex} cmp	ax, dx
 # CHECK: ccmpt	{dfv=}	edx, ecx
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x39,0xca]
-         ccmpt	{dfv=}	edx, ecx
+         {evex} cmp	edx, ecx
 # CHECK: ccmpt	{dfv=}	r15, r9
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x39,0xcf]
-         ccmpt	{dfv=}	r15, r9
+         {evex} cmp	r15, r9

@@ -776,49 +776,49 @@
 
 # CHECK: ctesttb	{dfv=}	$123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0xf6,0x44,0x80,0x7b,0x7b]
-         ctesttb	{dfv=}	$123, 123(%r8,%rax,4)
+         {evex} testb	$123, 123(%r8,%rax,4)
 # CHECK: ctesttw	{dfv=}	$1234, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x05,0x0a,0xf7,0x44,0x80,0x7b,0xd2,0x04]
-         ctesttw	{dfv=}	$1234, 123(%r8,%rax,4)
+         {evex} testw	$1234, 123(%r8,%rax,4)
 # CHECK: ctesttl	{dfv=}	$123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0xf7,0x44,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ctesttl	{dfv=}	$123456, 123(%r8,%rax,4)
+         {evex} testl	$123456, 123(%r8,%rax,4)
 # CHECK: ctesttq	{dfv=}	$123456, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x84,0x0a,0xf7,0x44,0x80,0x7b,0x40,0xe2,0x01,0x00]
-         ctesttq	{dfv=}	$123456, 123(%r8,%rax,4)
+         {evex} testq	$123456, 123(%r8,%rax,4)
 # CHECK: ctesttb	{dfv=}	%bl, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x84,0x5c,0x80,0x7b]
-         ctesttb	{dfv=}	%bl, 123(%r8,%rax,4)
+         {evex} testb	%bl, 123(%r8,%rax,4)
 # CHECK: ctesttw	{dfv=}	%dx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x05,0x0a,0x85,0x54,0x80,0x7b]
-         ctesttw	{dfv=}	%dx, 123(%r8,%rax,4)
+         {evex} testw	%dx, 123(%r8,%rax,4)
 # CHECK: ctesttl	{dfv=}	%ecx, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x85,0x4c,0x80,0x7b]
-         ctesttl	{dfv=}	%ecx, 123(%r8,%rax,4)
+         {evex} testl	%ecx, 123(%r8,%rax,4)
 # CHECK: ctesttq	{dfv=}	%r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x85,0x4c,0x80,0x7b]
-         ctesttq	{dfv=}	%r9, 123(%r8,%rax,4)
+         {evex} testq	%r9, 123(%r8,%rax,4)
 # CHECK: ctesttb	{dfv=}	$123, %bl
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0xf6,0xc3,0x7b]
-         ctesttb	{dfv=}	$123, %bl
+         {evex} testb	$123, %bl
 # CHECK: ctesttw	{dfv=}	$1234, %dx
 # CHECK: encoding: [0x62,0xf4,0x05,0x0a,0xf7,0xc2,0xd2,0x04]
-         ctesttw	{dfv=}	$1234, %dx
+         {evex} testw	$1234, %dx
 # CHECK: ctesttl	{dfv=}	$123456, %ecx
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0xf7,0xc1,0x40,0xe2,0x01,0x00]
-         ctesttl	{dfv=}	$123456, %ecx
+         {evex} testl	$123456, %ecx
 # CHECK: ctesttq	{dfv=}	$123456, %r9
 # CHECK: encoding: [0x62,0xd4,0x84,0x0a,0xf7,0xc1,0x40,0xe2,0x01,0x00]
-         ctesttq	{dfv=}	$123456, %r9
+         {evex} testq	$123456, %r9
 # CHECK: ctesttb	{dfv=}	%bl, %dl
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x84,0xda]
-         ctesttb	{dfv=}	%bl, %dl
+         {evex} testb	%bl, %dl
 # CHECK: ctesttw	{dfv=}	%dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x05,0x0a,0x85,0xd0]
-         ctesttw	{dfv=}	%dx, %ax
+         {evex} testw	%dx, %ax
 # CHECK: ctesttl	{dfv=}	%ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x85,0xca]
-         ctesttl	{dfv=}	%ecx, %edx
+         {evex} testl	%ecx, %edx
 # CHECK: ctesttq	{dfv=}	%r9, %r15
 # CHECK: encoding: [0x62,0x54,0x84,0x0a,0x85,0xcf]
-         ctesttq	{dfv=}	%r9, %r15
+         {evex} testq	%r9, %r15
