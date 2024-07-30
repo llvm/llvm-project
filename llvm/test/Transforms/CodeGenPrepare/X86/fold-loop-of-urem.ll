@@ -706,12 +706,10 @@ define void @simple_urem_to_sel_non_zero_start_through_add(i32 %N, i32 %rem_amt_
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = phi i32 [ 7, %[[FOR_BODY_PREHEADER]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 2, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[I_WITH_OFF:%.*]] = add nuw i32 [[I_04]], 5
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_WITH_OFF]], [[REM_AMT]]
 ; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[REM]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], [[REM_AMT]]
-; CHECK-NEXT:    [[TMP3]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
@@ -819,12 +817,10 @@ define void @simple_urem_to_sel_non_zero_start_through_sub(i32 %N, i32 %rem_amt,
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = phi i32 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[TMP3:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[START]], %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[I_WITH_OFF:%.*]] = sub nuw i32 [[I_04]], [[START]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_WITH_OFF]], [[REM_AMT]]
 ; CHECK-NEXT:    tail call void @use.i32(i32 [[REM]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[REM]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], [[REM_AMT]]
-; CHECK-NEXT:    [[TMP3]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
