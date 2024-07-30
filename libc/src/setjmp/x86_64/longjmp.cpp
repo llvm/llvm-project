@@ -42,10 +42,13 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   // load registers from buffer
   // do not pass any invalid values into registers
 #define RECOVER(REG)                                                           \
-  asm("mov %c[" #REG "](%%rdi), %%rdx\n\t"                                     \
-      "xor %%rdx, %%rcx\n\t"                                                   \
-      "mov %%rdx, %%" #REG "\n\t" ::[REG] "i"(offsetof(__jmp_buf, REG))        \
-      : "rdx");
+  register __UINT64_TYPE__ REG __asm__(#REG);                                  \
+  asm volatile("mov %c[" #REG "](%%rdi), %%rdx\n\t"                            \
+               "xor %%rdx, %1\n\t"                                             \
+               "mov %%rdx, %0\n\t"                                             \
+               : "=r"(REG)                                                     \
+               : "r"(rcx), [REG] "i"(offsetof(__jmp_buf, REG))                 \
+               : "rdx");
 
   RECOVER(rbx);
   RECOVER(rbp);
@@ -55,15 +58,18 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   RECOVER(r15);
   RECOVER(rsp);
 
-  asm(R"(
-   xor %%eax,%%eax
+  register int eax __asm__("eax");
+  asm volatile(R"(
+   xor %0,%0
    cmp $1,%%esi       
-   adc %%esi,%%eax
+   adc %%esi,%0
    mov %c[rip](%%rdi),%%rdx
    xor %%rdx, %%rcx
    jmp *%%rdx
- )" ::[rip] "i"(offsetof(__jmp_buf, rip))
-      : "rdx");
+ )"
+               : "=r"(eax)
+               : [rip] "i"(offsetof(__jmp_buf, rip))
+               : "rdx");
 }
 
 } // namespace LIBC_NAMESPACE_DECL
