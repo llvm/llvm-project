@@ -1398,17 +1398,15 @@ namespace {
                                  std::optional<unsigned> &NumExpansions,
                                  bool ForConstraints = false) {
       if (ForConstraints) {
-        LambdaScopeInfo *LSI = getSema().getCurLambda();
-        if (LSI) {
-          MultiLevelTemplateArgumentList MLTAL =
-              getSema().getTemplateInstantiationArgs(
-                  LSI->CallOperator, /*DC=*/nullptr, /*Final=*/false,
-                  /*Innermost=*/std::nullopt, /*RelativeToPrimary=*/true,
-                  /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
-          return getSema().CheckParameterPacksForExpansion(
-              EllipsisLoc, PatternRange, Unexpanded, MLTAL, ShouldExpand,
-              RetainExpansion, NumExpansions);
-        }
+        MultiLevelTemplateArgumentList MLTAL =
+            getSema().getTemplateInstantiationArgs(
+                cast<NamedDecl>(getSema().CurContext), /*DC=*/nullptr,
+                /*Final=*/false,
+                /*Innermost=*/std::nullopt, /*RelativeToPrimary=*/true,
+                /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+        return getSema().CheckParameterPacksForExpansion(
+            EllipsisLoc, PatternRange, Unexpanded, MLTAL, ShouldExpand,
+            RetainExpansion, NumExpansions);
       }
 
       return getSema().CheckParameterPacksForExpansion(EllipsisLoc,
