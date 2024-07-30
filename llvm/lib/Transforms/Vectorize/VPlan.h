@@ -2966,7 +2966,9 @@ public:
   }
 };
 
-/// A recipe to represent scalar stores that sink outside the vector loop.
+/// A recipe to represent scalar stores that are outside the vector loop region.
+/// Both the stored value and the address must be uniform, and finally, only a
+/// single store instance will be generated.
 class VPScalarStoreRecipe : public VPRecipeBase {
   StoreInst &SI;
 

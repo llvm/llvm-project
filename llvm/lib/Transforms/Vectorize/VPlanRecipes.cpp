@@ -1940,7 +1940,7 @@ void VPScalarStoreRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarStoreRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << Indent << "SINK store ";
+  O << Indent << "SCALAR-STORE ";
   printOperands(O, SlotTracker);
 }
 #endif
