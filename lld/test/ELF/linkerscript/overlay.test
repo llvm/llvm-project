@@ -98,5 +98,5 @@ SECTIONS {
   OVERLAY 0x1000 : AT ( 0x2000 ) {
 
 # RUN: not ld.lld a.o -T unclosed.lds 2>&1 | FileCheck %s --check-prefix=UNCLOSED
-# UNCLOSED:     error: unclosed.lds:1: unexpected EOF
+# UNCLOSED:     error: unclosed.lds:2: unexpected EOF
 # UNCLOSED-NOT: {{.}}
