@@ -139,7 +139,7 @@ void Benchmark::run_benchmarks() {
 
   if (id == 0) {
     print_header();
-    LIBC_NAMESPACE::srand(LIBC_NAMESPACE::gpu::processor_clock());
+    LIBC_NAMESPACE::srand(gpu::processor_clock());
   }
 
   gpu::sync_threads();
