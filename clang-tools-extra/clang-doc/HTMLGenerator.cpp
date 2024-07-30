@@ -620,7 +620,6 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     }
     return std::move(FullComment);
   }
-
   if (I.Kind == "ParagraphComment") {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
@@ -632,7 +631,6 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
       return nullptr;
     return std::move(ParagraphComment);
   }
-
   if (I.Kind == "BlockCommandComment") {
     auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
     auto Command = std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name);
@@ -646,7 +644,6 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
       return nullptr;
     return std::move(BlockComment);
   }
-
   if (I.Kind == "TextComment") {
     if (I.Text == "")
       return nullptr;
