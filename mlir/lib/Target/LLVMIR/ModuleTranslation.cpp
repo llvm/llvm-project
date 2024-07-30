@@ -1073,9 +1073,15 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // variable -> module -> compile unit
       // If a variable scope points to the module then we use the scope of the
       // module to get the compile unit.
+      // Global variables are also used for things like static local variables
+      // in C and local variables with the save attribute in Fortran. The scope
+      // of the variable is the parent function. We use the compile unit of the
+      // parent function in this case.
       llvm::DIScope *scope = diGlobalVar->getScope();
-      if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+      if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
         scope = mod->getScope();
+      else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
+        scope = sp->getUnit();
 
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
@@ -1325,6 +1331,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);
 
+  if (auto tuneCpu = func.getTuneCpu())
+    llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
+
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
 
@@ -1403,10 +1412,10 @@ LogicalResult ModuleTranslation::convertDialectAttributes(
 /// `llvmFunc`.
 static void convertFunctionMemoryAttributes(LLVMFuncOp func,
                                             llvm::Function *llvmFunc) {
-  if (!func.getMemory())
+  if (!func.getMemoryEffects())
     return;
 
-  MemoryEffectsAttr memEffects = func.getMemoryAttr();
+  MemoryEffectsAttr memEffects = func.getMemoryEffectsAttr();
 
   // Add memory effects incrementally.
   llvm::MemoryEffects newMemEffects =
@@ -1432,6 +1441,10 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
+  if (func.getNoUnwindAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+  if (func.getWillReturnAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 

@@ -1393,6 +1393,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           ReplaceNode(Node, SLLI);
           return;
         }
+        // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
+        if (Trailing > 0 && Leading + Trailing == 32 && C2 + Trailing < XLen &&
+            OneUseOrZExtW && Subtarget->hasStdExtZba()) {
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, X,
+              CurDAG->getTargetConstant(C2 + Trailing, DL, VT));
+          SDNode *SLLI_UW = CurDAG->getMachineNode(
+              RISCV::SLLI_UW, DL, VT, SDValue(SRLI, 0),
+              CurDAG->getTargetConstant(Trailing, DL, VT));
+          ReplaceNode(Node, SLLI_UW);
+          return;
+        }
       }
 
       // Turn (and (shl x, c2), c1) -> (slli (srli x, c3-c2), c3) if c1 is a
@@ -1528,7 +1540,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (tryIndexedLoad(Node))
       return;
 
-    if (Subtarget->hasVendorXCVmem()) {
+    if (Subtarget->hasVendorXCVmem() && !Subtarget->is64Bit()) {
       // We match post-incrementing load here
       LoadSDNode *Load = cast<LoadSDNode>(Node);
       if (Load->getAddressingMode() != ISD::POST_INC)
@@ -3753,11 +3765,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (!Info)
     return false;
 
-  // When Mask is not a true mask, this transformation is illegal for some
-  // operations whose results are affected by mask, like viota.m.
-  if (Info->MaskAffectsResult && Mask && !usesAllOnesMask(Mask, Glue))
-    return false;
-
   // If True has a merge operand then it needs to be the same as vmerge's False,
   // since False will be used for the result's merge operand.
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
@@ -3834,6 +3841,16 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   VL = GetMinVL(TrueVL, VL);
   if (!VL)
     return false;
+
+  // Some operations produce different elementwise results depending on the
+  // active elements, like viota.m or vredsum. This transformation is illegal
+  // for these if we change the active elements (i.e. mask or VL).
+  if (Info->ActiveElementsAffectResult) {
+    if (Mask && !usesAllOnesMask(Mask, Glue))
+      return false;
+    if (TrueVL != VL)
+      return false;
+  }
 
   // If we end up changing the VL or mask of True, then we need to make sure it
   // doesn't raise any observable fp exceptions, since changing the active

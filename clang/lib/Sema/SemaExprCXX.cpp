@@ -3806,6 +3806,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                                      Overaligned, DeleteName);
     }
 
+    if (OperatorDelete->isInvalidDecl())
+      return ExprError();
+
     MarkFunctionReferenced(StartLoc, OperatorDelete);
 
     // Check access and ambiguity of destructor if we're going to call it.
@@ -4294,6 +4297,20 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
+// adjustVectorType - Compute the intermediate cast type casting elements of the
+// from type to the elements of the to type without resizing the vector.
+static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
+                                 QualType ToType, QualType *ElTy = nullptr) {
+  auto *ToVec = ToType->castAs<VectorType>();
+  QualType ElType = ToVec->getElementType();
+  if (ElTy)
+    *ElTy = ElType;
+  if (!FromTy->isVectorType())
+    return ElType;
+  auto *FromVec = FromTy->castAs<VectorType>();
+  return Context.getExtVectorType(ElType, FromVec->getNumElements());
+}
+
 ExprResult
 Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const StandardConversionSequence& SCS,
@@ -4443,27 +4460,36 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_Integral_Promotion:
-  case ICK_Integral_Conversion:
-    if (ToType->isBooleanType()) {
+  case ICK_Integral_Conversion: {
+    QualType ElTy = ToType;
+    QualType StepTy = ToType;
+    if (ToType->isVectorType())
+      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+    if (ElTy->isBooleanType()) {
       assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
              "only enums with fixed underlying type can promote to bool");
-      From = ImpCastExprToType(From, ToType, CK_IntegralToBoolean, VK_PRValue,
+      From = ImpCastExprToType(From, StepTy, CK_IntegralToBoolean, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
     } else {
-      From = ImpCastExprToType(From, ToType, CK_IntegralCast, VK_PRValue,
+      From = ImpCastExprToType(From, StepTy, CK_IntegralCast, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
     }
     break;
+  }
 
   case ICK_Floating_Promotion:
-  case ICK_Floating_Conversion:
-    From = ImpCastExprToType(From, ToType, CK_FloatingCast, VK_PRValue,
+  case ICK_Floating_Conversion: {
+    QualType StepTy = ToType;
+    if (ToType->isVectorType())
+      StepTy = adjustVectorType(Context, FromType, ToType);
+    From = ImpCastExprToType(From, StepTy, CK_FloatingCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
                .get();
     break;
+  }
 
   case ICK_Complex_Promotion:
   case ICK_Complex_Conversion: {
@@ -4486,16 +4512,21 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
   }
 
-  case ICK_Floating_Integral:
-    if (ToType->isRealFloatingType())
-      From = ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
+  case ICK_Floating_Integral: {
+    QualType ElTy = ToType;
+    QualType StepTy = ToType;
+    if (ToType->isVectorType())
+      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+    if (ElTy->isRealFloatingType())
+      From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
     else
-      From = ImpCastExprToType(From, ToType, CK_FloatingToIntegral, VK_PRValue,
+      From = ImpCastExprToType(From, StepTy, CK_FloatingToIntegral, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
     break;
+  }
 
   case ICK_Fixed_Point_Conversion:
     assert((FromType->isFixedPointType() || ToType->isFixedPointType()) &&
@@ -4617,18 +4648,26 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
   }
 
-  case ICK_Boolean_Conversion:
+  case ICK_Boolean_Conversion: {
     // Perform half-to-boolean conversion via float.
     if (From->getType()->isHalfType()) {
       From = ImpCastExprToType(From, Context.FloatTy, CK_FloatingCast).get();
       FromType = Context.FloatTy;
     }
+    QualType ElTy = FromType;
+    QualType StepTy = ToType;
+    if (FromType->isVectorType()) {
+      if (getLangOpts().HLSL)
+        StepTy = adjustVectorType(Context, FromType, ToType);
+      ElTy = FromType->castAs<VectorType>()->getElementType();
+    }
 
-    From = ImpCastExprToType(From, Context.BoolTy,
-                             ScalarTypeToBooleanCastKind(FromType), VK_PRValue,
+    From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
+                             VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
                .get();
     break;
+  }
 
   case ICK_Derived_To_Base: {
     CXXCastPath BasePath;
@@ -4754,22 +4793,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              CK_ZeroToOCLOpaqueType,
                              From->getValueKind()).get();
     break;
-  case ICK_HLSL_Vector_Truncation: {
-    // Note: HLSL built-in vectors are ExtVectors. Since this truncates a vector
-    // to a smaller vector, this can only operate on arguments where the source
-    // and destination types are ExtVectors.
-    assert(From->getType()->isExtVectorType() && ToType->isExtVectorType() &&
-           "HLSL vector truncation should only apply to ExtVectors");
-    auto *FromVec = From->getType()->castAs<VectorType>();
-    auto *ToVec = ToType->castAs<VectorType>();
-    QualType ElType = FromVec->getElementType();
-    QualType TruncTy =
-        Context.getExtVectorType(ElType, ToVec->getNumElements());
-    From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
-                             From->getValueKind())
-               .get();
-    break;
-  }
 
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
@@ -4780,73 +4803,45 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_HLSL_Array_RValue:
+  case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Vector_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
 
-  if (SCS.Element != ICK_Identity) {
+  if (SCS.Dimension != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices.
 
     // TODO: Support HLSL matrices.
     assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
-           "Element conversion for matrix types is not implemented yet.");
-    assert(From->getType()->isVectorType() && ToType->isVectorType() &&
-           "Element conversion is only supported for vector types.");
-    assert(From->getType()->getAs<VectorType>()->getNumElements() ==
-               ToType->getAs<VectorType>()->getNumElements() &&
-           "Element conversion is only supported for vectors with the same "
-           "element counts.");
-    QualType FromElTy = From->getType()->getAs<VectorType>()->getElementType();
-    unsigned NumElts = ToType->getAs<VectorType>()->getNumElements();
-    switch (SCS.Element) {
-    case ICK_Boolean_Conversion:
-      // Perform half-to-boolean conversion via float.
-      if (FromElTy->isHalfType()) {
-        QualType FPExtType = Context.getExtVectorType(FromElTy, NumElts);
-        From = ImpCastExprToType(From, FPExtType, CK_FloatingCast).get();
-        FromType = FPExtType;
-      }
-
-      From =
-          ImpCastExprToType(From, ToType, ScalarTypeToBooleanCastKind(FromElTy),
-                            VK_PRValue,
-                            /*BasePath=*/nullptr, CCK)
-              .get();
-      break;
-    case ICK_Integral_Promotion:
-    case ICK_Integral_Conversion:
-      if (ToType->isBooleanType()) {
-        assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
-               SCS.Second == ICK_Integral_Promotion &&
-               "only enums with fixed underlying type can promote to bool");
-        From = ImpCastExprToType(From, ToType, CK_IntegralToBoolean, VK_PRValue,
-                                 /*BasePath=*/nullptr, CCK)
-                   .get();
-      } else {
-        From = ImpCastExprToType(From, ToType, CK_IntegralCast, VK_PRValue,
-                                 /*BasePath=*/nullptr, CCK)
-                   .get();
-      }
-      break;
-
-    case ICK_Floating_Promotion:
-    case ICK_Floating_Conversion:
-      From = ImpCastExprToType(From, ToType, CK_FloatingCast, VK_PRValue,
+           "Dimension conversion for matrix types is not implemented yet.");
+    assert(ToType->isVectorType() &&
+           "Dimension conversion is only supported for vector types.");
+    switch (SCS.Dimension) {
+    case ICK_HLSL_Vector_Splat: {
+      // Vector splat from any arithmetic type to a vector.
+      Expr *Elem = prepareVectorSplat(ToType, From).get();
+      From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
       break;
-    case ICK_Floating_Integral:
-      if (ToType->hasFloatingRepresentation())
-        From =
-            ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
-                              /*BasePath=*/nullptr, CCK)
-                .get();
-      else
-        From =
-            ImpCastExprToType(From, ToType, CK_FloatingToIntegral, VK_PRValue,
-                              /*BasePath=*/nullptr, CCK)
-                .get();
+    }
+    case ICK_HLSL_Vector_Truncation: {
+      // Note: HLSL built-in vectors are ExtVectors. Since this truncates a
+      // vector to a smaller vector, this can only operate on arguments where
+      // the source and destination types are ExtVectors.
+      assert(From->getType()->isExtVectorType() && ToType->isExtVectorType() &&
+             "HLSL vector truncation should only apply to ExtVectors");
+      auto *FromVec = From->getType()->castAs<VectorType>();
+      auto *ToVec = ToType->castAs<VectorType>();
+      QualType ElType = FromVec->getElementType();
+      QualType TruncTy =
+          Context.getExtVectorType(ElType, ToVec->getNumElements());
+      From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
+                               From->getValueKind())
+                 .get();
       break;
+    }
     case ICK_Identity:
     default:
       llvm_unreachable("Improper element standard conversion");
@@ -5077,6 +5072,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_HasTrivialCopy:
   case UTT_HasTrivialDestructor:
   case UTT_HasVirtualDestructor:
+  // has_unique_object_representations<T> when T is an array is defined in terms
+  // of has_unique_object_representations<remove_all_extents_t<T>>, so the base
+  // type needs to be complete even if the type is an incomplete array type.
+  case UTT_HasUniqueObjectRepresentations:
     ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
     [[fallthrough]];
 
@@ -5085,7 +5084,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsDestructible:
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
-  case UTT_HasUniqueObjectRepresentations:
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5127,6 +5125,83 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
     return FoundOperator;
   }
   return false;
+}
+
+static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
+                                                     const CXXRecordDecl *Decl,
+                                                     SourceLocation KeyLoc) {
+  if (Decl->isUnion())
+    return false;
+  if (Decl->isLambda())
+    return Decl->isCapturelessLambda();
+
+  {
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+    // const ClassT& obj;
+    OpaqueValueExpr Operand(
+        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        ExprValueKind::VK_LValue);
+    UnresolvedSet<16> Functions;
+    // obj == obj;
+    S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
+
+    auto Result = S.CreateOverloadedBinOp(KeyLoc, BinaryOperatorKind::BO_EQ,
+                                          Functions, &Operand, &Operand);
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    const auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(Result.get());
+    if (!CallExpr)
+      return false;
+    const auto *Callee = CallExpr->getDirectCallee();
+    auto ParamT = Callee->getParamDecl(0)->getType();
+    if (!Callee->isDefaulted())
+      return false;
+    if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
+      return false;
+    if (ParamT.getNonReferenceType()->getUnqualifiedDesugaredType() !=
+        Decl->getTypeForDecl())
+      return false;
+  }
+
+  return llvm::all_of(Decl->bases(),
+                      [&](const CXXBaseSpecifier &BS) {
+                        if (const auto *RD = BS.getType()->getAsCXXRecordDecl())
+                          return HasNonDeletedDefaultedEqualityComparison(
+                              S, RD, KeyLoc);
+                        return true;
+                      }) &&
+         llvm::all_of(Decl->fields(), [&](const FieldDecl *FD) {
+           auto Type = FD->getType();
+           if (Type->isArrayType())
+             Type = Type->getBaseElementTypeUnsafe()
+                        ->getCanonicalTypeUnqualified();
+
+           if (Type->isReferenceType() || Type->isEnumeralType())
+             return false;
+           if (const auto *RD = Type->getAsCXXRecordDecl())
+             return HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc);
+           return true;
+         });
+}
+
+static bool isTriviallyEqualityComparableType(Sema &S, QualType Type, SourceLocation KeyLoc) {
+  QualType CanonicalType = Type.getCanonicalType();
+  if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
+      CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
+    return false;
+
+  if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
+    if (!HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc))
+      return false;
+  }
+
+  return S.getASTContext().hasUniqueObjectRepresentations(
+      CanonicalType, /*CheckIfTriviallyCopyable=*/false);
 }
 
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
@@ -5561,7 +5636,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     Self.Diag(KeyLoc, diag::err_builtin_pass_in_regs_non_class) << T;
     return false;
   case UTT_IsTriviallyEqualityComparable:
-    return T.isTriviallyEqualityComparableType(C);
+    return isTriviallyEqualityComparableType(Self, T, KeyLoc);
   }
 }
 
@@ -5954,6 +6029,32 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
 
     return cast<CXXRecordDecl>(rhsRecord->getDecl())
       ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+  }
+  case BTT_IsVirtualBaseOf: {
+    const RecordType *BaseRecord = LhsT->getAs<RecordType>();
+    const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
+
+    if (!BaseRecord || !DerivedRecord) {
+      DiagnoseVLAInCXXTypeTrait(Self, Lhs,
+                                tok::kw___builtin_is_virtual_base_of);
+      DiagnoseVLAInCXXTypeTrait(Self, Rhs,
+                                tok::kw___builtin_is_virtual_base_of);
+      return false;
+    }
+
+    if (BaseRecord->isUnionType() || DerivedRecord->isUnionType())
+      return false;
+
+    if (!BaseRecord->isStructureOrClassType() ||
+        !DerivedRecord->isStructureOrClassType())
+      return false;
+
+    if (Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                                 diag::err_incomplete_type))
+      return false;
+
+    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
+        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);

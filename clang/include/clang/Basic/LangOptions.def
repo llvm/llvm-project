@@ -165,10 +165,14 @@ LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library fea
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
 LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")
 LANGOPT(PointerAuthReturns, 1, 0, "return pointer authentication")
+LANGOPT(PointerAuthIndirectGotos, 1, 0, "indirect gotos pointer authentication")
 LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
 LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, "incorporate address discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, "incorporate type discrimination in authenticated vtable pointers")
+LANGOPT(PointerAuthTypeInfoVTPtrDiscrimination, 1, 0, "incorporate type and address discrimination in authenticated vtable pointers for std::type_info")
 LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
+BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
+               "Use type discrimination when signing function pointers")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
@@ -220,7 +224,6 @@ COMPATIBLE_LANGOPT(GNUInline         , 1, 0, "GNU inline semantics")
 COMPATIBLE_LANGOPT(NoInlineDefine    , 1, 0, "__NO_INLINE__ predefined macro")
 COMPATIBLE_LANGOPT(Deprecated        , 1, 0, "__DEPRECATED predefined macro")
 COMPATIBLE_LANGOPT(FastMath          , 1, 0, "fast FP math optimizations, and __FAST_MATH__ predefined macro")
-COMPATIBLE_LANGOPT(FiniteMathOnly    , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 COMPATIBLE_LANGOPT(UnsafeFPMath      , 1, 0, "Unsafe Floating Point Math")
 COMPATIBLE_LANGOPT(ProtectParens     , 1, 0, "optimizer honors parentheses "
                    "when floating-point expressions are evaluated")
@@ -336,7 +339,6 @@ LANGOPT(SinglePrecisionConstants , 1, 0, "treating double-precision floating poi
 LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
 BENIGN_LANGOPT(CLNoSignedZero , 1, 0, "Permit Floating Point optimization without regard to signed zeros")
 COMPATIBLE_LANGOPT(CLUnsafeMath , 1, 0, "Unsafe Floating Point Math")
-COMPATIBLE_LANGOPT(CLFiniteMathOnly , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 /// FP_CONTRACT mode (on/off/fast).
 BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contraction type")
 COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
@@ -518,6 +520,9 @@ BENIGN_LANGOPT(CheckNew, 1, 0, "Do not assume C++ operator new may not return NU
 BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
                "Emit diagnostics for a constexpr function body that can never "
                "be used in a constant expression.")
+
+LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

@@ -432,6 +432,7 @@ cc_library(
         ":Version",
         "//clang:codegen",
         "//clang:frontend",
+        "//clang:serialization",
         "//llvm:Support",
     ],
 )
@@ -697,6 +698,7 @@ cc_library(
         ":TargetHeaders",
         ":TargetProperties",
         ":Utility",
+        "//clang:codegen",
         "//lldb/source/Plugins:PluginProcessUtility",
         "//llvm:BinaryFormat",
         "//llvm:MC",
@@ -706,7 +708,9 @@ cc_library(
 
 cc_library(
     name = "Headers",
-    hdrs = glob(["include/lldb/lldb-*.h"]),
+    hdrs = glob(["include/lldb/lldb-*.h"]) + [
+        "include/lldb/Symbol/SaveCoreOptions.h",
+    ],
     strip_include_prefix = "include",
 )
 

@@ -11,6 +11,9 @@ set(NSAN_SOURCES
   nsan_suppressions.cpp
 )
 
+set(NSAN_PREINIT_SOURCES
+  nsan_preinit.cpp)
+
 set(NSAN_HEADERS
   nsan.h
   nsan_flags.h
@@ -20,11 +23,11 @@ set(NSAN_HEADERS
   nsan_suppressions.h
 )
 
-append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC NSAN_CFLAGS)
-
 set(NSAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
 set(NSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_rtti_flag(OFF NSAN_CFLAGS)
+
 set(NSAN_DYNAMIC_CFLAGS ${NSAN_CFLAGS})
 
 set(NSAN_COMMON_RUNTIME_OBJECT_LIBS
@@ -61,6 +64,12 @@ if(NOT APPLE)
       ADDITIONAL_HEADERS ${NSAN_HEADERS}
       CFLAGS ${NSAN_CFLAGS})
 
+  add_compiler_rt_object_libraries(RTNsan_preinit
+    ARCHS ${NSAN_SUPPORTED_ARCH}
+    SOURCES ${NSAN_PREINIT_SOURCES}
+    ADDITIONAL_HEADERS ${NSAN_HEADERS}
+    CFLAGS ${NSAN_CFLAGS})
+
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
   add_compiler_rt_object_libraries(RTNsan_dynamic_version_script_dummy
     ARCHS ${NSAN_SUPPORTED_ARCH}
@@ -72,7 +81,7 @@ add_compiler_rt_runtime(
   clang_rt.nsan
   STATIC
   ARCHS ${NSAN_SUPPORTED_ARCH}
-  OBJECT_LIBS RTNsan
+  OBJECT_LIBS RTNsan_preinit RTNsan
               ${NSAN_COMMON_RUNTIME_OBJECT_LIBS}
   CFLAGS ${NSAN_CFLAGS}
   PARENT_TARGET nsan)

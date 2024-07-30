@@ -367,11 +367,12 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
+  constexpr const char *tuneCPU = "";
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine);
+      semanticsContext.languageFeatures(), targetMachine, tuneCPU);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {

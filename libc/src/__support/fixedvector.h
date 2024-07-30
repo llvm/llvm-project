@@ -12,8 +12,9 @@
 #include "src/__support/CPP/array.h"
 
 #include "src/__support/CPP/iterator.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // A fixed size data store backed by an underlying cpp::array data structure. It
 // supports vector like API but is not resizable like a vector.
@@ -97,6 +98,6 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H

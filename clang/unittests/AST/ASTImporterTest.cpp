@@ -9376,29 +9376,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, VaListCpp) {
       ToVaList->getUnderlyingType(), ToBuiltinVaList->getUnderlyingType()));
 }
 
-TEST_P(ASTImporterOptionSpecificTestBase,
-       ImportDefinitionOfEmptyClassWithNoUniqueAddressField) {
-  Decl *FromTU = getTuDecl(
-      R"(
-      struct B {};
-      struct A { B b; };
-      )",
-      Lang_CXX20);
-
-  CXXRecordDecl *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
-      FromTU, cxxRecordDecl(hasName("A")));
-
-  for (auto *FD : FromD->fields())
-    FD->addAttr(clang::NoUniqueAddressAttr::Create(FromD->getASTContext(),
-                                                   clang::SourceRange()));
-  FromD->markEmpty();
-
-  CXXRecordDecl *ToD = Import(FromD, Lang_CXX20);
-  EXPECT_TRUE(ToD->isEmpty());
-  for (auto *FD : ToD->fields())
-    EXPECT_EQ(true, FD->hasAttr<NoUniqueAddressAttr>());
-}
-
 TEST_P(ASTImporterOptionSpecificTestBase, ImportExistingTypedefToRecord) {
   const char *Code =
       R"(
@@ -9681,37 +9658,143 @@ AST_MATCHER_P(EnumDecl, hasEnumConstName, StringRef, ConstName) {
   return false;
 }
 
-TEST_P(ASTImporterOptionSpecificTestBase, ImportAnonymousEnum) {
+TEST_P(ASTImporterOptionSpecificTestBase, ImportAnonymousEnums) {
+  const char *Code =
+      R"(
+      struct A {
+        enum { E1, E2 } x;
+        enum { E3, E4 } y;
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromEnumE1 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E1")));
+  auto *ImportedEnumE1 = Import(FromEnumE1, Lang_CXX11);
+  EXPECT_TRUE(ImportedEnumE1);
+  auto *FromEnumE3 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E3")));
+  auto *ImportedEnumE3 = Import(FromEnumE3, Lang_CXX11);
+  EXPECT_TRUE(ImportedEnumE3);
+  EXPECT_NE(ImportedEnumE1, ImportedEnumE3);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFreeStandingAnonymousEnums) {
+  const char *Code =
+      R"(
+      struct A {
+        enum { E1, E2 };
+        enum { E3, E4 };
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromEnumE1 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E1")));
+  auto *ImportedEnumE1 = Import(FromEnumE1, Lang_CXX11);
+  EXPECT_TRUE(ImportedEnumE1);
+  auto *FromEnumE3 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E3")));
+  auto *ImportedEnumE3 = Import(FromEnumE3, Lang_CXX11);
+  EXPECT_TRUE(ImportedEnumE3);
+  EXPECT_NE(ImportedEnumE1, ImportedEnumE3);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportExistingAnonymousEnums) {
   const char *ToCode =
       R"(
       struct A {
-        enum { E1, E2} x;
-        enum { E3, E4} y;
+        enum { E1, E2 } x;
+        enum { E3, E4 } y;
       };
       )";
   Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
-  auto *ToE1 = FirstDeclMatcher<EnumDecl>().match(
+  auto *ToEnumE1 = FirstDeclMatcher<EnumDecl>().match(
       ToTU, enumDecl(hasEnumConstName("E1")));
-  auto *ToE3 = FirstDeclMatcher<EnumDecl>().match(
+  auto *ToEnumE3 = FirstDeclMatcher<EnumDecl>().match(
       ToTU, enumDecl(hasEnumConstName("E3")));
   const char *Code =
       R"(
       struct A {
-        enum { E1, E2} x;
-        enum { E3, E4} y;
+        enum { E1, E2 } x;
+        enum { E3, E4 } y;
       };
       )";
   Decl *FromTU = getTuDecl(Code, Lang_CXX11);
-  auto *FromE1 = FirstDeclMatcher<EnumDecl>().match(
+  auto *FromEnumE1 = FirstDeclMatcher<EnumDecl>().match(
       FromTU, enumDecl(hasEnumConstName("E1")));
+  auto *ImportedEnumE1 = Import(FromEnumE1, Lang_CXX11);
+  ASSERT_TRUE(ImportedEnumE1);
+  EXPECT_EQ(ImportedEnumE1, ToEnumE1);
+  auto *FromEnumE3 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E3")));
+  auto *ImportedEnumE3 = Import(FromEnumE3, Lang_CXX11);
+  ASSERT_TRUE(ImportedEnumE3);
+  EXPECT_EQ(ImportedEnumE3, ToEnumE3);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportExistingEmptyAnonymousEnums) {
+  const char *ToCode =
+      R"(
+      struct A {
+        enum {};
+      };
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  auto *ToE1 = FirstDeclMatcher<EnumDecl>().match(ToTU, enumDecl());
+  const char *Code =
+      R"(
+      struct A {
+        enum {};
+        enum {};
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromE1 = FirstDeclMatcher<EnumDecl>().match(FromTU, enumDecl());
   auto *ImportedE1 = Import(FromE1, Lang_CXX11);
   ASSERT_TRUE(ImportedE1);
   EXPECT_EQ(ImportedE1, ToE1);
-  auto *FromE3 = FirstDeclMatcher<EnumDecl>().match(
-      FromTU, enumDecl(hasEnumConstName("E3")));
-  auto *ImportedE3 = Import(FromE3, Lang_CXX11);
-  ASSERT_TRUE(ImportedE3);
-  EXPECT_EQ(ImportedE3, ToE3);
+  auto *FromE2 = LastDeclMatcher<EnumDecl>().match(FromTU, enumDecl());
+  ASSERT_NE(FromE1, FromE2);
+  auto *ImportedE2 = Import(FromE2, Lang_CXX11);
+  ASSERT_TRUE(ImportedE2);
+  // FIXME: These should not be equal, or the import should fail.
+  EXPECT_EQ(ImportedE2, ToE1);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportMultipleAnonymousEnumDecls) {
+  Decl *ToTU = getToTuDecl("", Lang_CXX03);
+  Decl *FromTU = getTuDecl(
+      R"(
+        struct foo {
+          enum { A };
+          enum { B };
+        };
+      )",
+      Lang_CXX03);
+
+  auto EnumConstA = enumConstantDecl(hasName("A"));
+  auto EnumConstB = enumConstantDecl(hasName("B"));
+
+  auto *FromA = FirstDeclMatcher<EnumConstantDecl>().match(FromTU, EnumConstA);
+  auto *FromB = FirstDeclMatcher<EnumConstantDecl>().match(FromTU, EnumConstB);
+
+  auto *ToA = Import(FromA, Lang_CXX03);
+  auto *ToB = Import(FromB, Lang_CXX03);
+
+  ASSERT_TRUE(ToA);
+  ASSERT_TRUE(ToB);
+
+  auto *ToFooA = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, tagDecl(has(enumDecl(has(EnumConstA)))));
+  auto *ToFooB = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, tagDecl(has(enumDecl(has(EnumConstB)))));
+  ASSERT_EQ(ToFooA, ToFooB);
+
+  // different EnumDecl
+  auto *ToEnumDeclA =
+      FirstDeclMatcher<EnumDecl>().match(ToTU, enumDecl(has(EnumConstA)));
+  auto *ToEnumDeclB =
+      FirstDeclMatcher<EnumDecl>().match(ToTU, enumDecl(has(EnumConstB)));
+  ASSERT_NE(ToEnumDeclA, ToEnumDeclB);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

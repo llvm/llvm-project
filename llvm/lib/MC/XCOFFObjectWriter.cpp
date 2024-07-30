@@ -296,7 +296,6 @@ class XCOFFObjectWriter : public MCObjectWriter {
   uint64_t SymbolTableOffset = 0;
   uint16_t SectionCount = 0;
   uint32_t PaddingsBeforeDwarf = 0;
-  std::vector<std::pair<std::string, size_t>> FileNames;
   bool HasVisibility = false;
 
   support::endian::Writer W;
@@ -422,16 +421,12 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void finalizeRelocationInfo(SectionEntry *Sec, uint64_t RelCount);
   void calcOffsetToRelocations(SectionEntry *Sec, uint64_t &RawPointer);
 
-  void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
-                         unsigned LanguageCode, unsigned ReasonCode,
-                         unsigned FunctionSize, bool hasDebug) override;
   bool hasExceptionSection() {
     return !ExceptionSection.ExceptionTable.empty();
   }
   unsigned getExceptionSectionSize();
   unsigned getExceptionOffset(const MCSymbol *Symbol);
 
-  void addCInfoSymEntry(StringRef Name, StringRef Metadata) override;
   size_t auxiliaryHeaderSize() const {
     // 64-bit object files have no auxiliary header.
     return HasVisibility && !is64Bit() ? XCOFF::AuxFileHeaderSizeShort : 0;
@@ -444,6 +439,11 @@ public:
   void writeWord(uint64_t Word) {
     is64Bit() ? W.write<uint64_t>(Word) : W.write<uint32_t>(Word);
   }
+
+  void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
+                         unsigned LanguageCode, unsigned ReasonCode,
+                         unsigned FunctionSize, bool hasDebug);
+  void addCInfoSymEntry(StringRef Name, StringRef Metadata);
 };
 
 XCOFFObjectWriter::XCOFFObjectWriter(
@@ -596,6 +596,9 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
     const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
+    if (ContainingCsect->isDwarfSect())
+      continue;
+
     if (XSym->getVisibilityType() != XCOFF::SYM_V_UNSPECIFIED)
       HasVisibility = true;
 
@@ -634,7 +637,6 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   if (CISI && nameShouldBeInStringTable(CISI->Name))
     Strings.add(CISI->Name);
 
-  FileNames = Asm.getFileNames();
   // Emit ".file" as the source file name when there is no file name.
   if (FileNames.empty())
     FileNames.emplace_back(".file", 0);
@@ -647,7 +649,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
   // the AUX_FILE auxiliary entry.
   if (nameShouldBeInStringTable(".file"))
     Strings.add(".file");
-  StringRef Vers = Asm.getCompilerVersion();
+  StringRef Vers = CompilerVersion;
   if (auxFileSymNameShouldBeInStringTable(Vers))
     Strings.add(Vers);
 
@@ -825,8 +827,6 @@ uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm) {
   // We always emit a timestamp of 0 for reproducibility, so ensure incremental
   // linking is not enabled, in case, like with Windows COFF, such a timestamp
   // is incompatible with incremental linking of XCOFF.
-  if (Asm.isIncrementalLinkerCompatible())
-    report_fatal_error("Incremental linking not supported for XCOFF.");
 
   finalizeSectionInfo();
   uint64_t StartOffset = W.OS.tell();
@@ -1159,7 +1159,7 @@ void XCOFFObjectWriter::writeRelocations() {
 
 void XCOFFObjectWriter::writeSymbolTable(MCAssembler &Asm) {
   // Write C_FILE symbols.
-  StringRef Vers = Asm.getCompilerVersion();
+  StringRef Vers = CompilerVersion;
 
   for (const std::pair<std::string, size_t> &F : FileNames) {
     // The n_name of a C_FILE symbol is the source file's name when no auxiliary
@@ -1385,11 +1385,10 @@ void XCOFFObjectWriter::addExceptionEntry(
 unsigned XCOFFObjectWriter::getExceptionSectionSize() {
   unsigned EntryNum = 0;
 
-  for (auto it = ExceptionSection.ExceptionTable.begin();
-       it != ExceptionSection.ExceptionTable.end(); ++it)
+  for (const auto &TableEntry : ExceptionSection.ExceptionTable)
     // The size() gets +1 to account for the initial entry containing the
     // symbol table index.
-    EntryNum += it->second.Entries.size() + 1;
+    EntryNum += TableEntry.second.Entries.size() + 1;
 
   return EntryNum * (is64Bit() ? XCOFF::ExceptionSectionEntrySize64
                                : XCOFF::ExceptionSectionEntrySize32);
@@ -1397,11 +1396,10 @@ unsigned XCOFFObjectWriter::getExceptionSectionSize() {
 
 unsigned XCOFFObjectWriter::getExceptionOffset(const MCSymbol *Symbol) {
   unsigned EntryNum = 0;
-  for (auto it = ExceptionSection.ExceptionTable.begin();
-       it != ExceptionSection.ExceptionTable.end(); ++it) {
-    if (Symbol == it->second.FunctionSymbol)
+  for (const auto &TableEntry : ExceptionSection.ExceptionTable) {
+    if (Symbol == TableEntry.second.FunctionSymbol)
       break;
-    EntryNum += it->second.Entries.size() + 1;
+    EntryNum += TableEntry.second.Entries.size() + 1;
   }
   return EntryNum * (is64Bit() ? XCOFF::ExceptionSectionEntrySize64
                                : XCOFF::ExceptionSectionEntrySize32);
@@ -1417,7 +1415,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(MCAssembler &Asm) {
   // The symbol table starts with all the C_FILE symbols. Each C_FILE symbol
   // requires 1 or 2 auxiliary entries.
   uint32_t SymbolTableIndex =
-      (2 + (Asm.getCompilerVersion().empty() ? 0 : 1)) * FileNames.size();
+      (2 + (CompilerVersion.empty() ? 0 : 1)) * FileNames.size();
 
   if (CInfoSymSection.Entry)
     SymbolTableIndex++;
@@ -1667,17 +1665,16 @@ void XCOFFObjectWriter::writeSectionForDwarfSectionEntry(
 void XCOFFObjectWriter::writeSectionForExceptionSectionEntry(
     const MCAssembler &Asm, ExceptionSectionEntry &ExceptionEntry,
     uint64_t &CurrentAddressLocation) {
-  for (auto it = ExceptionEntry.ExceptionTable.begin();
-       it != ExceptionEntry.ExceptionTable.end(); it++) {
+  for (const auto &TableEntry : ExceptionEntry.ExceptionTable) {
     // For every symbol that has exception entries, you must start the entries
     // with an initial symbol table index entry
-    W.write<uint32_t>(SymbolIndexMap[it->second.FunctionSymbol]);
+    W.write<uint32_t>(SymbolIndexMap[TableEntry.second.FunctionSymbol]);
     if (is64Bit()) {
       // 4-byte padding on 64-bit.
       W.OS.write_zeros(4);
     }
     W.OS.write_zeros(2);
-    for (auto &TrapEntry : it->second.Entries) {
+    for (auto &TrapEntry : TableEntry.second.Entries) {
       writeWord(TrapEntry.TrapAddress);
       W.write<uint8_t>(TrapEntry.Lang);
       W.write<uint8_t>(TrapEntry.Reason);
@@ -1740,4 +1737,19 @@ std::unique_ptr<MCObjectWriter>
 llvm::createXCOFFObjectWriter(std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW,
                               raw_pwrite_stream &OS) {
   return std::make_unique<XCOFFObjectWriter>(std::move(MOTW), OS);
+}
+
+// TODO: Export XCOFFObjectWriter to llvm/MC/MCXCOFFObjectWriter.h and remove
+// the forwarders.
+void XCOFF::addExceptionEntry(MCObjectWriter &Writer, const MCSymbol *Symbol,
+                              const MCSymbol *Trap, unsigned LanguageCode,
+                              unsigned ReasonCode, unsigned FunctionSize,
+                              bool hasDebug) {
+  static_cast<XCOFFObjectWriter &>(Writer).addExceptionEntry(
+      Symbol, Trap, LanguageCode, ReasonCode, FunctionSize, hasDebug);
+}
+
+void XCOFF::addCInfoSymEntry(MCObjectWriter &Writer, StringRef Name,
+                             StringRef Metadata) {
+  static_cast<XCOFFObjectWriter &>(Writer).addCInfoSymEntry(Name, Metadata);
 }

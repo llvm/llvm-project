@@ -808,13 +808,13 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
     Record1.reserveSites(IPVK_IndirectCallTarget, 4);
     InstrProfValueData VD0[] = {
         {(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}, {(uint64_t)callee3, 3}};
-    Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
     // No value profile data at the second site.
-    Record1.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 1, std::nullopt, nullptr);
     InstrProfValueData VD2[] = {{(uint64_t)callee1, 1}, {(uint64_t)callee2, 2}};
-    Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, 2, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 2, VD2, nullptr);
     InstrProfValueData VD3[] = {{(uint64_t)callee7, 1}, {(uint64_t)callee8, 2}};
-    Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
+    Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, nullptr);
   }
 
   // 2 vtable value sites.
@@ -828,8 +828,8 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
         {getCalleeAddress(vtable1), 1},
         {getCalleeAddress(vtable2), 2},
     };
-    Record1.addValueData(IPVK_VTableTarget, 0, VD0, 3, nullptr);
-    Record1.addValueData(IPVK_VTableTarget, 1, VD2, 2, nullptr);
+    Record1.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
+    Record1.addValueData(IPVK_VTableTarget, 1, VD2, nullptr);
   }
 
   Writer.addRecord(std::move(Record1), getProfWeight(), Err);
@@ -918,7 +918,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   Record.reserveSites(IPVK_IndirectCallTarget, 1);
   InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}, {5000, 5},
                               {4000, 4}, {6000, 6}};
-  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 6, nullptr);
+  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
   Writer.addRecord(std::move(Record), Err);
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -1011,21 +1011,21 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
                                 {uint64_t(callee2), 2},
                                 {uint64_t(callee3), 3},
                                 {uint64_t(callee4), 4}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, 4, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
 
     // No value profile data at the second site.
-    Record11.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 1, std::nullopt, nullptr);
 
     InstrProfValueData VD2[] = {
         {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 2, VD2, nullptr);
 
     InstrProfValueData VD3[] = {{uint64_t(callee7), 1}, {uint64_t(callee8), 2}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 3, VD3, nullptr);
 
     InstrProfValueData VD4[] = {
         {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-    Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, 3, nullptr);
+    Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, nullptr);
   }
   // 3 value sites for vtables.
   {
@@ -1034,53 +1034,53 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3},
                                 {getCalleeAddress(vtable4), 4}};
-    Record11.addValueData(IPVK_VTableTarget, 0, VD0, 4, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
 
     InstrProfValueData VD2[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record11.addValueData(IPVK_VTableTarget, 1, VD2, 3, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 1, VD2, nullptr);
 
     InstrProfValueData VD4[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record11.addValueData(IPVK_VTableTarget, 2, VD4, 3, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 2, VD4, nullptr);
   }
 
   // A different record for the same caller.
   Record12.reserveSites(IPVK_IndirectCallTarget, 5);
   InstrProfValueData VD02[] = {{uint64_t(callee2), 5}, {uint64_t(callee3), 3}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, 2, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, nullptr);
 
   // No value profile data at the second site.
-  Record12.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 1, std::nullopt, nullptr);
 
   InstrProfValueData VD22[] = {
       {uint64_t(callee2), 1}, {uint64_t(callee3), 3}, {uint64_t(callee4), 4}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 2, VD22, 3, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 2, VD22, nullptr);
 
-  Record12.addValueData(IPVK_IndirectCallTarget, 3, nullptr, 0, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 3, std::nullopt, nullptr);
 
   InstrProfValueData VD42[] = {
       {uint64_t(callee1), 1}, {uint64_t(callee2), 2}, {uint64_t(callee3), 3}};
-  Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, 3, nullptr);
+  Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, nullptr);
 
   // 3 value sites for vtables.
   {
     Record12.reserveSites(IPVK_VTableTarget, 3);
     InstrProfValueData VD0[] = {{getCalleeAddress(vtable2), 5},
                                 {getCalleeAddress(vtable3), 3}};
-    Record12.addValueData(IPVK_VTableTarget, 0, VD0, 2, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
 
     InstrProfValueData VD2[] = {{getCalleeAddress(vtable2), 1},
                                 {getCalleeAddress(vtable3), 3},
                                 {getCalleeAddress(vtable4), 4}};
-    Record12.addValueData(IPVK_VTableTarget, 1, VD2, 3, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 1, VD2, nullptr);
 
     InstrProfValueData VD4[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record12.addValueData(IPVK_VTableTarget, 2, VD4, 3, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 2, VD4, nullptr);
   }
 
   Writer.addRecord(std::move(Record11), Err);
@@ -1220,7 +1220,7 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_saturation) {
   NamedInstrProfRecord Record4("baz", 0x5678, {3, 4});
   Record4.reserveSites(ValueKind, 1);
   InstrProfValueData VD4[] = {{ProfiledValue, 1}};
-  Record4.addValueData(ValueKind, 0, VD4, 1, nullptr);
+  Record4.addValueData(ValueKind, 0, VD4, nullptr);
   Result = instrprof_error::success;
   Writer.addRecord(std::move(Record4), Err);
   ASSERT_EQ(Result, instrprof_error::success);
@@ -1229,7 +1229,7 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_saturation) {
   NamedInstrProfRecord Record5("baz", 0x5678, {5, 6});
   Record5.reserveSites(ValueKind, 1);
   InstrProfValueData VD5[] = {{ProfiledValue, MaxValCount}};
-  Record5.addValueData(ValueKind, 0, VD5, 1, nullptr);
+  Record5.addValueData(ValueKind, 0, VD5, nullptr);
   Result = instrprof_error::success;
   Writer.addRecord(std::move(Record5), Err);
   ASSERT_EQ(Result, instrprof_error::counter_overflow);
@@ -1269,8 +1269,8 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
     VD0[I].Count = 2 * I + 1000;
   }
 
-  Record11.addValueData(ValueKind, 0, VD0, 255, nullptr);
-  Record11.addValueData(ValueKind, 1, nullptr, 0, nullptr);
+  Record11.addValueData(ValueKind, 0, VD0, nullptr);
+  Record11.addValueData(ValueKind, 1, std::nullopt, nullptr);
 
   Record12.reserveSites(ValueKind, 2);
   InstrProfValueData VD1[255];
@@ -1279,8 +1279,8 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
     VD1[I].Count = 2 * I + 1001;
   }
 
-  Record12.addValueData(ValueKind, 0, VD1, 255, nullptr);
-  Record12.addValueData(ValueKind, 1, nullptr, 0, nullptr);
+  Record12.addValueData(ValueKind, 0, VD1, nullptr);
+  Record12.addValueData(ValueKind, 1, std::nullopt, nullptr);
 
   Writer.addRecord(std::move(Record11), Err);
   // Merge profile data.
@@ -1317,23 +1317,23 @@ static void addValueProfData(InstrProfRecord &Record) {
                                 {uint64_t(callee3), 500},
                                 {uint64_t(callee4), 300},
                                 {uint64_t(callee5), 100}};
-    Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 5, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, nullptr);
     InstrProfValueData VD1[] = {{uint64_t(callee5), 800},
                                 {uint64_t(callee3), 1000},
                                 {uint64_t(callee2), 2500},
                                 {uint64_t(callee1), 1300}};
-    Record.addValueData(IPVK_IndirectCallTarget, 1, VD1, 4, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 1, VD1, nullptr);
     InstrProfValueData VD2[] = {{uint64_t(callee6), 800},
                                 {uint64_t(callee3), 1000},
                                 {uint64_t(callee4), 5500}};
-    Record.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 2, VD2, nullptr);
     InstrProfValueData VD3[] = {{uint64_t(callee2), 1800},
                                 {uint64_t(callee3), 2000}};
-    Record.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
-    Record.addValueData(IPVK_IndirectCallTarget, 4, nullptr, 0, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 3, VD3, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 4, std::nullopt, nullptr);
     InstrProfValueData VD5[] = {{uint64_t(callee7), 1234},
                                 {uint64_t(callee8), 5678}};
-    Record.addValueData(IPVK_IndirectCallTarget, 5, VD5, 2, nullptr);
+    Record.addValueData(IPVK_IndirectCallTarget, 5, VD5, nullptr);
   }
 
   // Add test data for vtables
@@ -1355,10 +1355,10 @@ static void addValueProfData(InstrProfRecord &Record) {
     };
     InstrProfValueData VD3[] = {{getCalleeAddress(vtable2), 1800},
                                 {getCalleeAddress(vtable3), 2000}};
-    Record.addValueData(IPVK_VTableTarget, 0, VD0, 5, nullptr);
-    Record.addValueData(IPVK_VTableTarget, 1, VD1, 4, nullptr);
-    Record.addValueData(IPVK_VTableTarget, 2, VD2, 3, nullptr);
-    Record.addValueData(IPVK_VTableTarget, 3, VD3, 2, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 0, VD0, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 1, VD1, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 2, VD2, nullptr);
+    Record.addValueData(IPVK_VTableTarget, 3, VD3, nullptr);
   }
 }
 

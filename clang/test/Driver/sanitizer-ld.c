@@ -753,8 +753,8 @@
 // CHECK-SAFESTACK-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SAFESTACK-LINUX-NOT: "-lc"
 // CHECK-SAFESTACK-LINUX-NOT: whole-archive
-// CHECK-SAFESTACK-LINUX: libclang_rt.safestack.a"
 // CHECK-SAFESTACK-LINUX: "-u" "__safestack_init"
+// CHECK-SAFESTACK-LINUX: libclang_rt.safestack.a"
 // CHECK-SAFESTACK-LINUX: "-lpthread"
 // CHECK-SAFESTACK-LINUX: "-ldl"
 // CHECK-SAFESTACK-LINUX: "-lresolv"

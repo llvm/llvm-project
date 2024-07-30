@@ -1,72 +1,162 @@
 #include "LibcGpuBenchmark.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/config.h"
+#include "src/stdio/printf.h"
+#include "src/stdlib/srand.h"
 #include "src/time/gpu/time_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace benchmarks {
 
 FixedVector<Benchmark *, 64> benchmarks;
-cpp::array<BenchmarkResult, 1024> results;
 
 void Benchmark::add_benchmark(Benchmark *benchmark) {
   benchmarks.push_back(benchmark);
 }
 
-BenchmarkResult
-reduce_results(const cpp::array<BenchmarkResult, 1024> &results) {
-  BenchmarkResult result;
-  uint64_t cycles_sum = 0;
-  double standard_deviation_sum = 0;
-  uint64_t min = UINT64_MAX;
-  uint64_t max = 0;
-  uint32_t samples_sum = 0;
-  uint32_t iterations_sum = 0;
-  clock_t time_sum = 0;
-  uint64_t num_threads = gpu::get_num_threads();
-  for (uint64_t i = 0; i < num_threads; i++) {
-    BenchmarkResult current_result = results[i];
-    cycles_sum += current_result.cycles;
-    standard_deviation_sum += current_result.standard_deviation;
-    min = cpp::min(min, current_result.min);
-    max = cpp::max(max, current_result.max);
-    samples_sum += current_result.samples;
-    iterations_sum += current_result.total_iterations;
-    time_sum += current_result.total_time;
+struct AtomicBenchmarkSums {
+  cpp::Atomic<uint64_t> cycles_sum = 0;
+  cpp::Atomic<uint64_t> standard_deviation_sum = 0;
+  cpp::Atomic<uint64_t> min = UINT64_MAX;
+  cpp::Atomic<uint64_t> max = 0;
+  cpp::Atomic<uint32_t> samples_sum = 0;
+  cpp::Atomic<uint32_t> iterations_sum = 0;
+  cpp::Atomic<clock_t> time_sum = 0;
+  cpp::Atomic<uint64_t> active_threads = 0;
+
+  void reset() {
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+    active_threads.store(0, cpp::MemoryOrder::RELAXED);
+    cycles_sum.store(0, cpp::MemoryOrder::RELAXED);
+    standard_deviation_sum.store(0, cpp::MemoryOrder::RELAXED);
+    min.store(UINT64_MAX, cpp::MemoryOrder::RELAXED);
+    max.store(0, cpp::MemoryOrder::RELAXED);
+    samples_sum.store(0, cpp::MemoryOrder::RELAXED);
+    iterations_sum.store(0, cpp::MemoryOrder::RELAXED);
+    time_sum.store(0, cpp::MemoryOrder::RELAXED);
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
   }
-  result.cycles = cycles_sum / num_threads;
-  result.standard_deviation = standard_deviation_sum / num_threads;
-  result.min = min;
-  result.max = max;
-  result.samples = samples_sum / num_threads;
-  result.total_iterations = iterations_sum / num_threads;
-  result.total_time = time_sum / num_threads;
-  return result;
+
+  void update(const BenchmarkResult &result) {
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+    active_threads.fetch_add(1, cpp::MemoryOrder::RELAXED);
+
+    cycles_sum.fetch_add(result.cycles, cpp::MemoryOrder::RELAXED);
+    standard_deviation_sum.fetch_add(
+        static_cast<uint64_t>(result.standard_deviation),
+        cpp::MemoryOrder::RELAXED);
+
+    // Perform a CAS loop to atomically update the min
+    uint64_t orig_min = min.load(cpp::MemoryOrder::RELAXED);
+    while (!min.compare_exchange_strong(
+        orig_min, cpp::min(orig_min, result.min), cpp::MemoryOrder::ACQUIRE,
+        cpp::MemoryOrder::RELAXED))
+      ;
+
+    // Perform a CAS loop to atomically update the max
+    uint64_t orig_max = max.load(cpp::MemoryOrder::RELAXED);
+    while (!max.compare_exchange_strong(
+        orig_max, cpp::max(orig_max, result.max), cpp::MemoryOrder::ACQUIRE,
+        cpp::MemoryOrder::RELAXED))
+      ;
+
+    samples_sum.fetch_add(result.samples, cpp::MemoryOrder::RELAXED);
+    iterations_sum.fetch_add(result.total_iterations,
+                             cpp::MemoryOrder::RELAXED);
+    time_sum.fetch_add(result.total_time, cpp::MemoryOrder::RELAXED);
+    cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+  }
+};
+
+AtomicBenchmarkSums all_results;
+constexpr auto GREEN = "\033[32m";
+constexpr auto RESET = "\033[0m";
+
+void print_results(Benchmark *b) {
+  BenchmarkResult result;
+  cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+  int num_threads = all_results.active_threads.load(cpp::MemoryOrder::RELAXED);
+  result.cycles =
+      all_results.cycles_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  result.standard_deviation =
+      all_results.standard_deviation_sum.load(cpp::MemoryOrder::RELAXED) /
+      num_threads;
+  result.min = all_results.min.load(cpp::MemoryOrder::RELAXED);
+  result.max = all_results.max.load(cpp::MemoryOrder::RELAXED);
+  result.samples =
+      all_results.samples_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  result.total_iterations =
+      all_results.iterations_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  const uint64_t duration_ns =
+      all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  const uint64_t duration_us = duration_ns / 1000;
+  const uint64_t duration_ms = duration_ns / (1000 * 1000);
+  uint64_t converted_duration = duration_ns;
+  const char *time_unit;
+  if (duration_ms != 0) {
+    converted_duration = duration_ms;
+    time_unit = "ms";
+  } else if (duration_us != 0) {
+    converted_duration = duration_us;
+    time_unit = "us";
+  } else {
+    converted_duration = duration_ns;
+    time_unit = "ns";
+  }
+  result.total_time = converted_duration;
+  // result.total_time =
+  //     all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
+
+  LIBC_NAMESPACE::printf(
+      "%-20s |%8ld |%8ld |%8ld |%11d |%9ld %2s |%9ld |%9d |\n",
+      b->get_test_name().data(), result.cycles, result.min, result.max,
+      result.total_iterations, result.total_time, time_unit,
+      static_cast<uint64_t>(result.standard_deviation), num_threads);
+}
+
+void print_header() {
+  LIBC_NAMESPACE::printf("%s", GREEN);
+  LIBC_NAMESPACE::printf("Running Suite: %-10s\n",
+                         benchmarks[0]->get_suite_name().data());
+  LIBC_NAMESPACE::printf("%s", RESET);
+  LIBC_NAMESPACE::printf("Benchmark            |  Cycles |     Min |     Max | "
+                         "Iterations |        "
+                         "Time |   Stddev |  Threads |\n");
+  LIBC_NAMESPACE::printf(
+      "---------------------------------------------------------------------"
+      "--------------------------------\n");
 }
 
 void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
+
+  if (id == 0) {
+    print_header();
+    LIBC_NAMESPACE::srand(gpu::processor_clock());
+  }
+
   gpu::sync_threads();
 
-  for (Benchmark *b : benchmarks)
-    results[id] = b->run();
-  gpu::sync_threads();
-  if (id == 0) {
-    for (Benchmark const *b : benchmarks) {
-      BenchmarkResult all_results = reduce_results(results);
-      constexpr auto GREEN = "\033[32m";
-      constexpr auto RESET = "\033[0m";
-      log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
-      log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
-          << all_results.cycles << " cycles, " << all_results.min << " min, "
-          << all_results.max << " max, " << all_results.total_iterations
-          << " iterations, " << all_results.total_time << " ns, "
-          << static_cast<long>(all_results.standard_deviation) << " stddev\n";
+  for (Benchmark *b : benchmarks) {
+    if (id == 0)
+      all_results.reset();
+
+    gpu::sync_threads();
+    if (b->num_threads == static_cast<uint32_t>(-1) || id < b->num_threads) {
+      auto current_result = b->run();
+      all_results.update(current_result);
     }
+    gpu::sync_threads();
+
+    if (id == 0)
+      print_results(b);
   }
   gpu::sync_threads();
 }
@@ -118,6 +208,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     if (samples >= options.max_samples || iterations >= options.max_iterations)
       break;
     if (total_time >= options.min_duration && samples >= options.min_samples &&
+        total_iterations >= options.min_iterations &&
         change_ratio < options.epsilon)
       break;
 
@@ -136,4 +227,4 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
 };
 
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

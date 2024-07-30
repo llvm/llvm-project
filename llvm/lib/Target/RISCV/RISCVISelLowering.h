@@ -128,6 +128,7 @@ enum NodeType : unsigned {
   FROUND,
 
   FCLASS,
+  FSGNJX,
 
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
@@ -181,6 +182,12 @@ enum NodeType : unsigned {
   // Truncates a RVV integer vector by one power-of-two. Carries both an extra
   // mask and VL operand.
   TRUNCATE_VECTOR_VL,
+  // Truncates a RVV integer vector by one power-of-two. If the value doesn't
+  // fit in the destination type, the result is saturated. These correspond to
+  // vnclip and vnclipu with a shift of 0. Carries both an extra mask and VL
+  // operand.
+  TRUNCATE_VECTOR_VL_SSAT,
+  TRUNCATE_VECTOR_VL_USAT,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
   // pass-thru operand, the second is the source vector, the third is the XLenVT
   // index (either constant or non-constant), the fourth is the mask, the fifth
@@ -272,10 +279,6 @@ enum NodeType : unsigned {
   AVGCEILS_VL,
   // Rounding averaging adds of unsigned integers.
   AVGCEILU_VL,
-
-  // Operands are (source, shift, merge, mask, roundmode, vl)
-  VNCLIPU_VL,
-  VNCLIP_VL,
 
   MULHS_VL,
   MULHU_VL,
@@ -497,6 +500,7 @@ public:
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
+  bool isTruncateFree(SDValue Val, EVT VT2) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
   bool signExtendConstant(const ConstantInt *CI) const override;
@@ -972,6 +976,7 @@ private:
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPSplatExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;

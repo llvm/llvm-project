@@ -623,10 +623,12 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   if (isa<UndefValue>(Arg))
     return Constant::getNullValue(ResTy);
 
-  auto *ArgTy = dyn_cast<FixedVectorType>(Arg->getType());
-  // We can't easily peek through x86_mmx types.
-  if (!ArgTy)
+  // Preserve previous behavior and give up.
+  // TODO: treat as <8 x i8>.
+  if (II.getIntrinsicID() == Intrinsic::x86_mmx_pmovmskb)
     return nullptr;
+
+  auto *ArgTy = cast<FixedVectorType>(Arg->getType());
 
   // Expand MOVMSK to compare/bitcast/zext:
   // e.g. PMOVMSKB(v16i8 x):

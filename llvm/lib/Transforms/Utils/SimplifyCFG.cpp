@@ -3476,7 +3476,8 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL) {
+                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                bool SpeculateUnpredictables) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -3508,7 +3509,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // jump to one specific 'then' block (if we have two of them).
   // It isn't beneficial to speculatively execute the code
   // from the block that we know is predictably not entered.
-  if (!DomBI->getMetadata(LLVMContext::MD_unpredictable)) {
+  bool IsUnpredictable = DomBI->getMetadata(LLVMContext::MD_unpredictable);
+  if (!IsUnpredictable) {
     uint64_t TWeight, FWeight;
     if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
@@ -3551,6 +3553,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
+  if (SpeculateUnpredictables && IsUnpredictable)
+    Budget += TTI.getBranchMispredictPenalty();
 
   bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
@@ -3620,8 +3624,9 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
              [](BasicBlock *IfBlock) { return IfBlock->hasAddressTaken(); }))
     return Changed;
 
-  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond
-                    << "  T: " << IfTrue->getName()
+  LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond;
+             if (IsUnpredictable) dbgs() << " (unpredictable)";
+             dbgs() << "  T: " << IfTrue->getName()
                     << "  F: " << IfFalse->getName() << "\n");
 
   // If we can still promote the PHI nodes after this gauntlet of tests,
@@ -7573,11 +7578,31 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use, avoid hurting compile time with long uselists
-    auto *Use = cast<Instruction>(*I->user_begin());
+    // Only look at the first use we can handle, avoid hurting compile time with
+    // long uselists
+    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
+      auto *Use = cast<Instruction>(U);
+      // Change this list when we want to add new instructions.
+      switch (Use->getOpcode()) {
+      default:
+        return false;
+      case Instruction::GetElementPtr:
+      case Instruction::Ret:
+      case Instruction::BitCast:
+      case Instruction::Load:
+      case Instruction::Store:
+      case Instruction::Call:
+      case Instruction::CallBr:
+      case Instruction::Invoke:
+        return true;
+      }
+    });
+    if (FindUse == I->user_end())
+      return false;
+    auto *Use = cast<Instruction>(*FindUse);
     // Bail out if Use is not in the same BB as I or Use == I or Use comes
-    // before I in the block. The latter two can be the case if Use is a PHI
-    // node.
+    // before I in the block. The latter two can be the case if Use is a
+    // PHI node.
     if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
       return false;
 
@@ -7794,7 +7819,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL,
+                                Options.SpeculateUnpredictables))
           return true;
   }
 

@@ -33,7 +33,7 @@ using llvm::dynamicAPIntFromInt64;
 static void normalizeDivisionByGCD(MutableArrayRef<DynamicAPInt> dividend,
                                    DynamicAPInt &divisor) {
   assert(divisor > 0 && "divisor must be non-negative!");
-  if (divisor == 0 || dividend.empty())
+  if (dividend.empty())
     return;
   // We take the absolute value of dividend's coefficients to make sure that
   // `gcd` is positive.
@@ -556,8 +556,7 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
   auto getCoeff = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
     if (i < arr.size())
       return arr[i];
-    else
-      return 0;
+    return 0;
   };
 
   std::vector<Fraction> convolution;
@@ -566,11 +565,11 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
     Fraction sum(0, 1);
     for (unsigned l = 0; l <= k; ++l)
       sum += getCoeff(a, l) * getCoeff(b, k - l);
-    convolution.push_back(sum);
+    convolution.emplace_back(sum);
   }
   return convolution;
 }
 
 bool presburger::isRangeZero(ArrayRef<Fraction> arr) {
-  return llvm::all_of(arr, [&](Fraction f) { return f == 0; });
+  return llvm::all_of(arr, [](const Fraction &f) { return f == 0; });
 }

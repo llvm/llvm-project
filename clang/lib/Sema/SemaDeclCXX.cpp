@@ -1630,9 +1630,6 @@ void Sema::MergeVarDeclExceptionSpecs(VarDecl *New, VarDecl *Old) {
 /// function declaration are well-formed according to C++
 /// [dcl.fct.default].
 void Sema::CheckCXXDefaultArguments(FunctionDecl *FD) {
-  unsigned NumParams = FD->getNumParams();
-  unsigned ParamIdx = 0;
-
   // This checking doesn't make sense for explicit specializations; their
   // default arguments are determined by the declaration we're specializing,
   // not by FD.
@@ -1641,6 +1638,9 @@ void Sema::CheckCXXDefaultArguments(FunctionDecl *FD) {
   if (auto *FTD = FD->getDescribedFunctionTemplate())
     if (FTD->isMemberSpecialization())
       return;
+
+  unsigned NumParams = FD->getNumParams();
+  unsigned ParamIdx = 0;
 
   // Find first parameter with a default argument
   for (; ParamIdx < NumParams; ++ParamIdx) {
@@ -1654,21 +1654,19 @@ void Sema::CheckCXXDefaultArguments(FunctionDecl *FD) {
   //   with a default argument shall have a default argument supplied in this or
   //   a previous declaration, unless the parameter was expanded from a
   //   parameter pack, or shall be a function parameter pack.
-  for (; ParamIdx < NumParams; ++ParamIdx) {
+  for (++ParamIdx; ParamIdx < NumParams; ++ParamIdx) {
     ParmVarDecl *Param = FD->getParamDecl(ParamIdx);
-    if (!Param->hasDefaultArg() && !Param->isParameterPack() &&
-        !(CurrentInstantiationScope &&
-          CurrentInstantiationScope->isLocalPackExpansion(Param))) {
-      if (Param->isInvalidDecl())
-        /* We already complained about this parameter. */;
-      else if (Param->getIdentifier())
-        Diag(Param->getLocation(),
-             diag::err_param_default_argument_missing_name)
+    if (Param->hasDefaultArg() || Param->isParameterPack() ||
+        (CurrentInstantiationScope &&
+         CurrentInstantiationScope->isLocalPackExpansion(Param)))
+      continue;
+    if (Param->isInvalidDecl())
+      /* We already complained about this parameter. */;
+    else if (Param->getIdentifier())
+      Diag(Param->getLocation(), diag::err_param_default_argument_missing_name)
           << Param->getIdentifier();
-      else
-        Diag(Param->getLocation(),
-             diag::err_param_default_argument_missing);
-    }
+    else
+      Diag(Param->getLocation(), diag::err_param_default_argument_missing);
   }
 }
 
@@ -9072,7 +9070,10 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
     EnterExpressionEvaluationContext Context(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
 
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(FD->getLexicalParent());
+    CXXRecordDecl *RD =
+        cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
+                                ? FD->getDeclContext()
+                                : FD->getLexicalDeclContext());
     SourceLocation BodyLoc =
         FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
     StmtResult Body =
@@ -10384,7 +10385,7 @@ void Sema::checkIncorrectVTablePointerAuthenticationAttribute(
   while (1) {
     assert(PrimaryBase);
     const CXXRecordDecl *Base = nullptr;
-    for (auto BasePtr : PrimaryBase->bases()) {
+    for (const CXXBaseSpecifier &BasePtr : PrimaryBase->bases()) {
       if (!BasePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
         continue;
       Base = BasePtr.getType()->getAsCXXRecordDecl();
@@ -11255,6 +11256,34 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     D.setInvalidType();
   }
 
+  // Friend declarations require some care. Consider:
+  //
+  // namespace N {
+  // struct A{};
+  // int f(A);
+  // }
+  //
+  // struct S {
+  //   struct T {
+  //     int f(this T);
+  //   };
+  //
+  //   friend int T::f(this T); // Allow this.
+  //   friend int f(this S);    // But disallow this.
+  //   friend int N::f(this A); // And disallow this.
+  // };
+  //
+  // Here, it seems to suffice to check whether the scope
+  // specifier designates a class type.
+  if (D.getDeclSpec().isFriendSpecified() &&
+      !isa_and_present<CXXRecordDecl>(
+          computeDeclContext(D.getCXXScopeSpec()))) {
+    Diag(ExplicitObjectParam->getBeginLoc(),
+         diag::err_explicit_object_parameter_nonmember)
+        << D.getSourceRange() << /*non-member=*/2 << IsLambda;
+    D.setInvalidType();
+  }
+
   if (IsLambda && FTI.hasMutableQualifier()) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_mutable)
@@ -11265,10 +11294,8 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     return;
 
   if (!DC || !DC->isRecord()) {
-    Diag(ExplicitObjectParam->getLocation(),
-         diag::err_explicit_object_parameter_nonmember)
-        << D.getSourceRange() << /*non-member=*/2 << IsLambda;
-    D.setInvalidType();
+    assert(D.isInvalidType() && "Explicit object parameter in non-member "
+                                "should have been diagnosed already");
     return;
   }
 
@@ -12221,16 +12248,15 @@ Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation EnumLoc, SourceRange TyLoc,
                                       const IdentifierInfo &II, ParsedType Ty,
                                       CXXScopeSpec *SS) {
-  assert(!SS->isInvalid() && "ScopeSpec is invalid");
+  assert(SS && !SS->isInvalid() && "ScopeSpec is invalid");
   TypeSourceInfo *TSI = nullptr;
   SourceLocation IdentLoc = TyLoc.getBegin();
   QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
-    Diag(IdentLoc, SS && isDependentScopeSpecifier(*SS)
+    Diag(IdentLoc, isDependentScopeSpecifier(*SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
-        << II.getName()
-        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, TyLoc.getEnd());
+        << II.getName() << SourceRange(SS->getBeginLoc(), TyLoc.getEnd());
     return nullptr;
   }
 
@@ -18073,38 +18099,40 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
   }
 
   // Virtual overrides: check for matching effects.
-  const auto OldFX = Old->getFunctionEffects();
-  const auto NewFXOrig = New->getFunctionEffects();
+  if (Context.hasAnyFunctionEffects()) {
+    const auto OldFX = Old->getFunctionEffects();
+    const auto NewFXOrig = New->getFunctionEffects();
 
-  if (OldFX != NewFXOrig) {
-    FunctionEffectSet NewFX(NewFXOrig);
-    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
-    FunctionEffectSet::Conflicts Errs;
-    for (const auto &Diff : Diffs) {
-      switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
-      case FunctionEffectDiff::OverrideResult::NoAction:
-        break;
-      case FunctionEffectDiff::OverrideResult::Warn:
-        Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
-            << Diff.effectName();
-        Diag(Old->getLocation(), diag::note_overridden_virtual_function)
-            << Old->getReturnTypeSourceRange();
-        break;
-      case FunctionEffectDiff::OverrideResult::Merge: {
-        NewFX.insert(Diff.Old, Errs);
-        const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
-        FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
-        EPI.FunctionEffects = FunctionEffectsRef(NewFX);
-        QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
-                                                 NewFT->getParamTypes(), EPI);
-        New->setType(ModQT);
-        break;
+    if (OldFX != NewFXOrig) {
+      FunctionEffectSet NewFX(NewFXOrig);
+      const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+      FunctionEffectSet::Conflicts Errs;
+      for (const auto &Diff : Diffs) {
+        switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
+        case FunctionEffectDiff::OverrideResult::NoAction:
+          break;
+        case FunctionEffectDiff::OverrideResult::Warn:
+          Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+              << Diff.effectName();
+          Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+              << Old->getReturnTypeSourceRange();
+          break;
+        case FunctionEffectDiff::OverrideResult::Merge: {
+          NewFX.insert(Diff.Old, Errs);
+          const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
+          FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
+          EPI.FunctionEffects = FunctionEffectsRef(NewFX);
+          QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
+                                                   NewFT->getParamTypes(), EPI);
+          New->setType(ModQT);
+          break;
+        }
+        }
       }
-      }
+      if (!Errs.empty())
+        diagnoseFunctionEffectMergeConflicts(Errs, New->getLocation(),
+                                             Old->getLocation());
     }
-    if (!Errs.empty())
-      diagnoseFunctionEffectMergeConflicts(Errs, New->getLocation(),
-                                           Old->getLocation());
   }
 
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();

@@ -187,3 +187,12 @@ namespace delete_from_new {
 #endif
   }
 }
+
+namespace GH96191 {
+  struct S {};
+  struct T {
+    void operator delete(S) { } // expected-error {{first parameter of 'operator delete' must have type 'void *'}}
+  };
+
+  void foo(T *t) { delete t; }
+}

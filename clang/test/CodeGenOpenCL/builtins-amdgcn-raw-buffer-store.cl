@@ -2,19 +2,19 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu verde -emit-llvm -o - %s | FileCheck %s
 
-typedef char i8;
-typedef short i16;
-typedef int i32;
-typedef int i64 __attribute__((ext_vector_type(2)));
-typedef int i96 __attribute__((ext_vector_type(3)));
-typedef int i128 __attribute__((ext_vector_type(4)));
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned int v2u32 __attribute__((ext_vector_type(2)));
+typedef unsigned int v3u32 __attribute__((ext_vector_type(3)));
+typedef unsigned int v4u32 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: @test_amdgcn_raw_ptr_buffer_store_b8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b8(i8 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b8(u8 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b8(vdata, rsrc, /*offset=*/0, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -23,7 +23,7 @@ void test_amdgcn_raw_ptr_buffer_store_b8(i8 vdata, __amdgpu_buffer_rsrc_t rsrc, 
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b16(i16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b16(u16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b16(vdata, rsrc, /*offset=*/0, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -32,7 +32,7 @@ void test_amdgcn_raw_ptr_buffer_store_b16(i16 vdata, __amdgpu_buffer_rsrc_t rsrc
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b32(i32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b32(u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b32(vdata, rsrc, /*offset=*/0, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -41,7 +41,7 @@ void test_amdgcn_raw_ptr_buffer_store_b32(i32 vdata, __amdgpu_buffer_rsrc_t rsrc
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b64(i64 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b64(v2u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b64(vdata, rsrc, /*offset=*/0, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -50,7 +50,7 @@ void test_amdgcn_raw_ptr_buffer_store_b64(i64 vdata, __amdgpu_buffer_rsrc_t rsrc
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b96(i96 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b96(v3u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b96(vdata, rsrc, /*offset=*/0, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -59,7 +59,7 @@ void test_amdgcn_raw_ptr_buffer_store_b96(i96 vdata, __amdgpu_buffer_rsrc_t rsrc
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b128(i128 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b128(v4u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b128(vdata, rsrc, /*offset=*/0, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -68,7 +68,7 @@ void test_amdgcn_raw_ptr_buffer_store_b128(i128 vdata, __amdgpu_buffer_rsrc_t rs
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b8_non_const_offset(i8 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b8_non_const_offset(u8 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b8(vdata, rsrc, offset, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -77,7 +77,7 @@ void test_amdgcn_raw_ptr_buffer_store_b8_non_const_offset(i8 vdata, __amdgpu_buf
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b16_non_const_offset(i16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b16_non_const_offset(u16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b16(vdata, rsrc, offset, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -86,7 +86,7 @@ void test_amdgcn_raw_ptr_buffer_store_b16_non_const_offset(i16 vdata, __amdgpu_b
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b32_non_const_offset(i32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b32_non_const_offset(u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b32(vdata, rsrc, offset, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -95,7 +95,7 @@ void test_amdgcn_raw_ptr_buffer_store_b32_non_const_offset(i32 vdata, __amdgpu_b
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b64_non_const_offset(i64 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b64_non_const_offset(v2u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b64(vdata, rsrc, offset, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -104,7 +104,7 @@ void test_amdgcn_raw_ptr_buffer_store_b64_non_const_offset(i64 vdata, __amdgpu_b
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b96_non_const_offset(i96 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b96_non_const_offset(v3u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b96(vdata, rsrc, offset, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -113,7 +113,7 @@ void test_amdgcn_raw_ptr_buffer_store_b96_non_const_offset(i96 vdata, __amdgpu_b
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b128_non_const_offset(i128 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b128_non_const_offset(v4u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b128(vdata, rsrc, offset, /*soffset=*/0, /*aux=*/0);
 }
 
@@ -122,7 +122,7 @@ void test_amdgcn_raw_ptr_buffer_store_b128_non_const_offset(i128 vdata, __amdgpu
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b8_non_const_soffset(i8 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b8_non_const_soffset(u8 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b8(vdata, rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }
 
@@ -131,7 +131,7 @@ void test_amdgcn_raw_ptr_buffer_store_b8_non_const_soffset(i8 vdata, __amdgpu_bu
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b16_non_const_soffset(i16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b16_non_const_soffset(u16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b16(vdata, rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }
 
@@ -140,7 +140,7 @@ void test_amdgcn_raw_ptr_buffer_store_b16_non_const_soffset(i16 vdata, __amdgpu_
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b32_non_const_soffset(i32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b32_non_const_soffset(u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b32(vdata, rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }
 
@@ -149,7 +149,7 @@ void test_amdgcn_raw_ptr_buffer_store_b32_non_const_soffset(i32 vdata, __amdgpu_
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b64_non_const_soffset(i64 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b64_non_const_soffset(v2u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b64(vdata, rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }
 
@@ -158,7 +158,7 @@ void test_amdgcn_raw_ptr_buffer_store_b64_non_const_soffset(i64 vdata, __amdgpu_
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b96_non_const_soffset(i96 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b96_non_const_soffset(v3u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b96(vdata, rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }
 
@@ -167,6 +167,6 @@ void test_amdgcn_raw_ptr_buffer_store_b96_non_const_soffset(i96 vdata, __amdgpu_
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_raw_ptr_buffer_store_b128_non_const_soffset(i128 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
+void test_amdgcn_raw_ptr_buffer_store_b128_non_const_soffset(v4u32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   __builtin_amdgcn_raw_buffer_store_b128(vdata, rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }

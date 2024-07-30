@@ -114,7 +114,7 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
     DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
   }
   DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
-  MDT->applyUpdates(DTUpdates);
+  MDT->getBase().applyUpdates(DTUpdates);
 }
 
 void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
@@ -142,7 +142,7 @@ void SILateBranchLowering::earlyTerm(MachineInstr &MI,
     splitBlock(MBB, *BranchMI, MDT);
 
   MBB.addSuccessor(EarlyExitBlock);
-  MDT->insertEdge(&MBB, EarlyExitBlock);
+  MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
 }
 
 bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
@@ -238,7 +238,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
       }
 
       MBB->addSuccessor(EmptyMBBAtEnd);
-      MDT->insertEdge(MBB, EmptyMBBAtEnd);
+      MDT->getBase().insertEdge(MBB, EmptyMBBAtEnd);
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
           .addMBB(EmptyMBBAtEnd);
       MI->eraseFromParent();

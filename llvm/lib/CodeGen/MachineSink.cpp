@@ -199,7 +199,7 @@ namespace {
       AU.addPreserved<MachineCycleInfoWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
       if (UseBlockFreqInfo)
-        AU.addRequired<MachineBlockFrequencyInfo>();
+        AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
     }
 
@@ -374,7 +374,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
 
   // Check if it's safe to move the instruction.
   bool SawStore = true;
-  if (!MI.isSafeToMove(AA, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   // Convergent operations may not be made control-dependent on additional
@@ -417,7 +417,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       continue;
     }
 
-    if (Reg.isPhysical() &&
+    if (Reg.isPhysical() && MO.isUse() &&
         (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
       continue;
 
@@ -687,7 +687,7 @@ void MachineSinking::FindCycleSinkCandidates(
       continue;
     }
     bool DontMoveAcrossStore = true;
-    if (!MI.isSafeToMove(AA, DontMoveAcrossStore)) {
+    if (!MI.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction not safe to move.\n");
       continue;
     }
@@ -722,7 +722,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
+  MBFI = UseBlockFreqInfo
+             ? &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()
+             : nullptr;
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   RegClassInfo.runOnMachineFunction(MF);
@@ -959,7 +961,7 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
                                                 MachineBasicBlock *ToBB,
                                                 bool BreakPHIEdge) {
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
-  if (!SplitEdges || FromBB == ToBB)
+  if (!SplitEdges || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
     return false;
 
   MachineCycle *FromCycle = CI->getCycle(FromBB);
@@ -1652,7 +1654,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     return false;
 
   // Check if it's safe to move the instruction.
-  if (!MI.isSafeToMove(AA, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   // Convergent operations may not be made control-dependent on additional
@@ -1703,7 +1705,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     bool TryBreak = false;
     bool Store =
         MI.mayLoad() ? hasStoreBetween(ParentBlock, SuccToSinkTo, MI) : true;
-    if (!MI.isSafeToMove(AA, Store)) {
+    if (!MI.isSafeToMove(Store)) {
       LLVM_DEBUG(dbgs() << " *** NOTE: Won't sink load along critical edge.\n");
       TryBreak = true;
     }

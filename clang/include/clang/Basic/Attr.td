@@ -477,6 +477,9 @@ def TargetELF : TargetSpec {
 def TargetELFOrMachO : TargetSpec {
   let ObjectFormats = ["ELF", "MachO"];
 }
+def TargetWindowsArm64EC : TargetSpec {
+  let CustomCode = [{ Target.getTriple().isWindowsArm64EC() }];
+}
 
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
@@ -902,7 +905,7 @@ def PatchableFunctionEntry
     : InheritableAttr,
       TargetSpecificAttr<TargetArch<
           ["aarch64", "aarch64_be", "loongarch32", "loongarch64", "riscv32",
-           "riscv64", "x86", "x86_64"]>> {
+           "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
@@ -4027,6 +4030,12 @@ def SelectAny : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def HybridPatchable : InheritableAttr, TargetSpecificAttr<TargetWindowsArm64EC> {
+  let Spellings = [Declspec<"hybrid_patchable">, Clang<"hybrid_patchable">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [HybridPatchableDocs];
+}
+
 def Thread : Attr {
   let Spellings = [Declspec<"thread">];
   let LangOpts = [MicrosoftExt];
@@ -4170,6 +4179,18 @@ def LoopHint : Attr {
 
   let Documentation = [LoopHintDocs, UnrollHintDocs];
   let HasCustomParsing = 1;
+}
+
+/// The HLSL loop attributes
+def HLSLLoopHint: StmtAttr {
+  /// [unroll(directive)]
+  /// [loop]
+  let Spellings = [Microsoft<"unroll">, Microsoft<"loop">];
+  let Args = [UnsignedArgument<"directive", /*opt*/1>];
+  let Subjects = SubjectList<[ForStmt, WhileStmt, DoStmt],
+                              ErrorDiag, "'for', 'while', and 'do' statements">;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
 }
 
 def CapturedRecord : InheritableAttr {
@@ -4549,11 +4570,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-                 /*is_string=*/0, ["SRV", "UAV", "CBuffer", "Sampler"],
-                 ["SRV", "UAV", "CBuffer", "Sampler"],
-                 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+  let Args = [    
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,
@@ -4573,6 +4590,19 @@ def HLSLResource : InheritableAttr {
         ],
         /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
     DefaultBoolArgument<"isROV", /*default=*/0>
+  ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceClass : InheritableAttr {
+  let Spellings = [CXX11<"hlsl", "resource_class">];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL];
+  let Args = [
+	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
+				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+				 ["SRV", "UAV", "CBuffer", "Sampler"],
+				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
   let Documentation = [InternalOnly];
 }

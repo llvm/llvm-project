@@ -17,7 +17,12 @@ foreach(proj ${LLVM_ENABLE_RUNTIMES})
 endforeach()
 
 function(get_compiler_rt_path path)
-  foreach(entry ${runtimes})
+  set(all_runtimes ${runtimes})
+  foreach(name ${LLVM_RUNTIME_TARGETS})
+    list(APPEND all_runtimes ${RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES})
+  endforeach()
+  list(REMOVE_DUPLICATES all_runtimes)
+  foreach(entry ${all_runtimes})
     get_filename_component(projName ${entry} NAME)
     if("${projName}" MATCHES "compiler-rt")
       set(${path} ${entry} PARENT_SCOPE)
@@ -138,37 +143,44 @@ endfunction()
 # before the just-built compiler can pass the configuration tests.
 get_compiler_rt_path(compiler_rt_path)
 if(compiler_rt_path)
-  if(NOT LLVM_BUILTIN_TARGETS)
-    builtin_default_target(${compiler_rt_path}
-      DEPENDS clang-resource-headers)
-  else()
-    if("default" IN_LIST LLVM_BUILTIN_TARGETS)
-      builtin_default_target(${compiler_rt_path}
-        DEPENDS clang-resource-headers)
-      list(REMOVE_ITEM LLVM_BUILTIN_TARGETS "default")
-    else()
-      add_custom_target(builtins)
-      add_custom_target(install-builtins)
-      add_custom_target(install-builtins-stripped)
-      set_target_properties(
-        builtins install-builtins install-builtins-stripped
-        PROPERTIES FOLDER "Compiler-RT"
-      )
+  # If the user did not specify the targets infer them from the runtimes.
+  set(builtin_targets ${LLVM_BUILTIN_TARGETS})
+  if(NOT builtin_targets)
+    if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      list(APPEND builtin_targets "default")
     endif()
-
-    foreach(target ${LLVM_BUILTIN_TARGETS})
-      check_apple_target(${target} builtin)
-
-      builtin_register_target(${compiler_rt_path} ${target}
-        DEPENDS clang-resource-headers
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
-        EXTRA_ARGS TARGET_TRIPLE ${target})
-
-      add_dependencies(builtins builtins-${target})
-      add_dependencies(install-builtins install-builtins-${target})
-      add_dependencies(install-builtins-stripped install-builtins-${target}-stripped)
+    foreach(name ${LLVM_RUNTIME_TARGETS})
+      if("compiler-rt" IN_LIST RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+        list(APPEND builtin_targets ${name})
+      endif()
     endforeach()
   endif()
+  if("default" IN_LIST builtin_targets)
+    builtin_default_target(${compiler_rt_path}
+      DEPENDS clang-resource-headers)
+    list(REMOVE_ITEM builtin_targets "default")
+  else()
+    add_custom_target(builtins)
+    add_custom_target(install-builtins)
+    add_custom_target(install-builtins-stripped)
+    set_target_properties(
+      builtins install-builtins install-builtins-stripped
+      PROPERTIES FOLDER "Compiler-RT"
+    )
+  endif()
+
+  foreach(target ${builtin_targets})
+    check_apple_target(${target} builtin)
+
+    builtin_register_target(${compiler_rt_path} ${target}
+      DEPENDS clang-resource-headers
+      CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
+      EXTRA_ARGS TARGET_TRIPLE ${target})
+
+    add_dependencies(builtins builtins-${target})
+    add_dependencies(install-builtins install-builtins-${target})
+    add_dependencies(install-builtins-stripped install-builtins-${target}-stripped)
+  endforeach()
   set(builtins_dep builtins)
   # We don't need to depend on the builtins if we're building instrumented
   # because the next stage will use the same compiler used to build this stage.

@@ -5800,7 +5800,8 @@ takes precedence over the command line option ``-fpatchable-function-entry=N,M``
 ``M`` defaults to 0 if omitted.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
 
@@ -5982,6 +5983,16 @@ definition (
 For more information see
 `gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
+}]; }
+
+def HybridPatchableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hybrid_patchable`` attribute declares an ARM64EC function with an additional
+x86-64 thunk, which may be patched at runtime.
+
+For more information see
+`ARM64EC ABI documentation <https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi>`_.
 }]; }
 
 def WebAssemblyExportNameDocs : Documentation {
@@ -7343,6 +7354,100 @@ where shaders must be compiled into a library and linked at runtime.
   }];
 }
 
+def HLSLLoopHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[loop]";
+  let Content = [{
+The ``[loop]`` directive allows loop optimization hints to be
+specified for the subsequent loop. The directive allows unrolling to
+be disabled and is not compatible with [unroll(x)]. 
+
+Specifying the parameter, ``[loop]``, directs the
+unroller to not unroll the loop. 
+
+.. code-block:: hlsl
+
+  [loop]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [loop]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [loop]
+  do {
+    ...
+  } while (...)
+
+See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
+def HLSLUnrollHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "[unroll(x)], [unroll]";
+  let Content = [{
+Loop unrolling optimization hints can be specified with ``[unroll(x)]``
+. The attribute is placed immediately before a for, while,
+or do-while.
+Specifying the parameter, ``[unroll(_value_)]``, directs the
+unroller to unroll the loop ``_value_`` times. Note: [unroll(x)] is not compatible with [loop].
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll]
+  for (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll]
+  while (...) {
+    ...
+  }
+
+.. code-block:: hlsl
+
+  [unroll(4)]
+  do {
+    ...
+  } while (...)
+
+.. code-block:: hlsl
+
+  [unroll]
+  do {
+    ...
+  } while (...)
+
+See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
+for details.
+  }];
+}
+
 def ClangRandomizeLayoutDocs : Documentation {
   let Category = DocCatDecl;
   let Heading = "randomize_layout, no_randomize_layout";
@@ -7402,7 +7507,8 @@ b for constant buffer views (CBV).
 
 Register space is specified in the format ``space[number]`` and defaults to ``space0`` if omitted.
 Here're resource binding examples with and without space:
-.. code-block:: c++
+
+.. code-block:: hlsl
 
   RWBuffer<float> Uav : register(u3, space1);
   Buffer<float> Buf : register(t1);
@@ -7420,7 +7526,7 @@ A subcomponent is a register number, which is an integer. A component is in the 
 
 Examples:
 
-.. code-block:: c++
+.. code-block:: hlsl
 
   cbuffer A {
     float3 a : packoffset(c0.y);

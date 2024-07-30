@@ -16,10 +16,14 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+extern "C" cpp::byte _end;
+extern "C" cpp::byte __llvm_libc_heap_limit;
 
 using cpp::optional;
 using cpp::span;
@@ -46,18 +50,10 @@ public:
     size_t total_free_calls;
   };
 
-  FreeListHeap(span<cpp::byte> region)
-      : FreeListHeap(&*region.begin(), &*region.end(), region.size()) {
-    auto result = BlockType::init(region);
-    BlockType *block = *result;
-    freelist_.add_chunk(block_to_span(block));
-  }
+  constexpr FreeListHeap() : begin_(&_end), end_(&__llvm_libc_heap_limit) {}
 
-  constexpr FreeListHeap(void *start, cpp::byte *end, size_t total_bytes)
-      : block_region_start_(start), block_region_end_(end),
-        freelist_(DEFAULT_BUCKETS), heap_stats_{} {
-    heap_stats_.total_bytes = total_bytes;
-  }
+  constexpr FreeListHeap(span<cpp::byte> region)
+      : begin_(region.begin()), end_(region.end()) {}
 
   void *allocate(size_t size);
   void *aligned_allocate(size_t alignment, size_t size);
@@ -68,60 +64,56 @@ public:
   void *calloc(size_t num, size_t size);
 
   const HeapStats &heap_stats() const { return heap_stats_; }
-  void reset_heap_stats() { heap_stats_ = {}; }
 
-  void *region_start() const { return block_region_start_; }
-  size_t region_size() const {
-    return reinterpret_cast<uintptr_t>(block_region_end_) -
-           reinterpret_cast<uintptr_t>(block_region_start_);
-  }
+  cpp::span<cpp::byte> region() const { return {begin_, end_}; }
 
-protected:
-  constexpr void set_freelist_node(typename FreeListType::FreeListNode &node,
-                                   cpp::span<cpp::byte> chunk) {
-    freelist_.set_freelist_node(node, chunk);
-  }
+private:
+  void init();
 
   void *allocate_impl(size_t alignment, size_t size);
 
-private:
   span<cpp::byte> block_to_span(BlockType *block) {
     return span<cpp::byte>(block->usable_space(), block->inner_size());
   }
 
-  bool is_valid_ptr(void *ptr) {
-    return ptr >= block_region_start_ && ptr < block_region_end_;
-  }
+  bool is_valid_ptr(void *ptr) { return ptr >= begin_ && ptr < end_; }
 
-  void *block_region_start_;
-  void *block_region_end_;
-  FreeListType freelist_;
-  HeapStats heap_stats_;
+  bool is_initialized_ = false;
+  cpp::byte *begin_;
+  cpp::byte *end_;
+  FreeListType freelist_{DEFAULT_BUCKETS};
+  HeapStats heap_stats_{};
 };
 
 template <size_t BUFF_SIZE, size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()>
-struct FreeListHeapBuffer : public FreeListHeap<NUM_BUCKETS> {
+class FreeListHeapBuffer : public FreeListHeap<NUM_BUCKETS> {
   using parent = FreeListHeap<NUM_BUCKETS>;
   using FreeListNode = typename parent::FreeListType::FreeListNode;
 
+public:
   constexpr FreeListHeapBuffer()
-      : FreeListHeap<NUM_BUCKETS>(&block, buffer + sizeof(buffer), BUFF_SIZE),
-        block(0, BUFF_SIZE), node{}, buffer{} {
-    block.mark_last();
+      : FreeListHeap<NUM_BUCKETS>{buffer}, buffer{} {}
 
-    cpp::span<cpp::byte> chunk(buffer, sizeof(buffer));
-    parent::set_freelist_node(node, chunk);
-  }
-
-  typename parent::BlockType block;
-  FreeListNode node;
-  cpp::byte buffer[BUFF_SIZE - sizeof(block) - sizeof(node)];
+private:
+  cpp::byte buffer[BUFF_SIZE];
 };
+
+template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::init() {
+  LIBC_ASSERT(!is_initialized_ && "duplicate initialization");
+  heap_stats_.total_bytes = region().size();
+  auto result = BlockType::init(region());
+  BlockType *block = *result;
+  freelist_.add_chunk(block_to_span(block));
+  is_initialized_ = true;
+}
 
 template <size_t NUM_BUCKETS>
 void *FreeListHeap<NUM_BUCKETS>::allocate_impl(size_t alignment, size_t size) {
   if (size == 0)
     return nullptr;
+
+  if (!is_initialized_)
+    init();
 
   // Find a chunk in the freelist. Split it if needed, then return.
   auto chunk =
@@ -188,19 +180,19 @@ template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   BlockType *prev = chunk_block->prev();
   BlockType *next = nullptr;
 
-  if (!chunk_block->last())
+  if (chunk_block->next())
     next = chunk_block->next();
 
   if (prev != nullptr && !prev->used()) {
     // Remove from freelist and merge
     freelist_.remove_chunk(block_to_span(prev));
     chunk_block = chunk_block->prev();
-    BlockType::merge_next(chunk_block);
+    chunk_block->merge_next();
   }
 
   if (next != nullptr && !next->used()) {
     freelist_.remove_chunk(block_to_span(next));
-    BlockType::merge_next(chunk_block);
+    chunk_block->merge_next();
   }
   // Add back to the freelist
   freelist_.add_chunk(block_to_span(chunk_block));
@@ -258,6 +250,6 @@ void *FreeListHeap<NUM_BUCKETS>::calloc(size_t num, size_t size) {
 
 extern FreeListHeap<> *freelist_heap;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H

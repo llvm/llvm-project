@@ -32,10 +32,10 @@ cl::opt<bool>
                     "(which is what --hot-text relies on)."),
            cl::cat(BoltOptCategory));
 
-static cl::opt<std::string> RuntimeHugifyLib(
-    "runtime-hugify-lib",
-    cl::desc("specify file name of the runtime hugify library"),
-    cl::init("libbolt_rt_hugify.a"), cl::cat(BoltOptCategory));
+static cl::opt<std::string>
+    RuntimeHugifyLib("runtime-hugify-lib",
+                     cl::desc("specify path of the runtime hugify library"),
+                     cl::init("libbolt_rt_hugify.a"), cl::cat(BoltOptCategory));
 
 } // namespace opts
 

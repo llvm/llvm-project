@@ -65,7 +65,7 @@ class ExtensionWithMArch<
 
 let ArchExtKindSpelling = "AEK_FP", UserVisibleName = "fp" in
 def FeatureFPARMv8 : ExtensionWithMArch<"fp-armv8", "FPARMv8", "FEAT_FP",
-  "Enable ARMv8">;
+  "Enable Armv8.0-A Floating Point Extensions">;
 
 let ArchExtKindSpelling = "AEK_SIMD", UserVisibleName = "simd" in
 def FeatureNEON : ExtensionWithMArch<"neon", "NEON", "FEAT_AdvSIMD",
@@ -89,14 +89,14 @@ def FeatureCrypto : ExtensionWithMArch<"crypto", "Crypto", "FEAT_Crypto",
   "Enable cryptographic instructions", [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
 def FeatureCRC : ExtensionWithMArch<"crc", "CRC", "FEAT_CRC32",
-  "Enable ARMv8 CRC-32 checksum instructions">;
+  "Enable Armv8.0-A CRC-32 checksum instructions">;
 
 // This SubtargetFeature is special. It controls only whether codegen will turn
 // `llvm.readcyclecounter()` into an access to a PMUv3 System Register. The
 // `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
 let UserVisibleName = "pmuv3" in
 def FeaturePerfMon : ExtensionWithMArch<"perfmon", "PerfMon", "FEAT_PMUv3",
-  "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension">;
+  "Enable Armv8.0-A PMUv3 Performance Monitors extension">;
 
 def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict", "FEAT_CSV2_2",
   "Enable architectural speculation restriction">;
@@ -106,24 +106,24 @@ def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict", "FEAT_CSV2_2
 //===----------------------------------------------------------------------===//
 
 def FeatureLSE : ExtensionWithMArch<"lse", "LSE", "FEAT_LSE",
-  "Enable ARMv8.1 Large System Extension (LSE) atomic instructions">;
+  "Enable Armv8.1-A Large System Extension (LSE) atomic instructions">;
 
 let UserVisibleAlias = "rdma" in
 def FeatureRDM : ExtensionWithMArch<"rdm", "RDM", "FEAT_RDM",
-  "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions",
+  "Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions",
   [FeatureNEON]>;
 
 def FeaturePAN : Extension<"pan", "PAN", "FEAT_PAN",
-  "Enables ARM v8.1 Privileged Access-Never extension">;
+  "Enable Armv8.1-A Privileged Access-Never extension">;
 
 def FeatureLOR : Extension<"lor", "LOR", "FEAT_LOR",
-  "Enables ARM v8.1 Limited Ordering Regions extension">;
+  "Enable Armv8.1-A Limited Ordering Regions extension">;
 
 def FeatureCONTEXTIDREL2 : SubtargetFeature<"CONTEXTIDREL2", "HasCONTEXTIDREL2",
   "true", "Enable RW operand CONTEXTIDR_EL2">;
 
 def FeatureVH : Extension<"vh", "VH", "FEAT_VHE",
-  "Enables ARM v8.1 Virtual Host extension", [FeatureCONTEXTIDREL2]>;
+  "Enable Armv8.1-A Virtual Host extension", [FeatureCONTEXTIDREL2]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.2 Architecture Extensions
@@ -136,24 +136,24 @@ def FeatureSHA3 : ExtensionWithMArch<"sha3", "SHA3", "FEAT_SHA3, FEAT_SHA512",
   "Enable SHA512 and SHA3 support", [FeatureNEON, FeatureSHA2]>;
 
 def FeatureRAS : ExtensionWithMArch<"ras", "RAS", "FEAT_RAS, FEAT_RASv1p1",
-  "Enable ARMv8 Reliability, Availability and Serviceability Extensions">;
+  "Enable Armv8.0-A Reliability, Availability and Serviceability Extensions">;
 
 let ArchExtKindSpelling = "AEK_FP16", UserVisibleName = "fp16" in
 def FeatureFullFP16 : ExtensionWithMArch<"fullfp16", "FullFP16", "FEAT_FP16",
-  "Full FP16", [FeatureFPARMv8]>;
+  "Enable half-precision floating-point data processing", [FeatureFPARMv8]>;
 
 let ArchExtKindSpelling = "AEK_PROFILE", UserVisibleName = "profile" in
 def FeatureSPE : ExtensionWithMArch<"spe", "SPE", "FEAT_SPE",
   "Enable Statistical Profiling extension">;
 
 def FeaturePAN_RWV : Extension<"pan-rwv", "PAN_RWV", "FEAT_PAN2",
-  "Enable v8.2 PAN s1e1R and s1e1W Variants", [FeaturePAN]>;
+  "Enable Armv8.2-A PAN s1e1R and s1e1W Variants", [FeaturePAN]>;
 
 def FeaturePsUAO : Extension<"uaops", "PsUAO", "FEAT_UAO",
-  "Enable v8.2 UAO PState">;
+  "Enable Armv8.2-A UAO PState">;
 
 def FeatureCCPP : Extension<"ccpp", "CCPP", "FEAT_DPB",
-  "Enable v8.2 data Cache Clean to Point of Persistence">;
+  "Enable Armv8.2-A data Cache Clean to Point of Persistence">;
 
 def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
   "Enable Scalable Vector Extension (SVE) instructions", [FeatureFullFP16]>;
@@ -178,30 +178,33 @@ def FeatureRCPC : ExtensionWithMArch<"rcpc", "RCPC", "FEAT_LRCPC",
   "Enable support for RCPC extension">;
 
 def FeaturePAuth : ExtensionWithMArch<"pauth", "PAuth", "FEAT_PAuth",
-  "Enable v8.3-A Pointer Authentication extension">;
+  "Enable Armv8.3-A Pointer Authentication extension">;
 
 let ArchExtKindSpelling = "AEK_JSCVT", UserVisibleName = "jscvt" in
 def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
-  "Enable v8.3-A JavaScript FP conversion instructions",
+  "Enable Armv8.3-A JavaScript FP conversion instructions",
   [FeatureFPARMv8]>;
 
+def FeatureFPAC : Extension<"fpac", "FPAC", "FEAT_FPAC",
+  "Enable v8.3-A Pointer Authentication Faulting enhancement">;
+
 def FeatureCCIDX : Extension<"ccidx", "CCIDX", "FEAT_CCIDX",
-  "Enable v8.3-A Extend of the CCSIDR number of sets">;
+  "Enable Armv8.3-A Extend of the CCSIDR number of sets">;
 
 let ArchExtKindSpelling = "AEK_FCMA", UserVisibleName = "fcma" in
 def FeatureComplxNum : ExtensionWithMArch<"complxnum", "ComplxNum", "FEAT_FCMA",
-  "Enable v8.3-A Floating-point complex number support",
+  "Enable Armv8.3-A Floating-point complex number support",
   [FeatureNEON]>;
 
 def FeatureNV : Extension<"nv", "NV", "FEAT_NV, FEAT_NV2",
-  "Enable v8.4-A Nested Virtualization Enchancement">;
+  "Enable Armv8.4-A Nested Virtualization Enchancement">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.4 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
 def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
-  "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules">;
+  "Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules">;
 
 def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
   "Enable FP16 FML instructions", [FeatureFullFP16]>;
@@ -210,29 +213,29 @@ def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd", "FEAT_DotProd",
   "Enable dot product support", [FeatureNEON]>;
 
 def FeatureMPAM : Extension<"mpam", "MPAM", "FEAT_MPAM",
-  "Enable v8.4-A Memory system Partitioning and Monitoring extension">;
+  "Enable Armv8.4-A Memory system Partitioning and Monitoring extension">;
 
 def FeatureDIT : ExtensionWithMArch<"dit", "DIT", "FEAT_DIT",
-  "Enable v8.4-A Data Independent Timing instructions">;
+  "Enable Armv8.4-A Data Independent Timing instructions">;
 
 def FeatureTRACEV8_4 : Extension<"tracev8.4", "TRACEV8_4", "FEAT_TRF",
-  "Enable v8.4-A Trace extension">;
+  "Enable Armv8.4-A Trace extension">;
 
 def FeatureAM : Extension<"am", "AM", "FEAT_AMUv1",
-  "Enable v8.4-A Activity Monitors extension">;
+  "Enable Armv8.4-A Activity Monitors extension">;
 
 def FeatureSEL2 : Extension<"sel2", "SEL2", "FEAT_SEL2",
-  "Enable v8.4-A Secure Exception Level 2 extension">;
+  "Enable Armv8.4-A Secure Exception Level 2 extension">;
 
 def FeatureTLB_RMI : Extension<"tlb-rmi", "TLB_RMI",
   "FEAT_TLBIOS, FEAT_TLBIRANGE",
-  "Enable v8.4-A TLB Range and Maintenance Instructions">;
+  "Enable Armv8.4-A TLB Range and Maintenance instructions">;
 
 def FeatureFlagM : ExtensionWithMArch<"flagm", "FlagM", "FEAT_FlagM",
-  "Enable v8.4-A Flag Manipulation Instructions">;
+  "Enable Armv8.4-A Flag Manipulation instructions">;
 
 def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO", "FEAT_LRCPC2",
-  "Enable v8.4-A RCPC instructions with Immediate Offsets",
+  "Enable Armv8.4-A RCPC instructions with Immediate Offsets",
   [FeatureRCPC]>;
 
 //===----------------------------------------------------------------------===//
@@ -247,16 +250,16 @@ def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "an integer (in FP format) forcing it to fit into a 32- or 64-bit int">;
 
 def FeatureSB : ExtensionWithMArch<"sb", "SB", "FEAT_SB",
-  "Enable v8.5 Speculation Barrier">;
+  "Enable Armv8.5-A Speculation Barrier">;
 
 def FeatureSSBS : ExtensionWithMArch<"ssbs", "SSBS", "FEAT_SSBS, FEAT_SSBS2",
   "Enable Speculative Store Bypass Safe bit">;
 
 def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes", "FEAT_SPECRES",
-  "Enable v8.5a execution and data prediction invalidation instructions">;
+  "Enable Armv8.5-A execution and data prediction invalidation instructions">;
 
 def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
-  "Enable v8.5 Cache Clean to Point of Deep Persistence">;
+  "Enable Armv8.5-A Cache Clean to Point of Deep Persistence">;
 
 def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
   "Enable Branch Target Identification">;
@@ -279,7 +282,7 @@ def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
   "Enable BFloat16 Extension">;
 
 def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
-  "Enable v8.6-A Activity Monitors Virtualization support",
+  "Enable Armv8.6-A Activity Monitors Virtualization support",
   [FeatureAM]>;
 
 def FeatureFineGrainedTraps : Extension<"fgt", "FineGrainedTraps", "FEAT_FGT",
@@ -327,7 +330,7 @@ def FeatureNMI : Extension<"nmi", "NMI", "FEAT_NMI, FEAT_GICv3_NMI",
 //===----------------------------------------------------------------------===//
 
 def FeatureRASv2 : ExtensionWithMArch<"rasv2", "RASv2", "FEAT_RASv2",
-  "Enable ARMv8.9-A Reliability, Availability and Serviceability Extensions",
+  "Enable Armv8.9-A Reliability, Availability and Serviceability Extensions",
   [FeatureRAS]>;
 
 def FeatureCSSC : ExtensionWithMArch<"cssc", "CSSC", "FEAT_CSSC",
@@ -354,6 +357,10 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
 //===----------------------------------------------------------------------===//
 //  Armv9.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
+
+def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+  "UseFixedOverScalableIfEqualCost", "true",
+  "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
 
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
@@ -447,7 +454,7 @@ def FeatureITE : ExtensionWithMArch<"ite", "ITE", "FEAT_ITE",
   "Enable Armv9.4-A Instrumentation Extension", [FeatureETE, FeatureTRBE]>;
 
 def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128", "FEAT_LSE128",
-  "Enable Armv9.4-A 128-bit Atomic Instructions",
+  "Enable Armv9.4-A 128-bit Atomic instructions",
   [FeatureLSE]>;
 
 // FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, and FEAT_SYSINSTR128 are mutually implicit.
@@ -455,7 +462,7 @@ def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128", "FEAT_LSE128",
 def FeatureD128 : ExtensionWithMArch<"d128", "D128",
   "FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128",
   "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
-  "and Instructions",
+  "and instructions",
   [FeatureLSE128]>;
 
 //===----------------------------------------------------------------------===//
@@ -472,22 +479,22 @@ def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
   "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
   
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
-  "Enable fp8 multiply-add instructions", [FeatureFP8]>;
+  "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
 
 def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_SSVE_FP8FMA",
-  "Enable SVE2 fp8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
+  "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
-  "Enable fp8 4-way dot instructions", [FeatureFP8FMA]>;
+  "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
   
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
-  "Enable fp8 2-way dot instructions", [FeatureFP8DOT4]>;
+  "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
 
 def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
-  "Enable SVE2 fp8 4-way dot product instructions", [FeatureSSVE_FP8FMA]>;
+  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSSVE_FP8FMA]>;
 
 def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FEAT_SSVE_FP8DOT2",
-  "Enable SVE2 fp8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
+  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions">;
@@ -505,7 +512,7 @@ def FeaturePAuthLR : ExtensionWithMArch<"pauth-lr", "PAuthLR", "FEAT_PAuth_LR",
   "Enable Armv9.5-A PAC enhancements">;
 
 def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
-  "Enable ARMv9.5-A TLBI VMALL for Dirty State">;
+  "Enable Armv9.5-A TLBI VMALL for Dirty State">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -801,15 +808,15 @@ def HasV8_9aOps : Architecture64<8, 9, "a", "v8.9a",
   !listconcat(HasV8_8aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
     FeatureRASv2])>;
 def HasV9_0aOps : Architecture64<9, 0, "a", "v9a",
-  [HasV8_5aOps, FeatureMEC],
+  [HasV8_5aOps],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureFullFP16, FeatureSVE,
     FeatureSVE2])>;
 def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   [HasV8_6aOps, HasV9_0aOps],
-  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
+  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [])>;
+  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
   !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;

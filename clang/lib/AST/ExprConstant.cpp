@@ -2401,6 +2401,10 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
 /// produce an appropriate diagnostic.
 static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
                              const LValue *This = nullptr) {
+  // The restriction to literal types does not exist in C++23 anymore.
+  if (Info.getLangOpts().CPlusPlus23)
+    return true;
+
   if (!E->isPRValue() || E->getType()->isLiteralType(Info.Ctx))
     return true;
 
@@ -2839,6 +2843,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such
       // a shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_right;
     }
@@ -2849,15 +2855,22 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
     } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus20) {
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
       // E1 x 2^E2 module 2^N.
-      if (LHS.isNegative())
+      if (LHS.isNegative()) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
-      else if (LHS.countl_zero() < SA)
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      } else if (LHS.countl_zero() < SA) {
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
+        if (!Info.noteUndefinedBehavior())
+          return false;
+      }
     }
     Result = LHS << SA;
     return true;
@@ -2872,6 +2885,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
       // During constant-folding, a negative shift is an opposite shift. Such a
       // shift is not a constant expression.
       Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHS;
+      if (!Info.noteUndefinedBehavior())
+        return false;
       RHS = -RHS;
       goto shift_left;
     }
@@ -2879,9 +2894,13 @@ static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
     // C++11 [expr.shift]p1: Shift width must be less than the bit width of the
     // shifted type.
     unsigned SA = (unsigned) RHS.getLimitedValue(LHS.getBitWidth()-1);
-    if (SA != RHS)
+    if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
+      if (!Info.noteUndefinedBehavior())
+        return false;
+    }
+
     Result = LHS >> SA;
     return true;
   }
@@ -11471,7 +11490,7 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
 
 bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
     const CXXParenListInitExpr *E) {
-  assert(dyn_cast<ConstantArrayType>(E->getType()) &&
+  assert(E->getType()->isConstantArrayType() &&
          "Expression result is not a constant array type");
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
@@ -12942,19 +12961,35 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           Info.Ctx.getTargetInfo().getMaxAtomicInlineWidth();
       if (Size <= Info.Ctx.toCharUnitsFromBits(InlineWidthBits)) {
         if (BuiltinOp == Builtin::BI__c11_atomic_is_lock_free ||
-            Size == CharUnits::One() ||
-            E->getArg(1)->isNullPointerConstant(Info.Ctx,
-                                                Expr::NPC_NeverValueDependent))
-          // OK, we will inline appropriately-aligned operations of this size,
-          // and _Atomic(T) is appropriately-aligned.
+            Size == CharUnits::One())
           return Success(1, E);
 
-        QualType PointeeType = E->getArg(1)->IgnoreImpCasts()->getType()->
-          castAs<PointerType>()->getPointeeType();
-        if (!PointeeType->isIncompleteType() &&
-            Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
-          // OK, we will inline operations on this object.
+        // If the pointer argument can be evaluated to a compile-time constant
+        // integer (or nullptr), check if that value is appropriately aligned.
+        const Expr *PtrArg = E->getArg(1);
+        Expr::EvalResult ExprResult;
+        APSInt IntResult;
+        if (PtrArg->EvaluateAsRValue(ExprResult, Info.Ctx) &&
+            ExprResult.Val.toIntegralConstant(IntResult, PtrArg->getType(),
+                                              Info.Ctx) &&
+            IntResult.isAligned(Size.getAsAlign()))
           return Success(1, E);
+
+        // Otherwise, check if the type's alignment against Size.
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
+          // Drop the potential implicit-cast to 'const volatile void*', getting
+          // the underlying type.
+          if (ICE->getCastKind() == CK_BitCast)
+            PtrArg = ICE->getSubExpr();
+        }
+
+        if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+          QualType PointeeType = PtrTy->getPointeeType();
+          if (!PointeeType->isIncompleteType() &&
+              Info.Ctx.getTypeAlignInChars(PointeeType) >= Size) {
+            // OK, we will inline operations on this object.
+            return Success(1, E);
+          }
         }
       }
     }
@@ -14031,6 +14066,12 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
                      E);
   }
 
+  case UETT_PtrAuthTypeDiscriminator: {
+    if (E->getArgumentType()->isDependentType())
+      return false;
+    return Success(
+        Info.Ctx.getPointerAuthTypeDiscriminator(E->getArgumentType()), E);
+  }
   case UETT_VecStep: {
     QualType Ty = E->getTypeOfArgument();
 

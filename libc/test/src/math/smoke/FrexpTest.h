@@ -24,10 +24,10 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(inf, func(inf, &exponent));
     EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, func(neg_inf, &exponent));
 
-    EXPECT_FP_EQ_ALL_ROUNDING(0.0, func(0.0, &exponent));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(zero, &exponent));
     EXPECT_EQ(exponent, 0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(-0.0, func(-0.0, &exponent));
+    EXPECT_FP_EQ_ALL_ROUNDING(-zero, func(-zero, &exponent));
     EXPECT_EQ(exponent, 0);
   }
 

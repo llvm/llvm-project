@@ -2888,8 +2888,14 @@ void transform::TileUsingForOp::build(
 LogicalResult transform::TileUsingForOp::verify() {
   if (getMixedSizes().size() != getScalableSizes().size())
     return emitOpError("expected same number of sizes (")
-           << getMixedSizes().size() << ") and scalable sizes ()"
+           << getMixedSizes().size() << ") and scalable sizes ("
            << getScalableSizes().size() << ")";
+  ArrayRef<int64_t> staticSizes = getStaticSizes();
+  unsigned numExpectedLoops = staticSizes.size() - llvm::count(staticSizes, 0);
+  if (getLoops().size() != numExpectedLoops)
+    return emitOpError("expected number of loops to tile (")
+           << numExpectedLoops << ") to match number of `loops` results ("
+           << getLoops().size() << ")";
   return success();
 }
 
@@ -3708,6 +3714,37 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
 
   results.push_back(tilingResult.tileOp);
   results.push_back(tilingResult.tiledOp);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradConv2DOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  FailureOr<Operation *> maybeTransformed = failure();
+  bool supported = TypeSwitch<Operation *, bool>(target)
+                       .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+                         maybeTransformed =
+                             winogradConv2D(rewriter, op, getM(), getR());
+                         return true;
+                       })
+                       .Default([&](Operation *op) { return false; });
+
+  if (!supported) {
+    return emitSilenceableError()
+           << "this operation is not supported to convert to Winograd Conv2D";
+  }
+
+  if (supported && failed(maybeTransformed)) {
+    return emitSilenceableError() << "apply Winograd Conv2D failed";
+  }
+
+  results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
 }
 

@@ -90,8 +90,7 @@ define i64 @test7(i64 %x) {
 define i64 @test8(i64 %x) {
 ; ISEL-LABEL: test8:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    cinc x8, x0, lt
+; ISEL-NEXT:    add x8, x0, x0, lsr #63
 ; ISEL-NEXT:    asr x0, x8, #1
 ; ISEL-NEXT:    ret
 ;
@@ -110,10 +109,8 @@ define i32 @sdiv_int(i32 %begin, i32 %first) #0 {
 ; ISEL-LABEL: sdiv_int:
 ; ISEL:       // %bb.0:
 ; ISEL-NEXT:    sub w8, w0, w1
-; ISEL-NEXT:    add w9, w8, #1
-; ISEL-NEXT:    add w10, w8, #2
-; ISEL-NEXT:    cmp w9, #0
-; ISEL-NEXT:    csinc w8, w10, w8, lt
+; ISEL-NEXT:    add w8, w8, #1
+; ISEL-NEXT:    add w8, w8, w8, lsr #31
 ; ISEL-NEXT:    sub w0, w0, w8, asr #1
 ; ISEL-NEXT:    ret
 ;

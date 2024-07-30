@@ -63,7 +63,7 @@ std::optional<Expr<SubscriptInteger>> DynamicTypeWithLength::LEN() const {
 }
 
 static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
-    const std::optional<parser::TypeSpec> &spec) {
+    const std::optional<parser::TypeSpec> &spec, FoldingContext &context) {
   if (spec) {
     if (const semantics::DeclTypeSpec *typeSpec{spec->declTypeSpec}) {
       // Name resolution sets TypeSpec::declTypeSpec only when it's valid
@@ -80,7 +80,13 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::ParamValue &len{cts.length()};
             // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
             // type guards, but not in array constructors.
-            return DynamicTypeWithLength{DynamicType{kind, len}};
+            DynamicTypeWithLength type{DynamicType{kind, len}};
+            if (auto lenExpr{type.LEN()}) {
+              type.length = Fold(context,
+                  AsExpr(Extremum<SubscriptInteger>{Ordering::Greater,
+                      Expr<SubscriptInteger>{0}, std::move(*lenExpr)}));
+            }
+            return type;
           } else {
             return DynamicTypeWithLength{DynamicType{category, kind}};
           }
@@ -523,7 +529,7 @@ static std::optional<parser::Substring> FixMisparsedSubstringDataRef(
                   parser::GetLastName(arrElement.base).symbol}) {
             const Symbol &ultimate{symbol->GetUltimate()};
             if (const semantics::DeclTypeSpec *type{ultimate.GetType()}) {
-              if (!ultimate.IsObjectArray() &&
+              if (ultimate.Rank() == 0 &&
                   type->category() == semantics::DeclTypeSpec::Character) {
                 // The ambiguous S(j:k) was parsed as an array section
                 // reference, but it's now clear that it's a substring.
@@ -1584,7 +1590,8 @@ private:
   std::optional<Expr<SubscriptInteger>> LengthIfGood() const {
     if (type_) {
       auto len{type_->LEN()};
-      if (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len)) {
+      if (explicitType_ ||
+          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
         return len;
       }
     }
@@ -1939,7 +1946,8 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
-  ArrayConstructorContext acContext{*this, AnalyzeTypeSpec(acSpec.type)};
+  ArrayConstructorContext acContext{
+      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
   for (const parser::AcValue &value : acSpec.values) {
     acContext.Add(value);
   }
@@ -4525,6 +4533,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
         !OkLogicalIntegerAssignment(lhsType->category(), rhsType->category())) {
       SayNoMatch("ASSIGNMENT(=)", true);
     }
+  } else if (!fatalErrors_) {
+    CheckAssignmentConformance();
   }
   return std::nullopt;
 }

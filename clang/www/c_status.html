@@ -1066,7 +1066,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>char8_t: A type for UTF-8 characters and strings</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2653.htm">N2653</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Clarification for max exponent macros-update</td>
@@ -1255,7 +1255,8 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Round-trip rounding</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3232.pdf">N3232</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- editorial changes, no tests required -->
     </tr>
     <tr>
       <td>Accessing byte arrays</td>
@@ -1265,7 +1266,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Slay some earthly demons I</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3244.pdf">N3244</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
       <!-- Voted in:
              Annex J Item 21 (including additional change)
              Annex J Item 56
@@ -1273,6 +1274,14 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
              Annex J Item 67
              Annex J Item 69 (alternative wording for semantics)
       -->
+        <details><summary>Partial</summary>
+          Clang does not document the implementation-defined behavior for decay
+          of an array with the register storage class specifier. Clang does not
+          diagnose an <code>extern inline</code> function with no definition in
+          the TU. Clang accepts and rejects redeclarations with/without an
+          alignment specifier, depending on the order of the declarations.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Support ++ and -- on complex values</td>
@@ -1282,7 +1291,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Usability of a byte-wise copy of va_list</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3262.pdf">N3262</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>alignof of an incomplete array type</td>

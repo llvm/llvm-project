@@ -8,7 +8,7 @@
 define amdgpu_kernel void @memcpy_p0_p0_minsize(ptr %dest, ptr readonly %src) #0 {
 ; CHECK-LABEL: memcpy_p0_p0_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -121,7 +121,7 @@ entry:
 define amdgpu_kernel void @memcpy_p1_p1_minsize(ptr addrspace(1) %dest, ptr addrspace(1) %src) #0 {
 ; CHECK-LABEL: memcpy_p1_p1_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v12, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:32
@@ -145,7 +145,7 @@ entry:
 define amdgpu_kernel void @memcpy_p1_p4_minsize(ptr addrspace(1) %global, ptr addrspace(4) %0) #0 {
 ; CHECK-LABEL: memcpy_p1_p4_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
@@ -181,12 +181,12 @@ entry:
 define amdgpu_kernel void @memcpy_p5_p4_minsize(ptr addrspace(5) %local, ptr addrspace(4) %0) #0 {
 ; CHECK-LABEL: memcpy_p5_p4_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[18:19], s[2:3]
+; CHECK-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
+; CHECK-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_add_u32 s8, s8, s7
+; CHECK-NEXT:    s_add_u32 s16, s16, s13
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:15
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:14
@@ -206,52 +206,52 @@ define amdgpu_kernel void @memcpy_p5_p4_minsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1]
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:31
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:30
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
+; CHECK-NEXT:    s_addc_u32 s17, s17, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:29
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:15
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:15
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:14
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:14
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:13
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:13
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:12
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:12
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:11
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:11
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:10
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:10
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:23
 ; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:9
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:9
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:22
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:8
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:8
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:21
 ; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:7
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:7
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:20
 ; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:6
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:6
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:19
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:5
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:5
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:18
 ; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:2
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:2
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:47
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:1
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:1
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:31
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:31
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:30
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:4
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:30
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:4
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:17
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:3
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:3
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:16
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:27
@@ -262,229 +262,229 @@ define amdgpu_kernel void @memcpy_p5_p4_minsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:44
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:43
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:23
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:23
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:36
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:22
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:22
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:35
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:21
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:21
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:34
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:20
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:20
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:33
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:19
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:19
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:32
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:28
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:29
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:29
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:42
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:18
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:18
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:63
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:17
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:17
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:16
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:16
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:61
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:27
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:27
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:40
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:26
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:26
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:39
 ; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:25
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:25
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:38
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:24
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:24
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:37
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:44
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:44
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:57
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:43
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:43
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:56
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:45
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:45
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1] offset:58
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:36
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:36
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:49
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:35
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:35
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:48
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:46
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:47
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:47
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:60
 ; CHECK-NEXT:    s_waitcnt vmcnt(33)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:34
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:34
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:79
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:28
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:28
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:41
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:42
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:42
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:55
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:33
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:32
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:33
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:32
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:77
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:61
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:61
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:74
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:40
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:40
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:53
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:39
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:39
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:52
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:38
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:38
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:51
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:37
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:37
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:50
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:57
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:57
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:70
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:56
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:56
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:69
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:58
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:58
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1] offset:71
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:49
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:49
 ; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:48
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:48
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:93
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:46
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:46
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:59
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:60
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:73
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:41
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:41
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:54
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:55
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:55
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:68
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:74
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:74
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:87
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:53
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:53
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:66
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:52
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:52
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:65
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:51
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:51
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:64
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:62
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:63
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:63
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:76
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:50
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:50
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:95
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:77
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:77
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:90
 ; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:71
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:71
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1] offset:83
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:70
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:69
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:70
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:69
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:59
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:59
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:72
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:73
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:73
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:85
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:54
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:54
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:67
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:68
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:68
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:81
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:66
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:66
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:111
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:65
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:65
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:110
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:64
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:64
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:109
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:62
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:62
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:75
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:76
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:76
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:89
 ; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:90
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:90
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:103
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:72
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:72
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:86
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:84
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:82
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:87
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:87
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:100
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:67
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:67
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:80
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:78
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:94
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:79
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:79
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:92
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:95
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:95
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:108
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:93
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:93
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:106
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:75
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:75
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:88
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:89
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:89
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:102
 ; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:78
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:78
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:91
 ; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:94
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:94
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:107
 ; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:92
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:92
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:105
 ; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:88
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:88
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:101
 ; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:91
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:91
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:104
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:86
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:85
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:84
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:83
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:82
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:86
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:85
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:84
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:83
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:82
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:96
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:97
@@ -492,13 +492,13 @@ define amdgpu_kernel void @memcpy_p5_p4_minsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:99
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:120
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:81
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:80
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:111
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:110
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:109
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:108
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:100
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:81
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:80
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:111
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:110
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:109
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:108
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:100
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:121
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:122
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:123
@@ -506,54 +506,54 @@ define amdgpu_kernel void @memcpy_p5_p4_minsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:125
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:126
 ; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:107
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:107
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:127
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:106
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:106
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:105
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:103
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:102
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:105
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:103
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:102
 ; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:101
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:101
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:116
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:117
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:119
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:114
 ; CHECK-NEXT:    s_waitcnt vmcnt(34)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:104
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:104
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:118
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:115
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:113
 ; CHECK-NEXT:    global_load_ubyte v21, v0, s[0:1] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:99
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:98
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:97
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:96
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:99
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:98
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:97
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:127
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:126
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:125
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:124
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:123
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:122
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:121
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:120
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:127
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:126
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:125
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:124
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:123
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:122
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:121
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:120
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:119
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:119
 ; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:118
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:117
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:116
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:118
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:117
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:116
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:115
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:114
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:115
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:114
 ; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:113
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:113
 ; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v21, v1, s[8:11], 0 offen offset:112
+; CHECK-NEXT:    buffer_store_byte v21, v1, s[16:19], 0 offen offset:112
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) %local, ptr addrspace(4) %0, i64 128, i1 false)
@@ -563,32 +563,32 @@ entry:
 define amdgpu_kernel void @memcpy_p0_p5_minsize(ptr %generic, ptr addrspace(5) %src) #0 {
 ; CHECK-LABEL: memcpy_p0_p5_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x8
-; CHECK-NEXT:    s_add_u32 s8, s8, s7
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
+; CHECK-NEXT:    s_mov_b64 s[18:19], s[2:3]
+; CHECK-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x8
+; CHECK-NEXT:    s_add_u32 s16, s16, s13
+; CHECK-NEXT:    s_addc_u32 s17, s17, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:2
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:31
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:30
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:15
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:14
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:13
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:12
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:11
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:10
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:9
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:8
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:7
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:6
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:5
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:4
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:3
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:2
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:1
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:31
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:30
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
@@ -601,287 +601,287 @@ define amdgpu_kernel void @memcpy_p0_p5_minsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:11
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:10
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:9
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:23
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:23
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:8
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:22
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:22
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:7
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:21
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:21
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:6
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:20
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:20
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:5
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:19
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:19
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:4
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:18
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:18
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:3
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:17
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:17
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:1
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:47
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:47
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:31
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:2
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:16
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:16
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:45
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:28
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:27
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:26
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:25
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:24
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:45
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:23
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:37
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:37
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:22
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:36
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:36
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:21
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:35
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:35
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:20
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:34
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:34
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:19
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:33
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:33
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:18
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:32
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:32
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:29
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:29
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:30
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:44
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:44
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:17
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:63
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:63
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:16
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:28
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:42
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:42
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:26
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:40
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:40
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:25
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:39
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:39
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:24
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:38
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:38
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:27
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:41
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:41
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:45
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:59
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:59
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:37
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:51
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:51
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:36
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:50
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:50
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:35
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:49
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:49
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:34
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:48
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:48
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:46
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:46
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:47
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:61
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:61
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:29
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:43
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:43
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:44
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:58
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:58
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:33
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:79
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:79
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:32
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:42
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:56
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:56
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:40
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:54
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:54
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:39
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:53
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:53
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:38
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:52
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:52
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:41
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:55
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:55
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:59
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:73
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:73
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:51
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:65
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:65
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:50
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:64
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:64
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:62
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:62
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:63
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:77
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:77
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:46
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:60
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:61
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:75
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:75
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:43
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:57
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:57
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:58
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:72
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:72
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:49
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:95
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:95
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:48
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:56
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:70
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:70
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:54
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:68
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:68
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:53
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:67
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:67
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:52
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:66
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:66
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:55
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:69
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:69
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:73
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:87
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:87
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:65
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:111
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:111
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:64
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:110
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:110
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:62
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:76
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:76
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:77
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:91
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:91
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:60
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:74
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:74
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:75
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:89
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:89
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:57
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:71
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:71
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:72
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:86
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:86
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:70
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:84
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:84
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:68
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:83
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:83
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:67
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:81
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:81
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:66
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:80
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:80
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:78
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:78
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:79
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:93
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:93
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:69
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:82
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:82
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:87
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:101
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:101
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:76
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:90
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:90
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:91
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:105
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:105
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:74
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:88
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:88
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:89
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:103
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:103
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:71
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:85
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:85
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:86
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:100
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:100
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:78
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:92
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:92
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:93
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:107
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:107
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:90
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:104
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:104
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:88
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:102
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:102
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:85
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:99
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:99
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:94
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:94
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:95
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:109
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:109
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:92
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:106
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:106
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:94
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:108
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:108
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:84
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:83
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:82
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:81
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:96
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:96
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:97
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:98
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:120
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:97
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:98
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:120
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:80
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:111
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:110
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:109
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:99
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:121
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:121
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:122
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:123
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:124
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:122
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:123
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:124
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:107
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:105
@@ -891,20 +891,20 @@ define amdgpu_kernel void @memcpy_p0_p5_minsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:102
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:101
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:100
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:126
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:116
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:117
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:118
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:119
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:127
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:114
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:115
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:126
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:116
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:117
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:118
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:119
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:127
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:114
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:115
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:108
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:125
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:125
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:113
-; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[8:11], 0 offen offset:112
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:113
+; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[16:19], 0 offen offset:112
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:98
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:97
@@ -935,7 +935,7 @@ entry:
 define amdgpu_kernel void @memcpy_p3_p4_minsize(ptr addrspace(4) %0) #0 {
 ; CHECK-LABEL: memcpy_p3_p4_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v24, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v24, s[0:1]
@@ -971,7 +971,7 @@ entry:
 define amdgpu_kernel void @memcpy_p0_p3_minsize(ptr %generic) #0 {
 ; CHECK-LABEL: memcpy_p0_p3_minsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    ds_read_u8 v3, v2 offset:112
 ; CHECK-NEXT:    ds_read_u8 v4, v2 offset:113
@@ -1254,7 +1254,7 @@ entry:
 define amdgpu_kernel void @memcpy_p0_p0_optsize(ptr %dest, ptr %src) #1 {
 ; CHECK-LABEL: memcpy_p0_p0_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
@@ -1367,7 +1367,7 @@ entry:
 define amdgpu_kernel void @memcpy_p1_p1_optsize(ptr addrspace(1) %dest, ptr addrspace(1) %src) #1 {
 ; CHECK-LABEL: memcpy_p1_p1_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v12, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:32
@@ -1391,7 +1391,7 @@ entry:
 define amdgpu_kernel void @memcpy_p1_p4_optsize(ptr addrspace(1) %global, ptr addrspace(4) %0) #1 {
 ; CHECK-LABEL: memcpy_p1_p4_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
@@ -1427,12 +1427,12 @@ entry:
 define amdgpu_kernel void @memcpy_p5_p4_optsize(ptr addrspace(5) %local, ptr addrspace(4) %0) #1 {
 ; CHECK-LABEL: memcpy_p5_p4_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x0
+; CHECK-NEXT:    s_mov_b64 s[18:19], s[2:3]
+; CHECK-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x8
+; CHECK-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_add_u32 s8, s8, s7
+; CHECK-NEXT:    s_add_u32 s16, s16, s13
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:15
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:14
@@ -1452,52 +1452,52 @@ define amdgpu_kernel void @memcpy_p5_p4_optsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1]
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:31
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:30
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
+; CHECK-NEXT:    s_addc_u32 s17, s17, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:29
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:15
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:15
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:14
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:14
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:13
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:13
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:12
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:12
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:11
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:11
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:10
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:10
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:23
 ; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:9
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:9
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:22
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:8
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:8
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:21
 ; CHECK-NEXT:    s_waitcnt vmcnt(21)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:7
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:7
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:20
 ; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:6
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:6
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:19
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:5
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:5
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:18
 ; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:2
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:2
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:47
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:1
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:1
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:31
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:31
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:30
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:4
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:30
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:4
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:17
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:3
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:3
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:16
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:27
@@ -1508,229 +1508,229 @@ define amdgpu_kernel void @memcpy_p5_p4_optsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:44
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:43
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:23
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:23
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:36
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:22
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:22
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:35
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:21
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:21
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:34
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:20
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:20
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:33
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:19
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:19
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:32
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:28
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:29
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:29
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:42
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:18
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:18
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:63
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:17
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:17
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:16
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:16
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:61
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:27
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:27
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:40
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:26
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:26
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:39
 ; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:25
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:25
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:38
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:24
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:24
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:37
 ; CHECK-NEXT:    s_waitcnt vmcnt(27)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:44
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:44
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:57
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:43
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:43
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:56
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:45
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:45
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1] offset:58
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:36
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:36
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:49
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:35
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:35
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:48
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:46
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:47
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:47
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:60
 ; CHECK-NEXT:    s_waitcnt vmcnt(33)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:34
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:34
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:79
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:28
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:28
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:41
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:42
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:42
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:55
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:33
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:32
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:33
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:32
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:77
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:61
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:61
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:74
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:40
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:40
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:53
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:39
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:39
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:52
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:38
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:38
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:51
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:37
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:37
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:50
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:57
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:57
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:70
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:56
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:56
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:69
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:58
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:58
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1] offset:71
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:49
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:49
 ; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:48
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:48
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:93
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:46
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:46
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:59
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:60
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:73
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:41
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:41
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:54
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:55
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:55
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:68
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:74
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:74
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:87
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:53
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:53
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:66
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:52
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:52
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:65
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:51
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:51
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:64
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:62
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:63
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:63
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:76
 ; CHECK-NEXT:    s_waitcnt vmcnt(28)
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:50
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:50
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:95
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:77
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:77
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:90
 ; CHECK-NEXT:    s_waitcnt vmcnt(26)
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:71
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:71
 ; CHECK-NEXT:    global_load_ubyte v17, v0, s[0:1] offset:83
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:70
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:69
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:70
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:69
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:59
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:59
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:72
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:73
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:73
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:85
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:54
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:54
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:67
 ; CHECK-NEXT:    s_waitcnt vmcnt(25)
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:68
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:68
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:81
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:66
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:66
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:111
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:65
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:65
 ; CHECK-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:110
 ; CHECK-NEXT:    s_waitcnt vmcnt(23)
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:64
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:64
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:109
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:62
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:62
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:75
 ; CHECK-NEXT:    s_waitcnt vmcnt(24)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:76
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:76
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:89
 ; CHECK-NEXT:    s_waitcnt vmcnt(22)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:90
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:90
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:103
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:72
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:72
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:86
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:84
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:82
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:87
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:87
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:100
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:67
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:67
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:80
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:78
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:94
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:79
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:79
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:92
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:95
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:95
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:108
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:93
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:93
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:106
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:75
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:75
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:88
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:89
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:89
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:102
 ; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:78
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:78
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:91
 ; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:94
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:94
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:107
 ; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:92
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:92
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:105
 ; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:88
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:88
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:101
 ; CHECK-NEXT:    s_waitcnt vmcnt(6)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:91
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:91
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:104
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:86
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:85
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:84
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:83
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:82
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:86
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:85
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:84
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:83
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:82
 ; CHECK-NEXT:    global_load_ubyte v15, v0, s[0:1] offset:96
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v16, v0, s[0:1] offset:97
@@ -1738,13 +1738,13 @@ define amdgpu_kernel void @memcpy_p5_p4_optsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v18, v0, s[0:1] offset:99
 ; CHECK-NEXT:    global_load_ubyte v19, v0, s[0:1] offset:120
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:81
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:80
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:111
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:110
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:109
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:108
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:100
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:81
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:80
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:111
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:110
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:109
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:108
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:100
 ; CHECK-NEXT:    global_load_ubyte v20, v0, s[0:1] offset:121
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:122
 ; CHECK-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:123
@@ -1752,54 +1752,54 @@ define amdgpu_kernel void @memcpy_p5_p4_optsize(ptr addrspace(5) %local, ptr add
 ; CHECK-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:125
 ; CHECK-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:126
 ; CHECK-NEXT:    s_waitcnt vmcnt(29)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:107
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:107
 ; CHECK-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:127
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:106
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:106
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:105
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:103
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:102
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:105
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:103
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:102
 ; CHECK-NEXT:    s_waitcnt vmcnt(31)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:101
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:101
 ; CHECK-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:116
 ; CHECK-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:117
 ; CHECK-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:119
 ; CHECK-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:114
 ; CHECK-NEXT:    s_waitcnt vmcnt(34)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:104
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:104
 ; CHECK-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:118
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    global_load_ubyte v13, v0, s[0:1] offset:115
 ; CHECK-NEXT:    global_load_ubyte v14, v0, s[0:1] offset:113
 ; CHECK-NEXT:    global_load_ubyte v21, v0, s[0:1] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(30)
-; CHECK-NEXT:    buffer_store_byte v18, v1, s[8:11], 0 offen offset:99
-; CHECK-NEXT:    buffer_store_byte v17, v1, s[8:11], 0 offen offset:98
-; CHECK-NEXT:    buffer_store_byte v16, v1, s[8:11], 0 offen offset:97
-; CHECK-NEXT:    buffer_store_byte v15, v1, s[8:11], 0 offen offset:96
+; CHECK-NEXT:    buffer_store_byte v18, v1, s[16:19], 0 offen offset:99
+; CHECK-NEXT:    buffer_store_byte v17, v1, s[16:19], 0 offen offset:98
+; CHECK-NEXT:    buffer_store_byte v16, v1, s[16:19], 0 offen offset:97
+; CHECK-NEXT:    buffer_store_byte v15, v1, s[16:19], 0 offen offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v7, v1, s[8:11], 0 offen offset:127
-; CHECK-NEXT:    buffer_store_byte v6, v1, s[8:11], 0 offen offset:126
-; CHECK-NEXT:    buffer_store_byte v5, v1, s[8:11], 0 offen offset:125
-; CHECK-NEXT:    buffer_store_byte v4, v1, s[8:11], 0 offen offset:124
-; CHECK-NEXT:    buffer_store_byte v3, v1, s[8:11], 0 offen offset:123
-; CHECK-NEXT:    buffer_store_byte v2, v1, s[8:11], 0 offen offset:122
-; CHECK-NEXT:    buffer_store_byte v20, v1, s[8:11], 0 offen offset:121
-; CHECK-NEXT:    buffer_store_byte v19, v1, s[8:11], 0 offen offset:120
+; CHECK-NEXT:    buffer_store_byte v7, v1, s[16:19], 0 offen offset:127
+; CHECK-NEXT:    buffer_store_byte v6, v1, s[16:19], 0 offen offset:126
+; CHECK-NEXT:    buffer_store_byte v5, v1, s[16:19], 0 offen offset:125
+; CHECK-NEXT:    buffer_store_byte v4, v1, s[16:19], 0 offen offset:124
+; CHECK-NEXT:    buffer_store_byte v3, v1, s[16:19], 0 offen offset:123
+; CHECK-NEXT:    buffer_store_byte v2, v1, s[16:19], 0 offen offset:122
+; CHECK-NEXT:    buffer_store_byte v20, v1, s[16:19], 0 offen offset:121
+; CHECK-NEXT:    buffer_store_byte v19, v1, s[16:19], 0 offen offset:120
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v11, v1, s[8:11], 0 offen offset:119
+; CHECK-NEXT:    buffer_store_byte v11, v1, s[16:19], 0 offen offset:119
 ; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    buffer_store_byte v10, v1, s[8:11], 0 offen offset:118
-; CHECK-NEXT:    buffer_store_byte v9, v1, s[8:11], 0 offen offset:117
-; CHECK-NEXT:    buffer_store_byte v8, v1, s[8:11], 0 offen offset:116
+; CHECK-NEXT:    buffer_store_byte v10, v1, s[16:19], 0 offen offset:118
+; CHECK-NEXT:    buffer_store_byte v9, v1, s[16:19], 0 offen offset:117
+; CHECK-NEXT:    buffer_store_byte v8, v1, s[16:19], 0 offen offset:116
 ; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    buffer_store_byte v13, v1, s[8:11], 0 offen offset:115
-; CHECK-NEXT:    buffer_store_byte v12, v1, s[8:11], 0 offen offset:114
+; CHECK-NEXT:    buffer_store_byte v13, v1, s[16:19], 0 offen offset:115
+; CHECK-NEXT:    buffer_store_byte v12, v1, s[16:19], 0 offen offset:114
 ; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v14, v1, s[8:11], 0 offen offset:113
+; CHECK-NEXT:    buffer_store_byte v14, v1, s[16:19], 0 offen offset:113
 ; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    buffer_store_byte v21, v1, s[8:11], 0 offen offset:112
+; CHECK-NEXT:    buffer_store_byte v21, v1, s[16:19], 0 offen offset:112
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) %local, ptr addrspace(4) %0, i64 128, i1 false)
@@ -1809,32 +1809,32 @@ entry:
 define amdgpu_kernel void @memcpy_p0_p5_optsize(ptr %generic, ptr addrspace(5) %src) #1 {
 ; CHECK-LABEL: memcpy_p0_p5_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[0:1]
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x8
-; CHECK-NEXT:    s_add_u32 s8, s8, s7
-; CHECK-NEXT:    s_addc_u32 s9, s9, 0
+; CHECK-NEXT:    s_mov_b64 s[18:19], s[2:3]
+; CHECK-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x8
+; CHECK-NEXT:    s_add_u32 s16, s16, s13
+; CHECK-NEXT:    s_addc_u32 s17, s17, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:15
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:14
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:13
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:12
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:11
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:10
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:9
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:8
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:7
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:6
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:5
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:3
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:2
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:1
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:31
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:30
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:15
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:14
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:13
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:12
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:11
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:10
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:9
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:8
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:7
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:6
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:5
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:4
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:3
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:2
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:1
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:31
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:30
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
@@ -1847,287 +1847,287 @@ define amdgpu_kernel void @memcpy_p0_p5_optsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:11
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:10
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:9
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:23
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:23
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:8
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:22
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:22
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:7
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:21
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:21
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:6
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:20
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:20
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:5
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:19
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:19
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:4
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:18
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:18
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:3
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:17
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:17
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:1
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:47
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:47
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:31
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:2
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:16
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:16
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:28
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:27
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:26
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:25
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:24
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:45
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:28
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:27
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:26
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:25
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:24
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:45
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:23
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:37
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:37
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:22
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:36
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:36
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:21
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:35
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:35
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:20
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:34
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:34
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:19
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:33
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:33
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:18
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:32
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:32
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:29
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:29
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:30
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:44
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:44
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:17
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:63
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:63
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:16
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:28
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:42
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:42
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:26
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:40
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:40
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:25
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:39
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:39
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:24
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:38
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:38
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:27
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:41
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:41
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:45
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:59
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:59
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:37
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:51
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:51
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:36
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:50
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:50
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:35
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:49
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:49
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:34
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:48
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:48
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:46
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:46
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:47
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:61
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:61
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:29
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:43
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:43
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:44
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:58
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:58
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:33
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:79
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:79
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:32
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:42
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:56
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:56
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:40
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:54
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:54
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:39
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:53
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:53
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:38
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:52
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:52
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:41
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:55
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:55
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:59
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:73
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:73
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:51
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:65
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:65
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:50
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:64
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:64
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:62
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:62
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:63
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:77
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:77
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:46
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:60
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:60
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:61
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:75
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:75
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:43
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:57
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:57
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:58
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:72
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:72
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:49
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:95
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:95
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:48
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:56
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:70
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:70
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:54
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:68
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:68
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:53
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:67
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:67
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:52
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:66
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:66
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:55
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:69
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:69
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:73
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:87
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:87
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:65
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:111
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:111
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:64
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:110
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:110
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:62
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:76
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:76
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:77
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:91
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:91
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:60
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:74
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:74
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:75
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:89
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:89
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:57
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:71
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:71
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:72
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:86
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:86
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:70
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:84
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:84
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:68
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:83
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:83
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:67
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:81
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:81
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:66
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:80
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:80
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:78
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:78
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:79
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:93
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:93
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:69
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:82
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:82
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:87
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:101
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:101
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:76
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:90
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:90
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:91
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:105
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:105
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:74
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:88
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:88
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v17 offset:89
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:103
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:103
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:71
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:85
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:85
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:86
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:100
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:100
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:78
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:92
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:92
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:93
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:107
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:107
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v16 offset:90
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:104
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:104
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:88
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:102
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:102
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:85
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:99
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:99
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:94
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:94
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:95
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:109
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:109
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v14 offset:92
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:106
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:106
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:94
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:108
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:108
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v4 offset:84
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:83
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:82
 ; CHECK-NEXT:    flat_store_byte v[0:1], v7 offset:81
-; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[8:11], 0 offen offset:96
+; CHECK-NEXT:    buffer_load_ubyte v4, v2, s[16:19], 0 offen offset:96
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[8:11], 0 offen offset:97
-; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[8:11], 0 offen offset:98
-; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[8:11], 0 offen offset:120
+; CHECK-NEXT:    buffer_load_ubyte v5, v2, s[16:19], 0 offen offset:97
+; CHECK-NEXT:    buffer_load_ubyte v6, v2, s[16:19], 0 offen offset:98
+; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[16:19], 0 offen offset:120
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v8 offset:80
 ; CHECK-NEXT:    flat_store_byte v[0:1], v9 offset:111
 ; CHECK-NEXT:    flat_store_byte v[0:1], v10 offset:110
 ; CHECK-NEXT:    flat_store_byte v[0:1], v11 offset:109
 ; CHECK-NEXT:    flat_store_byte v[0:1], v3 offset:99
-; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[8:11], 0 offen offset:121
+; CHECK-NEXT:    buffer_load_ubyte v8, v2, s[16:19], 0 offen offset:121
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[8:11], 0 offen offset:122
-; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[8:11], 0 offen offset:123
-; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[8:11], 0 offen offset:124
+; CHECK-NEXT:    buffer_load_ubyte v9, v2, s[16:19], 0 offen offset:122
+; CHECK-NEXT:    buffer_load_ubyte v10, v2, s[16:19], 0 offen offset:123
+; CHECK-NEXT:    buffer_load_ubyte v11, v2, s[16:19], 0 offen offset:124
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v13 offset:107
 ; CHECK-NEXT:    flat_store_byte v[0:1], v15 offset:105
@@ -2137,20 +2137,20 @@ define amdgpu_kernel void @memcpy_p0_p5_optsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    flat_store_byte v[0:1], v18 offset:102
 ; CHECK-NEXT:    flat_store_byte v[0:1], v19 offset:101
 ; CHECK-NEXT:    flat_store_byte v[0:1], v20 offset:100
-; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[8:11], 0 offen offset:126
-; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[8:11], 0 offen offset:116
-; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[8:11], 0 offen offset:117
-; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[8:11], 0 offen offset:118
-; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[8:11], 0 offen offset:119
-; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[8:11], 0 offen offset:127
-; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[8:11], 0 offen offset:114
-; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[8:11], 0 offen offset:115
+; CHECK-NEXT:    buffer_load_ubyte v13, v2, s[16:19], 0 offen offset:126
+; CHECK-NEXT:    buffer_load_ubyte v15, v2, s[16:19], 0 offen offset:116
+; CHECK-NEXT:    buffer_load_ubyte v16, v2, s[16:19], 0 offen offset:117
+; CHECK-NEXT:    buffer_load_ubyte v17, v2, s[16:19], 0 offen offset:118
+; CHECK-NEXT:    buffer_load_ubyte v18, v2, s[16:19], 0 offen offset:119
+; CHECK-NEXT:    buffer_load_ubyte v14, v2, s[16:19], 0 offen offset:127
+; CHECK-NEXT:    buffer_load_ubyte v19, v2, s[16:19], 0 offen offset:114
+; CHECK-NEXT:    buffer_load_ubyte v20, v2, s[16:19], 0 offen offset:115
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v12 offset:108
-; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[8:11], 0 offen offset:125
+; CHECK-NEXT:    buffer_load_ubyte v12, v2, s[16:19], 0 offen offset:125
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[8:11], 0 offen offset:113
-; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[8:11], 0 offen offset:112
+; CHECK-NEXT:    buffer_load_ubyte v3, v2, s[16:19], 0 offen offset:113
+; CHECK-NEXT:    buffer_load_ubyte v21, v2, s[16:19], 0 offen offset:112
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:98
 ; CHECK-NEXT:    flat_store_byte v[0:1], v5 offset:97
@@ -2181,7 +2181,7 @@ entry:
 define amdgpu_kernel void @memcpy_p3_p4_optsize(ptr addrspace(4) %0) #1 {
 ; CHECK-LABEL: memcpy_p3_p4_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v24, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v24, s[0:1]
@@ -2217,7 +2217,7 @@ entry:
 define amdgpu_kernel void @memcpy_p0_p3_optsize(ptr %generic) #1 {
 ; CHECK-LABEL: memcpy_p0_p3_optsize:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    ds_read_u8 v3, v2 offset:112
 ; CHECK-NEXT:    ds_read_u8 v4, v2 offset:113

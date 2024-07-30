@@ -10,6 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <sys/syscall.h> // For syscall numbers.
@@ -18,7 +19,7 @@
 #include <linux/time_types.h> // For __kernel_timespec.
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
                    (pid_t tid, struct timespec *tp)) {
@@ -53,4 +54,4 @@ LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

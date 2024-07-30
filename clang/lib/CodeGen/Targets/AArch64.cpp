@@ -133,7 +133,7 @@ public:
       }
     }
     auto *Fn = cast<llvm::Function>(GV);
-    BPI.setFnAttributes(*Fn);
+    setBranchProtectionFnAttributes(BPI, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -883,8 +883,10 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
 
   if (!CalleeIsStreamingCompatible &&
       (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
-    CGM.getDiags().Report(CallLoc,
-                          diag::err_function_always_inline_attribute_mismatch)
+    CGM.getDiags().Report(
+        CallLoc, CalleeIsStreaming
+                     ? diag::err_function_always_inline_attribute_mismatch
+                     : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
   if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
     if (NewAttr->isNewZA())

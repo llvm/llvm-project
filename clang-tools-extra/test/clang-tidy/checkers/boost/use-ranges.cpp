@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++14 %s boost-use-ranges %t
-// RUN: %check_clang_tidy -std=c++17 %s boost-use-ranges %t -check-suffixes=,CPP17
+// RUN: %check_clang_tidy -std=c++14 %s boost-use-ranges %t  -- -- -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++17 %s boost-use-ranges %t -check-suffixes=,CPP17 -- -I %S/Inputs/use-ranges/
 
 // CHECK-FIXES: #include <boost/range/algorithm/find.hpp>
 // CHECK-FIXES: #include <boost/range/algorithm/reverse.hpp>
@@ -13,111 +13,8 @@
 // CHECK-FIXES: #include <boost/range/adaptor/reversed.hpp>
 // CHECK-FIXES: #include <boost/range/numeric.hpp>
 
-namespace std {
-
-template <typename T> class vector {
-public:
-  using iterator = T *;
-  using const_iterator = const T *;
-  constexpr const_iterator begin() const;
-  constexpr const_iterator end() const;
-  constexpr const_iterator cbegin() const;
-  constexpr const_iterator cend() const;
-  constexpr iterator begin();
-  constexpr iterator end();
-};
-
-template <typename Container> constexpr auto begin(const Container &Cont) {
-  return Cont.begin();
-}
-
-template <typename Container> constexpr auto begin(Container &Cont) {
-  return Cont.begin();
-}
-
-template <typename Container> constexpr auto end(const Container &Cont) {
-  return Cont.end();
-}
-
-template <typename Container> constexpr auto end(Container &Cont) {
-  return Cont.end();
-}
-
-template <typename Container> constexpr auto cbegin(const Container &Cont) {
-  return Cont.cbegin();
-}
-
-template <typename Container> constexpr auto cend(const Container &Cont) {
-  return Cont.cend();
-}
-// Find
-template< class InputIt, class T >
-InputIt find(InputIt first, InputIt last, const T& value);
-
-template <typename Iter> void reverse(Iter begin, Iter end);
-
-template <class InputIt1, class InputIt2>
-bool includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2);
-
-template <class ForwardIt1, class ForwardIt2>
-bool is_permutation(ForwardIt1 first1, ForwardIt1 last1, ForwardIt2 first2,
-                    ForwardIt2 last2);
-
-template <class BidirIt>
-bool next_permutation(BidirIt first, BidirIt last);
-
-template <class ForwardIt1, class ForwardIt2>
-bool equal(ForwardIt1 first1, ForwardIt1 last1,
-           ForwardIt2 first2, ForwardIt2 last2);
-
-template <class RandomIt>
-void push_heap(RandomIt first, RandomIt last);
-
-template <class InputIt, class OutputIt, class UnaryPred>
-OutputIt copy_if(InputIt first, InputIt last, OutputIt d_first, UnaryPred pred);
-
-template <class ForwardIt>
-ForwardIt is_sorted_until(ForwardIt first, ForwardIt last);
-
-template <class InputIt>
-void reduce(InputIt first, InputIt last);
-
-template <class InputIt, class T>
-T reduce(InputIt first, InputIt last, T init);
-
-template <class InputIt, class T, class BinaryOp>
-T reduce(InputIt first, InputIt last, T init, BinaryOp op) {
-  // Need a definition to suppress undefined_internal_type when invoked with lambda
-  return init;
-}
-
-template <class InputIt, class T>
-T accumulate(InputIt first, InputIt last, T init);
-
-} // namespace std
-
-namespace boost {
-namespace range_adl_barrier {
-template <typename T> void *begin(T &);
-template <typename T> void *end(T &);
-template <typename T> void *const_begin(const T &);
-template <typename T> void *const_end(const T &);
-} // namespace range_adl_barrier
-using namespace range_adl_barrier;
-
-template <typename T> void *rbegin(T &);
-template <typename T> void *rend(T &);
-
-template <typename T> void *const_rbegin(T &);
-template <typename T> void *const_rend(T &);
-namespace algorithm {
-
-template <class InputIterator, class T, class BinaryOperation>
-T reduce(InputIterator first, InputIterator last, T init, BinaryOperation bOp) {
-  return init;
-}
-} // namespace algorithm
-} // namespace boost
+#include "fake_boost.h"
+#include "fake_std.h"
 
 bool returnTrue(int val) {
   return true;

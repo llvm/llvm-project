@@ -77,7 +77,7 @@ bool MachineLoopInfo::invalidate(
 
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
-  analyze(MDT);
+  analyze(MDT.getBase());
 }
 
 void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -287,7 +287,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
       }
     }
 
-    if (!MO.isUse())
+    if (!MO.readsReg())
       continue;
 
     assert(MRI->getVRegDef(Reg) &&

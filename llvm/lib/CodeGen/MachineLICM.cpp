@@ -190,7 +190,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineLoopInfoWrapperPass>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
-        AU.addRequired<MachineBlockFrequencyInfo>();
+        AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
@@ -261,7 +261,8 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineLoop *CurLoop, MachineBasicBlock *CurPreheader);
+    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
+                        MachineBasicBlock *CurPreheader);
 
     void InitRegPressure(MachineBasicBlock *BB);
 
@@ -323,7 +324,7 @@ char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
@@ -332,7 +333,7 @@ INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
 INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
@@ -372,7 +373,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
 
   // Get our Loop information...
   if (DisableHoistingToHotterBlocks != UseBFI::None)
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -390,8 +391,9 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
     else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
+      MachineDomTreeNode *N = DT->getNode(CurLoop->getHeader());
       FirstInLoop = true;
-      HoistOutOfLoop(CurLoop, CurPreheader);
+      HoistOutOfLoop(N, CurLoop, CurPreheader);
       CSEMap.clear();
     }
   }
@@ -474,7 +476,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
   RUs |= RUsFromRegsNotInMask;
 }
 
-/// Examine the instruction for potentai LICM candidate. Also
+/// Examine the instruction for potential LICM candidate. Also
 /// gather register def and frame object update information.
 void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
@@ -794,10 +796,10 @@ void MachineLICMBase::ExitScopeIfDone(MachineDomTreeNode *Node,
 /// specified header block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree. This allows us to visit definitions before
 /// uses, allowing us to hoist a loop body in one pass without iteration.
-void MachineLICMBase::HoistOutOfLoop(MachineLoop *CurLoop,
+void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
+                                     MachineLoop *CurLoop,
                                      MachineBasicBlock *CurPreheader) {
   MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
-  MachineDomTreeNode *HeaderN = DT->getNode(CurLoop->getHeader());
   if (!Preheader)
     return;
 
@@ -1073,7 +1075,7 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
 bool MachineLICMBase::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop) {
   // Check if it's safe to move the instruction.
   bool DontMoveAcrossStore = !HoistConstLoads || !AllowedToHoistLoads[CurLoop];
-  if ((!I.isSafeToMove(AA, DontMoveAcrossStore)) &&
+  if ((!I.isSafeToMove(DontMoveAcrossStore)) &&
       !(HoistConstStores && isInvariantStore(I, TRI, MRI))) {
     LLVM_DEBUG(dbgs() << "LICM: Instruction not safe to move.\n");
     return false;

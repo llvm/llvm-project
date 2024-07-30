@@ -551,6 +551,13 @@ opt<std::string> ProjectRoot{
 };
 #endif
 
+opt<bool> ExperimentalModulesSupport{
+    "experimental-modules-support",
+    cat(Features),
+    desc("Experimental support for standard c++ modules"),
+    init(false),
+};
+
 /// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
@@ -860,6 +867,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
+  Opts.EnableExperimentalModulesSupport = ExperimentalModulesSupport;
 
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:

@@ -59,8 +59,8 @@ define void @recurrence_1(ptr readonly noalias %a, ptr noalias %b, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-IC:       scalar.body:
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP20:%.*]], [[SCALAR_BODY]] ]
@@ -115,8 +115,8 @@ define void @recurrence_1(ptr readonly noalias %a, ptr noalias %b, i32 %n) {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       scalar.body:
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP16:%.*]], [[SCALAR_BODY]] ]
@@ -169,8 +169,8 @@ define void @recurrence_1(ptr readonly noalias %a, ptr noalias %b, i32 %n) {
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; SINK-AFTER:       scalar.body:
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[SCALAR_BODY]] ]
@@ -271,8 +271,8 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP20]], [[MIDDLE_BLOCK]] ], [ poison, [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.cond.cleanup.loopexit:
@@ -340,8 +340,8 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ], [ poison, [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup.loopexit:
@@ -404,8 +404,8 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ poison, [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; SINK-AFTER:       for.cond.cleanup.loopexit:
@@ -534,8 +534,8 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[FOR_PREHEADER]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-IC:       scalar.body:
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP24:%.*]], [[SCALAR_BODY]] ]
@@ -607,8 +607,8 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[FOR_PREHEADER]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       scalar.body:
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP20:%.*]], [[SCALAR_BODY]] ]
@@ -678,8 +678,8 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[FOR_PREHEADER]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; SINK-AFTER:       scalar.body:
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP14:%.*]], [[SCALAR_BODY]] ]
@@ -916,13 +916,13 @@ define i32 @PR27246() {
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; UNROLL-NO-IC:       middle.block:
-; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i32 3
+; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[I_016]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP3]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[I_016]], [[FOR_COND1_PREHEADER]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_COND1:%.*]]
 ; UNROLL-NO-IC:       for.cond.cleanup:
 ; UNROLL-NO-IC-NEXT:    [[E_1_LCSSA_LCSSA:%.*]] = phi i32 [ [[E_1_LCSSA]], [[FOR_COND_CLEANUP3]] ]
@@ -965,8 +965,8 @@ define i32 @PR27246() {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[I_016]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP3]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[I_016]], [[FOR_COND1_PREHEADER]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND1:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    [[E_1_LCSSA_LCSSA:%.*]] = phi i32 [ [[E_1_LCSSA]], [[FOR_COND_CLEANUP3]] ]
@@ -1009,13 +1009,13 @@ define i32 @PR27246() {
 ; SINK-AFTER-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; SINK-AFTER:       middle.block:
-; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[VEC_IND]], i32 2
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[VEC_IND]], i32 3
+; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[VEC_IND]], i32 2
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[I_016]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP3]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[I_016]], [[FOR_COND1_PREHEADER]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[E_015]], [[FOR_COND1_PREHEADER]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_COND1:%.*]]
 ; SINK-AFTER:       for.cond.cleanup:
 ; SINK-AFTER-NEXT:    [[E_1_LCSSA_LCSSA:%.*]] = phi i32 [ [[E_1_LCSSA]], [[FOR_COND_CLEANUP3]] ]
@@ -1120,8 +1120,8 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP34]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP34]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-IC:       scalar.body:
 ; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1166,8 +1166,8 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       scalar.body:
 ; UNROLL-NO-VF-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1225,8 +1225,8 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP18]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP18]], [[MIDDLE_BLOCK]] ], [ [[PRE_LOAD]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; SINK-AFTER:       scalar.body:
 ; SINK-AFTER-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1272,8 +1272,8 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 1, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 1, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-IC:       scalar.body:
 ; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1302,8 +1302,8 @@ define i64 @constant_folded_previous_value() {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; UNROLL-NO-VF:       scalar.body:
 ; UNROLL-NO-VF-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1330,8 +1330,8 @@ define i64 @constant_folded_previous_value() {
 ; SINK-AFTER:       middle.block:
 ; SINK-AFTER-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 1, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 1, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[SCALAR_BODY:%.*]]
 ; SINK-AFTER:       scalar.body:
 ; SINK-AFTER-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[SCALAR_BODY]] ]
@@ -1385,12 +1385,12 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; UNROLL-NO-IC:       middle.block:
-; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -1422,8 +1422,8 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.body:
 ; UNROLL-NO-VF-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -1454,12 +1454,12 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; SINK-AFTER-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; SINK-AFTER-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; SINK-AFTER:       middle.block:
-; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
 ; SINK-AFTER-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-AFTER:       for.body:
 ; SINK-AFTER-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -1580,9 +1580,9 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-IC-NEXT:    [[TMP43:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP27]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[B]], [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP27]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP43]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.cond.cleanup:
@@ -1640,9 +1640,9 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; UNROLL-NO-VF-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP13]], [[TMP12]]
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[B]], [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[B]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
@@ -1709,9 +1709,9 @@ define i32 @PR33613(ptr %b, double %j, i32 %d) {
 ; SINK-AFTER-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP20]])
 ; SINK-AFTER-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[B]], [[ENTRY]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 10240, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ [[J]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP22]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-AFTER:       for.cond.cleanup:
@@ -1811,8 +1811,8 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP21:%.*]], [[FOR_BODY]] ]
@@ -1867,8 +1867,8 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.body:
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP17:%.*]], [[FOR_BODY]] ]
@@ -1919,8 +1919,8 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-AFTER:       for.body:
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP11:%.*]], [[FOR_BODY]] ]
@@ -2049,8 +2049,8 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP31]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP31]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP49:%.*]], [[FOR_BODY]] ]
@@ -2109,8 +2109,8 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.body:
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP17:%.*]], [[FOR_BODY]] ]
@@ -2176,8 +2176,8 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-AFTER:       for.body:
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP25:%.*]], [[FOR_BODY]] ]
@@ -2277,8 +2277,8 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP23:%.*]], [[FOR_BODY]] ]
@@ -2336,8 +2336,8 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.body:
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
@@ -2390,8 +2390,8 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-AFTER:       for.body:
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[FOR_BODY]] ]
@@ -2577,9 +2577,9 @@ define void @sink_dead_inst(ptr %a) {
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; UNROLL-NO-IC-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT3]], [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 13, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT3]], [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_COND:%.*]]
 ; UNROLL-NO-IC:       for.cond:
 ; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_COND]] ]
@@ -2627,9 +2627,9 @@ define void @sink_dead_inst(ptr %a) {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT2:%.*]] = phi i32 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY:%.*]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 15, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 15, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT2:%.*]] = phi i32 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND:%.*]]
 ; UNROLL-NO-VF:       for.cond:
 ; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_COND]] ]
@@ -2676,9 +2676,9 @@ define void @sink_dead_inst(ptr %a) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
 ; SINK-AFTER-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY:%.*]] ]
+; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 13, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 13, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_COND:%.*]]
 ; SINK-AFTER:       for.cond:
 ; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_COND]] ]
@@ -2830,8 +2830,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP43]], i32 3
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29:![0-9]+]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP51]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-IC:       bb1:
@@ -2895,8 +2895,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP13]], [[TMP12]]
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29:![0-9]+]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-VF:       bb1:
@@ -2983,8 +2983,8 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP22]], i32 3
 ; SINK-AFTER-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29:![0-9]+]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB]] ]
+; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP27]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    br label [[BB2:%.*]]
 ; SINK-AFTER:       bb1:
@@ -3198,9 +3198,9 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP43]], i32 3
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP75]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-IC:       bb1:
@@ -3282,9 +3282,9 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP17]], [[TMP16]]
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[BB2:%.*]]
 ; UNROLL-NO-VF:       bb1:
@@ -3406,9 +3406,9 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP22]], i32 3
 ; SINK-AFTER-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]], !prof [[PROF29]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[Y]], [[BB]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP39]], [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; SINK-AFTER-NEXT:    br label [[BB2:%.*]]
 ; SINK-AFTER:       bb1:
@@ -3483,12 +3483,12 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; UNROLL-NO-IC:       middle.block:
-; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP7]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP7]], i32 3
+; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP7]], i32 2
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -3535,8 +3535,8 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-VF:       loop:
 ; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -3578,12 +3578,12 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; SINK-AFTER-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; SINK-AFTER-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; SINK-AFTER:       middle.block:
-; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP3]], i32 2
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
+; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP3]], i32 2
 ; SINK-AFTER-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; SINK-AFTER-NEXT:    br label [[LOOP:%.*]]
 ; SINK-AFTER:       loop:
 ; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -3651,8 +3651,8 @@ define void @unused_recurrence(ptr %a) {
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP3]], i32 3
 ; UNROLL-NO-IC-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 997, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_COND:%.*]]
 ; UNROLL-NO-IC:       for.cond:
 ; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_COND]] ]
@@ -3687,8 +3687,8 @@ define void @unused_recurrence(ptr %a) {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 1001, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_COND:%.*]]
 ; UNROLL-NO-VF:       for.cond:
 ; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_COND]] ]
@@ -3720,8 +3720,8 @@ define void @unused_recurrence(ptr %a) {
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
 ; SINK-AFTER-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 1001, [[MIDDLE_BLOCK]] ], [ -27, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[FOR_COND:%.*]]
 ; SINK-AFTER:       for.cond:
 ; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_COND]] ]
@@ -3768,8 +3768,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 8, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[PHI:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
@@ -3795,8 +3795,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-VF:       loop:
 ; UNROLL-NO-VF-NEXT:    [[PHI:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
@@ -3824,8 +3824,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; SINK-AFTER:       middle.block:
 ; SINK-AFTER-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
-; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; SINK-AFTER-NEXT:    br label [[LOOP:%.*]]
 ; SINK-AFTER:       loop:
 ; SINK-AFTER-NEXT:    [[PHI:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]

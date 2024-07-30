@@ -12,10 +12,23 @@
 #include <rtsan/rtsan_context.h>
 #include <rtsan/rtsan_interceptors.h>
 
+using namespace __rtsan;
+
+bool __rtsan::rtsan_initialized;
+bool __rtsan::rtsan_init_is_running;
+
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
-  __rtsan::InitializeInterceptors();
+  CHECK(!rtsan_init_is_running);
+  if (rtsan_initialized)
+    return;
+  rtsan_init_is_running = true;
+
+  InitializeInterceptors();
+
+  rtsan_init_is_running = false;
+  rtsan_initialized = true;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter() {

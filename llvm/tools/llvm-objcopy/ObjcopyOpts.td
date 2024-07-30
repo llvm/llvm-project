@@ -1,5 +1,10 @@
 include "CommonOpts.td"
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 defm binary_architecture
     : Eq<"binary-architecture", "Ignored for compatibility">;
 def B : JoinedOrSeparate<["-"], "B">,
@@ -175,6 +180,10 @@ defm keep_global_symbol
 def G : JoinedOrSeparate<["-"], "G">,
         Alias<keep_global_symbol>,
         HelpText<"Alias for --keep-global-symbol">;
+
+defm verify_note_sections : B<"verify-note-sections",
+                              "Validate note sections",
+                              "Don't validate note sections">;
 
 defm keep_global_symbols
     : Eq<"keep-global-symbols",

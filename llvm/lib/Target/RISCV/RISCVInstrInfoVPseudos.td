@@ -561,17 +561,17 @@ def RISCVVIntrinsicsTable : GenericTable {
 //    unmasked variant.  For all but compares, both the masked and
 //    unmasked variant have a passthru and policy operand.  For compares,
 //    neither has a policy op, and only the masked version has a passthru.
-class RISCVMaskedPseudo<bits<4> MaskIdx, bit MaskAffectsRes=false> {
+class RISCVMaskedPseudo<bits<4> MaskIdx, bit ActiveAffectsRes=false> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
   bits<4> MaskOpIdx = MaskIdx;
-  bit MaskAffectsResult = MaskAffectsRes;
+  bit ActiveElementsAffectResult = ActiveAffectsRes;
 }
 
 def RISCVMaskedPseudosTable : GenericTable {
   let FilterClass = "RISCVMaskedPseudo";
   let CppTypeName = "RISCVMaskedPseudoInfo";
-  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "MaskAffectsResult"];
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "ActiveElementsAffectResult"];
   let PrimaryKey = ["MaskedPseudo"];
   let PrimaryKeyName = "getMaskedPseudoInfo";
 }
@@ -751,7 +751,7 @@ class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins, int sew = 0> :
 
 class GetVTypePredicates<VTypeInfo vti> {
   list<Predicate> Predicates = !cond(!eq(vti.Scalar, f16) : [HasVInstructionsF16],
-                                     !eq(vti.Scalar, bf16) : [HasVInstructionsBF16],
+                                     !eq(vti.Scalar, bf16) : [HasVInstructionsBF16Minimal],
                                      !eq(vti.Scalar, f32) : [HasVInstructionsAnyF],
                                      !eq(vti.Scalar, f64) : [HasVInstructionsF64],
                                      !eq(vti.SEW, 64) : [HasVInstructionsI64],
@@ -2065,7 +2065,7 @@ multiclass VPseudoVIOTA_M {
                        SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
-                                 RISCVMaskedPseudo<MaskIdx=2, MaskAffectsRes=true>,
+                                 RISCVMaskedPseudo<MaskIdx=2, ActiveAffectsRes=true>,
                                  SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                             forceMergeOpRead=true>;
     }
@@ -3162,7 +3162,7 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
-                                          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
+                                          RISCVMaskedPseudo<MaskIdx=3, ActiveAffectsRes=true>;
   }
 }
 
@@ -3179,7 +3179,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
                                                Op2Class>,
-          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
+          RISCVMaskedPseudo<MaskIdx=3, ActiveAffectsRes=true>;
   }
 }
 
@@ -6781,26 +6781,20 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 let Predicates = [HasVInstructionsAnyF] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach f = FPList in {
-    foreach m = f.MxList in {
-      defvar mx = m.MX;
-      let VLMul = m.value in {
-        let HasSEWOp = 1, BaseInstr = VFMV_F_S in
-        def "PseudoVFMV_" # f.FX # "_S_" # mx :
-          Pseudo<(outs f.fprclass:$rd),
-                 (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-          Sched<[WriteVMovFS, ReadVMovFS]>,
-          RISCVVPseudo;
-        let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
-            Constraints = "$rd = $rs1" in
-        def "PseudoVFMV_S_" # f.FX # "_" # mx :
-                                          Pseudo<(outs m.vrclass:$rd),
-                                                 (ins m.vrclass:$rs1, f.fprclass:$rs2,
-                                                      AVL:$vl, ixlenimm:$sew),
-                                                 []>,
-          Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
-          RISCVVPseudo;
-      }
-    }
+    let HasSEWOp = 1, BaseInstr = VFMV_F_S in
+    def "PseudoVFMV_" # f.FX # "_S" :
+      Pseudo<(outs f.fprclass:$rd),
+             (ins VR:$rs2, ixlenimm:$sew), []>,
+      Sched<[WriteVMovFS, ReadVMovFS]>,
+      RISCVVPseudo;
+    let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
+        Constraints = "$rd = $rs1" in
+    def "PseudoVFMV_S_" # f.FX :
+      Pseudo<(outs VR:$rd),
+             (ins VR:$rs1, f.fprclass:$rs2, AVL:$vl, ixlenimm:$sew),
+             []>,
+      Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
+      RISCVVPseudo;
   }
 }
 } // Predicates = [HasVInstructionsAnyF]

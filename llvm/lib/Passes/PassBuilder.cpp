@@ -95,13 +95,17 @@
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/SafeStack.h"
@@ -111,6 +115,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -840,6 +845,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.hoistCommonInsts(Enable);
     } else if (ParamName == "sink-common-insts") {
       Result.sinkCommonInsts(Enable);
+    } else if (ParamName == "speculate-unpredictables") {
+      Result.speculateUnpredictables(Enable);
     } else if (Enable && ParamName.consume_front("bonus-inst-threshold=")) {
       APInt BonusInstThreshold;
       if (ParamName.getAsInteger(0, BonusInstThreshold))
@@ -1175,7 +1182,7 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("filter=")) {
-      std::optional<RegClassFilterFunc> Filter =
+      std::optional<RegAllocFilterFunc> Filter =
           PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
@@ -2185,7 +2192,7 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
-std::optional<RegClassFilterFunc>
+std::optional<RegAllocFilterFunc>
 PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
     return nullptr;

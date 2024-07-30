@@ -206,11 +206,13 @@ public:
 
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
   virtual outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MBBI,
                        unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
@@ -381,7 +383,7 @@ struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
   uint8_t MaskOpIdx;
-  uint8_t MaskAffectsResult : 1;
+  uint8_t ActiveElementsAffectResult : 1;
 };
 #define GET_RISCVMaskedPseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"

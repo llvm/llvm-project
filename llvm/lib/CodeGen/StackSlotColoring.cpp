@@ -151,8 +151,8 @@ namespace {
       AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<LiveStacks>();
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addPreserved<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreservedID(MachineDominatorsID);
 
       // In some Target's pipeline, register allocation (RA) might be
@@ -224,13 +224,10 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
           li.incrementWeight(
               LiveIntervals::getSpillWeight(false, true, MBFI, MI));
       }
-      for (MachineInstr::mmo_iterator MMOI = MI.memoperands_begin(),
-                                      EE = MI.memoperands_end();
-           MMOI != EE; ++MMOI) {
-        MachineMemOperand *MMO = *MMOI;
+      for (MachineMemOperand *MMO : MI.memoperands()) {
         if (const FixedStackPseudoSourceValue *FSV =
-            dyn_cast_or_null<FixedStackPseudoSourceValue>(
-                MMO->getPseudoValue())) {
+                dyn_cast_or_null<FixedStackPseudoSourceValue>(
+                    MMO->getPseudoValue())) {
           int FI = FSV->getFrameIndex();
           if (FI >= 0)
             SSRefs[FI].push_back(MMO);
@@ -527,7 +524,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
@@ -552,8 +549,8 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
     Next = -1;
 
   SSIntervals.clear();
-  for (unsigned i = 0, e = SSRefs.size(); i != e; ++i)
-    SSRefs[i].clear();
+  for (auto &RefMMOs : SSRefs)
+    RefMMOs.clear();
   SSRefs.clear();
   OrigAlignments.clear();
   OrigSizes.clear();
