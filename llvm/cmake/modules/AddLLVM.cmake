@@ -2043,6 +2043,7 @@ function(add_lit_target target comment)
 
   # Tests should be excluded from "Build Solution".
   set_target_properties(${target} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+  set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # Convert a target name like check-clang to a variable name like CLANG.
