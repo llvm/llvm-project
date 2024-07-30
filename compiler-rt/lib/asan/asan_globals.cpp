@@ -163,12 +163,13 @@ static void CheckODRViolationViaIndicator(const Global *g) {
     *odr_indicator = REGISTERED;
     return;
   }
-  // Fetch globals with the same ODR indicator
+
+  // Fetch globals with the same ODR indicator.
   auto *relevant_globals_lookup =
       map_of_globals_by_indicator.find(g->odr_indicator);
-  if (!relevant_globals_lookup) {
+  if (!relevant_globals_lookup)
     return;
-  }
+
   ListOfGlobals *relevant_globals = relevant_globals_lookup->second;
   // If *odr_indicator is DEFINED, some module have already registered
   // externally visible symbol with the same name. This is an ODR violation.
