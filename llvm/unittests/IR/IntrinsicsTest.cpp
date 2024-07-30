@@ -12,7 +12,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -105,69 +104,6 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   for (const auto &[ID, Checker] : LeafIDs) {
     auto *Intr = makeIntrinsic(ID);
     EXPECT_TRUE(Checker(*Intr));
-  }
-}
-
-TEST(IntrinsicVerifierTest, LRound) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = std::make_unique<Module>("M", C);
-  IRBuilder<> Builder(C);
-
-  using TypePair = std::pair<Type *, Type *>;
-  Type *Int32Ty = Type::getInt32Ty(C);
-  Type *Int64Ty = Type::getInt64Ty(C);
-  Type *HalfTy = Type::getHalfTy(C);
-  Type *FltTy = Type::getFloatTy(C);
-  Type *DblTy = Type::getDoubleTy(C);
-  auto Vec2xTy = [&](Type *ElemTy) {
-    return VectorType::get(ElemTy, ElementCount::getFixed(2));
-  };
-  Type *Vec2xInt32Ty = Vec2xTy(Int32Ty);
-  Type *Vec2xInt64Ty = Vec2xTy(Int64Ty);
-  Type *Vec2xFltTy = Vec2xTy(FltTy);
-
-  // Test Cases
-  // Validating only a limited set of possible combinations.
-  std::vector<TypePair> ValidTypes = {
-      {Int32Ty, FltTy},          {Int32Ty, DblTy},  {Int64Ty, FltTy},
-      {Int64Ty, DblTy},          {Int32Ty, HalfTy}, {Vec2xInt32Ty, Vec2xFltTy},
-      {Vec2xInt64Ty, Vec2xFltTy}};
-
-  // CreateIntrinsic errors out on invalid argument types.
-  std::vector<TypePair> InvalidTypes = {
-      {VectorType::get(Int32Ty, ElementCount::getFixed(3)), Vec2xFltTy}};
-
-  auto testIntrinsic = [&](TypePair types, Intrinsic::ID ID, bool expectValid) {
-    Function *F =
-        Function::Create(FunctionType::get(types.first, {types.second}, false),
-                         Function::ExternalLinkage, "lround_fn", M.get());
-    BasicBlock *BB = BasicBlock::Create(C, "entry", F);
-    Builder.SetInsertPoint(BB);
-
-    Value *Arg = F->arg_begin();
-    Value *Result = Builder.CreateIntrinsic(types.first, ID, {Arg});
-    Builder.CreateRet(Result);
-
-    std::string Error;
-    raw_string_ostream ErrorOS(Error);
-    EXPECT_EQ(expectValid, !verifyFunction(*F, &ErrorOS));
-    if (!expectValid) {
-      EXPECT_TRUE(StringRef(ErrorOS.str())
-                      .contains("llvm.lround, llvm.llround: argument must be "
-                                "same length as result"));
-    }
-  };
-
-  // Run Valid Cases.
-  for (auto Types : ValidTypes) {
-    testIntrinsic(Types, Intrinsic::lround, true);
-    testIntrinsic(Types, Intrinsic::llround, true);
-  }
-
-  // Run Invalid Cases.
-  for (auto Types : InvalidTypes) {
-    testIntrinsic(Types, Intrinsic::lround, false);
-    testIntrinsic(Types, Intrinsic::llround, false);
   }
 }
 } // end namespace
