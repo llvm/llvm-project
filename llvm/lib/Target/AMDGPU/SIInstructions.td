@@ -2138,19 +2138,26 @@ def : GCNPat <
 /********** Immediate Patterns **********/
 /********** ================== **********/
 
+// FIXME: Remove VGPRImm. Should be inferrable from register bank.
+
 def : GCNPat <
   (VGPRImm<(i32 imm)>:$imm),
   (V_MOV_B32_e32 imm:$imm)
 >;
 
 def : GCNPat <
-  (VGPRImm<(f32 fpimm)>:$imm),
-  (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
+  (i32 imm:$imm),
+  (S_MOV_B32 imm:$imm)
 >;
 
 def : GCNPat <
-  (i32 imm:$imm),
-  (S_MOV_B32 imm:$imm)
+  (p5 frameindex:$fi),
+  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+>;
+
+def : GCNPat <
+  (p5 frameindex:$fi),
+  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : GCNPat <
@@ -2174,15 +2181,13 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
   // FIXME: Workaround for ordering issue with peephole optimizer where
   // a register class copy interferes with immediate folding.  Should
   // use s_mov_b32, which can be shrunk to s_movk_i32
-  def : GCNPat <
-    (VGPRImm<(f16 fpimm)>:$imm),
-    (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
-  >;
 
-  def : GCNPat <
-    (VGPRImm<(bf16 fpimm)>:$imm),
-    (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
-  >;
+  foreach vt = [f16, bf16] in {
+    def : GCNPat <
+      (VGPRImm<(f16 fpimm)>:$imm),
+      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
+    >;
+  }
 }
 
 let True16Predicate = UseRealTrue16Insts in {
@@ -2191,15 +2196,12 @@ let True16Predicate = UseRealTrue16Insts in {
     (V_MOV_B16_t16_e64 0, imm:$imm, 0)
   >;
 
-  def : GCNPat <
-    (VGPRImm<(f16 fpimm)>:$imm),
-    (V_MOV_B16_t16_e64 0, $imm, 0)
-  >;
-
-  def : GCNPat <
-    (VGPRImm<(bf16 fpimm)>:$imm),
-    (V_MOV_B16_t16_e64 0, $imm, 0)
-  >;
+  foreach vt = [f16, bf16] in {
+    def : GCNPat <
+      (VGPRImm<(vt fpimm)>:$imm),
+      (V_MOV_B16_t16_e64 0, $imm, 0)
+    >;
+  }
 }
 
 // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
@@ -2236,18 +2238,28 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (VGPRImm<(bf16 fpimm)>:$imm),
+  (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : GCNPat <
   (bf16 fpimm:$imm),
   (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : GCNPat <
-  (p5 frameindex:$fi),
-  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+  (VGPRImm<(f32 fpimm)>:$imm),
+  (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : GCNPat <
-  (p5 frameindex:$fi),
-  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
+  (f32 fpimm:$imm),
+  (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : GCNPat <
+  (VGPRImm<(i64 imm)>:$imm),
+  (V_MOV_B64_PSEUDO imm:$imm)
 >;
 
 def : GCNPat <
@@ -2255,7 +2267,29 @@ def : GCNPat <
   (S_MOV_B64 InlineImm64:$imm)
 >;
 
-// Set to sign-extended 64-bit value (true = -1, false = 0)
+def : GCNPat <
+  (i64 imm:$imm),
+  (S_MOV_B64_IMM_PSEUDO imm:$imm)
+>;
+
+def : GCNPat <
+  (VGPRImm<(f64 fpimm)>:$imm),
+  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
+>;
+
+// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+// immediate and wil be expanded as needed, but we will only use these patterns
+// for values which can be encoded.
+def : GCNPat <
+  (f64 InlineImmFP64:$imm),
+  (S_MOV_B64 (i64 (bitcast_fpimm_to_i64 $imm)))
+>;
+
+def : GCNPat <
+  (f64 fpimm:$imm),
+  (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
+>;
+
 // Set to sign-extended 64-bit value (true = -1, false = 0)
 def : GCNPat <(i1 imm:$imm),
               (S_MOV_B64 imm:$imm)> {
@@ -2266,11 +2300,6 @@ def : GCNPat <(i1 imm:$imm),
               (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
-
-def : GCNPat <
-  (f64 InlineImmFP64:$imm),
-  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineImmFP64:$imm)))
->;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
