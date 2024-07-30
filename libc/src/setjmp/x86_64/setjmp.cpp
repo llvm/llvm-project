@@ -39,13 +39,13 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   STORE(r14);
   STORE(r15);
   asm(R"(
-      lea 8(%%rsp),%%rdx
-      xor %%rdx, %%rcx
-      mov %%rdx,%c[rsp](%%rdi)
-      mov (%%rsp),%%rdx
-      xor %%rdx, %%rcx         
-      mov %%rdx,%c[rip](%%rdi)
-  )" ::[rsp] "i"(offsetof(__jmp_buf, rsp)),
+   lea 8(%%rsp),%%rdx
+   xor %%rdx, %%rcx
+   mov %%rdx,%c[rsp](%%rdi)
+   mov (%%rsp),%%rdx
+   xor %%rdx, %%rcx     
+   mov %%rdx,%c[rip](%%rdi)
+ )" ::[rsp] "i"(offsetof(__jmp_buf, rsp)),
       [rip] "i"(offsetof(__jmp_buf, rip))
       : "rdx");
 

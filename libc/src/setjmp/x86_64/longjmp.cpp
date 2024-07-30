@@ -21,18 +21,19 @@ namespace LIBC_NAMESPACE_DECL {
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   asm(R"(
-      pushq %%rbp
-      pushq %%rbx
-      mov   %%rdi, %%rbp
-      mov   %%esi, %%ebx
-      subq	$8, %%rsp
-      call %P0
-      addq  $8, %%rsp
-      mov   %%ebx, %%esi
-      mov   %%rbp, %%rdi
-      popq  %%rbx
-      popq  %%rbp
-  )" :: "i"(jmpbuf::verify) :  "rax", "rcx", "rdx", "r8", "r9", "r10", "r11");
+   pushq %%rbp
+   pushq %%rbx
+   mov  %%rdi, %%rbp
+   mov  %%esi, %%ebx
+   subq $8, %%rsp
+   call %P0
+   addq $8, %%rsp
+   mov  %%ebx, %%esi
+   mov  %%rbp, %%rdi
+   popq %%rbx
+   popq %%rbp
+ )" ::"i"(jmpbuf::verify)
+      : "rax", "rcx", "rdx", "r8", "r9", "r10", "r11");
 
   register __UINT64_TYPE__ rcx __asm__("rcx");
   // Load cookie
@@ -55,13 +56,13 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   RECOVER(rsp);
 
   asm(R"(
-      xor %%eax,%%eax
-	    cmp $1,%%esi             
-	    adc %%esi,%%eax
-      mov %c[rip](%%rdi),%%rdx
-      xor %%rdx, %%rcx
-	    jmp *%%rdx
-  )" ::[rip] "i"(offsetof(__jmp_buf, rip))
+   xor %%eax,%%eax
+   cmp $1,%%esi       
+   adc %%esi,%%eax
+   mov %c[rip](%%rdi),%%rdx
+   xor %%rdx, %%rcx
+   jmp *%%rdx
+ )" ::[rip] "i"(offsetof(__jmp_buf, rip))
       : "rdx");
 }
 
