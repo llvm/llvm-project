@@ -114,12 +114,23 @@ def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
 
 def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
   let description = [{
-    GPU attribute representing a table of kernels metadata. All the attributes
-    in the dictionary must be of type `#gpu.kernel`.
+    GPU attribute representing a list of `#gpu.kernel` attributes. This
+    attribute supports searching kernels by name. All kernels in the table must
+    have an unique name.
 
     Examples:
     ```mlir
-      #gpu.kernel_table<[#gpu.kernel<kernel0, ...>]>
+      // Empty table
+      #gpu.kernel_table<>
+
+      // Table with a single kernel
+      #gpu.kernel_table<[#gpu.kernel<kernel0, () -> () >]>
+
+      // Table with multiple kernels.
+      #gpu.kernel_table<[
+        #gpu.kernel<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+        #gpu.kernel<"kernel1", (i32) -> ()>
+      ]>
     ```
   }];
   let parameters = (ins
