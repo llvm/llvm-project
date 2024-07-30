@@ -41,7 +41,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   LIBC_NAMESPACE::internal::heap_sort(arr);
 
   for (size_t i = 0; i < array_size - 1; ++i)
-    if (*reinterpret_cast<const int *>(arr.get(i)) > *reinterpret_cast<const int *>(arr.get(i + 1)))
+    if (*reinterpret_cast<const int *>(arr.get(i)) >
+        *reinterpret_cast<const int *>(arr.get(i + 1)))
       __builtin_trap();
 
   delete[] array;
