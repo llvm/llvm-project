@@ -338,15 +338,15 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           StringRef reason;
           switch (loadType) {
-            case LoadType::LCLinkerOption:
-              reason = "LC_LINKER_OPTION";
-              break;
-            case LoadType::CommandLineForce:
-              reason = "-force_load";
-              break;
-            case LoadType::CommandLine:
-              reason = "-all_load";
-              break;
+          case LoadType::LCLinkerOption:
+            reason = "LC_LINKER_OPTION";
+            break;
+          case LoadType::CommandLineForce:
+            reason = "-force_load";
+            break;
+          case LoadType::CommandLine:
+            reason = "-all_load";
+            break;
           }
           if (Error e = file->fetch(c, reason)) {
             if (config->warnThinArchiveMissingMembers)
@@ -1143,15 +1143,14 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
   // If no flag is specified:
   //   - default true  on   >=  ios14/macos11
   //   - default false on everything else
-  PlatformType platform = config->platformInfo.target.Platform;
-  switch (platform) {
-    case PLATFORM_IOS:
-    case PLATFORM_IOSSIMULATOR:
+  switch (config->platformInfo.target.Platform) {
+  case PLATFORM_IOS:
+  case PLATFORM_IOSSIMULATOR:
       return config->platformInfo.target.MinDeployment >= VersionTuple(14, 0);
-    case PLATFORM_MACOS:
-      return config->platformInfo.target.MinDeployment >= VersionTuple(11, 0);
-    default:
-      return false;
+  case PLATFORM_MACOS:
+    return config->platformInfo.target.MinDeployment >= VersionTuple(11, 0);
+  default:
+    return false;
   };
   llvm_unreachable("Shouldn't be here");
 }
