@@ -1423,3 +1423,11 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
+
+if (XCODE)
+  set(LLVM_XCODE_EXTRA_TARGET_SCHEMES "" CACHE STRING "Specifies an extra list of targets to turn into schemes")
+
+  foreach(target ${LLVM_XCODE_EXTRA_TARGET_SCHEMES})
+    set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
+  endforeach()
+endif()
