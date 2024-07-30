@@ -16,3 +16,8 @@
 // RUN: %clang --target=x86_64-scei-ps4 -flto=full -fcrash-diagnostics-dir=mydumps %s -### 2>&1 | FileCheck --check-prefixes=CHECK-DIAG-LTO %s
 
 // CHECK-DIAG-LTO: "-lto-debug-options= -crash-diagnostics-dir=mydumps"
+
+// Test that -lto-debug-options is only supplied to the linker when necessary
+
+// RUN: %clang --target=x86_64-scei-ps4 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-LTO %s
+// CHECK-NO-LTO-NOT: -lto-debug-options
