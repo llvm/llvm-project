@@ -6,7 +6,9 @@ set(LLVM_LINK_COMPONENTS
   )
 
 if (BOLT_ENABLE_RUNTIME)
-  set(BOLT_DRIVER_DEPS "bolt_rt")
+  foreach(tgt ${BOLT_RT_TARGETS_TO_BUILD})
+    set(BOLT_DRIVER_DEPS ${BOLT_DRIVER_DEPS} "bolt_rt_${tgt}")
+  endforeach()
 else()
   set(BOLT_DRIVER_DEPS "")
 endif()
