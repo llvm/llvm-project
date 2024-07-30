@@ -3995,6 +3995,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  totalorder
+  SRCS
+    totalorder.cpp
+  HDRS
+    ../totalorder.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  totalorderf
+  SRCS
+    totalorderf.cpp
+  HDRS
+    ../totalorderf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   totalorderf16
   SRCS
     totalorderf16.cpp
@@ -4006,6 +4030,18 @@ add_entrypoint_object(
     -O3
 )
 
+add_entrypoint_object(
+  totalorderf128
+  SRCS
+    totalorderf128.cpp
+  HDRS
+    ../totalorderf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.properties.types
+  COMPILE_OPTIONS
+    -O3
+)
 add_entrypoint_object(
   totalordermag
   SRCS
