@@ -826,10 +826,16 @@ uptr internal_sigaltstack(const void *ss, void *oss) {
   return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);
 }
 
+extern "C" pid_t __fork(void);
+
 int internal_fork() {
 #    if SANITIZER_LINUX
 #      if SANITIZER_S390
   return internal_syscall(SYSCALL(clone), 0, SIGCHLD);
+#      elif SANITIZER_SPARC
+  // The clone syscall interface on SPARC differs massively from the rest,
+  // so fall back to __fork.
+  return __fork();
 #      else
   return internal_syscall(SYSCALL(clone), SIGCHLD, 0);
 #      endif
