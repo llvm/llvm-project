@@ -94,10 +94,8 @@ void Function::renumberBlocks() {
     BB.Number = NextBlockNum++;
 }
 
-#ifndef NDEBUG
-/// In asserts builds, this checks the numbering. In non-asserts builds, it
-/// is defined as a no-op inline function in Function.h
 void Function::validateBlockNumbers() const {
+#ifndef NDEBUG
   BitVector Numbers(NextBlockNum);
   for (const auto &BB : *this) {
     unsigned Num = BB.getNumber();
@@ -105,8 +103,8 @@ void Function::validateBlockNumbers() const {
     assert(!Numbers[Num] && "duplicate block numbers");
     Numbers.set(Num);
   }
-}
 #endif
+}
 
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;

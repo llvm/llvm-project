@@ -489,8 +489,8 @@ TEST(FunctionTest, EraseBBs) {
 
 TEST(FunctionTest, BasicBlockNumbers) {
   LLVMContext Context;
-  Type *VoidType(Type::getVoidTy(Context));
-  FunctionType *FuncType(FunctionType::get(VoidType, false));
+  Type *VoidType = Type::getVoidTy(Context);
+  FunctionType *FuncType = FunctionType::get(VoidType, false);
   std::unique_ptr<Function> Func(
       Function::Create(FuncType, GlobalValue::ExternalLinkage));
 
