@@ -2062,20 +2062,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   }
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_LROUND: {
-    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    if (!DstTy.isValid() || !SrcTy.isValid())
-      break;
-    if (SrcTy.isPointer() || DstTy.isPointer()) {
-      std::string Op = SrcTy.isPointer() ? "Source" : "Destination";
-      report(Twine(Op, " operand must not be a pointer type"), MI);
-    } else if (SrcTy.isScalar()) {
-      verifyAllRegOpsScalar(*MI, *MRI);
-      break;
-    } else if (SrcTy.isVector()) {
-      verifyVectorElementMatch(SrcTy, DstTy, MI);
-      break;
-    }
+    verifyAllRegOpsScalar(*MI, *MRI);
     break;
   }
   case TargetOpcode::G_IS_FPCLASS: {
