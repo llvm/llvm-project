@@ -267,36 +267,6 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   }
 }
 
-/// Inserts `llvm.load` ops in the function body to restore the expected pointee
-/// value from `llvm.byval`/`llvm.byref` function arguments that were converted
-/// to LLVM pointer types.
-static void restoreByValByRefArgumentType(ConversionPatternRewriter &rewriter,
-                                          FunctionOpInterface funcOp) {
-  // Nothing to do for function declarations.
-  if (funcOp.isExternal())
-    return;
-
-  ConversionPatternRewriter::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(&funcOp.getFunctionBody().front());
-
-  SmallVector<std::optional<NamedAttribute>> byValRefArgAttrs;
-  filterByValByRefArgAttributes(funcOp, byValRefArgAttrs);
-  for (const auto &[arg, byValRefAttr] :
-       llvm::zip(funcOp.getArguments(), byValRefArgAttrs)) {
-    // Skip argument if no `llvm.byval` or `llvm.byref` attribute.
-    if (!byValRefAttr)
-      continue;
-
-    // Insert load to retrieve the actual argument passed by value/reference.
-    assert(isa<LLVM::LLVMPointerType>(arg.getType()) &&
-           "Expected LLVM pointer type for argument with "
-           "`llvm.byval`/`llvm.byref` attribute");
-    Type resTy = cast<TypeAttr>(byValRefAttr->getValue()).getValue();
-    auto valueArg = rewriter.create<LLVM::LoadOp>(arg.getLoc(), resTy, arg);
-    rewriter.replaceAllUsesExcept(arg, valueArg, valueArg);
-  }
-}
-
 FailureOr<LLVM::LLVMFuncOp>
 mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                                 ConversionPatternRewriter &rewriter,
@@ -310,12 +280,10 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
   // Convert the original function arguments. They are converted using the
   // LLVMTypeConverter provided to this legalization pattern.
   auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
-  SmallVector<std::optional<NamedAttribute>> byValByRefArgAttrs;
-  filterByValByRefArgAttributes(funcOp, byValByRefArgAttrs);
   TypeConverter::SignatureConversion result(funcOp.getNumArguments());
   auto llvmType = converter.convertFunctionSignature(
       funcTy, varargsAttr && varargsAttr.getValue(),
-      shouldUseBarePtrCallConv(funcOp, &converter), byValByRefArgAttrs, result);
+      shouldUseBarePtrCallConv(funcOp, &converter), result);
   if (!llvmType)
     return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
 
@@ -429,11 +397,6 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
     return rewriter.notifyMatchFailure(funcOp,
                                        "region types conversion failed");
   }
-
-  // Fix the type mismatch between the generated `llvm.ptr` and the expected
-  // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
-  // function arguments.
-  restoreByValByRefArgumentType(rewriter, newFuncOp);
 
   if (!shouldUseBarePtrCallConv(funcOp, &converter)) {
     if (funcOp->getAttrOfType<UnitAttr>(

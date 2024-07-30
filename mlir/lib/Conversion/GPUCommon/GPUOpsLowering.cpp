@@ -53,12 +53,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   // Remap proper input types.
   TypeConverter::SignatureConversion signatureConversion(
       gpuFuncOp.front().getNumArguments());
-  SmallVector<std::optional<NamedAttribute>> byValByRefArgAttrs;
-  filterByValByRefArgAttributes(gpuFuncOp, byValByRefArgAttrs);
+
   Type funcType = getTypeConverter()->convertFunctionSignature(
       gpuFuncOp.getFunctionType(), /*isVariadic=*/false,
-      getTypeConverter()->getOptions().useBarePtrCallConv, byValByRefArgAttrs,
-      signatureConversion);
+      getTypeConverter()->getOptions().useBarePtrCallConv, signatureConversion);
   if (!funcType) {
     return rewriter.notifyMatchFailure(gpuFuncOp, [&](Diagnostic &diag) {
       diag << "failed to convert function signature type for: "
