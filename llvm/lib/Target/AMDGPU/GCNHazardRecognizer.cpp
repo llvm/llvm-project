@@ -889,14 +889,29 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
     return nullptr;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
+
+  unsigned Opcode = MI.getOpcode();
+
+  // There are three different types of instructions
+  // which produce forwarded dest: 1. SDWA with dst_sel != DWORD, 2. VOP3 with
+  // op_sel[3] != 0, and 3. CVR_SR_FP8_F32 and CVT_SR_BF8_F32 with op_sel[3:2]
+  // != 0
+
   if (SIInstrInfo::isSDWA(MI)) {
+    // Type 1: SDWA with dst_sel != DWORD
     if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
       if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
         return nullptr;
   } else {
-    if (!AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::op_sel) ||
+    // Type 2 && Type 3: (VOP3 with op_sel[3] != 0) || (CVT_SR_FP8_F32 and
+    // CVT_SR_BF8_F32 with op_sel[3:2] != 0)
+    if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
         !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
-          SISrcMods::DST_OP_SEL))
+              SISrcMods::DST_OP_SEL ||
+          ((Opcode == AMDGPU::V_CVT_SR_BF8_F32_e64 ||
+            Opcode == AMDGPU::V_CVT_SR_FP8_F32_e64) &&
+           (TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm() &
+            SISrcMods::OP_SEL_0))))
       return nullptr;
   }
 
@@ -953,18 +968,23 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
       for (auto Dst : Dsts) {
         Register Def = Dst->getReg();
 
+        // We must consider implicit reads of the VALU. SDWA with dst_sel and
+        // UNUSED_PRESERVE will implicitly read the result from forwarded dest,
+        // and we must account for that hazard.
         for (const MachineOperand &Use : VALU->all_uses()) {
           if (Use.isReg() && TRI->regsOverlap(Def, Use.getReg()))
             return true;
         }
 
-        // We also read the dst for sub 32 writes to the same register for ECC
+        if (!TII->isVOP3(*VALU))
+          return false;
+
+        // We also must account for WAW hazards. In particular, WAW hazards with
+        // dest op_sel and dest preserve semantics will read the forwarded dest
+        // for parity check for ECC. Without accounting for this hazard, the ECC
+        // will be wrong.
         if (auto *ThisDst = TII->getNamedOperand(*VALU, AMDGPU::OpName::vdst)) {
-          Register ThisDef = ThisDst->getReg();
-          if (!TRI->regsOverlap(Def, ThisDef))
-            return false;
-          if (TII->isVOP3(*VALU) && !TII->isVOP3P(*VALU))
-            return true;
+          return TRI->regsOverlap(Def, ThisDst->getReg());
         }
       }
       return false;
@@ -1077,7 +1097,7 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
       if (ST.hasDstSelForwardingHazard()) {
         const int Shift16DefWaitstates = 1;
 
-        auto IsShift16BitDefFn = [this](const MachineInstr &MI) {
+        auto IsShift16BitDefFn = [this, &IA](const MachineInstr &MI) {
           const MachineOperand *Dst = getDstSelForwardingOperand(MI, ST);
           // Assume inline asm reads the dst
           if (Dst)
@@ -1087,7 +1107,7 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
             // Assume other inline asm has dst forwarding hazard
             for (auto &Op :
                  drop_begin(MI.operands(), InlineAsm::MIOp_FirstOperand)) {
-              if (Op.isReg() && Op.isDef()) {
+              if (Op.isReg() && IA->modifiesRegister(Op.getReg(), &TRI)) {
                 return true;
               }
             }

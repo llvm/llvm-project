@@ -77,20 +77,21 @@ body:            |
   S_ENDPGM 0
 ...
 
+
 ---
-name:            opsel_no_sdwa_hazard
+name:            opsel_no_sdwa_no_hazard
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
 
-    ; HAZARD-LABEL: name: opsel_no_sdwa_hazard
+    ; HAZARD-LABEL: name: opsel_no_sdwa_no_hazard
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
     ; HAZARD-NEXT: renamable $vgpr0 = V_MAD_U16_gfx9_e64 12, killed $vgpr3, 4, killed $vgpr4, 4, killed $vgpr2, 0, 0, implicit $exec
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
-    ; NOHAZARD-LABEL: name: opsel_no_sdwa_hazard
+    ; NOHAZARD-LABEL: name: opsel_no_sdwa_no_hazard
     ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; NOHAZARD-NEXT: {{  $}}
     ; NOHAZARD-NEXT: renamable $vgpr0 = V_MAD_U16_gfx9_e64 12, killed $vgpr3, 4, killed $vgpr4, 4, killed $vgpr2, 0, 0, implicit $exec
@@ -102,19 +103,19 @@ body:            |
 ...
 
 ---
-name:            no_opsel_sdwa_hazard
+name:            no_opsel_sdwa_no_hazard
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
 
-    ; HAZARD-LABEL: name: no_opsel_sdwa_hazard
+    ; HAZARD-LABEL: name: no_opsel_sdwa_no_hazard
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
     ; HAZARD-NEXT: renamable $vgpr0 = V_MAD_U16_e64 killed $vgpr3, killed $vgpr4, killed $vgpr2, 0, implicit $exec
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
-    ; NOHAZARD-LABEL: name: no_opsel_sdwa_hazard
+    ; NOHAZARD-LABEL: name: no_opsel_sdwa_no_hazard
     ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; NOHAZARD-NEXT: {{  $}}
     ; NOHAZARD-NEXT: renamable $vgpr0 = V_MAD_U16_e64 killed $vgpr3, killed $vgpr4, killed $vgpr2, 0, implicit $exec
@@ -177,6 +178,32 @@ body:            |
   S_ENDPGM 0
 ...
 
+# DS_READ_U16_D16 has dest preserve semantics, but only VALU consumers have hazard
+
+---
+name:            sdwa_loadsel_no_hazard
+body:            |
+  bb.0:
+  liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+
+    ; HAZARD-LABEL: name: sdwa_loadsel_no_hazard
+    ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; HAZARD-NEXT: {{  $}}
+    ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 3, 0, 3, 3, implicit $exec
+    ; HAZARD-NEXT: renamable $vgpr0 = DS_READ_U16_D16 killed renamable $vgpr3, 0, 0, killed renamable $vgpr0, implicit $exec
+    ; HAZARD-NEXT: S_ENDPGM 0
+    ;
+    ; NOHAZARD-LABEL: name: sdwa_loadsel_no_hazard
+    ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; NOHAZARD-NEXT: {{  $}}
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 3, 0, 3, 3, implicit $exec
+    ; NOHAZARD-NEXT: renamable $vgpr0 = DS_READ_U16_D16 killed renamable $vgpr3, 0, 0, killed renamable $vgpr0, implicit $exec
+    ; NOHAZARD-NEXT: S_ENDPGM 0
+  renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 3, 0, 3, 3, implicit $exec
+  renamable $vgpr0 = DS_READ_U16_D16 killed renamable $vgpr3, 0, 0, killed renamable $vgpr0, implicit $exec
+  S_ENDPGM 0
+...
+
 ---
 name:            sdwa_sdwa_hazard
 body:            |
@@ -203,19 +230,118 @@ body:            |
 ...
 
 ---
-name:            sdwa_nosdwa_hazard
+name:            cvt_sdwa_hazard_1
 body:            |
   bb.0:
   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
 
-    ; HAZARD-LABEL: name: sdwa_nosdwa_hazard
+    ; HAZARD-LABEL: name: cvt_sdwa_hazard_1
+    ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; HAZARD-NEXT: {{  $}}
+    ; HAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 0, killed $vgpr3, 0, killed $vgpr1, 4, $vgpr0, 0, implicit $mode, implicit $exec
+    ; HAZARD-NEXT: S_NOP 0
+    ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; HAZARD-NEXT: S_ENDPGM 0
+    ;
+    ; NOHAZARD-LABEL: name: cvt_sdwa_hazard_1
+    ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; NOHAZARD-NEXT: {{  $}}
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 0, killed $vgpr3, 0, killed $vgpr1, 4, $vgpr0, 0, implicit $mode, implicit $exec
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; NOHAZARD-NEXT: S_ENDPGM 0
+  renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 0, killed $vgpr3, 0, killed $vgpr1, 4, $vgpr0, 0, implicit $mode, implicit $exec
+  renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+  S_ENDPGM 0
+...
+
+---
+name:            cvt_sdwa_hazard_2
+body:            |
+  bb.0:
+  liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+
+    ; HAZARD-LABEL: name: cvt_sdwa_hazard_2
+    ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; HAZARD-NEXT: {{  $}}
+    ; HAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 8, killed $vgpr3, 0, killed $vgpr1, 0, $vgpr0, 0, implicit $mode, implicit $exec
+    ; HAZARD-NEXT: S_NOP 0
+    ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; HAZARD-NEXT: S_ENDPGM 0
+    ;
+    ; NOHAZARD-LABEL: name: cvt_sdwa_hazard_2
+    ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; NOHAZARD-NEXT: {{  $}}
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 8, killed $vgpr3, 0, killed $vgpr1, 0, $vgpr0, 0, implicit $mode, implicit $exec
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; NOHAZARD-NEXT: S_ENDPGM 0
+  renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 8, killed $vgpr3, 0, killed $vgpr1, 0, $vgpr0, 0, implicit $mode, implicit $exec
+  renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+  S_ENDPGM 0
+...
+
+---
+name:            cvt_sdwa_hazard_3
+body:            |
+  bb.0:
+  liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+
+    ; HAZARD-LABEL: name: cvt_sdwa_hazard_3
+    ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; HAZARD-NEXT: {{  $}}
+    ; HAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 8, killed $vgpr3, 0, killed $vgpr1, 4, $vgpr0, 0, implicit $mode, implicit $exec
+    ; HAZARD-NEXT: S_NOP 0
+    ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; HAZARD-NEXT: S_ENDPGM 0
+    ;
+    ; NOHAZARD-LABEL: name: cvt_sdwa_hazard_3
+    ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; NOHAZARD-NEXT: {{  $}}
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 8, killed $vgpr3, 0, killed $vgpr1, 4, $vgpr0, 0, implicit $mode, implicit $exec
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; NOHAZARD-NEXT: S_ENDPGM 0
+  renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 8, killed $vgpr3, 0, killed $vgpr1, 4, $vgpr0, 0, implicit $mode, implicit $exec
+  renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+  S_ENDPGM 0
+...
+
+---
+name:            cvt_sdwa_no_hazard
+body:            |
+  bb.0:
+  liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+
+    ; HAZARD-LABEL: name: cvt_sdwa_no_hazard
+    ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; HAZARD-NEXT: {{  $}}
+    ; HAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 0, killed $vgpr3, 0, killed $vgpr1, 0, $vgpr0, 0, implicit $mode, implicit $exec
+    ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; HAZARD-NEXT: S_ENDPGM 0
+    ;
+    ; NOHAZARD-LABEL: name: cvt_sdwa_no_hazard
+    ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+    ; NOHAZARD-NEXT: {{  $}}
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 0, killed $vgpr3, 0, killed $vgpr1, 0, $vgpr0, 0, implicit $mode, implicit $exec
+    ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+    ; NOHAZARD-NEXT: S_ENDPGM 0
+  renamable $vgpr0 = V_CVT_SR_FP8_F32_e64 0, killed $vgpr3, 0, killed $vgpr1, 0, $vgpr0, 0, implicit $mode, implicit $exec
+  renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
+  S_ENDPGM 0
+...
+
+---
+name:            sdwa_nosdwa_no_hazard
+body:            |
+  bb.0:
+  liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
+
+    ; HAZARD-LABEL: name: sdwa_nosdwa_no_hazard
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
-    ; NOHAZARD-LABEL: name: sdwa_nosdwa_hazard
+    ; NOHAZARD-LABEL: name: sdwa_nosdwa_no_hazard
     ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; NOHAZARD-NEXT: {{  $}}
     ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec
