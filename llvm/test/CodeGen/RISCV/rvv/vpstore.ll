@@ -459,3 +459,14 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
   call void @llvm.vp.store.nxv17f64.p0(<vscale x 17 x double> %val, ptr %ptr, <vscale x 17 x i1> %m, i32 %evl)
   ret void
 }
+
+define void @vpstore_all_active_nxv8i8(<vscale x 8 x i8> %val, ptr %ptr) {
+; CHECK-LABEL: vpstore_all_active_nxv8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vs1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vscale = call i32 @llvm.vscale()
+  %evl = mul i32 %vscale, 8
+  call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> %val, ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  ret void
+}

@@ -342,9 +342,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.canonicalize
+    libc.src.math.canonicalizef
+    libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
@@ -358,18 +362,21 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.dmull
+    libc.src.math.dsqrtl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.exp2m1f
     libc.src.math.expf
     libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd 
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -422,6 +429,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -491,11 +500,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rintf
     libc.src.math.rintl
     libc.src.math.round
-    libc.src.math.roundf
-    libc.src.math.roundl
     libc.src.math.roundeven
     libc.src.math.roundevenf
     libc.src.math.roundevenl
+    libc.src.math.roundf
+    libc.src.math.roundl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -511,6 +520,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
@@ -596,6 +610,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.ceilf128
     libc.src.math.copysignf128
+    libc.src.math.dsqrtf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -633,6 +648,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundevenf128
     libc.src.math.scalbnf128
     libc.src.math.sqrtf128
+    libc.src.math.totalorderf128
+    libc.src.math.totalordermagf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
@@ -684,6 +701,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlock_clockrdlock
+    libc.src.pthread.pthread_rwlock_clockwrlock
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
     libc.src.pthread.pthread_rwlock_rdlock

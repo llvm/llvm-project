@@ -118,7 +118,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
         HeaderFile: An instance of HeaderFile populated with the data.
     """
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
     return yaml_to_classes(yaml_data, header_class, entry_points)
 
 
@@ -173,8 +173,7 @@ def add_function_to_yaml(yaml_file, function_details):
     new_function = parse_function_details(function_details)
 
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
-
+        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 

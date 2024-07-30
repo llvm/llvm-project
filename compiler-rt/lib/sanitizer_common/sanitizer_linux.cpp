@@ -33,11 +33,15 @@
 // For mips64, syscall(__NR_stat) fills the buffer in the 'struct kernel_stat'
 // format. Struct kernel_stat is defined as 'struct stat' in asm/stat.h. To
 // access stat from asm/stat.h, without conflicting with definition in
-// sys/stat.h, we use this trick.
-#  if SANITIZER_MIPS64
+// sys/stat.h, we use this trick.  sparc64 is similar, using
+// syscall(__NR_stat64) and struct kernel_stat64.
+#  if SANITIZER_LINUX && (SANITIZER_MIPS64 || SANITIZER_SPARC64)
 #    include <asm/unistd.h>
 #    include <sys/types.h>
 #    define stat kernel_stat
+#    if SANITIZER_SPARC64
+#      define stat64 kernel_stat64
+#    endif
 #    if SANITIZER_GO
 #      undef st_atime
 #      undef st_mtime
@@ -48,6 +52,7 @@
 #    endif
 #    include <asm/stat.h>
 #    undef stat
+#    undef stat64
 #  endif
 
 #  include <dlfcn.h>
@@ -220,7 +225,7 @@ uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
   // mmap2 specifies file offset in 4096-byte units.
   CHECK(IsAligned(offset, 4096));
   return internal_syscall(SYSCALL(mmap2), addr, length, prot, flags, fd,
-                          offset / 4096);
+                          (OFF_T)(offset / 4096));
 #      endif
 }
 #    endif  // !SANITIZER_S390
@@ -285,8 +290,7 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
   return res;
 }
 
-#    if (!SANITIZER_LINUX_USES_64BIT_SYSCALLS || SANITIZER_SPARC) && \
-        SANITIZER_LINUX
+#    if !SANITIZER_LINUX_USES_64BIT_SYSCALLS && SANITIZER_LINUX
 static void stat64_to_stat(struct stat64 *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = in->st_dev;
@@ -327,7 +331,12 @@ static void statx_to_stat(struct statx *in, struct stat *out) {
 }
 #    endif
 
-#    if SANITIZER_MIPS64
+#    if SANITIZER_MIPS64 || SANITIZER_SPARC64
+#      if SANITIZER_MIPS64
+typedef struct kernel_stat kstat_t;
+#      else
+typedef struct kernel_stat64 kstat_t;
+#      endif
 // Undefine compatibility macros from <sys/stat.h>
 // so that they would not clash with the kernel_stat
 // st_[a|m|c]time fields
@@ -345,7 +354,7 @@ static void statx_to_stat(struct statx *in, struct stat *out) {
 #        undef st_mtime_nsec
 #        undef st_ctime_nsec
 #      endif
-static void kernel_stat_to_stat(struct kernel_stat *in, struct stat *out) {
+static void kernel_stat_to_stat(kstat_t *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = in->st_dev;
   out->st_ino = in->st_ino;
@@ -391,6 +400,12 @@ uptr internal_stat(const char *path, void *buf) {
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
+#      elif SANITIZER_SPARC64
+  kstat_t buf64;
+  int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
+                             (uptr)&buf64, 0);
+  kernel_stat_to_stat(&buf64, (struct stat *)buf);
+  return res;
 #      else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
@@ -423,6 +438,12 @@ uptr internal_lstat(const char *path, void *buf) {
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
+#      elif SANITIZER_SPARC64
+  kstat_t buf64;
+  int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
+                             (uptr)&buf64, AT_SYMLINK_NOFOLLOW);
+  kernel_stat_to_stat(&buf64, (struct stat *)buf);
+  return res;
 #      else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
@@ -442,8 +463,14 @@ uptr internal_fstat(fd_t fd, void *buf) {
 #    if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
 #      if SANITIZER_MIPS64
   // For mips64, fstat syscall fills buffer in the format of kernel_stat
-  struct kernel_stat kbuf;
+  kstat_t kbuf;
   int res = internal_syscall(SYSCALL(fstat), fd, &kbuf);
+  kernel_stat_to_stat(&kbuf, (struct stat *)buf);
+  return res;
+#      elif SANITIZER_LINUX && SANITIZER_SPARC64
+  // For sparc64, fstat64 syscall fills buffer in the format of kernel_stat64
+  kstat_t kbuf;
+  int res = internal_syscall(SYSCALL(fstat64), fd, &kbuf);
   kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
 #      elif SANITIZER_LINUX && defined(__loongarch__)
@@ -826,10 +853,16 @@ uptr internal_sigaltstack(const void *ss, void *oss) {
   return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);
 }
 
+extern "C" pid_t __fork(void);
+
 int internal_fork() {
 #    if SANITIZER_LINUX
 #      if SANITIZER_S390
   return internal_syscall(SYSCALL(clone), 0, SIGCHLD);
+#      elif SANITIZER_SPARC
+  // The clone syscall interface on SPARC differs massively from the rest,
+  // so fall back to __fork.
+  return __fork();
 #      else
   return internal_syscall(SYSCALL(clone), SIGCHLD, 0);
 #      endif
@@ -2121,7 +2154,26 @@ bool SignalContext::IsTrueFaultingAddress() const {
 UNUSED
 static const char *RegNumToRegName(int reg) {
   switch (reg) {
-#  if defined(__x86_64__)
+#  if SANITIZER_LINUX && SANITIZER_GLIBC || SANITIZER_NETBSD
+#    if defined(__x86_64__)
+#      if SANITIZER_NETBSD
+#        define REG_RAX _REG_RAX
+#        define REG_RBX _REG_RBX
+#        define REG_RCX _REG_RCX
+#        define REG_RDX _REG_RDX
+#        define REG_RDI _REG_RDI
+#        define REG_RSI _REG_RSI
+#        define REG_RBP _REG_RBP
+#        define REG_RSP _REG_RSP
+#        define REG_R8 _REG_R8
+#        define REG_R9 _REG_R9
+#        define REG_R10 _REG_R10
+#        define REG_R11 _REG_R11
+#        define REG_R12 _REG_R12
+#        define REG_R13 _REG_R13
+#        define REG_R14 _REG_R14
+#        define REG_R15 _REG_R15
+#      endif
     case REG_RAX:
       return "rax";
     case REG_RBX:
@@ -2154,7 +2206,17 @@ static const char *RegNumToRegName(int reg) {
       return "r14";
     case REG_R15:
       return "r15";
-#  elif defined(__i386__)
+#    elif defined(__i386__)
+#      if SANITIZER_NETBSD
+#        define REG_EAX _REG_EAX
+#        define REG_EBX _REG_EBX
+#        define REG_ECX _REG_ECX
+#        define REG_EDX _REG_EDX
+#        define REG_EDI _REG_EDI
+#        define REG_ESI _REG_ESI
+#        define REG_EBP _REG_EBP
+#        define REG_ESP _REG_ESP
+#      endif
     case REG_EAX:
       return "eax";
     case REG_EBX:
@@ -2171,29 +2233,165 @@ static const char *RegNumToRegName(int reg) {
       return "ebp";
     case REG_ESP:
       return "esp";
-#  endif
+#    elif defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define REG_STR(reg) #reg
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return REG_STR(r##N)
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    MAKE_CASE(11);
+    MAKE_CASE(12);
+    case REG_R13:
+      return "sp";
+    case REG_R14:
+      return "lr";
+    case REG_R15:
+      return "pc";
+#    elif defined(__aarch64__)
+#      define REG_STR(reg) #reg
+#      define MAKE_CASE(N) \
+        case N:            \
+          return REG_STR(x##N)
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    MAKE_CASE(11);
+    MAKE_CASE(12);
+    MAKE_CASE(13);
+    MAKE_CASE(14);
+    MAKE_CASE(15);
+    MAKE_CASE(16);
+    MAKE_CASE(17);
+    MAKE_CASE(18);
+    MAKE_CASE(19);
+    MAKE_CASE(20);
+    MAKE_CASE(21);
+    MAKE_CASE(22);
+    MAKE_CASE(23);
+    MAKE_CASE(24);
+    MAKE_CASE(25);
+    MAKE_CASE(26);
+    MAKE_CASE(27);
+    MAKE_CASE(28);
+    case 29:
+      return "fp";
+    case 30:
+      return "lr";
+    case 31:
+      return "sp";
+#    endif
+#  endif  // SANITIZER_LINUX && SANITIZER_GLIBC
     default:
       return NULL;
   }
   return NULL;
 }
 
+#  if SANITIZER_LINUX && SANITIZER_GLIBC && \
+      (defined(__arm__) || defined(__aarch64__))
+static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
+  switch (RegNum) {
+#    if defined(__arm__)
+#      ifdef MAKE_CASE
+#        undef MAKE_CASE
+#      endif
+#      define MAKE_CASE(N) \
+        case REG_R##N:     \
+          return ctx->uc_mcontext.arm_r##N
+    MAKE_CASE(0);
+    MAKE_CASE(1);
+    MAKE_CASE(2);
+    MAKE_CASE(3);
+    MAKE_CASE(4);
+    MAKE_CASE(5);
+    MAKE_CASE(6);
+    MAKE_CASE(7);
+    MAKE_CASE(8);
+    MAKE_CASE(9);
+    MAKE_CASE(10);
+    case REG_R11:
+      return ctx->uc_mcontext.arm_fp;
+    case REG_R12:
+      return ctx->uc_mcontext.arm_ip;
+    case REG_R13:
+      return ctx->uc_mcontext.arm_sp;
+    case REG_R14:
+      return ctx->uc_mcontext.arm_lr;
+    case REG_R15:
+      return ctx->uc_mcontext.arm_pc;
+#    elif defined(__aarch64__)
+    case 0 ... 30:
+      return ctx->uc_mcontext.regs[RegNum];
+    case 31:
+      return ctx->uc_mcontext.sp;
+#    endif
+    default:
+      return 0;
+  }
+  return 0;
+}
+#  endif  // SANITIZER_LINUX && SANITIZER_GLIBC && (defined(__arm__) ||
+          // defined(__aarch64__))
+
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#  if defined(__x86_64__)
+#  if SANITIZER_LINUX && SANITIZER_GLIBC || SANITIZER_NETBSD
+#    if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
-         RegName, ctx->uc_mcontext.gregs[RegNum]);
-#  elif defined(__i386__)
-  Printf("%s = 0x%08x  ", RegName, ctx->uc_mcontext.gregs[RegNum]);
+         RegName,
+#      if SANITIZER_LINUX
+         ctx->uc_mcontext.gregs[RegNum]
+#      elif SANITIZER_NETBSD
+         ctx->uc_mcontext.__gregs[RegNum]
+#      endif
+  );
+#    elif defined(__i386__)
+  Printf("%s = 0x%08x  ", RegName,
+#      if SANITIZER_LINUX
+         ctx->uc_mcontext.gregs[RegNum]
+#      elif SANITIZER_NETBSD
+         ctx->uc_mcontext.__gregs[RegNum]
+#      endif
+  );
+#    elif defined(__arm__)
+  Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
+#    elif defined(__aarch64__)
+  Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
+         GetArmRegister(ctx, RegNum));
+#    else
+  (void)RegName;
+#    endif
 #  else
   (void)RegName;
 #  endif
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
-#  if SANITIZER_LINUX
   ucontext_t *ucontext = (ucontext_t *)context;
+#  if SANITIZER_LINUX && SANITIZER_GLIBC || SANITIZER_NETBSD
 #    if defined(__x86_64__)
   Report("Register values:\n");
   DumpSingleReg(ucontext, REG_RAX);
@@ -2232,7 +2430,77 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_EBP);
   DumpSingleReg(ucontext, REG_ESP);
   Printf("\n");
+#    elif defined(__arm__) && !SANITIZER_NETBSD
+  Report("Register values:\n");
+  DumpSingleReg(ucontext, REG_R0);
+  DumpSingleReg(ucontext, REG_R1);
+  DumpSingleReg(ucontext, REG_R2);
+  DumpSingleReg(ucontext, REG_R3);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R4);
+  DumpSingleReg(ucontext, REG_R5);
+  DumpSingleReg(ucontext, REG_R6);
+  DumpSingleReg(ucontext, REG_R7);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R8);
+  DumpSingleReg(ucontext, REG_R9);
+  DumpSingleReg(ucontext, REG_R10);
+  DumpSingleReg(ucontext, REG_R11);
+  Printf("\n");
+  DumpSingleReg(ucontext, REG_R12);
+  DumpSingleReg(ucontext, REG_R13);
+  DumpSingleReg(ucontext, REG_R14);
+  DumpSingleReg(ucontext, REG_R15);
+  Printf("\n");
+#    elif defined(__aarch64__) && !SANITIZER_NETBSD
+  Report("Register values:\n");
+  for (int i = 0; i <= 31; ++i) {
+    DumpSingleReg(ucontext, i);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
+#    else
+  (void)ucontext;
 #    endif
+#  elif SANITIZER_FREEBSD
+#    if defined(__x86_64__)
+  Report("Register values:\n");
+  Printf("rax = 0x%016lx  ", ucontext->uc_mcontext.mc_rax);
+  Printf("rbx = 0x%016lx  ", ucontext->uc_mcontext.mc_rbx);
+  Printf("rcx = 0x%016lx  ", ucontext->uc_mcontext.mc_rcx);
+  Printf("rdx = 0x%016lx  ", ucontext->uc_mcontext.mc_rdx);
+  Printf("\n");
+  Printf("rdi = 0x%016lx  ", ucontext->uc_mcontext.mc_rdi);
+  Printf("rsi = 0x%016lx  ", ucontext->uc_mcontext.mc_rsi);
+  Printf("rbp = 0x%016lx  ", ucontext->uc_mcontext.mc_rbp);
+  Printf("rsp = 0x%016lx  ", ucontext->uc_mcontext.mc_rsp);
+  Printf("\n");
+  Printf(" r8 = 0x%016lx  ", ucontext->uc_mcontext.mc_r8);
+  Printf(" r9 = 0x%016lx  ", ucontext->uc_mcontext.mc_r9);
+  Printf("r10 = 0x%016lx  ", ucontext->uc_mcontext.mc_r10);
+  Printf("r11 = 0x%016lx  ", ucontext->uc_mcontext.mc_r11);
+  Printf("\n");
+  Printf("r12 = 0x%016lx  ", ucontext->uc_mcontext.mc_r12);
+  Printf("r13 = 0x%016lx  ", ucontext->uc_mcontext.mc_r13);
+  Printf("r14 = 0x%016lx  ", ucontext->uc_mcontext.mc_r14);
+  Printf("r15 = 0x%016lx  ", ucontext->uc_mcontext.mc_r15);
+  Printf("\n");
+#    elif defined(__i386__)
+  Report("Register values:\n");
+  Printf("eax = 0x%08x  ", ucontext->uc_mcontext.mc_eax);
+  Printf("ebx = 0x%08x  ", ucontext->uc_mcontext.mc_ebx);
+  Printf("ecx = 0x%08x  ", ucontext->uc_mcontext.mc_ecx);
+  Printf("edx = 0x%08x  ", ucontext->uc_mcontext.mc_edx);
+  Printf("\n");
+  Printf("edi = 0x%08x  ", ucontext->uc_mcontext.mc_edi);
+  Printf("esi = 0x%08x  ", ucontext->uc_mcontext.mc_esi);
+  Printf("ebp = 0x%08x  ", ucontext->uc_mcontext.mc_ebp);
+  Printf("esp = 0x%08x  ", ucontext->uc_mcontext.mc_esp);
+  Printf("\n");
+#    else
+  (void)ucontext;
+#    endif
+#  else
   (void)ucontext;
 #  endif
   // FIXME: Implement this for other OSes and architectures.

@@ -498,7 +498,8 @@ public:
   // Array Types
 
   CompilerType CreateArrayType(const CompilerType &element_type,
-                               size_t element_count, bool is_vector);
+                               std::optional<size_t> element_count,
+                               bool is_vector);
 
   // Enumeration Types
   CompilerType CreateEnumerationType(llvm::StringRef name,
@@ -1171,6 +1172,9 @@ private:
   /// Helper method that is used in \ref TypeSystemClang::TypeSystemClang
   /// on creation of a new instance.
   void LogCreation() const;
+
+  std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                         ExecutionContextScope *exe_scope);
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;

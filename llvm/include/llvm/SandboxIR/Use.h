@@ -21,6 +21,7 @@ namespace llvm::sandboxir {
 class Context;
 class Value;
 class User;
+class CallBase;
 
 /// Represents a Def-use/Use-def edge in SandboxIR.
 /// NOTE: Unlike llvm::Use, this is not an integral part of the use-def chains.
@@ -40,6 +41,8 @@ class Use {
   friend class User;               // For constructor
   friend class OperandUseIterator; // For constructor
   friend class UserUseIterator;    // For accessing members
+  friend class CallBase;           // For LLVMUse
+  friend class CallBrInst;         // For constructor
 
 public:
   operator Value *() const { return get(); }
@@ -47,6 +50,7 @@ public:
   void set(Value *V);
   class User *getUser() const { return Usr; }
   unsigned getOperandNo() const;
+  void swap(Use &OtherUse);
   Context *getContext() const { return Ctx; }
   bool operator==(const Use &Other) const {
     assert(Ctx == Other.Ctx && "Contexts differ!");

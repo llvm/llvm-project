@@ -2,6 +2,7 @@
 
 //-----------------------------------------------------------------------------
 // 1. vector.transfer_read
+// [Pattern: DropInnerMostUnitDimsTransferRead]
 //-----------------------------------------------------------------------------
 
 func.func @contiguous_inner_most(%src: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x1xf32>{
@@ -306,6 +307,7 @@ func.func @negative_non_unit_strides(%src: memref<512x16x1xf32, strided<[8192, 1
 
 //-----------------------------------------------------------------------------
 // 2. vector.transfer_write
+// [Pattern: DropInnerMostUnitDimsTransferWrite]
 //-----------------------------------------------------------------------------
 
 func.func @contiguous_inner_most(%dest: memref<1x512x16x1x1xf32>, %v: vector<1x16x16x1x1xf32>, %i: index) {

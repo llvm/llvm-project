@@ -67,9 +67,9 @@ public:
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
       T x = FPBits(v).get_val(), y = FPBits(w).get_val();
-      if (isnan(x) || isinf(x))
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
-      if (isnan(y) || isinf(y))
+      if (FPBits(w).is_nan() || FPBits(w).is_inf())
         continue;
 
       if (x > y) {
