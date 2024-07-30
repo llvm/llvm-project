@@ -242,9 +242,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
-                               G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM,
-                               G_FMAXIMUM, G_FMINIMUM, G_FCEIL, G_FFLOOR,
-                               G_FRINT, G_FNEARBYINT, G_INTRINSIC_TRUNC,
+                               G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
+                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
+                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
                                G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
@@ -252,6 +252,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return (Ty == v8s16 || Ty == v4s16) && HasFP16;
       })
       .libcallFor({s128})
+      .minScalarOrElt(0, MinFPScalar)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
+
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[0];
+        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .customFor({s128})
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .minScalarOrElt(0, MinFPScalar)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -1346,6 +1360,8 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizePrefetch(MI, Helper);
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToCNeg(MI);
+  case TargetOpcode::G_FABS:
+    return legalizeFABS(MI, MRI, MIRBuilder);
   case TargetOpcode::G_ICMP:
     return legalizeICMP(MI, MRI, MIRBuilder);
   }
@@ -1403,6 +1419,25 @@ bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
                            Cast64.getReg(0)});
     MI.eraseFromParent();
   }
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeFABS(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &MIRBuilder) const {
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+
+  constexpr LLT S128 = LLT::scalar(128);
+  if (MRI.getType(SrcReg) != S128 || MRI.getType(DstReg) != S128)
+    return false;
+
+  MIRBuilder.buildAnd(
+      DstReg, SrcReg,
+      MIRBuilder.buildConstant(
+          S128, APInt::getSignedMaxValue(128)));
+
+  MI.eraseFromParent();
   return true;
 }
 
