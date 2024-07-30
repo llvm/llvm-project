@@ -22,8 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 // supports the MTE instructions, not whether the compiler is configured to use
 // them.)
 
-[[gnu::naked]]
-LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
+[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   // If BTI branch protection is in use, the compiler will automatically insert
   // a BTI here, so we don't need to make any extra effort to do so.
 
@@ -31,61 +30,61 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   // address at the start of longjmp, because we're not going to use it anyway!
 
   asm(
-    // Reload the callee-saved GPRs, including fp and lr.
-    R"(
-      ldp x19, x20, [x0,  #0*16]
-      ldp x21, x22, [x0,  #1*16]
-      ldp x23, x24, [x0,  #2*16]
-      ldp x25, x26, [x0,  #3*16]
-      ldp x27, x28, [x0,  #4*16]
-      ldp x29, x30, [x0,  #5*16]
-    )"
+      // Reload the callee-saved GPRs, including fp and lr.
+      R"(
+        ldp x19, x20, [x0,  #0*16]
+        ldp x21, x22, [x0,  #1*16]
+        ldp x23, x24, [x0,  #2*16]
+        ldp x25, x26, [x0,  #3*16]
+        ldp x27, x28, [x0,  #4*16]
+        ldp x29, x30, [x0,  #5*16]
+      )"
 
 #if LIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER
-    // Reload the stack pointer, and the platform register x18.
-    R"(
-      ldp x2,  x18, [x0,  #6*16]
-      mov sp, x2
-    )"
+      // Reload the stack pointer, and the platform register x18.
+      R"(
+        ldp x2,  x18, [x0,  #6*16]
+        mov sp, x2
+      )"
 #else
-    // Reload just the stack pointer.
-    R"(
-      ldr x2,       [x0,  #6*16]
-      mov sp, x2
-    )"
+      // Reload just the stack pointer.
+      R"(
+        ldr x2,       [x0,  #6*16]
+        mov sp, x2
+      )"
 #endif
 
 #if __ARM_FP
-    // Reload the callee-saved FP registers.
-    R"(
-      ldp d8,  d9,  [x0,  #7*16]
-      ldp d10, d11, [x0,  #8*16]
-      ldp d12, d13, [x0,  #9*16]
-      ldp d14, d15, [x0, #10*16]
-    )"
+      // Reload the callee-saved FP registers.
+      R"(
+        ldp d8,  d9,  [x0,  #7*16]
+        ldp d10, d11, [x0,  #8*16]
+        ldp d12, d13, [x0,  #9*16]
+        ldp d14, d15, [x0, #10*16]
+      )"
 #endif
 
-    // Calculate the return value.
-    R"(
-      cmp w1, #0
-      cinc w0, w1, eq
-    )"
+      // Calculate the return value.
+      R"(
+        cmp w1, #0
+        cinc w0, w1, eq
+      )"
 
 #if __ARM_FEATURE_PAC_DEFAULT & 1
-    // Authenticate the return address using the PAC A key.
-    R"(
-      hint #29 // AUTIASP
-    )"
+      // Authenticate the return address using the PAC A key.
+      R"(
+        hint #29 // AUTIASP
+      )"
 #elif __ARM_FEATURE_PAC_DEFAULT & 2
-    // Authenticate the return address using the PAC B key.
-    R"(
-      hint #31 // AUTIBSP
-    )"
+      // Authenticate the return address using the PAC B key.
+      R"(
+        hint #31 // AUTIBSP
+      )"
 #endif
 
-    R"(
-      ret
-    )");
+      R"(
+        ret
+      )");
 }
 
 } // namespace LIBC_NAMESPACE_DECL
