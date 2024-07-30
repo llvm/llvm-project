@@ -195,7 +195,8 @@ scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp fuseIndependentSiblingForLoops(scf::ForOp target, scf::ForOp source,
                                           RewriterBase &rewriter);
 
-/// Normalize an `scf.forall` operation. Returns `failure()`if normalization fails.
+/// Normalize an `scf.forall` operation. Returns `failure()`if normalization
+/// fails.
 // On `success()` returns the
 /// newly created operation with all uses of the original operation replaced
 /// with results of the new operation.

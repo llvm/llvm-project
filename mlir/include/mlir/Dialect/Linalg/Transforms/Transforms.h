@@ -867,7 +867,7 @@ computeContinuousTileSizes(OpBuilder &builder, TilingInterface op,
                            unsigned dimension, OpFoldResult targetSize,
                            bool emitAssertions);
 
-  /// Transformation information returned after reduction tiling.
+/// Transformation information returned after reduction tiling.
 struct ForallReductionTilingResult {
   /// The partial reduction tiled op generated.
   SmallVector<Operation *> parallelTiledOps;
@@ -1727,10 +1727,12 @@ void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
 
 /// Adds patterns that reduce the rank of named contraction ops that have
-/// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
-/// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For example a
-/// `linalg.batch_matmul` with unit batch size will convert to `linalg.matmul`
-/// and a `linalg.matvec` with with unit spatial dim in lhs will convert to a `linalg.dot`.
+/// unit dimensions in the operand(s) by converting to a sequence of
+/// `collapse_shape`,
+/// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For
+/// example a `linalg.batch_matmul` with unit batch size will convert to
+/// `linalg.matmul` and a `linalg.matvec` with with unit spatial dim in lhs will
+/// convert to a `linalg.dot`.
 void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
 } // namespace linalg

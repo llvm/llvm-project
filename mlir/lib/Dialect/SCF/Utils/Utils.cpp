@@ -294,8 +294,8 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 }
 
 /// Returns the trip count of `forOp` if its' low bound, high bound and step are
-/// constants, or optional otherwise. Trip count is computed as ceilDiv(highBound
-/// - lowBound, step).
+/// constants, or optional otherwise. Trip count is computed as
+/// ceilDiv(highBound - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
   std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
   std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
@@ -1379,11 +1379,11 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
 
   SmallVector<OpFoldResult> newLbs, newUbs, newSteps;
   for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
-    LoopParams normalizedLoopParams =
+    Range normalizedLoopParams =
         emitNormalizedLoopBounds(rewriter, forallOp.getLoc(), lb, ub, step);
-    newLbs.push_back(normalizedLoopParams.lowerBound);
-    newUbs.push_back(normalizedLoopParams.upperBound);
-    newSteps.push_back(normalizedLoopParams.step);
+    newLbs.push_back(normalizedLoopParams.offset);
+    newUbs.push_back(normalizedLoopParams.size);
+    newSteps.push_back(normalizedLoopParams.stride);
   }
 
   auto normalizedForallOp = rewriter.create<scf::ForallOp>(
