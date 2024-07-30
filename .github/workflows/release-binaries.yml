@@ -160,8 +160,13 @@ jobs:
         # remove it.
         path: workflows
 
-    # Move workflows so they don't get overwritten by checkout.  The checkout job
-    # requires checking out to github.workspace.
+    # actions/checkout does not support paths outside of the GITHUB_WORKSPACE.
+    # Also, anything that we put inside of GITHUB_WORKSPACE will be overwritten
+    # by future actions/checkout steps.  Therefore, in order to checkout the
+    # latest actions from main, we need to first checkout out the actions inside of
+    # GITHUB_WORKSPACE (see previous step), then use actions/checkout to checkout
+    # the code being built and the move the actions from main back into GITHUB_WORKSPACE,
+    # becasue the uses on composite actions only reads workflows from inside GITHUB_WORKSPACE.
     - shell: bash
       run: mv workflows  ../workflows-main
 
