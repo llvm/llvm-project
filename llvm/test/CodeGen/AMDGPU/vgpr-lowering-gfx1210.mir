@@ -64,8 +64,8 @@ body:             |
     $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr258_vgpr259, $vgpr0, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
 
     ; DPP/tied operand
-    ; GCN-NEXT: s_set_vgpr_msb 0x55
-    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=1
+    ; GCN-NEXT: s_set_vgpr_msb 0x45
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=0
     ; GCN-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; GCN-NEXT: v_add_nc_u16_e64_dpp v0 /*v256*/, v1 /*v257*/, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
     $vgpr256 = V_ADD_NC_U16_e64_dpp $vgpr256, 0, $vgpr257, 0, undef $vgpr258, 0, 0, 1, 15, 15, 1, implicit $exec
@@ -213,10 +213,8 @@ body:             |
     ; GCN-NEXT: v_fma_f32 v0 /*v768*/, v1 /*v769*/, v2 /*v770*/, v3 /*v771*/
     $vgpr768 = V_FMA_F32_e64 0, undef $vgpr769, 0, undef $vgpr770, 0, undef $vgpr771, 0, 0, implicit $exec, implicit $mode
 
-    ; Partial reset, bits for src1 and src2 are preserved.
-
-    ; GCN-NEXT: s_set_vgpr_msb 0x7e
-    ; ASM-SAME:                                         ;  msbs: dst=1 src0=2 src1=3 src2=3
+    ; GCN-NEXT: s_set_vgpr_msb 0x42
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=2 src1=0 src2=0
     ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v0 /*v512*/
     $vgpr256 = V_MOV_B32_e32 undef $vgpr512, implicit $exec
 
@@ -419,35 +417,32 @@ body:             |
     ; GCN-NEXT: v_fma_f32 v3 /*v259*/, v4 /*v260*/, v5 /*v261*/, v6 /*v262*/
     $vgpr259 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr261, 0, undef $vgpr262, 0, 0, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: s_set_vgpr_msb 16
+    ; GCN-NEXT: s_set_vgpr_msb 0
     ; GCN-NEXT: v_add_nc_u32_e32 v0, v1, v2
     $vgpr0 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr2, implicit $exec
 
     ; GCN-NEXT: v_mov_b32_e32 v0, v1
     $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
 
-    ; GCN-NEXT: s_set_vgpr_msb 0x50
+    ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v3 /*v259*/, v1
     $vgpr259 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
 
     ; GCN-NEXT: v_add_nc_u32_e32 v0 /*v256*/, v1, v2
     $vgpr256 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr2, implicit $exec
 
-    ; Preserve bit for sgpr src2
-    ; GCN-NEXT: s_set_vgpr_msb 16
+    ; GCN-NEXT: s_set_vgpr_msb 0
     ; GCN-NEXT: v_fma_f32 v3, v4, v5, s2
     $vgpr3 = V_FMA_F32_e64 0, undef $vgpr4, 0, undef $vgpr5, 0, undef $sgpr2, 0, 0, implicit $exec, implicit $mode
 
-    ; Preserve bit for immediate src2
-    ; GCN-NEXT: s_set_vgpr_msb 17
+    ; GCN-NEXT: s_set_vgpr_msb 1
     ; GCN-NEXT: v_fma_f32 v3, v4 /*v260*/, v5, 1
     $vgpr3 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr5, 0, 1, 0, 0, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: s_set_vgpr_msb 16
+    ; GCN-NEXT: s_set_vgpr_msb 4
     ; GCN-NEXT: v_mov_b32_e32 v0, v1
     $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
 
-    ; GCN-NEXT: s_set_vgpr_msb 20
     ; GCN-NEXT: v_add_nc_u32_e32 v2, v1, v3 /*v259*/
     $vgpr2 = V_ADD_U32_e32 undef $vgpr1, undef $vgpr259, implicit $exec
 
@@ -574,9 +569,7 @@ body:             |
 
   bb.1:
     ; ASM: .LBB{{[0-9]+}}_1:
-    ;
-    ; BUG: Missing s_set_vgpr_msb here!
-    ;
+    ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v1
     ; GCN-NEXT: s_set_vgpr_msb 0
     ; GCN-NEXT: s_cbranch_scc0
