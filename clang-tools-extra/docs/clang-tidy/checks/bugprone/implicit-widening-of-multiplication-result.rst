@@ -37,19 +37,19 @@ Options
 .. option:: UseCXXStaticCastsInCppSources
 
    When suggesting fix-its for C++ code, should C++-style ``static_cast<>()``'s
-   be suggested, or C-style casts. Defaults to ``true``.
+   be suggested, or C-style casts. Defaults to `true`.
 
 .. option:: UseCXXHeadersInCppSources
 
    When suggesting to include the appropriate header in C++ code,
    should ``<cstddef>`` header be suggested, or ``<stddef.h>``.
-   Defaults to ``true``.
+   Defaults to `true`.
 
 .. option:: IgnoreConstantIntExpr
 
    If the multiplication operands are compile-time constants (like literals or
    are ``constexpr``) and fit within the source expression type, do not emit a
-   diagnostic or suggested fix.  Defaults to ``false``.
+   diagnostic or suggested fix.  Defaults to `false`.
 
 Examples:
 
