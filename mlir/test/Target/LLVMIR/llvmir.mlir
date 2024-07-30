@@ -39,6 +39,9 @@ llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 // CHECK: @int_global_undef = internal global i64 undef
 llvm.mlir.global internal @int_global_undef() : i64
 
+// CHECK: @f8E3M4_global_as_i8 = internal global i8 56
+llvm.mlir.global internal @f8E3M4_global_as_i8(1.5 : f8E3M4) : i8
+
 // CHECK: @f8E4M3_global_as_i8 = internal global i8 60
 llvm.mlir.global internal @f8E4M3_global_as_i8(1.5 : f8E4M3) : i8
 

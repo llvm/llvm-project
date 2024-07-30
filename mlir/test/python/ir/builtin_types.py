@@ -113,6 +113,8 @@ def testTypeIsInstance():
 def testFloatTypeSubclasses():
     ctx = Context()
     # CHECK: True
+    print(isinstance(Type.parse("f8E3M4", ctx), FloatType))
+    # CHECK: True
     print(isinstance(Type.parse("f8E4M3", ctx), FloatType))
     # CHECK: True
     print(isinstance(Type.parse("f8E4M3FN", ctx), FloatType))
@@ -231,6 +233,8 @@ def testIndexType():
 @run
 def testFloatType():
     with Context():
+        # CHECK: float: f8E3M4
+        print("float:", Float8E3M4Type.get())
         # CHECK: float: f8E4M3
         print("float:", Float8E4M3Type.get())
         # CHECK: float: f8E4M3FN
@@ -605,6 +609,7 @@ def testTypeIDs():
         types = [
             (IntegerType, IntegerType.get_signless(16)),
             (IndexType, IndexType.get()),
+            (Float8E3M4Type, Float8E3M4Type.get()),
             (Float8E4M3Type, Float8E4M3Type.get()),
             (Float8E4M3FNType, Float8E4M3FNType.get()),
             (Float8E5M2Type, Float8E5M2Type.get()),
@@ -629,6 +634,7 @@ def testTypeIDs():
 
         # CHECK: IntegerType(i16)
         # CHECK: IndexType(index)
+        # CHECK: Float8E3M4Type(f8E3M4)
         # CHECK: Float8E4M3Type(f8E4M3)
         # CHECK: Float8E4M3FNType(f8E4M3FN)
         # CHECK: Float8E5M2Type(f8E5M2)
@@ -707,6 +713,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: F64Type
         # CHECK: F64Type(f64)
         print_downcasted(F64Type.get())
+        # CHECK: Float8E3M4Type
+        # CHECK: Float8E3M4Type(f8E3M4)
+        print_downcasted(Float8E3M4Type.get())
         # CHECK: Float8E4M3B11FNUZType
         # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
         print_downcasted(Float8E4M3B11FNUZType.get())
