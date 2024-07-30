@@ -612,11 +612,6 @@ public:
   /// Retrieves the number of base classes of this class.
   unsigned getNumBases() const { return data().NumBases; }
 
-  const CXXBaseSpecifier &getBase(unsigned Index) const {
-    assert(Index < getNumBases() && "Base access out of range!");
-    return data().getBases()[Index];
-  }
-
   using base_class_range = llvm::iterator_range<base_class_iterator>;
   using base_class_const_range =
       llvm::iterator_range<base_class_const_iterator>;
@@ -637,11 +632,6 @@ public:
 
   /// Retrieves the number of virtual base classes of this class.
   unsigned getNumVBases() const { return data().NumVBases; }
-
-  const CXXBaseSpecifier &getVBase(unsigned Index) const {
-    assert(Index < getNumVBases() && "Virtual base access out of range!");
-    return data().getVBases()[Index];
-  }
 
   base_class_range vbases() {
     return base_class_range(vbases_begin(), vbases_end());

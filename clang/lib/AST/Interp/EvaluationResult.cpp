@@ -11,7 +11,9 @@
 #include "Record.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include <iterator>
 
 namespace clang {
 namespace interp {
@@ -129,7 +131,7 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
     if (!P.isInitialized()) {
       const Descriptor *Desc = BasePtr.getDeclDesc();
       if (const auto *CD = dyn_cast_or_null<CXXRecordDecl>(R->getDecl())) {
-        const auto &BS = CD->getBase(I);
+        const auto &BS = *std::next(CD->bases_begin(), I);
         S.FFDiag(BS.getBaseTypeLoc(), diag::note_constexpr_uninitialized_base)
             << B.Desc->getType() << BS.getSourceRange();
       } else {
