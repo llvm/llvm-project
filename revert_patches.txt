@@ -89,6 +89,7 @@ Reverts:
 993d2383e68b [ctx_prof] Remove `Buffer` field in PGOCtxProfWriter  
 1488fb415336 [PAC][AArch64] Lower ptrauth constants in code (#96879)  
 cc7308a1563e [ctx_prof] Make the profile output analyzable by llvm-bcanalyzer (#99563)
+c99bd3ce [ctx_prof] Extend `WorkloadImportsManager` to use the contextual profile (#98682)
 Contacts: RonL and Hulk
 ---
 needs previous SEMA patches
@@ -108,9 +109,6 @@ Reverts: breaks hipBlender* tests in compilation step
 Revert: more Sema:
 9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
 RonL
----
-Reverts: breaks clang-offload-wrapper test
-fb5a38bb4930 [llvm-objcopy] Add verification of added .note section format 
 ---
 Reverts: depends upon older SLP reverts
 beccecaacde4 [SLP]Fix PR98838: do no replace condition of select-based logical op by poison.

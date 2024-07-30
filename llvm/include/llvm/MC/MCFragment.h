@@ -69,8 +69,15 @@ private:
   FragmentType Kind;
 
 protected:
+  /// Used by subclasses for better packing.
+  ///
+  /// MCEncodedFragment
   bool HasInstructions : 1;
+  bool AlignToBundleEnd : 1;
+  /// MCDataFragment
   bool LinkerRelaxable : 1;
+  /// MCRelaxableFragment: x86-specific
+  bool AllowAutoPadding : 1;
 
   MCFragment(FragmentType Kind, bool HasInstructions);
 
@@ -115,9 +122,6 @@ public:
 /// data.
 ///
 class MCEncodedFragment : public MCFragment {
-  /// Should this fragment be aligned to the end of a bundle?
-  bool AlignToBundleEnd = false;
-
   uint8_t BundlePadding = 0;
 
 protected:
@@ -228,11 +232,8 @@ public:
 /// relaxed during the assembler layout and relaxation stage.
 ///
 class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
-
   /// The instruction this is a fragment for.
   MCInst Inst;
-  /// Can we auto pad the instruction?
-  bool AllowAutoPadding = false;
 
 public:
   MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI)
