@@ -164,7 +164,7 @@
 "`3656 <https://wg21.link/LWG3656>`__","Inconsistent bit operations returning a count","July 2022","|Complete|","15.0",""
 "`3659 <https://wg21.link/LWG3659>`__","Consider ``ATOMIC_FLAG_INIT`` undeprecation","July 2022","|Complete|","15.0"
 "`3670 <https://wg21.link/LWG3670>`__","``Cpp17InputIterators`` don't have integer-class difference types","July 2022","","","|ranges|"
-"`3671 <https://wg21.link/LWG3671>`__","``atomic_fetch_xor`` missing from ``stdatomic.h``","July 2022","",""
+"`3671 <https://wg21.link/LWG3671>`__","``atomic_fetch_xor`` missing from ``stdatomic.h``","July 2022","|Complete|","20.0"
 "`3672 <https://wg21.link/LWG3672>`__","``common_iterator::operator->()`` should return by value","July 2022","|Complete|","19.0","|ranges|"
 "`3683 <https://wg21.link/LWG3683>`__","``operator==`` for ``polymorphic_allocator`` cannot deduce template argument in common cases","July 2022","|Complete|","20.0"
 "`3687 <https://wg21.link/LWG3687>`__","``expected<cv void, E>`` move constructor should move","July 2022","|Complete|","16.0"
