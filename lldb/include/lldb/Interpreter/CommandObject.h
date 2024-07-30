@@ -369,12 +369,13 @@ protected:
            "currently stopped.";
   }
 
-  // This is for use in the command interpreter and returns the most relevant
+  Target &GetDummyTarget();
+
+  // This is for use in the command interpreter, and returns the most relevant
   // target. In order of priority, that's the target from the command object's
-  // execution context, from the interpreter's execution context, the selected
-  // target or the dummy target. This function always return the dummy target if
-  // explicitly requested.
-  Target &GetTarget(bool dummy = false);
+  // execution context, the target from the interpreter's execution context, the
+  // selected target or the dummy target.
+  Target &GetTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have

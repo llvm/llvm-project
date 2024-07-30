@@ -323,7 +323,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
@@ -481,7 +481,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetTarget(m_options.m_use_dummy);
+    Target &target = m_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();

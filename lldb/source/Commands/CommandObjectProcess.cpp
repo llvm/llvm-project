@@ -1662,7 +1662,7 @@ protected:
     if (m_options.do_clear) {
       target.ClearDummySignals(signal_args);
       if (m_options.dummy)
-        GetTarget(/*dummy=*/true).ClearDummySignals(signal_args);
+        GetDummyTarget().ClearDummySignals(signal_args);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }

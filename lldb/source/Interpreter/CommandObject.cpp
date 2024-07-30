@@ -754,11 +754,11 @@ const char *CommandObject::GetArgumentDescriptionAsCString(
   return g_argument_table[arg_type].help_text;
 }
 
-Target &CommandObject::GetTarget(bool dummy) {
-  // Always return the dummy target if explicitly requested.
-  if (dummy)
-    return m_interpreter.GetDebugger().GetDummyTarget();
+Target &CommandObject::GetDummyTarget() {
+  return m_interpreter.GetDebugger().GetDummyTarget();
+}
 
+Target &CommandObject::GetTarget() {
   // Prefer the frozen execution context in the command object.
   if (Target *target = m_exe_ctx.GetTargetPtr())
     return *target;
@@ -774,7 +774,7 @@ Target &CommandObject::GetTarget(bool dummy) {
     return *target_sp;
 
   // We only have the dummy target.
-  return m_interpreter.GetDebugger().GetDummyTarget();
+  return GetDummyTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {

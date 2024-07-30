@@ -344,7 +344,7 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
     return;
 
   Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : GetTarget(/*dummy=*/true);
+  Target &target = exe_target ? *exe_target : GetDummyTarget();
 
   unsigned cursor_pos = request.GetRawCursorPos();
   // Get the full user input including the suffix. The suffix is necessary
@@ -407,7 +407,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   // that use an input reader...
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
   Target *exe_target = exe_ctx.GetTargetPtr();
-  Target &target = exe_target ? *exe_target : GetTarget(/*dummy=*/true);
+  Target &target = exe_target ? *exe_target : GetDummyTarget();
 
   lldb::ValueObjectSP result_valobj_sp;
   StackFrame *frame = exe_ctx.GetFramePtr();
