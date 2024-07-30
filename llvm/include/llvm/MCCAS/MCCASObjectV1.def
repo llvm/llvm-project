@@ -85,7 +85,6 @@ MCFRAGMENT_NODE_REF(MCSymbolIdFragment, FT_SymbolId, mc:symbol_id)
 #undef MCFRAGMENT_ENCODED_FRAGMENT_ONLY
 
 MCFRAGMENT_NODE_REF(MCDataFragment, FT_Data, mc:data)
-MCFRAGMENT_NODE_REF(MCCompactEncodedInstFragment, FT_CompactEncodedInst, mc:compact_coded_inst)
 MCFRAGMENT_NODE_REF(MCRelaxableFragment, FT_Relaxable, mc:relaxable)
 MCFRAGMENT_NODE_REF(MCDwarfLineAddrFragment, FT_Dwarf, mc:dwarf)
 MCFRAGMENT_NODE_REF(MCDwarfCallFrameFragment, FT_DwarfFrame, mc:dwarf_frame)

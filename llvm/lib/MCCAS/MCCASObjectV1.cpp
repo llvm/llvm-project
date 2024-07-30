@@ -2143,9 +2143,6 @@ MCCASBuilder::mergeMCFragmentContents(const MCSection *Section,
   for (const MCFragment &Fragment : *Section) {
     if (const auto *DataFragment = dyn_cast<MCDataFragment>(&Fragment))
       llvm::append_range(mergedData, DataFragment->getContents());
-    else if (const auto *CompactEncodedInstFragment =
-                 dyn_cast<MCCompactEncodedInstFragment>(&Fragment))
-      llvm::append_range(mergedData, CompactEncodedInstFragment->getContents());
     else if (const auto *RelaxableFragment =
                  dyn_cast<MCRelaxableFragment>(&Fragment))
       llvm::append_range(mergedData, RelaxableFragment->getContents());
