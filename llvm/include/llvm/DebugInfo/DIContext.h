@@ -51,7 +51,7 @@ struct DILineInfo {
   // DWARF-specific.
   uint32_t Discriminator = 0;
 
-  bool IsApproximatedLine = false;
+  bool IsApproximateLine = false;
   DILineInfo()
       : FileName(BadString), FunctionName(BadString), StartFileName(BadString) {
   }

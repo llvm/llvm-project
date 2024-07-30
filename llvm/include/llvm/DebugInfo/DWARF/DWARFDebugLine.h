@@ -240,7 +240,7 @@ public:
 
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
-    uint32_t lookupAddress(object::SectionedAddress Address, bool Approximate,
+    uint32_t lookupAddress(object::SectionedAddress Address,
                            bool *IsApproximateLine = nullptr) const;
 
     bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
@@ -303,7 +303,6 @@ public:
                      DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
     uint32_t lookupAddressImpl(object::SectionedAddress Address,
-                               bool Approximate,
                                bool *IsApproximateLine = nullptr) const;
 
     bool lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,

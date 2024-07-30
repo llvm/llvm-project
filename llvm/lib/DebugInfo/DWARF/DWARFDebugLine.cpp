@@ -158,13 +158,12 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
     uint32_t FileBase = getVersion() >= 5 ? 0 : 1;
     for (uint32_t I = 0; I != FileNames.size(); ++I) {
       const FileNameEntry &FileEntry = FileNames[I];
-      OS <<   format("file_names[%3u]:\n", I + FileBase);
-      OS <<          "           name: ";
+      OS << format("file_names[%3u]:\n", I + FileBase);
+      OS << "           name: ";
       FileEntry.Name.dump(OS, DumpOptions);
-      OS << '\n'
-         <<   format("      dir_index: %" PRIu64 "\n", FileEntry.DirIdx);
+      OS << '\n' << format("      dir_index: %" PRIu64 "\n", FileEntry.DirIdx);
       if (ContentTypes.HasMD5)
-        OS <<        "   md5_checksum: " << FileEntry.Checksum.digest() << '\n';
+        OS << "   md5_checksum: " << FileEntry.Checksum.digest() << '\n';
       if (ContentTypes.HasModTime)
         OS << format("       mod_time: 0x%8.8" PRIx64 "\n", FileEntry.ModTime);
       if (ContentTypes.HasLength)
@@ -604,9 +603,10 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
     DWARFDataExtractor &DebugLineData, uint64_t Offset, const DWARFContext &Ctx,
     const DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) {
   if (!DebugLineData.isValidOffset(Offset))
-    return createStringError(errc::invalid_argument, "offset 0x%8.8" PRIx64
-                       " is not a valid debug line section offset",
-                       Offset);
+    return createStringError(errc::invalid_argument,
+                             "offset 0x%8.8" PRIx64
+                             " is not a valid debug line section offset",
+                             Offset);
 
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
@@ -966,7 +966,8 @@ Error DWARFDebugLine::LineTable::parse(
 
           if (Cursor && Verbose) {
             *OS << " (";
-            DWARFFormValue::dumpAddress(*OS, OpcodeAddressSize, State.Row.Address.Address);
+            DWARFFormValue::dumpAddress(*OS, OpcodeAddressSize,
+                                        State.Row.Address.Address);
             *OS << ')';
           }
         }
@@ -1159,8 +1160,7 @@ Error DWARFDebugLine::LineTable::parse(
         // DW_LNS_advance_pc. Such assemblers, however, can use
         // DW_LNS_fixed_advance_pc instead, sacrificing compression.
         {
-          uint16_t PCOffset =
-              TableData.getRelocatedValue(Cursor, 2);
+          uint16_t PCOffset = TableData.getRelocatedValue(Cursor, 2);
           if (Cursor) {
             State.Row.Address.Address += PCOffset;
             State.Row.OpIndex = 0;
@@ -1314,11 +1314,10 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
 
 uint32_t
 DWARFDebugLine::LineTable::lookupAddress(object::SectionedAddress Address,
-                                         bool Approximate,
                                          bool *IsApproximateLine) const {
 
   // Search for relocatable addresses
-  uint32_t Result = lookupAddressImpl(Address, Approximate, IsApproximateLine);
+  uint32_t Result = lookupAddressImpl(Address, IsApproximateLine);
 
   if (Result != UnknownRowIndex ||
       Address.SectionIndex == object::SectionedAddress::UndefSection)
@@ -1326,12 +1325,11 @@ DWARFDebugLine::LineTable::lookupAddress(object::SectionedAddress Address,
 
   // Search for absolute addresses
   Address.SectionIndex = object::SectionedAddress::UndefSection;
-  return lookupAddressImpl(Address, Approximate, IsApproximateLine);
+  return lookupAddressImpl(Address, IsApproximateLine);
 }
 
 uint32_t
 DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
-                                             bool Approximate,
                                              bool *IsApproximateLine) const {
   // First, find an instruction sequence containing the given address.
   DWARFDebugLine::Sequence Sequence;
@@ -1343,21 +1341,21 @@ DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
     return UnknownRowIndex;
 
   uint32_t RowIndex = findRowInSeq(*It, Address);
-  if (RowIndex == UnknownRowIndex || !Approximate)
+  if (RowIndex == UnknownRowIndex || IsApproximateLine == nullptr)
     return RowIndex;
 
   // Approximation will only be attempted if a valid RowIndex exists.
-  if (Approximate) {
-    // Approximation Loop
-    for (uint32_t ApproxRowIndex = RowIndex;
-         ApproxRowIndex >= It->FirstRowIndex; --ApproxRowIndex) {
-      if (Rows[ApproxRowIndex].Line)
-        return ApproxRowIndex;
-      *IsApproximateLine = true;
-    }
-    // Approximation Loop fails to find the valid ApproxRowIndex
-    *IsApproximateLine = false;
+  uint32_t ApproxRowIndex = RowIndex;
+  // Approximation Loop
+  for (; ApproxRowIndex >= It->FirstRowIndex; --ApproxRowIndex) {
+    if (Rows[ApproxRowIndex].Line)
+      return ApproxRowIndex;
+    *IsApproximateLine = true;
   }
+  // Approximation Loop fails to find the valid ApproxRowIndex
+  if (ApproxRowIndex < It->FirstRowIndex)
+    *IsApproximateLine = false;
+
   return RowIndex;
 }
 
@@ -1501,9 +1499,8 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
     object::SectionedAddress Address, bool Approximate, const char *CompDir,
     FileLineInfoKind Kind, DILineInfo &Result) const {
   // Get the index of row we're looking for in the line table.
-
   uint32_t RowIndex =
-      lookupAddress(Address, Approximate, &Result.IsApproximatedLine);
+      lookupAddress(Address, Approximate ? &Result.IsApproximateLine : nullptr);
   if (RowIndex == -1U)
     return false;
   // Take file number and line/column from the row.
