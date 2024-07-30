@@ -1153,7 +1153,7 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
     return false;
   };
   llvm_unreachable("RelativeMethodList should default to false, control flow "
-                  "should not reach here");
+                   "should not reach here");
 }
 
 void SymbolPatterns::clear() {
