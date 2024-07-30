@@ -7121,8 +7121,12 @@ void ConstructVisitor::Post(const parser::AssociateStmt &x) {
   for (auto nthLastAssoc{assocCount}; nthLastAssoc > 0; --nthLastAssoc) {
     SetCurrentAssociation(nthLastAssoc);
     if (auto *symbol{MakeAssocEntity()}) {
-      if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
+      const MaybeExpr &expr{GetCurrentAssociation().selector.expr};
+      if (ExtractCoarrayRef(expr)) { // C1103
         Say("Selector must not be a coindexed object"_err_en_US);
+      }
+      if (evaluate::IsAssumedRank(expr)) {
+        Say("Selector must not be assumed-rank"_err_en_US);
       }
       SetTypeFromAssociation(*symbol);
       SetAttrsFromAssociation(*symbol);
