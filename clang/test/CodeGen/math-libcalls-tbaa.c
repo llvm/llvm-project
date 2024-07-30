@@ -13,7 +13,7 @@ float crealf(float _Complex);
 
 // Emit int TBAA metadata on FP math libcalls, which is useful for alias analysis
 
-// CHECK-LABEL: define dso_local float @foo(
+// CHECK-LABEL: define dso_local float @foo_expf(
 // CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 40
@@ -22,13 +22,13 @@ float crealf(float _Complex);
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // CHECK-NEXT:    ret float [[MUL]]
 //
-float foo (float num[]) {
+float foo_expf (float num[]) {
    const float expm2 = expf(num[10]);  // Emit TBAA metadata on @expf
    float tmp = expm2 * num[10];
    return tmp;
 }
 
-// CHECK-LABEL: define dso_local float @foo_buildin(
+// CHECK-LABEL: define dso_local float @foo_builtin_expf(
 // CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 40
@@ -37,7 +37,7 @@ float foo (float num[]) {
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // CHECK-NEXT:    ret float [[MUL]]
 //
-float foo_buildin (float num[]) {
+float foo_builtin_expf (float num[]) {
    const float expm2 = __builtin_expf(num[10]);  // Emit TBAA metadata on @expf
    float tmp = expm2 * num[10];
    return tmp;
@@ -76,7 +76,8 @@ double foo_remainder (double num[], double a) {
 }
 
 //
-// Negative test: frexp is not subject to any errors.
+// TODO: frexp is not subject to any errors, but also writes to
+// its int pointer out argument, so it could emit int TBAA metadata.
 // CHECK-LABEL: define dso_local double @foo_frexp(
 // CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
