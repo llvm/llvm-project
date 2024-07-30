@@ -133,7 +133,7 @@ ConstructCompositionT<C>::ConstructCompositionT(
   mergeReduction();
   mergeDSA();
 
-  // Fir the rest of the clauses, just copy them.
+  // For the rest of the clauses, just copy them.
   for (auto &[id, clauses] : clauseSets) {
     // Skip clauses we've already dealt with.
     switch (id) {

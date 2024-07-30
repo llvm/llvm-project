@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-objdump -t - | FileCheck %s --match-full-lines
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -optimize-mapping-symbols %s | llvm-objdump -t - | FileCheck %s --check-prefix=CHECK1 --match-full-lines
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -optimize-mapsyms %s | llvm-objdump -t - | FileCheck %s --check-prefix=CHECK1 --match-full-lines
 
 /// The test covers many state transitions. Let's use the first state and the last state to describe a section.
 /// .text goes through cd -> dd -> cc -> dd.

@@ -2231,6 +2231,8 @@ public:
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
 
+    bool EmitDebug = false;
+
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
                             bool SeparateBeginEndCalls)
@@ -2349,7 +2351,6 @@ public:
   void emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                     OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
                                     OpenMPIRBuilder::TargetDataInfo &Info,
-                                    bool EmitDebug = false,
                                     bool ForEndCall = false);
 
   /// Emit an array of struct descriptors to be assigned to the offload args.
@@ -2360,10 +2361,25 @@ public:
 
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
-  /// return nullptr by reference.
+  /// return nullptr by reference. Accepts a reference to a MapInfosTy object
+  /// that contains information generated for mappable clauses,
+  /// including base pointers, pointers, sizes, map types, user-defined mappers.
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+
+  /// Allocates memory for and populates the arrays required for offloading
+  /// (offload_{baseptrs|ptrs|mappers|sizes|maptypes|mapnames}). Then, it
+  /// emits their base addresses as arguments to be passed to the runtime
+  /// library. In essence, this function is a combination of
+  /// emitOffloadingArrays and emitOffloadingArraysArgument and should arguably
+  /// be preferred by clients of OpenMPIRBuilder.
+  void emitOffloadingArraysAndArgs(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+      TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
+      bool IsNonContiguous = false, bool ForEndCall = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 

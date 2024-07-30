@@ -48,7 +48,7 @@ MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
-MCOPT(bool, OptimizeMappingSymbols)
+MCOPT(bool, OptimizeMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
@@ -135,10 +135,10 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                             cl::desc("Use CREL relocation format for ELF"));
   MCBINDOPT(Crel);
 
-  static cl::opt<bool> OptimizeMappingSymbols(
-      "optimize-mapping-symbols",
+  static cl::opt<bool> OptimizeMapSyms(
+      "optimize-mapsyms",
       cl::desc("Allow mapping symbol at section beginning to be implicit"));
-  MCBINDOPT(OptimizeMappingSymbols);
+  MCBINDOPT(OptimizeMapSyms);
 
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
@@ -180,7 +180,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.MCSaveTempLabels = getSaveTempLabels();
   Options.Crel = getCrel();
-  Options.OptimizeMappingSymbols = getOptimizeMappingSymbols();
+  Options.OptimizeMapSyms = getOptimizeMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();

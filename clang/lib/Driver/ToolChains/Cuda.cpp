@@ -625,6 +625,15 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
                   C.getDriver().getLTOMode() == LTOK_Thin);
 
+  // Forward the PTX features if the nvlink-wrapper needs it.
+  std::vector<StringRef> Features;
+  getNVPTXTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
+                         Features);
+  for (StringRef Feature : Features)
+    CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
+
+  addGPULibraries(getToolChain(), Args, CmdArgs);
+
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);

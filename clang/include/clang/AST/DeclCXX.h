@@ -1188,10 +1188,6 @@ public:
   ///
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }
-  /// Marks this record as empty. This is used by DWARFASTParserClang
-  /// when parsing records with empty fields having [[no_unique_address]]
-  /// attribute
-  void markEmpty() { data().Empty = true; }
 
   void setInitMethod(bool Val) { data().HasInitMethod = Val; }
   bool hasInitMethod() const { return data().HasInitMethod; }

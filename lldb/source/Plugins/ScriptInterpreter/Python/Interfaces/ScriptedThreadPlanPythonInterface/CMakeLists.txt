@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginScriptedThreadPlanPythonInterface PLUGIN
+add_lldb_library(lldbPluginScriptInterpreterPythonScriptedThreadPlanPythonInterface PLUGIN
 
   ScriptedThreadPlanPythonInterface.cpp
 
@@ -7,6 +7,7 @@ add_lldb_library(lldbPluginScriptedThreadPlanPythonInterface PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
+    lldbPluginScriptInterpreterPython
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
 

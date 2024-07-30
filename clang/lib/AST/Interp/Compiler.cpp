@@ -89,6 +89,10 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     return Ctx->emitGetPtrLocal(Offset, E);
   case K_Decl:
     return Ctx->visitDeclRef(D, E);
+  case K_Elem:
+    if (!Ctx->emitConstUint32(Offset, E))
+      return false;
+    return Ctx->emitArrayElemPtrPopUint32(E);
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -1556,6 +1560,7 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex,
     return this->emitInitElem(*T, ElemIndex, Init);
   }
 
+  InitLinkScope<Emitter> ILS(this, InitLink::Elem(ElemIndex));
   // Advance the pointer currently on the stack to the given
   // dimension.
   if (!this->emitConstUint32(ElemIndex, Init))
@@ -3251,6 +3256,9 @@ bool Compiler<Emitter>::visitInitializer(const Expr *E) {
   if (E->containsErrors())
     return this->emitError(E);
 
+  if (!this->checkLiteralType(E))
+    return false;
+
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
   return this->Visit(E);
@@ -3682,6 +3690,9 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
 
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
+
+  if (Init && Init->isValueDependent())
+    return false;
 
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto checkDecl = [&]() -> bool {
@@ -4148,7 +4159,8 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (InitStackActive && !InitStack.empty()) {
     unsigned StartIndex = 0;
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-      if (InitStack[StartIndex].Kind != InitLink::K_Field)
+      if (InitStack[StartIndex].Kind != InitLink::K_Field &&
+          InitStack[StartIndex].Kind != InitLink::K_Elem)
         break;
     }
 
@@ -4361,6 +4373,7 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
   if (!this->jump(CondLabel))
     return false;
+  this->fallthrough(EndLabel);
   this->emitLabel(EndLabel);
 
   return true;
@@ -4687,6 +4700,17 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   // Nothing to do, since we emitted the RVO pointer above.
   return this->emitRetVoid(MD);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
+  if (Ctx.getLangOpts().CPlusPlus23)
+    return true;
+
+  if (!E->isPRValue() || E->getType()->isLiteralType(Ctx.getASTContext()))
+    return true;
+
+  return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
 template <class Emitter>
@@ -5230,6 +5254,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         };
 
+        // DecompositionDecls are just proxies for us.
+        if (isa<DecompositionDecl>(VD))
+          return revisit(VD);
+
         // Visit local const variables like normal.
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
@@ -5278,8 +5306,8 @@ template <class Emitter>
 unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
                                               const QualType DerivedType) {
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
-    if (const auto *PT = dyn_cast<PointerType>(Ty))
-      return PT->getPointeeType()->getAsCXXRecordDecl();
+    if (const auto *R = Ty->getPointeeCXXRecordDecl())
+      return R;
     return Ty->getAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);

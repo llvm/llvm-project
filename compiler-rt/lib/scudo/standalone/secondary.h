@@ -332,7 +332,6 @@ public:
   bool retrieve(Options Options, uptr Size, uptr Alignment, uptr HeadersSize,
                 LargeBlock::Header **H, bool *Zeroed) EXCLUDES(Mutex) {
     const uptr PageSize = getPageSizeCached();
-    const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     // 10% of the requested size proved to be the optimal choice for
     // retrieving cached blocks after testing several options.
     constexpr u32 FragmentedBytesDivisor = 10;
@@ -449,7 +448,6 @@ public:
         Quarantine[I].invalidate();
       }
     }
-    const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     for (u32 I = LRUHead; I != CachedBlock::InvalidEntry; I = Entries[I].Next) {
       Entries[I].MemMap.setMemoryPermission(Entries[I].CommitBase,
                                             Entries[I].CommitSize, 0);

@@ -24,10 +24,10 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -186,18 +186,18 @@ public:
                       std::move(Emitter)),
         LastEMS(EMS_None) {
     auto *TO = getContext().getTargetOptions();
-    OptimizeMappingSymbols = TO && TO->OptimizeMappingSymbols;
+    OptimizeMapSyms = TO && TO->OptimizeMapSyms;
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
     // Save the mapping symbol state for potential reuse when revisiting the
-    // section. When OptimizeMappingSymbols is true, the initial state is
+    // section. When OptimizeMapSyms is true, the initial state is
     // EMS_A64 for text sections and EMS_Data for the others.
     LastMappingSymbols[getCurrentSection().first] = LastEMS;
     auto It = LastMappingSymbols.find(Section);
     if (It != LastMappingSymbols.end())
       LastEMS = It->second;
-    else if (OptimizeMappingSymbols)
+    else if (OptimizeMapSyms)
       LastEMS = Section->isText() ? EMS_A64 : EMS_Data;
     else
       LastEMS = EMS_None;
@@ -289,7 +289,7 @@ private:
 
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS;
-  bool OptimizeMappingSymbols;
+  bool OptimizeMapSyms;
 };
 } // end anonymous namespace
 
@@ -312,14 +312,14 @@ void AArch64TargetELFStreamer::finish() {
   MCContext &Ctx = S.getContext();
   auto &Asm = S.getAssembler();
 
-  // If OptimizeMappingSymbols is specified, ensure that text sections end with
+  // If OptimizeMapSyms is specified, ensure that text sections end with
   // the A64 state while non-text sections end with the data state. When
   // sections are combined by the linker, the subsequent section will start with
   // the right state. The ending mapping symbol is added right after the last
   // symbol relative to the section. When a dumb linker combines (.text.0; .word
   // 0) and (.text.1; .word 0), the ending $x of .text.0 precedes the $d of
   // .text.1, even if they have the same address.
-  if (S.OptimizeMappingSymbols) {
+  if (S.OptimizeMapSyms) {
     auto &Syms = Asm.getSymbols();
     const size_t NumSyms = Syms.size();
     DenseMap<MCSection *, MCSymbol *> EndMappingSym;
@@ -343,6 +343,8 @@ void AArch64TargetELFStreamer::finish() {
         MCSection *Sec = Sym->isInSection() ? &Sym->getSection() : nullptr;
         if (!Sec || --Cnt[Sec])
           continue;
+        // `Sym` is the last symbol relative to `Sec`. Add the ending mapping
+        // symbol, if needed, after `Sym`.
         if (auto *MapSym = EndMappingSym.lookup(Sec)) {
           NewSyms.push_back(MapSym);
           Idx.push_back(I);
