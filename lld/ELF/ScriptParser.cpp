@@ -53,7 +53,7 @@ public:
   void readLinkerScript();
   void readVersionScript();
   void readDynamicList();
-  void readDefsym(StringRef name);
+  void readDefsym();
 
 private:
   void addFile(StringRef path);
@@ -283,9 +283,12 @@ void ScriptParser::readLinkerScript() {
   }
 }
 
-void ScriptParser::readDefsym(StringRef name) {
+void ScriptParser::readDefsym() {
   if (errorCount())
     return;
+  inExpr = true;
+  StringRef name = readName();
+  expect("=");
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
@@ -1854,7 +1857,4 @@ void elf::readDynamicList(MemoryBufferRef mb) {
   ScriptParser(mb).readDynamicList();
 }
 
-void elf::readDefsym(StringRef name, MemoryBufferRef mb) {
-  llvm::TimeTraceScope timeScope("Read defsym input", name);
-  ScriptParser(mb).readDefsym(name);
-}
+void elf::readDefsym(MemoryBufferRef mb) { ScriptParser(mb).readDefsym(); }
