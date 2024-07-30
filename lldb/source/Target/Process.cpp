@@ -2550,6 +2550,21 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   }
   ModuleSP module_sp(new Module(file_spec, ArchSpec()));
   if (module_sp) {
+    if (size_to_read == 0) {
+      // Default to 8192 in case we can't find a memory region.
+      size_to_read = 0x2000;
+      MemoryRegionInfo range_info;
+      Status error(GetMemoryRegionInfo(header_addr, range_info));
+      if (error.Success()) {
+        // We found a memory region, set the range of bytes ro read to read to
+        // the end of the memory region. This should be enough to contain the
+        // file header and important bits.
+        const auto &range = range_info.GetRange();
+        addr_t end = range.GetRangeBase() + range.GetByteSize();
+        if (end > header_addr)
+          size_to_read = end - header_addr;
+      }
+    }
     Status error;
     std::unique_ptr<Progress> progress_up;
     // Reading an ObjectFile from a local corefile is very fast,
