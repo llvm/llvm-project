@@ -408,3 +408,49 @@ TEST(SmallPtrSetTest, RemoveIf) {
   Removed = Set.remove_if([](int *Ptr) { return false; });
   EXPECT_FALSE(Removed);
 }
+
+TEST(SmallPtrSetTest, Reserve) {
+  // Check that we don't do anything silly when using reserve().
+  SmallPtrSet<int *, 4> Set;
+  int Vals[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
+  Set.insert(&Vals[0]);
+
+  // We shouldn't reallocate when this happens.
+  Set.reserve(4);
+
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[2]);
+  Set.insert(&Vals[3]);
+
+  // We shouldn't reallocate this time either.
+  Set.reserve(4);
+  EXPECT_EQ(Set.size(), 4u);
+  EXPECT_TRUE(Set.contains(&Vals[0]));
+  EXPECT_TRUE(Set.contains(&Vals[1]));
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+  EXPECT_TRUE(Set.contains(&Vals[3]));
+
+  // Reserving further should lead to a reallocation.
+  Set.reserve(5);
+  EXPECT_EQ(Set.size(), 4u);
+  EXPECT_TRUE(Set.contains(&Vals[0]));
+  EXPECT_TRUE(Set.contains(&Vals[1]));
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+  EXPECT_TRUE(Set.contains(&Vals[3]));
+
+  // And we should be able to insert another two or three elements without
+  // reallocating.
+  Set.insert(&Vals[4]);
+  Set.insert(&Vals[5]);
+
+  // Calling a smaller reserve size should have no effect.
+  Set.reserve(1);
+  EXPECT_EQ(Set.size(), 6u);
+  EXPECT_TRUE(Set.contains(&Vals[0]));
+  EXPECT_TRUE(Set.contains(&Vals[1]));
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+  EXPECT_TRUE(Set.contains(&Vals[3]));
+  EXPECT_TRUE(Set.contains(&Vals[4]));
+  EXPECT_TRUE(Set.contains(&Vals[5]));
+}

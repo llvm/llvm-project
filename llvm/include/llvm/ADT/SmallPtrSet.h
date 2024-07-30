@@ -112,10 +112,11 @@ public:
   void reserve(size_type NumEntries) {
     incrementEpoch();
     // No need to expand if we're small and NumEntries will fit in the space.
-    if (isSmall() && NumEntries < CurArraySize)
+    if (isSmall() && NumEntries <= CurArraySize)
       return;
-    // insert_imp_big will reallocate if stores is more than 75% full.
-    if (!isSmall() && (NumEntries * 4) <= (CurArraySize * 3))
+    // insert_imp_big will reallocate if stores is more than 75% full, on the
+    // /final/ insertion.
+    if (!isSmall() && ((NumEntries-1) * 4) < (CurArraySize * 3))
       return;
     // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
