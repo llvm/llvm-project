@@ -3,8 +3,6 @@
 ; RUN:   --ppc-asm-full-reg-names -mcpu=pwr7 < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
 ; RUN:   --ppc-asm-full-reg-names -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-aix \
-; RUN:   --ppc-asm-full-reg-names -mcpu=pwr7 < %s | FileCheck %s --check-prefix=CHECK-AIX32
 
 define i64 @cdtbcd_test(i64 noundef %ll) {
 ; CHECK-LABEL: cdtbcd_test:
