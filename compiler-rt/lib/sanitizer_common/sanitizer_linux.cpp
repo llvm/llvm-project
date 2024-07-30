@@ -35,7 +35,7 @@
 // access stat from asm/stat.h, without conflicting with definition in
 // sys/stat.h, we use this trick.  sparc64 is similar, using
 // syscall(__NR_stat64) and struct kernel_stat64.
-#  if SANITIZER_MIPS64 || SANITIZER_SPARC64
+#  if SANITIZER_LINUX && (SANITIZER_MIPS64 || SANITIZER_SPARC64)
 #    include <asm/unistd.h>
 #    include <sys/types.h>
 #    define stat kernel_stat
