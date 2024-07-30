@@ -2503,98 +2503,6 @@ bool AMDGPUInstructionSelector::selectG_FPEXT(MachineInstr &I) const {
   return false;
 }
 
-bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
-  if (selectImpl(I, *CoverageInfo))
-    return true;
-
-  // FIXME: Relying on manual selection for 64-bit case, and pointer typed
-  // constants.
-  MachineBasicBlock *BB = I.getParent();
-  MachineOperand &ImmOp = I.getOperand(1);
-  Register DstReg = I.getOperand(0).getReg();
-  LLT Ty = MRI->getType(DstReg);
-  unsigned Size = Ty.getSizeInBits();
-  assert((Size == 64 || Ty.isPointer()) &&
-         "patterns should have selected this");
-
-  bool IsFP = false;
-
-  // The AMDGPU backend only supports Imm operands and not CImm or FPImm.
-  if (ImmOp.isFPImm()) {
-    const APInt &Imm = ImmOp.getFPImm()->getValueAPF().bitcastToAPInt();
-    ImmOp.ChangeToImmediate(Imm.getZExtValue());
-    IsFP = true;
-  } else if (ImmOp.isCImm()) {
-    ImmOp.ChangeToImmediate(ImmOp.getCImm()->getSExtValue());
-  } else {
-    llvm_unreachable("Not supported by g_constants");
-  }
-
-  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
-  const bool IsSgpr = DstRB->getID() == AMDGPU::SGPRRegBankID;
-
-  unsigned Opcode;
-  if (DstRB->getID() == AMDGPU::VCCRegBankID) {
-    Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-  } else if (Size == 64 &&
-             AMDGPU::isValid32BitLiteral(I.getOperand(1).getImm(), IsFP)) {
-    Opcode = IsSgpr ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::V_MOV_B64_PSEUDO;
-    I.setDesc(TII.get(Opcode));
-    I.addImplicitDefUseOperands(*MF);
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  } else {
-    Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
-
-    // We should never produce s1 values on banks other than VCC. If the user of
-    // this already constrained the register, we may incorrectly think it's VCC
-    // if it wasn't originally.
-    if (Size == 1)
-      return false;
-  }
-
-  if (Size != 64) {
-    I.setDesc(TII.get(Opcode));
-    I.addImplicitDefUseOperands(*MF);
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
-  const DebugLoc &DL = I.getDebugLoc();
-
-  APInt Imm(Size, I.getOperand(1).getImm());
-
-  MachineInstr *ResInst;
-  if (IsSgpr && TII.isInlineConstant(Imm)) {
-    ResInst = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B64), DstReg)
-      .addImm(I.getOperand(1).getImm());
-  } else {
-    const TargetRegisterClass *RC = IsSgpr ?
-      &AMDGPU::SReg_32RegClass : &AMDGPU::VGPR_32RegClass;
-    Register LoReg = MRI->createVirtualRegister(RC);
-    Register HiReg = MRI->createVirtualRegister(RC);
-
-    BuildMI(*BB, &I, DL, TII.get(Opcode), LoReg)
-      .addImm(Imm.trunc(32).getZExtValue());
-
-    BuildMI(*BB, &I, DL, TII.get(Opcode), HiReg)
-      .addImm(Imm.ashr(32).getZExtValue());
-
-    ResInst = BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
-      .addReg(LoReg)
-      .addImm(AMDGPU::sub0)
-      .addReg(HiReg)
-      .addImm(AMDGPU::sub1);
-  }
-
-  // We can't call constrainSelectedInstRegOperands here, because it doesn't
-  // work for target independent opcodes
-  I.eraseFromParent();
-  const TargetRegisterClass *DstRC =
-    TRI.getConstrainedRegClassForOperand(ResInst->getOperand(0), *MRI);
-  if (!DstRC)
-    return true;
-  return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI);
-}
-
 bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
   // Only manually handle the f64 SGPR case.
   //
@@ -3521,9 +3429,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_FREEZE:
     return selectCOPY(I);
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_FCONSTANT:
-    return selectG_CONSTANT(I);
   case TargetOpcode::G_FNEG:
     if (selectImpl(I, *CoverageInfo))
       return true;
@@ -3629,6 +3534,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectStackRestore(I);
   case AMDGPU::G_PHI:
     return selectPHI(I);
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
   default:
     return selectImpl(I, *CoverageInfo);
   }
