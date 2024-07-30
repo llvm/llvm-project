@@ -585,9 +585,8 @@ struct SemiNCAInfo {
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
     // Loop over all of the discovered blocks in the function...
     for (NodePtr W : llvm::drop_begin(NumToNode)) {
-      // Don't replace this with 'count', the insertion side effect is important
       if (DT.getNode(W))
-        continue; // Haven't calculated this node yet?
+        continue; // Already calculated the node before
 
       NodePtr ImmDom = getIDom(W);
 
