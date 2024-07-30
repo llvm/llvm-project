@@ -770,16 +770,8 @@ void DWARFRewriter::updateDebugInfo() {
       processSplitCU(*CU, **SplitCU, DIEBlder, *TempRangesSectionWriter,
                      AddressWriter, DWOName, DwarfOutputPath, DWODIEBuilder);
     }
-    unsigned DWODIEBuilderIndex = 0;
-    for (DWARFUnit *CU : DIEBlder.getProcessedCUs()) {
-      std::optional<DWARFUnit *> SplitCU;
-      std::optional<uint64_t> DWOId = CU->getDWOId();
-      if (DWOId)
-        SplitCU = BC.getDWOCU(*DWOId);
-      if (!SplitCU)
-        continue;
-      DIEBuilder &DWODIEBuilder =
-          *DWODIEBuildersByCU[DWODIEBuilderIndex++].get();
+    for (std::unique_ptr<DIEBuilder> &DWODIEBuilderPtr : DWODIEBuildersByCU) {
+      DIEBuilder &DWODIEBuilder = *DWODIEBuilderPtr.get();
       DWODIEBuilder.updateDebugNamesTable();
     }
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs())

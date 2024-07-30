@@ -127,6 +127,8 @@ private:
   DWARFContext *DwarfContext{nullptr};
   DWARFUnit *SkeletonCU{nullptr};
   uint64_t UnitSize{0};
+  /// Adds separate UnitSize counter for updating DebugNames
+  /// so there is no dependency between the functions.
   uint64_t DebugNamesUnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
   DWARF5AcceleratorTable &DebugNamesTable;
