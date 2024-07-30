@@ -497,10 +497,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s32, sMaxScalar)
       .widenScalarToNextPow2(1);
 
-  // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize s16
-  // manually. Otherwise, in custom handler there is no way to understand
-  // whether s32 is an original type and we need to promote it to s64 or s32 is
-  // obtained after widening s16 and we shouldn't widen it to s64.
+  // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize types
+  // <= s32 manually. Otherwise, in custom handler there is no way to
+  // understand whether s32 is an original type and we need to promote it to
+  // s64 or s32 is obtained after widening and we shouldn't widen it to s64.
   //
   // For AVX512 we simply widen types as there is direct mapping from opcodes
   // to asm instructions.
@@ -509,16 +509,22 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
                typeInSet(1, {s32, s64})(Query);
       })
-      .clampScalar(0, s32, HasSSE2 ? s64 : s32)
-      .widenScalarToNextPow2(0)
+      .lowerIf([=](const LegalityQuery &Query) {
+        // Lower conversions from s64
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(0, s32)(Query)) ||
+                (HasSSE2 && typeIs(0, s64)(Query))) &&
+               (Is64Bit && typeIs(1, s64)(Query));
+      })
       .customIf([=](const LegalityQuery &Query) {
-        if (HasAVX512)
-          return false;
-        return ((HasSSE1 && typeIs(0, s32)(Query)) ||
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(0, s32)(Query)) ||
                 (HasSSE2 && typeIs(0, s64)(Query))) &&
                (scalarNarrowerThan(1, 32)(Query) ||
-                (Is64Bit && typeInSet(1, {s32, s64})(Query)));
+                (Is64Bit && typeIs(1, s32)(Query)));
       })
+      .clampScalar(0, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sMaxScalar)
       .widenScalarToNextPow2(1);
 
@@ -527,18 +533,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
                typeInSet(1, {s32, s64})(Query);
       })
-      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
-      .widenScalarToNextPow2(1)
       .customIf([=](const LegalityQuery &Query) {
-        if (HasAVX512)
-          return false;
-        return ((HasSSE1 && typeIs(1, s32)(Query)) ||
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(1, s32)(Query)) ||
                 (HasSSE2 && typeIs(1, s64)(Query))) &&
                (scalarNarrowerThan(0, 32)(Query) ||
                 (Is64Bit && typeInSet(0, {s32, s64})(Query)));
       })
       .clampScalar(0, s32, sMaxScalar)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(1);
 
   // vector ops
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
@@ -749,15 +754,6 @@ bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
-
-  if (SrcTy == s64 && DstTy == s32)
-    return Helper.lowerU64ToF32WithSITOFP(MI) !=
-           LegalizerHelper::LegalizeResult::UnableToLegalize;
-
-  if (SrcTy == s64 && DstTy == s64)
-    // TODO: rewrite with vector shuffles when supported.
-    return Helper.lowerU64ToF64BitFloatOps(MI) !=
-           LegalizerHelper::LegalizeResult::UnableToLegalize;
 
   return false;
 }

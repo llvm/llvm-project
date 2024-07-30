@@ -258,6 +258,44 @@ entry:
   ret double %conv
 }
 
+define double @test_si31_to_double(i31 %x) {
+; X64-LABEL: test_si31_to_double:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    addl %edi, %edi
+; X64-NEXT:    sarl %edi
+; X64-NEXT:    cvtsi2sd %edi, %xmm0
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_si31_to_double:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    addl %edi, %edi
+; AVX512-NEXT:    sarl %edi
+; AVX512-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %conv = sitofp i31 %x to double
+  ret double %conv
+}
+
+define double @test_si33_to_double(i33 %x) {
+; X64-LABEL: test_si33_to_double:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    shlq $31, %rdi
+; X64-NEXT:    sarq $31, %rdi
+; X64-NEXT:    cvtsi2sd %rdi, %xmm0
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_si33_to_double:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    shlq $31, %rdi
+; AVX512-NEXT:    sarq $31, %rdi
+; AVX512-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %conv = sitofp i33 %x to double
+  ret double %conv
+}
+
 define float @test_si64_to_float(i64 %x) {
 ; X64-LABEL: test_si64_to_float:
 ; X64:       # %bb.0: # %entry
@@ -318,3 +356,40 @@ entry:
   ret float %conv
 }
 
+define float @test_si31_to_float(i31 %x) {
+; X64-LABEL: test_si31_to_float:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    addl %edi, %edi
+; X64-NEXT:    sarl %edi
+; X64-NEXT:    cvtsi2ss %edi, %xmm0
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_si31_to_float:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    addl %edi, %edi
+; AVX512-NEXT:    sarl %edi
+; AVX512-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %conv = sitofp i31 %x to float
+  ret float %conv
+}
+
+define float @test_si33_to_float(i33 %x) {
+; X64-LABEL: test_si33_to_float:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    shlq $31, %rdi
+; X64-NEXT:    sarq $31, %rdi
+; X64-NEXT:    cvtsi2ss %rdi, %xmm0
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_si33_to_float:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    shlq $31, %rdi
+; AVX512-NEXT:    sarq $31, %rdi
+; AVX512-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+entry:
+  %conv = sitofp i33 %x to float
+  ret float %conv
+}

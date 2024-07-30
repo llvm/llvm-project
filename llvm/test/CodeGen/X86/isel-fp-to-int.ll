@@ -258,6 +258,36 @@ entry:
   ret i8 %conv
 }
 
+define i31 @test_double_to_si31(double %x) {
+; X64-LABEL: test_double_to_si31:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    cvttsd2si %xmm0, %eax
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_double_to_si31:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-NEXT:    retq
+entry:
+  %conv = fptosi double %x to i31
+  ret i31 %conv
+}
+
+define i33 @test_double_to_si33(double %x) {
+; X64-LABEL: test_double_to_si33:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    cvttsd2si %xmm0, %rax
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_double_to_si33:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX512-NEXT:    retq
+entry:
+  %conv = fptosi double %x to i33
+  ret i33 %conv
+}
+
 define i64 @test_float_to_si64(float %x) {
 ; X64-LABEL: test_float_to_si64:
 ; X64:       # %bb.0: # %entry
@@ -320,4 +350,34 @@ define signext i8 @test_float_to_si8(float %x) {
 entry:
   %conv = fptosi float %x to i8
   ret i8 %conv
+}
+
+define i31 @test_float_to_si31(float %x) {
+; X64-LABEL: test_float_to_si31:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_float_to_si31:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-NEXT:    retq
+entry:
+  %conv = fptosi float %x to i31
+  ret i31 %conv
+}
+
+define i33 @test_float_to_si33(float %x) {
+; X64-LABEL: test_float_to_si33:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    cvttss2si %xmm0, %rax
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_float_to_si33:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512-NEXT:    retq
+entry:
+  %conv = fptosi float %x to i33
+  ret i33 %conv
 }
