@@ -2324,29 +2324,33 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
 UNUSED
 static void DumpSingleReg(ucontext_t *ctx, int RegNum) {
   const char *RegName = RegNumToRegName(RegNum);
-#  if defined(__x86_64__)
+#  if SANITIZER_LINUX && SANITIZER_GLIBC || SANITIZER_NETBSD
+#    if defined(__x86_64__)
   Printf("%s%s = 0x%016llx  ", internal_strlen(RegName) == 2 ? " " : "",
          RegName,
-#    if SANITIZER_LINUX
+#      if SANITIZER_LINUX
          ctx->uc_mcontext.gregs[RegNum]
-#    elif SANITIZER_NETBSD
+#      elif SANITIZER_NETBSD
          ctx->uc_mcontext.__gregs[RegNum]
-#    endif
+#      endif
   );
-#  elif defined(__i386__)
+#    elif defined(__i386__)
   Printf("%s = 0x%08x  ", RegName,
-#    if SANITIZER_LINUX
+#      if SANITIZER_LINUX
          ctx->uc_mcontext.gregs[RegNum]
-#    elif SANITIZER_NETBSD
+#      elif SANITIZER_NETBSD
          ctx->uc_mcontext.__gregs[RegNum]
-#    endif
+#      endif
   );
-#  elif defined(__arm__)
+#    elif defined(__arm__)
   Printf("%s%s = 0x%08zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
-#  elif defined(__aarch64__)
+#    elif defined(__aarch64__)
   Printf("%s%s = 0x%016zx  ", internal_strlen(RegName) == 2 ? " " : "", RegName,
          GetArmRegister(ctx, RegNum));
+#    else
+  (void)RegName;
+#    endif
 #  else
   (void)RegName;
 #  endif
@@ -2463,6 +2467,8 @@ void SignalContext::DumpAllRegisters(void *context) {
 #    else
   (void)ucontext;
 #    endif
+#  else
+  (void)ucontext;
 #  endif
   // FIXME: Implement this for other OSes and architectures.
 }
