@@ -86,6 +86,7 @@ bool IsIntrinsicConcat(
 bool IsGenericDefinedOp(const Symbol &);
 bool IsDefinedOperator(SourceName);
 std::string MakeOpName(SourceName);
+bool IsCommonBlockContaining(const Symbol &, const Symbol &);
 
 // Returns true if maybeAncestor exists and is a proper ancestor of a
 // descendent scope (or symbol owner).  Will be false, unlike Scope::Contains(),

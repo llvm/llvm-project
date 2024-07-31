@@ -1143,6 +1143,118 @@ void CastInst::dump() const {
 }
 #endif // NDEBUG
 
+Value *SIToFPInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx,
+                          const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::SIToFP, Src, WhereIt,
+                          WhereBB, Ctx, Name);
+}
+Value *SIToFPInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+Value *SIToFPInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void SIToFPInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void SIToFPInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+Value *FPToUIInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx,
+                          const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::FPToUI, Src, WhereIt,
+                          WhereBB, Ctx, Name);
+}
+Value *FPToUIInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+Value *FPToUIInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void FPToUIInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void FPToUIInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+Value *FPToSIInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx,
+                          const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::FPToSI, Src, WhereIt,
+                          WhereBB, Ctx, Name);
+}
+Value *FPToSIInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+Value *FPToSIInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void FPToSIInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void FPToSIInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
+Value *IntToPtrInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                            BasicBlock *WhereBB, Context &Ctx,
+                            const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::IntToPtr, Src, WhereIt,
+                          WhereBB, Ctx, Name);
+}
+Value *IntToPtrInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                            Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+Value *IntToPtrInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                            Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void IntToPtrInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void IntToPtrInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 Value *PtrToIntInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
                             BasicBlock *WhereBB, Context &Ctx,
                             const Twine &Name) {

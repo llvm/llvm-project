@@ -861,7 +861,34 @@ AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
     return builder.create<arith::MulFOp>(a, b);
   };
 
-  Value s = mul(operand, operand);
+  auto sub = [&](Value a, Value b) -> Value {
+    return builder.create<arith::SubFOp>(a, b);
+  };
+
+  auto abs = [&](Value a) -> Value { return builder.create<math::AbsFOp>(a); };
+
+  auto sqrt = [&](Value a) -> Value { return builder.create<math::SqrtOp>(a); };
+
+  auto scopy = [&](Value a, Value b) -> Value {
+    return builder.create<math::CopySignOp>(a, b);
+  };
+
+  auto sel = [&](Value a, Value b, Value c) -> Value {
+    return builder.create<arith::SelectOp>(a, b, c);
+  };
+
+  Value abso = abs(operand);
+  Value aa = mul(operand, operand);
+  Value opp = sqrt(sub(bcast(floatCst(builder, 1.0, elementType)), aa));
+
+  Value gt =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, aa,
+                                    bcast(floatCst(builder, 0.5, elementType)));
+
+  Value x = sel(gt, opp, abso);
+
+  // Asin(x) approximation for x = [-9/16, 9/16]:
+  Value s = mul(x, x);
   Value q = mul(s, s);
   Value r = bcast(floatCst(builder, 5.5579749017470502e-2, elementType));
   Value t = bcast(floatCst(builder, -6.2027913464120114e-2, elementType));
@@ -878,8 +905,12 @@ AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
   t = fma(t, q, bcast(floatCst(builder, 7.4999999991367292e-2, elementType)));
   r = fma(r, s, t);
   r = fma(r, s, bcast(floatCst(builder, 1.6666666666670193e-1, elementType)));
-  t = mul(operand, s);
-  r = fma(r, t, operand);
+  t = mul(x, s);
+  r = fma(r, t, x);
+
+  Value rsub = sub(bcast(floatCst(builder, 1.57079632679, elementType)), r);
+  r = sel(gt, rsub, r);
+  r = scopy(r, operand);
 
   rewriter.replaceOp(op, r);
   return success();
