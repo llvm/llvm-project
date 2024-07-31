@@ -2124,6 +2124,8 @@ bb2:
   br label %bb2
 
 bb3:
+  ret void
+}
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   auto *LLVMBB1 = getBasicBlockByName(LLVMF, "bb1");
