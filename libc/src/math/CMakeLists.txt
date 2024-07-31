@@ -95,7 +95,6 @@ add_math_entrypoint_object(dfmaf128)
 add_math_entrypoint_object(dsqrtl)
 add_math_entrypoint_object(dsqrtf128)
 
-add_math_entrypoint_object(dsubl)
 add_math_entrypoint_object(dsubf128)
 
 add_math_entrypoint_object(erf)

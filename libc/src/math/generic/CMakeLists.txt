@@ -193,18 +193,6 @@ add_entrypoint_object(
     -O3
 )
 
-add_entrypoint_object(
-  dsubl
-  SRCS
-    dsubl.cpp
-  HDRS
-    ../dsubl.h
-  DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
-  COMPILE_OPTIONS
-    -O3
-)
-
 add_header_library(
   range_reduction
   HDRS

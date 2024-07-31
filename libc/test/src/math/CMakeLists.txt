@@ -2406,20 +2406,6 @@ add_fp_unittest(
     libc.src.stdlib.srand
 )
 
-add_fp_unittest(
-  dsubl_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    dsubl_test.cpp
-  HDRS
-    SubTest.h
-  DEPENDS
-    libc.src.math.dsubl
-)
-
-
 add_subdirectory(generic)
 add_subdirectory(smoke)
 

@@ -383,20 +383,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  dsubl_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    dsubl_test.cpp
-  HDRS
-    SubTest.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.hdr.fenv_macros
-    libc.src.math.dsubl
-)
-
-add_fp_unittest(
   dsubf128_test
   SUITE
     libc-math-smoke-tests
