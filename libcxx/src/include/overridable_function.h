@@ -96,6 +96,7 @@ _LIBCPP_HIDE_FROM_ABI bool __is_function_overridden(_Ret (*__fptr)(_Args...)) no
 }
 _LIBCPP_END_NAMESPACE_STD
 
+// The NVPTX linker cannot create '__start/__stop' sections.
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__)
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
