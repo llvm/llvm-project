@@ -418,7 +418,7 @@ public:
   virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
     return nullptr;
   }
-  
+
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::Function &F);
