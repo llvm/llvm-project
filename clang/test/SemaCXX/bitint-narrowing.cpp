@@ -4,7 +4,6 @@
 // RUN: %clang_cc1 -triple i386-linux-pc -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -triple i386-windows-pc -fsyntax-only -verify -std=c++11 %s
 
-#if __BITINT_MAXWIDTH__ >= 35
 struct {
   _BitInt(35) i : 33;
 } x;
@@ -15,9 +14,7 @@ _BitInt(33) xx{ x.i };
 _BitInt(33) yy{ y.i };
 // expected-error@-1 {{non-constant-expression cannot be narrowed from type '_BitInt(35)' to '_BitInt(33)' in initializer list}}
 //   FIXME-expected-note@-2 {{insert an explicit cast to silence this issue}}
-#endif
 
-#if __BITINT_MAXWIDTH__ >= 3
          _BitInt(2) S2 = 0;
 unsigned _BitInt(2) U2 = 0;
          _BitInt(3) S3 = 0;
@@ -39,6 +36,3 @@ unsigned _BitInt(3) bic{ S2 }; // expected-error {{non-constant-expression canno
 unsigned _BitInt(3) bid{ U2 };
 unsigned _BitInt(3) bie{ S3 }; // expected-error {{non-constant-expression cannot be narrowed from type '_BitInt(3)' to 'unsigned _BitInt(3)' in initializer list}}
 unsigned _BitInt(3) bif{ U3 };
-#else
-// expected-no-diagnostics
-#endif
