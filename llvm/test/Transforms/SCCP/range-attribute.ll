@@ -83,7 +83,7 @@ define void @call_range_result() {
 
 define internal i1 @ip_cmp_range_attribute(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range_attribute(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -100,7 +100,7 @@ define i1 @ip_range_attribute(i32 range(i32 0, 10) %v) {
 
 define internal i1 @ip_cmp_range_call(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range_call(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -119,7 +119,7 @@ define i1 @ip_range_call() {
 
 define internal i1 @ip_cmp_range_result(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range_result(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -138,7 +138,7 @@ define i1 @ip_range_result() {
 
 define internal i1 @ip_cmp_with_range_attribute(i32 range(i32 0, 10) %v) {
 ; CHECK-LABEL: @ip_cmp_with_range_attribute(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %c = icmp eq i32 %v, 5
   ret i1 %c

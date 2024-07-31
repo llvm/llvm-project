@@ -71,6 +71,8 @@ def get_input_signature():
             "nested_inlines",
             "nested_inline_cost_estimate",
             "threshold",
+            "is_callee_avail_external",
+            "is_caller_avail_external",
         ]
     ]
 

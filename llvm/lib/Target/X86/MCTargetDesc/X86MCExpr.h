@@ -53,7 +53,7 @@ public:
     OS << X86ATTInstPrinter::getRegisterName(RegNo);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override {
     return false;
   }

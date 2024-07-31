@@ -159,20 +159,6 @@ set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
 set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
     "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
 
-set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
-        "Build the benchmarks against the specified native STL.
-         The value must be one of libc++/libstdc++")
-set(LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN "" CACHE STRING
-    "Use alternate GCC toolchain when building the native benchmarks")
-
-if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
-  if (NOT (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++"
-        OR LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++"))
-    message(FATAL_ERROR "Invalid value for LIBCXX_BENCHMARK_NATIVE_STDLIB: "
-            "'${LIBCXX_BENCHMARK_NATIVE_STDLIB}'")
-  endif()
-endif()
-
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -225,6 +211,14 @@ endif()
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+
+# C Library options -----------------------------------------------------------
+
+set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+endif()
 
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
@@ -509,6 +503,7 @@ endif()
 # Setup Compiler Flags
 #===============================================================================
 
+include(HandleLibC) # Setup the C library flags
 include(HandleLibCXXABI) # Setup the ABI library flags
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
@@ -552,6 +547,10 @@ function(cxx_add_basic_build_flags target)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
   endif()
+
+  # Build with -fsized-deallocation, which is default in recent versions of Clang.
+  # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+  target_add_compile_flags_if_supported(${target} PRIVATE -fsized-deallocation)
 
   # Let the library headers know they are currently being used to build the
   # library.
@@ -780,8 +779,8 @@ config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTER
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-# TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
+  message(DEPRECATION "LIBCXX_ENABLE_ASSERTIONS is deprecated and will be removed in LLVM 20. Please use LIBCXX_HARDENING_MODE instead.")
   set(LIBCXX_HARDENING_MODE "extensive")
 endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")

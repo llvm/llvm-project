@@ -52,14 +52,17 @@ public:
 
   Kind kind() const { return (Kind)sectionKind; }
 
+  LLVM_PREFERRED_TYPE(Kind)
   uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t bss : 1;
 
   // Set for sections that should not be folded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t keepUnique : 1;
 
   uint8_t partition = 1;
@@ -282,6 +285,7 @@ struct SectionPiece {
       : inputOff(off), live(live), hash(hash >> 1) {}
 
   uint32_t inputOff;
+  LLVM_PREFERRED_TYPE(bool)
   uint32_t live : 1;
   uint32_t hash : 31;
   uint64_t outputOff = 0;

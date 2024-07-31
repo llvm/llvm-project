@@ -316,6 +316,10 @@ NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
   return s;
 }
 
+NativeProcessFreeBSD &NativeThreadFreeBSD::GetProcess() {
+  return static_cast<NativeProcessFreeBSD &>(m_process);
+}
+
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 NativeThreadFreeBSD::GetSiginfo() const {
   Log *log = GetLog(POSIXLog::Process);

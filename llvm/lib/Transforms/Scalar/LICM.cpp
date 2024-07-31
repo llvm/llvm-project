@@ -1052,7 +1052,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
                                   Loop *CurLoop) {
   Value *Addr = LI->getPointerOperand();
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   const TypeSize LocSizeInBits = DL.getTypeSizeInBits(LI->getType());
 
   // It is not currently possible for clang to generate an invariant.start
@@ -2043,7 +2043,7 @@ bool llvm::promoteLoopAccessesToScalars(
   bool SawNotAtomic = false;
   AAMDNodes AATags;
 
-  const DataLayout &MDL = Preheader->getModule()->getDataLayout();
+  const DataLayout &MDL = Preheader->getDataLayout();
 
   // If there are reads outside the promoted set, then promoting stores is
   // definitely not safe.
@@ -2506,7 +2506,7 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   // The swapped GEPs are inbounds if both original GEPs are inbounds
   // and the sign of the offsets is the same. For simplicity, only
   // handle both offsets being non-negative.
-  const DataLayout &DL = GEP->getModule()->getDataLayout();
+  const DataLayout &DL = GEP->getDataLayout();
   auto NonNegative = [&](Value *V) {
     return isKnownNonNegative(V, SimplifyQuery(DL, DT, AC, GEP));
   };
@@ -2556,7 +2556,7 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // freely move values from left side of inequality to right side (just as in
   // normal linear arithmetics). Overflows make things much more complicated, so
   // we want to avoid this.
-  auto &DL = L.getHeader()->getModule()->getDataLayout();
+  auto &DL = L.getHeader()->getDataLayout();
   bool ProvedNoOverflowAfterReassociate =
       computeOverflowForSignedSub(InvariantRHS, InvariantOp,
                                   SimplifyQuery(DL, DT, AC, &ICmp)) ==
@@ -2609,7 +2609,7 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   // normal linear arithmetics). Overflows make things much more complicated, so
   // we want to avoid this. Likewise, for "C1 - LV < C2" we need to prove that
   // "C1 - C2" does not overflow.
-  auto &DL = L.getHeader()->getModule()->getDataLayout();
+  auto &DL = L.getHeader()->getDataLayout();
   SimplifyQuery SQ(DL, DT, AC, &ICmp);
   if (VariantSubtracted) {
     // C1 - LV < C2 --> LV > C1 - C2

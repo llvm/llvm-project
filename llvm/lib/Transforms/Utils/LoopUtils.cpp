@@ -1077,7 +1077,9 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 
 // Helper to generate a log2 shuffle reduction.
 Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
-                                 unsigned Op, RecurKind RdxKind) {
+                                 unsigned Op,
+                                 TargetTransformInfo::ReductionShuffle RS,
+                                 RecurKind RdxKind) {
   unsigned VF = cast<FixedVectorType>(Src->getType())->getNumElements();
   // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
   // and vector ops, reducing the set of values being computed by half each
@@ -1091,18 +1093,10 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   // will never be relevant here.  Note that it would be generally unsound to
   // propagate these from an intrinsic call to the expansion anyways as we/
   // change the order of operations.
-  Value *TmpVec = Src;
-  SmallVector<int, 32> ShuffleMask(VF);
-  for (unsigned i = VF; i != 1; i >>= 1) {
-    // Move the upper half of the vector to the lower half.
-    for (unsigned j = 0; j != i / 2; ++j)
-      ShuffleMask[j] = i / 2 + j;
-
-    // Fill the rest of the mask with undef.
-    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
-
+  auto BuildShuffledOp = [&Builder, &Op,
+                          &RdxKind](SmallVectorImpl<int> &ShuffleMask,
+                                    Value *&TmpVec) -> void {
     Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
-
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
       TmpVec = Builder.CreateBinOp((Instruction::BinaryOps)Op, TmpVec, Shuf,
                                    "bin.rdx");
@@ -1110,6 +1104,30 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
       assert(RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
              "Invalid min/max");
       TmpVec = createMinMaxOp(Builder, RdxKind, TmpVec, Shuf);
+    }
+  };
+
+  Value *TmpVec = Src;
+  if (TargetTransformInfo::ReductionShuffle::Pairwise == RS) {
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned stride = 1; stride < VF; stride <<= 1) {
+      // Initialise the mask with undef.
+      std::fill(ShuffleMask.begin(), ShuffleMask.end(), -1);
+      for (unsigned j = 0; j < VF; j += stride << 1) {
+        ShuffleMask[j] = j + stride;
+      }
+      BuildShuffledOp(ShuffleMask, TmpVec);
+    }
+  } else {
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned i = VF; i != 1; i >>= 1) {
+      // Move the upper half of the vector to the lower half.
+      for (unsigned j = 0; j != i / 2; ++j)
+        ShuffleMask[j] = i / 2 + j;
+
+      // Fill the rest of the mask with undef.
+      std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
+      BuildShuffledOp(ShuffleMask, TmpVec);
     }
   }
   // The result is in the first element of the vector.
@@ -1192,6 +1210,19 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
+Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
+                                         const RecurrenceDescriptor &Desc) {
+  RecurKind Kind = Desc.getRecurrenceKind();
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         "AnyOf reduction is not supported.");
+  auto *SrcTy = cast<VectorType>(Src->getType());
+  Type *SrcEltTy = SrcTy->getElementType();
+  Value *Iden =
+      Desc.getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
+  Value *Ops[] = {Iden, Src};
+  return VBuilder.createSimpleTargetReduction(Kind, SrcTy, Ops);
+}
+
 Value *llvm::createTargetReduction(IRBuilderBase &B,
                                    const RecurrenceDescriptor &Desc, Value *Src,
                                    PHINode *OrigPhi) {
@@ -1218,6 +1249,20 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   return B.CreateFAddReduce(Start, Src);
+}
+
+Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
+                                    const RecurrenceDescriptor &Desc,
+                                    Value *Src, Value *Start) {
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+         "Unexpected reduction kind");
+  assert(Src->getType()->isVectorTy() && "Expected a vector type");
+  assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
+
+  auto *SrcTy = cast<VectorType>(Src->getType());
+  Value *Ops[] = {Start, Src};
+  return VBuilder.createSimpleTargetReduction(RecurKind::FAdd, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
@@ -1817,7 +1862,7 @@ Value *llvm::addRuntimeChecks(
 
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
-                                           Loc->getModule()->getDataLayout());
+                                           Loc->getDataLayout());
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
@@ -1871,7 +1916,7 @@ Value *llvm::addDiffRuntimeChecks(
 
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
-                                           Loc->getModule()->getDataLayout());
+                                           Loc->getDataLayout());
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;

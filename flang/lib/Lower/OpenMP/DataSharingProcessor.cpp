@@ -72,11 +72,8 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
     firOpBuilder.setInsertionPointAfter(op);
     insertDeallocs();
   } else {
-    // insert dummy instruction to mark the insertion position
-    mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-        op->getLoc(), firOpBuilder.getIndexType());
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     insertDeallocs();
-    firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
   }
 }
 
@@ -142,7 +139,6 @@ void DataSharingProcessor::collectOmpObjectListSymbol(
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {
-  bool hasCollapse = false;
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -156,16 +152,11 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       hasLastPrivateOp = true;
-    } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
-      hasCollapse = true;
     }
   }
 
   for (auto *sym : explicitlyPrivatizedSymbols)
     allPrivatizedSymbols.insert(sym);
-
-  if (hasCollapse && hasLastPrivateOp)
-    TODO(converter.getCurrentLocation(), "Collapse clause with lastprivate");
 }
 
 bool DataSharingProcessor::needBarrier() {
@@ -228,28 +219,39 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       mlir::Operation *lastOper = loopOp.getRegion().back().getTerminator();
       firOpBuilder.setInsertionPoint(lastOper);
 
-      mlir::Value iv = loopOp.getIVs()[0];
-      mlir::Value ub = loopOp.getUpperBound()[0];
-      mlir::Value step = loopOp.getStep()[0];
+      mlir::Value cmpOp;
+      llvm::SmallVector<mlir::Value> vs;
+      vs.reserve(loopOp.getIVs().size());
+      for (auto [iv, ub, step] : llvm::zip_equal(
+               loopOp.getIVs(), loopOp.getUpperBound(), loopOp.getStep())) {
+        // v = iv + step
+        // cmp = step < 0 ? v < ub : v > ub
+        mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+        vs.push_back(v);
+        mlir::Value zero =
+            firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
+        mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, step, zero);
+        mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, v, ub);
+        mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+        mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
+            loc, negativeStep, vLT, vGT);
 
-      // v = iv + step
-      // cmp = step < 0 ? v < ub : v > ub
-      mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
-      mlir::Value zero =
-          firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
-      mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, step, zero);
-      mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, v, ub);
-      mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sgt, v, ub);
-      mlir::Value cmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
-          loc, negativeStep, vLT, vGT);
+        if (cmpOp) {
+          cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+        } else {
+          cmpOp = icmpOp;
+        }
+      }
 
       auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
       firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      assert(loopIV && "loopIV was not set");
-      firOpBuilder.createStoreWithConvert(loc, v, loopIV);
+      for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
+        assert(loopIV && "loopIV was not set");
+        firOpBuilder.createStoreWithConvert(loc, v, loopIV);
+      }
       lastPrivIP = firOpBuilder.saveInsertionPoint();
     } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
       // Already handled by genOMP()

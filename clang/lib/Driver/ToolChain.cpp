@@ -195,11 +195,13 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.PosTargetFeature))
+        MArch.push_back(Ext.UserVisibleName.str());
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
+    if (!Ext.UserVisibleName.empty())
+      if (FeatureSet.contains(Ext.NegTargetFeature))
+        MArch.push_back(("no" + Ext.UserVisibleName).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
     if (FeatureSet.contains(ArchInfo->ArchFeature))
@@ -221,11 +223,13 @@ static void getARMMultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.Feature))
-      MArch.push_back(Ext.Name.str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.Feature))
+        MArch.push_back(Ext.Name.str());
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.contains(Ext.NegFeature))
-      MArch.push_back(("no" + Ext.Name).str());
+    if (!Ext.Name.empty())
+      if (FeatureSet.contains(Ext.NegFeature))
+        MArch.push_back(("no" + Ext.Name).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
 
@@ -808,6 +812,12 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
 std::optional<std::string> ToolChain::getStdlibPath() const {
   SmallString<128> P(D.Dir);
   llvm::sys::path::append(P, "..", "lib");
+  return getTargetSubDirPath(P);
+}
+
+std::optional<std::string> ToolChain::getStdlibIncludePath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "include");
   return getTargetSubDirPath(P);
 }
 

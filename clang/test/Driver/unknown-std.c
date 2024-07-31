@@ -18,6 +18,8 @@
 // CHECK-NEXT: note: use 'gnu17' or 'gnu18' for 'ISO C 2017 with GNU extensions' standard
 // CHECK-NEXT: note: use 'c23' for 'Working Draft for ISO C23' standard
 // CHECK-NEXT: note: use 'gnu23' for 'Working Draft for ISO C23 with GNU extensions' standard
+// CHECK-NEXT: note: use 'c2y' for 'Working Draft for ISO C2y' standard
+// CHECK-NEXT: note: use 'gnu2y' for 'Working Draft for ISO C2y with GNU extensions' standard
 
 // Make sure that no other output is present.
 // CHECK-NOT: {{^.+$}}

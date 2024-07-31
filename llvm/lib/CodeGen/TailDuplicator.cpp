@@ -97,7 +97,6 @@ void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   MRI = &MF->getRegInfo();
-  MMI = &MF->getMMI();
   MBPI = MBPIin;
   MBFI = MBFIin;
   PSI = PSIin;
@@ -201,8 +200,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Update SSA form.
   if (!SSAUpdateVRs.empty()) {
-    for (unsigned i = 0, e = SSAUpdateVRs.size(); i != e; ++i) {
-      unsigned VReg = SSAUpdateVRs[i];
+    for (unsigned VReg : SSAUpdateVRs) {
       SSAUpdate.Initialize(VReg);
 
       // If the original definition is still around, add it as an available
@@ -253,8 +251,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Eliminate some of the copies inserted by tail duplication to maintain
   // SSA form.
-  for (unsigned i = 0, e = Copies.size(); i != e; ++i) {
-    MachineInstr *Copy = Copies[i];
+  for (MachineInstr *Copy : Copies) {
     if (!Copy->isCopy())
       continue;
     Register Dst = Copy->getOperand(0).getReg();

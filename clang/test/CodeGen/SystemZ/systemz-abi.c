@@ -173,6 +173,29 @@ union union_double pass_union_double(union union_double arg) { return arg; }
 // CHECK-LABEL: define{{.*}} void @pass_union_double(ptr dead_on_unwind noalias writable sret(%union.union_double) align 8 %{{.*}}, i64 %{{.*}})
 
 
+// Verify that transparent unions are passed like their first member (but returned like a union)
+
+union tu_char { char a; } __attribute__((transparent_union));
+union tu_char pass_tu_char(union tu_char arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_char(ptr dead_on_unwind noalias writable sret(%union.tu_char) align 1 %{{.*}}, i8 signext %{{.*}})
+
+union tu_short { short a; } __attribute__((transparent_union));
+union tu_short pass_tu_short(union tu_short arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_short(ptr dead_on_unwind noalias writable sret(%union.tu_short) align 2 %{{.*}}, i16 signext %{{.*}})
+
+union tu_int { int a; } __attribute__((transparent_union));
+union tu_int pass_tu_int(union tu_int arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_int(ptr dead_on_unwind noalias writable sret(%union.tu_int) align 4 %{{.*}}, i32 signext %{{.*}})
+
+union tu_long { long a; } __attribute__((transparent_union));
+union tu_long pass_tu_long(union tu_long arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_long(ptr dead_on_unwind noalias writable sret(%union.tu_long) align 8 %{{.*}}, i64 %{{.*}})
+
+union tu_ptr { void *a; } __attribute__((transparent_union));
+union tu_ptr pass_tu_ptr(union tu_ptr arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_ptr(ptr dead_on_unwind noalias writable sret(%union.tu_ptr) align 8 %{{.*}}, ptr %{{.*}})
+
+
 // Accessing variable argument lists
 
 int va_int(__builtin_va_list l) { return __builtin_va_arg(l, int); }

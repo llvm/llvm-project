@@ -350,6 +350,7 @@ function(llvm_ExternalProject_Add name source_dir)
                ${sysroot_arg}
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
                -DLLVM_CONFIG_PATH=${llvm_config_path}
+               -DLLVM_CMAKE_DIR=${LLVM_CMAKE_DIR}
                -DLLVM_ENABLE_WERROR=${LLVM_ENABLE_WERROR}
                -DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}
                -DLLVM_HAVE_LINK_VERSION_SCRIPT=${LLVM_HAVE_LINK_VERSION_SCRIPT}

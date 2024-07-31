@@ -2314,7 +2314,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     }
   } else {
     chunkSizes.resize(payload.size(),
-                       rewriter.getIndexAttr(getStaticChunkSizes()));
+                      rewriter.getIndexAttr(getStaticChunkSizes()));
   }
 
   auto checkStructuredOpAndDimensions =
@@ -2327,7 +2327,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
 
     if (getDimension() >= linalgOp.getNumLoops()) {
       auto diag = emitSilenceableError() << "dimension " << getDimension()
-                                          << " does not exist in target op";
+                                         << " does not exist in target op";
       diag.attachNote(loc) << "target op";
       return diag;
     }
@@ -2335,10 +2335,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
   };
 
   auto checkFailureInSplitting =
-      [&](bool hasFailed, Operation *op) -> DiagnosedSilenceableFailure {
+      [&](bool hasFailed, Location loc) -> DiagnosedSilenceableFailure {
     if (hasFailed) {
       auto diag = emitDefiniteFailure() << "internal failure in splitting";
-      diag.attachNote(op->getLoc()) << "target op";
+      diag.attachNote(loc) << "target op";
       return diag;
     }
     return DiagnosedSilenceableFailure::success();
@@ -2368,6 +2368,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
         break;
 
       linalgOp = cast<LinalgOp>(target);
+      Location loc = target->getLoc();
 
       rewriter.setInsertionPoint(linalgOp);
       std::tie(head, tail) = linalg::splitOp(
@@ -2376,7 +2377,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
 
       // Propagate errors.
       DiagnosedSilenceableFailure diag =
-          checkFailureInSplitting(!head && !tail, target);
+          checkFailureInSplitting(!head && !tail, loc);
       if (diag.isDefiniteFailure())
         return diag;
 
@@ -2395,6 +2396,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     Operation *noSecondPart = nullptr;
     for (const auto &pair : llvm::zip(payload, chunkSizes)) {
       Operation *target = std::get<0>(pair);
+      Location loc = target->getLoc();
       LinalgOp linalgOp = dyn_cast<LinalgOp>(target);
       DiagnosedSilenceableFailure diag =
           checkStructuredOpAndDimensions(linalgOp, target->getLoc());
@@ -2409,7 +2411,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
 
       // Propagate errors.
       DiagnosedSilenceableFailure diagSplit =
-          checkFailureInSplitting(!first.back() && !second.back(), target);
+          checkFailureInSplitting(!first.back() && !second.back(), loc);
       if (diagSplit.isDefiniteFailure())
         return diag;
 
@@ -2718,8 +2720,8 @@ transform::ContinuousTileSizesOp::apply(transform::TransformRewriter &rewriter,
 
     auto getI64AttrsFromI64 = [&](ArrayRef<int64_t> values) {
       return llvm::map_to_vector(values, [&](int64_t value) -> Attribute {
-            return builder.getI64IntegerAttr(value);
-          });
+        return builder.getI64IntegerAttr(value);
+      });
     };
     transformResults.setParams(cast<OpResult>(getTileSizes()),
                                getI64AttrsFromI64(spec->tileSizes));
@@ -2756,9 +2758,9 @@ transform::ContinuousTileSizesOp::apply(transform::TransformRewriter &rewriter,
   }
 
   auto getDefiningOps = [&](ArrayRef<Value> values) {
-        return llvm::map_to_vector(values, [&](Value value) -> Operation * {
-          return value.getDefiningOp();
-        });
+    return llvm::map_to_vector(values, [&](Value value) -> Operation * {
+      return value.getDefiningOp();
+    });
   };
 
   transformResults.set(cast<OpResult>(getTileSizes()),
@@ -2886,8 +2888,14 @@ void transform::TileUsingForOp::build(
 LogicalResult transform::TileUsingForOp::verify() {
   if (getMixedSizes().size() != getScalableSizes().size())
     return emitOpError("expected same number of sizes (")
-           << getMixedSizes().size() << ") and scalable sizes ()"
+           << getMixedSizes().size() << ") and scalable sizes ("
            << getScalableSizes().size() << ")";
+  ArrayRef<int64_t> staticSizes = getStaticSizes();
+  unsigned numExpectedLoops = staticSizes.size() - llvm::count(staticSizes, 0);
+  if (getLoops().size() != numExpectedLoops)
+    return emitOpError("expected number of loops to tile (")
+           << numExpectedLoops << ") to match number of `loops` results ("
+           << getLoops().size() << ")";
   return success();
 }
 
@@ -3706,6 +3714,37 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
 
   results.push_back(tilingResult.tileOp);
   results.push_back(tilingResult.tiledOp);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradConv2DOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  FailureOr<Operation *> maybeTransformed = failure();
+  bool supported = TypeSwitch<Operation *, bool>(target)
+                       .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+                         maybeTransformed =
+                             winogradConv2D(rewriter, op, getM(), getR());
+                         return true;
+                       })
+                       .Default([&](Operation *op) { return false; });
+
+  if (!supported) {
+    return emitSilenceableError()
+           << "this operation is not supported to convert to Winograd Conv2D";
+  }
+
+  if (supported && failed(maybeTransformed)) {
+    return emitSilenceableError() << "apply Winograd Conv2D failed";
+  }
+
+  results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
 }
 
