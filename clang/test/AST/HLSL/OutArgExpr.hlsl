@@ -1,3 +1,4 @@
+// RUN: rm -f %t.pch
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-pch -finclude-default-header -o %t.pch %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-dump | FileCheck --check-prefix=AST %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-print | FileCheck %s
@@ -8,19 +9,19 @@
 
 RWBuffer<float> Buf;
 
-// CHECK: void trunc_Param(inout int &X) {
+// CHECK: void trunc_Param(inout int &__restrict X) {
 
 // AST: FunctionDecl {{.*}} used trunc_Param 'void (inout int)'
-// AST-NEXT: ParmVarDecl {{.*}} X 'int &'
+// AST-NEXT: ParmVarDecl {{.*}} X 'int &__restrict'
 // AST-NEXT: HLSLParamModifierAttr {{.*}} inout
 
 void trunc_Param(inout int X) {}
 
-// CHECK: void zero(out int &Z) {
+// CHECK: void zero(out int &__restrict Z) {
 // CHECK-NEXT: Z = 0;
 
 // AST: FunctionDecl {{.*}} zero 'void (out int)'
-// AST-NEXT: ParmVarDecl {{.*}} used Z 'int &'
+// AST-NEXT: ParmVarDecl {{.*}} used Z 'int &__restrict'
 // AST-NEXT: HLSLParamModifierAttr {{.*}} out
 void zero(out int Z) { Z = 0; }
 

@@ -5,6 +5,8 @@
 // In this test case a float value is passed to an inout parameter taking an
 // integer. It is converted to an integer on call and converted back after the
 // function.
+
+// CHECK: define void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void trunc_Param(inout int X) {}
 
 // ALL-LABEL: define noundef float {{.*}}case1
@@ -29,6 +31,8 @@ export float case1(float F) {
 // `out` parameters are not pre-initialized by the caller, so they are
 // uninitialized in the function. If they are not initialized before the
 // function returns the value is undefined.
+
+// CHECK: define void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void undef(out int Z) { }
 
 // ALL-LABEL: define noundef i32 {{.*}}case2
@@ -47,7 +51,10 @@ export int case2() {
 }
 
 // Case 3: Simple initialized `out` parameter.
-// This test should verify that an out parameter value is written to as expected.
+// This test should verify that an out parameter value is written to as
+// expected.
+
+// CHECK: define void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void zero(out int Z) { Z = 0; }
 
 // ALL-LABEL: define noundef i32 {{.*}}case3
@@ -68,6 +75,8 @@ export int case3() {
 // Case 4: Vector swizzle arguments.
 // Vector swizzles in HLSL produce lvalues, so they can be used as arguments to
 // inout parameters and the swizzle is reversed on writeback.
+
+// CHECK: define void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void funky(inout int3 X) {
   X.x += 1;
   X.y += 2;
@@ -106,6 +115,8 @@ export int3 case4() {
 
 
 // Case 5: Straightforward inout of a scalar value.
+
+// CHECK: define void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void increment(inout int I) {
   I += 1;
 }
@@ -133,6 +144,7 @@ struct S {
   float Y;
 };
 
+// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) {{%.*}})
 void init(out S s) {
   s.X = 3;
   s.Y = 4;
@@ -159,6 +171,8 @@ export int case6() {
 }
 
 // Case 7: Non-scalars with a cast expression.
+
+// CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
 // ALL-LABEL: define noundef <3 x float> {{.*}}case7

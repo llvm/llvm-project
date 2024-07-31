@@ -12,25 +12,25 @@ void fn(float f);
 void fn2(in float f);
 
 // CHECK: FunctionDecl {{.*}} fn3 'void (out float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &'
+// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NOT: HLSLParamModifierAttr
 void fn3(out float f);
 
 // CHECK: FunctionDecl {{.*}} fn4 'void (inout float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &'
+// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
 // CHECK-NOT: HLSLParamModifierAttr
 void fn4(inout float f);
 
 // CHECK: FunctionDecl {{.*}} fn5 'void (inout float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &'
+// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout MergedSpelling
 // CHECK-NOT: HLSLParamModifierAttr
 void fn5(out in float f);
 
 // CHECK: FunctionDecl {{.*}} fn6 'void (inout float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &'
+// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout MergedSpelling
 // CHECK-NOT: HLSLParamModifierAttr
 void fn6(in out float f);
@@ -43,7 +43,7 @@ void fn6(in out float f);
 // CHECK-NEXT: FunctionDecl [[Instantiation:0x[0-9a-fA-F]+]] {{.*}} used fn7 'void (inout float)' implicit_instantiation
 // CHECK-NEXT: TemplateArgument type 'float'
 // CHECK-NEXT:  BuiltinType {{.*}} 'float'
-// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &'
+// CHECK-NEXT: ParmVarDecl {{.*}} f 'float &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
 
 template <typename T>

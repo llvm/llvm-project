@@ -85,15 +85,15 @@ T wrapper(T V) {
 // Check the 3 instantiations (int, float, & double).
 
 // CHECK-LABEL: FunctionDecl {{.*}} used fizz 'void (inout int)' implicit_instantiation
-// CHECK: ParmVarDecl {{.*}} used V 'int &'
+// CHECK: ParmVarDecl {{.*}} used V 'int &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
 
 // CHECK-LABEL: FunctionDecl {{.*}} used fizz 'void (inout float)' implicit_instantiation
-// CHECK: ParmVarDecl {{.*}} used V 'float &'
+// CHECK: ParmVarDecl {{.*}} used V 'float &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
 
 // CHECK-LABEL: FunctionDecl {{.*}} used fizz 'void (inout double)' implicit_instantiation
-// CHECK: ParmVarDecl {{.*}} used V 'double &'
+// CHECK: ParmVarDecl {{.*}} used V 'double &__restrict'
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
 template <typename T>
 void fizz(inout T V) {

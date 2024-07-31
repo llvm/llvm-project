@@ -1211,3 +1211,9 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
       OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Arg);
   return ExprResult(HLSLOutArgExpr::Create(Ctx, Ty, Arg, IsInOut, OpV, OpV));
 }
+
+QualType SemaHLSL::getInoutParameterType(QualType Ty) {
+  Ty = SemaRef.getASTContext().getLValueReferenceType(Ty);
+  Ty.addRestrict();
+  return Ty;
+}

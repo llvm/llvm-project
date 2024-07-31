@@ -64,6 +64,8 @@ public:
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
+
+  QualType getInoutParameterType(QualType Ty);
 };
 
 } // namespace clang
