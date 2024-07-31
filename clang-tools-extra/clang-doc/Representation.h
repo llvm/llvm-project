@@ -445,8 +445,6 @@ struct EnumInfo : public SymbolInfo {
 
   // Indicates whether this enum is scoped (e.g. enum class).
   bool Scoped = false;
-  // Indicates whether or not enum members have comments attached
-  bool HasComments = false;
 
   // Set to nonempty to the type when this is an explicitly typed enum. For
   //   enum Foo : short { ... };
