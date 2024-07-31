@@ -191,7 +191,10 @@ def use_support_substitutions(config):
     # Set up substitutions for support tools.  These tools can be overridden at the CMake
     # level (by specifying -DLLDB_LIT_TOOLS_DIR), installed, or as a last resort, we can use
     # the just-built version.
-    host_flags = ["--target=" + config.target_triple]
+    if config.enable_remote:
+        host_flags = ["--target=" + config.target_triple]
+    else:
+        host_flags = ["--target=" + config.host_triple]
     if platform.system() in ["Darwin"]:
         try:
             out = subprocess.check_output(["xcrun", "--show-sdk-path"]).strip()
