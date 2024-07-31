@@ -34,11 +34,10 @@ void RegisterAbortWithPayloadFrameRecognizer(Process *process) {
 
   if (!process)
     return;
-  ConstString sym_arr[1] = {sym_name};
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
-      std::make_shared<AbortWithPayloadFrameRecognizer>(), module_name, sym_arr,
-      /*first_instruction_only*/ false);
+      std::make_shared<AbortWithPayloadFrameRecognizer>(), module_name, 
+      sym_name, /*first_instruction_only*/ false);
 }
 
 RecognizedStackFrameSP
@@ -55,18 +54,30 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   static constexpr llvm::StringLiteral flags_key("flags");
   static constexpr llvm::StringLiteral info_key("abort_with_payload");
 
-  // We are fetching the data from registers.
-  Thread *thread = frame_sp->GetThread().get();
-  Process *process = thread->GetProcess().get();
-
-  // FIXME: Add logging for these errors
-  if (!thread)
+  Log *log = GetLog(LLDBLog::SystemRuntime);
+  
+  if (!frame_sp) {
+    LLDB_LOG(log, "abort_with_payload recognizer: invalid frame.");
     return {};
+  }
+
+  Thread *thread = frame_sp->GetThread().get();
+  if (!thread) {
+    LLDB_LOG(log, "abort_with_payload recognizer: invalid thread.");
+    return {};
+  }
+
+  Process *process = thread->GetProcess().get();
+  if (!thread) {
+    LLDB_LOG(log, "abort_with_payload recognizer: invalid process.");
+  }
 
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-  if (!scratch_ts_sp)
+  if (!scratch_ts_sp) {
+    LLDB_LOG(log, "abort_with_payload recognizer: invalid scratch typesystem.");
     return {};
+  }
 
   // The abort_with_payload signature is:
   // abort_with_payload(uint32_t reason_namespace, uint64_t reason_code,
@@ -165,15 +176,18 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   Status error;
   size_t str_len =
       process->ReadCStringFromMemory(reason_addr, reason_string, error);
-  if (error.Fail())
-    return {};
+  if (error.Fail()) {
+    // Even if we couldn't read the string, return the other data.
+    LLDB_LOG(log, "Couldn't fetch reason string: {0}.", error);
+    reason_string = "<error fetching reason string>";
+  }
 
   uint32_t flags_val = 0;
   cur_value = arg_values.GetValueAtIndex(5);
   add_to_arguments(flags_key, cur_value, false);
   flags_val = cur_value->GetScalar().UInt(flags_val);
 
-  // Okay, we've gotten all the argument values, now put then in a
+  // Okay, we've gotten all the argument values, now put them in a
   // StructuredData, and add that to the Process ExtraCrashInformation:
   StructuredData::DictionarySP abort_dict_sp(new StructuredData::Dictionary());
   abort_dict_sp->AddIntegerItem(namespace_key, namespace_val);
@@ -183,8 +197,9 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   abort_dict_sp->AddStringItem(reason_key, reason_string);
   abort_dict_sp->AddIntegerItem(flags_key, flags_val);
 
-  // This will overwrite any information in the dictionary already.
-  // But we can only crash on abort_with_payload once, so that shouldn't matter.
+  // This will overwrite the abort_with_payload information in the dictionary  
+  // already.  But we can only crash on abort_with_payload once, so that 
+  // shouldn't matter.
   process->GetExtendedCrashInfoDict()->AddItem(info_key, abort_dict_sp);
 
   return RecognizedStackFrameSP(
