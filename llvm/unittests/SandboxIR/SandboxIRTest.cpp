@@ -1623,7 +1623,6 @@ define void @foo(ptr %ptr) {
 }
 )IR");
   Function &LLVMF = *M->getFunction("foo");
-<
   sandboxir::Context Ctx(C);
   sandboxir::Function *F = Ctx.createFunction(&LLVMF);
   unsigned ArgIdx = 0;
@@ -1765,6 +1764,10 @@ bb2:
   br label %bb2
 
 bb3:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
   auto *LLVMBB1 = getBasicBlockByName(LLVMF, "bb1");
   auto *LLVMBB2 = getBasicBlockByName(LLVMF, "bb2");
   auto *LLVMBB3 = getBasicBlockByName(LLVMF, "bb3");
