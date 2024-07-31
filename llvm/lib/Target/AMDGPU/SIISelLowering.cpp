@@ -949,8 +949,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::ATOMIC_LOAD_FMAX,
                        ISD::ATOMIC_LOAD_UINC_WRAP,
                        ISD::ATOMIC_LOAD_UDEC_WRAP,
-                       ISD::ATOMIC_LOAD_COND_SUB,
-                       ISD::ATOMIC_LOAD_SUB_CLAMP,
+                       ISD::ATOMIC_LOAD_USUB_COND,
+                       ISD::ATOMIC_LOAD_USUB_SAT,
                        ISD::INTRINSIC_VOID,
                        ISD::INTRINSIC_W_CHAIN});
 

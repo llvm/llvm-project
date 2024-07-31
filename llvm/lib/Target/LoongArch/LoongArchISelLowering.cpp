@@ -4540,8 +4540,8 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation() ||
       AI->getOperation() == AtomicRMWInst::UIncWrap ||
       AI->getOperation() == AtomicRMWInst::UDecWrap ||
-      AI->getOperation() == AtomicRMWInst::CondSub ||
-      AI->getOperation() == AtomicRMWInst::SubClamp)
+      AI->getOperation() == AtomicRMWInst::USubCond ||
+      AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();

@@ -15,7 +15,7 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw sub_clamp ptr addrspace(1) %gep0, i32 %data seq_cst
+  %rtn = atomicrmw usub_sat ptr addrspace(1) %gep0, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -31,7 +31,7 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw sub_clamp ptr addrspace(1) %gep1, i32 %data seq_cst
+  %rtn = atomicrmw usub_sat ptr addrspace(1) %gep1, i32 %data seq_cst
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -46,7 +46,7 @@ define amdgpu_ps void @global_csub_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw sub_clamp ptr addrspace(1) %gep0, i32 %data seq_cst
+  %unused = atomicrmw usub_sat ptr addrspace(1) %gep0, i32 %data seq_cst
   ret void
 }
 
@@ -61,7 +61,7 @@ define amdgpu_ps void @global_csub_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw sub_clamp ptr addrspace(1) %gep1, i32 %data seq_cst
+  %unused = atomicrmw usub_sat ptr addrspace(1) %gep1, i32 %data seq_cst
   ret void
 }
 

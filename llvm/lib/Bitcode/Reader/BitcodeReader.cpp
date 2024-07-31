@@ -1349,10 +1349,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
     return AtomicRMWInst::UDecWrap;
-  case bitc::RMW_COND_SUB:
-    return AtomicRMWInst::CondSub;
-  case bitc::RMW_SUB_CLAMP:
-    return AtomicRMWInst::SubClamp;
+  case bitc::RMW_USUB_COND:
+    return AtomicRMWInst::USubCond;
+  case bitc::RMW_USUB_SAT:
+    return AtomicRMWInst::USubSat;
   }
 }
 

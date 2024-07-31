@@ -440,10 +440,10 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   %16 = atomicrmw uinc_wrap ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw udec_wrap %[[PTR1]], %[[VAL1]] acquire
   %17 = atomicrmw udec_wrap ptr %ptr1, i32 %val1 acquire
-  ; CHECK:  llvm.atomicrmw cond_sub %[[PTR1]], %[[VAL1]] acquire
-  %18 = atomicrmw cond_sub ptr %ptr1, i32 %val1 acquire
-  ; CHECK:  llvm.atomicrmw sub_clamp %[[PTR1]], %[[VAL1]] acquire
-  %19 = atomicrmw sub_clamp ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw usub_cond %[[PTR1]], %[[VAL1]] acquire
+  %18 = atomicrmw usub_cond ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw usub_sat %[[PTR1]], %[[VAL1]] acquire
+  %19 = atomicrmw usub_sat ptr %ptr1, i32 %val1 acquire
 
   ; CHECK:  llvm.atomicrmw volatile
   ; CHECK-SAME:  syncscope("singlethread")

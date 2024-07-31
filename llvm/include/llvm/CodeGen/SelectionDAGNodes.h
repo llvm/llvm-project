@@ -1470,8 +1470,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
-    case ISD::ATOMIC_LOAD_COND_SUB:
-    case ISD::ATOMIC_LOAD_SUB_CLAMP:
+    case ISD::ATOMIC_LOAD_USUB_COND:
+    case ISD::ATOMIC_LOAD_USUB_SAT:
     case ISD::ATOMIC_LOAD:
     case ISD::ATOMIC_STORE:
     case ISD::MLOAD:
@@ -1558,8 +1558,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_COND_SUB ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_SUB_CLAMP ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_USUB_SAT ||
            N->getOpcode() == ISD::ATOMIC_LOAD ||
            N->getOpcode() == ISD::ATOMIC_STORE;
   }

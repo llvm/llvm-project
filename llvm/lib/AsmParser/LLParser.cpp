@@ -8331,11 +8331,11 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   case lltok::kw_udec_wrap:
     Operation = AtomicRMWInst::UDecWrap;
     break;
-  case lltok::kw_cond_sub:
-    Operation = AtomicRMWInst::CondSub;
+  case lltok::kw_usub_cond:
+    Operation = AtomicRMWInst::USubCond;
     break;
-  case lltok::kw_sub_clamp:
-    Operation = AtomicRMWInst::SubClamp;
+  case lltok::kw_usub_sat:
+    Operation = AtomicRMWInst::USubSat;
     break;
   case lltok::kw_fadd:
     Operation = AtomicRMWInst::FAdd;

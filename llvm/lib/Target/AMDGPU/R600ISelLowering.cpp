@@ -2179,8 +2179,8 @@ R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
-  case AtomicRMWInst::CondSub:
-  case AtomicRMWInst::SubClamp:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     // FIXME: Cayman at least appears to have instructions for this, but the
     // instruction defintions appear to be missing.
     return AtomicExpansionKind::CmpXChg;

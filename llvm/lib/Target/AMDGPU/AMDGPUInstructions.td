@@ -628,16 +628,12 @@ defm int_amdgcn_flat_atomic_fadd : global_addr_space_atomic_op;
 defm int_amdgcn_global_atomic_fadd_v2bf16 : noret_op;
 defm int_amdgcn_global_atomic_fmin : noret_op;
 defm int_amdgcn_global_atomic_fmax : noret_op;
-//defm int_amdgcn_global_atomic_csub : noret_op;
 defm int_amdgcn_flat_atomic_fadd : local_addr_space_atomic_op;
 defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
 defm int_amdgcn_flat_atomic_fmin_num : noret_op;
 defm int_amdgcn_flat_atomic_fmax_num : noret_op;
 defm int_amdgcn_global_atomic_fmin_num : noret_op;
 defm int_amdgcn_global_atomic_fmax_num : noret_op;
-//defm int_amdgcn_atomic_cond_sub_u32 : local_addr_space_atomic_op;
-//defm int_amdgcn_atomic_cond_sub_u32 : flat_addr_space_atomic_op;
-//defm int_amdgcn_atomic_cond_sub_u32 : global_addr_space_atomic_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op> {
   let HasNoUse = true in
@@ -688,8 +684,8 @@ defm atomic_load_fmin : binary_atomic_op_fp_all_as<atomic_load_fmin>;
 defm atomic_load_fmax : binary_atomic_op_fp_all_as<atomic_load_fmax>;
 defm atomic_load_uinc_wrap : binary_atomic_op_all_as<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op_all_as<atomic_load_udec_wrap>;
-defm atomic_load_cond_sub : binary_atomic_op_all_as<atomic_load_cond_sub>;
-defm atomic_load_sub_clamp : binary_atomic_op_all_as<atomic_load_sub_clamp>;
+defm atomic_load_usub_cond : binary_atomic_op_all_as<atomic_load_usub_cond>;
+defm atomic_load_usub_sat : binary_atomic_op_all_as<atomic_load_usub_sat>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,

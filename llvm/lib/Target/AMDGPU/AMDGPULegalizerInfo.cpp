@@ -1638,7 +1638,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   auto &Atomics32 =
-      getActionDefinitionsBuilder({G_ATOMICRMW_COND_SUB, G_ATOMICRMW_SUB_CLAMP})
+      getActionDefinitionsBuilder({G_ATOMICRMW_USUB_COND, G_ATOMICRMW_USUB_SAT})
           .legalFor({{S32, GlobalPtr}, {S32, LocalPtr}, {S32, RegionPtr}});
   if (ST.hasFlatAddressSpace()) {
     Atomics32.legalFor({{S32, FlatPtr}});

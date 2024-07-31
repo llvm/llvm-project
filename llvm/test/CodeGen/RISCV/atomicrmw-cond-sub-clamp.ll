@@ -13,8 +13,8 @@
 ; RUN:   | FileCheck -check-prefix=RV64IA %s
 
 
-define i8 @atomicrmw_cond_sub_i8(ptr %ptr, i8 %val) {
-; RV32I-LABEL: atomicrmw_cond_sub_i8:
+define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
+; RV32I-LABEL: atomicrmw_usub_cond_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32
@@ -60,7 +60,7 @@ define i8 @atomicrmw_cond_sub_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_cond_sub_i8:
+; RV32IA-LABEL: atomicrmw_usub_cond_i8:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a3, a0, 3
@@ -106,7 +106,7 @@ define i8 @atomicrmw_cond_sub_i8(ptr %ptr, i8 %val) {
 ; RV32IA-NEXT:    srl a0, a6, a0
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_cond_sub_i8:
+; RV64I-LABEL: atomicrmw_usub_cond_i8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    .cfi_def_cfa_offset 48
@@ -152,7 +152,7 @@ define i8 @atomicrmw_cond_sub_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_cond_sub_i8:
+; RV64IA-LABEL: atomicrmw_usub_cond_i8:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a4, a0, 3
@@ -197,12 +197,12 @@ define i8 @atomicrmw_cond_sub_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:  .LBB0_5: # %atomicrmw.end
 ; RV64IA-NEXT:    srlw a0, a3, a0
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw cond_sub ptr %ptr, i8 %val seq_cst
+  %result = atomicrmw usub_cond ptr %ptr, i8 %val seq_cst
   ret i8 %result
 }
 
-define i16 @atomicrmw_cond_sub_i16(ptr %ptr, i16 %val) {
-; RV32I-LABEL: atomicrmw_cond_sub_i16:
+define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
+; RV32I-LABEL: atomicrmw_usub_cond_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32
@@ -253,7 +253,7 @@ define i16 @atomicrmw_cond_sub_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_cond_sub_i16:
+; RV32IA-LABEL: atomicrmw_usub_cond_i16:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a4, a0, 3
@@ -300,7 +300,7 @@ define i16 @atomicrmw_cond_sub_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    srl a0, a7, a0
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_cond_sub_i16:
+; RV64I-LABEL: atomicrmw_usub_cond_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    .cfi_def_cfa_offset 48
@@ -351,7 +351,7 @@ define i16 @atomicrmw_cond_sub_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_cond_sub_i16:
+; RV64IA-LABEL: atomicrmw_usub_cond_i16:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a5, a0, 3
@@ -397,12 +397,12 @@ define i16 @atomicrmw_cond_sub_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:  .LBB1_5: # %atomicrmw.end
 ; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw cond_sub ptr %ptr, i16 %val seq_cst
+  %result = atomicrmw usub_cond ptr %ptr, i16 %val seq_cst
   ret i16 %result
 }
 
-define i32 @atomicrmw_cond_sub_i32(ptr %ptr, i32 %val) {
-; RV32I-LABEL: atomicrmw_cond_sub_i32:
+define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
+; RV32I-LABEL: atomicrmw_usub_cond_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    .cfi_def_cfa_offset 16
@@ -443,7 +443,7 @@ define i32 @atomicrmw_cond_sub_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_cond_sub_i32:
+; RV32IA-LABEL: atomicrmw_usub_cond_i32:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    lw a2, 0(a0)
 ; RV32IA-NEXT:    j .LBB2_2
@@ -482,7 +482,7 @@ define i32 @atomicrmw_cond_sub_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    mv a0, a2
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_cond_sub_i32:
+; RV64I-LABEL: atomicrmw_usub_cond_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    .cfi_def_cfa_offset 48
@@ -527,7 +527,7 @@ define i32 @atomicrmw_cond_sub_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_cond_sub_i32:
+; RV64IA-LABEL: atomicrmw_usub_cond_i32:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    lw a2, 0(a0)
 ; RV64IA-NEXT:    sext.w a3, a1
@@ -566,12 +566,12 @@ define i32 @atomicrmw_cond_sub_i32(ptr %ptr, i32 %val) {
 ; RV64IA-NEXT:  .LBB2_4: # %atomicrmw.end
 ; RV64IA-NEXT:    mv a0, a2
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw cond_sub ptr %ptr, i32 %val seq_cst
+  %result = atomicrmw usub_cond ptr %ptr, i32 %val seq_cst
   ret i32 %result
 }
 
-define i64 @atomicrmw_cond_sub_i64(ptr %ptr, i64 %val) {
-; RV32I-LABEL: atomicrmw_cond_sub_i64:
+define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
+; RV32I-LABEL: atomicrmw_usub_cond_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32
@@ -631,7 +631,7 @@ define i64 @atomicrmw_cond_sub_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_cond_sub_i64:
+; RV32IA-LABEL: atomicrmw_usub_cond_i64:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    addi sp, sp, -32
 ; RV32IA-NEXT:    .cfi_def_cfa_offset 32
@@ -691,7 +691,7 @@ define i64 @atomicrmw_cond_sub_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_cond_sub_i64:
+; RV64I-LABEL: atomicrmw_usub_cond_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32
@@ -732,7 +732,7 @@ define i64 @atomicrmw_cond_sub_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_cond_sub_i64:
+; RV64IA-LABEL: atomicrmw_usub_cond_i64:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    ld a2, 0(a0)
 ; RV64IA-NEXT:    j .LBB3_2
@@ -770,12 +770,12 @@ define i64 @atomicrmw_cond_sub_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:  .LBB3_4: # %atomicrmw.end
 ; RV64IA-NEXT:    mv a0, a2
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw cond_sub ptr %ptr, i64 %val seq_cst
+  %result = atomicrmw usub_cond ptr %ptr, i64 %val seq_cst
   ret i64 %result
 }
 
-define i8 @atomicrmw_sub_clamp_i8(ptr %ptr, i8 %val) {
-; RV32I-LABEL: atomicrmw_sub_clamp_i8:
+define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
+; RV32I-LABEL: atomicrmw_usub_sat_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32
@@ -815,7 +815,7 @@ define i8 @atomicrmw_sub_clamp_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_clamp_i8:
+; RV32IA-LABEL: atomicrmw_usub_sat_i8:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a3, a0, 3
@@ -853,7 +853,7 @@ define i8 @atomicrmw_sub_clamp_i8(ptr %ptr, i8 %val) {
 ; RV32IA-NEXT:    srl a0, a5, a0
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_sub_clamp_i8:
+; RV64I-LABEL: atomicrmw_usub_sat_i8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    .cfi_def_cfa_offset 48
@@ -893,7 +893,7 @@ define i8 @atomicrmw_sub_clamp_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_clamp_i8:
+; RV64IA-LABEL: atomicrmw_usub_sat_i8:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a4, a0, 3
@@ -930,12 +930,12 @@ define i8 @atomicrmw_sub_clamp_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV64IA-NEXT:    srlw a0, a3, a0
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw sub_clamp ptr %ptr, i8 %val seq_cst
+  %result = atomicrmw usub_sat ptr %ptr, i8 %val seq_cst
   ret i8 %result
 }
 
-define i16 @atomicrmw_sub_clamp_i16(ptr %ptr, i16 %val) {
-; RV32I-LABEL: atomicrmw_sub_clamp_i16:
+define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
+; RV32I-LABEL: atomicrmw_usub_sat_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32
@@ -980,7 +980,7 @@ define i16 @atomicrmw_sub_clamp_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_clamp_i16:
+; RV32IA-LABEL: atomicrmw_usub_sat_i16:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a0, -4
 ; RV32IA-NEXT:    slli a4, a0, 3
@@ -1019,7 +1019,7 @@ define i16 @atomicrmw_sub_clamp_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    srl a0, a6, a0
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_sub_clamp_i16:
+; RV64I-LABEL: atomicrmw_usub_sat_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    .cfi_def_cfa_offset 48
@@ -1064,7 +1064,7 @@ define i16 @atomicrmw_sub_clamp_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_clamp_i16:
+; RV64IA-LABEL: atomicrmw_usub_sat_i16:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
 ; RV64IA-NEXT:    slli a5, a0, 3
@@ -1102,12 +1102,12 @@ define i16 @atomicrmw_sub_clamp_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV64IA-NEXT:    srlw a0, a4, a0
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw sub_clamp ptr %ptr, i16 %val seq_cst
+  %result = atomicrmw usub_sat ptr %ptr, i16 %val seq_cst
   ret i16 %result
 }
 
-define i32 @atomicrmw_sub_clamp_i32(ptr %ptr, i32 %val) {
-; RV32I-LABEL: atomicrmw_sub_clamp_i32:
+define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
+; RV32I-LABEL: atomicrmw_usub_sat_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    .cfi_def_cfa_offset 16
@@ -1142,7 +1142,7 @@ define i32 @atomicrmw_sub_clamp_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_clamp_i32:
+; RV32IA-LABEL: atomicrmw_usub_sat_i32:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    lw a2, 0(a0)
 ; RV32IA-NEXT:  .LBB6_1: # %atomicrmw.start
@@ -1167,7 +1167,7 @@ define i32 @atomicrmw_sub_clamp_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    mv a0, a2
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_sub_clamp_i32:
+; RV64I-LABEL: atomicrmw_usub_sat_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -48
 ; RV64I-NEXT:    .cfi_def_cfa_offset 48
@@ -1206,7 +1206,7 @@ define i32 @atomicrmw_sub_clamp_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_clamp_i32:
+; RV64IA-LABEL: atomicrmw_usub_sat_i32:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    lw a2, 0(a0)
 ; RV64IA-NEXT:    sext.w a3, a1
@@ -1231,12 +1231,12 @@ define i32 @atomicrmw_sub_clamp_i32(ptr %ptr, i32 %val) {
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV64IA-NEXT:    mv a0, a2
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw sub_clamp ptr %ptr, i32 %val seq_cst
+  %result = atomicrmw usub_sat ptr %ptr, i32 %val seq_cst
   ret i32 %result
 }
 
-define i64 @atomicrmw_sub_clamp_i64(ptr %ptr, i64 %val) {
-; RV32I-LABEL: atomicrmw_sub_clamp_i64:
+define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
+; RV32I-LABEL: atomicrmw_usub_sat_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32
@@ -1292,7 +1292,7 @@ define i64 @atomicrmw_sub_clamp_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_clamp_i64:
+; RV32IA-LABEL: atomicrmw_usub_sat_i64:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    addi sp, sp, -32
 ; RV32IA-NEXT:    .cfi_def_cfa_offset 32
@@ -1348,7 +1348,7 @@ define i64 @atomicrmw_sub_clamp_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    addi sp, sp, 32
 ; RV32IA-NEXT:    ret
 ;
-; RV64I-LABEL: atomicrmw_sub_clamp_i64:
+; RV64I-LABEL: atomicrmw_usub_sat_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32
@@ -1383,7 +1383,7 @@ define i64 @atomicrmw_sub_clamp_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_clamp_i64:
+; RV64IA-LABEL: atomicrmw_usub_sat_i64:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    ld a2, 0(a0)
 ; RV64IA-NEXT:  .LBB7_1: # %atomicrmw.start
@@ -1407,6 +1407,6 @@ define i64 @atomicrmw_sub_clamp_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV64IA-NEXT:    mv a0, a2
 ; RV64IA-NEXT:    ret
-  %result = atomicrmw sub_clamp ptr %ptr, i64 %val seq_cst
+  %result = atomicrmw usub_sat ptr %ptr, i64 %val seq_cst
   ret i64 %result
 }

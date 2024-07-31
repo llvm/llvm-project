@@ -13,7 +13,7 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(ptr add
 ; OPT-NEXT:    br i1 [[CMP]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT:       if:
 ; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN:%.*]], i32 7
-; OPT-NEXT:    [[VAL:%.*]] = atomicrmw sub_clamp ptr addrspace(1) [[IN_GEP]], i32 2 seq_cst, align 4
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[IN_GEP]], i32 2 seq_cst, align 4
 ; OPT-NEXT:    br label [[ENDIF]]
 ; OPT:       endif:
 ; OPT-NEXT:    [[X:%.*]] = phi i32 [ [[VAL]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
@@ -52,7 +52,7 @@ entry:
 
 if:
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i32 7
-  %val = atomicrmw sub_clamp ptr addrspace(1) %in.gep, i32 2 seq_cst
+  %val = atomicrmw usub_sat ptr addrspace(1) %in.gep, i32 2 seq_cst
   br label %endif
 
 endif:

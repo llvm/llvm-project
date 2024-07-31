@@ -7,7 +7,7 @@
 ; GFX12PLUS: global_atomic_sub_clamp_u32 v0, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 define amdgpu_kernel void @global_atomic_csub_rtn(ptr addrspace(1) %ptr, i32 %data) {
 main_body:
-  %ret = atomicrmw sub_clamp ptr addrspace(1) %ptr, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst
   ret void
 }
 
@@ -16,7 +16,7 @@ main_body:
 ; GFX12PLUS: global_atomic_sub_clamp_u32 v0, v1, s[0:1]
 define amdgpu_kernel void @global_atomic_csub_no_rtn(ptr addrspace(1) %ptr, i32 %data) #0 {
 main_body:
-  %ret = atomicrmw sub_clamp ptr addrspace(1) %ptr, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst
   ret void
 }
 
@@ -26,7 +26,7 @@ main_body:
 define amdgpu_kernel void @global_atomic_csub_off4_rtn(ptr addrspace(1) %ptr, i32 %data) {
 main_body:
   %p = getelementptr i32, ptr addrspace(1) %ptr, i64 1
-  %ret = atomicrmw sub_clamp ptr addrspace(1) %p, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %p, i32 %data seq_cst
   ret void
 }
 
@@ -36,7 +36,7 @@ main_body:
 define amdgpu_kernel void @global_atomic_csub_off4_no_rtn(ptr addrspace(1) %ptr, i32 %data) #0 {
 main_body:
   %p = getelementptr i32, ptr addrspace(1) %ptr, i64 1
-  %ret = atomicrmw sub_clamp ptr addrspace(1) %p, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %p, i32 %data seq_cst
   ret void
 }
 

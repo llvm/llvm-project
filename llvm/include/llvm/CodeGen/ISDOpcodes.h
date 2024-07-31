@@ -1292,8 +1292,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
-  ATOMIC_LOAD_COND_SUB,
-  ATOMIC_LOAD_SUB_CLAMP,
+  ATOMIC_LOAD_USUB_COND,
+  ATOMIC_LOAD_USUB_SAT,
 
   // Masked load and store - consecutive vector load and store operations
   // with additional mask operand that prevents memory accesses to the

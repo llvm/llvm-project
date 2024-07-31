@@ -485,8 +485,8 @@ enum RMWOperations {
   RMW_FMIN = 14,
   RMW_UINC_WRAP = 15,
   RMW_UDEC_WRAP = 16,
-  RMW_COND_SUB = 17,
-  RMW_SUB_CLAMP = 18
+  RMW_USUB_COND = 17,
+  RMW_USUB_SAT = 18
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing

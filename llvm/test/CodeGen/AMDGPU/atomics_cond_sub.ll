@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-GISEL %s
 
-define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
-; GFX12-SDAG-LABEL: flat_atomic_cond_sub_no_rtn_u32:
+define amdgpu_kernel void @flat_atomic_usub_cond_no_rtn_u32(ptr %addr, i32 %in) {
+; GFX12-SDAG-LABEL: flat_atomic_usub_cond_no_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -14,7 +14,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: flat_atomic_cond_sub_no_rtn_u32:
+; GFX12-GISEL-LABEL: flat_atomic_usub_cond_no_rtn_u32:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -26,12 +26,12 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 -4
-  %unused = atomicrmw cond_sub ptr %gep, i32 %in seq_cst
+  %unused = atomicrmw usub_cond ptr %gep, i32 %in seq_cst
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32_forced(ptr %addr, i32 %in) "target-features"="+atomic-csub-no-rtn-insts" {
-; GFX12-SDAG-LABEL: flat_atomic_cond_sub_no_rtn_u32_forced:
+define amdgpu_kernel void @flat_atomic_usub_cond_no_rtn_u32_forced(ptr %addr, i32 %in) "target-features"="+atomic-csub-no-rtn-insts" {
+; GFX12-SDAG-LABEL: flat_atomic_usub_cond_no_rtn_u32_forced:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -42,7 +42,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32_forced(ptr %addr, i32
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: flat_atomic_cond_sub_no_rtn_u32_forced:
+; GFX12-GISEL-LABEL: flat_atomic_usub_cond_no_rtn_u32_forced:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -54,12 +54,12 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32_forced(ptr %addr, i32
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 -4
-  %unused = atomicrmw cond_sub ptr %gep, i32 %in seq_cst
+  %unused = atomicrmw usub_cond ptr %gep, i32 %in seq_cst
   ret void
 }
 
-define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr %use) {
-; GFX12-SDAG-LABEL: flat_atomic_cond_sub_rtn_u32:
+define amdgpu_kernel void @flat_atomic_usub_cond_rtn_u32(ptr %addr, i32 %in, ptr %use) {
+; GFX12-SDAG-LABEL: flat_atomic_usub_cond_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_clause 0x1
 ; GFX12-SDAG-NEXT:    s_load_b96 s[4:6], s[0:1], 0x24
@@ -74,7 +74,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr 
 ; GFX12-SDAG-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: flat_atomic_cond_sub_rtn_u32:
+; GFX12-GISEL-LABEL: flat_atomic_usub_cond_rtn_u32:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_clause 0x1
 ; GFX12-GISEL-NEXT:    s_load_b96 s[4:6], s[0:1], 0x24
@@ -90,13 +90,13 @@ define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr 
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 4
-  %val = atomicrmw cond_sub ptr %gep, i32 %in seq_cst
+  %val = atomicrmw usub_cond ptr %gep, i32 %in seq_cst
   store i32 %val, ptr %use
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32(ptr addrspace(1) %addr, i32 %in) {
-; GFX12-SDAG-LABEL: global_atomic_cond_sub_no_rtn_u32:
+define amdgpu_kernel void @global_atomic_usub_cond_no_rtn_u32(ptr addrspace(1) %addr, i32 %in) {
+; GFX12-SDAG-LABEL: global_atomic_usub_cond_no_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -106,7 +106,7 @@ define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32(ptr addrspace(1) %a
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: global_atomic_cond_sub_no_rtn_u32:
+; GFX12-GISEL-LABEL: global_atomic_usub_cond_no_rtn_u32:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -117,12 +117,12 @@ define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32(ptr addrspace(1) %a
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %addr, i32 -4
-  %unused = atomicrmw cond_sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %unused = atomicrmw usub_cond ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32_forced(ptr addrspace(1) %addr, i32 %in) "target-features"="+atomic-csub-no-rtn-insts" {
-; GFX12-SDAG-LABEL: global_atomic_cond_sub_no_rtn_u32_forced:
+define amdgpu_kernel void @global_atomic_usub_cond_no_rtn_u32_forced(ptr addrspace(1) %addr, i32 %in) "target-features"="+atomic-csub-no-rtn-insts" {
+; GFX12-SDAG-LABEL: global_atomic_usub_cond_no_rtn_u32_forced:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -132,7 +132,7 @@ define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32_forced(ptr addrspac
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: global_atomic_cond_sub_no_rtn_u32_forced:
+; GFX12-GISEL-LABEL: global_atomic_usub_cond_no_rtn_u32_forced:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -143,12 +143,12 @@ define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32_forced(ptr addrspac
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %addr, i32 -4
-  %unused = atomicrmw cond_sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %unused = atomicrmw usub_cond ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_cond_sub_rtn_u32(ptr addrspace(1) %addr, i32 %in, ptr addrspace(1) %use) {
-; GFX12-SDAG-LABEL: global_atomic_cond_sub_rtn_u32:
+define amdgpu_kernel void @global_atomic_usub_cond_rtn_u32(ptr addrspace(1) %addr, i32 %in, ptr addrspace(1) %use) {
+; GFX12-SDAG-LABEL: global_atomic_usub_cond_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b96 s[4:6], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
@@ -163,7 +163,7 @@ define amdgpu_kernel void @global_atomic_cond_sub_rtn_u32(ptr addrspace(1) %addr
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: global_atomic_cond_sub_rtn_u32:
+; GFX12-GISEL-LABEL: global_atomic_usub_cond_rtn_u32:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_clause 0x1
 ; GFX12-GISEL-NEXT:    s_load_b96 s[4:6], s[0:1], 0x24
@@ -179,13 +179,13 @@ define amdgpu_kernel void @global_atomic_cond_sub_rtn_u32(ptr addrspace(1) %addr
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %addr, i32 4
-  %val = atomicrmw cond_sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw usub_cond ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %use
   ret void
 }
 
-define amdgpu_kernel void @ds_cond_sub_no_rtn_u32(ptr addrspace(3) %addr, i32 %in) {
-; GFX12-SDAG-LABEL: ds_cond_sub_no_rtn_u32:
+define amdgpu_kernel void @ds_usub_cond_no_rtn_u32(ptr addrspace(3) %addr, i32 %in) {
+; GFX12-SDAG-LABEL: ds_usub_cond_no_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -197,7 +197,7 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32(ptr addrspace(3) %addr, i32 %i
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: ds_cond_sub_no_rtn_u32:
+; GFX12-GISEL-LABEL: ds_usub_cond_no_rtn_u32:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -210,12 +210,12 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32(ptr addrspace(3) %addr, i32 %i
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %addr, i32 -4
-  %unused = atomicrmw cond_sub ptr addrspace(3) %gep, i32 %in seq_cst
+  %unused = atomicrmw usub_cond ptr addrspace(3) %gep, i32 %in seq_cst
   ret void
 }
 
-define amdgpu_kernel void @ds_cond_sub_no_rtn_u32_forced(ptr addrspace(3) %addr, i32 %in) "target-features"="+atomic-csub-no-rtn-insts" {
-; GFX12-SDAG-LABEL: ds_cond_sub_no_rtn_u32_forced:
+define amdgpu_kernel void @ds_usub_cond_no_rtn_u32_forced(ptr addrspace(3) %addr, i32 %in) "target-features"="+atomic-csub-no-rtn-insts" {
+; GFX12-SDAG-LABEL: ds_usub_cond_no_rtn_u32_forced:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -227,7 +227,7 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32_forced(ptr addrspace(3) %addr,
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: ds_cond_sub_no_rtn_u32_forced:
+; GFX12-GISEL-LABEL: ds_usub_cond_no_rtn_u32_forced:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -240,12 +240,12 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32_forced(ptr addrspace(3) %addr,
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %addr, i32 -4
-  %unused = atomicrmw cond_sub ptr addrspace(3) %gep, i32 %in seq_cst
+  %unused = atomicrmw usub_cond ptr addrspace(3) %gep, i32 %in seq_cst
   ret void
 }
 
-define amdgpu_kernel void @ds_cond_sub_rtn_u32(ptr addrspace(3) %addr, i32 %in, ptr addrspace(3) %use) {
-; GFX12-SDAG-LABEL: ds_cond_sub_rtn_u32:
+define amdgpu_kernel void @ds_usub_cond_rtn_u32(ptr addrspace(3) %addr, i32 %in, ptr addrspace(3) %use) {
+; GFX12-SDAG-LABEL: ds_usub_cond_rtn_u32:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -257,7 +257,7 @@ define amdgpu_kernel void @ds_cond_sub_rtn_u32(ptr addrspace(3) %addr, i32 %in, 
 ; GFX12-SDAG-NEXT:    ds_store_b32 v1, v0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX12-GISEL-LABEL: ds_cond_sub_rtn_u32:
+; GFX12-GISEL-LABEL: ds_usub_cond_rtn_u32:
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -270,7 +270,7 @@ define amdgpu_kernel void @ds_cond_sub_rtn_u32(ptr addrspace(3) %addr, i32 %in, 
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %addr, i32 4
-  %val = atomicrmw cond_sub ptr addrspace(3) %gep, i32 %in seq_cst
+  %val = atomicrmw usub_cond ptr addrspace(3) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(3) %use
   ret void
 }

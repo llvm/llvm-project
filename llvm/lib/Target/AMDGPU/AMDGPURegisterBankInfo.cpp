@@ -5220,8 +5220,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_FMAX:
   case AMDGPU::G_ATOMICRMW_UINC_WRAP:
   case AMDGPU::G_ATOMICRMW_UDEC_WRAP:
-  case AMDGPU::G_ATOMICRMW_COND_SUB:
-  case AMDGPU::G_ATOMICRMW_SUB_CLAMP:
+  case AMDGPU::G_ATOMICRMW_USUB_COND:
+  case AMDGPU::G_ATOMICRMW_USUB_SAT:
   case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG: {
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());

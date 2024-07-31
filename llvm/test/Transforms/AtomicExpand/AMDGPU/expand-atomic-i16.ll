@@ -1366,8 +1366,8 @@ define i16 @test_atomicrmw_add_i16_buffer_fat_agent_align4(ptr addrspace(7) %ptr
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_cond_sub_i16_global_agent(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i16_global_agent(
+define i16 @test_atomicrmw_usub_cond_i16_global_agent(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_global_agent(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1397,12 +1397,12 @@ define i16 @test_atomicrmw_cond_sub_i16_global_agent(ptr addrspace(1) %ptr, i16 
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_cond_sub_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i16_global_agent_align4(
+define i16 @test_atomicrmw_usub_cond_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1422,12 +1422,12 @@ define i16 @test_atomicrmw_cond_sub_i16_global_agent_align4(ptr addrspace(1) %pt
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_cond_sub_i16_local(ptr addrspace(3) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i16_local(
+define i16 @test_atomicrmw_usub_cond_i16_local(ptr addrspace(3) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_local(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -1456,12 +1456,12 @@ define i16 @test_atomicrmw_cond_sub_i16_local(ptr addrspace(3) %ptr, i16 %value)
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(3) %ptr, i16 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_cond ptr addrspace(3) %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_cond_sub_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i16_local_align4(
+define i16 @test_atomicrmw_usub_cond_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_local_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1481,12 +1481,12 @@ define i16 @test_atomicrmw_cond_sub_i16_local_align4(ptr addrspace(3) %ptr, i16 
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(3) %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_cond ptr addrspace(3) %ptr, i16 %value syncscope("agent") seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_cond_sub_i16_flat_agent(ptr %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i16_flat_agent(
+define i16 @test_atomicrmw_usub_cond_i16_flat_agent(ptr %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_flat_agent(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1516,12 +1516,12 @@ define i16 @test_atomicrmw_cond_sub_i16_flat_agent(ptr %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr %ptr, i16 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_cond ptr %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_cond_sub_i16_flat_agent_align4(ptr %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i16_flat_agent_align4(
+define i16 @test_atomicrmw_usub_cond_i16_flat_agent_align4(ptr %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_flat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1541,12 +1541,12 @@ define i16 @test_atomicrmw_cond_sub_i16_flat_agent_align4(ptr %ptr, i16 %value) 
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw cond_sub ptr %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_cond ptr %ptr, i16 %value syncscope("agent") seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_sub_clamp_i16_global_agent(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i16_global_agent(
+define i16 @test_atomicrmw_usub_sat_i16_global_agent(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_global_agent(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1576,12 +1576,12 @@ define i16 @test_atomicrmw_sub_clamp_i16_global_agent(ptr addrspace(1) %ptr, i16
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_sub_clamp_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i16_global_agent_align4(
+define i16 @test_atomicrmw_usub_sat_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1601,12 +1601,12 @@ define i16 @test_atomicrmw_sub_clamp_i16_global_agent_align4(ptr addrspace(1) %p
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_sub_clamp_i16_local(ptr addrspace(3) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i16_local(
+define i16 @test_atomicrmw_usub_sat_i16_local(ptr addrspace(3) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_local(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -1635,12 +1635,12 @@ define i16 @test_atomicrmw_sub_clamp_i16_local(ptr addrspace(3) %ptr, i16 %value
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(3) %ptr, i16 %value seq_cst
+  %res = atomicrmw usub_sat ptr addrspace(3) %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_sub_clamp_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i16_local_align4(
+define i16 @test_atomicrmw_usub_sat_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_local_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1660,12 +1660,12 @@ define i16 @test_atomicrmw_sub_clamp_i16_local_align4(ptr addrspace(3) %ptr, i16
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(3) %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw usub_sat ptr addrspace(3) %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_sub_clamp_i16_flat_agent(ptr %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i16_flat_agent(
+define i16 @test_atomicrmw_usub_sat_i16_flat_agent(ptr %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_flat_agent(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1695,12 +1695,12 @@ define i16 @test_atomicrmw_sub_clamp_i16_flat_agent(ptr %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr %ptr, i16 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_sat ptr %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_sub_clamp_i16_flat_agent_align4(ptr %ptr, i16 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i16_flat_agent_align4(
+define i16 @test_atomicrmw_usub_sat_i16_flat_agent_align4(ptr %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_flat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1720,7 +1720,7 @@ define i16 @test_atomicrmw_sub_clamp_i16_flat_agent_align4(ptr %ptr, i16 %value)
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw sub_clamp ptr %ptr, i16 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_sat ptr %ptr, i16 %value syncscope("agent") seq_cst, align 4
   ret i16 %res
 }
 

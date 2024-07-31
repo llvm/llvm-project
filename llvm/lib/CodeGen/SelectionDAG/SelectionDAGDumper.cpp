@@ -102,10 +102,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
     return "AtomicLoadUDecWrap";
-  case ISD::ATOMIC_LOAD_COND_SUB:
-    return "AtomicLoadCondSub";
-  case ISD::ATOMIC_LOAD_SUB_CLAMP:
-    return "AtomicLoadSubClamp";
+  case ISD::ATOMIC_LOAD_USUB_COND:
+    return "AtomicLoadUSubCond";
+  case ISD::ATOMIC_LOAD_USUB_SAT:
+    return "AtomicLoadUSubSat";
   case ISD::ATOMIC_LOAD:                return "AtomicLoad";
   case ISD::ATOMIC_STORE:               return "AtomicStore";
   case ISD::PCMARKER:                   return "PCMarker";

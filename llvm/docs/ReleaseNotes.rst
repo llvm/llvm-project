@@ -80,7 +80,7 @@ Changes to the LLVM IR
     removed. The next argument has been changed from byte index to bit
     index.
 
-* Added ``cond_sub`` and ``sub_clamp`` operations to ``atomicrmw``.
+* Added ``usub_cond`` and ``usub_sat`` operations to ``atomicrmw``.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -136,7 +136,7 @@ Changes to the AMDGPU Backend
 
 * Removed ``llvm.amdgcn.atomic.cond.sub.u32`` and
   ``llvm.amdgcn.atomic.csub.u32`` intrinsics. :ref:`atomicrmw <i_atomicrmw>`
-  should be used instead with ``cond_sub`` and ``sub_clamp``.
+  should be used instead with ``usub_cond`` and ``usub_sat``.
 
 Changes to the ARM Backend
 --------------------------

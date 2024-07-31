@@ -3619,8 +3619,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ATOMICRMW_UMAX:
   case TargetOpcode::G_ATOMICRMW_UINC_WRAP:
   case TargetOpcode::G_ATOMICRMW_UDEC_WRAP:
-  case TargetOpcode::G_ATOMICRMW_COND_SUB:
-  case TargetOpcode::G_ATOMICRMW_SUB_CLAMP:
+  case TargetOpcode::G_ATOMICRMW_USUB_COND:
+  case TargetOpcode::G_ATOMICRMW_USUB_SAT:
   case TargetOpcode::G_ATOMICRMW_FADD:
   case TargetOpcode::G_ATOMICRMW_FMIN:
   case TargetOpcode::G_ATOMICRMW_FMAX:

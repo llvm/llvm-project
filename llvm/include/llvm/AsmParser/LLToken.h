@@ -268,8 +268,8 @@ enum Kind {
   kw_fmin,
   kw_uinc_wrap,
   kw_udec_wrap,
-  kw_cond_sub,
-  kw_sub_clamp,
+  kw_usub_cond,
+  kw_usub_sat,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,

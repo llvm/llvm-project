@@ -8580,8 +8580,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-          Opcode == ISD::ATOMIC_LOAD_COND_SUB ||
-          Opcode == ISD::ATOMIC_LOAD_SUB_CLAMP || Opcode == ISD::ATOMIC_SWAP ||
+          Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
+          Opcode == ISD::ATOMIC_LOAD_USUB_SAT || Opcode == ISD::ATOMIC_SWAP ||
           Opcode == ISD::ATOMIC_STORE) &&
          "Invalid Atomic Op");
 

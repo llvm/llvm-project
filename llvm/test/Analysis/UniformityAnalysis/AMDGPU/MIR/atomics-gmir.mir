@@ -81,11 +81,11 @@ body:             |
     ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UDEC_WRAP
     %20:_(s32) = G_ATOMICRMW_UDEC_WRAP %1, %5
 
-    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_COND_SUB
-    %21:_(s32) = G_ATOMICRMW_COND_SUB %1, %5
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_USUB_COND
+    %21:_(s32) = G_ATOMICRMW_USUB_COND %1, %5
 
-    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_SUB_CLAMP
-    %22:_(s32) = G_ATOMICRMW_SUB_CLAMP %1, %5
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_USUB_SAT
+    %22:_(s32) = G_ATOMICRMW_USUB_SAT %1, %5
 
     $vgpr0 = COPY %4(s32)
     SI_RETURN implicit $vgpr0

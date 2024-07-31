@@ -12,7 +12,7 @@ define i32 @shl_base_atomicrmw_global_atomic_csub_ptr(ptr addrspace(1) %out, ptr
   %cast = ptrtoint ptr addrspace(1) %arrayidx0 to i64
   %shl = shl i64 %cast, 2
   %castback = inttoptr i64 %shl to ptr addrspace(1)
-  %val = atomicrmw sub_clamp ptr addrspace(1) %castback, i32 43 seq_cst
+  %val = atomicrmw usub_sat ptr addrspace(1) %castback, i32 43 seq_cst
   store volatile i64 %cast, ptr addrspace(1) %extra.use, align 4
   ret i32 %val
 }

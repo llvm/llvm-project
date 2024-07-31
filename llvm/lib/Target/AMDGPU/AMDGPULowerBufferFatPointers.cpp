@@ -1151,11 +1151,11 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       report_fatal_error("wrapping increment/decrement not supported for "
                          "buffer resources and should've been expanded away");
       break;
-    case AtomicRMWInst::CondSub:
+    case AtomicRMWInst::USubCond:
       report_fatal_error("conditional subtract not supported for buffer "
                          "resources and should've been expanded away");
       break;
-    case AtomicRMWInst::SubClamp:
+    case AtomicRMWInst::USubSat:
       report_fatal_error("subtract with clamp not supported for buffer "
                          "resources and should've been expanded away");
       break;

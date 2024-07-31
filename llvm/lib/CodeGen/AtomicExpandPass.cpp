@@ -869,8 +869,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
-  case AtomicRMWInst::CondSub:
-  case AtomicRMWInst::SubClamp: {
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat: {
     // Finally, other ops will operate on the full value, so truncate down to
     // the original size, and expand out again after doing the
     // operation. Bitcasts will be inserted for FP values.
@@ -1544,8 +1544,8 @@ bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
-  case AtomicRMWInst::CondSub:
-  case AtomicRMWInst::SubClamp:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return C->isZero();
   case AtomicRMWInst::And:
     return C->isMinusOne();
@@ -1787,8 +1787,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
-  case AtomicRMWInst::CondSub:
-  case AtomicRMWInst::SubClamp:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     // No atomic libcalls are available for max/min/umax/umin.
     return {};
   }

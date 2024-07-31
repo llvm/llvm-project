@@ -1713,8 +1713,8 @@ define i8 @test_atomicrmw_add_i8_buffer_fat_agent_align4(ptr addrspace(7) %ptr, 
   ret i8 %res
 }
 
-define i8 @test_atomicrmw_cond_sub_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_cond_sub_i8_global_agent(
+define i8 @test_atomicrmw_usub_cond_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_cond_i8_global_agent(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1744,7 +1744,7 @@ define i8 @test_atomicrmw_cond_sub_i8_global_agent(ptr addrspace(1) %ptr, i8 %va
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_cond_sub_i8_global_agent(
+; R600-LABEL: @test_atomicrmw_usub_cond_i8_global_agent(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -1773,12 +1773,12 @@ define i8 @test_atomicrmw_cond_sub_i8_global_agent(ptr addrspace(1) %ptr, i8 %va
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_cond_sub_i8_global_agent_align2(
+define i8 @test_atomicrmw_usub_cond_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_cond_i8_global_agent_align2(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1808,7 +1808,7 @@ define i8 @test_atomicrmw_cond_sub_i8_global_agent_align2(ptr addrspace(1) %ptr,
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_cond_sub_i8_global_agent_align2(
+; R600-LABEL: @test_atomicrmw_usub_cond_i8_global_agent_align2(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -1837,12 +1837,12 @@ define i8 @test_atomicrmw_cond_sub_i8_global_agent_align2(ptr addrspace(1) %ptr,
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 2
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 2
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i8_global_agent_align4(
+define i8 @test_atomicrmw_usub_cond_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1862,12 +1862,12 @@ define i8 @test_atomicrmw_cond_sub_i8_global_agent_align4(ptr addrspace(1) %ptr,
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED1]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 4
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_local(ptr addrspace(3) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i8_local(
+define i8 @test_atomicrmw_usub_cond_i8_local(ptr addrspace(3) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_local(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -1896,12 +1896,12 @@ define i8 @test_atomicrmw_cond_sub_i8_local(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(3) %ptr, i8 %value seq_cst
+  %res = atomicrmw usub_cond ptr addrspace(3) %ptr, i8 %value seq_cst
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i8_local_align2(
+define i8 @test_atomicrmw_usub_cond_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_local_align2(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -1930,12 +1930,12 @@ define i8 @test_atomicrmw_cond_sub_i8_local_align2(ptr addrspace(3) %ptr, i8 %va
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(3) %ptr, i8 %value seq_cst, align 2
+  %res = atomicrmw usub_cond ptr addrspace(3) %ptr, i8 %value seq_cst, align 2
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i8_local_align4(
+define i8 @test_atomicrmw_usub_cond_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_local_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -1955,12 +1955,12 @@ define i8 @test_atomicrmw_cond_sub_i8_local_align4(ptr addrspace(3) %ptr, i8 %va
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED1]]
 ;
-  %res = atomicrmw cond_sub ptr addrspace(3) %ptr, i8 %value seq_cst, align 4
+  %res = atomicrmw usub_cond ptr addrspace(3) %ptr, i8 %value seq_cst, align 4
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_flat_agent(ptr %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_cond_sub_i8_flat_agent(
+define i8 @test_atomicrmw_usub_cond_i8_flat_agent(ptr %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -1990,7 +1990,7 @@ define i8 @test_atomicrmw_cond_sub_i8_flat_agent(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_cond_sub_i8_flat_agent(
+; R600-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2019,12 +2019,12 @@ define i8 @test_atomicrmw_cond_sub_i8_flat_agent(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr %ptr, i8 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_cond ptr %ptr, i8 %value syncscope("agent") seq_cst
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_flat_agent_align2(ptr %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_cond_sub_i8_flat_agent_align2(
+define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent_align2(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -2054,7 +2054,7 @@ define i8 @test_atomicrmw_cond_sub_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_cond_sub_i8_flat_agent_align2(
+; R600-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent_align2(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2083,12 +2083,12 @@ define i8 @test_atomicrmw_cond_sub_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw cond_sub ptr %ptr, i8 %value syncscope("agent") seq_cst, align 2
+  %res = atomicrmw usub_cond ptr %ptr, i8 %value syncscope("agent") seq_cst, align 2
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_cond_sub_i8_flat_agent_align4(ptr %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_cond_sub_i8_flat_agent_align4(
+define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align4(ptr %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -2108,12 +2108,12 @@ define i8 @test_atomicrmw_cond_sub_i8_flat_agent_align4(ptr %ptr, i8 %value) {
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED1]]
 ;
-  %res = atomicrmw cond_sub ptr %ptr, i8 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_cond ptr %ptr, i8 %value syncscope("agent") seq_cst, align 4
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_sub_clamp_i8_global_agent(
+define i8 @test_atomicrmw_usub_sat_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_sat_i8_global_agent(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -2143,7 +2143,7 @@ define i8 @test_atomicrmw_sub_clamp_i8_global_agent(ptr addrspace(1) %ptr, i8 %v
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_sub_clamp_i8_global_agent(
+; R600-LABEL: @test_atomicrmw_usub_sat_i8_global_agent(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2172,12 +2172,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_global_agent(ptr addrspace(1) %ptr, i8 %v
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_sub_clamp_i8_global_agent_align2(
+define i8 @test_atomicrmw_usub_sat_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_sat_i8_global_agent_align2(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -2207,7 +2207,7 @@ define i8 @test_atomicrmw_sub_clamp_i8_global_agent_align2(ptr addrspace(1) %ptr
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_sub_clamp_i8_global_agent_align2(
+; R600-LABEL: @test_atomicrmw_usub_sat_i8_global_agent_align2(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2236,12 +2236,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_global_agent_align2(ptr addrspace(1) %ptr
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 2
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 2
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i8_global_agent_align4(
+define i8 @test_atomicrmw_usub_sat_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -2261,12 +2261,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_global_agent_align4(ptr addrspace(1) %ptr
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED1]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i8 %value syncscope("agent") seq_cst, align 4
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_local(ptr addrspace(3) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i8_local(
+define i8 @test_atomicrmw_usub_sat_i8_local(ptr addrspace(3) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_local(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2295,12 +2295,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_local(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(3) %ptr, i8 %value seq_cst
+  %res = atomicrmw usub_sat ptr addrspace(3) %ptr, i8 %value seq_cst
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i8_local_align2(
+define i8 @test_atomicrmw_usub_sat_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_local_align2(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2329,12 +2329,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_local_align2(ptr addrspace(3) %ptr, i8 %v
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(3) %ptr, i8 %value seq_cst, align 2
+  %res = atomicrmw usub_sat ptr addrspace(3) %ptr, i8 %value seq_cst, align 2
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i8_local_align4(
+define i8 @test_atomicrmw_usub_sat_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_local_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -2354,12 +2354,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_local_align4(ptr addrspace(3) %ptr, i8 %v
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED1]]
 ;
-  %res = atomicrmw sub_clamp ptr addrspace(3) %ptr, i8 %value seq_cst, align 4
+  %res = atomicrmw usub_sat ptr addrspace(3) %ptr, i8 %value seq_cst, align 4
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_flat_agent(ptr %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_sub_clamp_i8_flat_agent(
+define i8 @test_atomicrmw_usub_sat_i8_flat_agent(ptr %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_sat_i8_flat_agent(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -2389,7 +2389,7 @@ define i8 @test_atomicrmw_sub_clamp_i8_flat_agent(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_sub_clamp_i8_flat_agent(
+; R600-LABEL: @test_atomicrmw_usub_sat_i8_flat_agent(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2418,12 +2418,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_flat_agent(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr %ptr, i8 %value syncscope("agent") seq_cst
+  %res = atomicrmw usub_sat ptr %ptr, i8 %value syncscope("agent") seq_cst
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_flat_agent_align2(ptr %ptr, i8 %value) {
-; GCN-LABEL: @test_atomicrmw_sub_clamp_i8_flat_agent_align2(
+define i8 @test_atomicrmw_usub_sat_i8_flat_agent_align2(ptr %ptr, i8 %value) {
+; GCN-LABEL: @test_atomicrmw_usub_sat_i8_flat_agent_align2(
 ; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
@@ -2453,7 +2453,7 @@ define i8 @test_atomicrmw_sub_clamp_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; GCN-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600-LABEL: @test_atomicrmw_sub_clamp_i8_flat_agent_align2(
+; R600-LABEL: @test_atomicrmw_usub_sat_i8_flat_agent_align2(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i32
 ; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
@@ -2482,12 +2482,12 @@ define i8 @test_atomicrmw_sub_clamp_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-  %res = atomicrmw sub_clamp ptr %ptr, i8 %value syncscope("agent") seq_cst, align 2
+  %res = atomicrmw usub_sat ptr %ptr, i8 %value syncscope("agent") seq_cst, align 2
   ret i8 %res
   }
 
-define i8 @test_atomicrmw_sub_clamp_i8_flat_agent_align4(ptr %ptr, i8 %value) {
-; CHECK-LABEL: @test_atomicrmw_sub_clamp_i8_flat_agent_align4(
+define i8 @test_atomicrmw_usub_sat_i8_flat_agent_align4(ptr %ptr, i8 %value) {
+; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_flat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
@@ -2507,6 +2507,6 @@ define i8 @test_atomicrmw_sub_clamp_i8_flat_agent_align4(ptr %ptr, i8 %value) {
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i8
 ; CHECK-NEXT:    ret i8 [[EXTRACTED1]]
 ;
-  %res = atomicrmw sub_clamp ptr %ptr, i8 %value syncscope("agent") seq_cst, align 4
+  %res = atomicrmw usub_sat ptr %ptr, i8 %value syncscope("agent") seq_cst, align 4
   ret i8 %res
 }

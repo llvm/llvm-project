@@ -1104,15 +1104,11 @@ defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_l
 defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
 
-defm : DSAtomicRetNoRetPat_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_sub_clamp">;
-
 let SubtargetPredicate = isGFX12Plus in {
 
-//defm : DSAtomicRetNoRetPat_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_cond_sub">;
+defm : DSAtomicRetNoRetPatCondSub_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_usub_cond">;
 
-defm : DSAtomicRetNoRetPatCondSub_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_cond_sub">;
-
-defm : DSAtomicRetNoRetPat_mc<DS_SUB_CLAMP_RTN_U32, DS_SUB_CLAMP_U32, i32, "atomic_load_sub_clamp">;
+defm : DSAtomicRetNoRetPat_mc<DS_SUB_CLAMP_RTN_U32, DS_SUB_CLAMP_U32, i32, "atomic_load_usub_sat">;
 
 } // let SubtargetPredicate = isGFX12Plus
 

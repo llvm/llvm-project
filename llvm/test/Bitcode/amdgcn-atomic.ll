@@ -250,75 +250,75 @@ define <2 x i16> @upgrade_amdgcn_ds_fadd_v2bf16__missing_args_as_i16(ptr addrspa
 
 attributes #0 = { argmemonly nounwind willreturn }
 
-define void @atomic_cond_sub(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
-  ; CHECK: atomicrmw cond_sub ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+define void @atomic_usub_cond(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
+  ; CHECK: atomicrmw usub_cond ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result0 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 0, i1 false)
 
-  ; CHECK: atomicrmw cond_sub ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
     %result1 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 false)
 
-  ; CHECK: atomicrmw cond_sub ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_cond ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4
     %result2 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p3(ptr addrspace(3) %ptr3, i32 46, i32 0, i32 0, i1 false)
   ret void
 }
 
-define void @atomic_sub_clamp(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
-  ; CHECK: atomicrmw sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+define void @atomic_usub_sat(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result0 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 0, i1 false)
 
-  ; CHECK: atomicrmw sub_clamp ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_sat ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
     %result1 = call i32 @llvm.amdgcn.atomic.csub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 false)
 
-  ; CHECK: atomicrmw sub_clamp ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_sat ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4
     %result2 = call i32 @llvm.amdgcn.atomic.csub.i32.p3(ptr addrspace(3) %ptr3, i32 46, i32 0, i32 0, i1 false)
   ret void
 }
 
 ; Test some invalid ordering handling
-define void @ordering_cond_sub_clamp(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
-  ; CHECK: atomicrmw volatile cond_sub ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+define void @ordering_usub_cond_usub_sat(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
+  ; CHECK: atomicrmw volatile usub_cond ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result0 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p0(ptr %ptr0, i32 42, i32 -1, i32 0, i1 true)
 
-  ; CHECK: atomicrmw volatile cond_sub ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw volatile usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
     %result1 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 true)
 
-  ; CHECK: atomicrmw cond_sub ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
     %result2 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 1, i32 0, i1 false)
 
-  ; CHECK: atomicrmw volatile cond_sub ptr addrspace(1) %ptr1, i32 43 syncscope("agent") monotonic, align 4
+  ; CHECK: atomicrmw volatile usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") monotonic, align 4
     %result3 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 2, i32 0, i1 true)
 
-  ; CHECK: atomicrmw cond_sub ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
     %result4 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 3, i32 0, i1 false)
 
-  ; CHECK: atomicrmw volatile sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result5 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 4, i1 true)
 
-  ; CHECK: atomicrmw sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result6 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 5, i1 false)
 
-  ; CHECK: atomicrmw volatile sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result7 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 6, i1 true)
 
-  ; CHECK: atomicrmw sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result8 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 7, i1 false)
 
-  ; CHECK:= atomicrmw volatile sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+  ; CHECK:= atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result9 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 8, i1 true)
 
-  ; CHECK:= atomicrmw volatile sub_clamp ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+  ; CHECK:= atomicrmw volatile usub_sat ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
     %result10 = call i32 @llvm.amdgcn.atomic.csub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 3, i32 0, i1 true)
   ret void
 }
 
-define void @immarg_violations_sub_clamp(ptr %ptr0, i32 %val32, i1 %val1) {
-  ; CHECK: atomicrmw sub_clamp ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+define void @immarg_violations_usub_sat(ptr %ptr0, i32 %val32, i1 %val1) {
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
     %result0 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 %val32, i32 0, i1 false)
 
-  ; CHECK: atomicrmw sub_clamp ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4
     %result1 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 2, i32 %val32, i1 false)
 
-  ; CHECK: atomicrmw volatile sub_clamp ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4
     %result2 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 2, i32 0, i1 %val1)
   ret void
 }

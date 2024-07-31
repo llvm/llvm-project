@@ -752,14 +752,14 @@ public:
 
     /// Subtract only if result would be positive.
     /// *p = (old u>= v) ? old - v : old
-    CondSub,
+    USubCond,
 
     /// Subtract with clamping of negative results to zero.
     /// *p = (old u>= v) ? old - v : 0
-    SubClamp,
+    USubSat,
 
     FIRST_BINOP = Xchg,
-    LAST_BINOP = SubClamp,
+    LAST_BINOP = USubSat,
     BAD_BINOP
   };
 

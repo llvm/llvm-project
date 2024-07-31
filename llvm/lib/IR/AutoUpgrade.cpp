@@ -1026,8 +1026,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (Name.consume_front("atomic.")) {
         if (Name.starts_with("inc") || Name.starts_with("dec") ||
             Name.starts_with("cond.sub") || Name.starts_with("csub")) {
-          // These were replaced with atomicrmw uinc_wrap, udec_wrap, cond_sub
-          // and sub_clamp so there's no new declaration.
+          // These were replaced with atomicrmw uinc_wrap, udec_wrap, usub_cond
+          // and usub_sat so there's no new declaration.
           NewFn = nullptr;
           return true;
         }
@@ -2350,8 +2350,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
           .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
-          .StartsWith("atomic.cond.sub", AtomicRMWInst::CondSub)
-          .StartsWith("atomic.csub", AtomicRMWInst::SubClamp);
+          .StartsWith("atomic.cond.sub", AtomicRMWInst::USubCond)
+          .StartsWith("atomic.csub", AtomicRMWInst::USubSat);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.

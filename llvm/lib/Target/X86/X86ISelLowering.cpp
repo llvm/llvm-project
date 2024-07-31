@@ -30912,8 +30912,8 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
-  case AtomicRMWInst::CondSub:
-  case AtomicRMWInst::SubClamp:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
   default:
     // These always require a non-trivial set of data operations on x86. We must
     // use a cmpxchg loop.

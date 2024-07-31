@@ -11209,8 +11209,8 @@ operation. The operation must be one of the following keywords:
 -  fmin
 -  uinc_wrap
 -  udec_wrap
--  cond_sub
--  sub_clamp
+-  usub_cond
+-  usub_sat
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
@@ -11261,8 +11261,8 @@ operation argument:
 -  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
--  cond_sub: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if result would be positive).
--  sub_clamp: ``*ptr = (*ptr u>= val) ? *ptr - val : 0`` (subtract with clamping of negative results to zero).
+-  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
+-  usub_sat: ``*ptr = (*ptr u>= val) ? *ptr - val : 0`` (subtract with clamping to zero).
 
 
 Example:
