@@ -13,22 +13,7 @@
 // unique_lock& operator=(unique_lock const&) = delete;
 
 #include <mutex>
-#include <cassert>
 
-int main(int, char**)
-{
-    {
-    typedef std::mutex M;
-    M m0;
-    M m1;
-    std::unique_lock<M> lk0(m0);
-    std::unique_lock<M> lk1(m1);
-    lk1 = lk0;
-    assert(lk1.mutex() == &m0);
-    assert(lk1.owns_lock() == true);
-    assert(lk0.mutex() == nullptr);
-    assert(lk0.owns_lock() == false);
-    }
+#include "../types.h"
 
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::lock_guard<MyMutex> >::value, "");
