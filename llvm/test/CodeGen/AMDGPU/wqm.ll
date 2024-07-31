@@ -3538,6 +3538,155 @@ define amdgpu_gs void @wqm_init_exec_wwm() {
   ret void
 }
 
+; Check that exact regions with execz affected instructions are as short as possible
+define amdgpu_ps float @short_exact_regions(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float %c, ptr addrspace(4) %p) {
+; GFX9-W64-LABEL: short_exact_regions:
+; GFX9-W64:       ; %bb.0: ; %main_body
+; GFX9-W64-NEXT:    s_mov_b64 s[12:13], exec
+; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
+; GFX9-W64-NEXT:    image_sample v[3:6], v0, s[0:7], s[8:11] dmask:0xf
+; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
+; GFX9-W64-NEXT:    s_and_saveexec_b64 s[14:15], vcc
+; GFX9-W64-NEXT:    s_cbranch_execz .LBB59_2
+; GFX9-W64-NEXT:  ; %bb.1: ; %if
+; GFX9-W64-NEXT:    s_and_saveexec_b64 s[16:17], s[12:13]
+; GFX9-W64-NEXT:    global_load_dword v0, v[1:2], off
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-W64-NEXT:    v_readfirstlane_b32 s18, v0
+; GFX9-W64-NEXT:    s_buffer_load_dword s18, s[8:11], s18 offset:0x0
+; GFX9-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-W64-NEXT:    v_mov_b32_e32 v0, s18
+; GFX9-W64-NEXT:    buffer_store_dwordx4 v[3:6], v0, s[0:3], 0 idxen
+; GFX9-W64-NEXT:    s_mov_b64 exec, s[16:17]
+; GFX9-W64-NEXT:  .LBB59_2: ; %endif
+; GFX9-W64-NEXT:    s_or_b64 exec, exec, s[14:15]
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-W64-NEXT:    image_sample v0, v3, s[0:7], s[8:11] dmask:0x4
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-W64-NEXT:    v_add_f32_e32 v0, v4, v0
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[12:13]
+; GFX9-W64-NEXT:    ; return to shader part epilog
+;
+; GFX10-W32-LABEL: short_exact_regions:
+; GFX10-W32:       ; %bb.0: ; %main_body
+; GFX10-W32-NEXT:    s_mov_b32 s12, exec_lo
+; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    image_sample v[3:6], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX10-W32-NEXT:    s_mov_b32 s13, exec_lo
+; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
+; GFX10-W32-NEXT:    v_cmpx_gt_u32_e32 16, v0
+; GFX10-W32-NEXT:    s_cbranch_execz .LBB59_2
+; GFX10-W32-NEXT:  ; %bb.1: ; %if
+; GFX10-W32-NEXT:    s_and_saveexec_b32 s14, s12
+; GFX10-W32-NEXT:    global_load_dword v0, v[1:2], off
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-W32-NEXT:    v_readfirstlane_b32 s15, v0
+; GFX10-W32-NEXT:    s_buffer_load_dword s15, s[8:11], s15 offset:0x0
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s15
+; GFX10-W32-NEXT:    buffer_store_dwordx4 v[3:6], v0, s[0:3], 0 idxen
+; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s14
+; GFX10-W32-NEXT:  .LBB59_2: ; %endif
+; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s13
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-W32-NEXT:    image_sample v0, v3, s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_1D
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-W32-NEXT:    v_add_f32_e32 v0, v4, v0
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX10-W32-NEXT:    ; return to shader part epilog
+main_body:
+  %tex1 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
+  %idx0 = load <4 x i32>, ptr addrspace(4) %p, align 4
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %cc = icmp uge i32 %hi, 16
+  br i1 %cc, label %endif, label %if
+
+if:
+  %idx1 = extractelement <4 x i32> %idx0, i64 0
+  %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
+  %idx3 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %sampler, i32 %idx2, i32 0)
+
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex1, <4 x i32> undef, i32 %idx3, i32 0, i32 0, i32 0)
+  br label %endif
+
+endif:
+  %d = extractelement <4 x float> %tex1, i64 0
+  %tex2 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %d, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
+  %r0 = extractelement <4 x float> %tex1, i64 1
+  %r1 = extractelement <4 x float> %tex2, i64 2
+  %r2 = fadd float %r0, %r1
+  %out = call float @llvm.amdgcn.wqm.f32(float %r2)
+
+  ret float %out
+}
+
+; Check that exact regions shortening doesn't prevent early WQM exit
+define amdgpu_ps float @short_exact_regions_2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float %c, ptr addrspace(4) %p) {
+; GFX9-W64-LABEL: short_exact_regions_2:
+; GFX9-W64:       ; %bb.0: ; %main_body
+; GFX9-W64-NEXT:    s_mov_b64 s[12:13], exec
+; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
+; GFX9-W64-NEXT:    image_sample v[3:4], v0, s[0:7], s[8:11] dmask:0x3
+; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[12:13]
+; GFX9-W64-NEXT:    global_load_dword v0, v[1:2], off
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-W64-NEXT:    image_sample v5, v3, s[0:7], s[8:11] dmask:0x4
+; GFX9-W64-NEXT:    ; kill: killed $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6 killed $sgpr7
+; GFX9-W64-NEXT:    ; kill: killed $vgpr3
+; GFX9-W64-NEXT:    ; kill: killed $vgpr1 killed $vgpr2
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-W64-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-W64-NEXT:    s_buffer_load_dword s0, s[8:11], s0 offset:0x0
+; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-W64-NEXT:    v_add_f32_e32 v0, v4, v5
+; GFX9-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-W64-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX9-W64-NEXT:    ; return to shader part epilog
+;
+; GFX10-W32-LABEL: short_exact_regions_2:
+; GFX10-W32:       ; %bb.0: ; %main_body
+; GFX10-W32-NEXT:    s_mov_b32 s12, exec_lo
+; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    image_sample v[3:4], v0, s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D
+; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX10-W32-NEXT:    global_load_dword v0, v[1:2], off
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-W32-NEXT:    image_sample v1, v3, s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_1D
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-W32-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-W32-NEXT:    v_add_f32_e32 v0, v4, v1
+; GFX10-W32-NEXT:    s_buffer_load_dword s0, s[8:11], s0 offset:0x0
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX10-W32-NEXT:    ; return to shader part epilog
+main_body:
+  %tex1 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
+  %idx0 = load <4 x i32>, ptr addrspace(4) %p, align 4
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %idx1 = extractelement <4 x i32> %idx0, i64 0
+  %d = extractelement <4 x float> %tex1, i64 0
+
+  %tex2 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %d, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
+
+  %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
+  %idx3 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %sampler, i32 %idx2, i32 0)
+
+  %r0 = extractelement <4 x float> %tex1, i64 1
+  %r1 = extractelement <4 x float> %tex2, i64 2
+  %r2 = fadd float %r0, %r1
+  %out = fadd float %r2, %idx3
+
+  ret float %out
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #1
 
@@ -3577,6 +3726,7 @@ declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32)
 declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #7
+declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
 
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
