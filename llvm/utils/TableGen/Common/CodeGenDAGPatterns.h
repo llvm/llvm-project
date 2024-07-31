@@ -264,7 +264,8 @@ struct TypeInfer {
   bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) const {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out,
+                       const ValueTypeByHwMode &InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
 
@@ -841,7 +842,8 @@ public: // Higher level manipulation routines.
                       TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
                       TreePattern &TP);
-  bool UpdateNodeType(unsigned ResNo, ValueTypeByHwMode InTy, TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, const ValueTypeByHwMode &InTy,
+                      TreePattern &TP);
 
   // Update node type with types inferred from an instruction operand or result
   // def from the ins/outs lists.
@@ -996,7 +998,7 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
 }
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
-                                            ValueTypeByHwMode InTy,
+                                            const ValueTypeByHwMode &InTy,
                                             TreePattern &TP) {
   TypeSetByHwMode VTS(InTy);
   TP.getInfer().expandOverloads(VTS);
