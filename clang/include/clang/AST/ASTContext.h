@@ -1391,7 +1391,7 @@ public:
                            bool AsWritten = false);
 
   /// Get a function type and produce the equivalent function type where
-  /// pointer size address spaces in the return type and parameter tyeps are
+  /// pointer size address spaces in the return type and parameter types are
   /// replaced with the default address space.
   QualType getFunctionTypeWithoutPtrSizes(QualType T);
 
