@@ -20,6 +20,7 @@
 #include <flat_map>
 #include <functional>
 #include <limits>
+#include <vector>
 
 #include "test_comparisons.h"
 #include "test_container_comparisons.h"

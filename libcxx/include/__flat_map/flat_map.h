@@ -9,9 +9,10 @@
 #ifndef _LIBCPP___FLAT_MAP_FLAT_MAP_H
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/ranges_equal.h>
-#include <__algorithm/ranges_lexicographical_compare.h>
 #include <__algorithm/ranges_lower_bound.h>
+#include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_stable_sort.h>
 #include <__algorithm/ranges_unique.h>
 #include <__algorithm/ranges_upper_bound.h>
@@ -19,6 +20,7 @@
 #include <__concepts/convertible_to.h>
 #include <__config>
 #include <__flat_map/sorted_unique.h>
+#include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
@@ -37,7 +39,7 @@
 #include <__type_traits/conjunction.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/pair.h>
 #include <initializer_list>
@@ -113,7 +115,7 @@ private:
   template <bool _Const>
   struct __iterator {
   private:
-    using __key_iterator    = ranges::iterator_t<__maybe_const<_Const, key_container_type>>;
+    using __key_iterator    = ranges::iterator_t<const key_container_type>;
     using __mapped_iterator = ranges::iterator_t<__maybe_const<_Const, mapped_container_type>>;
     using __reference       = pair<iter_reference_t<__key_iterator>, iter_reference_t<__mapped_iterator>>;
 
@@ -177,8 +179,8 @@ private:
     }
 
     _LIBCPP_HIDE_FROM_ABI __iterator& operator-=(difference_type __x) {
-      __key_iter_ += __x;
-      __mapped_iter_ += __x;
+      __key_iter_ -= __x;
+      __mapped_iter_ -= __x;
       return *this;
     }
 
@@ -704,11 +706,11 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) {
-    return __erase_impl(__position.__key_iter_, __position.__mapped_iter);
+    return __erase_impl(__position.__key_iter_, __position.__mapped_iter_);
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) {
-    return __erase_impl(__position.__key_iter_, __position.__mapped_iter);
+    return __erase_impl(__position.__key_iter_, __position.__mapped_iter_);
   }
 
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __x) {
@@ -721,22 +723,21 @@ public:
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires(__is_compare_transparent && !is_convertible_v<_Kp &&, iterator> &&
+             !is_convertible_v<_Kp &&, const_iterator>)
   _LIBCPP_HIDE_FROM_ABI size_type erase(_Kp&& __x) {
-    auto __iter = find(__x);
-    if (__iter != end()) {
-      erase(__iter);
-      return 1;
-    }
-    return 0;
+    auto [__first, __last] = equal_range(__x);
+    auto __res             = __last - __first;
+    erase(__first, __last);
+    return __res;
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      auto __key_it    = __containers_.keys.erase(__first.__key_iter, __last.__key_iter);
-      auto __mapped_it = __containers_.values.erase(__first.__mapped_iter, __last.__mapped_iter);
+      auto __key_it    = __containers_.keys.erase(__first.__key_iter_, __last.__key_iter_);
+      auto __mapped_it = __containers_.values.erase(__first.__mapped_iter_, __last.__mapped_iter_);
       return iterator(std::move(__key_it), std::move(__mapped_it));
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (const exception& __ex) {
@@ -803,8 +804,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI size_type count(const key_type& __x) const { return contains(__x) ? 1 : 0; }
 
   template <class _Kp>
+    requires __is_compare_transparent
   _LIBCPP_HIDE_FROM_ABI size_type count(const _Kp& __x) const {
-    return contains(__x) ? 1 : 0;
+    auto [__first, __last] = __equal_range_return_key_iter(*this, __x);
+    return __last - __first;
   }
 
   _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __x) const { return find(__x) != end(); }
@@ -873,9 +876,9 @@ public:
     return ranges::equal(__x, __y);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<value_type>
-  operator<=>(const flat_map& __x, const flat_map& __y) {
-    return ranges::lexicographical_compare(__x, __y);
+  friend _LIBCPP_HIDE_FROM_ABI auto operator<=>(const flat_map& __x, const flat_map& __y) {
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
   }
 
   friend _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __x, flat_map& __y) noexcept { __x.swap(__y); }
@@ -925,14 +928,46 @@ private:
     return __it;
   }
 
-  template <class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
-    auto __it   = __self.lower_bound(__key);
-    auto __last = __self.end();
-    if (__it == __last || __self.__compare_(__key, __it->first)) {
-      return std::make_pair(std::move(__it), std::move(__last));
+  template <class _Self>
+  _LIBCPP_HIDE_FROM_ABI static auto __equal_range_return_key_iter(_Self&& __self, const _Key& __key) {
+    auto __it   = ranges::lower_bound(__self.__containers_.keys, __key, __self.__compare_);
+    auto __last = __self.__containers_.keys.end();
+    if (__it == __last || __self.__compare_(__key, *__it)) {
+      return std::make_pair(__it, __it);
     }
     return std::make_pair(__it, std::next(__it));
+  }
+
+  template <class _Self, class _Kp>
+  _LIBCPP_HIDE_FROM_ABI static auto __equal_range_return_key_iter(_Self&& __self, const _Kp& __key) {
+    // if the comparator gives different results between  Key(__x) < key2  and __x < key2,
+    // the container might have duplicates w.r.t to  _Kp < Key
+    // TODO: this is the case in Author's test case, but do we really want to support it?
+    auto __first_not_smaller = ranges::lower_bound(__self.__containers_.keys, __key, __self.__compare_);
+    auto __first_bigger =
+        std::ranges::partition_point(__first_not_smaller, __self.__containers_.keys.end(), [&](const auto& __ele) {
+          return !std::invoke(__self.__compare_, __key, __ele);
+        });
+    return std::make_pair(std::move(__first_not_smaller), std::move(__first_bigger));
+  }
+
+  template <class _Self, class _Kp>
+  _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
+    // if the comparator gives different results between  Key(__x) < key2  and __x < key2,
+    // the container might have duplicates w.r.t to  _Kp < Key
+    // TODO: this is the case in Author's test case, but do we really want to support it?
+    auto [__first_not_smaller_key_iter, __first_bigger_key_iter] = __equal_range_return_key_iter(__self, __key);
+
+    const auto __make_mapped_iter = [&](const auto& __key_iter) {
+      return __self.__containers_.values.begin() +
+             static_cast<ranges::range_difference_t<mapped_container_type>>(
+                 ranges::distance(__self.__containers_.keys.begin(), __key_iter));
+    };
+
+    using __iterator_type = ranges::iterator_t<decltype(__self)>;
+    return std::make_pair(
+        __iterator_type(__first_not_smaller_key_iter, __make_mapped_iter(__first_not_smaller_key_iter)),
+        __iterator_type(__first_bigger_key_iter, __make_mapped_iter(__first_bigger_key_iter)));
   }
 
   template <class _Res, class _Self, class _Kp>
@@ -950,7 +985,7 @@ private:
     if (__hint != cbegin() && !__compare_(std::prev(__hint)->first, __key)) {
       return false;
     }
-    if (__hint != cend() && __compare(__hint->first, __key)) {
+    if (__hint != cend() && __compare_(__hint->first, __key)) {
       return false;
     }
     return true;
@@ -1168,6 +1203,10 @@ private:
 #  endif // _LIBCPP_HAS_NO_EXCEPTIONS
   }
 
+  template <class _Key2, class _Tp2, class _Compare2, class _KeyContainer2, class _MappedContainer2, class _Predicate>
+  friend typename flat_map<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>::size_type
+  erase_if(flat_map<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>&, _Predicate);
+
   containers __containers_;
   [[no_unique_address]] key_compare __compare_;
 
@@ -1295,6 +1334,29 @@ flat_map(sorted_unique_t, initializer_list<pair<_Key, _Tp>>, _Compare = _Compare
 template <class _Key, class _Tp, class _Compare, class _KeyContainer, class _MappedContainer, class _Allocator>
 struct uses_allocator<flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>, _Allocator>
     : bool_constant<uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator>> {};
+
+template <class _Key, class _Tp, class _Compare, class _KeyContainer, class _MappedContainer, class _Predicate>
+_LIBCPP_HIDE_FROM_ABI typename flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>::size_type
+erase_if(flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>& __flat_map, _Predicate __pred) {
+  auto __zv     = ranges::views::zip(__flat_map.__containers_.keys, __flat_map.__containers_.values);
+  auto __first  = __zv.begin();
+  auto __last   = __zv.end();
+  auto __guard  = std::__make_exception_guard([&] { __flat_map.clear(); });
+  auto __it     = std::remove_if(__first, __last, [&](auto&& __zipped) -> bool {
+    using __ref = typename flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>::const_reference;
+    return __pred(__ref(std::get<0>(__zipped), std::get<1>(__zipped)));
+  });
+  auto __res    = __last - __it;
+  auto __offset = __it - __first;
+
+  const auto __erase_container = [&](auto& __cont) { __cont.erase(__cont.begin() + __offset, __cont.end()); };
+
+  __erase_container(__flat_map.__containers_.keys);
+  __erase_container(__flat_map.__containers_.values);
+
+  __guard.__complete();
+  return __res;
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

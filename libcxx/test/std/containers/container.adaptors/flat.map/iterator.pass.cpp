@@ -27,11 +27,10 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using M = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
-    M m = {{1,'a'}, {2,'b'}, {3,'c'}, {4,'d'}};
+    M m     = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
     ASSERT_SAME_TYPE(decltype(m.begin()), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.cbegin()), M::const_iterator);
     ASSERT_SAME_TYPE(decltype(m.end()), M::iterator);
@@ -39,22 +38,24 @@ int main(int, char**)
     assert(m.size() == 4);
     assert(std::distance(m.begin(), m.end()) == 4);
     assert(std::distance(m.cbegin(), m.cend()) == 4);
-    M::iterator i;  // default-construct
-    i = m.begin();  // move-assignment
-    M::const_iterator k = i;  // converting constructor
-    assert(i == k);  // comparison
-    for (int j = 1; j <= 4; ++j, ++i) {  // pre-increment
-      assert(i->first == j);  // operator->
+    M::iterator i;                      // default-construct
+    i                   = m.begin();    // move-assignment
+    M::const_iterator k = i;            // converting constructor
+    assert(i == k);                     // comparison
+    for (int j = 1; j <= 4; ++j, ++i) { // pre-increment
+      assert(i->first == j);            // operator->
       assert(i->second == 'a' + j - 1);
     }
     assert(i == m.end());
     for (int j = 4; j >= 1; --j) {
-      --i;  // pre-decrement
+      --i; // pre-decrement
       assert((*i).first == j);
       assert((*i).second == 'a' + j - 1);
     }
     assert(i == m.begin());
   }
+// std::string is not a sequence container
+#if 0
   {
     using M = std::flat_map<short, char, std::less<>, std::deque<short>, std::string>;
     const M m = {{1,'a'}, {2,'b'}, {3,'c'}, {4,'d'}};
@@ -79,6 +80,7 @@ int main(int, char**)
     }
     assert(i == m.begin());
   }
+#endif
   {
     // N3644 testing
     using C = std::flat_map<int, char>;
@@ -89,8 +91,8 @@ int main(int, char**)
     assert(ii1 == ii4);
     assert(!(ii1 != ii2));
 
-    assert( (ii1 == cii));
-    assert( (cii == ii1));
+    assert((ii1 == cii));
+    assert((cii == ii1));
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }

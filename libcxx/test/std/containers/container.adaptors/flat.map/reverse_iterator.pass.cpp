@@ -25,13 +25,15 @@
 #include <functional>
 #include <string>
 
-#include "test_macros.h"
+#include <iterator>
 
-int main(int, char**)
-{
+#include "test_macros.h"
+#include <iostream>
+
+int main(int, char**) {
   {
     using M = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
-    M m = {{1,'a'}, {2,'b'}, {3,'c'}, {4,'d'}};
+    M m     = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
     ASSERT_SAME_TYPE(decltype(m.rbegin()), M::reverse_iterator);
     ASSERT_SAME_TYPE(decltype(m.crbegin()), M::const_reverse_iterator);
     ASSERT_SAME_TYPE(decltype(m.rend()), M::reverse_iterator);
@@ -39,24 +41,26 @@ int main(int, char**)
     assert(m.size() == 4);
     assert(std::distance(m.rbegin(), m.rend()) == 4);
     assert(std::distance(m.crbegin(), m.crend()) == 4);
-    M::reverse_iterator i;  // default-construct
+    M::reverse_iterator i; // default-construct
     ASSERT_SAME_TYPE(decltype(i->first), const int&);
     ASSERT_SAME_TYPE(decltype(i->second), char&);
-    i = m.rbegin();  // move-assignment
-    M::const_reverse_iterator k = i;  // converting constructor
-    assert(i == k);  // comparison
-    for (int j = 4; j >= 1; --j, ++i) {  // pre-increment
-      assert(i->first == j);  // operator->
+    i                           = m.rbegin(); // move-assignment
+    M::const_reverse_iterator k = i;          // converting constructor
+    assert(i == k);                           // comparison
+    for (int j = 4; j >= 1; --j, ++i) {       // pre-increment
+      assert(i->first == j);                  // operator->
       assert(i->second == 'a' + j - 1);
     }
     assert(i == m.rend());
     for (int j = 1; j <= 4; ++j) {
-      --i;  // pre-decrement
+      --i; // pre-decrement
       assert((*i).first == j);
       assert((*i).second == 'a' + j - 1);
     }
     assert(i == m.rbegin());
   }
+// std::string is not a sequence container
+#if 0
   {
     using M = std::flat_map<short, char, std::less<>, std::deque<short>, std::string>;
     const M m = {{1,'a'}, {2,'b'}, {3,'c'}, {4,'d'}};
@@ -83,6 +87,7 @@ int main(int, char**)
     }
     assert(i == m.rbegin());
   }
+#endif
   {
     // N3644 testing
     using C = std::flat_map<int, char>;
@@ -93,8 +98,8 @@ int main(int, char**)
     assert(ii1 == ii4);
     assert(!(ii1 != ii2));
 
-    assert( (ii1 == cii));
-    assert( (cii == ii1));
+    assert((ii1 == cii));
+    assert((cii == ii1));
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }

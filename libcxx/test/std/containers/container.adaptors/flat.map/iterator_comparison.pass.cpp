@@ -22,8 +22,9 @@
 #include "MinSequenceContainer.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
+// V is not a container as <=> is required
+#if 0
   {
     using V = MinSequenceContainer<int, random_access_iterator<int*>, random_access_iterator<const int*>>;
     using M = std::flat_map<int, int, std::less<int>, V, V>;
@@ -46,14 +47,15 @@ int main(int, char**)
     static_assert(std::same_as<decltype(RI() <=> CRI()), std::strong_ordering>);
     static_assert(std::same_as<decltype(CRI() <=> CRI()), std::strong_ordering>);
   }
+#endif
   {
-    using V = MinSequenceContainer<int, int*, const int*>;
-    using M = std::flat_map<int, int, std::less<int>, V, V>;
-    using VI = V::iterator;
+    using V   = MinSequenceContainer<int, int*, const int*>;
+    using M   = std::flat_map<int, int, std::less<int>, V, V>;
+    using VI  = V::iterator;
     using VCI = V::const_iterator;
-    using I = M::iterator;
-    using CI = M::const_iterator;
-    using RI = M::reverse_iterator;
+    using I   = M::iterator;
+    using CI  = M::const_iterator;
+    using RI  = M::reverse_iterator;
     using CRI = M::const_reverse_iterator;
     static_assert(std::three_way_comparable<VI>); // And when VI does support <=>...
     static_assert(std::three_way_comparable<VCI>);

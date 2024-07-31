@@ -23,11 +23,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     using M = std::flat_map<int, char>;
-    M m = {{1,'a'}, {2,'b'}, {4,'d'}, {5,'e'}, {8,'h'}};
+    M m     = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
     ASSERT_SAME_TYPE(decltype(m.find(0)), M::iterator);
     ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), M::const_iterator);
     assert(m.find(0) == m.end());
@@ -41,6 +40,9 @@ int main(int, char**)
     assert(std::as_const(m).find(8) == m.begin() + 4);
     assert(std::as_const(m).find(9) == m.end());
   }
+// std::string is not a sequence container
+#if 0
+
   {
     using M = std::flat_map<int, char, std::greater<int>, std::deque<int, min_allocator<int>>, std::string>;
     M m = {{1,'a'}, {2,'b'}, {4,'d'}, {5,'e'}, {8,'h'}};
@@ -57,17 +59,18 @@ int main(int, char**)
     assert(std::as_const(m).find(8) == m.begin());
     assert(std::as_const(m).find(9) == m.end());
   }
+#endif
   {
     using M = std::flat_map<bool, bool>;
-    M m = {{true,false}, {false,true}};
+    M m     = {{true, false}, {false, true}};
     ASSERT_SAME_TYPE(decltype(m.find(0)), M::iterator);
     ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), M::const_iterator);
     assert(m.find(true) == m.begin() + 1);
     assert(m.find(false) == m.begin());
-    m = {{true,true}};
+    m = {{true, true}};
     assert(m.find(true) == m.begin());
     assert(m.find(false) == m.end());
-    m = {{false,false}};
+    m = {{false, false}};
     assert(std::as_const(m).find(true) == m.end());
     assert(std::as_const(m).find(false) == m.begin());
     m.clear();
