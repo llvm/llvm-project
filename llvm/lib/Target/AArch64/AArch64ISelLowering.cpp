@@ -13826,13 +13826,42 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
       (EltSize != 1 && LaneMask.getOperand(2).getOpcode() != ISD::SRA))
     return SDValue();
 
-  // An alias mask for i8 elements omits the division because it would just
-  // divide by 1
+  // The number of elements that alias is calculated by dividing the positive difference between the pointers by the element size.
+  // An alias mask for i8 elements omits the division because it would just divide by 1
   if (EltSize > 1) {
     SDValue DiffDiv = LaneMask.getOperand(2);
     auto DiffDivConst = dyn_cast<ConstantSDNode>(DiffDiv.getOperand(1));
     if (!DiffDivConst || DiffDivConst->getZExtValue() != Log2_64(EltSize))
       return SDValue();
+    if (EltSize > 2) {
+      // When masking i32 or i64 elements, the positive value of the possibly-negative difference comes from a select of the difference if it's positive, otherwise the difference plus the element size if it's negative:
+      // pos_diff = diff < 0 ? (diff + 7) : diff
+      SDValue Select = DiffDiv.getOperand(0);
+      // Make sure the difference is being compared by the select
+      if (Select.getOpcode() != ISD::SELECT_CC || Select.getOperand(3) != Diff)
+        return SDValue();
+      // Make sure it's checking if the difference is less than 0
+      if (auto *SelectConst = dyn_cast<ConstantSDNode>(Select.getOperand(1)); !SelectConst || SelectConst->getZExtValue() != 0 || cast<CondCodeSDNode>(Select.getOperand(4))->get() != ISD::CondCode::SETLT)
+        return SDValue();
+      // An add creates a positive value from the negative difference
+      SDValue Add = Select.getOperand(2);
+      if (Add.getOpcode() != ISD::ADD || Add.getOperand(0) != Diff)
+        return SDValue();
+      if (auto *AddConst = dyn_cast<ConstantSDNode>(Add.getOperand(1)); !AddConst || AddConst->getZExtValue() != EltSize - 1)
+        return SDValue();
+    } else {
+      // When masking i16 elements, this positive value comes from adding the difference's sign bit to the difference itself. This is equivalent to the 32 bit and 64 bit case:
+      // pos_diff = diff + sign_bit (diff)
+      SDValue Add = DiffDiv.getOperand(0);
+      if (Add.getOpcode() != ISD::ADD || Add.getOperand(0) != Diff)
+        return SDValue();
+      // A logical right shift by 63 extracts the sign bit from the difference value
+      SDValue Shift = Add.getOperand(1);
+      if (Shift.getOpcode() != ISD::SRL || Shift.getOperand(0) != Diff)
+        return SDValue();
+      if (auto *ShiftConst = dyn_cast<ConstantSDNode>(Shift.getOperand(1)); !ShiftConst || ShiftConst->getZExtValue() != 63)
+        return SDValue();
+    }
   } else if (LaneMask.getOperand(2) != Diff)
     return SDValue();
 
