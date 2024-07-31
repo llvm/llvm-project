@@ -186,7 +186,7 @@ Expected<ArrayRef<MemoryDescriptor_64>> MinidumpFile::getMemory64List() {
   if (!Descriptors)
     return Descriptors.takeError();
 
-  cacheMemory64RVAs(ListHeader->NumberOfMemoryRanges, *Descriptors);
+  cacheMemory64RVAs(ListHeader->BaseRVA, *Descriptors);
   return Descriptors;
 }
 

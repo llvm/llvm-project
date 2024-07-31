@@ -377,11 +377,16 @@ Streams:
   const size_t ExpectedStreamSize = sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
   ASSERT_EQ(ExpectedStreamSize, ExpectedContent->size());
 
+  Expected<minidump::Memory64ListHeader> ExpectedHeader = File.getMemoryList64Header();
+  ASSERT_THAT_EXPECTED(ExpectedHeader, Succeeded());
+  ASSERT_EQ(ExpectedHeader->BaseRVA, 92u);
+
   Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = File.getRawData(DescOne);
   ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
-  ASSERT_EQ("hello", reinterpret_cast<const char *>(DescOneExpectedContentSlice->data()));
+  ASSERT_EQ(5u, DescOneExpectedContentSlice->size());
+  ASSERT_EQ(arrayRefFromStringRef("hello"), *DescOneExpectedContentSlice);
 
   Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = File.getRawData(DescTwo);
-  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
-  ASSERT_EQ("world", reinterpret_cast<const char *>(DescTwoExpectedContentSlice->data()));
+  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded()); 
+  ASSERT_EQ(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
 }
