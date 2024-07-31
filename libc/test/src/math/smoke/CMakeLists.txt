@@ -368,8 +368,6 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.dfmal
-    libc.src.stdlib.rand
-    libc.src.stdlib.srand
 )
 
 add_fp_unittest(
