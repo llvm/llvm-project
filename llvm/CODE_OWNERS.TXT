@@ -265,5 +265,5 @@ E: ilia.diachkov@gmail.com
 D: SPIR-V backend (lib/Target/SPIRV/*)
 
 N: Christopher Apple, David Trevelyan
-E: cja-private@pm.me, realtime.sanitizer@gmail.com
+E: cja-private@pm.me, david.trevelyan@gmail.com
 D: RealtimeSanitizer (LLVM part)
