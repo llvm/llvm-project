@@ -6719,7 +6719,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
-      assert(ParamType->isPointerType() || ParamType->isReferenceType() ||
+      assert(ParamType->isPointerOrReferenceType() ||
              ParamType->isNullPtrType());
       // -- a temporary object
       // -- a string literal
