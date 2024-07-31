@@ -12,14 +12,14 @@ entry:
 ; CHECK:      [[VX:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 8
 ; CHECK-NEXT: [[V1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
 ; CHECK-NEXT: [[T2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[V1]], 2, implicit-def dead $scc
-; CHECK-NEXT: [[T3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[T2]], 0, 1, implicit $exec
+; CHECK-NEXT: [[T3:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[T2]], 0, implicit $exec
 ; CHECK-NEXT: [[T5:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[VX]], 2, implicit-def dead $scc
-; CHECK-NEXT: V_STORE_IDX [[T3]], [[T5]], 3, 1, implicit $exec
+; CHECK-NEXT: V_STORE_IDX [[T3]], [[T5]], 3, implicit $exec
 ; CHECK-NEXT: [[T7:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[VX]], 2, implicit-def dead $scc
-; CHECK-NEXT: [[T8:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[T7]], 5, 1, implicit $exec
+; CHECK-NEXT: [[T8:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[T7]], 5, implicit $exec
 ; CHECK-NEXT: [[V2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
 ; CHECK-NEXT: [[T10:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[V2]], 2, implicit-def dead $scc
-; CHECK-NEXT: V_STORE_IDX [[T8]], [[T10]], 0, 1, implicit $exec
+; CHECK-NEXT: V_STORE_IDX [[T8]], [[T10]], 0, implicit $exec
   %0 = load float, ptr addrspace(10) @v1, align 4, !tbaa !4
   store float %0, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12), align 4, !tbaa !4
   %1 = load float, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20), align 4, !tbaa !4

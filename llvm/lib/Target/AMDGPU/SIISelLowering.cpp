@@ -5538,7 +5538,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
-        .addImm(1u); // indicates lane-shared access
+        .setMemRefs(MI.memoperands());
     MI.eraseFromParent();
     return &MBB;
   }
@@ -5560,7 +5560,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
-        .addImm(1u); // indicates lane-shared access
+        .setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return &MBB;
@@ -5583,7 +5583,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addReg(Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
-        .addImm(1u); // indicates lane-shared access
+        .setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return &MBB;
@@ -5607,7 +5607,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addReg(Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
-        .addImm(1u); // indicates lane-shared access
+        .setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return &MBB;
@@ -5633,7 +5633,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
-        .addImm(1u); // indicates lane-shared
+        .setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return LoopBB;
@@ -5660,7 +5660,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addReg(Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
-        .addImm(1u); // indicates lane-shared
+        .setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return LoopBB;
