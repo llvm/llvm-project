@@ -32,6 +32,14 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
+static constexpr StringLiteral vecTypeHintAttrName = "vec_type_hint";
+static constexpr StringLiteral workGroupSizeHintAttrName =
+    "work_group_size_hint";
+static constexpr StringLiteral reqdWorkGroupSizeAttrName =
+    "reqd_work_group_size";
+static constexpr StringLiteral intelReqdSubGroupSizeAttrName =
+    "intel_reqd_sub_group_size";
+
 /// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect
 /// intrinsic. Returns false otherwise.
 static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
@@ -70,11 +78,18 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 
 /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
 /// dialect attributes.
-static ArrayRef<unsigned> getSupportedMetadataImpl() {
+static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
   static const SmallVector<unsigned> convertibleMetadata = {
-      llvm::LLVMContext::MD_prof,         llvm::LLVMContext::MD_tbaa,
-      llvm::LLVMContext::MD_access_group, llvm::LLVMContext::MD_loop,
-      llvm::LLVMContext::MD_noalias,      llvm::LLVMContext::MD_alias_scope};
+      llvm::LLVMContext::MD_prof,
+      llvm::LLVMContext::MD_tbaa,
+      llvm::LLVMContext::MD_access_group,
+      llvm::LLVMContext::MD_loop,
+      llvm::LLVMContext::MD_noalias,
+      llvm::LLVMContext::MD_alias_scope,
+      context.getMDKindID(vecTypeHintAttrName),
+      context.getMDKindID(workGroupSizeHintAttrName),
+      context.getMDKindID(reqdWorkGroupSizeAttrName),
+      context.getMDKindID(intelReqdSubGroupSizeAttrName)};
   return convertibleMetadata;
 }
 
@@ -226,6 +241,133 @@ static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
   return success();
 }
 
+/// Extract constant integer value from metadata if this is constant. Return
+/// `std::nullopt` otherwise.
+static std::optional<int32_t> parseIntegerMD(llvm::Metadata *md) {
+  auto *c = llvm::dyn_cast_or_null<llvm::ConstantAsMetadata>(md);
+  if (!c)
+    return {};
+
+  auto *ci = dyn_cast<llvm::ConstantInt>(c->getValue());
+  if (!ci)
+    return {};
+
+  return ci->getValue().getSExtValue();
+}
+
+/// Convert an `MDNode` to an LLVM dialect `VecTypeHintAttr` if possible.
+template <typename ConvertType>
+static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *md,
+                                          ConvertType convertType) {
+  if (!md || md->getNumOperands() != 2)
+    return {};
+
+  auto *hintMD = dyn_cast<llvm::ValueAsMetadata>(md->getOperand(0).get());
+  if (!hintMD)
+    return {};
+  TypeAttr hint = TypeAttr::get(convertType(hintMD->getType()));
+
+  std::optional<int32_t> optIsSigned = parseIntegerMD(md->getOperand(1).get());
+  if (!optIsSigned)
+    return {};
+  bool isSigned = *optIsSigned != 0;
+
+  return builder.getAttr<VecTypeHintAttr>(hint, isSigned);
+}
+
+/// Convert an `MDNode` to an MLIR `DenseI32ArrayAttr` if possible.
+static DenseI32ArrayAttr convertDenseI32Array(Builder builder,
+                                              llvm::MDNode *md) {
+  if (!md)
+    return {};
+  SmallVector<int32_t> vals;
+  for (const llvm::MDOperand &op : md->operands()) {
+    std::optional<int32_t> mdValue = parseIntegerMD(op.get());
+    if (!mdValue)
+      return {};
+    vals.push_back(*mdValue);
+  }
+  return builder.getDenseI32ArrayAttr(vals);
+}
+
+/// Convert an `MDNode` to an MLIR `IntegerAttr` if possible.
+static IntegerAttr convertIntegerMD(Builder builder, llvm::MDNode *md) {
+  if (!md || md->getNumOperands() != 1)
+    return {};
+  std::optional<int32_t> val = parseIntegerMD(md->getOperand(0));
+  if (!val)
+    return {};
+  return builder.getI32IntegerAttr(*val);
+}
+
+template <typename Parser, typename Setter>
+static LogicalResult setFuncAttr(Builder &builder, llvm::MDNode *node,
+                                 Operation *op, Parser parse, Setter set) {
+  auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
+  if (!funcOp)
+    return failure();
+
+  auto attr = parse(node);
+  if (!attr)
+    return failure();
+
+  set(funcOp, attr);
+  return success();
+}
+
+static LogicalResult setVecTypeHintAttr(Builder &builder, llvm::MDNode *node,
+                                        Operation *op,
+                                        LLVM::ModuleImport &moduleImport) {
+  return setFuncAttr(
+      builder, node, op,
+      [&builder, &moduleImport](llvm::MDNode *node) {
+        return convertVecTypeHint(builder, node,
+                                  [&moduleImport](llvm::Type *type) {
+                                    return moduleImport.convertType(type);
+                                  });
+      },
+      [](LLVM::LLVMFuncOp funcOp, VecTypeHintAttr attr) {
+        funcOp.setVecTypeHintAttr(attr);
+      });
+}
+
+static LogicalResult
+setWorkGroupSizeHintAttr(Builder &builder, llvm::MDNode *node, Operation *op) {
+  return setFuncAttr(
+      builder, node, op,
+      [&builder](llvm::MDNode *node) {
+        return convertDenseI32Array(builder, node);
+      },
+      [](LLVM::LLVMFuncOp funcOp, DenseI32ArrayAttr attr) {
+        funcOp.setWorkGroupSizeHintAttr(attr);
+      });
+}
+
+static LogicalResult
+setReqdWorkGroupSizeAttr(Builder &builder, llvm::MDNode *node, Operation *op) {
+  return setFuncAttr(
+      builder, node, op,
+      [&builder](llvm::MDNode *node) {
+        return convertDenseI32Array(builder, node);
+      },
+      [](LLVM::LLVMFuncOp funcOp, DenseI32ArrayAttr attr) {
+        funcOp.setReqdWorkGroupSizeAttr(attr);
+      });
+}
+
+static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
+                                                  llvm::MDNode *node,
+                                                  Operation *op) {
+  return setFuncAttr(
+      builder, node, op,
+      [&builder](llvm::MDNode *node) {
+        return convertIntegerMD(builder, node);
+      },
+      [](LLVM::LLVMFuncOp funcOp, IntegerAttr attr) {
+        funcOp.setIntelReqdSubGroupSizeAttr(attr);
+      });
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -261,6 +403,16 @@ public:
     if (kind == llvm::LLVMContext::MD_noalias)
       return setNoaliasScopesAttr(node, op, moduleImport);
 
+    llvm::LLVMContext &context = node->getContext();
+    if (kind == context.getMDKindID(vecTypeHintAttrName))
+      return setVecTypeHintAttr(builder, node, op, moduleImport);
+    if (kind == context.getMDKindID(workGroupSizeHintAttrName))
+      return setWorkGroupSizeHintAttr(builder, node, op);
+    if (kind == context.getMDKindID(reqdWorkGroupSizeAttrName))
+      return setReqdWorkGroupSizeAttr(builder, node, op);
+    if (kind == context.getMDKindID(intelReqdSubGroupSizeAttrName))
+      return setIntelReqdSubGroupSizeAttr(builder, node, op);
+
     // A handler for a supported metadata kind is missing.
     llvm_unreachable("unknown metadata type");
   }
@@ -273,8 +425,9 @@ public:
 
   /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
   /// LLVM dialect attributes.
-  ArrayRef<unsigned> getSupportedMetadata() const final {
-    return getSupportedMetadataImpl();
+  ArrayRef<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &context) const final {
+    return getSupportedMetadataImpl(context);
   }
 };
 } // namespace
