@@ -714,10 +714,7 @@ define ptr @select_bitcast_unsized_pointer(i1 %c) {
 
 define float @copysign_idiom_constant(float %x) {
 ; CHECK-LABEL: @copysign_idiom_constant(
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i32 [[SIGN]], 1065353216
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float 1.000000e+00, float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %bits = bitcast float %x to i32
@@ -731,10 +728,8 @@ define float @copysign_idiom(float %x, i32 %mag) {
 ; CHECK-LABEL: @copysign_idiom(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[MAG:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i32 [[SIGN]], [[MAG]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %cond = icmp sgt i32 %mag, -1
@@ -752,10 +747,8 @@ define float @copysign_idiom_commuted(float %x, i32 %magx) {
 ; CHECK-NEXT:    [[MAG:%.*]] = add i32 [[MAGX:%.*]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[MAG]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i32 [[MAG]], [[SIGN]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %mag = add i32 %magx, -1 ; thwart complexity-based canonicalization
@@ -771,12 +764,7 @@ define float @copysign_idiom_commuted(float %x, i32 %magx) {
 
 define float @copysign_idiom_abs(float %x, float %mag) {
 ; CHECK-LABEL: @copysign_idiom_abs(
-; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[MAG:%.*]])
-; CHECK-NEXT:    [[ABSBITS:%.*]] = bitcast float [[ABS]] to i32
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i32 [[SIGN]], [[ABSBITS]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %abs = call float @llvm.fabs.f32(float %mag)
@@ -792,10 +780,8 @@ define double @copysign_idiom_f64(double %x, i64 %mag) {
 ; CHECK-LABEL: @copysign_idiom_f64(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[MAG:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X:%.*]] to i64
-; CHECK-NEXT:    [[SIGN:%.*]] = and i64 [[BITS]], -9223372036854775808
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i64 [[SIGN]], [[MAG]]
-; CHECK-NEXT:    [[Y:%.*]] = bitcast i64 [[RES]] to double
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[MAG]] to double
+; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.copysign.f64(double [[TMP1]], double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[Y]]
 ;
   %cond = icmp sgt i64 %mag, -1
@@ -810,10 +796,7 @@ define double @copysign_idiom_f64(double %x, i64 %mag) {
 
 define <2 x float> @copysign_idiom_vec(<2 x float> %x) {
 ; CHECK-LABEL: @copysign_idiom_vec(
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SIGN:%.*]] = and <2 x i32> [[BITS]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint <2 x i32> [[SIGN]], <i32 1065353216, i32 1065353216>
-; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x i32> [[RES]] to <2 x float>
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[Y]]
 ;
   %bits = bitcast <2 x float> %x to <2 x i32>
