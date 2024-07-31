@@ -37,9 +37,13 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
 
 add_subdirectory(OperatingSystemPythonInterface)
 add_subdirectory(ScriptedPlatformPythonInterface)
-set(ORIGINAL_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "${ORIGINAL_CMAKE_CXX_FLAGS} -H")
+if (WIN32)
+  set(ORIGINAL_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${ORIGINAL_CMAKE_CXX_FLAGS} /H")
+endif()
 add_subdirectory(ScriptedProcessPythonInterface)
-set(CMAKE_CXX_FLAGS "${ORIGINAL_CMAKE_CXX_FLAGS}")
+if (WIN32)
+  set(CMAKE_CXX_FLAGS "${ORIGINAL_CMAKE_CXX_FLAGS}")
+endif()
 add_subdirectory(ScriptedThreadPlanPythonInterface)
 
