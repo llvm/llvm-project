@@ -1457,7 +1457,6 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$no_unwind,
     OptionalAttr<UnitAttr>:$will_return,
     OptionalAttr<UnitAttr>:$optimize_none,
-    // Kernel metadata
     OptionalAttr<LLVM_VecTypeHintAttr>:$vec_type_hint,
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
