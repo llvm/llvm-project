@@ -5,8 +5,6 @@ include(CheckCXXCompilerFlag)
 # Build Google Benchmark
 #==============================================================================
 
-set(CMAKE_FOLDER "${CMAKE_FOLDER}/Benchmarks")
-
 set(BENCHMARK_COMPILE_FLAGS
     -Wno-unused-command-line-argument
     -nostdinc++
@@ -190,6 +188,10 @@ endforeach()
 
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM)
+
+  configure_lit_site_cfg(
+          ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py.in
+          ${CMAKE_CURRENT_BINARY_DIR}/lit.cfg.py)
 
   configure_lit_site_cfg(
           ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
