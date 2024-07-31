@@ -2,7 +2,7 @@
 # RUN: %clang %cflags %s -o %t.exe
 # RUN: link_fdata %s %t.exe %t.fdata
 # RUN: llvm-bolt %t.exe -o %t.null --data %t.fdata -w %t.yaml --time-rewrite \
-# RUN:   | FileCheck %s
+# RUN:   2>&1 | FileCheck %s
 
 # CHECK-DAG: update metadata post-emit
 # CHECK-DAG: process section metadata
