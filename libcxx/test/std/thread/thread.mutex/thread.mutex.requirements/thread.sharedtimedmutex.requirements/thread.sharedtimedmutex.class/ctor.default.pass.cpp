@@ -5,22 +5,23 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11
 
 // <shared_mutex>
 
-// class shared_mutex;
+// class shared_timed_mutex;
 
-// shared_mutex(const shared_mutex&) = delete;
+// shared_timed_mutex();
 
 #include <shared_mutex>
 
-int main(int, char**)
-{
-    std::shared_mutex m0;
-    std::shared_mutex m1(m0); // expected-error {{call to deleted constructor of 'std::shared_mutex'}}
+#include "test_macros.h"
+
+int main(int, char**) {
+  std::shared_timed_mutex m;
+  (void)m;
 
   return 0;
 }

@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
@@ -13,15 +13,9 @@
 
 // class shared_timed_mutex;
 
-// shared_timed_mutex();
+// shared_timed_mutex& operator=(const shared_timed_mutex&) = delete;
 
 #include <shared_mutex>
+#include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**) {
-  std::shared_timed_mutex m;
-  (void)m;
-
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::shared_timed_mutex>::value, "");
