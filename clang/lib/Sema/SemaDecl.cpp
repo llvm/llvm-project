@@ -5888,7 +5888,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
 
 static QualType getCoreType(QualType Ty) {
   do {
-    if (Ty->isPointerType() || Ty->isReferenceType())
+    if (Ty->isPointerOrReferenceType())
       Ty = Ty->getPointeeType();
     else if (Ty->isArrayType())
       Ty = Ty->castAsArrayTypeUnsafe()->getElementType();
@@ -9340,7 +9340,7 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
   if (PT->isDependentType())
     return InvalidKernelParam;
 
-  if (PT->isPointerType() || PT->isReferenceType()) {
+  if (PT->isPointerOrReferenceType()) {
     QualType PointeeType = PT->getPointeeType();
     if (PointeeType.getAddressSpace() == LangAS::opencl_generic ||
         PointeeType.getAddressSpace() == LangAS::opencl_private ||
@@ -10790,10 +10790,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (getLangOpts().getOpenCLCompatibleVersion() >= 200) {
       if(const PipeType *PipeTy = PT->getAs<PipeType>()) {
         QualType ElemTy = PipeTy->getElementType();
-          if (ElemTy->isReferenceType() || ElemTy->isPointerType()) {
-            Diag(Param->getTypeSpecStartLoc(), diag::err_reference_pipe_type );
-            D.setInvalidType();
-          }
+        if (ElemTy->isPointerOrReferenceType()) {
+          Diag(Param->getTypeSpecStartLoc(), diag::err_reference_pipe_type);
+          D.setInvalidType();
+        }
       }
     }
     // WebAssembly tables can't be used as function parameters.

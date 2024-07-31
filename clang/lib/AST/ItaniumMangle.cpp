@@ -6487,7 +6487,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
 
   case APValue::LValue: {
     // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/47.
-    assert((T->isPointerType() || T->isReferenceType()) &&
+    assert((T->isPointerOrReferenceType()) &&
            "unexpected type for LValue template arg");
 
     if (V.isNullPointer()) {

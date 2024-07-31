@@ -2530,6 +2530,7 @@ public:
   bool isFunctionNoProtoType() const { return getAs<FunctionNoProtoType>(); }
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
+  bool isPointerOrReferenceType() const;
   bool isSignableType() const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
@@ -8009,6 +8010,10 @@ inline bool Type::isFunctionType() const {
 
 inline bool Type::isPointerType() const {
   return isa<PointerType>(CanonicalType);
+}
+
+inline bool Type::isPointerOrReferenceType() const {
+  return isPointerType() || isReferenceType();
 }
 
 inline bool Type::isAnyPointerType() const {
