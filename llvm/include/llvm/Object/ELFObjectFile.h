@@ -949,15 +949,15 @@ bool ELFObjectFile<ELFT>::isSectionText(DataRefImpl Sec) const {
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionData(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_type == ELF::SHT_PROGBITS &&
-         EShdr->sh_flags & ELF::SHF_ALLOC &&
-         !(EShdr->sh_flags & ELF::SHF_EXECINSTR);
+  return (EShdr->sh_flags & ELF::SHF_ALLOC) &&
+         !(EShdr->sh_flags & ELF::SHF_EXECINSTR) &&
+         EShdr->sh_type != ELF::SHT_NOBITS;
 }
 
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionBSS(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_flags & (ELF::SHF_ALLOC | ELF::SHF_WRITE) &&
+  return EShdr->sh_flags & ELF::SHF_ALLOC &&
          EShdr->sh_type == ELF::SHT_NOBITS;
 }
 
