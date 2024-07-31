@@ -12387,17 +12387,12 @@ def err_hlsl_export_not_on_function : Error<
 def err_hlsl_attribute_in_wrong_shader_model: Error<
   "attribute %0 requires shader model %1 or greater">;
 
-def err_hlsl_wavesize_size: Error<
-  "wavesize arguments must be between 4 and 128 and a power of 2">;
-def err_hlsl_wavesize_min_geq_max: Error<
-  "minimum wavesize value %0 must be less than maximum wavesize value %1">;
-def warn_hlsl_wavesize_min_eq_max:  Warning<
-  "wave size range minimum and maximum are equal">,
+def warn_attr_min_eq_max:  Warning<
+  "%0 attribute minimum and maximum arguments are equal">,
   InGroup<HLSLAttributeStatement>, DefaultError;
-def err_hlsl_wavesize_pref_size_out_of_range: Error<
-  "preferred wavesize value %0 must be between %1 and %2">;
-def err_hlsl_wavesize_insufficient_shader_model: Error<
-  "wavesize only takes multiple arguments in shader model 6.8 or higher">;
+
+def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
+  "attribute %0 with %1 arguments requires shader model %2 or greater">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

@@ -2,49 +2,49 @@
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 1}}
 [WaveSize(1)]
 void e0() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 2}}
 [WaveSize(4, 2)]
 void e1() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 7}}
 [WaveSize(4, 8, 7)]
 void e2() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{minimum wavesize value 16 must be less than maximum wavesize value 8}}
+// expected-error@+1 {{'WaveSize' attribute argument is invalid: min must not be greater than max}}
 [WaveSize(16, 8)]
 void e3() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{preferred wavesize value 8 must be between 16 and 128}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 16 and 128 inclusive; provided argument was 8}}
 [WaveSize(16, 128, 8)]
 void e4() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{preferred wavesize value 32 must be between 8 and 16}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 8 and 16 inclusive; provided argument was 32}}
 [WaveSize(8, 16, 32)]
 void e5() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 0}}
 [WaveSize(4, 0)]
 void e6() {
 }
@@ -52,7 +52,7 @@ void e6() {
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 0}}
 [WaveSize(4, 4, 0)]
 void e7() {
 }
@@ -60,21 +60,21 @@ void e7() {
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wave size range minimum and maximum are equal}}
+// expected-error@+1 {{'WaveSize' attribute minimum and maximum arguments are equal}}
 [WaveSize(16, 16)]
 void e8() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 0}}
 [WaveSize(0)]
 void e9() {
 }
 
 [shader("compute")]
 [numthreads(1,1,1)]
-// expected-error@+1 {{wavesize arguments must be between 4 and 128 and a power of 2}}
+// expected-error@+1 {{'WaveSize' attribute requires an integer argument which is a constant power of two between 4 and 128 inclusive; provided argument was 4294967292}}
 [WaveSize(-4)]
 void e10() {
 }
