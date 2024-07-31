@@ -9158,7 +9158,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       InnerLHS = ZExt->getOperand();
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS);
         AR && !AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
-        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), true)) {
+        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true)) {
       auto Flags = AR->getNoWrapFlags();
       Flags = setFlags(Flags, SCEV::FlagNW);
       SmallVector<const SCEV*> Operands{AR->operands()};
@@ -10844,20 +10844,20 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
 }
 
 bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero) {
-  auto nonRecursive = [this](const SCEV *S) {
+  auto NonRecursive = [this](const SCEV *S) {
     if (auto *C = dyn_cast<SCEVConstant>(S))
       return C->getAPInt().isPowerOf2();
     // The vscale_range indicates vscale is a power-of-two.
-    return S->getSCEVType() == scVScale && F.hasFnAttribute(Attribute::VScaleRange);;
+    return isa<SCEVVScale>(S) && F.hasFnAttribute(Attribute::VScaleRange);
   };
 
   if (nonRecursive(S))
     return true;
 
   auto *Mul = dyn_cast<SCEVMulExpr>(S);
-  if (!Mul || Mul->getNumOperands() != 2)
+  if (!Mul)
     return false;
-  return nonRecursive(Mul->getOperand(0)) && nonRecursive(Mul->getOperand(1)) &&
+  return all_of(Mul->operands(), NonRecursive) &&
     (OrZero || isKnownNonZero(S));
 }
 
@@ -12792,7 +12792,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (!isLoopInvariant(RHS, L))
       return false;
 
-    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), true))
+    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true))
       return false;
 
     if (!ControlsOnlyExit || !loopHasNoAbnormalExits(L))
