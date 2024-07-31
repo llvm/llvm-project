@@ -3874,8 +3874,8 @@ add_fp_unittest(
   HDRS
     DivTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16div
 )
 
@@ -3888,8 +3888,8 @@ add_fp_unittest(
   HDRS
     DivTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16divf
 )
 
@@ -3902,8 +3902,8 @@ add_fp_unittest(
   HDRS
     DivTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16divl
 )
 
@@ -3916,8 +3916,8 @@ add_fp_unittest(
   HDRS
     DivTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16divf128
 )
 
