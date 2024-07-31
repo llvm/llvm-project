@@ -9161,7 +9161,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
         isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true)) {
       auto Flags = AR->getNoWrapFlags();
       Flags = setFlags(Flags, SCEV::FlagNW);
-      SmallVector<const SCEV*> Operands{AR->operands()};
+      SmallVector<const SCEV *> Operands{AR->operands()};
       Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
       setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
     }
@@ -10857,10 +10857,8 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero) {
   auto *Mul = dyn_cast<SCEVMulExpr>(S);
   if (!Mul)
     return false;
-  return all_of(Mul->operands(), NonRecursive) &&
-    (OrZero || isKnownNonZero(S));
+  return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
-
 
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
