@@ -741,7 +741,7 @@ void DWARFRewriter::updateDebugInfo() {
   CUPartitionVector PartVec = partitionCUs(*BC.DwCtx);
   for (std::vector<DWARFUnit *> &Vec : PartVec) {
     DIEBlder.buildCompileUnits(Vec);
-    llvm::SmallVector<std::unique_ptr<DIEBuilder>> DWODIEBuildersByCU;
+    llvm::SmallVector<std::unique_ptr<DIEBuilder>, 72> DWODIEBuildersByCU;
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs()) {
       createRangeLocListAddressWriters(*CU);
       std::optional<DWARFUnit *> SplitCU;

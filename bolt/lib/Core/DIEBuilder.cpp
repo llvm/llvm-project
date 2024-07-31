@@ -527,7 +527,7 @@ void DIEBuilder::finish() {
     // Skipping DWARF4 types.
     if (CU->getVersion() < 5 && CU->isTypeUnit())
       continue;
-    finalizeCU(*CU, DebugNamesUnitSize);
+    finalizeCU(*CU, UnitSize);
   }
   if (opts::Verbosity >= 1) {
     if (!getState().DWARFDieAddressesParsed.empty())
@@ -575,7 +575,7 @@ void DIEBuilder::updateDebugNamesTable() {
   for (DWARFUnit *CU : getState().DUList) {
     if (CU->getVersion() < 5 && CU->isTypeUnit())
       continue;
-    finalizeDebugNamesTableForCU(*CU, UnitSize);
+    finalizeDebugNamesTableForCU(*CU, DebugNamesUnitSize);
   }
   updateReferences();
 }
