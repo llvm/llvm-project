@@ -539,7 +539,8 @@ void DIEBuilder::finish() {
 }
 
 void DIEBuilder::populateDebugNamesTable(
-    DWARFUnit &CU, DIE &Die, std::optional<BOLTDWARF5AccelTableData *> Parent,
+    DWARFUnit &CU, const DIE &Die,
+    std::optional<BOLTDWARF5AccelTableData *> Parent,
     uint32_t NumberParentsInChain) {
   std::optional<BOLTDWARF5AccelTableData *> NameEntry =
       DebugNamesTable.addAccelTableEntry(
@@ -550,7 +551,7 @@ void DIEBuilder::populateDebugNamesTable(
   if (NameEntry)
     ++NumberParentsInChain;
 
-  for (DIE &Child : Die.children())
+  for (const DIE &Child : Die.children())
     populateDebugNamesTable(CU, Child, NameEntry, NumberParentsInChain);
 }
 

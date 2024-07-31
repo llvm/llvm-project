@@ -213,7 +213,7 @@ private:
   uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
 
   /// Populates DebugNames table.
-  void populateDebugNamesTable(DWARFUnit &CU, DIE &Die,
+  void populateDebugNamesTable(DWARFUnit &CU, const DIE &Die,
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
 
