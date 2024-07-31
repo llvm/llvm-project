@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix -O2 -target-cpu pwr7 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s
 // RUN: not %clang_cc1 -triple powerpc-unknown-aix -O2 -target-cpu pwr7 \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-32-ERROR
+// RUN:   -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-32-ERROR
 
 // CHECK-LABEL: define{{.*}} i64 @cdtbcd_test(i64
 // CHECK-NEXT:  [[ENTRY:.*:]]
