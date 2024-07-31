@@ -217,8 +217,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   auto *RBI = new MipsRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
-  InstSelector.reset(createMipsInstructionSelector(
-      *static_cast<const MipsTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createMipsInstructionSelector(TM, *this, *RBI));
 }
 
 bool MipsSubtarget::isPositionIndependent() const {

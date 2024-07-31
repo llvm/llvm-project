@@ -26,6 +26,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
+    "utils/lldb-scripts/mlirDataFormatters.py",
     "utils/textmate/mlir.json",
 ])
 
@@ -430,6 +431,7 @@ mlir_c_api_cc_library(
         "include/mlir/CAPI/Interfaces.h",
         "include/mlir/CAPI/Pass.h",
         "include/mlir/CAPI/Registration.h",
+        "include/mlir/CAPI/Rewrite.h",
         "include/mlir/CAPI/Support.h",
         "include/mlir/CAPI/Utils.h",
         "include/mlir/CAPI/Wrap.h",
@@ -916,24 +918,14 @@ exports_files(
     glob(["lib/Bindings/Python/**/*.cpp"]),
 )
 
-# In the targets related to Python bindings, the projects @pybind11 and
-# @local_config_python are defined by @pybind11_bazel. The latter contains
-# python headers, and can be configured in an out-of-tree bazel project via
-#
-#   load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-#   python_configure(name = "local_config_python")
-#
-# For more up-to-date instructions, see
-# https://github.com/pybind/pybind11_bazel
-#
-# Some out-of-tree projects alias @python_runtime//:headers to
-# @local_config_python//:python_headers.
-
-MLIR_BINDINGS_PYTHON_HEADERS = [
-    "lib/Bindings/Python/*.h",
-    "include/mlir-c/Bindings/Python/*.h",
-    "include/mlir/Bindings/Python/*.h",
-]
+filegroup(
+    name = "MLIRBindingsPythonHeaderFiles",
+    srcs = glob([
+        "lib/Bindings/Python/*.h",
+        "include/mlir-c/Bindings/Python/*.h",
+        "include/mlir/Bindings/Python/*.h",
+    ]),
+)
 
 cc_library(
     name = "MLIRBindingsPythonHeaders",
@@ -941,16 +933,12 @@ cc_library(
         "include",
         "lib/Bindings/Python",
     ],
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
-    textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIRHeaders",
         ":CAPITransformsHeaders",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -960,16 +948,12 @@ cc_library(
         "include",
         "lib/Bindings/Python",
     ],
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
-    textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIR",
         ":CAPITransforms",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -984,26 +968,25 @@ PYBIND11_FEATURES = [
     "-use_header_modules",
 ]
 
-MLIR_PYTHON_BINDINGS_SOURCES = [
-    "lib/Bindings/Python/IRAffine.cpp",
-    "lib/Bindings/Python/IRAttributes.cpp",
-    "lib/Bindings/Python/IRCore.cpp",
-    "lib/Bindings/Python/IRInterfaces.cpp",
-    "lib/Bindings/Python/IRModule.cpp",
-    "lib/Bindings/Python/IRTypes.cpp",
-    "lib/Bindings/Python/Pass.cpp",
-    "lib/Bindings/Python/Rewrite.cpp",
-]
+filegroup(
+    name = "MLIRBindingsPythonSourceFiles",
+    srcs = [
+        "lib/Bindings/Python/IRAffine.cpp",
+        "lib/Bindings/Python/IRAttributes.cpp",
+        "lib/Bindings/Python/IRCore.cpp",
+        "lib/Bindings/Python/IRInterfaces.cpp",
+        "lib/Bindings/Python/IRModule.cpp",
+        "lib/Bindings/Python/IRTypes.cpp",
+        "lib/Bindings/Python/Pass.cpp",
+        "lib/Bindings/Python/Rewrite.cpp",
+    ],
+)
 
 cc_library(
     name = "MLIRBindingsPythonCore",
-    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
+    srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
@@ -1013,29 +996,26 @@ cc_library(
         ":Support",
         ":config",
         "//llvm:Support",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
-    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
+    srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
         ":MLIRBindingsPythonHeaders",
         ":Support",
+        ":config",
         "//llvm:Support",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -1043,10 +1023,6 @@ cc_library(
 # MLIRBindingsPythonCoreNoCAPI.
 cc_library(
     name = "MLIRBindingsPythonCAPIObjects",
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIAsyncObjects",
         ":CAPIDebugObjects",
@@ -1065,10 +1041,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
@@ -1082,10 +1054,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
@@ -1100,10 +1068,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",
-    ],
     deps = [
         ":CAPIIR",
         ":CAPILLVM",
@@ -1119,10 +1083,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIIR",
         ":CAPIQuant",
@@ -1138,10 +1098,6 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIIR",
         ":CAPISparseTensor",
@@ -1158,15 +1114,11 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -1178,15 +1130,11 @@ cc_binary(
     features = PYBIND11_FEATURES,
     linkshared = 1,
     linkstatic = 0,
-    tags = [
-        "manual",  # External dependency
-        "nobuildkite",  # TODO(gcmn): Add support for this target
-    ],
     deps = [
         ":CAPILinalg",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@local_config_python//:python_headers",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
@@ -2198,6 +2146,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
         "//llvm:Support",
@@ -2897,6 +2846,7 @@ cc_library(
         ":IR",
         ":LoopLikeInterface",
         ":SCFDialect",
+        ":SCFToControlFlow",
         ":SCFTransformOpsIncGen",
         ":SCFTransforms",
         ":SCFUtils",
@@ -4217,6 +4167,7 @@ cc_library(
         ":MathToFuncs",
         ":MathToLLVM",
         ":MathToLibm",
+        ":MathToROCDL",
         ":MathToSPIRV",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
@@ -5987,6 +5938,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathToROCDL",
         ":MemRefDialect",
         ":MemRefToLLVM",
         ":Pass",
@@ -6878,6 +6830,110 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "PtrTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Ptr/IR/PtrAttrDefs.td",
+        "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
+        "include/mlir/Dialect/Ptr/IR/PtrOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AttrTdFiles",
+        ":BuiltinDialectTdFiles",
+        ":DataLayoutInterfacesTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrDialectIncGen",
+    tbl_outs = [
+        (
+            ["-gen-dialect-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsDialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrOps.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrAttrsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsAttrs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrAttrDefs.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+cc_library(
+    name = "PtrDialect",
+    srcs = glob(
+        [
+            "lib/Dialect/Ptr/IR/*.cpp",
+        ],
+    ),
+    hdrs = glob([
+        "include/mlir/Dialect/Ptr/IR/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":DataLayoutInterfaces",
+        ":IR",
+        ":InliningUtils",
+        ":PtrAttrsIncGen",
+        ":PtrDialectIncGen",
+        ":PtrOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "SPIRVOpsTdFiles",
     srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
     includes = ["include"],
@@ -7098,10 +7154,15 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":SPIRVDialect",
+        ":Support",
         ":TransformUtils",
+        ":VectorDialect",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -7167,6 +7228,32 @@ cc_library(
         ":SPIRVDialect",
         ":TransformUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MathToROCDL",
+    srcs = glob([
+        "lib/Conversion/MathToROCDL/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/MathToROCDL/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":GPUCommonTransforms",
+        ":GPUToGPURuntimeTransforms",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+        ":ROCDLDialect",
+        ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
@@ -8435,6 +8522,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":IR",
         ":Pass",
         ":Support",
@@ -9385,6 +9473,7 @@ cc_library(
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
         ":PolynomialDialect",
+        ":PtrDialect",
         ":QuantOps",
         ":ROCDLDialect",
         ":ROCDLTarget",
@@ -9477,6 +9566,7 @@ cc_binary(
         "//mlir/test:TestArmSME",
         "//mlir/test:TestBufferization",
         "//mlir/test:TestControlFlow",
+        "//mlir/test:TestConvertToSPIRV",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
         "//mlir/test:TestFunc",
@@ -10212,6 +10302,7 @@ td_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPAttrDefs.td",
+        "include/mlir/Dialect/OpenMP/OpenMPClauses.td",
         "include/mlir/Dialect/OpenMP/OpenMPDialect.td",
         "include/mlir/Dialect/OpenMP/OpenMPEnums.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpBase.td",

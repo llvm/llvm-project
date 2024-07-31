@@ -27,7 +27,7 @@ struct MemorySlot {
 /// Memory slot attached with information about its destructuring procedure.
 struct DestructurableMemorySlot : public MemorySlot {
   /// Maps an index within the memory slot to the corresponding subelement type.
-  DenseMap<Attribute, Type> elementPtrs;
+  DenseMap<Attribute, Type> subelementTypes;
 };
 
 /// Returned by operation promotion logic requesting the deletion of an

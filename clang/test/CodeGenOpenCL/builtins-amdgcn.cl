@@ -308,14 +308,14 @@ void test_ds_bpermute(global int* out, int a, int b)
 }
 
 // CHECK-LABEL: @test_readfirstlane
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.readfirstlane(i32 %a)
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.readfirstlane.i32(i32 %a)
 void test_readfirstlane(global int* out, int a)
 {
   *out = __builtin_amdgcn_readfirstlane(a);
 }
 
 // CHECK-LABEL: @test_readlane
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.readlane(i32 %a, i32 %b)
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.readlane.i32(i32 %a, i32 %b)
 void test_readlane(global int* out, int a, int b)
 {
   *out = __builtin_amdgcn_readlane(a, b);

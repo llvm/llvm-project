@@ -50,7 +50,7 @@ static void preserveDWARFSection(LinkGraph &G, Section &Sec) {
 static SmallVector<char, 0> getSectionData(Section &Sec) {
   SmallVector<char, 0> SecData;
   SmallVector<Block *, 8> SecBlocks(Sec.blocks().begin(), Sec.blocks().end());
-  llvm::sort(SecBlocks, [](Block *LHS, Block *RHS) {
+  std::sort(SecBlocks.begin(), SecBlocks.end(), [](Block *LHS, Block *RHS) {
     return LHS->getAddress() < RHS->getAddress();
   });
   // Convert back to what object file would have, one blob of section content

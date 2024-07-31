@@ -373,7 +373,7 @@ static bool lowerExpectIntrinsic(Function &F) {
         SmallVector<uint32_t> Weights;
         if (extractBranchWeights(*BI, Weights))
           misexpect::checkMissingAnnotations(*BI, Weights,
-                                             /*IsFrontendInstr=*/false);
+                                             /*IsFrontendInstr=*/true);
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
       if (handleSwitchExpect(*SI))
@@ -382,7 +382,7 @@ static bool lowerExpectIntrinsic(Function &F) {
         SmallVector<uint32_t> Weights;
         if (extractBranchWeights(*SI, Weights))
           misexpect::checkMissingAnnotations(*SI, Weights,
-                                             /*isFrontend=*/false);
+                                             /*isFrontend=*/true);
       }
     }
 
@@ -399,7 +399,7 @@ static bool lowerExpectIntrinsic(Function &F) {
             SmallVector<uint32_t> Weights;
             if (extractBranchWeights(*SI, Weights))
               misexpect::checkMissingAnnotations(*SI, Weights,
-                                                 /*isFrontend=*/false);
+                                                 /*isFrontend=*/true);
           }
         }
         continue;

@@ -62,6 +62,7 @@ bool getMaxClusterRank(const Function &, unsigned &);
 bool getMinCTASm(const Function &, unsigned &);
 bool getMaxNReg(const Function &, unsigned &);
 bool isKernelFunction(const Function &);
+bool isParamGridConstant(const Value &);
 
 MaybeAlign getAlign(const Function &, unsigned);
 MaybeAlign getAlign(const CallInst &, unsigned);

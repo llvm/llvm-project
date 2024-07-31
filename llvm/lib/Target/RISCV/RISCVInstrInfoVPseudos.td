@@ -561,17 +561,17 @@ def RISCVVIntrinsicsTable : GenericTable {
 //    unmasked variant.  For all but compares, both the masked and
 //    unmasked variant have a passthru and policy operand.  For compares,
 //    neither has a policy op, and only the masked version has a passthru.
-class RISCVMaskedPseudo<bits<4> MaskIdx, bit MaskAffectsRes=false> {
+class RISCVMaskedPseudo<bits<4> MaskIdx, bit ActiveAffectsRes=false> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
   bits<4> MaskOpIdx = MaskIdx;
-  bit MaskAffectsResult = MaskAffectsRes;
+  bit ActiveElementsAffectResult = ActiveAffectsRes;
 }
 
 def RISCVMaskedPseudosTable : GenericTable {
   let FilterClass = "RISCVMaskedPseudo";
   let CppTypeName = "RISCVMaskedPseudoInfo";
-  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "MaskAffectsResult"];
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "ActiveElementsAffectResult"];
   let PrimaryKey = ["MaskedPseudo"];
   let PrimaryKeyName = "getMaskedPseudoInfo";
 }
@@ -2065,7 +2065,7 @@ multiclass VPseudoVIOTA_M {
                        SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
-                                 RISCVMaskedPseudo<MaskIdx=2, MaskAffectsRes=true>,
+                                 RISCVMaskedPseudo<MaskIdx=2, ActiveAffectsRes=true>,
                                  SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                             forceMergeOpRead=true>;
     }
@@ -3162,7 +3162,7 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
-                                          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
+                                          RISCVMaskedPseudo<MaskIdx=3, ActiveAffectsRes=true>;
   }
 }
 
@@ -3179,7 +3179,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
                                                Op2Class>,
-          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
+          RISCVMaskedPseudo<MaskIdx=3, ActiveAffectsRes=true>;
   }
 }
 
@@ -3957,6 +3957,28 @@ class VPatUnaryNoMaskRoundingMode<string intrinsic_name,
                    (XLenVT timm:$round),
                    GPR:$vl, log2sew, TU_MU)>;
 
+class VPatUnaryNoMaskRTZ<string intrinsic_name,
+                         string inst,
+                         string kind,
+                         ValueType result_type,
+                         ValueType op2_type,
+                         int log2sew,
+                         LMULInfo vlmul,
+                         VReg result_reg_class,
+                         VReg op2_reg_class,
+                         bit isSEWAware = 0> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   (XLenVT 0b001),
+                   VLOpFrag)),
+                   (!cast<Instruction>(
+                      !if(isSEWAware,
+                          inst#"_"#kind#"_"#vlmul.MX#"_E"#!shl(1, log2sew),
+                          inst#"_"#kind#"_"#vlmul.MX))
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   GPR:$vl, log2sew, TU_MU)>;
 
 class VPatUnaryMask<string intrinsic_name,
                     string inst,
@@ -4009,6 +4031,31 @@ class VPatUnaryMaskRoundingMode<string intrinsic_name,
                    (XLenVT timm:$round),
                    GPR:$vl, log2sew, (XLenVT timm:$policy))>;
 
+class VPatUnaryMaskRTZ<string intrinsic_name,
+                       string inst,
+                       string kind,
+                       ValueType result_type,
+                       ValueType op2_type,
+                       ValueType mask_type,
+                       int log2sew,
+                       LMULInfo vlmul,
+                       VReg result_reg_class,
+                       VReg op2_reg_class,
+                       bit isSEWAware = 0> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   (mask_type V0),
+                   (XLenVT 0b001),
+                   VLOpFrag, (XLenVT timm:$policy))),
+                   (!cast<Instruction>(
+                      !if(isSEWAware,
+                          inst#"_"#kind#"_"#vlmul.MX#"_E"#!shl(1, log2sew)#"_MASK",
+                          inst#"_"#kind#"_"#vlmul.MX#"_MASK"))
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_reg_class:$rs2),
+                   (mask_type V0),
+                   GPR:$vl, log2sew, (XLenVT timm:$policy))>;
 
 class VPatMaskUnaryNoMask<string intrinsic_name,
                           string inst,
@@ -4822,6 +4869,25 @@ multiclass VPatConversionRoundingMode<string intrinsic,
                                     log2sew, vlmul, result_reg_class,
                                     op1_reg_class, isSEWAware>;
   def : VPatUnaryMaskRoundingMode<intrinsic, inst, kind, result_type, op1_type,
+                                  mask_type, log2sew, vlmul, result_reg_class,
+                                  op1_reg_class, isSEWAware>;
+}
+
+multiclass VPatConversionRTZ<string intrinsic,
+                             string inst,
+                             string kind,
+                             ValueType result_type,
+                             ValueType op1_type,
+                             ValueType mask_type,
+                             int log2sew,
+                             LMULInfo vlmul,
+                             VReg result_reg_class,
+                             VReg op1_reg_class,
+                             bit isSEWAware = 0> {
+  def : VPatUnaryNoMaskRTZ<intrinsic, inst, kind, result_type, op1_type,
+                                    log2sew, vlmul, result_reg_class,
+                                    op1_reg_class, isSEWAware>;
+  def : VPatUnaryMaskRTZ<intrinsic, inst, kind, result_type, op1_type,
                                   mask_type, log2sew, vlmul, result_reg_class,
                                   op1_reg_class, isSEWAware>;
 }
@@ -5776,6 +5842,18 @@ multiclass VPatConversionVI_VF_RM<string intrinsic,
   }
 }
 
+multiclass VPatConversionVI_VF_RTZ<string intrinsic, 
+                                           string instruction> {
+  foreach fvti = AllFloatVectors in {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<ivti>.Predicates) in
+    defm : VPatConversionRTZ<intrinsic, instruction, "V",
+                                              ivti.Vector, fvti.Vector, ivti.Mask, fvti.Log2SEW,
+                                              fvti.LMul, ivti.RegClass, fvti.RegClass>;
+  }
+}
+
 multiclass VPatConversionVF_VI_RM<string intrinsic, string instruction,
                                   bit isSEWAware = 0> {
   foreach fvti = AllFloatVectors in {
@@ -5810,6 +5888,18 @@ multiclass VPatConversionWI_VF_RM<string intrinsic, string instruction> {
     defm : VPatConversionRoundingMode<intrinsic, instruction, "V",
                                       iwti.Vector, fvti.Vector, iwti.Mask, fvti.Log2SEW,
                                       fvti.LMul, iwti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionWI_VF_RTZ<string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<iwti>.Predicates) in
+    defm : VPatConversionRTZ<intrinsic, instruction, "V",
+                             iwti.Vector, fvti.Vector, iwti.Mask, fvti.Log2SEW,
+                             fvti.LMul, iwti.RegClass, fvti.RegClass>;
   }
 }
 
@@ -5879,6 +5969,18 @@ multiclass VPatConversionVI_WF_RM <string intrinsic, string instruction> {
   }
 }
 
+multiclass VPatConversionVI_WF_RTZ <string intrinsic, string instruction> {
+  foreach vtiToWti = AllWidenableIntToFloatVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar fwti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<fwti>.Predicates) in
+    defm : VPatConversionRTZ<intrinsic, instruction, "W",
+                             vti.Vector, fwti.Vector, vti.Mask, vti.Log2SEW,
+                             vti.LMul, vti.RegClass, fwti.RegClass>;
+  }
+}
+
 multiclass VPatConversionVF_WI_RM <string intrinsic, string instruction,
                                    bit isSEWAware = 0> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
@@ -5918,6 +6020,20 @@ multiclass VPatConversionVF_WF_RM<string intrinsic, string instruction,
                                       fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
                                       fvti.LMul, fvti.RegClass, fwti.RegClass,
                                       isSEWAware>;
+  }
+}
+
+multiclass VPatConversionVF_WF_RTZ<string intrinsic, string instruction,
+                                   list<VTypeInfoToWide> wlist = AllWidenableFloatVectors,
+                                   bit isSEWAware = 0> {
+  foreach fvtiToFWti = wlist in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<fwti>.Predicates) in
+    defm : VPatConversionRTZ<intrinsic, instruction, "W",
+                             fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
+                             fvti.LMul, fvti.RegClass, fwti.RegClass, isSEWAware>;
   }
 }
 
@@ -6629,6 +6745,7 @@ defm PseudoVIOTA_M: VPseudoVIOTA_M;
 //===----------------------------------------------------------------------===//
 // 15.9. Vector Element Index Instruction
 //===----------------------------------------------------------------------===//
+let isReMaterializable = 1 in
 defm PseudoVID : VPseudoVID_V;
 } // Predicates = [HasVInstructions]
 
@@ -7152,6 +7269,8 @@ foreach fvti = AllFloatVectors in {
 //===----------------------------------------------------------------------===//
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
+defm : VPatConversionVI_VF_RTZ<"int_riscv_vfcvt_x_f_v", "PseudoVFCVT_RTZ_X_F">;
+defm : VPatConversionVI_VF_RTZ<"int_riscv_vfcvt_xu_f_v", "PseudoVFCVT_RTZ_XU_F">;
 defm : VPatConversionVI_VF_RM<"int_riscv_vfcvt_x_f_v", "PseudoVFCVT_X_F">;
 defm : VPatConversionVI_VF_RM<"int_riscv_vfcvt_xu_f_v", "PseudoVFCVT_XU_F">;
 defm : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_xu_f_v", "PseudoVFCVT_RTZ_XU_F">;
@@ -7164,6 +7283,8 @@ defm : VPatConversionVF_VI_RM<"int_riscv_vfcvt_f_xu_v", "PseudoVFCVT_F_XU",
 //===----------------------------------------------------------------------===//
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
+defm : VPatConversionWI_VF_RTZ<"int_riscv_vfwcvt_xu_f_v", "PseudoVFWCVT_RTZ_XU_F">;
+defm : VPatConversionWI_VF_RTZ<"int_riscv_vfwcvt_x_f_v", "PseudoVFWCVT_RTZ_X_F">;
 defm : VPatConversionWI_VF_RM<"int_riscv_vfwcvt_xu_f_v", "PseudoVFWCVT_XU_F">;
 defm : VPatConversionWI_VF_RM<"int_riscv_vfwcvt_x_f_v", "PseudoVFWCVT_X_F">;
 defm : VPatConversionWI_VF<"int_riscv_vfwcvt_rtz_xu_f_v", "PseudoVFWCVT_RTZ_XU_F">;
@@ -7180,6 +7301,8 @@ defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
 //===----------------------------------------------------------------------===//
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
+defm : VPatConversionVI_WF_RTZ<"int_riscv_vfncvt_xu_f_w", "PseudoVFNCVT_RTZ_XU_F">;
+defm : VPatConversionVI_WF_RTZ<"int_riscv_vfncvt_x_f_w", "PseudoVFNCVT_RTZ_X_F">;
 defm : VPatConversionVI_WF_RM<"int_riscv_vfncvt_xu_f_w", "PseudoVFNCVT_XU_F">;
 defm : VPatConversionVI_WF_RM<"int_riscv_vfncvt_x_f_w", "PseudoVFNCVT_X_F">;
 defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_xu_f_w", "PseudoVFNCVT_RTZ_XU_F">;

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++23 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -std=c++14 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++23 -verify=ref,both %s
 
 namespace MemberPointers {
   struct A {
@@ -194,4 +196,16 @@ namespace {
     use(ps->*&S::x);
     use(psr->*&S::x);
   }
+}
+
+namespace MemPtrTemporary {
+  struct A {
+    constexpr int f() const { return 5; }
+  };
+
+  constexpr int apply(const A &a, int (A::*ff)() const) {
+    return (a.*ff)();
+  }
+
+  static_assert(apply(A(), &A::f) == 5, "");
 }

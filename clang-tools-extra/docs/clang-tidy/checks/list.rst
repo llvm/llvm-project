@@ -75,6 +75,7 @@ Clang-Tidy Checks
    :doc:`android-cloexec-pipe2 <android/cloexec-pipe2>`, "Yes"
    :doc:`android-cloexec-socket <android/cloexec-socket>`, "Yes"
    :doc:`android-comparison-in-temp-failure-retry <android/comparison-in-temp-failure-retry>`,
+   :doc:`boost-use-ranges <boost/use-ranges>`, "Yes"
    :doc:`boost-use-to-string <boost/use-to-string>`, "Yes"
    :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
@@ -157,6 +158,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
+   :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
@@ -300,6 +302,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
+   :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"

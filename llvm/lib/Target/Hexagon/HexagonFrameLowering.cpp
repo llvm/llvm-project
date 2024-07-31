@@ -1032,7 +1032,6 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
@@ -1043,7 +1042,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
   DebugLoc DL;
   const MCInstrDesc &CFID = HII.get(TargetOpcode::CFI_INSTRUCTION);
 
-  MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
+  MCSymbol *FrameLabel = MF.getContext().createTempSymbol();
   bool HasFP = hasFP(MF);
 
   if (HasFP) {

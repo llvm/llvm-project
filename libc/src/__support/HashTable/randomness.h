@@ -12,12 +12,13 @@
 #include "src/__support/common.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #if defined(LIBC_HASHTABLE_USE_GETRANDOM)
 #include "src/errno/libc_errno.h"
 #include "src/sys/random/getrandom.h"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 namespace randomness {
 // We need an initial state for the hash function. More entropy are to be added
@@ -58,5 +59,5 @@ LIBC_INLINE uint64_t next_random_seed() {
 
 } // namespace randomness
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_HASHTABLE_RANDOMNESS_H
