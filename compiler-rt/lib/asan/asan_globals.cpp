@@ -84,11 +84,6 @@ static void AddGlobalToList(ListOfGlobals *&list, const Global *g) {
   list = l;
 }
 
-static void AddGlobalToMap(MapOfGlobals &map, const Global *g) {
-  ListOfGlobals *&in_map = map[g->odr_indicator];
-  AddGlobalToList(in_map, g);
-}
-
 static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
   if (addr <= g.beg - kMinimalDistanceFromAnotherGlobal) return false;
   if (addr >= g.beg + g.size_with_redzone) return false;
@@ -158,27 +153,25 @@ static void CheckODRViolationViaIndicator(const Global *g) {
   // Instrumentation requests to skip ODR check.
   if (g->odr_indicator == UINTPTR_MAX)
     return;
+
+  ListOfGlobals *&relevant_globals =
+      map_of_globals_by_indicator[g->odr_indicator];
+
   u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
-  if (*odr_indicator == UNREGISTERED) {
+  if (*odr_indicator == REGISTERED) {
+    // If *odr_indicator is REGISTERED, some module have already registered
+    // externally visible symbol with the same name. This is an ODR violation.
+    for (ListOfGlobals *l = relevant_globals; l; l = l->next) {
+      if ((flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
+          !IsODRViolationSuppressed(g->name))
+        ReportODRViolation(g, FindRegistrationSite(g), l->g,
+                           FindRegistrationSite(l->g));
+    }
+  } else {  // UNREGISTERED
     *odr_indicator = REGISTERED;
-    return;
   }
 
-  // Fetch globals with the same ODR indicator.
-  auto *relevant_globals_lookup =
-      map_of_globals_by_indicator.find(g->odr_indicator);
-  if (!relevant_globals_lookup)
-    return;
-
-  ListOfGlobals *relevant_globals = relevant_globals_lookup->second;
-  // If *odr_indicator is DEFINED, some module have already registered
-  // externally visible symbol with the same name. This is an ODR violation.
-  for (ListOfGlobals *l = relevant_globals; l; l = l->next) {
-    if ((flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-        !IsODRViolationSuppressed(g->name))
-      ReportODRViolation(g, FindRegistrationSite(g), l->g,
-                         FindRegistrationSite(l->g));
-  }
+  AddGlobalToList(relevant_globals, g);
 }
 
 // Check ODR violation for given global G by checking if it's already poisoned.
@@ -250,9 +243,6 @@ static void RegisterGlobal(const Global *g) {
     PoisonRedZones(*g);
 
   AddGlobalToList(list_of_all_globals, g);
-
-  if (UseODRIndicator(g) && g->odr_indicator != UINTPTR_MAX)
-    AddGlobalToMap(map_of_globals_by_indicator, g);
 
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
