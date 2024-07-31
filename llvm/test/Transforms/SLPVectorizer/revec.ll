@@ -58,3 +58,33 @@ entry:
   store <8 x i16> %4, ptr %5, align 2
   ret void
 }
+
+define void @test3(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[Y]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP5]], <8 x i32> [[TMP3]], <8 x i32> [[TMP4]]
+; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[Z:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = getelementptr inbounds i32, ptr %x, i64 4
+  %1 = getelementptr inbounds i32, ptr %y, i64 4
+  %2 = load <4 x i32>, ptr %x, align 4
+  %3 = load <4 x i32>, ptr %0, align 4
+  %4 = load <4 x i32>, ptr %y, align 4
+  %5 = load <4 x i32>, ptr %1, align 4
+  %6 = icmp eq ptr %x, null
+  %7 = icmp eq ptr %y, null
+  %8 = select i1 %6, <4 x i32> %2, <4 x i32> %4
+  %9 = select i1 %7, <4 x i32> %3, <4 x i32> %5
+  %10 = getelementptr inbounds i32, ptr %z, i64 4
+  store <4 x i32> %8, ptr %z, align 4
+  store <4 x i32> %9, ptr %10, align 4
+  ret void
+}
