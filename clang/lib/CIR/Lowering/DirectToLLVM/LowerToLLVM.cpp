@@ -872,7 +872,7 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
           dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp)),
           callOperands);
   }
-      return mlir::success();
+  return mlir::success();
 }
 
 class CIRCallLowering : public mlir::OpConversionPattern<mlir::cir::CallOp> {
@@ -899,6 +899,18 @@ public:
     return rewriteToCallOrInvoke(op.getOperation(), adaptor.getOperands(),
                                  rewriter, getTypeConverter(),
                                  op.getCalleeAttr());
+  }
+};
+
+class CIREhInflightOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::EhInflightOp> {
+public:
+  using OpConversionPattern<mlir::cir::EhInflightOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::EhInflightOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return mlir::failure();
   }
 };
 
@@ -3488,15 +3500,15 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRBitPopcountOpLowering, CIRAtomicCmpXchgLowering, CIRAtomicXchgLowering,
       CIRAtomicFetchLowering, CIRByteswapOpLowering, CIRRotateOpLowering,
       CIRBrCondOpLowering, CIRPtrStrideOpLowering, CIRCallLowering,
-      CIRTryCallLowering, CIRUnaryOpLowering, CIRBinOpLowering,
-      CIRBinOpOverflowOpLowering, CIRShiftOpLowering, CIRLoadLowering,
-      CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
-      CIRComplexCreateOpLowering, CIRComplexRealOpLowering,
-      CIRComplexImagOpLowering, CIRComplexRealPtrOpLowering,
-      CIRComplexImagPtrOpLowering, CIRVAStartLowering, CIRVAEndLowering,
-      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
-      CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
+      CIRTryCallLowering, CIREhInflightOpLowering, CIRUnaryOpLowering,
+      CIRBinOpLowering, CIRBinOpOverflowOpLowering, CIRShiftOpLowering,
+      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+      CIRFuncLowering, CIRCastOpLowering, CIRGlobalOpLowering,
+      CIRGetGlobalOpLowering, CIRComplexCreateOpLowering,
+      CIRComplexRealOpLowering, CIRComplexImagOpLowering,
+      CIRComplexRealPtrOpLowering, CIRComplexImagPtrOpLowering,
+      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
+      CIRBrOpLowering, CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
       CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
       CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
       CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
