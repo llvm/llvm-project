@@ -72,12 +72,12 @@ define void @memset_inline_is_volatile(ptr %dest, i8 %value, i1 %is.volatile) {
 }
 
 
-declare void @llvm.memset_pattern.p0.i32.i32(ptr nocapture, i32, i32, i1)
+declare void @llvm.memset.pattern.p0.i32.i32(ptr nocapture, i32, i32, i1)
 define void @memset_pattern_is_volatile(ptr %dest, i32 %value, i1 %is.volatile) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i1 %is.volatile
-  ; CHECK-NEXT: call void @llvm.memset_pattern.p0.i32.i32(ptr %dest, i32 %value, i32 8, i1 %is.volatile)
-  call void @llvm.memset_pattern.p0.i32.i32(ptr %dest, i32 %value, i32 8, i1 %is.volatile)
+  ; CHECK-NEXT: call void @llvm.memset.pattern.p0.i32.i32(ptr %dest, i32 %value, i32 8, i1 %is.volatile)
+  call void @llvm.memset.pattern.p0.i32.i32(ptr %dest, i32 %value, i32 8, i1 %is.volatile)
   ret void
 }
 

@@ -16,7 +16,7 @@ define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset_pattern.p0.i64.i128(ptr %a, i128 %value, i64 1, i1 0)
+  tail call void @llvm.memset.pattern.p0.i64.i128(ptr %a, i128 %value, i64 1, i1 0)
   ret void
 }
 
@@ -35,7 +35,7 @@ define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset_pattern.p0.i64.i128(ptr %a, i128 %value, i64 16, i1 0)
+  tail call void @llvm.memset.pattern.p0.i64.i128(ptr %a, i128 %value, i64 16, i1 0)
   ret void
 }
 
@@ -55,7 +55,7 @@ define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset_pattern.p0.i64.i128(ptr %a, i128 %value, i64 %x, i1 0)
+  tail call void @llvm.memset.pattern.p0.i64.i128(ptr %a, i128 %value, i64 %x, i1 0)
   ret void
 }
 
@@ -75,6 +75,6 @@ define void @memset_pattern_i256_x(ptr %a, i256 %value, i64 %x) nounwind {
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset_pattern.p0.i64.i256(ptr %a, i256 %value, i64 %x, i1 0)
+  tail call void @llvm.memset.pattern.p0.i64.i256(ptr %a, i256 %value, i64 %x, i1 0)
   ret void
 }

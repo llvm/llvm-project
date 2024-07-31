@@ -464,7 +464,7 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
   const DataLayout &DL = F->getDataLayout();
 
   if (DL.isBigEndian())
-    report_fatal_error("memset_pattern.inline expansion not currently "
+    report_fatal_error("memset.pattern expansion not currently "
                        "implemented for big-endian targets",
                        false);
 

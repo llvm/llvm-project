@@ -15232,7 +15232,7 @@ external functions.
 
 .. _int_memset_pattern:
 
-'``llvm.memset_pattern``' Intrinsic
+'``llvm.memset.pattern``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -15244,13 +15244,13 @@ address spaces. Not all targets support all bit widths however.
 
 ::
 
-      declare void @llvm.memset_pattern.p0.i64.i128(ptr <dest>, i128 <val>,
+      declare void @llvm.memset.pattern.p0.i64.i128(ptr <dest>, i128 <val>,
                                                     i64 <len>, i1 <isvolatile>)
 
 Overview:
 """""""""
 
-The '``llvm.memset_pattern.*``' intrinsics fill a block of memory with
+The '``llvm.memset.pattern.*``' intrinsics fill a block of memory with
 a particular value. This may be expanded to an inline loop, a sequence of
 stores, or a libcall depending on what is available for the target and the
 expected performance and code size impact.
@@ -15267,14 +15267,14 @@ The :ref:`align <attr_align>` parameter attribute can be provided
 for the first argument.
 
 If the ``isvolatile`` parameter is ``true``, the
-``llvm.memset_pattern`` call is a :ref:`volatile operation <volatile>`. The
+``llvm.memset.pattern`` call is a :ref:`volatile operation <volatile>`. The
 detailed access behavior is not very cleanly specified and it is unwise to
 depend on it.
 
 Semantics:
 """"""""""
 
-The '``llvm.memset_pattern.*``' intrinsics fill "len" bytes of memory
+The '``llvm.memset.pattern*``' intrinsic fills "len" bytes of memory
 starting at the destination location. If the argument is known to be aligned
 to some boundary, this can be specified as an attribute on the argument.
 

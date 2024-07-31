@@ -1221,7 +1221,7 @@ public:
 };
 
 /// This class wraps the llvm.memset, llvm.memset.inline, and
-/// llvm.memset_pattern intrinsics.
+/// llvm.memset.pattern intrinsics.
 class MemSetInst : public MemSetBase<MemIntrinsic> {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
