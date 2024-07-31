@@ -68,6 +68,16 @@ const TargetLowering &CombinerHelper::getTargetLowering() const {
   return *Builder.getMF().getSubtarget().getTargetLowering();
 }
 
+const MachineFunction &CombinerHelper::getMachineFunction() const {
+  return Builder.getMF();
+}
+
+const DataLayout &CombinerHelper::getDataLayout() const {
+  return getMachineFunction().getDataLayout();
+}
+
+LLVMContext &CombinerHelper::getContext() const { return Builder.getContext(); }
+
 /// \returns The little endian in-memory byte position of byte \p I in a
 /// \p ByteWidth bytes wide type.
 ///
@@ -2580,40 +2590,6 @@ void CombinerHelper::applyCombineExtOfExt(
     Builder.buildInstr(SrcExtOp, {DstReg}, {Reg});
     MI.eraseFromParent();
   }
-}
-
-bool CombinerHelper::matchCombineTruncOfExt(
-    MachineInstr &MI, std::pair<Register, unsigned> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Expected a G_TRUNC");
-  Register SrcReg = MI.getOperand(1).getReg();
-  MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
-  unsigned SrcOpc = SrcMI->getOpcode();
-  if (SrcOpc == TargetOpcode::G_ANYEXT || SrcOpc == TargetOpcode::G_SEXT ||
-      SrcOpc == TargetOpcode::G_ZEXT) {
-    MatchInfo = std::make_pair(SrcMI->getOperand(1).getReg(), SrcOpc);
-    return true;
-  }
-  return false;
-}
-
-void CombinerHelper::applyCombineTruncOfExt(
-    MachineInstr &MI, std::pair<Register, unsigned> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Expected a G_TRUNC");
-  Register SrcReg = MatchInfo.first;
-  unsigned SrcExtOp = MatchInfo.second;
-  Register DstReg = MI.getOperand(0).getReg();
-  LLT SrcTy = MRI.getType(SrcReg);
-  LLT DstTy = MRI.getType(DstReg);
-  if (SrcTy == DstTy) {
-    MI.eraseFromParent();
-    replaceRegWith(MRI, DstReg, SrcReg);
-    return;
-  }
-  if (SrcTy.getSizeInBits() < DstTy.getSizeInBits())
-    Builder.buildInstr(SrcExtOp, {DstReg}, {SrcReg});
-  else
-    Builder.buildTrunc(DstReg, SrcReg);
-  MI.eraseFromParent();
 }
 
 static LLT getMidVTForTruncRightShiftCombine(LLT ShiftTy, LLT TruncTy) {

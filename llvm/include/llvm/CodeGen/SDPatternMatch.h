@@ -490,6 +490,18 @@ m_c_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
                                                          CC);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_Select(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::SELECT, Cond, T, F);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VSELECT, Cond, T, F);
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -720,6 +732,10 @@ inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(const Opnd &Op) {
 template <typename Opnd>
 inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
   return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(Op), Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
 }
 
 // === Constants ===

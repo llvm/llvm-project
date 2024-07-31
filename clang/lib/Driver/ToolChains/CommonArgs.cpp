@@ -64,6 +64,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
@@ -634,7 +635,10 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    return ppc::getPPCTargetCPU(D, Args, T);
+    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+      return std::string(
+          llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
+    return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
 
   case llvm::Triple::csky:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))

@@ -60,6 +60,7 @@
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
@@ -1512,6 +1513,10 @@ static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
           options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
     CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
 
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                         options::OPT_fno_ptrauth_indirect_gotos))
+    CC1Args.push_back("-fptrauth-indirect-gotos");
+
   if (!DriverArgs.hasArg(options::OPT_fptrauth_init_fini,
                          options::OPT_fno_ptrauth_init_fini))
     CC1Args.push_back("-fptrauth-init-fini");
@@ -1839,6 +1844,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   Args.addOptInFlag(
       CmdArgs, options::OPT_fptrauth_vtable_pointer_type_discrimination,
       options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
+      options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination);
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
                     options::OPT_fno_ptrauth_init_fini);
   Args.addOptInFlag(
@@ -2019,10 +2027,10 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const Driver &D = getToolChain().getDriver();
   const llvm::Triple &T = getToolChain().getTriple();
-  if (Args.getLastArg(options::OPT_mtune_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
-    std::string CPU = ppc::getPPCTuneCPU(Args, T);
-    CmdArgs.push_back(Args.MakeArgString(CPU));
+    StringRef CPU = llvm::PPC::getNormalizedPPCTuneCPU(T, A->getValue());
+    CmdArgs.push_back(Args.MakeArgString(CPU.str()));
   }
 
   // Select the ABI to use.
@@ -3376,9 +3384,28 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-ffast-math");
 
   // Handle __FINITE_MATH_ONLY__ similarly.
-  if (!HonorINFs && !HonorNaNs)
+  // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
+  // Otherwise process the Xclang arguments to determine if -menable-no-infs and
+  // -menable-no-nans are set by the user.
+  bool shouldAddFiniteMathOnly = false;
+  if (!HonorINFs && !HonorNaNs) {
+    shouldAddFiniteMathOnly = true;
+  } else {
+    bool InfValues = true;
+    bool NanValues = true;
+    for (const auto *Arg : Args.filtered(options::OPT_Xclang)) {
+      StringRef ArgValue = Arg->getValue();
+      if (ArgValue == "-menable-no-nans")
+        NanValues = false;
+      else if (ArgValue == "-menable-no-infs")
+        InfValues = false;
+    }
+    if (!NanValues && !InfValues)
+      shouldAddFiniteMathOnly = true;
+  }
+  if (shouldAddFiniteMathOnly) {
     CmdArgs.push_back("-ffinite-math-only");
-
+  }
   if (const Arg *A = Args.getLastArg(options::OPT_mfpmath_EQ)) {
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
@@ -3745,6 +3772,11 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   } else if (Arg *A = Args.getLastArg(options::OPT_cl_ext_EQ)) {
     std::string CLExtStr = std::string("-cl-ext=") + A->getValue();
     CmdArgs.push_back(Args.MakeArgString(CLExtStr));
+  }
+
+  if (Args.hasArg(options::OPT_cl_finite_math_only)) {
+    CmdArgs.push_back("-menable-no-infs");
+    CmdArgs.push_back("-menable-no-nans");
   }
 
   for (const auto &Arg : ForwardedArguments)
@@ -9123,7 +9155,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // If we disable the GPU C library support it needs to be forwarded to the
   // link job.
   if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
-    CmdArgs.push_back("--device-linker=-nolibc");
+    CmdArgs.push_back("--device-compiler=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

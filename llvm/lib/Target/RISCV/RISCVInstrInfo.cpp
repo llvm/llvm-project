@@ -1365,7 +1365,7 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-  if (!MI->isSafeToMove(/* AliasAnalysis = */ nullptr, DontMoveAcrossStores))
+  if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
 }
