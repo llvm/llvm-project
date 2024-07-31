@@ -285,9 +285,6 @@ static ShaderKind getShaderKindEnum(Triple::EnvironmentType EnvType) {
 /// the following prototype
 ///     OverloadType dx.op.<opclass>.<return-type>(int opcode, <param types>)
 /// <param-types> are constructed from types in Prop.
-/// \param Prop  Structure containing DXIL Operation properties based on
-///               its specification in DXIL.td.
-/// \param OverloadTy Return type to be used to construct DXIL function type.
 static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
                                            LLVMContext &Context,
                                            Type *OverloadTy) {
@@ -355,11 +352,16 @@ static Error makeOpError(dxil::OpCode OpCode, Twine Msg) {
 }
 
 Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
-                                                ArrayRef<Value *> Args) {
+                                                ArrayRef<Value *> Args,
+                                                Type *RetTy) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
 
   Type *OverloadTy = nullptr;
-  if (Prop->OverloadParamIndex > 0) {
+  if (Prop->OverloadParamIndex == 0) {
+    if (!RetTy)
+      return makeOpError(OpCode, "Op overloaded on unknown return type");
+    OverloadTy = RetTy;
+  } else if (Prop->OverloadParamIndex > 0) {
     // The index counts including the return type
     unsigned ArgIndex = Prop->OverloadParamIndex - 1;
     if (static_cast<unsigned>(ArgIndex) >= Args.size())
@@ -422,9 +424,9 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   return B.CreateCall(DXILFn, OpArgs);
 }
 
-CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode,
-                                  ArrayRef<Value *> &Args) {
-  Expected<CallInst *> Result = tryCreateOp(OpCode, Args);
+CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> &Args,
+                                  Type *RetTy) {
+  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, RetTy);
   if (Error E = Result.takeError())
     llvm_unreachable("Invalid arguments for operation");
   return *Result;

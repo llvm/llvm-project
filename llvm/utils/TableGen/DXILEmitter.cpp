@@ -132,54 +132,25 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // resolve an LLVMMatchType in accordance with  convention outlined in
   // the comment before the definition of class LLVMMatchType in
   // llvm/IR/Intrinsics.td
-  SmallVector<int> OverloadParamIndices;
+  OverloadParamIndex = -1; // A sigil meaning none.
   for (unsigned i = 0; i < ParamTypeRecsSize; i++) {
     auto TR = ParamTypeRecs[i];
     // Track operation parameter indices of any overload types
     auto isAny = TR->getValueAsInt("isAny");
     if (isAny == 1) {
-      // All overload types in a DXIL Op are required to be of the same type.
-      if (!OverloadParamIndices.empty()) {
-        [[maybe_unused]] bool knownType = true;
-        // Ensure that the same overload type registered earlier is being used
-        for (auto Idx : OverloadParamIndices) {
-          if (TR != ParamTypeRecs[Idx]) {
-            knownType = false;
-            break;
-          }
-        }
-        assert(knownType && "Specification of multiple differing overload "
-                            "parameter types not yet supported");
-      } else {
-        // Skip the return value - having the overload index point at the return
-        // value makes it hard to determine the overload from an argument list,
-        // and we treat unoverloaded functions and those overloaded on return
-        // identically anyway.
-        if (i != 0)
-          OverloadParamIndices.push_back(i);
+      if (OverloadParamIndex != -1) {
+        assert(TR == ParamTypeRecs[OverloadParamIndex] &&
+               "Specification of multiple differing overload parameter types "
+               "is not supported");
       }
+      // Keep the earliest parameter index we see, but if it was the return type
+      // overwrite it with the first overloaded argument.
+      if (OverloadParamIndex <= 0)
+        OverloadParamIndex = i;
     }
-    // Populate OpTypes array according to the type specification
-    if (TR->isAnonymous()) {
-      // Check prior overload types exist
-      assert(!OverloadParamIndices.empty() &&
-             "No prior overloaded parameter found to match.");
-      // Get the parameter index of anonymous type, TR, references
-      auto OLParamIndex = TR->getValueAsInt("Number");
-      // Resolve and insert the type to that at OLParamIndex
-      OpTypes.emplace_back(ParamTypeRecs[OLParamIndex]);
-    } else {
-      // A non-anonymous type. Just record it in OpTypes
-      OpTypes.emplace_back(TR);
-    }
-  }
-
-  // Set the index of the overload parameter, if any.
-  OverloadParamIndex = -1; // default; indicating none
-  if (!OverloadParamIndices.empty()) {
-    assert(OverloadParamIndices.size() == 1 &&
-           "Multiple overload type specification not supported");
-    OverloadParamIndex = OverloadParamIndices[0];
+    if (TR->isAnonymous())
+      PrintFatalError(TR, "Only concrete types are allowed here");
+    OpTypes.emplace_back(TR);
   }
 
   // Get overload records

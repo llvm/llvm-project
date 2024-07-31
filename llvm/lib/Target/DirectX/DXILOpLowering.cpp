@@ -89,7 +89,8 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     } else
       Args.append(CI->arg_begin(), CI->arg_end());
 
-    Expected<CallInst *> OpCallOrErr = OpBuilder.tryCreateOp(DXILOp, Args);
+    Expected<CallInst *> OpCallOrErr = OpBuilder.tryCreateOp(DXILOp, Args,
+                                                             F.getReturnType());
     if (Error E = OpCallOrErr.takeError()) {
       std::string Message(toString(std::move(E)));
       DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,

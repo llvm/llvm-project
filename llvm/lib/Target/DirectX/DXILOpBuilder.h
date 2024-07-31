@@ -33,20 +33,23 @@ public:
 
   /// Create a call instruction for the given DXIL op. The arguments
   /// must be valid for an overload of the operation.
-  CallInst *createOp(dxil::OpCode Op, ArrayRef<Value *> &Args);
+  CallInst *createOp(dxil::OpCode Op, ArrayRef<Value *> &Args,
+                     Type *RetTy = nullptr);
 
 #define DXIL_OPCODE(Op, Name)                                                  \
-  CallInst *create##Name##Op(ArrayRef<Value *> &Args) {                        \
-    return createOp(dxil::OpCode(Op), Args);                                   \
+  CallInst *create##Name##Op(ArrayRef<Value *> &Args, Type *RetTy = nullptr) { \
+    return createOp(dxil::OpCode(Op), Args, RetTy);                            \
   }
 #include "DXILOperation.inc"
 
   /// Try to create a call instruction for the given DXIL op. Fails if the
   /// overload is invalid.
-  Expected<CallInst *> tryCreateOp(dxil::OpCode Op, ArrayRef<Value *> Args);
+  Expected<CallInst *> tryCreateOp(dxil::OpCode Op, ArrayRef<Value *> Args,
+                                   Type *RetTy = nullptr);
 #define DXIL_OPCODE(Op, Name)                                                  \
-  Expected<CallInst *> tryCreate##Name##Op(ArrayRef<Value *> &Args) {          \
-    return tryCreateOp(dxil::OpCode(Op), Args);                                \
+  Expected<CallInst *> tryCreate##Name##Op(ArrayRef<Value *> &Args,            \
+                                           Type *RetTy = nullptr) {            \
+    return tryCreateOp(dxil::OpCode(Op), Args, RetTy);                         \
   }
 #include "DXILOperation.inc"
 
