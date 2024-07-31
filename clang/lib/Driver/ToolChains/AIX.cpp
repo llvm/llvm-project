@@ -561,10 +561,8 @@ void AIX::addClangTargetOptions(
                               options::OPT_fno_sized_deallocation))
     CC1Args.push_back("-fno-sized-deallocation");
 
-  if (Args.hasFlag(options::OPT_ferr_pragma_mc_func_aix,
-                   options::OPT_fno_err_pragma_mc_func_aix, true))
-    CC1Args.push_back("-ferr-pragma-mc-func-aix");
-  else
+  if (!Args.hasFlag(options::OPT_ferr_pragma_mc_func_aix,
+                    options::OPT_fno_err_pragma_mc_func_aix, true))
     CC1Args.push_back("-fno-err-pragma-mc-func-aix");
 }
 

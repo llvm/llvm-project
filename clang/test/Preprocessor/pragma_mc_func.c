@@ -1,6 +1,8 @@
 // RUN: not %clang --target=powerpc64-ibm-aix -fsyntax-only %s 2>&1 | FileCheck %s
 // RUN: not %clang --target=powerpc64-ibm-aix -ferr-pragma-mc-func-aix -fsyntax-only \
 // RUN:   %s 2>&1 | FileCheck %s
+// RUN: not %clang --target=powerpc64-ibm-aix -fno-err-pragma-mc-func-aix \
+// RUN:   -ferr-pragma-mc-func-aix -fsyntax-only %s 2>&1 | FileCheck %s
 #pragma mc_func asm_barrier {"60000000"}
 
 // CHECK:  error: #pragma mc_func is not supported
