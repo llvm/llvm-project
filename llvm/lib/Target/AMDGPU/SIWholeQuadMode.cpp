@@ -1374,7 +1374,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
       // exclude instructions with unexpected effects from them.
       // FIXME: ideally we would branch over these when EXEC=0,
       // but this requires updating implicit values, live intervals and CFG.
-      if (WQMToExact || ExactToWQM) {
+      if ((WQMToExact && (OutNeeds & StateWQM)) || ExactToWQM) {
         for (MachineBasicBlock::iterator I = First; I != II; ++I) {
           if (TII->hasUnwantedEffectsWhenEXECEmpty(*I)) {
             PreferLast = WQMToExact;
