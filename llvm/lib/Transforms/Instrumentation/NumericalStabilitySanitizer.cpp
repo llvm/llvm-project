@@ -850,7 +850,7 @@ void NumericalStabilitySanitizer::populateShadowStack(
   IRBuilder<> Builder(&CI);
   SmallVector<Value *, 8> ArgShadows;
   const bool ShouldCheckArgs = shouldCheckArgs(CI, TLI, CheckFunctionsFilter);
-  for (auto &[ArgIdx, Arg] : enumerate(CI.operands())) {
+  for (auto [ArgIdx, Arg] : enumerate(CI.operands())) {
     if (Config.getExtendedFPType(Arg->getType()) == nullptr)
       continue; // Not an FT value.
     Value *ArgShadow = Map.getShadow(Arg);
