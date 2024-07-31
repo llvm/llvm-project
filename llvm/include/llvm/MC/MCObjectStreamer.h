@@ -26,8 +26,6 @@ class MCAssembler;
 class MCCodeEmitter;
 class MCSubtargetInfo;
 class MCExpr;
-class MCFragment;
-class MCDataFragment;
 class MCAsmBackend;
 class raw_ostream;
 class raw_pwrite_stream;
@@ -43,9 +41,6 @@ class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
-  SmallVector<MCSymbol *, 2> PendingLabels;
-  SmallSetVector<MCSection *, 4> PendingLabelSections;
-  unsigned CurSubsectionIdx = 0;
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
@@ -88,12 +83,13 @@ public:
   void emitFrames(MCAsmBackend *MAB);
   void emitCFISections(bool EH, bool Debug) override;
 
-  MCFragment *getCurrentFragment() const;
-
   void insert(MCFragment *F) {
-    MCSection *CurSection = getCurrentSectionOnly();
-    CurSection->addFragment(*F);
-    F->setParent(CurSection);
+    auto *Sec = CurFrag->getParent();
+    F->setParent(Sec);
+    F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+    CurFrag->Next = F;
+    CurFrag = F;
+    Sec->curFragList()->Tail = F;
   }
 
   /// Get a data fragment to write into, creating a new one if the current
@@ -103,13 +99,7 @@ public:
   MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
 
 protected:
-  bool changeSectionImpl(MCSection *Section, const MCExpr *Subsection);
-
-  /// If any labels have been emitted but not assigned fragments in the current
-  /// Section and Subsection, ensure that they get assigned to fragment F.
-  /// Optionally, one can provide an offset \p FOffset as a symbol offset within
-  /// the fragment.
-  void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0) {}
+  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
@@ -130,7 +120,8 @@ public:
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
+  void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction

@@ -135,16 +135,16 @@ struct _LIBCPP_TEMPLATE_VIS pair
       typename conditional< _MaybeEnable, _CheckArgs, __check_tuple_constructor_fail>::type;
 
   template <bool _Dummy = true, __enable_if_t<_CheckArgsDep<_Dummy>::__enable_default(), int> = 0>
-  explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR pair() _NOEXCEPT_(
-      is_nothrow_default_constructible<first_type>::value&& is_nothrow_default_constructible<second_type>::value)
+  explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI constexpr pair() noexcept(
+      is_nothrow_default_constructible<first_type>::value && is_nothrow_default_constructible<second_type>::value)
       : first(), second() {}
 
   template <bool _Dummy = true,
             __enable_if_t<_CheckArgsDep<_Dummy>::template __is_pair_constructible<_T1 const&, _T2 const&>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(
-      !_CheckArgsDep<_Dummy>::template __is_implicit<_T1 const&, _T2 const&>()) pair(_T1 const& __t1, _T2 const& __t2)
-      _NOEXCEPT_(is_nothrow_copy_constructible<first_type>::value&& is_nothrow_copy_constructible<second_type>::value)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgsDep<_Dummy>::template __is_implicit<_T1 const&, _T2 const&>())
+      pair(_T1 const& __t1, _T2 const& __t2) noexcept(is_nothrow_copy_constructible<first_type>::value &&
+                                                      is_nothrow_copy_constructible<second_type>::value)
       : first(__t1), second(__t2) {}
 
   template <
@@ -156,10 +156,9 @@ struct _LIBCPP_TEMPLATE_VIS pair
       class _U2,
 #  endif
       __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1, _U2>(), int> = 0 >
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>()) pair(_U1&& __u1, _U2&& __u2)
-      _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
-                  is_nothrow_constructible<second_type, _U2>::value))
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>())
+      pair(_U1&& __u1, _U2&& __u2) noexcept(is_nothrow_constructible<first_type, _U1>::value &&
+                                            is_nothrow_constructible<second_type, _U2>::value)
       : first(std::forward<_U1>(__u1)), second(std::forward<_U2>(__u2)) {
   }
 
@@ -176,16 +175,14 @@ struct _LIBCPP_TEMPLATE_VIS pair
             __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1 const&, _U2 const&>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1 const&, _U2 const&>())
-      pair(pair<_U1, _U2> const& __p)
-          _NOEXCEPT_((is_nothrow_constructible<first_type, _U1 const&>::value &&
-                      is_nothrow_constructible<second_type, _U2 const&>::value))
+      pair(pair<_U1, _U2> const& __p) noexcept(is_nothrow_constructible<first_type, _U1 const&>::value &&
+                                               is_nothrow_constructible<second_type, _U2 const&>::value)
       : first(__p.first), second(__p.second) {}
 
   template <class _U1, class _U2, __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1, _U2>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>()) pair(pair<_U1, _U2>&& __p)
-      _NOEXCEPT_((is_nothrow_constructible<first_type, _U1&&>::value &&
-                  is_nothrow_constructible<second_type, _U2&&>::value))
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>())
+      pair(pair<_U1, _U2>&& __p) noexcept(is_nothrow_constructible<first_type, _U1&&>::value &&
+                                          is_nothrow_constructible<second_type, _U2&&>::value)
       : first(std::forward<_U1>(__p.first)), second(std::forward<_U2>(__p.second)) {}
 
 #  if _LIBCPP_STD_VER >= 23
@@ -219,8 +216,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
   template <class... _Args1, class... _Args2>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args, tuple<_Args2...> __second_args) _NOEXCEPT_(
-      is_nothrow_constructible<first_type, _Args1...>::value&& is_nothrow_constructible<second_type, _Args2...>::value)
+  pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args, tuple<_Args2...> __second_args) noexcept(
+      is_nothrow_constructible<first_type, _Args1...>::value && is_nothrow_constructible<second_type, _Args2...>::value)
       : pair(__pc,
              __first_args,
              __second_args,
@@ -228,19 +225,19 @@ struct _LIBCPP_TEMPLATE_VIS pair
              typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
-  operator=(__conditional_t< is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
-                             pair,
-                             __nat> const& __p)
-      _NOEXCEPT_(is_nothrow_copy_assignable<first_type>::value&& is_nothrow_copy_assignable<second_type>::value) {
+  operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
+                            pair,
+                            __nat> const& __p) noexcept(is_nothrow_copy_assignable<first_type>::value &&
+                                                        is_nothrow_copy_assignable<second_type>::value) {
     first  = __p.first;
     second = __p.second;
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair& operator=(
-      __conditional_t< is_move_assignable<first_type>::value && is_move_assignable<second_type>::value, pair, __nat>&&
-          __p)
-      _NOEXCEPT_(is_nothrow_move_assignable<first_type>::value&& is_nothrow_move_assignable<second_type>::value) {
+      __conditional_t<is_move_assignable<first_type>::value && is_move_assignable<second_type>::value, pair, __nat>&&
+          __p) noexcept(is_nothrow_move_assignable<first_type>::value &&
+                        is_nothrow_move_assignable<second_type>::value) {
     first  = std::forward<first_type>(__p.first);
     second = std::forward<second_type>(__p.second);
     return *this;

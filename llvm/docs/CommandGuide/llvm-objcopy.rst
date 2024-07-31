@@ -299,6 +299,19 @@ them.
  Allow :program:`llvm-objcopy` to remove sections even if it would leave invalid
  section references. Any invalid sh_link fields will be set to zero.
 
+.. option:: --change-section-lma \*{+-}<val>
+
+ Shift LMA of non-zero-sized segments by ``<val>``.
+
+.. option:: --change-section-address <section>{=+-}<val>, --adjust-section-vma
+
+ Change the address of sections that match ``<section>`` pattern to the
+ specified value, or apply ``+<val>``/``-<val>`` to the current value. Can be
+ specified multiple times to specify multiple patterns. Each section is only
+ modified by one ``--change-section-address`` argument. If a section name
+ matches multiple patterns, the rightmost change applies. The object file needs
+ to be of ET_REL type.
+
 .. option:: --change-start <incr>, --adjust-start
 
  Add ``<incr>`` to the program's start address. Can be specified multiple
@@ -422,6 +435,10 @@ them.
 
  The default is `default`.
 
+.. option:: --no-verify-note-sections
+
+ When adding note sections, do not verify if the section format is valid.
+
 .. option:: --output-target <format>, -O
 
  Write the output as the specified format. See `SUPPORTED FORMATS`_ for a list
@@ -511,6 +528,11 @@ them.
  Equivalent to :option:`--input-target` and :option:`--output-target` for the
  specified format. See `SUPPORTED FORMATS`_ for a list of valid ``<format>``
  values.
+
+.. option:: --verify-note-sections
+
+ When adding note sections, verify if the section format is valid. On by
+ default.
 
 .. option:: --weaken-symbol <symbol>, -W
 

@@ -281,6 +281,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare float @remainderf(float, float)\n"
       "declare x86_fp80 @remainderl(x86_fp80, x86_fp80)\n"
       "declare i32 @remove(i8*)\n"
+      "declare double @remquo(double, double, ptr)\n"
+      "declare float @remquof(float, float, ptr)\n"
+      "declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)\n"
       "declare i32 @rename(i8*, i8*)\n"
       "declare void @rewind(%struct*)\n"
       "declare double @rint(double)\n"
@@ -496,6 +499,10 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @__cxa_guard_release(%struct*)\n"
 
       "declare i32 @atexit(void ()*)\n"
+
+      "declare void @abort()\n"
+      "declare void @exit(i32)\n"
+      "declare void @_Exit(i32)\n"
 
       "declare i32 @__nvvm_reflect(i8*)\n"
 

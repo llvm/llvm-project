@@ -88,15 +88,14 @@ static MaskFormat getMaskFormat(Value mask) {
     // Inspect constant mask index. If the index exceeds the
     // dimension size, all bits are set. If the index is zero
     // or less, no bits are set.
-    ArrayAttr masks = m.getMaskDimSizes();
+    ArrayRef<int64_t> masks = m.getMaskDimSizes();
     auto shape = m.getType().getShape();
     bool allTrue = true;
     bool allFalse = true;
     for (auto [maskIdx, dimSize] : llvm::zip_equal(masks, shape)) {
-      int64_t i = llvm::cast<IntegerAttr>(maskIdx).getInt();
-      if (i < dimSize)
+      if (maskIdx < dimSize)
         allTrue = false;
-      if (i > 0)
+      if (maskIdx > 0)
         allFalse = false;
     }
     if (allTrue)
@@ -2465,11 +2464,6 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ShuffleOp
 //===----------------------------------------------------------------------===//
 
-void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value v1,
-                      Value v2, ArrayRef<int64_t> mask) {
-  build(builder, result, v1, v2, getVectorSubscriptAttr(builder, mask));
-}
-
 LogicalResult ShuffleOp::verify() {
   VectorType resultType = getResultVectorType();
   VectorType v1Type = getV1VectorType();
@@ -2492,8 +2486,8 @@ LogicalResult ShuffleOp::verify() {
       return emitOpError("dimension mismatch");
   }
   // Verify mask length.
-  auto maskAttr = getMask().getValue();
-  int64_t maskLength = maskAttr.size();
+  ArrayRef<int64_t> mask = getMask();
+  int64_t maskLength = mask.size();
   if (maskLength <= 0)
     return emitOpError("invalid mask length");
   if (maskLength != resultType.getDimSize(0))
@@ -2501,10 +2495,9 @@ LogicalResult ShuffleOp::verify() {
   // Verify all indices.
   int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
                       (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
-  for (const auto &en : llvm::enumerate(maskAttr)) {
-    auto attr = llvm::dyn_cast<IntegerAttr>(en.value());
-    if (!attr || attr.getInt() < 0 || attr.getInt() >= indexSize)
-      return emitOpError("mask index #") << (en.index() + 1) << " out of range";
+  for (auto [idx, maskPos] : llvm::enumerate(mask)) {
+    if (maskPos < 0 || maskPos >= indexSize)
+      return emitOpError("mask index #") << (idx + 1) << " out of range";
   }
   return success();
 }
@@ -2528,13 +2521,12 @@ ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
   return success();
 }
 
-static bool isStepIndexArray(ArrayAttr idxArr, uint64_t begin, size_t width) {
-  uint64_t expected = begin;
-  return idxArr.size() == width &&
-         llvm::all_of(idxArr.getAsValueRange<IntegerAttr>(),
-                      [&expected](auto attr) {
-                        return attr.getZExtValue() == expected++;
-                      });
+template <typename T>
+static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
+  T expected = begin;
+  return idxArr.size() == width && llvm::all_of(idxArr, [&expected](T value) {
+           return value == expected++;
+         });
 }
 
 OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
@@ -2569,8 +2561,7 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   SmallVector<Attribute> results;
   auto lhsElements = llvm::cast<DenseElementsAttr>(lhs).getValues<Attribute>();
   auto rhsElements = llvm::cast<DenseElementsAttr>(rhs).getValues<Attribute>();
-  for (const auto &index : this->getMask().getAsValueRange<IntegerAttr>()) {
-    int64_t i = index.getZExtValue();
+  for (int64_t i : this->getMask()) {
     if (i >= lhsSize) {
       results.push_back(rhsElements[i - lhsSize]);
     } else {
@@ -2591,13 +2582,13 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
   LogicalResult matchAndRewrite(ShuffleOp shuffleOp,
                                 PatternRewriter &rewriter) const override {
     VectorType v1VectorType = shuffleOp.getV1VectorType();
-    ArrayAttr mask = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
     if (v1VectorType.getRank() > 0)
       return failure();
     if (mask.size() != 1)
       return failure();
     VectorType resType = VectorType::Builder(v1VectorType).setShape({1});
-    if (llvm::cast<IntegerAttr>(mask[0]).getInt() == 0)
+    if (mask[0] == 0)
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shuffleOp, resType,
                                                        shuffleOp.getV1());
     else
@@ -2652,11 +2643,11 @@ public:
           op, "ShuffleOp types don't match an interleave");
     }
 
-    ArrayAttr shuffleMask = op.getMask();
+    ArrayRef<int64_t> shuffleMask = op.getMask();
     int64_t resultVectorSize = resultType.getNumElements();
     for (int i = 0, e = resultVectorSize / 2; i < e; ++i) {
-      int64_t maskValueA = cast<IntegerAttr>(shuffleMask[i * 2]).getInt();
-      int64_t maskValueB = cast<IntegerAttr>(shuffleMask[(i * 2) + 1]).getInt();
+      int64_t maskValueA = shuffleMask[i * 2];
+      int64_t maskValueB = shuffleMask[(i * 2) + 1];
       if (maskValueA != i || maskValueB != (resultVectorSize / 2) + i)
         return rewriter.notifyMatchFailure(op,
                                            "ShuffleOp mask not interleaving");
@@ -2851,6 +2842,9 @@ public:
     Attribute vectorDestCst;
     if (!matchPattern(destVector, m_Constant(&vectorDestCst)))
       return failure();
+    auto denseDest = llvm::dyn_cast<DenseElementsAttr>(vectorDestCst);
+    if (!denseDest)
+      return failure();
 
     VectorType destTy = destVector.getType();
     if (destTy.isScalable())
@@ -2860,8 +2854,6 @@ public:
     if (destTy.getNumElements() > vectorSizeFoldThreshold &&
         !destVector.hasOneUse())
       return failure();
-
-    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
 
     Value sourceValue = op.getSource();
     Attribute sourceCst;
@@ -3592,8 +3584,7 @@ public:
     if (extractStridedSliceOp.hasNonUnitStrides())
       return failure();
     // Gather constant mask dimension sizes.
-    SmallVector<int64_t, 4> maskDimSizes;
-    populateFromInt64AttrArray(constantMaskOp.getMaskDimSizes(), maskDimSizes);
+    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
     // Gather strided slice offsets and sizes.
     SmallVector<int64_t, 4> sliceOffsets;
     populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
@@ -3624,7 +3615,7 @@ public:
     // region.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         extractStridedSliceOp, extractStridedSliceOp.getResult().getType(),
-        vector::getVectorSubscriptAttr(rewriter, sliceMaskDimSizes));
+        sliceMaskDimSizes);
     return success();
   }
 };
@@ -3817,7 +3808,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+                          : builder.getBoolArrayAttr(
+                                SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         inBoundsAttr);
 }
@@ -3832,7 +3824,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+                          : builder.getBoolArrayAttr(
+                                SmallVector<bool>(vectorType.getRank(), false));
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         padding,
         /*mask=*/Value(), inBoundsAttr);
@@ -3950,17 +3943,15 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
            << inferredMaskType << ") and mask operand type (" << maskType
            << ") don't match";
 
-  if (inBounds) {
-    if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
-      return op->emitOpError("expects the optional in_bounds attr of same rank "
-                             "as permutation_map results: ")
-             << AffineMapAttr::get(permutationMap)
-             << " vs inBounds of size: " << inBounds.size();
-    for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
-      if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
-          !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
-        return op->emitOpError("requires broadcast dimensions to be in-bounds");
-  }
+  if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
+    return op->emitOpError("expects the in_bounds attr of same rank "
+                           "as permutation_map results: ")
+           << AffineMapAttr::get(permutationMap)
+           << " vs inBounds of size: " << inBounds.size();
+  for (unsigned int i = 0, e = permutationMap.getNumResults(); i < e; ++i)
+    if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
+        !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
+      return op->emitOpError("requires broadcast dimensions to be in-bounds");
 
   return success();
 }
@@ -4036,6 +4027,13 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
   }
+  auto inBoundsAttrName = TransferReadOp::getInBoundsAttrName(result.name);
+  Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
+  if (!inBoundsAttr) {
+    result.addAttribute(inBoundsAttrName,
+                        builder.getBoolArrayAttr(
+                            SmallVector<bool>(permMap.getNumResults(), false)));
+  }
   if (parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
       parser.resolveOperands(indexInfo, indexType, result.operands) ||
       parser.resolveOperand(paddingInfo, shapedType.getElementType(),
@@ -4080,8 +4078,7 @@ LogicalResult TransferReadOp::verify() {
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
-                              inferredMaskType, permutationMap,
-                              getInBounds() ? *getInBounds() : ArrayAttr())))
+                              inferredMaskType, permutationMap, getInBounds())))
     return failure();
 
   if (auto sourceVectorElementType =
@@ -4172,11 +4169,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   if (!mask)
     return failure();
 
-  auto constantMask = mask.template getDefiningOp<vector::ConstantMaskOp>();
-  if (!constantMask)
-    return failure();
-
-  if (!constantMask.isAllOnesMask())
+  if (getMaskFormat(mask) != MaskFormat::AllTrue)
     return failure();
 
   op.getMaskMutable().clear();
@@ -4358,9 +4351,11 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : ArrayAttr();
+  auto inBoundsAttr =
+      (inBounds && !inBounds.value().empty())
+          ? builder.getBoolArrayAttr(inBounds.value())
+          : builder.getBoolArrayAttr(SmallVector<bool>(
+                llvm::cast<VectorType>(vector.getType()).getRank(), false));
   build(builder, result, vector, dest, indices, permutationMapAttr,
         /*mask=*/Value(), inBoundsAttr);
 }
@@ -4412,6 +4407,13 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
+  }
+  auto inBoundsAttrName = TransferWriteOp::getInBoundsAttrName(result.name);
+  Attribute inBoundsAttr = result.attributes.get(inBoundsAttrName);
+  if (!inBoundsAttr) {
+    result.addAttribute(inBoundsAttrName,
+                        builder.getBoolArrayAttr(
+                            SmallVector<bool>(permMap.getNumResults(), false)));
   }
   if (parser.resolveOperand(vectorInfo, vectorType, result.operands) ||
       parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
@@ -4466,8 +4468,7 @@ LogicalResult TransferWriteOp::verify() {
 
   if (failed(verifyTransferOp(cast<VectorTransferOpInterface>(getOperation()),
                               shapedType, vectorType, maskType,
-                              inferredMaskType, permutationMap,
-                              getInBounds() ? *getInBounds() : ArrayAttr())))
+                              inferredMaskType, permutationMap, getInBounds())))
     return failure();
 
   return verifyPermutationMap(permutationMap,
@@ -5227,6 +5228,16 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
     if (!isValidShapeCast(resultShape, sourceShape))
       return op->emitOpError("invalid shape cast");
   }
+
+  // Check that (non-)scalability is preserved
+  int64_t sourceNScalableDims = sourceVectorType.getNumScalableDims();
+  int64_t resultNScalableDims = resultVectorType.getNumScalableDims();
+  if (sourceNScalableDims != resultNScalableDims)
+    return op->emitOpError("different number of scalable dims at source (")
+           << sourceNScalableDims << ") and result (" << resultNScalableDims
+           << ")";
+  sourceVectorType.getNumDynamicDims();
+
   return success();
 }
 
@@ -5389,21 +5400,19 @@ public:
     }
 
     if (constantMaskOp) {
-      auto maskDimSizes = constantMaskOp.getMaskDimSizes().getValue();
+      auto maskDimSizes = constantMaskOp.getMaskDimSizes();
       auto numMaskOperands = maskDimSizes.size();
 
       // Check every mask dim size to see whether it can be dropped
       for (size_t i = numMaskOperands - 1; i >= numMaskOperands - numDimsToDrop;
            --i) {
-        if (cast<IntegerAttr>(maskDimSizes[i]).getValue() != 1)
+        if (maskDimSizes[i] != 1)
           return failure();
       }
 
       auto newMaskOperands = maskDimSizes.drop_back(numDimsToDrop);
-      ArrayAttr newMaskOperandsAttr = rewriter.getArrayAttr(newMaskOperands);
-
       rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(shapeOp, shapeOpResTy,
-                                                          newMaskOperandsAttr);
+                                                          newMaskOperands);
       return success();
     }
 
@@ -5783,12 +5792,10 @@ public:
 
     // ConstantMaskOp case.
     auto maskDimSizes = constantMaskOp.getMaskDimSizes();
-    SmallVector<Attribute> newMaskDimSizes(maskDimSizes.getValue());
-    applyPermutationToVector(newMaskDimSizes, permutation);
+    auto newMaskDimSizes = applyPermutation(maskDimSizes, permutation);
 
     rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
-        transpOp, transpOp.getResultVectorType(),
-        ArrayAttr::get(transpOp.getContext(), newMaskDimSizes));
+        transpOp, transpOp.getResultVectorType(), newMaskDimSizes);
     return success();
   }
 };
@@ -5811,7 +5818,7 @@ LogicalResult ConstantMaskOp::verify() {
   if (resultType.getRank() == 0) {
     if (getMaskDimSizes().size() != 1)
       return emitError("array attr must have length 1 for 0-D vectors");
-    auto dim = llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt();
+    auto dim = getMaskDimSizes()[0];
     if (dim != 0 && dim != 1)
       return emitError("mask dim size must be either 0 or 1 for 0-D vectors");
     return success();
@@ -5825,9 +5832,8 @@ LogicalResult ConstantMaskOp::verify() {
   // result dimension size.
   auto resultShape = resultType.getShape();
   auto resultScalableDims = resultType.getScalableDims();
-  SmallVector<int64_t, 4> maskDimSizes;
-  for (const auto [index, intAttr] : llvm::enumerate(getMaskDimSizes())) {
-    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
+  ArrayRef<int64_t> maskDimSizes = getMaskDimSizes();
+  for (const auto [index, maskDimSize] : llvm::enumerate(maskDimSizes)) {
     if (maskDimSize < 0 || maskDimSize > resultShape[index])
       return emitOpError(
           "array attr of size out of bounds of vector result dimension size");
@@ -5835,7 +5841,6 @@ LogicalResult ConstantMaskOp::verify() {
         maskDimSize != resultShape[index])
       return emitOpError(
           "only supports 'none set' or 'all set' scalable dimensions");
-    maskDimSizes.push_back(maskDimSize);
   }
   // Verify that if one mask dim size is zero, they all should be zero (because
   // the mask region is a conjunction of each mask dimension interval).
@@ -5852,11 +5857,10 @@ bool ConstantMaskOp::isAllOnesMask() {
   // Check the corner case of 0-D vectors first.
   if (resultType.getRank() == 0) {
     assert(getMaskDimSizes().size() == 1 && "invalid sizes for zero rank mask");
-    return llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt() == 1;
+    return getMaskDimSizes()[0] == 1;
   }
-  for (const auto [resultSize, intAttr] :
+  for (const auto [resultSize, maskDimSize] :
        llvm::zip_equal(resultType.getShape(), getMaskDimSizes())) {
-    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
     if (maskDimSize < resultSize)
       return false;
   }
@@ -5986,9 +5990,8 @@ public:
     }
 
     // Replace 'createMaskOp' with ConstantMaskOp.
-    rewriter.replaceOpWithNewOp<ConstantMaskOp>(
-        createMaskOp, retTy,
-        vector::getVectorSubscriptAttr(rewriter, maskDimSizes));
+    rewriter.replaceOpWithNewOp<ConstantMaskOp>(createMaskOp, retTy,
+                                                maskDimSizes);
     return success();
   }
 };
@@ -6314,6 +6317,20 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+//===----------------------------------------------------------------------===//
+// StepOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult StepOp::fold(FoldAdaptor adaptor) {
+  auto resultType = cast<VectorType>(getType());
+  if (resultType.isScalable())
+    return nullptr;
+  SmallVector<APInt> indices;
+  for (unsigned i = 0; i < resultType.getNumElements(); i++)
+    indices.push_back(APInt(/*width=*/64, i));
+  return DenseElementsAttr::get(resultType, indices);
 }
 
 //===----------------------------------------------------------------------===//

@@ -51,7 +51,6 @@ class OpAsmPrinter;
 class OperandRange;
 class OperandRangeRange;
 class OpFoldResult;
-class ParseResult;
 class Pattern;
 class Region;
 class ResultRange;

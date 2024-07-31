@@ -47,7 +47,7 @@ static bool splitGlobal(GlobalVariable &GV) {
   if (!Init)
     return false;
 
-  const DataLayout &DL = GV.getParent()->getDataLayout();
+  const DataLayout &DL = GV.getDataLayout();
   const StructLayout *SL = DL.getStructLayout(Init->getType());
   ArrayRef<TypeSize> MemberOffsets = SL->getMemberOffsets();
   unsigned IndexWidth = DL.getIndexTypeSizeInBits(GV.getType());

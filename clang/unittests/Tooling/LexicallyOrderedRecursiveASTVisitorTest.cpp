@@ -87,7 +87,7 @@ bool LexicallyOrderedDeclVisitor::VisitNamedDecl(const NamedDecl *D) {
   }
   if (EmitDeclIndices)
     OS << "@" << Index++;
-  Matcher.match(OS.str(), D);
+  Matcher.match(Path, D);
   return true;
 }
 
@@ -96,7 +96,7 @@ bool LexicallyOrderedDeclVisitor::VisitDeclRefExpr(const DeclRefExpr *D) {
   llvm::raw_string_ostream OS(Name);
   if (EmitStmtIndices)
     OS << "@" << Index++;
-  Matcher.match(OS.str(), D);
+  Matcher.match(Name, D);
   return true;
 }
 

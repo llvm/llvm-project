@@ -8,8 +8,7 @@
 
 #include "Context.h"
 #include "ByteCodeEmitter.h"
-#include "ByteCodeExprGen.h"
-#include "ByteCodeStmtGen.h"
+#include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
 #include "InterpFrame.h"
@@ -30,7 +29,10 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
   Function *Func = P->getFunction(FD);
   if (!Func || !Func->hasBody())
-    Func = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD);
+    Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
+
+  if (!Func)
+    return false;
 
   APValue DummyResult;
   if (!Run(Parent, Func, DummyResult))
@@ -40,8 +42,9 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
+  ++EvalID;
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
@@ -66,8 +69,9 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 }
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
+  ++EvalID;
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E);
   if (Res.isInvalid()) {
@@ -91,8 +95,9 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
+  ++EvalID;
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
@@ -171,8 +176,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
       T->isFunctionType())
     return PT_FnPtr;
 
-  if (T->isReferenceType() || T->isPointerType() ||
-      T->isObjCObjectPointerType())
+  if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
     return PT_Ptr;
 
   if (const auto *AT = T->getAs<AtomicType>())
@@ -261,7 +265,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
     return Func;
 
   if (!Func || WasNotDefined) {
-    if (auto F = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD))
+    if (auto F = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD))
       Func = F;
   }
 

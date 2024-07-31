@@ -177,9 +177,9 @@ private:
 
 class RegAllocFastImpl {
 public:
-  RegAllocFastImpl(const RegClassFilterFunc F = nullptr,
+  RegAllocFastImpl(const RegAllocFilterFunc F = nullptr,
                    bool ClearVirtRegs_ = true)
-      : ShouldAllocateClass(F), StackSlotForVirtReg(-1),
+      : ShouldAllocateRegisterImpl(F), StackSlotForVirtReg(-1),
         ClearVirtRegs(ClearVirtRegs_) {}
 
 private:
@@ -188,7 +188,7 @@ private:
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   RegisterClassInfo RegClassInfo;
-  const RegClassFilterFunc ShouldAllocateClass;
+  const RegAllocFilterFunc ShouldAllocateRegisterImpl;
 
   /// Basic block currently being allocated.
   MachineBasicBlock *MBB = nullptr;
@@ -397,7 +397,7 @@ class RegAllocFast : public MachineFunctionPass {
 public:
   static char ID;
 
-  RegAllocFast(const RegClassFilterFunc F = nullptr, bool ClearVirtRegs_ = true)
+  RegAllocFast(const RegAllocFilterFunc F = nullptr, bool ClearVirtRegs_ = true)
       : MachineFunctionPass(ID), Impl(F, ClearVirtRegs_) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -440,10 +440,10 @@ INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
 
 bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   assert(Reg.isVirtual());
-  if (!ShouldAllocateClass)
+  if (!ShouldAllocateRegisterImpl)
     return true;
-  const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
-  return ShouldAllocateClass(*TRI, RC);
+
+  return ShouldAllocateRegisterImpl(*TRI, *MRI, Reg);
 }
 
 void RegAllocFastImpl::setPhysRegState(MCPhysReg PhysReg, unsigned NewState) {
@@ -1810,6 +1810,7 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
 
 PreservedAnalyses RegAllocFastPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
   RegAllocFastImpl Impl(Opts.Filter, Opts.ClearVRegs);
   bool Changed = Impl.runOnMachineFunction(MF);
   if (!Changed)
@@ -1840,7 +1841,7 @@ void RegAllocFastPass::printPipeline(
 
 FunctionPass *llvm::createFastRegisterAllocator() { return new RegAllocFast(); }
 
-FunctionPass *llvm::createFastRegisterAllocator(RegClassFilterFunc Ftor,
+FunctionPass *llvm::createFastRegisterAllocator(RegAllocFilterFunc Ftor,
                                                 bool ClearVirtRegs) {
   return new RegAllocFast(Ftor, ClearVirtRegs);
 }

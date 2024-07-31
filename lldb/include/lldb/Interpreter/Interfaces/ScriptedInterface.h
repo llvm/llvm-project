@@ -9,8 +9,9 @@
 #ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 
+#include "ScriptedInterfaceUsages.h"
+
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -52,7 +53,8 @@ public:
   }
 
   template <typename T = StructuredData::ObjectSP>
-  bool CheckStructuredDataObject(llvm::StringRef caller, T obj, Status &error) {
+  static bool CheckStructuredDataObject(llvm::StringRef caller, T obj,
+                                        Status &error) {
     if (!obj)
       return ErrorWithMessage<bool>(caller, "Null Structured Data object",
                                     error);
@@ -66,6 +68,11 @@ public:
       return ErrorWithMessage<bool>(caller, error.AsCString(), error);
 
     return true;
+  }
+
+  static bool CreateInstance(lldb::ScriptLanguage language,
+                             ScriptedInterfaceUsages usages) {
+    return false;
   }
 
 protected:

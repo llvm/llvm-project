@@ -5,6 +5,7 @@ add_flang_library(FIRSupport
   DataLayout.cpp
   InitFIR.cpp
   InternalNames.cpp
+  Utils.cpp
 
   DEPENDS
   FIROpsIncGen
@@ -14,6 +15,7 @@ add_flang_library(FIRSupport
   ${extension_libs}
 
   LINK_LIBS
+  FIRDialect
   ${dialect_libs}
   ${extension_libs}
   MLIRBuiltinToLLVMIRTranslation

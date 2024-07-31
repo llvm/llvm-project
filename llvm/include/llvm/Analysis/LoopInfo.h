@@ -385,6 +385,11 @@ public:
   /// Return the source code span of the loop.
   LocRange getLocRange() const;
 
+  /// Return a string containing the debug location of the loop (file name +
+  /// line number if present, otherwise module name). Meant to be used for debug
+  /// printing within LLVM_DEBUG.
+  std::string getLocStr() const;
+
   StringRef getName() const {
     if (BasicBlock *Header = getHeader())
       if (Header->hasName())
@@ -693,7 +698,6 @@ llvm::MDNode *
 makePostTransformationMetadata(llvm::LLVMContext &Context, MDNode *OrigLoopID,
                                llvm::ArrayRef<llvm::StringRef> RemovePrefixes,
                                llvm::ArrayRef<llvm::MDNode *> AddAttrs);
-
 } // namespace llvm
 
 #endif

@@ -11,11 +11,12 @@
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 // These length modifiers match the length modifiers in the format string, which
@@ -86,6 +87,6 @@ enum ErrorCodes : int {
   ALLOCATION_FAILURE = -4,
 };
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_CORE_STRUCTS_H

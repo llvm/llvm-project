@@ -75,7 +75,7 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
 const IdentifierInfo* QualType::getBaseTypeIdentifier() const {
   const Type* ty = getTypePtr();
   NamedDecl *ND = nullptr;
-  if (ty->isPointerType() || ty->isReferenceType())
+  if (ty->isPointerOrReferenceType())
     return ty->getPointeeType().getBaseTypeIdentifier();
   else if (ty->isRecordType())
     ND = ty->castAs<RecordType>()->getDecl();
@@ -1627,9 +1627,10 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
 }
 
 QualType QualType::getAtomicUnqualifiedType() const {
-  if (const auto AT = getTypePtr()->getAs<AtomicType>())
-    return AT->getValueType().getUnqualifiedType();
-  return getUnqualifiedType();
+  QualType T = *this;
+  if (const auto AT = T.getTypePtr()->getAs<AtomicType>())
+    T = AT->getValueType();
+  return T.getUnqualifiedType();
 }
 
 std::optional<ArrayRef<QualType>>
@@ -2815,66 +2816,6 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
   }
 }
 
-static bool
-HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
-  if (Decl->isUnion())
-    return false;
-  if (Decl->isLambda())
-    return Decl->isCapturelessLambda();
-
-  auto IsDefaultedOperatorEqualEqual = [&](const FunctionDecl *Function) {
-    return Function->getOverloadedOperator() ==
-               OverloadedOperatorKind::OO_EqualEqual &&
-           Function->isDefaulted() && Function->getNumParams() > 0 &&
-           (Function->getParamDecl(0)->getType()->isReferenceType() ||
-            Decl->isTriviallyCopyable());
-  };
-
-  if (llvm::none_of(Decl->methods(), IsDefaultedOperatorEqualEqual) &&
-      llvm::none_of(Decl->friends(), [&](const FriendDecl *Friend) {
-        if (NamedDecl *ND = Friend->getFriendDecl()) {
-          return ND->isFunctionOrFunctionTemplate() &&
-                 IsDefaultedOperatorEqualEqual(ND->getAsFunction());
-        }
-        return false;
-      }))
-    return false;
-
-  return llvm::all_of(Decl->bases(),
-                      [](const CXXBaseSpecifier &BS) {
-                        if (const auto *RD = BS.getType()->getAsCXXRecordDecl())
-                          return HasNonDeletedDefaultedEqualityComparison(RD);
-                        return true;
-                      }) &&
-         llvm::all_of(Decl->fields(), [](const FieldDecl *FD) {
-           auto Type = FD->getType();
-           if (Type->isArrayType())
-             Type = Type->getBaseElementTypeUnsafe()->getCanonicalTypeUnqualified();
-
-           if (Type->isReferenceType() || Type->isEnumeralType())
-             return false;
-           if (const auto *RD = Type->getAsCXXRecordDecl())
-             return HasNonDeletedDefaultedEqualityComparison(RD);
-           return true;
-         });
-}
-
-bool QualType::isTriviallyEqualityComparableType(
-    const ASTContext &Context) const {
-  QualType CanonicalType = getCanonicalType();
-  if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
-      CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
-    return false;
-
-  if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
-    if (!HasNonDeletedDefaultedEqualityComparison(RD))
-      return false;
-  }
-
-  return Context.hasUniqueObjectRepresentations(
-      CanonicalType, /*CheckIfTriviallyCopyable=*/false);
-}
-
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
   return !Context.getLangOpts().ObjCAutoRefCount &&
          Context.getLangOpts().ObjCWeak &&
@@ -3711,6 +3652,34 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     auto &EllipsisLoc = *getTrailingObjects<SourceLocation>();
     EllipsisLoc = epi.EllipsisLoc;
   }
+
+  if (!epi.FunctionEffects.empty()) {
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    size_t EffectsCount = epi.FunctionEffects.size();
+    ExtraBits.NumFunctionEffects = EffectsCount;
+    assert(ExtraBits.NumFunctionEffects == EffectsCount &&
+           "effect bitfield overflow");
+
+    ArrayRef<FunctionEffect> SrcFX = epi.FunctionEffects.effects();
+    auto *DestFX = getTrailingObjects<FunctionEffect>();
+    std::uninitialized_copy(SrcFX.begin(), SrcFX.end(), DestFX);
+
+    ArrayRef<EffectConditionExpr> SrcConds = epi.FunctionEffects.conditions();
+    if (!SrcConds.empty()) {
+      ExtraBits.EffectsHaveConditions = true;
+      auto *DestConds = getTrailingObjects<EffectConditionExpr>();
+      std::uninitialized_copy(SrcConds.begin(), SrcConds.end(), DestConds);
+      assert(std::any_of(SrcConds.begin(), SrcConds.end(),
+                         [](const EffectConditionExpr &EC) {
+                           if (const Expr *E = EC.getCondition())
+                             return E->isTypeDependent() ||
+                                    E->isValueDependent();
+                           return false;
+                         }) &&
+             "expected a dependent expression among the conditions");
+      addDependence(TypeDependence::DependentInstantiation);
+    }
+  }
 }
 
 bool FunctionProtoType::hasDependentExceptionSpec() const {
@@ -3794,6 +3763,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // Finally we have a trailing return type flag (bool)
   // combined with AArch64 SME Attributes, to save space:
   //      int
+  // combined with any FunctionEffects
   //
   // There is no ambiguity between the consumed arguments and an empty EH
   // spec because of the leading 'bool' which unambiguously indicates
@@ -3828,7 +3798,18 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   }
 
   epi.ExtInfo.Profile(ID);
-  ID.AddInteger((epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+
+  unsigned EffectCount = epi.FunctionEffects.size();
+  bool HasConds = !epi.FunctionEffects.Conditions.empty();
+
+  ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
+                (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+
+  for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
+    ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
+    if (HasConds)
+      ID.AddPointer(epi.FunctionEffects.Conditions[Idx].getCondition());
+  }
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
@@ -3919,18 +3900,19 @@ QualType MacroQualifiedType::getModifiedType() const {
   return Inner;
 }
 
-TypeOfExprType::TypeOfExprType(Expr *E, TypeOfKind Kind, QualType Can)
+TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
+                               TypeOfKind Kind, QualType Can)
     : Type(TypeOfExpr,
            // We have to protect against 'Can' being invalid through its
            // default argument.
            Kind == TypeOfKind::Unqualified && !Can.isNull()
-               ? Can.getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
            toTypeDependence(E->getDependence()) |
                (E->getType()->getDependence() &
                 TypeDependence::VariablyModified)),
-      TOExpr(E) {
-  TypeOfBits.IsUnqual = Kind == TypeOfKind::Unqualified;
+      TOExpr(E), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
 }
 
 bool TypeOfExprType::isSugared() const {
@@ -3940,7 +3922,9 @@ bool TypeOfExprType::isSugared() const {
 QualType TypeOfExprType::desugar() const {
   if (isSugared()) {
     QualType QT = getUnderlyingExpr()->getType();
-    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
+    return getKind() == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+               : QT;
   }
   return QualType(this, 0);
 }
@@ -3950,6 +3934,24 @@ void DependentTypeOfExprType::Profile(llvm::FoldingSetNodeID &ID,
                                       bool IsUnqual) {
   E->Profile(ID, Context, true);
   ID.AddBoolean(IsUnqual);
+}
+
+TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
+                       TypeOfKind Kind)
+    : Type(TypeOf,
+           Kind == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
+               : Can,
+           T->getDependence()),
+      TOType(T), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
+}
+
+QualType TypeOfType::desugar() const {
+  QualType QT = getUnmodifiedType();
+  return getKind() == TypeOfKind::Unqualified
+             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+             : QT;
 }
 
 DecltypeType::DecltypeType(Expr *E, QualType underlyingType, QualType can)
@@ -5092,4 +5094,235 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
   Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
           getTypeConstraintConcept(), getTypeConstraintArguments());
+}
+
+FunctionEffect::Kind FunctionEffect::oppositeKind() const {
+  switch (kind()) {
+  case Kind::NonBlocking:
+    return Kind::Blocking;
+  case Kind::Blocking:
+    return Kind::NonBlocking;
+  case Kind::NonAllocating:
+    return Kind::Allocating;
+  case Kind::Allocating:
+    return Kind::NonAllocating;
+  case Kind::None:
+    return Kind::None;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+StringRef FunctionEffect::name() const {
+  switch (kind()) {
+  case Kind::NonBlocking:
+    return "nonblocking";
+  case Kind::NonAllocating:
+    return "nonallocating";
+  case Kind::Blocking:
+    return "blocking";
+  case Kind::Allocating:
+    return "allocating";
+  case Kind::None:
+    return "(none)";
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
+  switch (kind()) {
+  case Kind::NonAllocating:
+  case Kind::NonBlocking: {
+    FunctionEffectsRef CalleeFX;
+    if (auto *FD = Callee.getAsFunction())
+      CalleeFX = FD->getFunctionEffects();
+    else if (auto *BD = dyn_cast<BlockDecl>(&Callee))
+      CalleeFX = BD->getFunctionEffects();
+    else
+      return false;
+    for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
+      // nonblocking/nonallocating cannot call allocating.
+      if (CalleeEC.Effect.kind() == Kind::Allocating)
+        return false;
+      // nonblocking cannot call blocking.
+      if (kind() == Kind::NonBlocking &&
+          CalleeEC.Effect.kind() == Kind::Blocking)
+        return false;
+    }
+    return true;
+  }
+
+  case Kind::Allocating:
+  case Kind::Blocking:
+    return false;
+
+  case Kind::None:
+    assert(0 && "canInferOnFunction with None");
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+bool FunctionEffect::shouldDiagnoseFunctionCall(
+    bool Direct, ArrayRef<FunctionEffect> CalleeFX) const {
+  switch (kind()) {
+  case Kind::NonAllocating:
+  case Kind::NonBlocking: {
+    const Kind CallerKind = kind();
+    for (const auto &Effect : CalleeFX) {
+      const Kind EK = Effect.kind();
+      // Does callee have same or stronger constraint?
+      if (EK == CallerKind ||
+          (CallerKind == Kind::NonAllocating && EK == Kind::NonBlocking)) {
+        return false; // no diagnostic
+      }
+    }
+    return true; // warning
+  }
+  case Kind::Allocating:
+  case Kind::Blocking:
+    return false;
+  case Kind::None:
+    assert(0 && "shouldDiagnoseFunctionCall with None");
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+// =====
+
+bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
+                               Conflicts &Errs) {
+  FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
+  Expr *NewCondition = NewEC.Cond.getCondition();
+
+  // The index at which insertion will take place; default is at end
+  // but we might find an earlier insertion point.
+  unsigned InsertIdx = Effects.size();
+  unsigned Idx = 0;
+  for (const FunctionEffectWithCondition &EC : *this) {
+    // Note about effects with conditions: They are considered distinct from
+    // those without conditions; they are potentially unique, redundant, or
+    // in conflict, but we can't tell which until the condition is evaluated.
+    if (EC.Cond.getCondition() == nullptr && NewCondition == nullptr) {
+      if (EC.Effect.kind() == NewEC.Effect.kind()) {
+        // There is no condition, and the effect kind is already present,
+        // so just fail to insert the new one (creating a duplicate),
+        // and return success.
+        return true;
+      }
+
+      if (EC.Effect.kind() == NewOppositeKind) {
+        Errs.push_back({EC, NewEC});
+        return false;
+      }
+    }
+
+    if (NewEC.Effect.kind() < EC.Effect.kind() && InsertIdx > Idx)
+      InsertIdx = Idx;
+
+    ++Idx;
+  }
+
+  if (NewCondition || !Conditions.empty()) {
+    if (Conditions.empty() && !Effects.empty())
+      Conditions.resize(Effects.size());
+    Conditions.insert(Conditions.begin() + InsertIdx,
+                      NewEC.Cond.getCondition());
+  }
+  Effects.insert(Effects.begin() + InsertIdx, NewEC.Effect);
+  return true;
+}
+
+bool FunctionEffectSet::insert(const FunctionEffectsRef &Set, Conflicts &Errs) {
+  for (const auto &Item : Set)
+    insert(Item, Errs);
+  return Errs.empty();
+}
+
+FunctionEffectSet FunctionEffectSet::getIntersection(FunctionEffectsRef LHS,
+                                                     FunctionEffectsRef RHS) {
+  FunctionEffectSet Result;
+  FunctionEffectSet::Conflicts Errs;
+
+  // We could use std::set_intersection but that would require expanding the
+  // container interface to include push_back, making it available to clients
+  // who might fail to maintain invariants.
+  auto IterA = LHS.begin(), EndA = LHS.end();
+  auto IterB = RHS.begin(), EndB = RHS.end();
+
+  auto FEWCLess = [](const FunctionEffectWithCondition &LHS,
+                     const FunctionEffectWithCondition &RHS) {
+    return std::tuple(LHS.Effect, uintptr_t(LHS.Cond.getCondition())) <
+           std::tuple(RHS.Effect, uintptr_t(RHS.Cond.getCondition()));
+  };
+
+  while (IterA != EndA && IterB != EndB) {
+    FunctionEffectWithCondition A = *IterA;
+    FunctionEffectWithCondition B = *IterB;
+    if (FEWCLess(A, B))
+      ++IterA;
+    else if (FEWCLess(B, A))
+      ++IterB;
+    else {
+      Result.insert(A, Errs);
+      ++IterA;
+      ++IterB;
+    }
+  }
+
+  // Insertion shouldn't be able to fail; that would mean both input
+  // sets contained conflicts.
+  assert(Errs.empty() && "conflict shouldn't be possible in getIntersection");
+
+  return Result;
+}
+
+FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
+                                              FunctionEffectsRef RHS,
+                                              Conflicts &Errs) {
+  // Optimize for either of the two sets being empty (very common).
+  if (LHS.empty())
+    return FunctionEffectSet(RHS);
+
+  FunctionEffectSet Combined(LHS);
+  Combined.insert(RHS, Errs);
+  return Combined;
+}
+
+LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
+  OS << "Effects{";
+  bool First = true;
+  for (const auto &CFE : *this) {
+    if (!First)
+      OS << ", ";
+    else
+      First = false;
+    OS << CFE.Effect.name();
+    if (Expr *E = CFE.Cond.getCondition()) {
+      OS << '(';
+      E->dump();
+      OS << ')';
+    }
+  }
+  OS << "}";
+}
+
+LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
+  FunctionEffectsRef(*this).dump(OS);
+}
+
+FunctionEffectsRef
+FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
+                           ArrayRef<EffectConditionExpr> Conds) {
+  assert(std::is_sorted(FX.begin(), FX.end()) && "effects should be sorted");
+  assert((Conds.empty() || Conds.size() == FX.size()) &&
+         "effects size should match conditions size");
+  return FunctionEffectsRef(FX, Conds);
+}
+
+std::string FunctionEffectWithCondition::description() const {
+  std::string Result(Effect.name().str());
+  if (Cond.getCondition() != nullptr)
+    Result += "(expr)";
+  return Result;
 }

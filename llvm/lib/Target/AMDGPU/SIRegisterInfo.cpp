@@ -1775,13 +1775,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
 
   if (SpillToVGPR) {
 
-    // Since stack slot coloring pass is trying to optimize SGPR spills,
-    // VGPR lanes (mapped from spill stack slot) may be shared for SGPR
-    // spills of different sizes. This accounts for number of VGPR lanes alloted
-    // equal to the largest SGPR being spilled in them.
-    assert(SB.NumSubRegs <= VGPRSpills.size() &&
-           "Num of SGPRs spilled should be less than or equal to num of "
-           "the VGPR lanes.");
+    assert(SB.NumSubRegs == VGPRSpills.size() &&
+           "Num of VGPR lanes should be equal to num of SGPRs spilled");
 
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
       Register SubReg =
@@ -2454,7 +2449,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                             ? &AMDGPU::SReg_32RegClass
                                             : &AMDGPU::VGPR_32RegClass;
         bool IsCopy = MI->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
-                      MI->getOpcode() == AMDGPU::V_MOV_B32_e64;
+                      MI->getOpcode() == AMDGPU::V_MOV_B32_e64 ||
+                      MI->getOpcode() == AMDGPU::S_MOV_B32;
         Register ResultReg =
             IsCopy ? MI->getOperand(0).getReg()
                    : RS->scavengeRegisterBackwards(*RC, MI, false, 0);
@@ -2463,7 +2459,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (Offset == 0) {
           unsigned OpCode = IsSALU && !LiveSCC ? AMDGPU::S_LSHR_B32
                                                : AMDGPU::V_LSHRREV_B32_e64;
-          auto Shift = BuildMI(*MBB, MI, DL, TII->get(OpCode), ResultReg);
+          Register TmpResultReg = ResultReg;
+          if (IsSALU && LiveSCC) {
+            TmpResultReg = RS->scavengeRegisterBackwards(
+                AMDGPU::VGPR_32RegClass, MI, false, 0);
+          }
+
+          auto Shift = BuildMI(*MBB, MI, DL, TII->get(OpCode), TmpResultReg);
           if (OpCode == AMDGPU::V_LSHRREV_B32_e64)
             // For V_LSHRREV, the operands are reversed (the shift count goes
             // first).
@@ -2473,11 +2475,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (IsSALU && !LiveSCC)
             Shift.getInstr()->getOperand(3).setIsDead(); // Mark SCC as dead.
           if (IsSALU && LiveSCC) {
-            Register NewDest = RS->scavengeRegisterBackwards(
-                AMDGPU::SReg_32RegClass, Shift, false, 0);
+            Register NewDest =
+                IsCopy ? ResultReg
+                       : RS->scavengeRegisterBackwards(AMDGPU::SReg_32RegClass,
+                                                       Shift, false, 0);
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     NewDest)
-                .addReg(ResultReg);
+                .addReg(TmpResultReg);
             ResultReg = NewDest;
           }
         } else {
@@ -2528,22 +2532,82 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
             // We may have 1 free scratch SGPR even though a carry out is
             // unavailable. Only one additional mov is needed.
-            Register TmpScaledReg = RS->scavengeRegisterBackwards(
-                AMDGPU::SReg_32_XM0RegClass, MI, false, 0, false);
-            Register ScaledReg = TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
+            Register TmpScaledReg = IsCopy && IsSALU
+                                        ? ResultReg
+                                        : RS->scavengeRegisterBackwards(
+                                              AMDGPU::SReg_32_XM0RegClass, MI,
+                                              false, 0, /*AllowSpill=*/false);
+            Register ScaledReg =
+                TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
+            Register TmpResultReg = ScaledReg;
 
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), ScaledReg)
-              .addReg(FrameReg)
-              .addImm(ST.getWavefrontSizeLog2());
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
-                .addReg(ScaledReg, RegState::Kill)
-                .addImm(Offset);
+            if (!LiveSCC) {
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), TmpResultReg)
+                  .addReg(FrameReg)
+                  .addImm(ST.getWavefrontSizeLog2());
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), TmpResultReg)
+                  .addReg(TmpResultReg, RegState::Kill)
+                  .addImm(Offset);
+            } else {
+              TmpResultReg = RS->scavengeRegisterBackwards(
+                  AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
+
+              MachineInstrBuilder Add;
+              if ((Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS))) {
+                BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
+                        TmpResultReg)
+                    .addImm(ST.getWavefrontSizeLog2())
+                    .addReg(FrameReg);
+                if (Add->getOpcode() == AMDGPU::V_ADD_CO_U32_e64) {
+                  BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32),
+                          ResultReg)
+                      .addImm(Offset);
+                  Add.addReg(ResultReg, RegState::Kill)
+                      .addReg(TmpResultReg, RegState::Kill)
+                      .addImm(0);
+                } else
+                  Add.addImm(Offset).addReg(TmpResultReg, RegState::Kill);
+              } else {
+                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
+                        TmpResultReg)
+                    .addImm(Offset);
+                assert(Offset > 0 &&
+                       isUInt<24>(2 * ST.getMaxWaveScratchSize()) &&
+                       "offset is unsafe for v_mad_u32_u24");
+                // We start with a frame pointer with a wave space value, and an
+                // offset in lane-space. We are materializing a lane space
+                // value. We can either do a right shift of the frame pointer to
+                // get to lane space, or a left shift of the offset to get to
+                // wavespace. We can right shift after the computation to get
+                // back to the desired per-lane value.
+                // We are using the mad_u32_u24 primarily as an add with no
+                // carry out clobber.
+                Add = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MAD_U32_U24_e64),
+                              TmpResultReg)
+                          .addReg(TmpResultReg, RegState::Kill)
+                          .addImm(ST.getWavefrontSize())
+                          .addReg(FrameReg)
+                          .addImm(0);
+                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
+                        TmpResultReg)
+                    .addImm(ST.getWavefrontSizeLog2())
+                    .addReg(FrameReg);
+              }
+
+              Register NewDest = IsCopy ? ResultReg
+                                        : RS->scavengeRegisterBackwards(
+                                              AMDGPU::SReg_32RegClass, *Add,
+                                              false, 0, /*AllowSpill=*/true);
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
+                      NewDest)
+                  .addReg(TmpResultReg);
+              ResultReg = NewDest;
+            }
             if (!IsSALU)
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
-                  .addReg(ScaledReg, RegState::Kill);
+                  .addReg(TmpResultReg, RegState::Kill);
             else
-              ResultReg = ScaledReg;
-
+              ResultReg = TmpResultReg;
             // If there were truly no free SGPRs, we need to undo everything.
             if (!TmpScaledReg.isValid()) {
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
@@ -3162,7 +3226,7 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
                                               MachineInstr &Use,
                                               MachineRegisterInfo &MRI,
                                               LiveIntervals *LIS) const {
-  auto &MDT = LIS->getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto &MDT = LIS->getDomTree();
   SlotIndex UseIdx = LIS->getInstructionIndex(Use);
   SlotIndex DefIdx;
 
