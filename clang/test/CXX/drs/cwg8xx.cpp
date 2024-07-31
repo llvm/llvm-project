@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
@@ -30,3 +30,8 @@ void g(int i) {
 }
 #endif
 } // namespace cwg873
+
+// cwg882: 3.5
+int main() = delete;
+// expected-error@-1 {{'main' is not allowed to be deleted}}
+// cxx98-error@-2 {{deleted function definitions are a C++11 extension}}
