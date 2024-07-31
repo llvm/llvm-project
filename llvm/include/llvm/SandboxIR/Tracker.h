@@ -214,13 +214,14 @@ public:
 };
 
 class SetVolatile : public IRChangeBase {
-  Instruction *Inst;
+  /// This holds the properties of whether
+  /// LoadInst or StoreInst was volatile
   bool WasVolatile;
   /// This could either be StoreInst or LoadInst
   PointerUnion<StoreInst *, LoadInst *> InstUnion;
 
 public:
-  SetVolatile(Instruction *I, bool WasVolatile, Tracker &Tracker);
+  SetVolatile(Instruction *I, Tracker &Tracker);
   void revert() final;
   void accept() final {}
 #ifndef NDEBUG

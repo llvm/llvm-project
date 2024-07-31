@@ -160,26 +160,28 @@ void CallBrInstSetIndirectDest::dump() const {
 }
 #endif
 
-SetVolatile::SetVolatile(Instruction *I, bool WasBool, Tracker &Tracker)
-    : IRChangeBase(Tracker), Inst(I) {
-  if (auto *Load = cast<llvm::LoadInst>(Inst)) {
+SetVolatile::SetVolatile(Instruction *I, Tracker &Tracker)
+    : IRChangeBase(Tracker) {
+  if (auto *Load = cast<llvm::LoadInst>(I)) {
     WasVolatile = Load->isVolatile();
     InstUnion = Load;
-  }
-  if (auto *Store = cast<llvm::StoreInst>(Inst)) {
+    assert(Load && "This isn't a LoadInst");
+  } else if (auto *Store = cast<llvm::StoreInst>(I)) {
     WasVolatile = Store->isVolatile();
     InstUnion = Store;
+    assert(StoreInst && "This isn't a StoreInst");
+  } else {
+    llvm_unreachable("Expected LoadInst or StoreInst");
   }
 }
 
 void SetVolatile::revert() {
-  if (llvm::LoadInst *Load = InstUnion.dyn_cast<llvm::LoadInst *>()) {
-    // It's a LoadInst
+  if (llvm::LoadInst *Load = InstUnion.dyn_cast<llvm::LoadInst *>())
     Load->setVolatile(WasVolatile);
-  } else if (llvm::StoreInst *Store = InstUnion.dyn_cast<llvm::StoreInst *>()) {
-    // It's a StoreInst
+  else if (llvm::StoreInst *Store = InstUnion.dyn_cast<llvm::StoreInst *>())
     Store->setVolatile(WasVolatile);
-  }
+  else
+    llvm_unreachable("Expected LoadInst or StoreInst");
 }
 #ifndef NDEBUG
 void SetVolatile::dump() const {

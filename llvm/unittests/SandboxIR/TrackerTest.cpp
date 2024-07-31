@@ -584,3 +584,38 @@ define void @foo(i8 %arg) {
   Ctx.revert();
   EXPECT_EQ(CallBr->getIndirectDest(0), OrigIndirectDest);
 }
+
+TEST_F(TrackerTest, SetVolatile) {
+  parseIR(C, R"IR(
+define void @foo(ptr %arg0, i8 %val) {
+  %ld = load i8, ptr %arg0, align 64
+  store i8 %val, ptr %arg0, align 64 
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto *F = Ctx.createFunction(&LLVMF);
+  unsigned ArgIdx = 0;
+  [[maybe_unused]] auto *Arg0 = F->getArg(ArgIdx++);
+  [[maybe_unused]] auto *Val = F->getArg(ArgIdx++);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check setVolatile()
+  Ctx.save();
+  Load->setVolatile(true);
+  EXPECT_TRUE(Load->isVolatile());
+  Load->setVolatile(false);
+  EXPECT_FALSE(Load->isVolatile());
+
+  Ctx.save();
+  Store->setVolatile(true);
+  EXPECT_TRUE(Store->isVolatile());
+  Store->setVolatile(false);
+  EXPECT_FALSE(Store->isVolatile());
+}
