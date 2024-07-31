@@ -20,12 +20,12 @@ namespace LIBC_NAMESPACE_DECL {
 #if __ARM_FEATURE_PAC_DEFAULT & 1
       // Sign the return address using the PAC A key.
       R"(
-        hint #25 // PACIASP
+        paciasp
       )"
 #elif __ARM_FEATURE_PAC_DEFAULT & 2
       // Sign the return address using the PAC B key.
       R"(
-        hint #27 // PACIBSP
+        pacibsp
       )"
 #endif
 
@@ -76,12 +76,12 @@ namespace LIBC_NAMESPACE_DECL {
       // Authenticate the return address using the PAC A key, since the
       // compilation options ask for PAC protection even on leaf functions.
       R"(
-        hint #29 // AUTIASP
+        autiasp
       )"
 #elif (__ARM_FEATURE_PAC_DEFAULT & 7) == 6
       // Same, but using the PAC B key.
       R"(
-        hint #31 // AUTIBSP
+        autibsp
       )"
 #endif
 

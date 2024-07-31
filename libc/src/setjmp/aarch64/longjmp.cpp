@@ -73,12 +73,12 @@ namespace LIBC_NAMESPACE_DECL {
 #if __ARM_FEATURE_PAC_DEFAULT & 1
       // Authenticate the return address using the PAC A key.
       R"(
-        hint #29 // AUTIASP
+        autiasp
       )"
 #elif __ARM_FEATURE_PAC_DEFAULT & 2
       // Authenticate the return address using the PAC B key.
       R"(
-        hint #31 // AUTIBSP
+        autibsp
       )"
 #endif
 
