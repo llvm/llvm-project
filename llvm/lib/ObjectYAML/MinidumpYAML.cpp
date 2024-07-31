@@ -373,7 +373,6 @@ void yaml::MappingContextTraits<MemoryDescriptor, yaml::BinaryRef>::mapping(
 void yaml::MappingContextTraits<MemoryDescriptor_64, yaml::BinaryRef>::mapping(
     IO &IO, MemoryDescriptor_64 &Memory, BinaryRef &Content) {
   mapRequiredHex(IO, "Start of Memory Range", Memory.StartOfMemoryRange);
-  mapRequiredHex(IO, "Data Size", Memory.DataSize);
   IO.mapRequired("Content", Content);
 }
 

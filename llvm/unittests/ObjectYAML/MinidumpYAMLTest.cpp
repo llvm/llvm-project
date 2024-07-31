@@ -345,10 +345,8 @@ Streams:
   - Type:            Memory64List
     Memory Ranges:
       - Start of Memory Range: 0x7FFFFFCF0818283
-        Data Size:             8
         Content:               '68656c6c6f'
       - Start of Memory Range: 0x7FFFFFFF0818283
-        Data Size:             8
         Content:               '776f726c64'
         )");
 
@@ -367,20 +365,23 @@ Streams:
 
   const minidump::MemoryDescriptor_64 &DescOne = MemoryList[0];
   ASSERT_EQ(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
-  ASSERT_EQ(8u, DescOne.DataSize);
+  ASSERT_EQ(5u, DescOne.DataSize);
 
   const minidump::MemoryDescriptor_64 &DescTwo = MemoryList[1];
   ASSERT_EQ(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
-  ASSERT_EQ(8u, DescTwo.DataSize);
+  ASSERT_EQ(5u, DescTwo.DataSize);
 
   const std::optional<ArrayRef<uint8_t>> ExpectedContent =
       File.getRawStream(StreamType::Memory64List);
   ASSERT_TRUE(ExpectedContent);
-  const ArrayRef<uint8_t> Content = *ExpectedContent;
-  const size_t offset =
-      sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
-  const uint64_t *Array =
-      reinterpret_cast<const uint64_t *>(Content.slice(offset, 16).data(), 16);
-  ASSERT_EQ(0x7000000000002Au, Array[0]);
-  ASSERT_EQ(0x7000A00000000Au, Array[1]);
+  const size_t ExpectedStreamSize = sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
+  ASSERT_EQ(ExpectedStreamSize, ExpectedContent->size());
+
+  Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = File.getRawData(DescOne);
+  ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
+  ASSERT_EQ("hello", reinterpret_cast<const char *>(DescOneExpectedContentSlice->data()));
+
+  Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = File.getRawData(DescTwo);
+  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
+  ASSERT_EQ("world", reinterpret_cast<const char *>(DescTwoExpectedContentSlice->data()));
 }

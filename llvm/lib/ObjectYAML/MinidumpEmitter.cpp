@@ -138,11 +138,14 @@ static size_t layout(BlobAllocator &File, MinidumpYAML::ExceptionStream &S) {
 
 static size_t layout(BlobAllocator &File, MinidumpYAML::Memory64ListStream &S) {
   size_t BaseRVA = File.tell() + sizeof(minidump::Memory64ListHeader);
+  BaseRVA += S.Entries.size() * sizeof(minidump::MemoryDescriptor_64);
   S.Header.BaseRVA = BaseRVA;
   S.Header.NumberOfMemoryRanges = S.Entries.size();
   File.allocateObject(S.Header);
-  for (auto &E : S.Entries)
+  for (auto &E : S.Entries) {
+    E.Entry.DataSize = E.Content.binary_size();
     File.allocateObject(E.Entry);
+  }
 
   // Save the new offset for the stream size.
   size_t DataEnd = File.tell();

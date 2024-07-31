@@ -216,10 +216,10 @@ Expected<const T &> MinidumpFile::getStream(minidump::StreamType Type) const {
 
 template <typename T>
 Expected<ArrayRef<T>> MinidumpFile::getDataSliceAs(ArrayRef<uint8_t> Data,
-                                                   size_t Offset,
-                                                   size_t Count) {
+                                                   uint64_t Offset,
+                                                   uint64_t Count) {
   // Check for overflow.
-  if (Count > std::numeric_limits<size_t>::max() / sizeof(T))
+  if (Count > std::numeric_limits<uint64_t>::max() / sizeof(T))
     return createEOFError();
   Expected<ArrayRef<uint8_t>> Slice =
       getDataSlice(Data, Offset, sizeof(T) * Count);
