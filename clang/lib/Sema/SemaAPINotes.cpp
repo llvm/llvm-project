@@ -1044,11 +1044,16 @@ void Sema::ProcessAPINotes(Decl *D) {
 
   if (auto TagContext = dyn_cast<TagDecl>(D->getDeclContext())) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        if (auto Context = UnwindTagContext(TagContext, APINotes)) {
-          auto Info =
-              Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
-          ProcessVersionedAPINotes(*this, CXXMethod, Info);
+      if (!isa<CXXConstructorDecl>(CXXMethod) &&
+          !isa<CXXDestructorDecl>(CXXMethod) &&
+          !isa<CXXConversionDecl>(CXXMethod) &&
+          !CXXMethod->isOverloadedOperator()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info =
+                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+          }
         }
       }
     }

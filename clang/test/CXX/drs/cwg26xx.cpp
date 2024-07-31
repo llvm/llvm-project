@@ -90,7 +90,7 @@ D<T, N> d();
 std::int32_t d1{ d<std::int64_t, 31>().i };
 std::int32_t d2{ d<std::int64_t, 32>().i };
 std::int32_t d3{ d<std::int64_t, 33>().i };
-// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'long long' to 'std::int32_t' (aka 'int') in initializer lis}}
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'long long' to 'std::int32_t' (aka 'int') in initializer list}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 
 std::int16_t d6{ d<int, 16>().i };
