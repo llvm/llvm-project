@@ -1431,146 +1431,42 @@ public:
 #endif
 };
 
-class SIToFPInst final : public CastInst {
+// Helper class to simplify stamping out CastInst subclasses.
+template <Instruction::Opcode Op> class CastInstImpl : public CastInst {
 public:
   static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
                        BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
+                       const Twine &Name = "") {
+    return CastInst::create(DestTy, Op, Src, WhereIt, WhereBB, Ctx, Name);
+  }
   static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
+                       Context &Ctx, const Twine &Name = "") {
+    return create(Src, DestTy, InsertBefore->getIterator(),
+                  InsertBefore->getParent(), Ctx, Name);
+  }
   static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
+                       Context &Ctx, const Twine &Name = "") {
+    return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+  }
 
   static bool classof(const Value *From) {
     if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::SIToFP;
+      return I->getOpcode() == Op;
     return false;
   }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
 };
 
-class FPToUIInst final : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::FPToUI;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
+class SIToFPInst final : public CastInstImpl<Instruction::Opcode::SIToFP> {};
+class FPToUIInst final : public CastInstImpl<Instruction::Opcode::FPToUI> {};
+class FPToSIInst final : public CastInstImpl<Instruction::Opcode::FPToSI> {};
+class IntToPtrInst final : public CastInstImpl<Instruction::Opcode::IntToPtr> {
 };
-
-class FPToSIInst final : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::FPToSI;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
+class PtrToIntInst final : public CastInstImpl<Instruction::Opcode::PtrToInt> {
 };
-
-class IntToPtrInst final : public CastInst {
+class BitCastInst final : public CastInstImpl<Instruction::Opcode::BitCast> {};
+class AddrSpaceCastInst final
+    : public CastInstImpl<Instruction::Opcode::AddrSpaceCast> {
 public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::IntToPtr;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
-};
-
-class PtrToIntInst final : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    return isa<Instruction>(From) &&
-           cast<Instruction>(From)->getOpcode() == Opcode::PtrToInt;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
-#endif // NDEBUG
-};
-
-class BitCastInst : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Instruction::Opcode::BitCast;
-    return false;
-  }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const override;
-  LLVM_DUMP_METHOD void dump() const override;
-#endif
-};
-
-class AddrSpaceCastInst : public CastInst {
-public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "");
-
-  static bool classof(const Value *From) {
-    if (auto *I = dyn_cast<Instruction>(From))
-      return I->getOpcode() == Opcode::AddrSpaceCast;
-    return false;
-  }
   /// \Returns the pointer operand.
   Value *getPointerOperand() { return getOperand(0); }
   /// \Returns the pointer operand.
@@ -1587,10 +1483,6 @@ public:
   unsigned getDestAddressSpace() const {
     return getType()->getPointerAddressSpace();
   }
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const override;
-  LLVM_DUMP_METHOD void dump() const override;
-#endif
 };
 
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
