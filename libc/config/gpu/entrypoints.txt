@@ -47,6 +47,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
+    libc.src.string.strerror
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -181,10 +182,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vprintf
     libc.src.stdio.fprintf
     libc.src.stdio.vfprintf
-    libc.src.stdio.sprintf
     libc.src.stdio.snprintf
-    libc.src.stdio.vsprintf
+    libc.src.stdio.sprintf
     libc.src.stdio.vsnprintf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.sscanf
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
@@ -216,6 +218,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.clock
+    libc.src.time.clock_gettime
     libc.src.time.nanosleep
 
     # wchar.h entrypoints
@@ -242,6 +245,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
+    libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
@@ -263,6 +267,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.floor

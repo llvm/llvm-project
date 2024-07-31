@@ -1399,9 +1399,10 @@ public:
   bool isSingleScalar() const;
 };
 
-/// VPWidenRecipe is a recipe for producing a copy of vector type its
-/// ingredient. This recipe covers most of the traditional vectorization cases
-/// where each ingredient transforms into a vectorized version of itself.
+/// VPWidenRecipe is a recipe for producing a widened instruction using the
+/// opcode and operands of the recipe. This recipe covers most of the
+/// traditional vectorization cases where each recipe transforms into a
+/// vectorized version of itself.
 class VPWidenRecipe : public VPRecipeWithIRFlags {
   unsigned Opcode;
 
@@ -1421,7 +1422,8 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
-  /// Produce widened copies of all Ingredients.
+  /// Produce a widened instruction using the opcode and operands of the recipe,
+  /// processing State.VF elements.
   void execute(VPTransformState &State) override;
 
   unsigned getOpcode() const { return Opcode; }

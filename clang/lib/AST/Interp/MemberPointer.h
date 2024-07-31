@@ -80,7 +80,7 @@ public:
     return MemberPointer(Instance, this->Dcl, this->PtrOffset);
   }
 
-  APValue toAPValue() const;
+  APValue toAPValue(const ASTContext &) const;
 
   bool isZero() const { return Base.isZero() && !Dcl; }
   bool hasBase() const { return !Base.isZero(); }

@@ -29,7 +29,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"errno" options**
-    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM.
+    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM.
 * **"malloc" options**
     - ``LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE``: Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB).
 * **"math" options**
@@ -52,3 +52,6 @@ to learn about the defaults for your platform and target.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
+* **"unistd" options**
+    - ``LIBC_CONF_ENABLE_PID_CACHE``: Enable caching mechanism for getpid to avoid syscall (default to true). Please refer to Undefined Behavior documentation for implications.
+    - ``LIBC_CONF_ENABLE_TID_CACHE``: Enable caching mechanism for gettid to avoid syscall (only effective in fullbuild mode, default to true). Please refer to Undefined Behavior documentation for implications.

@@ -286,6 +286,7 @@ typedef enum {
   LLVMInstructionValueKind,
   LLVMPoisonValueValueKind,
   LLVMConstantTargetNoneValueKind,
+  LLVMConstantPtrAuthValueKind,
 } LLVMValueKind;
 
 typedef enum {
@@ -1667,6 +1668,35 @@ LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
 unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy);
 
 /**
+ * Get the pointer value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getPointer
+ */
+LLVMValueRef LLVMGetConstantPtrAuthPointer(LLVMValueRef PtrAuth);
+
+/**
+ * Get the key value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getKey
+ */
+LLVMValueRef LLVMGetConstantPtrAuthKey(LLVMValueRef PtrAuth);
+
+/**
+ * Get the discriminator value for the associated ConstantPtrAuth constant.
+ *
+ * @see llvm::ConstantPtrAuth::getDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthDiscriminator(LLVMValueRef PtrAuth);
+
+/**
+ * Get the address discriminator value for the associated ConstantPtrAuth
+ * constant.
+ *
+ * @see llvm::ConstantPtrAuth::getAddrDiscriminator
+ */
+LLVMValueRef LLVMGetConstantPtrAuthAddrDiscriminator(LLVMValueRef PtrAuth);
+
+/**
  * @}
  */
 
@@ -1789,6 +1819,10 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
  * @{
  */
 
+// Currently, clang-format tries to format the LLVM_FOR_EACH_VALUE_SUBCLASS
+// macro in a progressively-indented fashion, which is not desired
+// clang-format off
+
 #define LLVM_FOR_EACH_VALUE_SUBCLASS(macro) \
   macro(Argument)                           \
   macro(BasicBlock)                         \
@@ -1808,6 +1842,7 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
       macro(ConstantStruct)                 \
       macro(ConstantTokenNone)              \
       macro(ConstantVector)                 \
+      macro(ConstantPtrAuth)                \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \
         macro(GlobalObject)                 \
@@ -1878,6 +1913,8 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
       macro(AtomicCmpXchgInst)              \
       macro(AtomicRMWInst)                  \
       macro(FenceInst)
+
+// clang-format on
 
 /**
  * @defgroup LLVMCCoreValueGeneral General APIs
@@ -2371,6 +2408,14 @@ LLVM_ATTRIBUTE_C_DEPRECATED(
  * @see llvm::ConstantVector::get()
  */
 LLVMValueRef LLVMConstVector(LLVMValueRef *ScalarConstantVals, unsigned Size);
+
+/**
+ * Create a ConstantPtrAuth constant with the given values.
+ *
+ * @see llvm::ConstantPtrAuth::get()
+ */
+LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
+                                 LLVMValueRef Disc, LLVMValueRef AddrDisc);
 
 /**
  * @}

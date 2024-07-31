@@ -144,8 +144,8 @@ struct VectorBroadcastConvert final
 
     SmallVector<Value, 4> source(castOp.getResultVectorType().getNumElements(),
                                  adaptor.getSource());
-    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
-        castOp, castOp.getResultVectorType(), source);
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(castOp, resultType,
+                                                             source);
     return success();
   }
 };

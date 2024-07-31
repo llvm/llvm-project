@@ -232,8 +232,11 @@ bool WindowScheduler::initialize() {
       return false;
     }
     for (auto &Def : MI.all_defs())
-      if (Def.isReg() && Def.getReg().isPhysical())
+      if (Def.isReg() && Def.getReg().isPhysical()) {
+        LLVM_DEBUG(dbgs() << "Physical registers are not supported in "
+                             "window scheduling!\n");
         return false;
+      }
   }
   if (SchedInstrNum <= WindowRegionLimit) {
     LLVM_DEBUG(dbgs() << "There are too few MIs in the window region!\n");
@@ -437,12 +440,16 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
       int PredCycle = getOriCycle(PredMI);
       ExpectCycle = std::max(ExpectCycle, PredCycle + (int)Pred.getLatency());
     }
-    // ResourceManager can be used to detect resource conflicts between the
-    // current MI and the previously inserted MIs.
-    while (!RM.canReserveResources(*SU, CurCycle) || CurCycle < ExpectCycle) {
-      ++CurCycle;
-      if (CurCycle == (int)WindowIILimit)
-        return CurCycle;
+    // Zero cost instructions do not need to check resource.
+    if (!TII->isZeroCost(MI.getOpcode())) {
+      // ResourceManager can be used to detect resource conflicts between the
+      // current MI and the previously inserted MIs.
+      while (!RM.canReserveResources(*SU, CurCycle) || CurCycle < ExpectCycle) {
+        ++CurCycle;
+        if (CurCycle == (int)WindowIILimit)
+          return CurCycle;
+      }
+      RM.reserveResources(*SU, CurCycle);
     }
     RM.reserveResources(*SU, CurCycle);
     OriToCycle[getOriMI(&MI)] = CurCycle;

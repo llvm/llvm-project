@@ -85,6 +85,7 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -509,6 +510,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
+  setOperationAction(ISD::BRIND, MVT::Other, Custom);
   setOperationAction(ISD::SETCCCARRY, MVT::i64, Custom);
 
   setOperationAction(ISD::PtrAuthGlobalAddress, MVT::i64, Custom);
@@ -732,10 +734,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
                   ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
+                  ISD::FACOS,        ISD::FASIN,         ISD::FATAN,
+                  ISD::FCOSH,        ISD::FSINH,         ISD::FTANH,
                   ISD::FTAN,         ISD::FEXP,          ISD::FEXP2,
                   ISD::FEXP10,       ISD::FLOG,          ISD::FLOG2,
                   ISD::FLOG10,       ISD::STRICT_FREM,   ISD::STRICT_FPOW,
                   ISD::STRICT_FPOWI, ISD::STRICT_FCOS,   ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS, ISD::STRICT_FASIN,  ISD::STRICT_FATAN,
+                  ISD::STRICT_FCOSH, ISD::STRICT_FSINH,  ISD::STRICT_FTANH,
                   ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
                   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
@@ -1074,6 +1080,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
 
+  // llvm.init.trampoline and llvm.adjust.trampoline
+  setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
+  setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
+
   // Vector add and sub nodes may conceal a high-half opportunity.
   // Also, try to fold ADD into CSINC/CSINV..
   setTargetDAGCombine({ISD::ADD, ISD::ABS, ISD::SUB, ISD::XOR, ISD::SINT_TO_FP,
@@ -1176,6 +1186,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
           ISD::FSQRT,             ISD::FFLOOR,         ISD::FNEARBYINT,
           ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
+          ISD::FASIN,             ISD::FACOS,          ISD::FATAN,
+          ISD::FSINH,             ISD::FCOSH,          ISD::FTANH,
           ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
           ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
@@ -1615,6 +1627,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FTAN, VT, Expand);
+      setOperationAction(ISD::FACOS, VT, Expand);
+      setOperationAction(ISD::FASIN, VT, Expand);
+      setOperationAction(ISD::FATAN, VT, Expand);
+      setOperationAction(ISD::FCOSH, VT, Expand);
+      setOperationAction(ISD::FSINH, VT, Expand);
+      setOperationAction(ISD::FTANH, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
       setOperationAction(ISD::FEXP10, VT, Expand);
@@ -1822,6 +1840,12 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FSIN, VT, Expand);
     setOperationAction(ISD::FCOS, VT, Expand);
     setOperationAction(ISD::FTAN, VT, Expand);
+    setOperationAction(ISD::FASIN, VT, Expand);
+    setOperationAction(ISD::FACOS, VT, Expand);
+    setOperationAction(ISD::FATAN, VT, Expand);
+    setOperationAction(ISD::FSINH, VT, Expand);
+    setOperationAction(ISD::FCOSH, VT, Expand);
+    setOperationAction(ISD::FTANH, VT, Expand);
     setOperationAction(ISD::FPOW, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
@@ -3385,6 +3409,11 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
+static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
+  KnownBits KnownSrc = DAG.computeKnownBits(CheckedVal);
+  return !KnownSrc.getSignedMinValue().isMinSignedValue();
+}
+
 // Can a (CMP op1, (sub 0, op2) be turned into a CMN instruction on
 // the grounds that "op1 - (-op2) == op1 + op2" ? Not always, the C and V flags
 // can be set differently by this operation. It comes down to whether
@@ -3392,12 +3421,14 @@ static bool isLegalArithImmed(uint64_t C) {
 // everything is fine. If not then the optimization is wrong. Thus general
 // comparisons are only valid if op2 != 0.
 //
-// So, finally, the only LLVM-native comparisons that don't mention C and V
-// are SETEQ and SETNE. They're the only ones we can safely use CMN for in
-// the absence of information about op2.
-static bool isCMN(SDValue Op, ISD::CondCode CC) {
+// So, finally, the only LLVM-native comparisons that don't mention C or V
+// are the ones that aren't unsigned comparisons. They're the only ones we can
+// safely use CMN for in the absence of information about op2.
+static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
-         (CC == ISD::SETEQ || CC == ISD::SETNE);
+         (isIntEqualitySetCC(CC) ||
+          (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
+          (isSignedIntSetCC(CC) && cannotBeIntMin(Op.getOperand(1), DAG)));
 }
 
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
@@ -3442,11 +3473,12 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // register to WZR/XZR if it ends up being unused.
   unsigned Opcode = AArch64ISD::SUBS;
 
-  if (isCMN(RHS, CC)) {
+  if (isCMN(RHS, CC, DAG)) {
     // Can we combine a (CMP op1, (sub 0, op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
     RHS = RHS.getOperand(1);
-  } else if (isCMN(LHS, CC)) {
+  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
+             isIntEqualitySetCC(CC)) {
     // As we are looking for EQ/NE compares, the operands can be commuted ; can
     // we combine a (CMP (sub 0, op1), op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
@@ -3548,13 +3580,15 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
       Opcode = AArch64ISD::CCMN;
       RHS = DAG.getConstant(Imm.abs(), DL, Const->getValueType(0));
     }
-  } else if (RHS.getOpcode() == ISD::SUB) {
-    SDValue SubOp0 = RHS.getOperand(0);
-    if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-      // See emitComparison() on why we can only do this for SETEQ and SETNE.
-      Opcode = AArch64ISD::CCMN;
-      RHS = RHS.getOperand(1);
-    }
+  } else if (isCMN(RHS, CC, DAG)) {
+    Opcode = AArch64ISD::CCMN;
+    RHS = RHS.getOperand(1);
+  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
+             isIntEqualitySetCC(CC)) {
+    // As we are looking for EQ/NE compares, the operands can be commuted ; can
+    // we combine a (CCMP (sub 0, op1), op2) into a CCMN instruction ?
+    Opcode = AArch64ISD::CCMN;
+    LHS = LHS.getOperand(1);
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
@@ -3872,8 +3906,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w12, w11, lsl #1
   if (!isa<ConstantSDNode>(RHS) ||
       !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
-    bool LHSIsCMN = isCMN(LHS, CC);
-    bool RHSIsCMN = isCMN(RHS, CC);
+    bool LHSIsCMN = isCMN(LHS, CC, DAG);
+    bool RHSIsCMN = isCMN(RHS, CC, DAG);
     SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
     SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
@@ -3886,7 +3920,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
   SDValue Cmp;
   AArch64CC::CondCode AArch64CC;
-  if ((CC == ISD::SETEQ || CC == ISD::SETNE) && isa<ConstantSDNode>(RHS)) {
+  if (isIntEqualitySetCC(CC) && isa<ConstantSDNode>(RHS)) {
     const ConstantSDNode *RHSC = cast<ConstantSDNode>(RHS);
 
     // The imm operand of ADDS is an unsigned immediate, in the range 0 to 4095.
@@ -6658,6 +6692,56 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
   return Final;
 }
 
+SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+    report_fatal_error(
+        "ADJUST_TRAMPOLINE operation is only supported on Linux.");
+
+  return Op.getOperand(0);
+}
+
+SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+
+  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+    report_fatal_error("INIT_TRAMPOLINE operation is only supported on Linux.");
+
+  SDValue Chain = Op.getOperand(0);
+  SDValue Trmp = Op.getOperand(1); // trampoline
+  SDValue FPtr = Op.getOperand(2); // nested function
+  SDValue Nest = Op.getOperand(3); // 'nest' parameter value
+  SDLoc dl(Op);
+
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+
+  Entry.Ty = IntPtrTy;
+  Entry.Node = Trmp;
+  Args.push_back(Entry);
+  Entry.Node = DAG.getConstant(20, dl, MVT::i64);
+  Args.push_back(Entry);
+
+  Entry.Node = FPtr;
+  Args.push_back(Entry);
+  Entry.Node = Nest;
+  Args.push_back(Entry);
+
+  // Lower to a call to __trampoline_setup(Trmp, TrampSize, FPtr, ctx_reg)
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
+      CallingConv::C, Type::getVoidTy(*DAG.getContext()),
+      DAG.getExternalSymbol("__trampoline_setup", PtrVT), std::move(Args));
+
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  return CallResult.second;
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -6675,6 +6759,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGlobalTLSAddress(Op, DAG);
   case ISD::PtrAuthGlobalAddress:
     return LowerPtrAuthGlobalAddress(Op, DAG);
+  case ISD::ADJUST_TRAMPOLINE:
+    return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::INIT_TRAMPOLINE:
+    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -6693,6 +6781,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::BR_JT:
     return LowerBR_JT(Op, DAG);
+  case ISD::BRIND:
+    return LowerBRIND(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
   case ISD::BlockAddress:
@@ -7091,7 +7181,13 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::PreserveNone:
-    return CC_AArch64_Preserve_None;
+    // The VarArg implementation makes assumptions about register
+    // argument passing that do not hold for preserve_none, so we
+    // instead fall back to C argument passing.
+    // The non-vararg case is handled in the CC function itself.
+    if (!IsVarArg)
+      return CC_AArch64_Preserve_None;
+    [[fallthrough]];
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
@@ -7164,7 +7260,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &F = MF.getFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool IsWin64 = Subtarget->isCallingConvWin64(F.getCallingConv());
+  bool IsWin64 =
+      Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   bool StackViaX4 = CallConv == CallingConv::ARM64EC_Thunk_X64 ||
                     (isVarArg && Subtarget->isWindowsArm64EC());
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
@@ -7616,7 +7713,9 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
-  bool IsWin64 = Subtarget->isCallingConvWin64(MF.getFunction().getCallingConv());
+  Function &F = MF.getFunction();
+  bool IsWin64 =
+      Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg());
 
   SmallVector<SDValue, 8> MemOps;
 
@@ -7787,6 +7886,21 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
+/// Return true if the call convention supports varargs
+/// Currently only those that pass varargs like the C
+/// calling convention does are eligible
+/// Calling conventions listed in this function must also
+/// be properly handled in AArch64Subtarget::isCallingConvWin64
+static bool callConvSupportsVarArgs(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::PreserveNone:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void analyzeCallOperands(const AArch64TargetLowering &TLI,
                                 const AArch64Subtarget *Subtarget,
                                 const TargetLowering::CallLoweringInfo &CLI,
@@ -7795,7 +7909,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
   CallingConv::ID CalleeCC = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
   const SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
-  bool IsCalleeWin64 = Subtarget->isCallingConvWin64(CalleeCC);
+  bool IsCalleeWin64 = Subtarget->isCallingConvWin64(CalleeCC, IsVarArg);
 
   // For Arm64EC thunks, allocate 32 extra bytes at the bottom of the stack
   // for the shadow store.
@@ -7923,8 +8037,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // I want anyone implementing a new calling convention to think long and hard
   // about this assert.
-  assert((!IsVarArg || CalleeCC == CallingConv::C) &&
-         "Unexpected variadic calling convention");
+  if (IsVarArg && !callConvSupportsVarArgs(CalleeCC))
+    report_fatal_error("Unsupported variadic calling convention");
 
   LLVMContext &C = *DAG.getContext();
   // Check that the call results are passed in the same way.
@@ -8578,7 +8692,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
-            /*isTailCall = */ false, DstInfo, MachinePointerInfo());
+            /*CI=*/nullptr, std::nullopt, DstInfo, MachinePointerInfo());
 
         MemOpChains.push_back(Cpy);
       } else {
@@ -10690,11 +10804,62 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   AFI->setJumpTableEntryInfo(JTI, 4, nullptr);
 
+  // With aarch64-jump-table-hardening, we only expand the jump table dispatch
+  // sequence later, to guarantee the integrity of the intermediate values.
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          "aarch64-jump-table-hardening")) {
+    CodeModel::Model CM = getTargetMachine().getCodeModel();
+    if (Subtarget->isTargetMachO()) {
+      if (CM != CodeModel::Small && CM != CodeModel::Large)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    } else {
+      // Note that COFF support would likely also need JUMP_TABLE_DEBUG_INFO.
+      assert(Subtarget->isTargetELF() &&
+             "jump table hardening only supported on MachO/ELF");
+      if (CM != CodeModel::Small)
+        report_fatal_error("Unsupported code-model for hardened jump-table");
+    }
+
+    SDValue X16Copy = DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::X16,
+                                       Entry, SDValue());
+    SDNode *B = DAG.getMachineNode(AArch64::BR_JumpTable, DL, MVT::Other,
+                                   DAG.getTargetJumpTable(JTI, MVT::i32),
+                                   X16Copy.getValue(0), X16Copy.getValue(1));
+    return SDValue(B, 0);
+  }
+
   SDNode *Dest =
       DAG.getMachineNode(AArch64::JumpTableDest32, DL, MVT::i64, MVT::i64, JT,
                          Entry, DAG.getTargetJumpTable(JTI, MVT::i32));
   SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Op.getOperand(0), DL);
   return DAG.getNode(ISD::BRIND, DL, MVT::Other, JTInfo, SDValue(Dest, 0));
+}
+
+SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Dest = Op.getOperand(1);
+
+  // BR_JT is lowered to BRIND, but the later lowering is specific to indirectbr
+  // Skip over the jump-table BRINDs, where the destination is JumpTableDest32.
+  if (Dest->isMachineOpcode() &&
+      Dest->getMachineOpcode() == AArch64::JumpTableDest32)
+    return SDValue();
+
+  const MachineFunction &MF = DAG.getMachineFunction();
+  std::optional<uint16_t> BADisc =
+      Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(MF.getFunction());
+  if (!BADisc)
+    return SDValue();
+
+  SDLoc DL(Op);
+
+  SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
+  SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+  SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+
+  SDNode *BrA = DAG.getMachineNode(AArch64::BRA, DL, MVT::Other,
+                                   {Dest, Key, Disc, AddrDisc, Chain});
+  return SDValue(BrA, 0);
 }
 
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
@@ -10716,15 +10881,37 @@ SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
-  BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
+  BlockAddressSDNode *BAN = cast<BlockAddressSDNode>(Op);
+  const BlockAddress *BA = BAN->getBlockAddress();
+
+  if (std::optional<uint16_t> BADisc =
+          Subtarget->getPtrAuthBlockAddressDiscriminatorIfEnabled(
+              *BA->getFunction())) {
+    SDLoc DL(Op);
+
+    // This isn't cheap, but BRIND is rare.
+    SDValue TargetBA = DAG.getTargetBlockAddress(BA, BAN->getValueType(0));
+
+    SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
+
+    SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+    SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
+
+    SDNode *MOV =
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, {MVT::Other, MVT::Glue},
+                           {TargetBA, Key, AddrDisc, Disc});
+    return DAG.getCopyFromReg(SDValue(MOV, 0), DL, AArch64::X16, MVT::i64,
+                              SDValue(MOV, 1));
+  }
+
   CodeModel::Model CM = getTargetMachine().getCodeModel();
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO()) {
     if (!getTargetMachine().isPositionIndependent())
-      return getAddrLarge(BA, DAG);
+      return getAddrLarge(BAN, DAG);
   } else if (CM == CodeModel::Tiny) {
-    return getAddrTiny(BA, DAG);
+    return getAddrTiny(BAN, DAG);
   }
-  return getAddr(BA, DAG);
+  return getAddr(BAN, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerDarwin_VASTART(SDValue Op,
@@ -10854,8 +11041,9 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
 SDValue AArch64TargetLowering::LowerVASTART(SDValue Op,
                                             SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  Function &F = MF.getFunction();
 
-  if (Subtarget->isCallingConvWin64(MF.getFunction().getCallingConv()))
+  if (Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg()))
     return LowerWin64_VASTART(Op, DAG);
   else if (Subtarget->isTargetDarwin())
     return LowerDarwin_VASTART(Op, DAG);
@@ -10878,8 +11066,9 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, false,
-                       MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+                       Align(PtrSize), false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -13161,7 +13350,7 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   if (VT.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock)
     return SDValue();
 
-  // The DUPQ operation is indepedent of element type so normalise to i64s.
+  // The DUPQ operation is independent of element type so normalise to i64s.
   SDValue Idx128 = Op.getOperand(2);
 
   // DUPQ can be used when idx is in range.
@@ -27526,6 +27715,20 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
           /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
     VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  }
+
+  // Lower VECREDUCE_ADD of nxv2i1-nxv16i1 to CNTP rather than UADDV.
+  if (ScalarOp.getOpcode() == ISD::VECREDUCE_ADD &&
+      VecOp.getOpcode() == ISD::ZERO_EXTEND) {
+    SDValue BoolVec = VecOp.getOperand(0);
+    if (BoolVec.getValueType().getVectorElementType() == MVT::i1) {
+      // CNTP(BoolVec & BoolVec) <=> CNTP(BoolVec & PTRUE)
+      SDValue CntpOp = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+          DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+          BoolVec, BoolVec);
+      return DAG.getAnyExtOrTrunc(CntpOp, DL, ScalarOp.getValueType());
+    }
   }
 
   // UADDV always returns an i64 result.

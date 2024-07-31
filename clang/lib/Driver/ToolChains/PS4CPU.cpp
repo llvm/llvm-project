@@ -162,10 +162,6 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   if (UseLTO) {
-    // We default to creating the arange section, but LTO does not. Enable it
-    // here.
-    AddCodeGenFlag("-generate-arange-section");
-
     // This tells LTO to perform JustMyCode instrumentation.
     if (UseJMC)
       AddCodeGenFlag("-enable-jmc-instrument");
@@ -272,10 +268,6 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   if (UseLTO) {
-    // We default to creating the arange section, but LTO does not. Enable it
-    // here.
-    AddCodeGenFlag("-generate-arange-section");
-
     // This tells LTO to perform JustMyCode instrumentation.
     if (UseJMC)
       AddCodeGenFlag("-enable-jmc-instrument");

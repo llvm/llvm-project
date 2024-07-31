@@ -451,7 +451,7 @@ protected:
   bool OptNone;
 
 public:
-  WaitcntGenerator() {}
+  WaitcntGenerator() = default;
   WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter)
       : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
         IV(AMDGPU::getIsaVersion(ST->getCPU())), MaxCounter(MaxCounter),
@@ -510,7 +510,7 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  WaitcntGeneratorPreGFX12() {}
+  WaitcntGeneratorPreGFX12() = default;
   WaitcntGeneratorPreGFX12(const MachineFunction &MF)
       : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS) {}
 
@@ -540,12 +540,12 @@ public:
     return WaitEventMaskForInstPreGFX12;
   }
 
-  virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
+  AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
 public:
-  WaitcntGeneratorGFX12Plus() {}
+  WaitcntGeneratorGFX12Plus() = default;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
                             InstCounterType MaxCounter)
       : WaitcntGenerator(MF, MaxCounter) {}
@@ -575,7 +575,7 @@ public:
     return WaitEventMaskForInstGFX12Plus;
   }
 
-  virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
+  AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -699,7 +699,8 @@ public:
     // these should use VM_CNT.
     if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
       return VMEM_ACCESS;
-    if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst)) {
+    if (Inst.mayStore() &&
+        (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
       // instructions do not.
       if (SIInstrInfo::isFLAT(Inst) && mayAccessScratchThroughFlat(Inst))

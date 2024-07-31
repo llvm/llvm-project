@@ -1943,6 +1943,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // have the headers, we can find out which sections they point to.
   setReservedSymbolSections();
 
+  if (script->noCrossRefs.size()) {
+    llvm::TimeTraceScope timeScope("Check NOCROSSREFS");
+    checkNoCrossRefs<ELFT>();
+  }
+
   {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections");
 

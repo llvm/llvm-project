@@ -482,12 +482,6 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
 
 void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
   defineHLSLVectorAlias();
-
-  ResourceDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Resource")
-                     .startDefinition()
-                     .addHandleMember(AccessSpecifier::AS_public)
-                     .completeDefinition()
-                     .Record;
 }
 
 /// Set up common members and attributes for buffer types

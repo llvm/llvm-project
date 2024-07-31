@@ -32,7 +32,7 @@ MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
 namespace {
 
 class SIFormMemoryClauses : public MachineFunctionPass {
-  typedef DenseMap<unsigned, std::pair<unsigned, LaneBitmask>> RegUse;
+  using RegUse = DenseMap<unsigned, std::pair<unsigned, LaneBitmask>>;
 
 public:
   static char ID;

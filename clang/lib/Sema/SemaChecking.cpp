@@ -1489,12 +1489,16 @@ enum PointerAuthOpKind {
 };
 }
 
-static bool checkPointerAuthEnabled(Sema &S, Expr *E) {
-  if (S.getLangOpts().PointerAuthIntrinsics)
+bool Sema::checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range) {
+  if (getLangOpts().PointerAuthIntrinsics)
     return false;
 
-  S.Diag(E->getExprLoc(), diag::err_ptrauth_disabled) << E->getSourceRange();
+  Diag(Loc, diag::err_ptrauth_disabled) << Range;
   return true;
+}
+
+static bool checkPointerAuthEnabled(Sema &S, Expr *E) {
+  return S.checkPointerAuthEnabled(E->getExprLoc(), E->getSourceRange());
 }
 
 static bool checkPointerAuthKey(Sema &S, Expr *&Arg) {

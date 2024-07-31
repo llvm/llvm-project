@@ -3018,6 +3018,37 @@ void LibCallSimplifier::classifyArgUse(
   }
 }
 
+/// Constant folds remquo
+Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
+  const APFloat *X, *Y;
+  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
+      !match(CI->getArgOperand(1), m_APFloat(Y)))
+    return nullptr;
+
+  APFloat::opStatus Status;
+  APFloat Quot = *X;
+  Status = Quot.divide(*Y, APFloat::rmNearestTiesToEven);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
+    return nullptr;
+  APFloat Rem = *X;
+  if (Rem.remainder(*Y) != APFloat::opOK)
+    return nullptr;
+
+  // TODO: We can only keep at least the three of the last bits of x/y
+  unsigned IntBW = TLI->getIntSize();
+  APSInt QuotInt(IntBW, /*isUnsigned=*/false);
+  bool IsExact;
+  Status =
+      Quot.convertToInteger(QuotInt, APFloat::rmNearestTiesToEven, &IsExact);
+  if (Status != APFloat::opOK && Status != APFloat::opInexact)
+    return nullptr;
+
+  B.CreateAlignedStore(
+      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      CI->getArgOperand(2), CI->getParamAlign(2));
+  return ConstantFP::get(CI->getType(), Rem);
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -3926,6 +3957,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cabsf:
   case LibFunc_cabsl:
     return optimizeCAbs(CI, Builder);
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    return optimizeRemquo(CI, Builder);
   default:
     return nullptr;
   }

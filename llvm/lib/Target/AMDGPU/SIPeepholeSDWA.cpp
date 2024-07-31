@@ -597,12 +597,11 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
         Opcode == AMDGPU::V_LSHLREV_B32_e64) {
       return std::make_unique<SDWADstOperand>(
           Dst, Src1, *Imm == 16 ? WORD_1 : BYTE_3, UNUSED_PAD);
-    } else {
-      return std::make_unique<SDWASrcOperand>(
-          Src1, Dst, *Imm == 16 ? WORD_1 : BYTE_3, false, false,
-          Opcode != AMDGPU::V_LSHRREV_B32_e32 &&
-          Opcode != AMDGPU::V_LSHRREV_B32_e64);
     }
+    return std::make_unique<SDWASrcOperand>(
+        Src1, Dst, *Imm == 16 ? WORD_1 : BYTE_3, false, false,
+        Opcode != AMDGPU::V_LSHRREV_B32_e32 &&
+            Opcode != AMDGPU::V_LSHRREV_B32_e64);
     break;
   }
 
@@ -633,14 +632,12 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
       break;
 
     if (Opcode == AMDGPU::V_LSHLREV_B16_e32 ||
-        Opcode == AMDGPU::V_LSHLREV_B16_e64) {
+        Opcode == AMDGPU::V_LSHLREV_B16_e64)
       return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
-    } else {
-      return std::make_unique<SDWASrcOperand>(
-            Src1, Dst, BYTE_1, false, false,
-            Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
+    return std::make_unique<SDWASrcOperand>(
+        Src1, Dst, BYTE_1, false, false,
+        Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
             Opcode != AMDGPU::V_LSHRREV_B16_e64);
-    }
     break;
   }
 

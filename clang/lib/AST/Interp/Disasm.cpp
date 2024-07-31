@@ -366,9 +366,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
 
     OS << "LValue: ";
     if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
+      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
     OS << "\n";
     break;
   }

@@ -4259,14 +4259,18 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
     // Include number of iterations, if any.
 
     if (const auto *IE = cast_or_null<OMPIteratorExpr>(D.IteratorExpr)) {
+      llvm::Value *ClauseIteratorSpace =
+          llvm::ConstantInt::get(CGF.IntPtrTy, 1);
       for (unsigned I = 0, E = IE->numOfIterators(); I < E; ++I) {
         llvm::Value *Sz = CGF.EmitScalarExpr(IE->getHelper(I).Upper);
         Sz = CGF.Builder.CreateIntCast(Sz, CGF.IntPtrTy, /*isSigned=*/false);
-        llvm::Value *NumClauseDeps = CGF.Builder.CreateNUWMul(
-            Sz, llvm::ConstantInt::get(CGF.IntPtrTy, D.DepExprs.size()));
-        NumOfRegularWithIterators =
-            CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumClauseDeps);
+        ClauseIteratorSpace = CGF.Builder.CreateNUWMul(Sz, ClauseIteratorSpace);
       }
+      llvm::Value *NumClauseDeps = CGF.Builder.CreateNUWMul(
+          ClauseIteratorSpace,
+          llvm::ConstantInt::get(CGF.IntPtrTy, D.DepExprs.size()));
+      NumOfRegularWithIterators =
+          CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumClauseDeps);
       HasRegularWithIterators = true;
       continue;
     }
@@ -6041,11 +6045,6 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
           return NumTeams;
         }
         MinTeamsVal = MaxTeamsVal = 0;
-        return nullptr;
-      }
-      if (isOpenMPParallelDirective(NestedDir->getDirectiveKind()) ||
-          isOpenMPSimdDirective(NestedDir->getDirectiveKind())) {
-        MinTeamsVal = MaxTeamsVal = 1;
         return nullptr;
       }
       MinTeamsVal = MaxTeamsVal = 1;

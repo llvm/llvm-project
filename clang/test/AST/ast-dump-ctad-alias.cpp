@@ -32,22 +32,24 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |     | |-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'Concept'
 // CHECK-NEXT: |     | | |-TemplateArgument type 'int'
 // CHECK-NEXT: |     | | | `-BuiltinType {{.*}} 'int'
-// CHECK-NEXT: |     | | `-TemplateArgument type 'type-parameter-1-0'
-// CHECK-NEXT: |     | |   `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent depth 1 index 0
+// CHECK-NEXT: |     | | `-TemplateArgument type 'Y':'type-parameter-1-0'
+// CHECK-NEXT: |     | |   `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
+// CHECK-NEXT: |     | |     `-TemplateTypeParm {{.*}} 'Y'
 // CHECK-NEXT: |     | `-TypeTraitExpr {{.*}} 'bool' __is_deducible
 // CHECK-NEXT: |     |   |-DeducedTemplateSpecializationType {{.*}} 'Out2<double>::AInner' dependent
 // CHECK-NEXT: |     |   | `-name: 'Out2<double>::AInner'
 // CHECK-NEXT: |     |   |   `-TypeAliasTemplateDecl {{.+}} AInner{{$}}
-// CHECK-NEXT: |     |   `-ElaboratedType {{.*}} 'Inner<type-parameter-1-0>' sugar dependent
-// CHECK-NEXT: |     |     `-TemplateSpecializationType {{.*}} 'Inner<type-parameter-1-0>' dependent
+// CHECK-NEXT: |     |   `-ElaboratedType {{.*}} 'Inner<Y>' sugar dependent
+// CHECK-NEXT: |     |     `-TemplateSpecializationType {{.*}} 'Inner<Y>' dependent
 // CHECK-NEXT: |     |       |-name: 'Inner':'Out<int>::Inner' qualified
 // CHECK-NEXT: |     |       | `-ClassTemplateDecl {{.+}} Inner{{$}}
-// CHECK-NEXT: |     |       `-TemplateArgument type 'type-parameter-1-0'
-// CHECK-NEXT: |     |         `-SubstTemplateTypeParmType {{.*}} 'type-parameter-1-0'
+// CHECK-NEXT: |     |       `-TemplateArgument type 'Y'
+// CHECK-NEXT: |     |         `-SubstTemplateTypeParmType {{.*}} 'Y'
 // CHECK-NEXT: |     |           |-FunctionTemplate {{.*}} '<deduction guide for Inner>'
-// CHECK-NEXT: |     |           `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent depth 1 index 0
-// CHECK-NEXT: |     |-CXXDeductionGuideDecl {{.*}} <deduction guide for AInner> 'auto (type-parameter-0-0) -> Inner<type-parameter-0-0>'
-// CHECK-NEXT: |     | `-ParmVarDecl {{.*}} 'type-parameter-0-0'
+// CHECK-NEXT: |     |           `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
+// CHECK-NEXT: |     |             `-TemplateTypeParm {{.*}} 'Y'
+// CHECK-NEXT: |     |-CXXDeductionGuideDecl {{.*}} <deduction guide for AInner> 'auto (Y) -> Inner<Y>'
+// CHECK-NEXT: |     | `-ParmVarDecl {{.*}} 'Y'
 // CHECK-NEXT: |     `-CXXDeductionGuideDecl {{.*}} used <deduction guide for AInner> 'auto (double) -> Inner<double>' implicit_instantiation
 // CHECK-NEXT: |       |-TemplateArgument type 'double'
 // CHECK-NEXT: |       | `-BuiltinType {{.*}} 'double'
@@ -77,8 +79,8 @@ AFoo3 afoo3{0, 1};
 // CHECK-NEXT: | |-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'Concept'
 // CHECK-NEXT: | | |-TemplateArgument type 'int'
 // CHECK-NEXT: | | | `-BuiltinType {{.*}} 'int'
-// CHECK-NEXT: | | `-TemplateArgument type 'type-parameter-0-1'
-// CHECK-NEXT: | |   `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+// CHECK-NEXT: | | `-TemplateArgument type 'V'
+// CHECK-NEXT: | |   `-TemplateTypeParmType {{.*}} 'V' dependent depth 0 index 1
 
 template <typename... T1>
 struct Foo {
@@ -88,16 +90,16 @@ struct Foo {
 template <typename...T2>
 using AFoo = Foo<T2...>;
 AFoo a(1, 2);
-// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (type-parameter-0-0...) -> Foo<type-parameter-0-0...>'
-// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'type-parameter-0-0...' pack
+// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (T2...) -> Foo<T2...>'
+// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'T2...' pack
 // CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (int, int) -> Foo<int, int>' implicit_instantiation
 
 template <typename T>
 using BFoo = Foo<T, T>;
 BFoo b2(1.0, 2.0);
-// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for BFoo> 'auto (type-parameter-0-0, type-parameter-0-0) -> Foo<type-parameter-0-0, type-parameter-0-0>'
-// CHECK-NEXT: | | |-ParmVarDecl {{.*}} 'type-parameter-0-0'
-// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'type-parameter-0-0'
+// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for BFoo> 'auto (T, T) -> Foo<T, T>'
+// CHECK-NEXT: | | |-ParmVarDecl {{.*}} 'T'
+// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'T'
 // CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for BFoo> 'auto (double, double) -> Foo<double, double>' implicit_instantiation
 
 namespace GH90209 {

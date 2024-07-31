@@ -89,6 +89,15 @@ _add_capi_test_executable(mlir-capi-quant-test
     MLIRCAPIQuant
 )
 
+_add_capi_test_executable(mlir-capi-rewrite-test
+  rewrite.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegisterEverything
+    MLIRCAPITransforms
+)
+
+
 _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE

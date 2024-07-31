@@ -272,32 +272,10 @@ StringRef ScriptLexer::peek() {
   return tok;
 }
 
-StringRef ScriptLexer::peek2() {
-  skip();
-  StringRef tok = next();
-  if (errorCount())
-    return "";
-  pos = pos - 2;
-  return tok;
-}
-
 bool ScriptLexer::consume(StringRef tok) {
-  if (peek() == tok) {
-    skip();
+  if (next() == tok)
     return true;
-  }
-  return false;
-}
-
-// Consumes Tok followed by ":". Space is allowed between Tok and ":".
-bool ScriptLexer::consumeLabel(StringRef tok) {
-  if (consume((tok + ":").str()))
-    return true;
-  if (tokens.size() >= pos + 2 && tokens[pos] == tok &&
-      tokens[pos + 1] == ":") {
-    pos += 2;
-    return true;
-  }
+  --pos;
   return false;
 }
 

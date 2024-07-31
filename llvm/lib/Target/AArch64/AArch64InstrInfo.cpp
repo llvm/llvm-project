@@ -8286,6 +8286,7 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
 
 std::optional<outliner::OutlinedFunction>
 AArch64InstrInfo::getOutliningCandidateInfo(
+    const MachineModuleInfo &MMI,
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0])
@@ -8861,8 +8862,9 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
 }
 
 outliner::InstrType
-AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
-                                   unsigned Flags) const {
+AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                       MachineBasicBlock::iterator &MIT,
+                                       unsigned Flags) const {
   MachineInstr &MI = *MIT;
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
@@ -8974,7 +8976,7 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
 
     // We have a function we have information about. Check it if it's something
     // can safely outline.
-    MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
+    MachineFunction *CalleeMF = MMI.getMachineFunction(*Callee);
 
     // We don't know what's going on with the callee at all. Don't touch it.
     if (!CalleeMF)

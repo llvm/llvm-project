@@ -3469,6 +3469,17 @@ static_assert(__has_unique_object_representations(_BitInt(8)), "BitInt:");
 static_assert(!__has_unique_object_representations(_BitInt(127)), "BitInt:");
 static_assert(__has_unique_object_representations(_BitInt(128)), "BitInt:");
 
+namespace GH95311 {
+
+template <int>
+class Foo {
+  int x;
+};
+static_assert(__has_unique_object_representations(Foo<0>[]));
+class Bar; // expected-note {{forward declaration of 'GH95311::Bar'}}
+static_assert(__has_unique_object_representations(Bar[])); // expected-error {{incomplete type}}
+
+}
 
 namespace PR46209 {
   // Foo has both a trivial assignment operator and a non-trivial one.

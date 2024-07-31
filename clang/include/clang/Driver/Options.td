@@ -931,7 +931,9 @@ def O : Joined<["-"], "O">, Group<O_Group>,
 def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
-  Visibility<[ClangOption, CC1Option, FlangOption]>;
+  Visibility<[ClangOption, CC1Option, FlangOption]>,
+  HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
+  " or '-O3' to enable only conforming optimizations">;
 def P : Flag<["-"], "P">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Group<Preprocessor_Group>,
@@ -1163,19 +1165,19 @@ def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[NoXarchOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
 def config : Joined<["--"], "config=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, MetaVarName<"<file>">,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, MetaVarName<"<file>">,
   HelpText<"Specify configuration file">;
-def : Separate<["--"], "config">, Alias<config>;
+def : Separate<["--"], "config">, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<config>;
 def no_default_config : Flag<["--"], "no-default-config">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable loading default configuration files">;
 def config_system_dir_EQ : Joined<["--"], "config-system-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"System directory for configuration files">;
 def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"User directory for configuration files">;
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
@@ -1908,6 +1910,14 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
+
+defm bounds_safety : BoolFOption<
+  "experimental-bounds-safety",
+  LangOpts<"BoundsSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental bounds safety extension for C">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -3222,6 +3232,10 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Implicitly search the file system for module map files.">,
   MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
+defm modulemap_allow_subdirectory_search : BoolFOption <"modulemap-allow-subdirectory-search",
+  HeaderSearchOpts<"AllowModuleMapSubdirectorySearch">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Allow to search for module maps in subdirectories of search paths">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption], [ClangOption, CC1Option]>>;
 defm modules : BoolFOption<"modules",
   LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -3379,6 +3393,7 @@ def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
 def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>;
+def fno_pointer_tbaa : Flag<["-"], "fno-pointer-tbaa">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>, HelpText<
   "Directly create compilation output files. This may lead to incorrect incremental builds if the compiler crashes">,
@@ -3883,6 +3898,7 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
+def fpointer_tbaa : Flag<["-"], "fpointer-tbaa">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   Group<Action_Group>, HelpText<"Only run the driver.">;
@@ -3986,6 +4002,10 @@ def ftime_trace_granularity_EQ : Joined<["-"], "ftime-trace-granularity=">, Grou
   HelpText<"Minimum time granularity (in microseconds) traced by time profiler">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   MarshallingInfoInt<FrontendOpts<"TimeTraceGranularity">, "500u">;
+def ftime_trace_verbose : Joined<["-"], "ftime-trace-verbose">, Group<f_Group>,
+  HelpText<"Make time trace capture verbose event details (e.g. source filenames). This can increase the size of the output by 2-3 times">,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  MarshallingInfoFlag<FrontendOpts<"TimeTraceVerbose">>;
 def ftime_trace_EQ : Joined<["-"], "ftime-trace=">, Group<f_Group>,
   HelpText<"Similar to -ftime-trace. Specify the JSON file or a directory which will contain the JSON file">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -4233,9 +4253,13 @@ defm ptrauth_vtable_pointer_address_discrimination :
   OptInCC1FFlag<"ptrauth-vtable-pointer-address-discrimination", "Enable address discrimination of vtable pointers">;
 defm ptrauth_vtable_pointer_type_discrimination :
   OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
+defm ptrauth_type_info_vtable_pointer_discrimination :
+  OptInCC1FFlag<"ptrauth-type-info-vtable-pointer-discrimination", "Enable type and address discrimination of vtable pointer of std::type_info">;
 defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 defm ptrauth_function_pointer_type_discrimination : OptInCC1FFlag<"ptrauth-function-pointer-type-discrimination",
   "Enable type discrimination on C function pointers">;
+defm ptrauth_indirect_gotos : OptInCC1FFlag<"ptrauth-indirect-gotos",
+  "Enable signing and authentication of indirect goto targets">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5065,6 +5089,11 @@ def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 } // let Flags = [TargetSpecific]
+def msave_reg_params : Flag<["-"], "msave-reg-params">, Group<m_Group>,
+  Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Save arguments passed by registers to ABI-defined stack positions">,
+  MarshallingInfoFlag<CodeGenOpts<"SaveRegParams">>;
 def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
@@ -5456,6 +5485,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
@@ -5621,7 +5651,7 @@ def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
-def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption]>,
+def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption, FlangOption]>,
   HelpText<"Compiler runtime library to use">;
 def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, FlangOption]>,
@@ -6134,10 +6164,6 @@ def mno_80387 : Flag<["-"], "mno-80387">, Alias<mno_x87>;
 def mno_fp_ret_in_387 : Flag<["-"], "mno-fp-ret-in-387">, Alias<mno_x87>;
 def mmmx : Flag<["-"], "mmmx">, Group<m_x86_Features_Group>;
 def mno_mmx : Flag<["-"], "mno-mmx">, Group<m_x86_Features_Group>;
-def m3dnow : Flag<["-"], "m3dnow">, Group<m_x86_Features_Group>;
-def mno_3dnow : Flag<["-"], "mno-3dnow">, Group<m_x86_Features_Group>;
-def m3dnowa : Flag<["-"], "m3dnowa">, Group<m_x86_Features_Group>;
-def mno_3dnowa : Flag<["-"], "mno-3dnowa">, Group<m_x86_Features_Group>;
 def mamx_bf16 : Flag<["-"], "mamx-bf16">, Group<m_x86_Features_Group>;
 def mno_amx_bf16 : Flag<["-"], "mno-amx-bf16">, Group<m_x86_Features_Group>;
 def mamx_complex : Flag<["-"], "mamx-complex">, Group<m_x86_Features_Group>;
@@ -6357,9 +6383,8 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
-// For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]
@@ -6370,6 +6395,12 @@ def mvevpu : Flag<["-"], "mvevpu">, Group<m_ve_Features_Group>,
   HelpText<"Emit VPU instructions for VE">;
 def mno_vevpu : Flag<["-"], "mno-vevpu">, Group<m_ve_Features_Group>;
 } // let Flags = [TargetSpecific]
+
+// Unsupported X86 feature flags (triggers a warning)
+def m3dnow : Flag<["-"], "m3dnow">;
+def mno_3dnow : Flag<["-"], "mno-3dnow">;
+def m3dnowa : Flag<["-"], "m3dnowa">;
+def mno_3dnowa : Flag<["-"], "mno-3dnowa">;
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag
@@ -6783,9 +6814,6 @@ def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
 
 let Visibility = [CC1Option, CC1AsOption] in {
 
-def tune_cpu : Separate<["-"], "tune-cpu">,
-  HelpText<"Tune for a specific cpu type">,
-  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">,
   MarshallingInfoString<TargetOpts<"ABI">>;
@@ -6812,6 +6840,9 @@ def darwin_target_variant_triple : Separate<["-"], "darwin-target-variant-triple
 
 let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
 
+def tune_cpu : Separate<["-"], "tune-cpu">,
+  HelpText<"Tune for a specific cpu type">,
+  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_cpu : Separate<["-"], "target-cpu">,
   HelpText<"Target a specific cpu type">,
   MarshallingInfoString<TargetOpts<"CPU">>;
@@ -7161,6 +7192,9 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
+def pointer_tbaa: Flag<["-"], "pointer-tbaa">,
+  HelpText<"Turn on Type Based Alias Analysis for pointer accesses">,
+  MarshallingInfoFlag<CodeGenOpts<"PointerTBAA">>;
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"StructPathTBAA">>;
@@ -8060,6 +8094,13 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
   HelpText<"Time to be used in __DATE__, __TIME__, and __TIMESTAMP__ macros">;
 
 } // let Visibility = [CC1Option]
+
+defm err_pragma_mc_func_aix : BoolFOption<"err-pragma-mc-func-aix",
+  PreprocessorOpts<"ErrorOnPragmaMcfuncOnAIX">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Treat uses of #pragma mc_func as errors">,
+  NegFlag<SetFalse,[], [ClangOption, CC1Option],
+          "Ignore uses of #pragma mc_func">>;
 
 //===----------------------------------------------------------------------===//
 // CUDA Options

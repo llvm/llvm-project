@@ -14,6 +14,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -292,6 +293,13 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
   return *Path;
 }
 
+/// We will defer LTO to the target's linker if we are not doing JIT and it is
+/// supported by the toolchain.
+bool linkerSupportsLTO(const ArgList &Args) {
+  llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  return Triple.isNVPTX() || Triple.isAMDGPU();
+}
+
 /// Returns the hashed value for a constant string.
 std::string getHash(StringRef Str) {
   llvm::MD5 Hasher;
@@ -554,17 +562,22 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
-  // Pass on -mllvm options to the clang invocation.
-  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Arg->getValue());
-  }
+  // Pass on -mllvm options to the linker invocation.
+  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
+    CmdArgs.push_back(
+        Args.MakeArgString("-Wl,-mllvm=" + StringRef(Arg->getValue())));
 
   if (Args.hasArg(OPT_debug))
     CmdArgs.push_back("-g");
 
   if (SaveTemps)
     CmdArgs.push_back("-save-temps");
+
+  if (SaveTemps && linkerSupportsLTO(Args))
+    CmdArgs.push_back("-Wl,--save-temps");
+
+  if (Args.hasArg(OPT_embed_bitcode))
+    CmdArgs.push_back("-Wl,--lto-emit-llvm");
 
   if (Verbose)
     CmdArgs.push_back("-v");
@@ -586,8 +599,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
                       Args.MakeArgString(Arg.split('=').second)});
   }
 
-  // The OpenMPOpt pass can introduce new calls and is expensive, we do not want
-  // this when running CodeGen through clang.
+  // The OpenMPOpt pass can introduce new calls and is expensive, we do
+  // not want this when running CodeGen through clang.
   if (Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ))
     CmdArgs.append({"-mllvm", "-openmp-opt-disable"});
 
@@ -668,7 +681,8 @@ std::unique_ptr<lto::LTO> createLTO(
     ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   // We need to remove AMD's target-id from the processor if present.
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ).split(":").first;
+  StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
+  StringRef Arch = clang::getProcessorFromTargetID(Triple, TargetID);
   lto::Config Conf;
   lto::ThinBackend Backend;
   // TODO: Handle index-only thin-LTO
@@ -712,7 +726,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   if (SaveTemps) {
     std::string TempName = (sys::path::filename(ExecutableName) + "." +
-                            Triple.getTriple() + "." + Arch)
+                            Triple.getTriple() + "." + TargetID)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
       std::string File =
@@ -770,8 +784,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
-  // Search for bitcode files in the input and create an LTO input file. If it
-  // is not a bitcode file, scan its symbol table for symbols we need to save.
+  // Search for bitcode files in the input and create an LTO input file. If
+  // it is not a bitcode file, scan its symbol table for symbols we need to
+  // save.
   for (OffloadFile &File : InputFiles) {
     MemoryBufferRef Buffer = MemoryBufferRef(File.getBinary()->getImage(), "");
 
@@ -805,7 +820,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
         if (!Name)
           return Name.takeError();
 
-        // Record if we've seen these symbols in any object or shared libraries.
+        // Record if we've seen these symbols in any object or shared
+        // libraries.
         if ((*ObjFile)->isRelocatableObject())
           UsedInRegularObj.insert(Saver.save(*Name));
         else
@@ -842,7 +858,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return false;
   };
 
-  // We assume visibility of the whole program if every input file was bitcode.
+  // We assume visibility of the whole program if every input file was
+  // bitcode.
   auto Features = getTargetFeatures(BitcodeInputFiles);
   auto LTOBackend = Args.hasArg(OPT_embed_bitcode) ||
                             Args.hasArg(OPT_builtin_bitcode_EQ) ||
@@ -850,9 +867,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                         ? createLTO(Args, Features, OutputBitcode)
                         : createLTO(Args, Features);
 
-  // We need to resolve the symbols so the LTO backend knows which symbols need
-  // to be kept or can be internalized. This is a simplified symbol resolution
-  // scheme to approximate the full resolution a linker would do.
+  // We need to resolve the symbols so the LTO backend knows which symbols
+  // need to be kept or can be internalized. This is a simplified symbol
+  // resolution scheme to approximate the full resolution a linker would do.
   uint64_t Idx = 0;
   DenseSet<StringRef> PrevailingSymbols;
   for (auto &BitcodeInput : BitcodeInputFiles) {
@@ -884,7 +901,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
       // We need LTO to preseve the following global symbols:
       // 1) Symbols used in regular objects.
       // 2) Sections that will be given a __start/__stop symbol.
-      // 3) Prevailing symbols that are needed visible to external libraries.
+      // 3) Prevailing symbols that are needed visible to external
+      // libraries.
       Res.VisibleToRegularObj =
           UsedInRegularObj.contains(Sym.getName()) ||
           isValidCIdentifier(Sym.getSectionName()) ||
@@ -899,9 +917,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
           (UsedInSharedLib.contains(Sym.getName()) ||
            !Sym.canBeOmittedFromSymbolTable());
 
-      // The final definition will reside in this linkage unit if the symbol is
-      // defined and local to the module. This only checks for bitcode files,
-      // full assertion will require complete symbol resolution.
+      // The final definition will reside in this linkage unit if the symbol
+      // is defined and local to the module. This only checks for bitcode
+      // files, full assertion will require complete symbol resolution.
       Res.FinalDefinitionInLinkageUnit =
           Sym.getVisibility() != GlobalValue::DefaultVisibility &&
           (!Sym.isUndefined() && !Sym.isCommon());
@@ -954,8 +972,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return Error::success();
   }
 
-  // Append the new inputs to the device linker input. If the user requested an
-  // internalizing link we need to pass the bitcode to clang.
+  // Append the new inputs to the device linker input. If the user requested
+  // an internalizing link we need to pass the bitcode to clang.
   for (StringRef File :
        Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ)
            ? BitcodeOutput
@@ -970,10 +988,9 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
   StringRef Prefix =
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-  StringRef Suffix = getImageKindName(Binary.getImageKind());
 
   auto TempFileOrErr = createOutputFile(
-      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), Suffix);
+      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -1186,8 +1203,8 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
-  // If every input file is bitcode we have whole program visibility as we do
-  // only support static linking with bitcode.
+  // If every input file is bitcode we have whole program visibility as we
+  // do only support static linking with bitcode.
   auto ContainsBitcode = [](const OffloadFile &F) {
     return identify_magic(F.getBinary()->getImage()) == file_magic::bitcode;
   };
@@ -1197,7 +1214,13 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   // Forward '-Xoffload-linker' options to the appropriate backend.
   for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ)) {
     auto [Triple, Value] = Arg.split('=');
-    if (Value.empty())
+    llvm::Triple TT(Triple);
+    // If this isn't a recognized triple then it's an `arg=value` option.
+    if (TT.getArch() <= Triple::ArchType::UnknownArch ||
+        TT.getArch() > Triple::ArchType::LastArchType)
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+                       Args.MakeArgString(Arg));
+    else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Triple));
     else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
@@ -1275,12 +1298,15 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       if (File.getBinary()->getOffloadKind() != OFK_None)
         ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
 
-    // First link and remove all the input files containing bitcode.
+    // First link and remove all the input files containing bitcode if
+    // the target linker does not support it natively.
     SmallVector<StringRef> InputFiles;
-    if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
-      return Err;
+    if (!linkerSupportsLTO(LinkerArgs))
+      if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
+        return Err;
 
-    // Write any remaining device inputs to an output file for the linker.
+    // Write any remaining device inputs to an output file for the
+    // linker.
     for (const OffloadFile &File : Input) {
       auto FileNameOrErr = writeOffloadFile(File);
       if (!FileNameOrErr)
@@ -1289,9 +1315,10 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     }
 
     // Link the remaining device files using the device linker.
-    auto OutputOrErr = !Args.hasArg(OPT_embed_bitcode)
-                           ? linkDevice(InputFiles, LinkerArgs)
-                           : InputFiles.front();
+    auto OutputOrErr =
+        !Args.hasArg(OPT_embed_bitcode) || linkerSupportsLTO(LinkerArgs)
+            ? linkDevice(InputFiles, LinkerArgs)
+            : InputFiles.front();
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
@@ -1418,12 +1445,14 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       bool NewSymbol = Syms.count(Sym.getName()) == 0;
       auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
 
-      // We will extract if it defines a currenlty undefined non-weak symbol.
+      // We will extract if it defines a currenlty undefined non-weak
+      // symbol.
       bool ResolvesStrongReference =
           ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
            !Sym.isUndefined());
-      // We will extract if it defines a new global symbol visible to the host.
-      // This is only necessary for code targeting an offloading language.
+      // We will extract if it defines a new global symbol visible to the
+      // host. This is only necessary for code targeting an offloading
+      // language.
       bool NewGlobalSymbol =
           ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
            !Sym.canBeOmittedFromSymbolTable() && Kind != object::OFK_None &&
@@ -1478,8 +1507,9 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
                                    !(OldSym & Sym_Weak) &&
                                    !(*FlagsOrErr & SymbolRef::SF_Undefined);
 
-    // We will extract if it defines a new global symbol visible to the host.
-    // This is only necessary for code targeting an offloading language.
+    // We will extract if it defines a new global symbol visible to the
+    // host. This is only necessary for code targeting an offloading
+    // language.
     bool NewGlobalSymbol =
         ((NewSymbol || (OldSym & Sym_Undefined)) &&
          !(*FlagsOrErr & SymbolRef::SF_Undefined) && Kind != object::OFK_None &&
@@ -1646,8 +1676,8 @@ getDeviceInput(const ArgList &Args) {
 
         Expected<bool> ExtractOrErr =
             getSymbols(Binary.getBinary()->getImage(),
-                       Binary.getBinary()->getOffloadKind(), /*IsArchive=*/true,
-                       Saver, Syms[ID]);
+                       Binary.getBinary()->getOffloadKind(),
+                       /*IsArchive=*/true, Saver, Syms[ID]);
         if (!ExtractOrErr)
           return ExtractOrErr.takeError();
 

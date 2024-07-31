@@ -509,7 +509,10 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, FnVarLocs);
+  MachineModuleInfo &MMI =
+      MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
+
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -562,7 +565,11 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   UniformityInfo *UA = nullptr;
   if (auto *UAPass = MFP.getAnalysisIfAvailable<UniformityInfoWrapperPass>())
     UA = &UAPass->getUniformityInfo();
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, FnVarLocs);
+
+  MachineModuleInfo &MMI =
+      MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -796,7 +803,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   }
 
   // Determine if floating point is used for msvc
-  computeUsesMSVCFloatingPoint(TM.getTargetTriple(), Fn, MF->getMMI());
+  computeUsesMSVCFloatingPoint(TM.getTargetTriple(), Fn, *CurDAG->getMMI());
 
   // Release function-specific state. SDB and CurDAG are already cleared
   // at this point.
@@ -1443,7 +1450,6 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
 
 // Mark and Report IPToState for each Block under IsEHa
 void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
-  MachineModuleInfo &MMI = MF->getMMI();
   llvm::WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
   if (!EHInfo)
     return;
@@ -1458,8 +1464,8 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
         continue;
 
       // Insert EH Labels
-      MCSymbol *BeginLabel = MMI.getContext().createTempSymbol();
-      MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
+      MCSymbol *BeginLabel = MF->getContext().createTempSymbol();
+      MCSymbol *EndLabel = MF->getContext().createTempSymbol();
       EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
       BuildMI(MBB, MBBb, SDB->getCurDebugLoc(),
               TII->get(TargetOpcode::EH_LABEL))

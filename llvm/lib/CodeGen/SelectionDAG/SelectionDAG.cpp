@@ -75,6 +75,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -1332,7 +1333,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
                         UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin,
+                        BlockFrequencyInfo *BFIin, MachineModuleInfo &MMIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
@@ -1344,6 +1345,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
+  MMI = &MMIin;
   FnVarLocs = VarLocs;
 }
 
@@ -4704,14 +4706,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return 1;  // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    // sub_carry(x,x,c) -> 0/-1 (sext carry)
+    if (Op.getResNo() == 0 && Op.getOperand(0) == Op.getOperand(1))
+      return VTBits;
+    [[fallthrough]];
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SADDO_CARRY:
   case ISD::UADDO_CARRY:
   case ISD::SSUBO:
   case ISD::USUBO:
-  case ISD::SSUBO_CARRY:
-  case ISD::USUBO_CARRY:
   case ISD::SMULO:
   case ISD::UMULO:
     if (Op.getResNo() != 1)
@@ -7555,6 +7561,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
+  case ISD::VECTOR_COMPRESS: {
+    [[maybe_unused]] EVT VecVT = N1.getValueType();
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    [[maybe_unused]] EVT PassthruVT = N3.getValueType();
+    assert(VT == VecVT && "Vector and result type don't match.");
+    assert(VecVT.isVector() && MaskVT.isVector() && PassthruVT.isVector() &&
+           "All inputs must be vectors.");
+    assert(VecVT == PassthruVT && "Vector and passthru types don't match.");
+    assert(VecVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "Vector and mask must have same number of elements.");
+
+    if (N1.isUndef() || N2.isUndef())
+      return N3;
+
+    break;
+  }
   }
 
   // Memoize node if it doesn't produce a glue result.
@@ -8236,12 +8258,11 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
-SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                                SDValue Src, SDValue Size, Align Alignment,
-                                bool isVol, bool AlwaysInline, bool isTailCall,
-                                MachinePointerInfo DstPtrInfo,
-                                MachinePointerInfo SrcPtrInfo,
-                                const AAMDNodes &AAInfo, AAResults *AA) {
+SDValue SelectionDAG::getMemcpy(
+    SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
+    Align Alignment, bool isVol, bool AlwaysInline, const CallInst *CI,
+    std::optional<bool> OverrideTailCall, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo, AAResults *AA) {
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -8296,6 +8317,18 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
   Entry.Node = Size; Args.push_back(Entry);
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall = false;
+  if (OverrideTailCall.has_value()) {
+    IsTailCall = *OverrideTailCall;
+  } else {
+    bool LowersToMemcpy =
+        TLI->getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy");
+    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+    IsTailCall = CI && CI->isTailCall() &&
+                 isInTailCallPosition(*CI, getTarget(),
+                                      ReturnsFirstArg && LowersToMemcpy);
+  }
+
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
@@ -8304,7 +8337,7 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                       TLI->getPointerTy(getDataLayout())),
                     std::move(Args))
       .setDiscardResult()
-      .setTailCall(isTailCall);
+      .setTailCall(IsTailCall);
 
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
@@ -8352,7 +8385,8 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                  SDValue Src, SDValue Size, Align Alignment,
-                                 bool isVol, bool isTailCall,
+                                 bool isVol, const CallInst *CI,
+                                 std::optional<bool> OverrideTailCall,
                                  MachinePointerInfo DstPtrInfo,
                                  MachinePointerInfo SrcPtrInfo,
                                  const AAMDNodes &AAInfo, AAResults *AA) {
@@ -8398,6 +8432,19 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   Entry.Node = Size; Args.push_back(Entry);
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
+
+  bool IsTailCall = false;
+  if (OverrideTailCall.has_value()) {
+    IsTailCall = *OverrideTailCall;
+  } else {
+    bool LowersToMemmove =
+        TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
+    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+    IsTailCall = CI && CI->isTailCall() &&
+                 isInTailCallPosition(*CI, getTarget(),
+                                      ReturnsFirstArg && LowersToMemmove);
+  }
+
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMMOVE),
@@ -8406,7 +8453,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                       TLI->getPointerTy(getDataLayout())),
                     std::move(Args))
       .setDiscardResult()
-      .setTailCall(isTailCall);
+      .setTailCall(IsTailCall);
 
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
@@ -8454,7 +8501,8 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                 SDValue Src, SDValue Size, Align Alignment,
-                                bool isVol, bool AlwaysInline, bool isTailCall,
+                                bool isVol, bool AlwaysInline,
+                                const CallInst *CI,
                                 MachinePointerInfo DstPtrInfo,
                                 const AAMDNodes &AAInfo) {
   // Check to see if we should lower the memset to stores first.
@@ -8514,8 +8562,9 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     return Entry;
   };
 
+  bool UseBZero = isNullConstant(Src) && BzeroName;
   // If zeroing out and bzero is present, use it.
-  if (isNullConstant(Src) && BzeroName) {
+  if (UseBZero) {
     TargetLowering::ArgListTy Args;
     Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
     Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
@@ -8533,8 +8582,16 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                        TLI->getPointerTy(DL)),
                      std::move(Args));
   }
-
-  CLI.setDiscardResult().setTailCall(isTailCall);
+  bool LowersToMemset =
+      TLI->getLibcallName(RTLIB::MEMSET) == StringRef("memset");
+  // If we're going to use bzero, make sure not to tail call unless the
+  // subsequent return doesn't need a value, as bzero doesn't return the first
+  // arg unlike memset.
+  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI) && !UseBZero;
+  bool IsTailCall =
+      CI && CI->isTailCall() &&
+      isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg && LowersToMemset);
+  CLI.setDiscardResult().setTailCall(IsTailCall);
 
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;

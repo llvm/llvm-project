@@ -391,6 +391,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstVector(Elts.data(), EltCount);
   }
 
+  if (LLVMIsAConstantPtrAuth(Cst)) {
+    LLVMValueRef Ptr = clone_constant(LLVMGetConstantPtrAuthPointer(Cst), M);
+    LLVMValueRef Key = clone_constant(LLVMGetConstantPtrAuthKey(Cst), M);
+    LLVMValueRef Disc =
+        clone_constant(LLVMGetConstantPtrAuthDiscriminator(Cst), M);
+    LLVMValueRef AddrDisc =
+        clone_constant(LLVMGetConstantPtrAuthAddrDiscriminator(Cst), M);
+    return LLVMConstantPtrAuth(Ptr, Key, Disc, AddrDisc);
+  }
+
   // At this point, if it's not a constant expression, it's a kind of constant
   // which is not supported
   if (!LLVMIsAConstantExpr(Cst))

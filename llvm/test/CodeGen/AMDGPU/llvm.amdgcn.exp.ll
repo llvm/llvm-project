@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,PREGFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
 
@@ -549,12 +549,20 @@ end:
 ; GCN-LABEL: {{^}}test_export_clustering:
 ; PREGFX11-DAG: v_mov_b32_e32 [[W0:v[0-9]+]], 0
 ; PREGFX11-DAG: v_mov_b32_e32 [[W1:v[0-9]+]], 1.0
-; PREGFX11-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
-; PREGFX11-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
-; PREGFX11-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
-; PREGFX11-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
-; PREGFX11: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
-; PREGFX11-NEXT: exp param1 [[X]], [[Y]], [[Z1]], [[W1]] done{{$}}
+
+; GFX8-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s1
+; GFX8-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s0
+; GFX8-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
+; GFX8-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
+; GFX8: exp param0 [[Y]], [[X]], [[Z0]], [[W0]]{{$}}
+; GFX8-NEXT: exp param1 [[Y]], [[X]], [[Z1]], [[W1]] done{{$}}
+
+; GFX10-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
+; GFX10-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
+; GFX10-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
+; GFX10-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
+; GFX10: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
+; GFX10-NEXT: exp param1 [[X]], [[Y]], [[Z1]], [[W1]] done{{$}}
 define amdgpu_kernel void @test_export_clustering(float %x, float %y) #0 {
   %z0 = fadd float %x, %y
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %x, float %y, float %z0, float 0.0, i1 false, i1 false)

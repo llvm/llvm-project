@@ -734,6 +734,8 @@ private:
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
       std::optional<common::OmpAtomicDefaultMemOrderType>);
+  void IssueNonConformanceWarning(
+      llvm::omp::Directive D, parser::CharBlock source);
 };
 
 template <typename T>
@@ -1524,6 +1526,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     // TODO others
     break;
   }
+  if (beginDir.v == llvm::omp::Directive::OMPD_master)
+    IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
   ClearAllocateNames();
@@ -1634,11 +1638,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     break;
   }
   if (beginDir.v == llvm::omp::Directive::OMPD_target_loop)
-    if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-      context_.Say(beginDir.source,
-          "Usage of directive %s is non-confirming to OpenMP standard"_warn_en_US,
-          llvm::omp::getOpenMPDirectiveName(beginDir.v).str());
-    }
+    IssueNonConformanceWarning(beginDir.v, beginDir.source);
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
 
@@ -2758,4 +2758,21 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
   } while (!scopeIter->IsGlobal());
 }
 
+void OmpAttributeVisitor::IssueNonConformanceWarning(
+    llvm::omp::Directive D, parser::CharBlock source) {
+  std::string warnStr = "";
+  std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
+  switch (D) {
+  case llvm::omp::OMPD_master:
+    warnStr = "OpenMP directive '" + dirName +
+        "' has been deprecated, please use 'masked' instead.";
+    break;
+  case llvm::omp::OMPD_target_loop:
+  default:
+    warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
+  }
+  if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+    context_.Say(source, "%s"_warn_en_US, warnStr);
+  }
+}
 } // namespace Fortran::semantics

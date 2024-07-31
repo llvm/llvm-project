@@ -3595,6 +3595,9 @@ public:
     if (!forcedTargetCPU.empty())
       fir::setTargetCPU(mod, forcedTargetCPU);
 
+    if (!forcedTuneCPU.empty())
+      fir::setTuneCPU(mod, forcedTuneCPU);
+
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
 

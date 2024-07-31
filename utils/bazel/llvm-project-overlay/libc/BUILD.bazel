@@ -675,6 +675,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_macros_optimization",
@@ -1073,6 +1074,22 @@ libc_support_library(
     }),
     deps = [
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_pid",
+    srcs = ["src/__support/OSUtil/linux/pid.cpp"],
+    hdrs = ["src/__support/OSUtil/pid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
     ],
 )
 
@@ -1911,7 +1928,6 @@ libc_math_function(name = "fdimf128")
 libc_math_function(
     name = "ceil",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1919,7 +1935,6 @@ libc_math_function(
 libc_math_function(
     name = "ceilf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1936,7 +1951,6 @@ libc_math_function(name = "ceilf128")
 libc_math_function(
     name = "floor",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1944,7 +1958,6 @@ libc_math_function(
 libc_math_function(
     name = "floorf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1964,7 +1977,6 @@ libc_math_function(name = "ldexpf128")
 libc_math_function(
     name = "trunc",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1972,7 +1984,6 @@ libc_math_function(
 libc_math_function(
     name = "truncf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1984,7 +1995,6 @@ libc_math_function(name = "truncf128")
 libc_math_function(
     name = "round",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -1992,7 +2002,6 @@ libc_math_function(
 libc_math_function(
     name = "roundf",
     specializations = [
-        "aarch64",
         "generic",
     ],
 )
@@ -2028,6 +2037,7 @@ libc_math_function(name = "hypot")
 libc_math_function(
     name = "hypotf",
     additional_deps = [
+        ":__support_fputil_double_double",
         ":__support_fputil_sqrt",
     ],
 )
@@ -3039,8 +3049,11 @@ libc_function(
     hdrs = ["src/unistd/getpid.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_pid",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_pid_t",
     ],
 )
 

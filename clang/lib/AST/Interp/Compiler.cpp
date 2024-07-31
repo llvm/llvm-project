@@ -89,6 +89,10 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     return Ctx->emitGetPtrLocal(Offset, E);
   case K_Decl:
     return Ctx->visitDeclRef(D, E);
+  case K_Elem:
+    if (!Ctx->emitConstUint32(Offset, E))
+      return false;
+    return Ctx->emitArrayElemPtrPopUint32(E);
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -465,6 +469,16 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (!this->visit(SubExpr))
       return false;
+
+    // Possibly diagnose casts to enum types if the target type does not
+    // have a fixed size.
+    if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
+      if (const auto *ET = CE->getType().getCanonicalType()->getAs<EnumType>();
+          ET && !ET->getDecl()->isFixed()) {
+        if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
+          return false;
+      }
+    }
 
     if (ToT == PT_IntAP)
       return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
@@ -1324,6 +1338,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       if (!this->visit(Init))
         return false;
 
@@ -1334,6 +1349,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init) -> bool {
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
@@ -1544,6 +1560,7 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex,
     return this->emitInitElem(*T, ElemIndex, Init);
   }
 
+  InitLinkScope<Emitter> ILS(this, InitLink::Elem(ElemIndex));
   // Advance the pointer currently on the stack to the given
   // dimension.
   if (!this->emitConstUint32(ElemIndex, Init))
@@ -1686,10 +1703,8 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   if (Kind == UETT_VectorElements) {
     if (const auto *VT = E->getTypeOfArgument()->getAs<VectorType>())
       return this->emitConst(VT->getNumElements(), E);
-
-    // FIXME: Apparently we need to catch the fact that a sizeless vector type
-    // has been passed and diagnose that (at run time).
     assert(E->getTypeOfArgument()->isSizelessVectorType());
+    return this->emitSizelessVectorElementSize(E);
   }
 
   if (Kind == UETT_VecStep) {
@@ -2772,6 +2787,117 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Ptr);
+  const Expr *Init = E->getInitializer();
+  QualType ElementType = E->getAllocatedType();
+  std::optional<PrimType> ElemT = classify(ElementType);
+  unsigned PlacementArgs = E->getNumPlacementArgs();
+  bool IsNoThrow = false;
+
+  // FIXME: Better diagnostic. diag::note_constexpr_new_placement
+  if (PlacementArgs != 0) {
+    // The only new-placement list we support is of the form (std::nothrow).
+    //
+    // FIXME: There is no restriction on this, but it's not clear that any
+    // other form makes any sense. We get here for cases such as:
+    //
+    //   new (std::align_val_t{N}) X(int)
+    //
+    // (which should presumably be valid only if N is a multiple of
+    // alignof(int), and in any case can't be deallocated unless N is
+    // alignof(X) and X has new-extended alignment).
+    if (PlacementArgs != 1 || !E->getPlacementArg(0)->getType()->isNothrowT())
+      return this->emitInvalid(E);
+
+    if (!this->discard(E->getPlacementArg(0)))
+      return false;
+    IsNoThrow = true;
+  }
+
+  const Descriptor *Desc;
+  if (ElemT) {
+    if (E->isArray())
+      Desc = nullptr; // We're not going to use it in this case.
+    else
+      Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
+                                /*IsConst=*/false, /*IsTemporary=*/false,
+                                /*IsMutable=*/false);
+  } else {
+    Desc = P.createDescriptor(
+        E, ElementType.getTypePtr(),
+        E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
+        /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false, Init);
+  }
+
+  if (E->isArray()) {
+    std::optional<const Expr *> ArraySizeExpr = E->getArraySize();
+    if (!ArraySizeExpr)
+      return false;
+
+    const Expr *Stripped = *ArraySizeExpr;
+    for (; auto *ICE = dyn_cast<ImplicitCastExpr>(Stripped);
+         Stripped = ICE->getSubExpr())
+      if (ICE->getCastKind() != CK_NoOp &&
+          ICE->getCastKind() != CK_IntegralCast)
+        break;
+
+    PrimType SizeT = classifyPrim(Stripped->getType());
+
+    if (!this->visit(Stripped))
+      return false;
+
+    if (ElemT) {
+      // N primitive elements.
+      if (!this->emitAllocN(SizeT, *ElemT, E, IsNoThrow, E))
+        return false;
+    } else {
+      // N Composite elements.
+      if (!this->emitAllocCN(SizeT, Desc, IsNoThrow, E))
+        return false;
+    }
+
+    if (Init && !this->visitInitializer(Init))
+      return false;
+
+  } else {
+    // Allocate just one element.
+    if (!this->emitAlloc(Desc, E))
+      return false;
+
+    if (Init) {
+      if (ElemT) {
+        if (!this->visit(Init))
+          return false;
+
+        if (!this->emitInit(*ElemT, E))
+          return false;
+      } else {
+        // Composite.
+        if (!this->visitInitializer(Init))
+          return false;
+      }
+    }
+  }
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
+  const Expr *Arg = E->getArgument();
+
+  // Arg must be an lvalue.
+  if (!this->visit(Arg))
+    return false;
+
+  return this->emitFree(E->isArrayForm(), E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -3073,13 +3199,9 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     }
 
     assert(S == Result);
-    if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
-      if (DiscardResult)
-        return this->discard(ResultExpr);
+    if (const Expr *ResultExpr = dyn_cast<Expr>(S))
       return this->delegate(ResultExpr);
-    }
-
-    return this->visitStmt(S);
+    return this->emitUnsupported(E);
   }
 
   return BS.destroyLocals();
@@ -3566,6 +3688,9 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
+  if (Init && Init->isValueDependent())
+    return false;
+
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto checkDecl = [&]() -> bool {
       bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
@@ -3967,12 +4092,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  bool Old = InitStackActive;
-  InitStackActive =
-      !(E->getUsedContext()->getDeclKind() == Decl::CXXConstructor);
-  bool Result = this->delegate(E->getExpr());
-  InitStackActive = Old;
-  return Result;
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
@@ -4030,10 +4150,14 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // instance pointer of the current function frame, but e.g. to the declaration
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
+  if (!InitStackActive || !E->isImplicit())
+    return this->emitThis(E);
+
   if (InitStackActive && !InitStack.empty()) {
     unsigned StartIndex = 0;
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-      if (InitStack[StartIndex].Kind != InitLink::K_Field)
+      if (InitStack[StartIndex].Kind != InitLink::K_Field &&
+          InitStack[StartIndex].Kind != InitLink::K_Elem)
         break;
     }
 
@@ -5163,8 +5287,8 @@ template <class Emitter>
 unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
                                               const QualType DerivedType) {
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
-    if (const auto *PT = dyn_cast<PointerType>(Ty))
-      return PT->getPointeeType()->getAsCXXRecordDecl();
+    if (const auto *R = Ty->getPointeeCXXRecordDecl())
+      return R;
     return Ty->getAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);

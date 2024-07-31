@@ -80,7 +80,6 @@ TailMergeThreshold("tail-merge-threshold",
           cl::init(150), cl::Hidden);
 
 // Heuristic for tail merging (and, inversely, tail duplication).
-// TODO: This should be replaced with a target query.
 static cl::opt<unsigned>
 TailMergeSize("tail-merge-size",
               cl::desc("Min number of instructions to consider tail merging"),
@@ -145,8 +144,6 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
                            ProfileSummaryInfo *PSI, unsigned MinTailLength)
     : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
       MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
-  if (MinCommonTailLength == 0)
-    MinCommonTailLength = TailMergeSize;
   switch (FlagEnableTailMerge) {
   case cl::BOU_UNSET:
     EnableTailMerge = DefaultEnableTailMerge;
@@ -194,6 +191,12 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   TRI = tri;
   MLI = mli;
   this->MRI = &MRI;
+
+  if (MinCommonTailLength == 0) {
+    MinCommonTailLength = TailMergeSize.getNumOccurrences() > 0
+                              ? TailMergeSize
+                              : TII->getTailMergeSize(MF);
+  }
 
   UpdateLiveIns = MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF);
   if (!UpdateLiveIns)

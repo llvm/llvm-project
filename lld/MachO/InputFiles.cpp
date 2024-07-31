@@ -2200,10 +2200,6 @@ Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!mb)
     return mb.takeError();
 
-  // Thin archives refer to .o files, so --reproduce needs the .o files too.
-  if (tar && c.getParent()->isThin())
-    tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb->getBuffer());
-
   Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
   if (!modTime)
     return modTime.takeError();

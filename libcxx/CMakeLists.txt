@@ -71,12 +71,16 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
-  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
   "Specify the path to a header that contains a custom implementation of the
    assertion handler that gets invoked when a hardening assertion fails. If
    provided, this header will be included by the library, replacing the
-   default assertion handler.")
+   default assertion handler. If this is specified as a relative path, it
+   is assumed to be relative to '<monorepo>/libcxx'.")
+if (NOT IS_ABSOLUTE "${LIBCXX_ASSERTION_HANDLER_FILE}")
+  set(LIBCXX_ASSERTION_HANDLER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${LIBCXX_ASSERTION_HANDLER_FILE}")
+endif()
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -159,20 +163,6 @@ set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
 set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
     "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
 
-set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
-        "Build the benchmarks against the specified native STL.
-         The value must be one of libc++/libstdc++")
-set(LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN "" CACHE STRING
-    "Use alternate GCC toolchain when building the native benchmarks")
-
-if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
-  if (NOT (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++"
-        OR LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++"))
-    message(FATAL_ERROR "Invalid value for LIBCXX_BENCHMARK_NATIVE_STDLIB: "
-            "'${LIBCXX_BENCHMARK_NATIVE_STDLIB}'")
-  endif()
-endif()
-
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -225,6 +215,14 @@ endif()
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+
+# C Library options -----------------------------------------------------------
+
+set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+endif()
 
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
@@ -509,6 +507,7 @@ endif()
 # Setup Compiler Flags
 #===============================================================================
 
+include(HandleLibC) # Setup the C library flags
 include(HandleLibCXXABI) # Setup the ABI library flags
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.

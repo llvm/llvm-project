@@ -40,20 +40,6 @@ foreach(archive IN ZIP_LISTS
   # Add the offloading version of the library for offloading languages. These
   # are installed in the standard search path separate from the other libraries.
   if(LIBC_TARGET_OS_IS_GPU)
-    add_gpu_entrypoint_library(
-      ${archive_1}gpu
-      ${archive_1}
-      DEPENDS
-        ${${archive_2}}
-    )
-    set_target_properties(
-      ${archive_1}gpu
-      PROPERTIES
-        ARCHIVE_OUTPUT_NAME ${archive_0}gpu-${LIBC_TARGET_ARCHITECTURE}
-        ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
-    )
-    list(APPEND added_gpu_archive_targets ${archive_1}gpu)
-
     add_bitcode_entrypoint_library(
       ${archive_1}bitcode
       ${archive_1}
@@ -65,7 +51,6 @@ foreach(archive IN ZIP_LISTS
       PROPERTIES
         OUTPUT_NAME ${archive_1}.bc
     )
-    add_dependencies(${archive_1}gpu ${archive_1}bitcode)
     list(APPEND added_gpu_bitcode_targets ${archive_1}bitcode)
   endif()
 endforeach()

@@ -973,7 +973,15 @@ public:
   llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
                                      QualType FunctionType);
 
+  llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
+                                           llvm::Type *Ty = nullptr);
+
+  llvm::Constant *getMemberFunctionPointer(llvm::Constant *Pointer,
+                                           QualType FT);
+
   CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
+
+  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType FT);
 
   CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
 
@@ -1010,7 +1018,7 @@ public:
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
            !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
   }
 
   /// Get the address of the RTTI descriptor for the given type.

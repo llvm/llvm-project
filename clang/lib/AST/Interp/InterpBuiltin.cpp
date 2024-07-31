@@ -942,15 +942,29 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
       if (Ptr.isZero())
         return returnBool(true);
 
-      QualType PointeeType = Call->getArg(1)
-                                 ->IgnoreImpCasts()
-                                 ->getType()
-                                 ->castAs<PointerType>()
-                                 ->getPointeeType();
-      // OK, we will inline operations on this object.
-      if (!PointeeType->isIncompleteType() &&
-          S.getCtx().getTypeAlignInChars(PointeeType) >= Size)
-        return returnBool(true);
+      if (Ptr.isIntegralPointer()) {
+        uint64_t IntVal = Ptr.getIntegerRepresentation();
+        if (APSInt(APInt(64, IntVal, false), true).isAligned(Size.getAsAlign()))
+          return returnBool(true);
+      }
+
+      const Expr *PtrArg = Call->getArg(1);
+      // Otherwise, check if the type's alignment against Size.
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PtrArg)) {
+        // Drop the potential implicit-cast to 'const volatile void*', getting
+        // the underlying type.
+        if (ICE->getCastKind() == CK_BitCast)
+          PtrArg = ICE->getSubExpr();
+      }
+
+      if (auto PtrTy = PtrArg->getType()->getAs<PointerType>()) {
+        QualType PointeeType = PtrTy->getPointeeType();
+        if (!PointeeType->isIncompleteType() &&
+            S.getCtx().getTypeAlignInChars(PointeeType) >= Size) {
+          // OK, we will inline operations on this object.
+          return returnBool(true);
+        }
+      }
     }
   }
 

@@ -2051,6 +2051,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   } else if (Literal.isUTF8()) {
     if (getLangOpts().Char8)
       CharTy = Context.Char8Ty;
+    else if (getLangOpts().C23)
+      CharTy = Context.UnsignedCharTy;
     Kind = StringLiteralKind::UTF8;
   } else if (Literal.isUTF16()) {
     CharTy = Context.Char16Ty;
@@ -2062,17 +2064,23 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     CharTy = Context.UnsignedCharTy;
   }
 
-  // Warn on initializing an array of char from a u8 string literal; this
-  // becomes ill-formed in C++2a.
-  if (getLangOpts().CPlusPlus && !getLangOpts().CPlusPlus20 &&
-      !getLangOpts().Char8 && Kind == StringLiteralKind::UTF8) {
-    Diag(StringTokLocs.front(), diag::warn_cxx20_compat_utf8_string);
+  // Warn on u8 string literals before C++20 and C23, whose type
+  // was an array of char before but becomes an array of char8_t.
+  // In C++20, it cannot be used where a pointer to char is expected.
+  // In C23, it might have an unexpected value if char was signed.
+  if (Kind == StringLiteralKind::UTF8 &&
+      (getLangOpts().CPlusPlus
+           ? !getLangOpts().CPlusPlus20 && !getLangOpts().Char8
+           : !getLangOpts().C23)) {
+    Diag(StringTokLocs.front(), getLangOpts().CPlusPlus
+                                    ? diag::warn_cxx20_compat_utf8_string
+                                    : diag::warn_c23_compat_utf8_string);
 
     // Create removals for all 'u8' prefixes in the string literal(s). This
-    // ensures C++2a compatibility (but may change the program behavior when
+    // ensures C++20/C23 compatibility (but may change the program behavior when
     // built by non-Clang compilers for which the execution character set is
     // not always UTF-8).
-    auto RemovalDiag = PDiag(diag::note_cxx20_compat_utf8_string_remove_u8);
+    auto RemovalDiag = PDiag(diag::note_cxx20_c23_compat_utf8_string_remove_u8);
     SourceLocation RemovalDiagLoc;
     for (const Token &Tok : StringToks) {
       if (Tok.getKind() == tok::utf8_string_literal) {
@@ -4109,6 +4117,21 @@ static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
   return false;
 }
 
+static bool checkPtrAuthTypeDiscriminatorOperandType(Sema &S, QualType T,
+                                                     SourceLocation Loc,
+                                                     SourceRange ArgRange) {
+  if (S.checkPointerAuthEnabled(Loc, ArgRange))
+    return true;
+
+  if (!T->isFunctionType() && !T->isFunctionPointerType() &&
+      !T->isFunctionReferenceType() && !T->isMemberFunctionPointerType()) {
+    S.Diag(Loc, diag::err_ptrauth_type_disc_undiscriminated) << T << ArgRange;
+    return true;
+  }
+
+  return false;
+}
+
 static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
                                            SourceLocation Loc,
                                            SourceRange ArgRange,
@@ -4502,6 +4525,10 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprKind == UETT_VectorElements)
     return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
                                                ExprRange);
+
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -5703,7 +5730,6 @@ static bool isParenthetizedAndQualifiedAddressOfExpr(Expr *Fn) {
   if (!UO || UO->getOpcode() != clang::UO_AddrOf)
     return false;
   if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens())) {
-    assert(isa<FunctionDecl>(DRE->getDecl()) && "expected a function");
     return DRE->hasQualifier();
   }
   if (auto *OVL = dyn_cast<OverloadExpr>(UO->getSubExpr()->IgnoreParens()))
@@ -6762,8 +6788,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   }
 
   // Bail out early if calling a builtin with custom type checking.
-  if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID))
-    return CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
+  if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
+    ExprResult E = CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
+    if (!E.isInvalid() && Context.BuiltinInfo.isImmediate(BuiltinID))
+      E = CheckForImmediateInvocation(E, FDecl);
+    return E;
+  }
 
   if (getLangOpts().CUDA) {
     if (Config) {
@@ -10897,6 +10927,14 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
   if (isObjCPointer && checkArithmeticOnObjCPointer(*this, Loc, PExp))
     return QualType();
 
+  // Arithmetic on label addresses is normally allowed, except when we add
+  // a ptrauth signature to the addresses.
+  if (isa<AddrLabelExpr>(PExp) && getLangOpts().PointerAuthIndirectGotos) {
+    Diag(Loc, diag::err_ptrauth_indirect_goto_addrlabel_arithmetic)
+        << /*addition*/ 1;
+    return QualType();
+  }
+
   // Check array bounds for pointer arithemtic
   CheckArrayAccess(PExp, IExp);
 
@@ -10970,6 +11008,15 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
     if (LHS.get()->getType()->isObjCObjectPointerType() &&
         checkArithmeticOnObjCPointer(*this, Loc, LHS.get()))
       return QualType();
+
+    // Arithmetic on label addresses is normally allowed, except when we add
+    // a ptrauth signature to the addresses.
+    if (isa<AddrLabelExpr>(LHS.get()) &&
+        getLangOpts().PointerAuthIndirectGotos) {
+      Diag(Loc, diag::err_ptrauth_indirect_goto_addrlabel_arithmetic)
+          << /*subtraction*/ 0;
+      return QualType();
+    }
 
     // The result type of a pointer-int computation is the pointer type.
     if (RHS.get()->getType()->isIntegerType()) {
@@ -14105,7 +14152,14 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       // Okay: we can take the address of a field.
       // Could be a pointer to member, though, if there is an explicit
       // scope qualifier for the class.
-      if (isa<DeclRefExpr>(op) && cast<DeclRefExpr>(op)->getQualifier()) {
+
+      // [C++26] [expr.prim.id.general]
+      // If an id-expression E denotes a non-static non-type member
+      // of some class C [...] and if E is a qualified-id, E is
+      // not the un-parenthesized operand of the unary & operator [...]
+      // the id-expression is transformed into a class member access expression.
+      if (isa<DeclRefExpr>(op) && cast<DeclRefExpr>(op)->getQualifier() &&
+          !isa<ParenExpr>(OrigOp.get())) {
         DeclContext *Ctx = dcl->getDeclContext();
         if (Ctx && Ctx->isRecord()) {
           if (dcl->getType()->isReferenceType()) {
@@ -14113,22 +14167,6 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
                  diag::err_cannot_form_pointer_to_member_of_reference_type)
               << dcl->getDeclName() << dcl->getType();
             return QualType();
-          }
-
-          // C++11 [expr.unary.op] p4:
-          // A pointer to member is only formed when an explicit & is used and
-          // its operand is a qualified-id not enclosed in parentheses.
-          if (isa<ParenExpr>(OrigOp.get())) {
-            SourceLocation LeftParenLoc = OrigOp.get()->getBeginLoc(),
-                           RightParenLoc = OrigOp.get()->getEndLoc();
-
-            Diag(LeftParenLoc,
-                 diag::err_form_ptr_to_member_from_parenthesized_expr)
-                << SourceRange(OpLoc, RightParenLoc)
-                << FixItHint::CreateRemoval(LeftParenLoc)
-                << FixItHint::CreateRemoval(RightParenLoc);
-
-            // Continuing might lead to better error recovery.
           }
 
           while (cast<RecordDecl>(Ctx)->isAnonymousStructOrUnion())
@@ -17007,7 +17045,8 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   // not a constant expression as a side-effect.
   bool Folded =
       E->EvaluateAsRValue(EvalResult, Context, /*isConstantContext*/ true) &&
-      EvalResult.Val.isInt() && !EvalResult.HasSideEffects;
+      EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
+      (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
   if (!isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);

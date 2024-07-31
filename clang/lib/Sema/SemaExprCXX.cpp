@@ -5068,6 +5068,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_HasTrivialCopy:
   case UTT_HasTrivialDestructor:
   case UTT_HasVirtualDestructor:
+  // has_unique_object_representations<T> when T is an array is defined in terms
+  // of has_unique_object_representations<remove_all_extents_t<T>>, so the base
+  // type needs to be complete even if the type is an incomplete array type.
+  case UTT_HasUniqueObjectRepresentations:
     ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
     [[fallthrough]];
 
@@ -5076,7 +5080,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsDestructible:
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
-  case UTT_HasUniqueObjectRepresentations:
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 

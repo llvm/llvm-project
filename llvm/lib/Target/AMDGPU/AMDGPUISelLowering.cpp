@@ -397,6 +397,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
+  setOperationAction({ISD::LROUND, ISD::LLROUND},
+                     {MVT::f16, MVT::f32, MVT::f64}, Expand);
 
   setOperationAction(
       {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f32,
@@ -405,6 +407,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FRINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+
+  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f16, MVT::f32, MVT::f64},
+                     Expand);
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
@@ -1342,8 +1347,8 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
   DAG.getContext()->diagnose(NoCalls);
 
   if (!CLI.IsTailCall) {
-    for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
-      InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+    for (ISD::InputArg &Arg : CLI.Ins)
+      InVals.push_back(DAG.getUNDEF(Arg.VT));
   }
 
   return DAG.getEntryNode();
@@ -5839,7 +5844,7 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     if (Tmp0 == 1)
       return 1; // Early out.
 
-    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+    return std::min({Tmp0, Tmp1, Tmp2});
   }
   default:
     return 1;
@@ -5876,7 +5881,7 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
     unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
     if (Tmp0 == 1)
       return 1;
-    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+    return std::min({Tmp0, Tmp1, Tmp2});
   }
   default:
     return 1;

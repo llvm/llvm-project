@@ -279,6 +279,10 @@ BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
              : TTIImpl->getPredictableBranchThreshold();
 }
 
+InstructionCost TargetTransformInfo::getBranchMispredictPenalty() const {
+  return TTIImpl->getBranchMispredictPenalty();
+}
+
 bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }
@@ -1286,6 +1290,10 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost();
+}
+
 bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode, Type *Ty,
                                                 ReductionFlags Flags) const {
   return TTIImpl->preferInLoopReduction(Opcode, Ty, Flags);
@@ -1315,6 +1323,12 @@ unsigned TargetTransformInfo::getMaxNumArgs() const {
 
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
+}
+
+TargetTransformInfo::ReductionShuffle
+TargetTransformInfo::getPreferredExpandedReductionShuffle(
+    const IntrinsicInst *II) const {
+  return TTIImpl->getPreferredExpandedReductionShuffle(II);
 }
 
 unsigned TargetTransformInfo::getGISelRematGlobalCost() const {

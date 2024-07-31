@@ -52,7 +52,9 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1721,11 +1723,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-    const char *Result;
+    std::string Result;
+    std::stringstream TmpStream;
+    TmpStream.imbue(std::locale("C"));
     if (getPreprocessorOpts().SourceDateEpoch) {
       time_t TT = *getPreprocessorOpts().SourceDateEpoch;
       std::tm *TM = std::gmtime(&TT);
-      Result = asctime(TM);
+      TmpStream << std::put_time(TM, "%a %b %e %T %Y");
     } else {
       // Get the file that we are lexing out of.  If we're currently lexing from
       // a macro, dig into the include stack.
@@ -1735,13 +1739,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       if (CurFile) {
         time_t TT = CurFile->getModificationTime();
         struct tm *TM = localtime(&TT);
-        Result = asctime(TM);
-      } else {
-        Result = "??? ??? ?? ??:??:?? ????\n";
+        TmpStream << std::put_time(TM, "%a %b %e %T %Y");
       }
     }
-    // Surround the string with " and strip the trailing newline.
-    OS << '"' << StringRef(Result).drop_back() << '"';
+    Result = TmpStream.str();
+    if (Result.empty())
+      Result = "??? ??? ?? ??:??:?? ????";
+    OS << '"' << Result << '"';
     Tok.setKind(tok::string_literal);
   } else if (II == Ident__FLT_EVAL_METHOD__) {
     // __FLT_EVAL_METHOD__ is set to the default value.

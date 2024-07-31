@@ -417,7 +417,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       continue;
     }
 
-    if (Reg.isPhysical() &&
+    if (Reg.isPhysical() && MO.isUse() &&
         (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
       continue;
 

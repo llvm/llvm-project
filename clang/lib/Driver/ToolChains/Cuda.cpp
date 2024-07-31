@@ -461,13 +461,6 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--output-file");
   std::string OutputFileName = TC.getInputFilename(Output);
 
-  // If we are invoking `nvlink` internally we need to output a `.cubin` file.
-  // FIXME: This should hopefully be removed if NVIDIA updates their tooling.
-  if (!C.getInputArgs().getLastArg(options::OPT_c)) {
-    SmallString<256> Filename(Output.getFilename());
-    llvm::sys::path::replace_extension(Filename, "cubin");
-    OutputFileName = Filename.str();
-  }
   if (Output.isFilename() && OutputFileName != Output.getFilename())
     C.addTempFile(Args.MakeArgString(OutputFileName));
 
@@ -612,12 +605,27 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Args.MakeArgString(GPUArch));
 
+  if (Args.hasArg(options::OPT_ptxas_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
+
+  if (Args.hasArg(options::OPT_cuda_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "--cuda-path=" + Args.getLastArgValue(options::OPT_cuda_path_EQ)));
+
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
 
   // Add standard library search paths passed on the command line.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+
+  if (C.getDriver().isUsingLTO())
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+                  C.getDriver().getLTOMode() == LTOK_Thin);
+
+  addGPULibraries(getToolChain(), Args, CmdArgs);
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
@@ -625,51 +633,12 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
-  for (const auto &II : Inputs) {
-    if (II.getType() == types::TY_LLVM_IR || II.getType() == types::TY_LTO_IR ||
-        II.getType() == types::TY_LTO_BC || II.getType() == types::TY_LLVM_BC) {
-      C.getDriver().Diag(diag::err_drv_no_linker_llvm_support)
-          << getToolChain().getTripleString();
-      continue;
-    }
-
-    // The 'nvlink' application performs RDC-mode linking when given a '.o'
-    // file and device linking when given a '.cubin' file. We always want to
-    // perform device linking, so just rename any '.o' files.
-    // FIXME: This should hopefully be removed if NVIDIA updates their tooling.
-    if (II.isFilename()) {
-      auto InputFile = getToolChain().getInputFilename(II);
-      if (llvm::sys::path::extension(InputFile) != ".cubin") {
-        // If there are no actions above this one then this is direct input and
-        // we can copy it. Otherwise the input is internal so a `.cubin` file
-        // should exist.
-        if (II.getAction() && II.getAction()->getInputs().size() == 0) {
-          const char *CubinF =
-              Args.MakeArgString(getToolChain().getDriver().GetTemporaryPath(
-                  llvm::sys::path::stem(InputFile), "cubin"));
-          if (llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
-            continue;
-
-          CmdArgs.push_back(CubinF);
-        } else {
-          SmallString<256> Filename(InputFile);
-          llvm::sys::path::replace_extension(Filename, "cubin");
-          CmdArgs.push_back(Args.MakeArgString(Filename));
-        }
-      } else {
-        CmdArgs.push_back(Args.MakeArgString(InputFile));
-      }
-    } else if (!II.isNothing()) {
-      II.getInputArg().renderAsInput(Args, CmdArgs);
-    }
-  }
-
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
                           "--options-file"},
-      Args.MakeArgString(getToolChain().GetProgramPath("nvlink")), CmdArgs,
-      Inputs, Output));
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper")),
+      CmdArgs, Inputs, Output));
 }
 
 void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -949,11 +918,7 @@ std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   if (Input.getType() != types::TY_Object || getDriver().offloadDeviceOnly())
     return ToolChain::getInputFilename(Input);
 
-  // Replace extension for object files with cubin because nvlink relies on
-  // these particular file names.
-  SmallString<256> Filename(ToolChain::getInputFilename(Input));
-  llvm::sys::path::replace_extension(Filename, "cubin");
-  return std::string(Filename);
+  return ToolChain::getInputFilename(Input);
 }
 
 llvm::opt::DerivedArgList *
