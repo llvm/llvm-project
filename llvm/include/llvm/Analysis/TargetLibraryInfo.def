@@ -1807,6 +1807,21 @@ TLI_DEFINE_ENUM_INTERNAL(modfl)
 TLI_DEFINE_STRING_INTERNAL("modfl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Ptr)
 
+/// double nan(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nan)
+TLI_DEFINE_STRING_INTERNAL("nan")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Ptr)
+
+/// float nanf(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nanf)
+TLI_DEFINE_STRING_INTERNAL("nanf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Ptr)
+
+/// long double nanl(const char *arg);
+TLI_DEFINE_ENUM_INTERNAL(nanl)
+TLI_DEFINE_STRING_INTERNAL("nanl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, Ptr)
+
 /// double nearbyint(double x);
 TLI_DEFINE_ENUM_INTERNAL(nearbyint)
 TLI_DEFINE_STRING_INTERNAL("nearbyint")
