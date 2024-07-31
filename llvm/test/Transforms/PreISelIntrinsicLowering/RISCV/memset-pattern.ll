@@ -4,28 +4,15 @@
 define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    br i1 true, label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[STORELOOP:.*]]
 ; CHECK:       [[STORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 1, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP4]] = sub i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP3]], %[[STORELOOP]] ]
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP11:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i128 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP12:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i128 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[TMP7]]
-; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP11]] = add i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP12]] = lshr i128 [[TMP8]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], 1
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[SPLIT]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -33,95 +20,18 @@ define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
   ret void
 }
 
-define void @memset_pattern_i128_3(ptr %a, i128 %value) nounwind {
-; CHECK-LABEL: define void @memset_pattern_i128_3(
-; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 true, label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
-; CHECK:       [[STORELOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[TMP4]] = sub i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP3]], %[[STORELOOP]] ]
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP11:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i128 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP12:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i128 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[TMP7]]
-; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP11]] = add i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP12]] = lshr i128 [[TMP8]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], 3
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
-; CHECK:       [[SPLIT]]:
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset_pattern.p0.i64.i128(ptr %a, i128 %value, i64 3, i1 0)
-  ret void
-}
-
-define void @memset_pattern_i128_14(ptr %a, i128 %value) nounwind {
-; CHECK-LABEL: define void @memset_pattern_i128_14(
-; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 true, label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
-; CHECK:       [[STORELOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[TMP4]] = sub i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP3]], %[[STORELOOP]] ]
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP11:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i128 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP12:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i128 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[TMP7]]
-; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP11]] = add i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP12]] = lshr i128 [[TMP8]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], 14
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
-; CHECK:       [[SPLIT]]:
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset_pattern.p0.i64.i128(ptr %a, i128 %value, i64 14, i1 0)
-  ret void
-}
-
 define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_16(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 false, label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[STORELOOP:.*]]
 ; CHECK:       [[STORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 1, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 16, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP4]] = sub i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP3]], %[[STORELOOP]] ]
-; CHECK-NEXT:    br i1 true, label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP11:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i128 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP12:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i128 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[TMP7]]
-; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP11]] = add i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP12]] = lshr i128 [[TMP8]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], 0
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[SPLIT]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -129,67 +39,19 @@ define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
   ret void
 }
 
-define void @memset_pattern_i128_38(ptr %a, i128 %value) nounwind {
-; CHECK-LABEL: define void @memset_pattern_i128_38(
-; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 false, label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
-; CHECK:       [[STORELOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 2, [[TMP0]] ], [ [[TMP4:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i128, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[TMP4]] = sub i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP3]], %[[STORELOOP]] ]
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP11:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i128 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP12:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i128 [[TMP8]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[TMP7]]
-; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP11]] = add i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP12]] = lshr i128 [[TMP8]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], 6
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
-; CHECK:       [[SPLIT]]:
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset_pattern.p0.i64.i128(ptr %a, i128 %value, i64 38, i1 0)
-  ret void
-}
-
 define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[X]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[X]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 0, [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[STORELOOP:.*]]
 ; CHECK:       [[STORELOOP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ [[TMP1]], [[TMP0]] ], [ [[TMP7:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ [[X]], [[TMP0]] ], [ [[TMP7:%.*]], %[[STORELOOP]] ]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i128, ptr [[TMP4]], i64 16
+; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i128, ptr [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP7]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP6]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP15:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i128 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP16:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc i128 [[TMP12]] to i8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 [[TMP11]]
-; CHECK-NEXT:    store i8 [[TMP13]], ptr [[TMP14]], align 1
-; CHECK-NEXT:    [[TMP15]] = add i64 [[TMP11]], 1
-; CHECK-NEXT:    [[TMP16]] = lshr i128 [[TMP12]], 8
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult i64 [[TMP15]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[STORELOOP]], label %[[SPLIT]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -200,32 +62,16 @@ define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 define void @memset_pattern_i256_x(ptr %a, i256 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i256_x(
 ; CHECK-SAME: ptr [[A:%.*]], i256 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[X]], 5
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[X]], 31
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 0, [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[REMCHECK:.*]], label %[[STORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[STORELOOP:.*]]
 ; CHECK:       [[STORELOOP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ [[A]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ [[TMP1]], [[TMP0]] ], [ [[TMP7:%.*]], %[[STORELOOP]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ [[X]], [[TMP0]] ], [ [[TMP7:%.*]], %[[STORELOOP]] ]
 ; CHECK-NEXT:    store i256 [[VALUE]], ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i256, ptr [[TMP4]], i64 32
+; CHECK-NEXT:    [[TMP6]] = getelementptr inbounds i256, ptr [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP7]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[STORELOOP]], label %[[REMCHECK]]
-; CHECK:       [[REMCHECK]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi ptr [ [[A]], [[TMP0]] ], [ [[TMP6]], %[[STORELOOP]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[SPLIT:.*]], label %[[REMAINDERLOOP:.*]]
-; CHECK:       [[REMAINDERLOOP]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ 0, %[[REMCHECK]] ], [ [[TMP15:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i256 [ [[VALUE]], %[[REMCHECK]] ], [ [[TMP16:%.*]], %[[REMAINDERLOOP]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc i256 [[TMP12]] to i8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 [[TMP11]]
-; CHECK-NEXT:    store i8 [[TMP13]], ptr [[TMP14]], align 1
-; CHECK-NEXT:    [[TMP15]] = add i64 [[TMP11]], 1
-; CHECK-NEXT:    [[TMP16]] = lshr i256 [[TMP12]], 8
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult i64 [[TMP15]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[REMAINDERLOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[STORELOOP]], label %[[SPLIT]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;

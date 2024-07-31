@@ -457,7 +457,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
 }
 
 static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
-                                    Value *CopyLen, Value *SetValue,
+                                    Value *Count, Value *SetValue,
                                     Align DstAlign, bool IsVolatile) {
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
@@ -471,91 +471,39 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
   if (!isPowerOf2_32(SetValue->getType()->getScalarSizeInBits()))
     report_fatal_error("Pattern width for memset_pattern must be a power of 2",
                        false);
-  unsigned PatternSize = SetValue->getType()->getScalarSizeInBits() / 8;
 
-  Type *TypeOfCopyLen = CopyLen->getType();
+  Type *TypeOfCount = Count->getType();
 
   BasicBlock *NewBB = OrigBB->splitBasicBlock(InsertBefore, "split");
   BasicBlock *LoopBB =
       BasicBlock::Create(F->getContext(), "storeloop", F, NewBB);
-  BasicBlock *RemCheckBB =
-      BasicBlock::Create(F->getContext(), "remcheck", F, NewBB);
-  BasicBlock *RemainderLoopBB =
-      BasicBlock::Create(F->getContext(), "remainderloop", F, NewBB);
   IRBuilder<> Builder(OrigBB->getTerminator());
 
-  ConstantInt *CILoopOpSize =
-      ConstantInt::get(dyn_cast<IntegerType>(TypeOfCopyLen), PatternSize);
-  Value *RuntimeLoopCount =
-      getRuntimeLoopCount(DL, Builder, CopyLen, CILoopOpSize, PatternSize);
-  Value *RuntimeRemainder =
-      getRuntimeLoopRemainder(DL, Builder, CopyLen, CILoopOpSize, PatternSize);
-
-  Builder.CreateCondBr(Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0),
-                                            RuntimeLoopCount),
-                       RemCheckBB, LoopBB);
+  Builder.CreateCondBr(
+      Builder.CreateICmpEQ(ConstantInt::get(TypeOfCount, 0), Count), NewBB,
+      LoopBB);
   OrigBB->getTerminator()->eraseFromParent();
 
   IRBuilder<> LoopBuilder(LoopBB);
   PHINode *CurrentDst = LoopBuilder.CreatePHI(DstAddr->getType(), 0);
   CurrentDst->addIncoming(DstAddr, OrigBB);
-  PHINode *LoopCount = LoopBuilder.CreatePHI(TypeOfCopyLen, 0);
-  LoopCount->addIncoming(RuntimeLoopCount, OrigBB);
+  PHINode *LoopCount = LoopBuilder.CreatePHI(TypeOfCount, 0);
+  LoopCount->addIncoming(Count, OrigBB);
 
   // Create the store instruction for the pattern
   LoopBuilder.CreateAlignedStore(SetValue, CurrentDst, DstAlign, IsVolatile);
 
   Value *NextDst = LoopBuilder.CreateInBoundsGEP(
-      SetValue->getType(), CurrentDst,
-      ConstantInt::get(TypeOfCopyLen, PatternSize));
+      SetValue->getType(), CurrentDst, ConstantInt::get(TypeOfCount, 1));
   CurrentDst->addIncoming(NextDst, LoopBB);
 
   Value *NewLoopCount =
-      LoopBuilder.CreateSub(LoopCount, ConstantInt::get(TypeOfCopyLen, 1));
+      LoopBuilder.CreateSub(LoopCount, ConstantInt::get(TypeOfCount, 1));
   LoopCount->addIncoming(NewLoopCount, LoopBB);
 
   LoopBuilder.CreateCondBr(
-      LoopBuilder.CreateICmpNE(NewLoopCount,
-                               ConstantInt::get(TypeOfCopyLen, 0)),
-      LoopBB, RemCheckBB);
-
-  IRBuilder<> RemCheckBuilder(RemCheckBB, RemCheckBB->begin());
-  // Branch to the end if there are no remainder bytes.
-  PHINode *RemainderDstPHI = RemCheckBuilder.CreatePHI(NextDst->getType(), 0);
-  RemainderDstPHI->addIncoming(DstAddr, OrigBB);
-  RemainderDstPHI->addIncoming(NextDst, LoopBB);
-  RemCheckBuilder.CreateCondBr(
-      RemCheckBuilder.CreateICmpEQ(RuntimeRemainder,
-                                   ConstantInt::get(TypeOfCopyLen, 0)),
-      NewBB, RemainderLoopBB);
-
-  // Remainder loop
-  IRBuilder<> RemainderLoopBuilder(RemainderLoopBB);
-  PHINode *ByteIndex = RemainderLoopBuilder.CreatePHI(TypeOfCopyLen, 0);
-  ByteIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), RemCheckBB);
-  Type *TypeOfSetValue = SetValue->getType();
-  PHINode *ShiftedValue = RemainderLoopBuilder.CreatePHI(TypeOfSetValue, 0);
-  ShiftedValue->addIncoming(SetValue, RemCheckBB);
-
-  Value *ByteToStore = RemainderLoopBuilder.CreateTrunc(
-      ShiftedValue, RemainderLoopBuilder.getInt8Ty());
-
-  RemainderLoopBuilder.CreateStore(
-      ByteToStore,
-      RemainderLoopBuilder.CreateInBoundsGEP(RemainderLoopBuilder.getInt8Ty(),
-                                             RemainderDstPHI, ByteIndex),
-      IsVolatile);
-
-  Value *NewByteIndex = RemainderLoopBuilder.CreateAdd(
-      ByteIndex, ConstantInt::get(TypeOfCopyLen, 1));
-  ByteIndex->addIncoming(NewByteIndex, RemainderLoopBB);
-  Value *NewShiftedValue = RemainderLoopBuilder.CreateLShr(
-      ShiftedValue, ConstantInt::get(TypeOfSetValue, 8));
-  ShiftedValue->addIncoming(NewShiftedValue, RemainderLoopBB);
-
-  RemainderLoopBuilder.CreateCondBr(
-      RemainderLoopBuilder.CreateICmpULT(NewByteIndex, RuntimeRemainder),
-      RemainderLoopBB, NewBB);
+      LoopBuilder.CreateICmpNE(NewLoopCount, ConstantInt::get(TypeOfCount, 0)),
+      LoopBB, NewBB);
 }
 
 static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
@@ -697,7 +645,7 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
     return createMemSetPatternLoop(
         /* InsertBefore */ Memset,
         /* DstAddr */ Memset->getRawDest(),
-        /* CopyLen */ Memset->getLength(),
+        /* Count */ Memset->getLength(),
         /* SetValue */ Memset->getValue(),
         /* Alignment */ Memset->getDestAlign().valueOrOne(),
         Memset->isVolatile());
