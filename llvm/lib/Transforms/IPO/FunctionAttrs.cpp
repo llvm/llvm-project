@@ -1780,6 +1780,11 @@ allBBPathsGoThroughCold(BasicBlock *BB,
   if (Succs.empty())
     return false;
 
+  // We didn't find a cold callsite in this BB, so check that all successors
+  // contain a cold callsite (or that their successors do).
+  // Potential TODO: We could use static branch hints to assume certain
+  // successor paths are inherently cold, irrespective of if they contain a cold
+  // callsite.
   for (auto *Succ : Succs) {
     // Start with false, this is necessary to ensure we don't turn loops into
     // cold.
