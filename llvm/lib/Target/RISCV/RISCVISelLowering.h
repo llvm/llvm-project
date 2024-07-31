@@ -468,6 +468,18 @@ enum NodeType : unsigned {
   SF_VC_V_VVW_SE,
   SF_VC_V_FVW_SE,
 
+  // These nodes represent the same operations as the target-independent nodes
+  // with the same names. The only difference is using target-specific encoding
+  // of rounding mode.
+  FADD_ROUND,
+  FSUB_ROUND,
+  FMUL_ROUND,
+  FDIV_ROUND,
+  FSQRT_ROUND,
+  FMA_ROUND,
+  SINT_TO_FP_ROUND,
+  UINT_TO_FP_ROUND,
+
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
   // opcodes will be thought as target memory ops!
@@ -535,10 +547,7 @@ public:
 
   bool softPromoteHalfType() const override { return true; }
 
-  bool isStaticRoundingSupportedFor(const Instruction &I) const override {
-    return true;
-  }
-  int getMachineRoundingMode(RoundingMode RM) const override;
+  bool isStaticRoundingSupportedFor(const Instruction &I) const override;
 
   /// Return the register type for a given MVT, ensuring vectors are treated
   /// as a series of gpr sized integers.
@@ -1002,6 +1011,8 @@ private:
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue convertToMachineRounding(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

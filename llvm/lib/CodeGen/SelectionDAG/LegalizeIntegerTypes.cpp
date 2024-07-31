@@ -1943,7 +1943,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_SIGN_EXTEND: Res = PromoteIntOp_VP_SIGN_EXTEND(N); break;
   case ISD::VP_SINT_TO_FP:
   case ISD::SINT_TO_FP:   Res = PromoteIntOp_SINT_TO_FP(N); break;
-  case ISD::SINT_TO_FP_MODE: Res = PromoteIntOp_SINT_TO_FP_MODE(N); break;
+  case ISD::SINT_TO_FP_ROUND: Res = PromoteIntOp_SINT_TO_FP_ROUND(N); break;
   case ISD::STRICT_SINT_TO_FP: Res = PromoteIntOp_STRICT_SINT_TO_FP(N); break;
   case ISD::STORE:        Res = PromoteIntOp_STORE(cast<StoreSDNode>(N),
                                                    OpNo); break;
@@ -1964,7 +1964,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP16_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
-  case ISD::UINT_TO_FP_MODE: Res = PromoteIntOp_UINT_TO_FP_MODE(N); break;
+  case ISD::UINT_TO_FP_ROUND: Res = PromoteIntOp_UINT_TO_FP_ROUND(N); break;
   case ISD::STRICT_FP16_TO_FP:
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
@@ -2346,14 +2346,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP(SDNode *N) {
                                 SExtPromotedInteger(N->getOperand(0))), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP_MODE(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP_ROUND(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N,
                                         SExtPromotedInteger(N->getOperand(0)),
                                         N->getOperand(1)),
                  0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_UINT_TO_FP_MODE(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntOp_UINT_TO_FP_ROUND(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N,
                                         ZExtPromotedInteger(N->getOperand(0)),
                                         N->getOperand(1)),

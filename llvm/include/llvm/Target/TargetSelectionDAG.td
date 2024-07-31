@@ -134,7 +134,7 @@ def SDTIntScaledBinOp : SDTypeProfile<1, 3, [  // smulfix, sdivfix, etc
 def SDTFPBinOp : SDTypeProfile<1, 2, [      // fadd, fmul, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
 ]>;
-def SDTFPBinModeOp : SDTypeProfile<1, 3, [  // fadd, fmul, etc. with static modes
+def SDTFPBinRoundOp : SDTypeProfile<1, 3, [  // fadd, fmul, etc. with static rounding
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>, SDTCisInt<3>
 ]>;
 def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
@@ -143,7 +143,7 @@ def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
 def SDTFPTernaryOp : SDTypeProfile<1, 3, [  // fmadd, fnmsub, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>
 ]>;
-def SDTFPTernaryModeOp : SDTypeProfile<1, 4, [  // fmadd, fnmsub, etc. with static modes
+def SDTFPTernaryRoundOp : SDTypeProfile<1, 4, [  // fmadd, fnmsub, etc. with static rounding
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>, SDTCisInt<4>
 ]>;
 def SDTIntUnaryOp : SDTypeProfile<1, 1, [ // bitreverse
@@ -161,14 +161,11 @@ def SDTIntTruncOp  : SDTypeProfile<1, 1, [  // trunc
 def SDTFPUnaryOp  : SDTypeProfile<1, 1, [   // fneg, fsqrt, etc
   SDTCisSameAs<0, 1>, SDTCisFP<0>
 ]>;
-def SDTFPUnaryModeOp  : SDTypeProfile<1, 2, [   // fsqrt with static modes
+def SDTFPUnaryRoundOp  : SDTypeProfile<1, 2, [   // fsqrt with static rounding
   SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisInt<2>
 ]>;
 def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fpround
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
-]>;
-def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [   // fpround with static modes
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>, SDTCisInt<2>
 ]>;
 def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fpextend
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
@@ -179,7 +176,7 @@ def SDIsFPClassOp : SDTypeProfile<1, 2, [   // is_fpclass
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
   SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
-def SDTIntToFPModeOp : SDTypeProfile<1, 2, [    // [su]int_to_fp with static modes
+def SDTIntToFPRoundOp : SDTypeProfile<1, 2, [    // [su]int_to_fp with static rounding
   SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>, SDTCisInt<2>
 ]>;
 def SDTFPToIntOp : SDTypeProfile<1, 1, [    // fp_to_[su]int
@@ -677,15 +674,14 @@ def strict_fp_to_bf16  : SDNode<"ISD::STRICT_FP_TO_BF16",
 def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
 def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
 
-def fadd_mode      : SDNode<"ISD::FADD_MODE"  , SDTFPBinModeOp, [SDNPCommutative]>;
-def fsub_mode      : SDNode<"ISD::FSUB_MODE"  , SDTFPBinModeOp>;
-def fmul_mode      : SDNode<"ISD::FMUL_MODE"  , SDTFPBinModeOp, [SDNPCommutative]>;
-def fdiv_mode      : SDNode<"ISD::FDIV_MODE"  , SDTFPBinModeOp>;
-def fsqrt_mode     : SDNode<"ISD::FSQRT_MODE" , SDTFPUnaryModeOp>;
-def fma_mode       : SDNode<"ISD::FMA_MODE"   , SDTFPTernaryModeOp, [SDNPCommutative]>;
-def sint_to_fp_mode: SDNode<"ISD::SINT_TO_FP_MODE" , SDTIntToFPModeOp>;
-def uint_to_fp_mode: SDNode<"ISD::UINT_TO_FP_MODE" , SDTIntToFPModeOp>;
-def fpround_mode   : SDNode<"ISD::FP_ROUND_MODE"   , SDTFPRoundModeOp>;
+def fadd_round      : SDNode<"ISD::FADD_ROUND"  , SDTFPBinRoundOp, [SDNPCommutative]>;
+def fsub_round      : SDNode<"ISD::FSUB_ROUND"  , SDTFPBinRoundOp>;
+def fmul_round      : SDNode<"ISD::FMUL_ROUND"  , SDTFPBinRoundOp, [SDNPCommutative]>;
+def fdiv_round      : SDNode<"ISD::FDIV_ROUND"  , SDTFPBinRoundOp>;
+def fsqrt_round     : SDNode<"ISD::FSQRT_ROUND" , SDTFPUnaryRoundOp>;
+def fma_round       : SDNode<"ISD::FMA_ROUND"   , SDTFPTernaryRoundOp, [SDNPCommutative]>;
+def sint_to_fp_round: SDNode<"ISD::SINT_TO_FP_ROUND" , SDTIntToFPRoundOp>;
+def uint_to_fp_round: SDNode<"ISD::UINT_TO_FP_ROUND" , SDTIntToFPRoundOp>;
 
 def get_fpenv      : SDNode<"ISD::GET_FPENV", SDTGetFPStateOp, [SDNPHasChain]>;
 def set_fpenv      : SDNode<"ISD::SET_FPENV", SDTSetFPStateOp, [SDNPHasChain]>;

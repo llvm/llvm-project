@@ -411,19 +411,18 @@ enum NodeType {
   STRICT_FREM,
   STRICT_FMA,
 
-  /// Basic floating-point operations with statically specified control modes,
-  /// usually rounding. These have the same operands as the corresponding
-  /// default mode operations with an additional integer operand that represents
-  /// the specified modes in a target-dependent format.
-  FADD_MODE,
-  FSUB_MODE,
-  FMUL_MODE,
-  FDIV_MODE,
-  FSQRT_MODE,
-  FMA_MODE,
-  SINT_TO_FP_MODE,
-  UINT_TO_FP_MODE,
-  FP_ROUND_MODE,
+  /// Basic floating-point operations with statically specified rounding mode.
+  /// They have the same operands as the corresponding default mode operations
+  /// with an additional integer operand that represents the specified rounding
+  /// mode in target-independent format, the same as used in llvm.get_rounding.
+  FADD_ROUND,
+  FSUB_ROUND,
+  FMUL_ROUND,
+  FDIV_ROUND,
+  FSQRT_ROUND,
+  FMA_ROUND,
+  SINT_TO_FP_ROUND,
+  UINT_TO_FP_ROUND,
 
   /// Constrained versions of libm-equivalent floating point intrinsics.
   /// These will be lowered to the equivalent non-constrained pseudo-op

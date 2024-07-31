@@ -1025,6 +1025,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
+  case ISD::SINT_TO_FP_ROUND:
+  case ISD::UINT_TO_FP_ROUND:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getOperand(0).getValueType());
+    break;
   case ISD::SIGN_EXTEND_INREG: {
     EVT InnerType = cast<VTSDNode>(Node->getOperand(1))->getVT();
     Action = TLI.getOperationAction(Node->getOpcode(), InnerType);

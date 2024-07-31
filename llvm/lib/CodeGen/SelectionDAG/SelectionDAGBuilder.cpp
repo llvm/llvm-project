@@ -8153,40 +8153,36 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 
   if (UseStaticRounding) {
     switch (FPI.getIntrinsicID()) {
+    default:
+      break;
     case Intrinsic::experimental_constrained_fadd:
-      Opcode = ISD::FADD_MODE;
+      Opcode = ISD::FADD_ROUND;
       break;
     case Intrinsic::experimental_constrained_fsub:
-      Opcode = ISD::FSUB_MODE;
+      Opcode = ISD::FSUB_ROUND;
       break;
     case Intrinsic::experimental_constrained_fmul:
-      Opcode = ISD::FMUL_MODE;
+      Opcode = ISD::FMUL_ROUND;
       break;
     case Intrinsic::experimental_constrained_fdiv:
-      Opcode = ISD::FDIV_MODE;
+      Opcode = ISD::FDIV_ROUND;
       break;
     case Intrinsic::experimental_constrained_sqrt:
-      Opcode = ISD::FSQRT_MODE;
+      Opcode = ISD::FSQRT_ROUND;
       break;
     case Intrinsic::experimental_constrained_fma:
-      Opcode = ISD::FMA_MODE;
+      Opcode = ISD::FMA_ROUND;
       break;
     case Intrinsic::experimental_constrained_sitofp:
-      Opcode = ISD::SINT_TO_FP_MODE;
+      Opcode = ISD::SINT_TO_FP_ROUND;
       break;
     case Intrinsic::experimental_constrained_uitofp:
-      Opcode = ISD::UINT_TO_FP_MODE;
-      break;
-    case Intrinsic::experimental_constrained_fptrunc:
-      Opcode = ISD::FP_ROUND_MODE;
+      Opcode = ISD::UINT_TO_FP_ROUND;
       break;
     }
     if (Opcode) {
-      int MachineRM = TLI.getMachineRoundingMode(*RM);
-      assert(MachineRM >= 0 && "Unsupported rounding mode");
-      EVT RMType = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::i32);
-      Opers.push_back(DAG.getConstant(static_cast<uint64_t>(MachineRM), sdl,
-                                      RMType, true));
+      Opers.push_back(DAG.getTargetConstant(static_cast<uint64_t>(*RM), sdl,
+                                            MVT::i8, true));
       SDValue Result = DAG.getNode(Opcode, sdl, VT, Opers, Flags);
       setValue(&FPI, Result);
       return;

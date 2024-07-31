@@ -434,9 +434,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
       ISD::STRICT_FSQRT,   ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
 
-  static const unsigned FPStaticRoundNodes[] = {ISD::FADD_MODE, ISD::FSUB_MODE,
-                                                ISD::FMUL_MODE, ISD::FDIV_MODE,
-                                                ISD::FSQRT,     ISD::FMA_MODE};
+  static const unsigned FPStaticRoundNodes[] = {
+      ISD::FADD_ROUND, ISD::FSUB_ROUND,  ISD::FMUL_ROUND,
+      ISD::FDIV_ROUND, ISD::FSQRT_ROUND, ISD::FMA_ROUND};
 
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
@@ -530,7 +530,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtFOrZfinx()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
-    setOperationAction(FPStaticRoundNodes, MVT::f32, Legal);
+    setOperationAction(FPStaticRoundNodes, MVT::f32, Custom);
     setOperationAction(FPRndMode, MVT::f32,
                        Subtarget.hasStdExtZfa() ? Legal : Custom);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
@@ -612,11 +612,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT,
                         ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
                        XLenVT, Legal);
+    setOperationAction({ISD::UINT_TO_FP_ROUND, ISD::SINT_TO_FP_ROUND},
+                       XLenVT, Custom);
 
-    if (RV64LegalI32 && Subtarget.is64Bit())
+    if (RV64LegalI32 && Subtarget.is64Bit()) {
       setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT,
                           ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
                          MVT::i32, Legal);
+      setOperationAction({ISD::UINT_TO_FP_ROUND, ISD::SINT_TO_FP_ROUND},
+                         MVT::i32, Custom);
+    }
 
     setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
@@ -7085,6 +7090,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitStrictFPVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
+  case ISD::FADD_ROUND:
+  case ISD::FSUB_ROUND:
+  case ISD::FMUL_ROUND:
+  case ISD::FDIV_ROUND:
+  case ISD::FSQRT_ROUND:
+  case ISD::FMA_ROUND:
+  case ISD::SINT_TO_FP_ROUND:
+  case ISD::UINT_TO_FP_ROUND:
+    return convertToMachineRounding(Op, DAG);
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
     return lowerVectorStrictFSetcc(Op, DAG);
@@ -11990,6 +12004,53 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
                         DAG.getConstant(0x7, DL, XLenVT));
   return DAG.getNode(RISCVISD::WRITE_CSR, DL, MVT::Other, Chain, SysRegNo,
                      RMValue);
+}
+
+SDValue RISCVTargetLowering::convertToMachineRounding(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  unsigned Opcode = 0;
+  switch (Op->getOpcode()) {
+    default:
+    break;
+  case ISD::FADD_ROUND:
+    Opcode = RISCVISD::FADD_ROUND;
+    break;
+  case ISD::FSUB_ROUND:
+    Opcode = RISCVISD::FSUB_ROUND;
+    break;
+  case ISD::FMUL_ROUND:
+    Opcode = RISCVISD::FMUL_ROUND;
+    break;
+  case ISD::FDIV_ROUND:
+    Opcode = RISCVISD::FDIV_ROUND;
+    break;
+  case ISD::FSQRT_ROUND:
+    Opcode = RISCVISD::FSQRT_ROUND;
+    break;
+  case ISD::FMA_ROUND:
+    Opcode = RISCVISD::FMA_ROUND;
+    break;
+  case ISD::SINT_TO_FP_ROUND:
+    Opcode = RISCVISD::SINT_TO_FP_ROUND;
+    break;
+  case ISD::UINT_TO_FP_ROUND:
+    Opcode = RISCVISD::UINT_TO_FP_ROUND;
+    break;
+  }
+  if (Opcode == 0)
+    return SDValue();
+
+  SDLoc DL(Op);
+  SmallVector<SDValue, 4> Opers;
+  for (unsigned I = 0, E = Op.getNumOperands() - 1; I != E; ++I)
+    Opers.push_back(Op.getOperand(I));
+  SDValue RMVal = Op->ops().back();
+  unsigned RM = cast<ConstantSDNode>(RMVal)->getZExtValue();
+  RM = RISCVFPRndMode::getMachineMode(static_cast<llvm::RoundingMode>(RM));
+  RMVal = DAG.getTargetConstant(RM, DL, Subtarget.getXLenVT());
+  Opers.push_back(RMVal);
+
+  return DAG.getNode(Opcode, DL, Op->getVTList(), Opers);
 }
 
 SDValue RISCVTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
@@ -20466,6 +20527,14 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SF_VC_V_IVW_SE)
   NODE_NAME_CASE(SF_VC_V_VVW_SE)
   NODE_NAME_CASE(SF_VC_V_FVW_SE)
+  NODE_NAME_CASE(FADD_ROUND)
+  NODE_NAME_CASE(FSUB_ROUND)
+  NODE_NAME_CASE(FMUL_ROUND)
+  NODE_NAME_CASE(FDIV_ROUND)
+  NODE_NAME_CASE(FSQRT_ROUND)
+  NODE_NAME_CASE(FMA_ROUND)
+  NODE_NAME_CASE(SINT_TO_FP_ROUND)
+  NODE_NAME_CASE(UINT_TO_FP_ROUND)
   }
   // clang-format on
   return nullptr;
@@ -21432,21 +21501,25 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
   return true;
 }
 
-int RISCVTargetLowering::getMachineRoundingMode(RoundingMode RM) const {
-  switch (RM) {
-  case RoundingMode::TowardZero:
-    return RISCVFPRndMode::RTZ;
-  case RoundingMode::NearestTiesToEven:
-    return RISCVFPRndMode::RNE;
-  case RoundingMode::TowardNegative:
-    return RISCVFPRndMode::RDN;
-  case RoundingMode::TowardPositive:
-    return RISCVFPRndMode::RUP;
-  case RoundingMode::NearestTiesToAway:
-    return RISCVFPRndMode::RMM;
-  default:
-    return -1;
+bool RISCVTargetLowering::isStaticRoundingSupportedFor(
+    const Instruction &I) const {
+  if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&I)) {
+    switch (CI->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::experimental_constrained_fadd:
+    case Intrinsic::experimental_constrained_fsub:
+    case Intrinsic::experimental_constrained_fmul:
+    case Intrinsic::experimental_constrained_fdiv:
+    case Intrinsic::experimental_constrained_sqrt:
+    case Intrinsic::experimental_constrained_fma:
+    case Intrinsic::experimental_constrained_sitofp:
+    case Intrinsic::experimental_constrained_uitofp:
+      if (CI->getType()->isFloatTy())
+        return true;
+    }
   }
+  return false;
 }
 
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {

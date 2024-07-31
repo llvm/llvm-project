@@ -375,6 +375,26 @@ inline static bool isValidRoundingMode(unsigned Mode) {
     return true;
   }
 }
+
+inline static RoundingMode getMachineMode(llvm::RoundingMode RM) {
+  switch (RM) {
+  case llvm::RoundingMode::TowardZero :
+    return RISCVFPRndMode::RTZ;
+  case llvm::RoundingMode::NearestTiesToEven:
+    return RISCVFPRndMode::RNE;
+  case llvm::RoundingMode::TowardNegative :
+    return RISCVFPRndMode::RDN;
+  case llvm::RoundingMode::TowardPositive:
+    return RISCVFPRndMode::RUP;
+  case llvm::RoundingMode::NearestTiesToAway:
+    return RISCVFPRndMode::RMM;
+  case llvm::RoundingMode::Dynamic:
+    return RISCVFPRndMode::DYN;
+  default:
+    return RoundingMode::Invalid;
+  }
+}
+
 } // namespace RISCVFPRndMode
 
 namespace RISCVVXRndMode {
