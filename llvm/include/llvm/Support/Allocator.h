@@ -149,8 +149,7 @@ public:
     // Keep track of how many bytes we've allocated.
     BytesAllocated += Size;
 
-    size_t Adjustment = offsetToAlignedAddr(CurPtr, Alignment);
-    assert(Adjustment + Size >= Size && "Adjustment + Size must not overflow");
+    char *AlignedPtr = reinterpret_cast<char *>(alignAddr(CurPtr, Alignment));
 
     size_t SizeToAllocate = Size;
 #if LLVM_ADDRESS_SANITIZER_BUILD
@@ -158,12 +157,13 @@ public:
     SizeToAllocate += RedZoneSize;
 #endif
 
+    char *AllocEndPtr = AlignedPtr + SizeToAllocate;
+
     // Check if we have enough space.
-    if (LLVM_LIKELY(Adjustment + SizeToAllocate <= size_t(End - CurPtr)
+    if (LLVM_LIKELY(AllocEndPtr <= End
                     // We can't return nullptr even for a zero-sized allocation!
                     && CurPtr != nullptr)) {
-      char *AlignedPtr = CurPtr + Adjustment;
-      CurPtr = AlignedPtr + SizeToAllocate;
+      CurPtr = AllocEndPtr;
       // Update the allocation point of this memory block in MemorySanitizer.
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
