@@ -266,8 +266,6 @@ void EnumInfo::merge(EnumInfo &&Other) {
     Scoped = Other.Scoped;
   if (Members.empty())
     Members = std::move(Other.Members);
-  if (Other.HasComments || HasComments)
-    HasComments = true;
   SymbolInfo::merge(std::move(Other));
 }
 
