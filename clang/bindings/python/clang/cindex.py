@@ -3011,6 +3011,20 @@ class TranslationUnit(ClangObject):
     # into the set of code completions returned from this translation unit.
     PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION = 128
 
+    @staticmethod
+    def process_unsaved_files(unsaved_files) -> Array[_CXUnsavedFile] | None:
+        unsaved_array = None
+        if len(unsaved_files):
+            unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
+            for i, (name, contents) in enumerate(unsaved_files):
+                if hasattr(contents, "read"):
+                    contents = contents.read()
+                binary_contents = b(contents)
+                unsaved_array[i].name = b(os.fspath(name))
+                unsaved_array[i].contents = binary_contents
+                unsaved_array[i].length = len(binary_contents)
+        return unsaved_array
+
     @classmethod
     def from_source(
         cls, filename, args=None, unsaved_files=None, options=0, index=None
@@ -3067,16 +3081,7 @@ class TranslationUnit(ClangObject):
         if len(args) > 0:
             args_array = (c_char_p * len(args))(*[b(x) for x in args])
 
-        unsaved_array = None
-        if len(unsaved_files) > 0:
-            unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
-            for i, (name, contents) in enumerate(unsaved_files):
-                if hasattr(contents, "read"):
-                    contents = contents.read()
-                contents = b(contents)
-                unsaved_array[i].name = b(os.fspath(name))
-                unsaved_array[i].contents = contents
-                unsaved_array[i].length = len(contents)
+        unsaved_array = cls.process_unsaved_files(unsaved_files)
 
         ptr = conf.lib.clang_parseTranslationUnit(
             index,
@@ -3257,16 +3262,7 @@ class TranslationUnit(ClangObject):
         if unsaved_files is None:
             unsaved_files = []
 
-        unsaved_files_array = 0
-        if len(unsaved_files):
-            unsaved_files_array = (_CXUnsavedFile * len(unsaved_files))()
-            for i, (name, contents) in enumerate(unsaved_files):
-                if hasattr(contents, "read"):
-                    contents = contents.read()
-                contents = b(contents)
-                unsaved_files_array[i].name = b(os.fspath(name))
-                unsaved_files_array[i].contents = contents
-                unsaved_files_array[i].length = len(contents)
+        unsaved_files_array = self.process_unsaved_files(unsaved_files)
         ptr = conf.lib.clang_reparseTranslationUnit(
             self, len(unsaved_files), unsaved_files_array, options
         )
@@ -3329,16 +3325,7 @@ class TranslationUnit(ClangObject):
         if unsaved_files is None:
             unsaved_files = []
 
-        unsaved_files_array = 0
-        if len(unsaved_files):
-            unsaved_files_array = (_CXUnsavedFile * len(unsaved_files))()
-            for i, (name, contents) in enumerate(unsaved_files):
-                if hasattr(contents, "read"):
-                    contents = contents.read()
-                contents = b(contents)
-                unsaved_files_array[i].name = b(os.fspath(name))
-                unsaved_files_array[i].contents = contents
-                unsaved_files_array[i].length = len(contents)
+        unsaved_files_array = self.process_unsaved_files(unsaved_files)
         ptr = conf.lib.clang_codeCompleteAt(
             self,
             os.fspath(path),
