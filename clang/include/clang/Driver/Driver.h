@@ -628,8 +628,9 @@ public:
   /// treated before building actions or binding tools.
   ///
   /// \return Whether any compilation should be built for this
-  /// invocation.
-  bool HandleImmediateArgs(const Compilation &C);
+  /// invocation. The compilation can only be modified when
+  /// this function returns false.
+  bool HandleImmediateArgs(Compilation &C);
 
   /// ConstructAction - Construct the appropriate action to do for
   /// \p Phase on the \p Input, taking in to account arguments
@@ -746,9 +747,6 @@ private:
   /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
   /// option.
   void setDriverMode(StringRef DriverModeValue);
-
-  /// Set the resource directory, depending on which driver is being used.
-  void setResourceDirectory();
 
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.

@@ -6,7 +6,7 @@ define weak_odr amdgpu_kernel void @test_mul24_knownbits_kernel(ptr addrspace(1)
 ; GCN-LABEL: test_mul24_knownbits_kernel:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_and_b32_e32 v0, 3, v0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GCN-NEXT:    v_mul_i32_i24_e32 v0, -5, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0xffffffe0, v0
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0

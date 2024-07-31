@@ -38,19 +38,6 @@ extern cl::opt<bool> PreserveBlocksAlignment;
 cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
                           cl::cat(BoltOptCategory));
 
-cl::opt<MacroFusionType>
-AlignMacroOpFusion("align-macro-fusion",
-  cl::desc("fix instruction alignment for macro-fusion (x86 relocation mode)"),
-  cl::init(MFT_HOT),
-  cl::values(clEnumValN(MFT_NONE, "none",
-               "do not insert alignment no-ops for macro-fusion"),
-             clEnumValN(MFT_HOT, "hot",
-               "only insert alignment no-ops on hot execution paths (default)"),
-             clEnumValN(MFT_ALL, "all",
-               "always align instructions to allow macro-fusion")),
-  cl::ZeroOrMore,
-  cl::cat(BoltRelocCategory));
-
 static cl::list<std::string>
 BreakFunctionNames("break-funcs",
   cl::CommaSeparated,
@@ -453,20 +440,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         Streamer.emitLabel(EntrySymbol);
     }
 
-    // Check if special alignment for macro-fusion is needed.
-    bool MayNeedMacroFusionAlignment =
-        (opts::AlignMacroOpFusion == MFT_ALL) ||
-        (opts::AlignMacroOpFusion == MFT_HOT && BB->getKnownExecutionCount());
-    BinaryBasicBlock::const_iterator MacroFusionPair;
-    if (MayNeedMacroFusionAlignment) {
-      MacroFusionPair = BB->getMacroOpFusionPair();
-      if (MacroFusionPair == BB->end())
-        MayNeedMacroFusionAlignment = false;
-    }
-
     SMLoc LastLocSeen;
-    // Remember if the last instruction emitted was a prefix.
-    bool LastIsPrefix = false;
     for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
       MCInst &Instr = *I;
 
@@ -477,16 +451,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       if (BC.MIB->isCFI(Instr)) {
         emitCFIInstruction(*BF.getCFIFor(Instr));
         continue;
-      }
-
-      // Handle macro-fusion alignment. If we emitted a prefix as
-      // the last instruction, we should've already emitted the associated
-      // alignment hint, so don't emit it twice.
-      if (MayNeedMacroFusionAlignment && !LastIsPrefix &&
-          I == MacroFusionPair) {
-        // This assumes the second instruction in the macro-op pair will get
-        // assigned to its own MCRelaxableFragment. Since all JCC instructions
-        // are relaxable, we should be safe.
       }
 
       if (!EmitCodeOnly) {
@@ -525,7 +489,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
       }
 
       Streamer.emitInstruction(Instr, *BC.STI);
-      LastIsPrefix = BC.MIB->isPrefix(Instr);
     }
   }
 

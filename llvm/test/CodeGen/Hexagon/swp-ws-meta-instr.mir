@@ -1,6 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -o - 2>&1 | FileCheck %s
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
 
 # CHECK-NOT: PSEUDO_PROBE
 # CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.

@@ -71,7 +71,7 @@ private:
   bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
   mlir::OpBuilder::InsertPoint insPt;
-  mlir::Value loopIV;
+  llvm::SmallVector<mlir::Value> loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
@@ -147,10 +147,7 @@ public:
   void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
   void processStep2(mlir::Operation *op, bool isLoop);
 
-  void setLoopIV(mlir::Value iv) {
-    assert(!loopIV && "Loop iteration variable already set");
-    loopIV = iv;
-  }
+  void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {

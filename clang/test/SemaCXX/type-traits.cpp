@@ -3505,6 +3505,17 @@ static_assert(__has_unique_object_representations(_BitInt(8)), "BitInt:");
 static_assert(!__has_unique_object_representations(_BitInt(127)), "BitInt:");
 static_assert(__has_unique_object_representations(_BitInt(128)), "BitInt:");
 
+namespace GH95311 {
+
+template <int>
+class Foo {
+  int x;
+};
+static_assert(__has_unique_object_representations(Foo<0>[]));
+class Bar; // expected-note {{forward declaration of 'GH95311::Bar'}}
+static_assert(__has_unique_object_representations(Bar[])); // expected-error {{incomplete type}}
+
+}
 
 namespace PR46209 {
   // Foo has both a trivial assignment operator and a non-trivial one.
@@ -3676,6 +3687,12 @@ struct NonTriviallyEqualityComparableNoComparator {
   int j;
 };
 static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator));
+
+struct NonTriviallyEqualityComparableConvertibleToBuiltin {
+  int i;
+  operator unsigned() const;
+};
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableConvertibleToBuiltin));
 
 struct NonTriviallyEqualityComparableNonDefaultedComparator {
   int i;
@@ -3885,7 +3902,50 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
 };
+
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
+
+template<bool B>
+struct MaybeTriviallyEqualityComparable {
+    int i;
+    bool operator==(const MaybeTriviallyEqualityComparable&) const requires B = default;
+    bool operator==(const MaybeTriviallyEqualityComparable& rhs) const { return (i % 3) == (rhs.i % 3); }
+};
+static_assert(__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<true>));
+static_assert(!__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<false>));
+
+struct NotTriviallyEqualityComparableMoreConstrainedExternalOp {
+  int i;
+  bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) const = default;
+};
+
+bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&,
+                const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) __attribute__((enable_if(true, ""))) {}
+
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableMoreConstrainedExternalOp));
+
+struct TriviallyEqualityComparableExternalDefaultedOp {
+  int i;
+  friend bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp);
+};
+bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp) = default;
+
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableExternalDefaultedOp));
+
+struct EqualityComparableBase {
+  bool operator==(const EqualityComparableBase&) const = default;
+};
+
+struct ComparingBaseOnly : EqualityComparableBase {
+  int j_ = 0;
+};
+static_assert(!__is_trivially_equality_comparable(ComparingBaseOnly));
+
+template <class>
+class Template {};
+
+// Make sure we don't crash when instantiating a type
+static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
 
 namespace hidden_friend {
 

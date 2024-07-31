@@ -3483,6 +3483,60 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
 
+``__builtin_verbose_trap``
+--------------------------
+
+``__builtin_verbose_trap`` causes the program to stop its execution abnormally
+and shows a human-readable description of the reason for the termination when a
+debugger is attached or in a symbolicated crash log.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_verbose_trap(const char *category, const char *reason)
+
+**Description**
+
+``__builtin_verbose_trap`` is lowered to the ` ``llvm.trap`` <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>`_ builtin.
+Additionally, clang emits debugging information that represents an artificial
+inline frame whose name encodes the category and reason strings passed to the builtin,
+prefixed by a "magic" prefix.
+
+For example, consider the following code:
+
+.. code-block:: c++
+
+    void foo(int* p) {
+      if (p == nullptr)
+        __builtin_verbose_trap("check null", "Argument must not be null!");
+    }
+
+The debugging information would look as if it were produced for the following code:
+
+.. code-block:: c++
+
+    __attribute__((always_inline))
+    inline void "__clang_trap_msg$check null$Argument must not be null!"() {
+      __builtin_trap();
+    }
+
+    void foo(int* p) {
+      if (p == nullptr)
+        "__clang_trap_msg$check null$Argument must not be null!"();
+    }
+
+However, the generated code would not actually contain a call to the artificial
+function — it only exists in the debugging information.
+
+Query for this feature with ``__has_builtin(__builtin_verbose_trap)``. Note that
+users need to enable debug information to enable this feature. A call to this
+builtin is equivalent to a call to ``__builtin_trap`` if debug information isn't
+enabled.
+
+The optimizer can merge calls to trap with different messages, which degrades
+the debugging experience.
+
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
@@ -3923,7 +3977,10 @@ standard library ``<stdarg.h>`` header:
 
 * ``__builtin_va_list``
 
-A predefined typedef for the target-specific ``va_list`` type.
+A predefined typedef for the target-specific ``va_list`` type. It is undefined
+behavior to use a byte-wise copy of this type produced by calling ``memcpy``,
+``memmove``, or similar. Valid explicit copies are only produced by calling
+``va_copy`` or ``__builtin_va_copy``.
 
 * ``void __builtin_va_start(__builtin_va_list list, <parameter-name>)``
 
@@ -5345,7 +5402,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 
 * The pragma clang section is enabled automatically, without need of any flags.
 
-* This feature is only defined to work sensibly for ELF targets.
+* This feature is only defined to work sensibly for ELF and Mach-O targets.
 
 * If section name is specified through _attribute_((section("myname"))), then
   the attribute name gains precedence.
@@ -5368,16 +5425,85 @@ The ``#pragma comment(lib, ...)`` directive is supported on all ELF targets.
 The second parameter is the library name (without the traditional Unix prefix of
 ``lib``).  This allows you to provide an implicit link of dependent libraries.
 
-Evaluating Object Size Dynamically
-==================================
+Evaluating Object Size
+======================
 
-Clang supports the builtin ``__builtin_dynamic_object_size``, the semantics are
-the same as GCC's ``__builtin_object_size`` (which Clang also supports), but
-``__builtin_dynamic_object_size`` can evaluate the object's size at runtime.
-``__builtin_dynamic_object_size`` is meant to be used as a drop-in replacement
-for ``__builtin_object_size`` in libraries that support it.
+Clang supports the builtins ``__builtin_object_size`` and
+``__builtin_dynamic_object_size``. The semantics are compatible with GCC's
+builtins of the same names, but the details are slightly different.
 
-For instance, here is a program that ``__builtin_dynamic_object_size`` will make
+.. code-block:: c
+
+  size_t __builtin_[dynamic_]object_size(const void *ptr, int type)
+
+Returns the number of accessible bytes ``n`` past ``ptr``. The value returned
+depends on ``type``, which is required to be an integer constant between 0 and
+3:
+
+* If ``type & 2 == 0``, the least ``n`` is returned such that accesses to
+  ``(const char*)ptr + n`` and beyond are known to be out of bounds. This is
+  ``(size_t)-1`` if no better bound is known.
+* If ``type & 2 == 2``, the greatest ``n`` is returned such that accesses to
+  ``(const char*)ptr + i`` are known to be in bounds, for 0 <= ``i`` < ``n``.
+  This is ``(size_t)0`` if no better bound is known.
+
+.. code-block:: c
+
+  char small[10], large[100];
+  bool cond;
+  // Returns 100: writes of more than 100 bytes are known to be out of bounds.
+  int n100 = __builtin_object_size(cond ? small : large, 0);
+  // Returns 10: writes of 10 or fewer bytes are known to be in bounds.
+  int n10 = __builtin_object_size(cond ? small : large, 2);
+
+* If ``type & 1 == 0``, pointers are considered to be in bounds if they point
+  into the same storage as ``ptr`` -- that is, the same stack object, global
+  variable, or heap allocation.
+* If ``type & 1 == 1``, pointers are considered to be in bounds if they point
+  to the same subobject that ``ptr`` points to. If ``ptr`` points to an array
+  element, other elements of the same array, but not of enclosing arrays, are
+  considered in bounds.
+
+.. code-block:: c
+
+  struct X { char a, b, c; } x;
+  static_assert(__builtin_object_size(&x, 0) == 3);
+  static_assert(__builtin_object_size(&x.b, 0) == 2);
+  static_assert(__builtin_object_size(&x.b, 1) == 1);
+
+.. code-block:: c
+
+  char a[10][10][10];
+  static_assert(__builtin_object_size(&a, 1) == 1000);
+  static_assert(__builtin_object_size(&a[1], 1) == 900);
+  static_assert(__builtin_object_size(&a[1][1], 1) == 90);
+  static_assert(__builtin_object_size(&a[1][1][1], 1) == 9);
+
+The values returned by this builtin are a best effort conservative approximation
+of the correct answers. When ``type & 2 == 0``, the true value is less than or
+equal to the value returned by the builtin, and when ``type & 2 == 1``, the true
+value is greater than or equal to the value returned by the builtin.
+
+For ``__builtin_object_size``, the value is determined entirely at compile time.
+With optimization enabled, better results will be produced, especially when the
+call to ``__builtin_object_size`` is in a different function from the formation
+of the pointer. Unlike in GCC, enabling optimization in Clang does not allow
+more information about subobjects to be determined, so the ``type & 1 == 1``
+case will often give imprecise results when used across a function call boundary
+even when optimization is enabled.
+
+`The pass_object_size and pass_dynamic_object_size attributes <https://clang.llvm.org/docs/AttributeReference.html#pass-object-size-pass-dynamic-object-size>`_
+can be used to invisibly pass the object size for a pointer parameter alongside
+the pointer in a function call. This allows more precise object sizes to be
+determined both when building without optimizations and in the ``type & 1 == 1``
+case.
+
+For ``__builtin_dynamic_object_size``, the result is not limited to being a
+compile time constant. Instead, a small amount of runtime evaluation is
+permitted to determine the size of the object, in order to give a more precise
+result. ``__builtin_dynamic_object_size`` is meant to be used as a drop-in
+replacement for ``__builtin_object_size`` in libraries that support it. For
+instance, here is a program that ``__builtin_dynamic_object_size`` will make
 safer:
 
 .. code-block:: c

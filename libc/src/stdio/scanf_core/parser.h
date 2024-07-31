@@ -11,13 +11,14 @@
 
 #include "src/__support/arg_list.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/scanf_config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 #ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
@@ -279,6 +280,6 @@ private:
 };
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H

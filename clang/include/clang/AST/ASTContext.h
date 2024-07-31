@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
@@ -641,6 +642,9 @@ private:
   /// Address space map mangling must be used with language specific
   /// address spaces (e.g. OpenCL/CUDA)
   bool AddrSpaceMapMangling;
+
+  /// For performance, track whether any function effects are in use.
+  mutable bool AnyFunctionEffects = false;
 
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
@@ -1276,6 +1280,14 @@ public:
   /// The return type should be T with all prior qualifiers minus the address
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
+
+  /// Return the "other" discriminator used for the pointer auth schema used for
+  /// vtable pointers in instances of the requested type.
+  uint16_t
+  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+
+  /// Return the "other" type-specific discriminator for the given type.
+  uint16_t getPointerAuthTypeDiscriminator(QualType T) const;
 
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
@@ -2644,6 +2656,10 @@ public:
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
   QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
+  QualType getUnqualifiedArrayType(QualType T) const {
+    Qualifiers Quals;
+    return getUnqualifiedArrayType(T, Quals);
+  }
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
@@ -2895,6 +2911,8 @@ public:
   bool addressSpaceMapManglingFor(LangAS AS) const {
     return AddrSpaceMapMangling || isTargetAddressSpace(AS);
   }
+
+  bool hasAnyFunctionEffects() const { return AnyFunctionEffects; }
 
   // Merges two exception specifications, such that the resulting
   // exception spec is the union of both. For example, if either
@@ -3438,12 +3456,21 @@ public:
   /// Whether a C++ static variable or CUDA/HIP kernel should be externalized.
   bool shouldExternalize(const Decl *D) const;
 
+  /// Resolve the root record to be used to derive the vtable pointer
+  /// authentication policy for the specified record.
+  const CXXRecordDecl *
+  baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+  bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                               StringRef MangledName);
+
   StringRef getCUIDHash() const;
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
+
+  llvm::DenseMap<GlobalDecl, llvm::StringSet<>> ThunksToBeAbbreviated;
 };
 
 /// Insertion operator for diagnostics.

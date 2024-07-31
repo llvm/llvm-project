@@ -117,11 +117,13 @@ constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
   using _Rp  = common_type_t<_Tp, _Up>;
   _Rp __val1 = __ct_abs<_Rp, _Tp>()(__m) / std::gcd(__m, __n);
   _Rp __val2 = __ct_abs<_Rp, _Up>()(__n);
-  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((numeric_limits<_Rp>::max() / __val1 > __val2), "Overflow in lcm");
-  return __val1 * __val2;
+  _Rp __res;
+  [[maybe_unused]] bool __overflow = __builtin_mul_overflow(__val1, __val2, &__res);
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__overflow, "Overflow in lcm");
+  return __res;
 }
 
-#endif // _LIBCPP_STD_VER
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -177,7 +177,7 @@ static VGPRRegisterRegAlloc greedyRegAllocVGPR(
 
 static VGPRRegisterRegAlloc fastRegAllocVGPR(
   "fast", "fast register allocator", createFastVGPRRegisterAllocator);
-}
+} // anonymous namespace
 
 static cl::opt<bool>
 EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
@@ -731,6 +731,14 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
 
+  // FIXME: Why is AMDGPUAttributor not in CGSCC?
+  PB.registerOptimizerLastEPCallback(
+      [this](ModulePassManager &MPM, OptimizationLevel Level) {
+        if (Level != OptimizationLevel::O0) {
+          MPM.addPass(AMDGPUAttributorPass(*this));
+        }
+      });
+
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         // We want to support the -lto-partitions=N option as "best effort".
@@ -1037,11 +1045,6 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
-  // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
-  // after their introduction
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPUAttributorLegacyPass());
-
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(createInferAddressSpacesPass());
 
@@ -1197,10 +1200,10 @@ bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createAMDGPULateCodeGenPreparePass());
+    addPass(createSinkingPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
-    addPass(createSinkingPass());
+    addPass(createAMDGPULateCodeGenPreparePass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

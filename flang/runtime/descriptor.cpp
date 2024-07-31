@@ -199,7 +199,16 @@ RT_API_ATTRS int Descriptor::Destroy(
   }
 }
 
-RT_API_ATTRS int Descriptor::Deallocate() { return ISO::CFI_deallocate(&raw_); }
+RT_API_ATTRS int Descriptor::Deallocate() {
+  ISO::CFI_cdesc_t &descriptor{raw()};
+  if (!descriptor.base_addr) {
+    return CFI_ERROR_BASE_ADDR_NULL;
+  } else {
+    std::free(descriptor.base_addr);
+    descriptor.base_addr = nullptr;
+    return CFI_SUCCESS;
+  }
+}
 
 RT_API_ATTRS bool Descriptor::DecrementSubscripts(
     SubscriptValue *subscript, const int *permutation) const {

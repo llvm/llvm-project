@@ -3921,13 +3921,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
-    case VTABLES_TO_EMIT:
-      if (F.Kind == MK_MainFile ||
-          getContext().getLangOpts().BuildingPCHWithObjectFile)
-        for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
-          VTablesToEmit.push_back(ReadDeclID(F, Record, I));
-      break;
-
     case IMPORTED_MODULES:
       if (!F.isModule()) {
         // If we aren't loading a module (which has its own exports), make
@@ -8117,10 +8110,6 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
 }
 
-void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
-  Consumer->HandleVTable(RD);
-}
-
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
   this->Consumer = Consumer;
 
@@ -9886,6 +9875,7 @@ void ASTReader::finishPendingActions() {
             // We only perform ODR checks for decls not in the explicit
             // global module fragment.
             !shouldSkipCheckingODR(FD) &&
+            !shouldSkipCheckingODR(NonConstDefn) &&
             FD->getODRHash() != NonConstDefn->getODRHash()) {
           if (!isa<CXXMethodDecl>(FD)) {
             PendingFunctionOdrMergeFailures[FD].push_back(NonConstDefn);

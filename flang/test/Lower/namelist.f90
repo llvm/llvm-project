@@ -71,7 +71,7 @@ program p
   ! CHECK:     %[[V_70:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_58]]) fastmath<contract> : (!fir.ref<i8>) -> i32
   write(*, nnn)
 
-  call rename
+  call rename_sub
 end
 
 ! CHECK-LABEL: c.func @_QPsss
@@ -128,8 +128,8 @@ module mmm
   namelist /aaa/ rrr
 end
 
-! CHECK-LABEL: c.func @_QPrename
-subroutine rename
+! CHECK-LABEL: c.func @_QPrename_sub
+subroutine rename_sub
   use mmm, bbb => aaa
   rrr = 3.
   ! CHECK:     %[[V_4:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput

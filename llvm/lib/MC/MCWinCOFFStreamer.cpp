@@ -81,6 +81,15 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
+void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  changeSectionImpl(Section, Subsection);
+  // Ensure that the first and the second symbols relative to the section are
+  // the section symbol and the COMDAT symbol.
+  getAssembler().registerSymbol(*Section->getBeginSymbol());
+  if (auto *Sym = cast<MCSectionCOFF>(Section)->getCOMDATSymbol())
+    getAssembler().registerSymbol(*Sym);
+}
+
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
@@ -196,9 +205,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   changeSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
-  auto *F = getContext().allocFragment<MCSymbolIdFragment>(Symbol);
-  F->setParent(SXData);
-  SXData->addFragment(*F);
+  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();
 

@@ -14,10 +14,10 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC1-NEXT:   [[NOT:%*]] = xor <vscale x 4 x i1> [[VEC_ICMP]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR]], i32 7, i32 3
+; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 
 ; CHECK-VF4IC4-LABEL: @select_const_i32_from_icmp
 ; CHECK-VF4IC4:      vector.body:
@@ -38,13 +38,13 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL3:%.*]] = or <vscale x 4 x i1> [[VEC_PHI3]], [[NOT3]]
 ; CHECK-VF4IC4-NEXT:   [[VEC_SEL4:%.*]] = or <vscale x 4 x i1> [[VEC_PHI4]], [[NOT4]]
 ; CHECK-VF4IC4:      middle.block:
-; CHECK-VF4IC4:        %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC4-NEXT:   [[OR1:%.*]] = or <vscale x 4 x i1> [[VEC_SEL2]], [[VEC_SEL1]]
 ; CHECK-VF4IC4-NEXT:   [[OR2:%.*]] = or <vscale x 4 x i1> [[VEC_SEL3]], [[OR1]]
 ; CHECK-VF4IC4-NEXT:   [[OR3:%.*]] = or <vscale x 4 x i1> [[VEC_SEL4]], [[OR2]]
 ; CHECK-VF4IC4-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[OR3]])
 ; CHECK-VF4IC4-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC4-NEXT:   {{.*}} = select i1 [[FR]], i32 7, i32 3
+; CHECK-VF4IC4-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 entry:
   br label %for.body
 
@@ -75,10 +75,10 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-VF4IC1-NEXT:   [[NOT:%*]] = xor <vscale x 4 x i1> [[VEC_ICMP]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR]], i32 %b, i32 %a
+; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 
 ; CHECK-VF4IC4-LABEL: @select_i32_from_icmp
 ; CHECK-VF4IC4:      vector.body:
@@ -109,10 +109,10 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC1-NEXT:   [[NOT:%*]] = xor <vscale x 4 x i1> [[VEC_ICMP]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR]], i32 1, i32 2
+; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 
 ; CHECK-VF4IC4-LABEL: @select_const_i32_from_fcmp
 ; CHECK-VF4IC4:      vector.body:
@@ -168,10 +168,10 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL_TMP:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:        [[VEC_SEL:%.*]] = select <vscale x 4 x i1> [[MASK]], <vscale x 4 x i1> [[VEC_SEL_TMP]], <vscale x 4 x i1> [[VEC_PHI]]
 ; CHECK-VF4IC1:      middle.block:
-; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_SEL]])
 ; CHECK-VF4IC1-NEXT:   [[FR:%.*]] = freeze i1 [[OR_RDX]]
 ; CHECK-VF4IC1-NEXT:   {{.*}} = select i1 [[FR]], i32 1, i32 0
+; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
 
 ; CHECK-VF4IC4-LABEL: @pred_select_const_i32_from_icmp
 ; CHECK-VF4IC4:      vector.body:
