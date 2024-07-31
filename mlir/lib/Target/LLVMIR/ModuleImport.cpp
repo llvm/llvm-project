@@ -1918,6 +1918,99 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
 }
 
+/// Extract constant integer value from metadata if this is constant. Return
+/// `std::nullopt` otherwise.
+static std::optional<int32_t> parseIntegerMD(llvm::Metadata *md) {
+  if (!md)
+    return {};
+
+  auto *c = dyn_cast<llvm::ConstantAsMetadata>(md);
+  if (!c)
+    return {};
+
+  auto *ci = dyn_cast<llvm::ConstantInt>(c->getValue());
+  if (!ci)
+    return {};
+
+  return ci->getValue().getSExtValue();
+}
+
+/// Convert an `MDNode` to an LLVM dialect `VecTypeHintAttr` if possible.
+template <typename ConvertType>
+static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *md,
+                                          ConvertType convertType) {
+  if (!md || md->getNumOperands() != 2)
+    return {};
+
+  auto *hintMD = dyn_cast<llvm::ValueAsMetadata>(md->getOperand(0).get());
+  if (!hintMD)
+    return {};
+  TypeAttr hint = TypeAttr::get(convertType(hintMD->getType()));
+
+  std::optional<int32_t> optIsSigned = parseIntegerMD(md->getOperand(1).get());
+  if (!optIsSigned)
+    return {};
+  bool isSigned = *optIsSigned != 0;
+
+  return builder.getAttr<VecTypeHintAttr>(hint, isSigned);
+}
+
+/// Convert an `MDNode` to an MLIR `DenseI32ArrayAttr` if possible.
+static DenseI32ArrayAttr convertDenseI32Array(Builder builder,
+                                              llvm::MDNode *md) {
+  if (!md)
+    return {};
+  SmallVector<int32_t> vals;
+  for (const llvm::MDOperand &op : md->operands()) {
+    std::optional<int32_t> mdValue = parseIntegerMD(op.get());
+    if (!mdValue)
+      return {};
+    vals.push_back(*mdValue);
+  }
+  return builder.getDenseI32ArrayAttr(vals);
+}
+
+/// Convert an `MDNode` to an MLIR `IntegerAttr` if possible.
+static IntegerAttr convertIntegerMD(Builder builder, llvm::MDNode *md) {
+  if (!md || md->getNumOperands() != 1)
+    return {};
+  std::optional<int32_t> val = parseIntegerMD(md->getOperand(0));
+  if (!val)
+    return {};
+  return builder.getI32IntegerAttr(*val);
+}
+
+/// Process metadata found in kernel functions:
+/// - `vec_type_hint`
+/// - `work_group_size_hint`
+/// - `reqd_work_group_size`
+/// - `intel_reqd_sub_group_size`
+template <typename ConvertType>
+static void processKernelMetadata(llvm::Function *func, LLVMFuncOp funcOp,
+                                  ConvertType convertType) {
+  Builder builder(funcOp);
+
+  if (VecTypeHintAttr attr = convertVecTypeHint(
+          builder, func->getMetadata("vec_type_hint"), convertType)) {
+    funcOp.setVecTypeHintAttr(attr);
+  }
+
+  if (DenseI32ArrayAttr attr = convertDenseI32Array(
+          builder, func->getMetadata("work_group_size_hint"))) {
+    funcOp.setWorkGroupSizeHintAttr(attr);
+  }
+
+  if (DenseI32ArrayAttr attr = convertDenseI32Array(
+          builder, func->getMetadata("reqd_work_group_size"))) {
+    funcOp.setReqdWorkGroupSizeAttr(attr);
+  }
+
+  if (IntegerAttr attr = convertIntegerMD(
+          builder, func->getMetadata("intel_reqd_sub_group_size"))) {
+    funcOp.setIntelReqdSubGroupSizeAttr(attr);
+  }
+}
+
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   clearRegionState();
 
@@ -1965,6 +2058,10 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
+
+  // Handle Kernel Metadata
+  processKernelMetadata(func, funcOp,
+                        [this](llvm::Type *type) { return convertType(type); });
 
   // Convert non-debug metadata by using the dialect interface.
   SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;

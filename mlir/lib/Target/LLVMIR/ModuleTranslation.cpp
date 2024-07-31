@@ -1247,6 +1247,41 @@ static LogicalResult checkedAddLLVMFnAttribute(Location loc,
   return success();
 }
 
+/// Return a representation of `value` as metadata.
+static llvm::Metadata *convertIntegerToMetadata(llvm::LLVMContext &context,
+                                                const llvm::APInt &value) {
+  llvm::Constant *constant = llvm::ConstantInt::get(context, value);
+  return llvm::ConstantAsMetadata::get(constant);
+}
+
+/// Return a representation of `value` as an MDNode.
+static llvm::MDNode *convertIntegerToMDNode(llvm::LLVMContext &context,
+                                            const llvm::APInt &value) {
+  return llvm::MDNode::get(context, convertIntegerToMetadata(context, value));
+}
+
+/// Return an MDNode encoding `vec_type_hint` metadata.
+static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
+                                                llvm::Type *type,
+                                                bool isSigned) {
+  llvm::Metadata *typeMD =
+      llvm::ConstantAsMetadata::get(llvm::UndefValue::get(type));
+  llvm::Metadata *isSignedMD =
+      convertIntegerToMetadata(context, llvm::APInt(32, isSigned ? 1 : 0));
+  return llvm::MDNode::get(context, {typeMD, isSignedMD});
+}
+
+/// Return an MDNode with a tuple given by the values in the input integer array
+/// attribute.
+static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
+                                                 ArrayRef<int32_t> values) {
+  llvm::SmallVector<llvm::Metadata *> mds;
+  llvm::transform(values, std::back_inserter(mds), [&context](int32_t value) {
+    return convertIntegerToMetadata(context, llvm::APInt(32, value));
+  });
+  return llvm::MDNode::get(context, mds);
+}
+
 /// Attaches the attributes listed in the given array attribute to `llvmFunc`.
 /// Reports error to `loc` if any and returns immediately. Expects `attributes`
 /// to be an array attribute containing either string attributes, treated as
@@ -1448,6 +1483,42 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
+/// Converts function attributes from `func` and attaches them to `llvmFunc`.
+template <typename TypeConverter>
+static void convertFunctionKernelAttributes(LLVMFuncOp func,
+                                            llvm::Function *llvmFunc,
+                                            TypeConverter convertType) {
+  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
+
+  if (auto vecTypeHint = func.getVecTypeHint()) {
+    Type type = vecTypeHint->getHint().getValue();
+    llvm::Type *llvmType = convertType(type);
+    bool isSigned = vecTypeHint->getIsSigned();
+    llvmFunc->setMetadata(
+        "vec_type_hint",
+        convertVecTypeHintToMDNode(llvmContext, llvmType, isSigned));
+  }
+
+  if (auto workGroupSizeHint = func.getWorkGroupSizeHint()) {
+    llvmFunc->setMetadata(
+        "work_group_size_hint",
+        convertIntegerArrayToMDNode(llvmContext, *workGroupSizeHint));
+  }
+
+  if (auto reqdWorkGroupSize = func.getReqdWorkGroupSize()) {
+    llvmFunc->setMetadata(
+        "reqd_work_group_size",
+        convertIntegerArrayToMDNode(llvmContext, *reqdWorkGroupSize));
+  }
+
+  if (auto intelReqdSubGroupSize = func.getIntelReqdSubGroupSize()) {
+    llvmFunc->setMetadata(
+        "intel_reqd_sub_group_size",
+        convertIntegerToMDNode(llvmContext,
+                               llvm::APInt(32, *intelReqdSubGroupSize)));
+  }
+}
+
 FailureOr<llvm::AttrBuilder>
 ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
                                          DictionaryAttr paramAttrs) {
@@ -1491,6 +1562,10 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     // Convert function attributes.
     convertFunctionAttributes(function, llvmFunc);
+
+    // Convert function kernel attributes to metadata
+    convertFunctionKernelAttributes(
+        function, llvmFunc, [this](Type type) { return convertType(type); });
 
     // Convert function_entry_count attribute to metadata.
     if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
