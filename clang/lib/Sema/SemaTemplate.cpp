@@ -3073,12 +3073,19 @@ static QualType commonTypeImpl(Sema &S, TemplateName BaseTemplate,
         T1, S.Context.getTrivialTypeSourceInfo(T1.getAsType())));
     Args.addArgument(TemplateArgumentLoc(
         T2, S.Context.getTrivialTypeSourceInfo(T2.getAsType())));
+
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
     QualType BaseTemplateInst =
         S.CheckTemplateIdType(BaseTemplate, TemplateLoc, Args);
-    if (S.RequireCompleteType(TemplateLoc, BaseTemplateInst,
-                              diag::err_incomplete_type))
+
+    if (SFINAE.hasErrorOccurred())
       return QualType();
-    return S.getTypeMember(BaseTemplateInst, "type");
+
+    return BaseTemplateInst;
   };
 
   // Note A: For the common_type trait applied to a template parameter pack T of
@@ -3270,8 +3277,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 
   case BTK__common_type: {
     assert(Converted.size() == 4);
-    if (Converted[0].isDependent() || Converted[1].isDependent() ||
-        Converted[2].isDependent() || Converted[3].isDependent())
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
       return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
                                                             Converted);
 

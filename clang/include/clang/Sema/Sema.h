@@ -2282,10 +2282,6 @@ public:
   /// Check to see if a given expression could have '.c_str()' called on it.
   bool hasCStrMethod(const Expr *E);
 
-  // Check whether a type member 'Type::Name' exists, and if yes, return the
-  // type. If there is no type, the QualType is null
-  QualType getTypeMember(QualType Type, StringRef Name);
-
   /// Diagnose pointers that are always non-null.
   /// \param E the expression containing the pointer
   /// \param NullKind NPCK_NotNull if E is a cast to bool, otherwise, E is

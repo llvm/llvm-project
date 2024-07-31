@@ -28,7 +28,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__common_type)
 
 template <class... _Args>
-struct common_type : __common_type<common_type, __type_identity, __empty, _Args...> {};
+struct common_type;
+
+template <class... _Args>
+using __common_type_t = typename common_type<_Args...>::type;
+
+template <class... _Args>
+struct common_type : __common_type<__common_type_t, __type_identity, __empty, _Args...> {};
 
 #else
 #  if _LIBCPP_STD_VER >= 20

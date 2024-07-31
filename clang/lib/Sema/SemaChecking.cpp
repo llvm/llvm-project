@@ -6848,14 +6848,6 @@ CXXRecordMembersNamed(StringRef Name, Sema &S, QualType Ty) {
   return Results;
 }
 
-QualType Sema::getTypeMember(QualType Type, StringRef Name) {
-  auto Results = CXXRecordMembersNamed<TypeDecl>(Name, *this, Type);
-  assert(Results.size() <= 1);
-  if (Results.empty())
-    return {};
-  return Context.getTypeDeclType(*Results.begin());
-}
-
 /// Check if we could call '.c_str()' on an object.
 ///
 /// FIXME: This returns the wrong results in some cases (if cv-qualifiers don't

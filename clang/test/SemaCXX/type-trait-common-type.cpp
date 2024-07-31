@@ -22,8 +22,10 @@ template <class...>
 struct common_type;
 
 template <class... Args>
-using common_type_base = __common_type<common_type, type_identity, empty_type, Args...>;
-// expected-error@-1 {{incomplete type 'common_type<Incomplete, Incomplete>' where a complete type is required}}
+using common_type_t = typename common_type<Args...>::type;
+
+template <class... Args>
+using common_type_base = __common_type<common_type_t, type_identity, empty_type, Args...>;
 
 template <class... Args>
 struct common_type : common_type_base<Args...> {};
@@ -31,10 +33,10 @@ struct common_type : common_type_base<Args...> {};
 struct Incomplete;
 
 template<>
-struct common_type<Incomplete, Incomplete>; // expected-note {{forward declaration}}
+struct common_type<Incomplete, Incomplete>;
 
 static_assert(__is_same(common_type_base<>, empty_type));
-static_assert(__is_same(common_type_base<Incomplete>, empty_type)); // expected-note {{requested here}}
+static_assert(__is_same(common_type_base<Incomplete>, empty_type));
 static_assert(__is_same(common_type_base<char>, type_identity<char>));
 static_assert(__is_same(common_type_base<int>, type_identity<int>));
 static_assert(__is_same(common_type_base<const int>, type_identity<int>));
@@ -166,3 +168,17 @@ struct common_type<WeirdConvertible2, WeirdConvertible1> {
 
 static_assert(__is_same(common_type_base<WeirdConvertible1, WeirdConvertible2, WeirdConvertible3>,
                         type_identity<WeirdConvertible_1p2_p3>));
+
+struct PrivateTypeMember
+{
+  operator int();
+};
+
+template<>
+struct common_type<PrivateTypeMember, PrivateTypeMember>
+{
+private:
+  using type = int;
+};
+
+static_assert(__is_same(common_type_base<PrivateTypeMember, PrivateTypeMember, PrivateTypeMember>, empty_type));
