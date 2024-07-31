@@ -6,10 +6,13 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sin.h"
 #include "src/stdlib/rand.h"
-#include "src/stdlib/srand.h"
 
 #ifdef NVPTX_MATH_FOUND
 #include "src/math/nvptx/declarations.h"
+#endif
+
+#ifdef AMDGPU_MATH_FOUND
+#include "src/math/amdgpu/declarations.h"
 #endif
 
 constexpr double M_PI = 3.14159265358979323846;
@@ -50,4 +53,13 @@ BENCHMARK(LlvmLibcSinGpuBenchmark, NvSinTwoPi,
           BM_TWO_PI(LIBC_NAMESPACE::__nv_sin));
 BENCHMARK(LlvmLibcSinGpuBenchmark, NvSinLargeInt,
           BM_LARGE_INT(LIBC_NAMESPACE::__nv_sin));
+#endif
+
+#ifdef AMDGPU_MATH_FOUND
+BENCHMARK(LlvmLibcSinGpuBenchmark, AmdgpuSin,
+          BM_RANDOM_INPUT(LIBC_NAMESPACE::__ocml_sin_f64));
+BENCHMARK(LlvmLibcSinGpuBenchmark, AmdgpuSinTwoPi,
+          BM_TWO_PI(LIBC_NAMESPACE::__ocml_sin_f64));
+BENCHMARK(LlvmLibcSinGpuBenchmark, AmdgpuSinLargeInt,
+          BM_LARGE_INT(LIBC_NAMESPACE::__ocml_sin_f64));
 #endif
