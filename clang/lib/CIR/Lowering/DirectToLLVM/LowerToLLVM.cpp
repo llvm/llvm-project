@@ -830,6 +830,37 @@ struct ConvertCIRToLLVMPass
   virtual StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
+mlir::LogicalResult
+rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
+                      mlir::ConversionPatternRewriter &rewriter,
+                      const mlir::TypeConverter *converter,
+                      mlir::FlatSymbolRefAttr calleeAttr) {
+  llvm::SmallVector<mlir::Type, 8> llvmResults;
+  auto cirResults = op->getResultTypes();
+
+  if (converter->convertTypes(cirResults, llvmResults).failed())
+    return mlir::failure();
+
+  if (calleeAttr) { // direct call
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, llvmResults, calleeAttr,
+                                                    callOperands);
+  } else { // indirect call
+    assert(op->getOperands().size() &&
+           "operands list must no be empty for the indirect call");
+    auto typ = op->getOperands().front().getType();
+    assert(isa<mlir::cir::PointerType>(typ) && "expected pointer type");
+    auto ptyp = dyn_cast<mlir::cir::PointerType>(typ);
+    auto ftyp = dyn_cast<mlir::cir::FuncType>(ptyp.getPointee());
+    assert(ftyp && "expected a pointer to a function as the first operand");
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op,
+        dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp)),
+        callOperands);
+  }
+      return mlir::success();
+}
+
 class CIRCallLowering : public mlir::OpConversionPattern<mlir::cir::CallOp> {
 public:
   using OpConversionPattern<mlir::cir::CallOp>::OpConversionPattern;
@@ -837,31 +868,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CallOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    llvm::SmallVector<mlir::Type, 8> llvmResults;
-    auto cirResults = op.getResultTypes();
-    auto *converter = getTypeConverter();
-
-    if (converter->convertTypes(cirResults, llvmResults).failed())
-      return mlir::failure();
-
-    if (auto callee = op.getCalleeAttr()) { // direct call
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-          op, llvmResults, op.getCalleeAttr(), adaptor.getOperands());
-    } else { // indirect call
-      assert(op.getOperands().size() &&
-             "operands list must no be empty for the indirect call");
-      auto typ = op.getOperands().front().getType();
-      assert(isa<mlir::cir::PointerType>(typ) && "expected pointer type");
-      auto ptyp = dyn_cast<mlir::cir::PointerType>(typ);
-      auto ftyp = dyn_cast<mlir::cir::FuncType>(ptyp.getPointee());
-      assert(ftyp && "expected a pointer to a function as the first operand");
-
-      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-          op,
-          dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp)),
-          adaptor.getOperands());
-    }
-    return mlir::success();
+    return rewriteToCallOrInvoke(op.getOperation(), adaptor.getOperands(),
+                                 rewriter, getTypeConverter(),
+                                 op.getCalleeAttr());
   }
 };
 
