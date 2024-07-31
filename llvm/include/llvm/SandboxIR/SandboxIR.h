@@ -39,6 +39,8 @@
 //                                      |                   +- IntToPtrInst
 //                                      |                   |
 //                                      |                   +- PtrToIntInst
+//                                      |                   |
+//                                      |                   +- SIToFPInst
 //                                      |
 //                                      +- CallBase -----------+- CallBrInst
 //                                      |                      |
@@ -1376,6 +1378,27 @@ public:
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
 #endif
+};
+
+class SIToFPInst final : public CastInst {
+public:
+  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From))
+      return I->getOpcode() == Opcode::SIToFP;
+    return false;
+  }
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
 };
 
 class FPToUIInst final : public CastInst {
