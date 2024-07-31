@@ -2281,6 +2281,7 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
   } dbgs() << "\n";);
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
+  misexpect::checkMissingAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
   if (EmitBranchProbability) {
