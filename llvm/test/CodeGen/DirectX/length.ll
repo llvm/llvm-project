@@ -1,6 +1,8 @@
 ; RUN: opt -S  -dxil-intrinsic-expansion  < %s | FileCheck %s --check-prefixes=CHECK,EXPCHECK
 ; RUN: opt -S  -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library < %s | FileCheck %s --check-prefixes=CHECK,DOPCHECK
 
+; Make sure dxil operation function calls for length are generated for half/float.
+
 declare half @llvm.fabs.f16(half)
 declare half @llvm.dx.length.v2f16(<2 x half>)
 declare half @llvm.dx.length.v3f16(<3 x half>)
