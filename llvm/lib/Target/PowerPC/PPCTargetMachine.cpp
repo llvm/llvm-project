@@ -112,9 +112,10 @@ static cl::opt<bool> EnablePPCGenScalarMASSEntries(
     cl::Hidden);
 
 static cl::opt<bool> PPCDisableTrapOnUnreachable(
-  "ppc-disable-trap-on-unreachable", cl::init(false),
-  cl::desc("Disable lowering of unreachable IR intruction to a trap instuction"),
-           cl::Hidden);
+    "ppc-disable-trap-on-unreachable", cl::init(false),
+    cl::desc(
+        "Disable lowering of unreachable IR intruction to a trap instuction"),
+    cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
