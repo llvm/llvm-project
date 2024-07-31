@@ -105,6 +105,8 @@ static const int UseBiasVar = 0;
 static const char *FileOpenMode = "a+b";
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
+static void *BitmapBiasAddr = NULL;
+static void *BitmapBiasDefaultAddr = NULL;
 static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   /* Get the sizes of various profile data sections. Taken from
    * __llvm_profile_get_size_for_buffer(). */
@@ -203,11 +205,15 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR                            \
   INSTR_PROF_CONCAT(INSTR_PROF_PROFILE_COUNTER_BIAS_VAR, _default)
 COMPILER_RT_VISIBILITY intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR = 0;
+#define INSTR_PROF_PROFILE_BITMAP_BIAS_DEFAULT_VAR                             \
+  INSTR_PROF_CONCAT(INSTR_PROF_PROFILE_BITMAP_BIAS_VAR, _default)
+COMPILER_RT_VISIBILITY intptr_t INSTR_PROF_PROFILE_BITMAP_BIAS_DEFAULT_VAR = 0;
 
 /* This variable is a weak external reference which could be used to detect
  * whether or not the compiler defined this symbol. */
 #if defined(_MSC_VER)
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
+COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_BITMAP_BIAS_VAR;
 #if defined(_M_IX86) || defined(__i386__)
 #define WIN_SYM_PREFIX "_"
 #else
@@ -217,10 +223,17 @@ COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
     linker, "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
                 INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX        \
                 INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
+#pragma comment(                                                               \
+    linker, "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
+                INSTR_PROF_PROFILE_BITMAP_BIAS_VAR) "=" WIN_SYM_PREFIX         \
+                INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_BITMAP_BIAS_DEFAULT_VAR))
 #else
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR
     __attribute__((weak, alias(INSTR_PROF_QUOTE(
                              INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))));
+COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_BITMAP_BIAS_VAR
+    __attribute__((weak, alias(INSTR_PROF_QUOTE(
+                             INSTR_PROF_PROFILE_BITMAP_BIAS_DEFAULT_VAR))));
 #endif
 static const int ContinuousModeSupported = 1;
 static const int UseBiasVar = 1;
@@ -231,6 +244,9 @@ static const char *FileOpenMode = "w+b";
  * used and runtime provides a weak alias so we can check if it's defined. */
 static void *BiasAddr = &INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasDefaultAddr = &INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR;
+static void *BitmapBiasAddr = &INSTR_PROF_PROFILE_BITMAP_BIAS_VAR;
+static void *BitmapBiasDefaultAddr =
+    &INSTR_PROF_PROFILE_BITMAP_BIAS_DEFAULT_VAR;
 static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   /* Get the sizes of various profile data sections. Taken from
    * __llvm_profile_get_size_for_buffer(). */
@@ -241,12 +257,18 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   const char *BitmapBegin = __llvm_profile_begin_bitmap();
   const char *BitmapEnd = __llvm_profile_end_bitmap();
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  uint64_t CountersSize =
+      __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
+  uint64_t NumBitmapBytes =
+      __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
   /* Get the file size. */
   uint64_t FileSize = 0;
   if (getProfileFileSizeForMerging(File, &FileSize))
     return 1;
 
   int Fileno = fileno(File);
+  uint64_t PaddingBytesAfterCounters =
+      __llvm_profile_get_num_padding_bytes(CountersSize);
   uint64_t FileOffsetToCounters =
       sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
 
@@ -264,7 +286,17 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   /* Return the memory allocated for counters to OS. */
   lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin, (uintptr_t)CountersEnd);
 
-  /* BIAS MODE not supported yet for Bitmap (MCDC). */
+  /* Also mmap MCDC bitmap bytes. If there aren't any bitmap bytes, mmap()
+   * will fail with EINVAL. */
+  if (NumBitmapBytes == 0)
+    return 0;
+
+  /* Update profbm_bias. */
+  uint64_t FileOffsetToBitmap =
+      FileOffsetToCounters + CountersSize + PaddingBytesAfterCounters;
+  /* Update the profile fields based on the current mapping. */
+  INSTR_PROF_PROFILE_BITMAP_BIAS_VAR =
+      (uintptr_t)Profile - (uintptr_t)BitmapBegin + FileOffsetToBitmap;
 
   /* Return the memory allocated for counters to OS. */
   lprofReleaseMemoryPagesToOS((uintptr_t)BitmapBegin, (uintptr_t)BitmapEnd);
@@ -636,8 +668,10 @@ static void initializeProfileForContinuousMode(void) {
     PROF_ERR("%s\n", "continuous mode is unsupported on this platform");
     return;
   }
-  if (UseBiasVar && BiasAddr == BiasDefaultAddr) {
-    PROF_ERR("%s\n", "__llvm_profile_counter_bias is undefined");
+  if (UseBiasVar && BiasAddr == BiasDefaultAddr &&
+      BitmapBiasAddr == BitmapBiasDefaultAddr) {
+    PROF_ERR("%s\n", "Neither __llvm_profile_counter_bias nor "
+                     "__llvm_profile_bitmap_bias is defined");
     return;
   }
 
