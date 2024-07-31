@@ -15,15 +15,8 @@
 ;     C[i] = D[i] * E[i];
 ;   }
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
-
 ; CHECK-LABEL: @f(
-define void @f(ptr noalias %a,
-               ptr noalias %b,
-               ptr noalias %c,
-               ptr noalias %d,
-               ptr noalias %e) {
+define void @f(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) {
 entry:
   br label %for.body
 
@@ -88,11 +81,7 @@ declare i32 @llvm.convergent(i32) #0
 ; It is OK to distribute with a convergent operation, since in each
 ; new loop the convergent operation has the ssame control dependency.
 ; CHECK-LABEL: @f_with_convergent(
-define void @f_with_convergent(ptr noalias %a,
-                               ptr noalias %b,
-                               ptr noalias %c,
-                               ptr noalias %d,
-                               ptr noalias %e) {
+define void @f_with_convergent(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) {
 entry:
   br label %for.body
 

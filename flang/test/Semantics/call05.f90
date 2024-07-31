@@ -123,9 +123,7 @@ end module
 
 module m2
 
-  !ERROR: Procedure 't3' may not be ALLOCATABLE without an explicit interface
   character(len=10), allocatable :: t1, t2, t3, t4
-  !ERROR: Procedure 't6' may not be ALLOCATABLE without an explicit interface
   character(len=:), allocatable :: t5, t6, t7, t8(:)
 
   character(len=10), pointer :: p1
@@ -189,7 +187,7 @@ module m2
     !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
     call sma(t2(:))
 
-    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    !ERROR: 't3' is not a callable procedure
     call sma(t3(1))
 
     !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
@@ -208,7 +206,7 @@ module m2
     !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
     call sma(t5(:))
 
-    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    !ERROR: 't6' is not a callable procedure
     call sma(t6(1))
 
     !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument

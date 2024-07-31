@@ -19,7 +19,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -131,7 +130,8 @@ public:
   }
 
   /// Converts the pointer to an APValue that is an rvalue.
-  std::optional<APValue> toRValue(const Context &Ctx) const;
+  std::optional<APValue> toRValue(const Context &Ctx,
+                                  QualType ResultType) const;
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
@@ -210,6 +210,9 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    assert(isBlockPointer());
+    Block *Pointee = asBlockPointer().Pointee;
+
     if (isElementPastEnd()) {
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
@@ -217,7 +220,7 @@ public:
         Adjust = sizeof(InitMapPtr);
       else
         Adjust = sizeof(InlineDescriptor);
-      return Pointer(asBlockPointer().Pointee, asBlockPointer().Base,
+      return Pointer(Pointee, asBlockPointer().Base,
                      asBlockPointer().Base + getSize() + Adjust);
     }
 
@@ -227,15 +230,17 @@ public:
 
     // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(asBlockPointer().Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, RootPtrMark, 0);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
     const Descriptor *Desc =
-        Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
+        (Next == Pointee->getDescriptor()->getMetadataSize())
+            ? getDeclDesc()
+            : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
-    return Pointer(asBlockPointer().Pointee, Next, Offset);
+    return Pointer(Pointee, Next, Offset);
   }
 
   /// Checks if the pointer is null.
@@ -513,6 +518,8 @@ public:
   unsigned getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isOnePastEnd())
+      return PastEndMark;
     return Offset;
   }
 
@@ -551,8 +558,19 @@ public:
     if (!asBlockPointer().Pointee)
       return false;
 
-    return isElementPastEnd() ||
+    if (isUnknownSizeArray())
+      return false;
+
+    return isElementPastEnd() || isPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
+  }
+
+  /// Checks if the pointer points past the end of the object.
+  bool isPastEnd() const {
+    if (isIntegralPointer())
+      return false;
+
+    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
@@ -566,6 +584,7 @@ public:
     assert(isLive() && "Invalid pointer");
     assert(isBlockPointer());
     assert(asBlockPointer().Pointee);
+    assert(isDereferencable());
     assert(Offset + sizeof(T) <=
            asBlockPointer().Pointee->getDescriptor()->getAllocSize());
 
@@ -583,6 +602,17 @@ public:
     assert(asBlockPointer().Pointee);
     return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
                                  sizeof(InitMapPtr))[I];
+  }
+
+  /// Whether this block can be read from at all. This is only true for
+  /// block pointers that point to a valid location inside that block.
+  bool isDereferencable() const {
+    if (!isBlockPointer())
+      return false;
+    if (isPastEnd())
+      return false;
+
+    return true;
   }
 
   /// Initializes a field.
@@ -617,13 +647,16 @@ private:
   friend class Block;
   friend class DeadBlock;
   friend class MemberPointer;
+  friend class InterpState;
   friend struct InitMap;
+  friend class DynamicAllocator;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
+    assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
     return getDescriptor(asBlockPointer().Base);
   }
 

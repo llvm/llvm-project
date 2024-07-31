@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/freelist_heap.h"
+#include "src/stdlib/aligned_alloc.h"
 #include "src/stdlib/calloc.h"
 #include "src/stdlib/free.h"
 #include "src/stdlib/malloc.h"
@@ -53,4 +54,21 @@ TEST(LlvmLibcFreeListMalloc, MallocStats) {
             kAllocSize + kCallocNum * kCallocSize);
   EXPECT_EQ(freelist_heap_stats.cumulative_freed,
             kAllocSize + kCallocNum * kCallocSize);
+
+  constexpr size_t ALIGN = kAllocSize;
+  void *ptr3 = LIBC_NAMESPACE::aligned_alloc(ALIGN, kAllocSize);
+  EXPECT_NE(ptr3, static_cast<void *>(nullptr));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr3) % ALIGN, size_t(0));
+  EXPECT_EQ(freelist_heap_stats.bytes_allocated, kAllocSize);
+  EXPECT_EQ(freelist_heap_stats.cumulative_allocated,
+            kAllocSize + kCallocNum * kCallocSize + kAllocSize);
+  EXPECT_EQ(freelist_heap_stats.cumulative_freed,
+            kAllocSize + kCallocNum * kCallocSize);
+
+  LIBC_NAMESPACE::free(ptr3);
+  EXPECT_EQ(freelist_heap_stats.bytes_allocated, size_t(0));
+  EXPECT_EQ(freelist_heap_stats.cumulative_allocated,
+            kAllocSize + kCallocNum * kCallocSize + kAllocSize);
+  EXPECT_EQ(freelist_heap_stats.cumulative_freed,
+            kAllocSize + kCallocNum * kCallocSize + kAllocSize);
 }

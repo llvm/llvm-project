@@ -449,6 +449,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
 
+  if (HasSVE2p1)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
+
   if (HasSVE2 && HasSVE2AES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
@@ -467,8 +470,15 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   if (HasSME2) {
-    Builder.defineMacro("__ARM_FEATURE_SME");
-    Builder.defineMacro("__ARM_FEATURE_SME2");
+    Builder.defineMacro("__ARM_FEATURE_SME", "1");
+    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
+  }
+
+  if (HasSME2p1) {
+    Builder.defineMacro("__ARM_FEATURE_SME", "1");
+    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+    Builder.defineMacro("__ARM_FEATURE_SME2p1", "1");
     Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
   }
 
@@ -739,8 +749,10 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
+      .Case("sve2p1", FPU & SveMode && HasSVE2p1)
       .Case("sme", HasSME)
       .Case("sme2", HasSME2)
+      .Case("sme2p1", HasSME2p1)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
@@ -816,6 +828,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = true;
       HasSVE2 = true;
     }
+    if (Feature == "+sve2p1") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2p1 = true;
+    }
     if (Feature == "+sve2-aes") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -864,6 +883,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+sme2") {
       HasSME = true;
       HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sme2p1") {
+      HasSME = true;
+      HasSME2 = true;
+      HasSME2p1 = true;
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
@@ -1536,6 +1562,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_Swift:
   case CC_SwiftAsync:
   case CC_Win64:

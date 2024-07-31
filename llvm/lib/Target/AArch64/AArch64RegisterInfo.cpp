@@ -501,6 +501,17 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().isLRReservedForRA()) {
+    // In order to prevent the register allocator from using LR, we need to
+    // mark it as reserved. However we don't want to keep it reserved throughout
+    // the pipeline since it prevents other infrastructure from reasoning about
+    // it's liveness. We use the NoVRegs property instead of IsSSA because
+    // IsSSA is removed before VirtRegRewriter runs.
+    if (!MF.getProperties().hasProperty(
+            MachineFunctionProperties::Property::NoVRegs))
+      markSuperRegs(Reserved, AArch64::LR);
+  }
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }

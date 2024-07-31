@@ -347,6 +347,25 @@ llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_
 
 // -----
 
+// CHECK: @func_global = external global i64, !dbg {{.*}}
+// CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GVALS:.*]])
+// CHECK-DAG: ![[SP:.*]] = distinct !DISubprogram(name: "fn_with_gl"{{.*}}unit: ![[CU]])
+// CHECK-DAG: ![[GVAR:.*]] = distinct !DIGlobalVariable(name: "func_global"{{.*}}, scope: ![[SP]]{{.*}})
+// CHECK-DAG: ![[GEXPR:.*]] = !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
+// CHECK-DAG: ![[GVALS]] = !{![[GEXPR]]}
+
+#file = #llvm.di_file<"test.f90" in "existence">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #file, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#ty1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "fn_with_gl", file = #file, subprogramFlags = "Definition|Optimized">
+llvm.mlir.global @func_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #sp, name = "func_global", linkageName = "func_global", file = #file, line = 121, type = #ty1, isLocalToUnit = true, isDefined = true>, expr = <>>} : i64
+
+llvm.func @fn_with_gl() {
+  llvm.return
+} loc(fused<#sp>["foo1.mlir":0:0])
+
+// -----
+
 // Nameless and scopeless global constant.
 
 // CHECK-LABEL: @.str.1 = external constant [10 x i8]

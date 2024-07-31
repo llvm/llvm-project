@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
 namespace mlir {
@@ -26,6 +27,19 @@ namespace ROCDL {
 /// 4. The ROCM path detected by CMake.
 /// 5. Returns an empty string.
 StringRef getROCMPath();
+
+/// Helper enum for specifying the AMD GCN device libraries required for
+/// compilation.
+enum class AMDGCNLibraries : uint32_t {
+  None = 0,
+  Ockl = 1,
+  Ocml = 2,
+  OpenCL = 4,
+  Hip = 8,
+  LastLib = Hip,
+  LLVM_MARK_AS_BITMASK_ENUM(LastLib),
+  All = (LastLib << 1) - 1
+};
 
 /// Base class for all ROCDL serializations from GPU modules into binary
 /// strings. By default this class serializes into LLVM bitcode.
@@ -49,8 +63,8 @@ public:
   /// Returns the bitcode files to be loaded.
   ArrayRef<std::string> getFileList() const;
 
-  /// Appends standard ROCm device libraries like `ocml.bc`, `ockl.bc`, etc.
-  LogicalResult appendStandardLibs();
+  /// Appends standard ROCm device libraries to `fileList`.
+  LogicalResult appendStandardLibs(AMDGCNLibraries libs);
 
   /// Loads the bitcode files in `fileList`.
   virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
@@ -63,15 +77,20 @@ public:
   LogicalResult handleBitcodeFile(llvm::Module &module) override;
 
 protected:
-  /// Appends the paths of common ROCm device libraries to `libs`.
-  LogicalResult getCommonBitcodeLibs(llvm::SmallVector<std::string> &libs,
-                                     SmallVector<char, 256> &libPath,
-                                     StringRef isaVersion);
-
   /// Adds `oclc` control variables to the LLVM module.
-  void addControlVariables(llvm::Module &module, bool wave64, bool daz,
-                           bool finiteOnly, bool unsafeMath, bool fastMath,
-                           bool correctSqrt, StringRef abiVer);
+  void addControlVariables(llvm::Module &module, AMDGCNLibraries libs,
+                           bool wave64, bool daz, bool finiteOnly,
+                           bool unsafeMath, bool fastMath, bool correctSqrt,
+                           StringRef abiVer);
+
+  /// Compiles assembly to a binary.
+  virtual std::optional<SmallVector<char, 0>>
+  compileToBinary(const std::string &serializedISA);
+
+  /// Default implementation of `ModuleToObject::moduleToObject`.
+  std::optional<SmallVector<char, 0>>
+  moduleToObjectImpl(const gpu::TargetOptions &targetOptions,
+                     llvm::Module &llvmModule);
 
   /// Returns the assembled ISA.
   std::optional<SmallVector<char, 0>> assembleIsa(StringRef isa);
@@ -84,6 +103,9 @@ protected:
 
   /// List of LLVM bitcode files to link to.
   SmallVector<std::string> fileList;
+
+  /// AMD GCN libraries to use when linking, the default is using none.
+  AMDGCNLibraries deviceLibs = AMDGCNLibraries::None;
 };
 } // namespace ROCDL
 } // namespace mlir

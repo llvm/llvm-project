@@ -208,10 +208,14 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     TuneCPU = ArchName;
   Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
 
-  if (HasFeatureLSX)
+  if (HasFeatureLASX) {
+    Builder.defineMacro("__loongarch_simd_width", "256");
     Builder.defineMacro("__loongarch_sx", Twine(1));
-  if (HasFeatureLASX)
     Builder.defineMacro("__loongarch_asx", Twine(1));
+  } else if (HasFeatureLSX) {
+    Builder.defineMacro("__loongarch_simd_width", "128");
+    Builder.defineMacro("__loongarch_sx", Twine(1));
+  }
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")

@@ -212,9 +212,17 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 }
 
 let usesCustomInserter = 1 in {
-def S_INVERSE_BALLOT_U32 : SPseudoInstSI <(outs SReg_32:$sdst), (ins SSrc_b32:$mask)>;
+let WaveSizePredicate = isWave32 in
+def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
+  (outs SReg_32:$sdst), (ins SSrc_b32:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i32:$mask))]
+>;
 
-def S_INVERSE_BALLOT_U64 : SPseudoInstSI <(outs SReg_64:$sdst), (ins SSrc_b64:$mask)>;
+let WaveSizePredicate = isWave64 in
+def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
+  (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
+>;
 } // End usesCustomInserter = 1
 
 // Pseudo instructions used for @llvm.fptrunc.round upward
@@ -3389,7 +3397,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 
@@ -3534,16 +3542,6 @@ multiclass FPMed3Pat<ValueType vt,
               DSTCLAMP.NONE, DSTOMOD.NONE)>;
 }
 
-class FP16Med3Pat<ValueType vt,
-                Instruction med3Inst> : GCNPat<
-  (fmaxnum_like_nnan (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
-                                   (VOP3Mods vt:$src1, i32:$src1_mods)),
-           (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
-                                       (VOP3Mods vt:$src1, i32:$src1_mods)),
-                         (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
-  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
->;
-
 multiclass Int16Med3Pat<Instruction med3Inst,
                         SDPatternOperator min,
                         SDPatternOperator max> {
@@ -3565,6 +3563,10 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 }
 
 defm : FPMed3Pat<f32, V_MED3_F32_e64>;
+
+let SubtargetPredicate = HasMed3_16 in {
+defm : FPMed3Pat<f16, V_MED3_F16_e64>;
+}
 
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
@@ -3611,7 +3613,6 @@ def : FPMinCanonMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>
 }
 
 let OtherPredicates = [isGFX9Plus] in {
-def : FP16Med3Pat<f16, V_MED3_F16_e64>;
 defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax>;
 defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax>;
 } // End Predicates = [isGFX9Plus]

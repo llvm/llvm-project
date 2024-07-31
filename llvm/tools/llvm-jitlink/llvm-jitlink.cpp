@@ -1259,9 +1259,10 @@ Error Session::FileInfo::registerMultiStubEntry(
                      Sym.getTargetFlags());
 
   // Let's keep stubs ordered by ascending address.
-  llvm::sort(Entry, [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
-    return L.getTargetAddress() < R.getTargetAddress();
-  });
+  std::sort(Entry.begin(), Entry.end(),
+            [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
+              return L.getTargetAddress() < R.getTargetAddress();
+            });
 
   return Error::success();
 }

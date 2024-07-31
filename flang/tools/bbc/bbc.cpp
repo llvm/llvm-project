@@ -269,7 +269,7 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
 /// of the pass manager, allowing it to be invoked as soon as it's
 /// required without impacting the main pass pipeline that may be invoked
 /// more than once for verification.
-static mlir::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
+static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
   mlir::PassManager pm(mlirModule->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
   fir::createOpenMPFIRPassPipeline(pm, enableOpenMPDevice);
@@ -285,7 +285,7 @@ static mlir::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
 // Translate Fortran input to FIR, a dialect of MLIR.
 //===----------------------------------------------------------------------===//
 
-static mlir::LogicalResult convertFortranSourceToMLIR(
+static llvm::LogicalResult convertFortranSourceToMLIR(
     std::string path, Fortran::parser::Options options,
     const ProgramName &programPrefix,
     Fortran::semantics::SemanticsContext &semanticsContext,
@@ -367,11 +367,12 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
+  constexpr const char *tuneCPU = "";
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine);
+      semanticsContext.languageFeatures(), targetMachine, tuneCPU);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {

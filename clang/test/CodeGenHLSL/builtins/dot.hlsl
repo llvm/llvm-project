@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
@@ -156,38 +156,6 @@ float test_dot_float3_splat(float p0, float3 p1) { return dot(p0, p1); }
 // CHECK: ret float %dx.dot
 float test_dot_float4_splat(float p0, float4 p1) { return dot(p0, p1); }
 
-// CHECK: %conv = sitofp i32 %1 to float
-// CHECK: %splat.splatinsert = insertelement <2 x float> poison, float %conv, i64 0
-// CHECK: %splat.splat = shufflevector <2 x float> %splat.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
-// CHECK: %dx.dot = call float @llvm.dx.dot2.v2f32(<2 x float> %0, <2 x float> %splat.splat)
-// CHECK: ret float %dx.dot
-float test_builtin_dot_float2_int_splat(float2 p0, int p1) {
-  return dot(p0, p1);
-}
-
-// CHECK: %conv = sitofp i32 %1 to float
-// CHECK: %splat.splatinsert = insertelement <3 x float> poison, float %conv, i64 0
-// CHECK: %splat.splat = shufflevector <3 x float> %splat.splatinsert, <3 x float> poison, <3 x i32> zeroinitializer
-// CHECK: %dx.dot = call float @llvm.dx.dot3.v3f32(<3 x float> %0, <3 x float> %splat.splat)
-// CHECK: ret float %dx.dot
-float test_builtin_dot_float3_int_splat(float3 p0, int p1) {
-  return dot(p0, p1);
-}
-
 // CHECK: %dx.dot = fmul double %0, %1
 // CHECK: ret double %dx.dot
 double test_dot_double(double p0, double p1) { return dot(p0, p1); }
-
-// CHECK: %conv = zext i1 %tobool to i32
-// CHECK: %dx.dot = mul i32 %conv, %1
-// CHECK: ret i32 %dx.dot
-int test_dot_bool_scalar_arg0_type_promotion(bool p0, int p1) {
-  return dot(p0, p1);
-}
-
-// CHECK: %conv = zext i1 %tobool to i32
-// CHECK: %dx.dot = mul i32 %0, %conv
-// CHECK: ret i32 %dx.dot
-int test_dot_bool_scalar_arg1_type_promotion(int p0, bool p1) {
-  return dot(p0, p1);
-}

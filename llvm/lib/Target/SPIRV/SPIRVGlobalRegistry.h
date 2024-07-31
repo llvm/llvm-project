@@ -51,6 +51,10 @@ class SPIRVGlobalRegistry {
   // Maps Functions to their calls (in a form of the machine instruction,
   // OpFunctionCall) that happened before the definition is available
   DenseMap<const Function *, SmallPtrSet<MachineInstr *, 8>> ForwardCalls;
+  // map a Function to its original return type before the clone function was
+  // created during substitution of aggregate arguments
+  // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
+  DenseMap<Value *, Type *> MutatedAggRet;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -161,6 +165,16 @@ public:
   CallInst *findAssignPtrTypeInstr(const Value *Val) {
     auto It = AssignPtrTypeInstr.find(Val);
     return It == AssignPtrTypeInstr.end() ? nullptr : It->second;
+  }
+
+  // A registry of mutated values
+  // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`):
+  // - Add a record.
+  void addMutated(Value *Val, Type *Ty) { MutatedAggRet[Val] = Ty; }
+  // - Find a record.
+  Type *findMutated(const Value *Val) {
+    auto It = MutatedAggRet.find(Val);
+    return It == MutatedAggRet.end() ? nullptr : It->second;
   }
 
   // Deduced element types of untyped pointers and composites:
@@ -457,13 +471,11 @@ public:
   Register getOrCreateConstVector(APFloat Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
-  Register getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
-                                   SPIRVType *SpvType,
-                                   const SPIRVInstrInfo &TII);
+  Register getOrCreateConstIntArray(uint64_t Val, size_t Num, MachineInstr &I,
+                                    SPIRVType *SpvType,
+                                    const SPIRVInstrInfo &TII);
   Register getOrCreateConsIntVector(uint64_t Val, MachineIRBuilder &MIRBuilder,
                                     SPIRVType *SpvType, bool EmitIR = true);
-  Register getOrCreateConsIntArray(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                                   SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,

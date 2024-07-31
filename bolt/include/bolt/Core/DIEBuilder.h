@@ -135,13 +135,6 @@ private:
 
   /// Returns current state of the DIEBuilder
   State &getState() { return *BuilderState.get(); }
-  /// Resolve the reference in DIE, if target is not loaded into IR,
-  /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
-  /// RefValue.
-  DWARFDie resolveDIEReference(
-      const DWARFFormValue &RefValue,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry);
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -165,10 +158,9 @@ private:
       const DWARFFormValue &Val);
 
   /// Clone an attribute in reference format.
-  void cloneDieReferenceAttribute(
+  void cloneDieOffsetReferenceAttribute(
       DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      const DWARFFormValue &Val);
+      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.
   void cloneBlockAttribute(
