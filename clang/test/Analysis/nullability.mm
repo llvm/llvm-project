@@ -55,6 +55,7 @@ extern void __assert_fail(__const char *__assertion, __const char *__file,
 @property(readonly, nullable) void (^propReturnsNullableBlock)(void);
 @property(readonly, nullable) int *propReturnsNullable;
 @property(readonly) int *propReturnsUnspecified;
++ (nullable TestObject *)getNullableObject;
 @end
 
 TestObject * getUnspecifiedTestObject();
@@ -69,6 +70,7 @@ void takesNullable(Dummy *_Nullable);
 void takesNonnull(Dummy *_Nonnull);
 void takesUnspecified(Dummy *);
 void takesNonnullBlock(void (^ _Nonnull)(void));
+void takesNonnullObject(NSObject *_Nonnull);
 
 Dummy *_Nullable returnsNullable();
 Dummy *_Nonnull returnsNonnull();
@@ -142,6 +144,17 @@ void testArgumentTracking(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
   case 7: testMultiParamChecking(nullable, nullable, nonnull); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
   case 8: testMultiParamChecking(nullable, nullable, nullable); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
   case 9: testMultiParamChecking((Dummy *_Nonnull)0, nullable, nonnull); break;
+  }
+}
+
+void testArgumentTrackingDirectly(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
+  switch(getRandom()) {
+  case 1: testMultiParamChecking(nonnull, nullable, nonnull); break;
+  case 2: testMultiParamChecking(nonnull, nonnull, nonnull); break;
+  case 3: testMultiParamChecking(nonnull, nullable, nullable); break; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 3rd parameter}}
+  case 4: testMultiParamChecking(nullable, nullable, nonnull); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 5: testMultiParamChecking(nullable, nullable, nullable); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 6: testMultiParamChecking((Dummy *_Nonnull)0, nullable, nonnull); break;
   }
 }
 
@@ -244,6 +257,12 @@ void testObjCPropertyReadNullability() {
   case 8:
     [o takesNonnullBlock:o.propReturnsNullableBlock]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
+  case 9:
+    [o takesNonnull:getNullableTestObject().propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 10:
+    [o takesNonnull:[TestObject getNullableObject].propReturnsNonnull]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
   }
 }
 
@@ -262,6 +281,17 @@ Dummy * _Nonnull testIndirectCastNullableToNonnull() {
 Dummy * _Nonnull testDirectCastNilToNonnull() {
   takesNonnull((Dummy * _Nonnull)0);  // no-warning
   return (Dummy * _Nonnull)0;         // no-warning
+}
+
+void testImplicitCastNilToNonnull() {
+  id obj = nil;
+  takesNonnullObject(obj); // expected-warning {{nil passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testImplicitCastNullableArgToNonnull(TestObject *_Nullable obj) {
+  if (!obj) {
+    takesNonnullObject(obj); // expected-warning {{nil passed to a callee that requires a non-null 1st parameter}}
+  }
 }
 
 void testIndirectCastNilToNonnullAndPass() {

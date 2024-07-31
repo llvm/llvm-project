@@ -72,7 +72,7 @@ void pr6013_6035_test(void *p) {
   (void) foo;
 }
 
-// PR12511 and radar://11215362 - Test that we support SymCastExpr, which represents symbolic int to float cast.
+// PR12511 - Test that we support SymCastExpr, which represents symbolic int to float cast.
 char ttt(int intSeconds) {
   double seconds = intSeconds;
   if (seconds)
@@ -129,7 +129,7 @@ void locAsIntegerCasts(void *p) {
 }
 
 void multiDimensionalArrayPointerCasts(void) {
-  static int x[10][10];
+  static int x[10][10]; // expected-note2{{Array at the right-hand side of subtraction}}
   int *y1 = &(x[3][5]);
   char *z = ((char *) y1) + 2;
   int *y2 = (int *)(z - 2);
@@ -138,7 +138,9 @@ void multiDimensionalArrayPointerCasts(void) {
   clang_analyzer_eval(y1 == y2); // expected-warning{{TRUE}}
 
   // FIXME: should be FALSE (i.e. equal pointers).
+  // FIXME: pointer subtraction warning might be incorrect
   clang_analyzer_eval(y1 - y2); // expected-warning{{UNKNOWN}}
+  // expected-warning@-1{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   // FIXME: should be TRUE (i.e. same symbol).
   clang_analyzer_eval(*y1 == *y2); // expected-warning{{UNKNOWN}}
 
@@ -147,7 +149,9 @@ void multiDimensionalArrayPointerCasts(void) {
   clang_analyzer_eval(y1 == y3); // expected-warning{{TRUE}}
 
   // FIXME: should be FALSE (i.e. equal pointers).
+  // FIXME: pointer subtraction warning might be incorrect
   clang_analyzer_eval(y1 - y3); // expected-warning{{UNKNOWN}}
+  // expected-warning@-1{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   // FIXME: should be TRUE (i.e. same symbol).
   clang_analyzer_eval(*y1 == *y3); // expected-warning{{UNKNOWN}}
 
@@ -227,7 +231,7 @@ void no_crash_on_symsym_cast_to_long(void) {
   globalA == 3;
   (long)globalA << 48;
   #ifdef BIT32
-  // expected-warning@-2{{The result of the left shift is undefined due to shifting by '48', which is greater or equal to the width of type 'long'}}
+  // expected-warning@-2{{Left shift by '48' overflows the capacity of 'long'}}
   #else
   // expected-no-diagnostics
   #endif

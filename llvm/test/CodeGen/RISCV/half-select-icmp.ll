@@ -510,30 +510,26 @@ define half @select_icmp_slt_one(i32 signext %a) {
 define half @select_icmp_sgt_zero(i32 signext %a) {
 ; CHECK-LABEL: select_icmp_sgt_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sgtz a0, a0
-; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    slti a0, a0, 1
 ; CHECK-NEXT:    fcvt.h.w fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: select_icmp_sgt_zero:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    sgtz a0, a0
-; CHECKIZHINX-NEXT:    xori a0, a0, 1
+; CHECKIZHINX-NEXT:    slti a0, a0, 1
 ; CHECKIZHINX-NEXT:    fcvt.h.w a0, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: select_icmp_sgt_zero:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    sgtz a0, a0
-; CHECKIZFHMIN-NEXT:    xori a0, a0, 1
+; CHECKIZFHMIN-NEXT:    slti a0, a0, 1
 ; CHECKIZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: select_icmp_sgt_zero:
 ; CHECKIZHINXMIN:       # %bb.0:
-; CHECKIZHINXMIN-NEXT:    sgtz a0, a0
-; CHECKIZHINXMIN-NEXT:    xori a0, a0, 1
+; CHECKIZHINXMIN-NEXT:    slti a0, a0, 1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    ret
@@ -541,4 +537,3 @@ define half @select_icmp_sgt_zero(i32 signext %a) {
   %2 = select i1 %1, half 0.000000e+00, half 1.000000e+00
   ret half %2
 }
-

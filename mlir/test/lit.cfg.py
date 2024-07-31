@@ -18,7 +18,14 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "MLIR"
 
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+# We prefer the lit internal shell which provides a better user experience on failures
+# unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+  use_lit_shell = not lit.util.pythonize_bool(lit_shell_env)
+
+config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -42,15 +49,15 @@ config.test_exec_root = os.path.join(config.mlir_obj_root, "test")
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 config.substitutions.append(("%host_cc", config.host_cc))
 
 
-# Searches for a runtime library with the given name and returns a tool
-# substitution of the same name and the found path.
+# Searches for a runtime library with the given name and returns the found path.
 # Correctly handles the platforms shared library directory and naming conventions.
-def add_runtime(name):
+def find_runtime(name):
     path = ""
     for prefix in ["", "lib"]:
         path = os.path.join(
@@ -58,7 +65,13 @@ def add_runtime(name):
         )
         if os.path.isfile(path):
             break
-    return ToolSubst(f"%{name}", path)
+    return path
+
+
+# Searches for a runtime library with the given name and returns a tool
+# substitution of the same name and the found path.
+def add_runtime(name):
+    return ToolSubst(f"%{name}", find_runtime(name))
 
 
 llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
@@ -88,16 +101,21 @@ tools = [
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
     "mlir-capi-ir-test",
+    "mlir-capi-irdl-test",
     "mlir-capi-llvm-test",
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
     "mlir-capi-quant-test",
+    "mlir-capi-rewrite-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-transform-interpreter-test",
+    "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
     add_runtime("mlir_async_runtime"),
+    add_runtime("mlir_float16_utils"),
     "mlir-linalg-ods-yaml-gen",
     "mlir-reduce",
     "mlir-pdll",
@@ -118,6 +136,21 @@ if config.enable_rocm_runner:
 if config.enable_cuda_runner:
     tools.extend([add_runtime("mlir_cuda_runtime")])
 
+if config.enable_sycl_runner:
+    tools.extend([add_runtime("mlir_sycl_runtime")])
+
+if config.mlir_run_arm_sve_tests or config.mlir_run_arm_sme_tests:
+    tools.extend([add_runtime("mlir_arm_runner_utils")])
+
+if config.mlir_run_arm_sme_tests:
+    config.substitutions.append(
+        (
+            "%arm_sme_abi_shlib",
+            # Use passed Arm SME ABI routines, if not present default to stubs.
+            config.arm_sme_abi_routines_shlib or find_runtime("mlir_arm_sme_abi_stubs"),
+        )
+    )
+
 # The following tools are optional
 tools.extend(
     [
@@ -128,8 +161,10 @@ tools.extend(
         ToolSubst("toyc-ch5", unresolved="ignore"),
         ToolSubst("toyc-ch6", unresolved="ignore"),
         ToolSubst("toyc-ch7", unresolved="ignore"),
-        ToolSubst('transform-opt-ch2', unresolved='ignore'),
-        ToolSubst('transform-opt-ch3', unresolved='ignore'),
+        ToolSubst("transform-opt-ch2", unresolved="ignore"),
+        ToolSubst("transform-opt-ch3", unresolved="ignore"),
+        ToolSubst("transform-opt-ch4", unresolved="ignore"),
+        ToolSubst("mlir-transform-opt", unresolved="ignore"),
         ToolSubst("%mlir_lib_dir", config.mlir_lib_dir, unresolved="ignore"),
         ToolSubst("%mlir_src_dir", config.mlir_src_root, unresolved="ignore"),
     ]
@@ -172,6 +207,7 @@ config.environment["FILECHECK_OPTS"] = "-enable-var-scope --allow-unused-prefixe
 # binaries come from the build tree. This should be unified to the build tree
 # by copying/linking sources to build.
 if config.enable_bindings_python:
+    config.environment["PYTHONPATH"] = os.getenv("MLIR_LIT_PYTHONPATH", "")
     llvm_config.with_environment(
         "PYTHONPATH",
         [
@@ -210,3 +246,12 @@ def have_host_jit_feature_support(feature_name):
 
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
+
+if config.run_nvptx_tests:
+    config.available_features.add("host-supports-nvptx")
+
+if config.run_rocm_tests:
+    config.available_features.add("host-supports-amdgpu")
+
+if config.arm_emulator_executable:
+    config.available_features.add("arm-emulator")

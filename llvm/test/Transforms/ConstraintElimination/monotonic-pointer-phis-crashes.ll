@@ -66,7 +66,7 @@ define void @test_cond_multi_use_with_one_use_simplified_before_adding_ne_fact(p
 ; CHECK-NEXT:    br i1 [[C_1]], label [[IF:%.*]], label [[LOOP_HEADER]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ne ptr [[B]], null
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_0]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], true
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[EXIT]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @clobber()

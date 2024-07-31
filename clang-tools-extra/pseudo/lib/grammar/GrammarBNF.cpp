@@ -33,11 +33,11 @@ public:
 
     assert(llvm::all_of(Specs,
                         [](const RuleSpec &R) {
-                          if (R.Target.endswith(OptSuffix))
+                          if (R.Target.ends_with(OptSuffix))
                             return false;
                           return llvm::all_of(
                               R.Sequence, [](const RuleSpec::Element &E) {
-                                return !E.Symbol.endswith(OptSuffix);
+                                return !E.Symbol.ends_with(OptSuffix);
                               });
                         }) &&
            "Optional symbols should be eliminated!");
@@ -225,7 +225,7 @@ private:
       Chunk = Chunk.trim();
       if (Chunk.empty())
         continue; // skip empty
-      if (Chunk.startswith("[") && Chunk.endswith("]")) {
+      if (Chunk.starts_with("[") && Chunk.ends_with("]")) {
         if (Out.Sequence.empty())
           continue;
 
@@ -241,7 +241,7 @@ private:
   bool parseAttributes(
       llvm::StringRef Content,
       std::vector<std::pair<llvm::StringRef, llvm::StringRef>> &Out) {
-    assert(Content.startswith("[") && Content.endswith("]"));
+    assert(Content.starts_with("[") && Content.ends_with("]"));
     auto KV = Content.drop_front().drop_back().split('=');
     Out.push_back({KV.first, KV.second.trim()});
 
@@ -299,7 +299,7 @@ private:
     if (Elements.empty())
       return CB();
     auto Front = Elements.front();
-    if (!Front.Symbol.endswith(OptSuffix)) {
+    if (!Front.Symbol.ends_with(OptSuffix)) {
       Result.push_back(std::move(Front));
       eliminateOptionalTail(Elements.drop_front(1), Result, CB);
       Result.pop_back();

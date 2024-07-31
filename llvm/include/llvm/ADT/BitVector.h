@@ -42,7 +42,7 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
 
 public:
   using iterator_category = std::forward_iterator_tag;
-  using difference_type   = void;
+  using difference_type   = std::ptrdiff_t;
   using value_type        = int;
   using pointer           = value_type*;
   using reference         = value_type&;
@@ -688,7 +688,7 @@ public:
   }
   bool isInvalid() const { return Size == (unsigned)-1; }
 
-  ArrayRef<BitWord> getData() const { return {&Bits[0], Bits.size()}; }
+  ArrayRef<BitWord> getData() const { return {Bits.data(), Bits.size()}; }
 
   //===--------------------------------------------------------------------===//
   // Portable bit mask operations.

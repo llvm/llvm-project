@@ -2,6 +2,7 @@
 
 %struct.S = type { i32, [2 x i32], i32 }
 %struct.S2 = type { i32, [4 x i32], [4 x i32] }
+@G = global [10 x i32] zeroinitializer, align 4
 
 ; CHECK: Function: t1
 ; CHECK: NoAlias: i32* %gep1, i32* %gep2
@@ -239,8 +240,38 @@ define void @benign_overflow(ptr %p, i64 %o) {
   ret void
 }
 
-declare void @llvm.assume(i1)
+; CHECK-LABEL: pr63266
+; CHECK: MayAlias:	i8* %gep2, i8* %offset16
+define void @pr63266(i1 %c, ptr %base) {
+entry:
+  %offset16 = getelementptr inbounds i8, ptr %base, i64 16
+  %gep1 = getelementptr i8, ptr %base, i64 -9223372036854775792
+  br i1 %c, label %if, label %join
 
+if:
+  br label %join
+
+join:
+  %phi = phi i64 [ -9223372036854775808, %if ], [ 0, %entry ]
+  %gep2 = getelementptr i8, ptr %gep1, i64 %phi
+  store i8 0, ptr %gep2
+  load i8, ptr %offset16
+  ret void
+}
+
+
+; CHECK-LABEL: Function: select_in_gep
+; CHECK: NoAlias: i32* %arrayidx, i32* getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 3)
+define i32 @select_in_gep(i1 %c)  {
+entry:
+  %select_ = select i1 %c, i64 2, i64 1
+  %arrayidx = getelementptr inbounds [10 x i32], ptr @G, i64 0, i64 %select_
+  store i32 42, ptr %arrayidx, align 4
+  %load_ = load i32, ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 3), align 4
+  ret i32 %load_
+}
+
+declare void @llvm.assume(i1)
 
 !0 = !{ i32 0, i32 2 }
 !1 = !{ i32 0, i32 1 }

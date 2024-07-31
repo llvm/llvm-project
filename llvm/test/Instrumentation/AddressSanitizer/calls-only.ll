@@ -29,8 +29,8 @@ entry:
 ; OUTLINE:  call void @__asan_set_shadow_f2(i64 %45, i64 3)
 ; OUTLINE:  call void @__asan_set_shadow_07(i64 %46, i64 1)
 ; OUTLINE:  call void @__asan_set_shadow_f3(i64 %47, i64 3)
-; OUTLINE:  call void @__asan_set_shadow_f5(i64 %134, i64 32)
-; OUTLINE:  call void @__asan_set_shadow_00(i64 %140, i64 24)
+; OUTLINE:  call void @__asan_stack_free_2(i64 %7, i64 192)
+; OUTLINE:  call void @__asan_set_shadow_00(i64 %135, i64 24)
 ; INLINE:  store i64 -1007977276409515535, ptr %34, align 1
 ; INLINE:  store i64 -940423264817843709, ptr %36, align 1
 ; INLINE:  store i64 -868083087686045178, ptr %38, align 1
@@ -51,5 +51,5 @@ entry:
 ; CHECK-NOT:  store i64 -723401728380766731, ptr %126, align 1
   ret void
 }
-attributes #0 = { noinline nounwind optnone sanitize_address ssp uwtable(sync) "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+crc,+crypto,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+zcm,+zcz" }
+attributes #0 = { noinline nounwind optnone sanitize_address ssp uwtable(sync) "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+crc,+crypto,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
 

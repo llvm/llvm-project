@@ -1,13 +1,11 @@
 // RUN: %clang_cc1 -x objective-c++ -fblocks -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -std=c++1z -emit-llvm -o - %s | FileCheck %s
 
-// rdar://31385153
 // Shouldn't crash!
 
-// CHECK: %[[CLASS_ANON:.*]] = type { %[[STRUCT_COPYABLE:.*]] }
-// CHECK: %[[STRUCT_COPYABLE]] = type { i8 }
-// CHECK: %[[CLASS_ANON_0:.*]] = type { %[[STRUCT_COPYABLE]] }
-// CHECK: %[[CLASS_ANON_1:.*]] = type { %[[STRUCT_COPYABLE]] }
-// CHECK: %[[CLASS_ANON_2:.*]] = type { %[[STRUCT_COPYABLE]] }
+// CHECK: %[[CLASS_ANON:.*]] = type { i8 }
+// CHECK: %[[CLASS_ANON_0:.*]] = type { i8 }
+// CHECK: %[[CLASS_ANON_1:.*]] = type { i8 }
+// CHECK: %[[CLASS_ANON_2:.*]] = type { i8 }
 
 // CHECK: @[[BLOCK_DESC0:.*]] = internal constant { i64, i64, ptr, ptr, ptr, ptr } { i64 0, i64 33, ptr @[[COPY_HELPER0:.*__copy_helper_block_.*]], ptr @__destroy_helper_block{{.*}}, {{.*}}}, align 8
 // CHECK: @[[BLOCK_DESC1:.*]] = internal constant { i64, i64, ptr, ptr, ptr, ptr } { i64 0, i64 33, ptr @[[COPY_HELPER1:.*__copy_helper_block_.*]], ptr @__destroy_helper_block{{.*}}, {{.*}}}, align 8

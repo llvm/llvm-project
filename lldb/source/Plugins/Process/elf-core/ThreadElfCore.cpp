@@ -29,11 +29,13 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "ProcessElfCore.h"
+#include "RegisterContextLinuxCore_x86_64.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
+#include "RegisterContextPOSIXCore_riscv64.h"
 #include "RegisterContextPOSIXCore_s390x.h"
 #include "RegisterContextPOSIXCore_x86_64.h"
 #include "ThreadElfCore.h"
@@ -71,6 +73,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
 
+  bool is_linux = false;
   if (concrete_frame_idx == 0) {
     if (m_thread_reg_ctx_sp)
       return m_thread_reg_ctx_sp;
@@ -123,6 +126,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     case llvm::Triple::Linux: {
+      is_linux = true;
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
         break;
@@ -165,7 +169,8 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
-        arch.GetMachine() != llvm::Triple::arm) {
+        arch.GetMachine() != llvm::Triple::arm &&
+        arch.GetMachine() != llvm::Triple::riscv64) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
       assert(false && "Architecture or OS not supported");
@@ -180,6 +185,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
           *this, std::make_unique<RegisterInfoPOSIX_arm>(arch), m_gpregset_data,
           m_notes);
+      break;
+    case llvm::Triple::riscv64:
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv64::Create(
+          *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::mipsel:
     case llvm::Triple::mips:
@@ -206,8 +215,13 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
-          *this, reg_interface, m_gpregset_data, m_notes);
+      if (is_linux) {
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86_64>(
+              *this, reg_interface, m_gpregset_data, m_notes);
+      } else {
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
+              *this, reg_interface, m_gpregset_data, m_notes);
+      }
       break;
     default:
       break;

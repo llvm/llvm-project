@@ -354,16 +354,20 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   %12 = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> %2)
   ; CHECK: "llvm.intr.vector.reduce.umin"(%{{.*}}) : (vector<8xi32>) -> i32
   %13 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> %2)
-  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{reassoc = false}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<8xf32>) -> f32
   %14 = call float @llvm.vector.reduce.fadd.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{reassoc = false}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<8xf32>) -> f32
   %15 = call float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{reassoc = true}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   %16 = call reassoc float @llvm.vector.reduce.fadd.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{reassoc = true}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   %17 = call reassoc float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
   ; CHECK:  "llvm.intr.vector.reduce.xor"(%{{.*}}) : (vector<8xi32>) -> i32
   %18 = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %2)
+  ; CHECK: llvm.intr.vector.reduce.fmaximum(%{{.*}}) : (vector<8xf32>) -> f32
+  %19 = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> %1)
+  ; CHECK: llvm.intr.vector.reduce.fminimum(%{{.*}}) : (vector<8xf32>) -> f32
+  %20 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %1)
   ret void
 }
 
@@ -436,6 +440,17 @@ define void @masked_expand_compress_intrinsics(ptr %0, <7 x i1> %1, <7 x float> 
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @annotate_intrinsics
+define void @annotate_intrinsics(ptr %var, ptr %ptr, i16 %int, ptr %annotation, ptr %fileName, i32 %line, ptr %args) {
+  ; CHECK: "llvm.intr.var.annotation"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> ()
+  call void @llvm.var.annotation.p0.p0(ptr %var, ptr %annotation, ptr %fileName, i32 %line, ptr %args)
+  ; CHECK: %{{.*}} = "llvm.intr.ptr.annotation"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+  %1 = call ptr @llvm.ptr.annotation.p0.p0(ptr %ptr, ptr %annotation, ptr %fileName, i32 %line, ptr %args)
+  ; CHECK: %{{.*}} = "llvm.intr.annotation"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (i16, !llvm.ptr, !llvm.ptr, i32) -> i16
+  %2 = call i16 @llvm.annotation.i16.p0(i16 %int, ptr %annotation, ptr %fileName, i32 %line)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @trap_intrinsics
 define void @trap_intrinsics() {
   ; CHECK: "llvm.intr.trap"() : () -> ()
@@ -450,7 +465,6 @@ define void @trap_intrinsics() {
 
 ; CHECK-LABEL:  llvm.func @memcpy_test
 define void @memcpy_test(i32 %0, ptr %1, ptr %2) {
-  ; CHECK: %[[CST:.+]] = llvm.mlir.constant(10 : i64) : i64
   ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   call void @llvm.memcpy.p0.p0.i32(ptr %1, ptr %2, i32 %0, i1 false)
   ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
@@ -583,13 +597,13 @@ define void @ushl_sat_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
 }
 
 ; CHECK-LABEL: llvm.func @va_intrinsics_test
-define void @va_intrinsics_test(ptr %0, ptr %1) {
+define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
 ; CHECK: llvm.intr.vastart %{{.*}}
-  call void @llvm.va_start(ptr %0)
+  call void @llvm.va_start.p0(ptr %0)
 ; CHECK: llvm.intr.vacopy %{{.*}} to %{{.*}}
-  call void @llvm.va_copy(ptr %1, ptr %0)
+  call void @llvm.va_copy.p0(ptr %1, ptr %0)
 ; CHECK: llvm.intr.vaend %{{.*}}
-  call void @llvm.va_end(ptr %0)
+  call void @llvm.va_end.p0(ptr %0)
   ret void
 }
 
@@ -627,10 +641,12 @@ define void @expect_with_probability(i16 %0) {
   ret void
 }
 
+@tls_var = dso_local thread_local global i32 0, align 4
+
 ; CHECK-LABEL: llvm.func @threadlocal_test
-define void @threadlocal_test(ptr %0) {
+define void @threadlocal_test() {
   ; CHECK: "llvm.intr.threadlocal.address"(%{{.*}}) : (!llvm.ptr) -> !llvm.ptr
-  %local = call ptr @llvm.threadlocal.address.p0(ptr %0)
+  %local = call ptr @llvm.threadlocal.address.p0(ptr @tls_var)
   ret void
 }
 
@@ -686,7 +702,7 @@ define void @coro_suspend(i32 %0, i1 %1, ptr %2) {
 ; CHECK-LABEL:  llvm.func @coro_end
 define void @coro_end(ptr %0, i1 %1) {
   ; CHECK:  llvm.intr.coro.end
-  call i1 @llvm.coro.end(ptr %0, i1 %1)
+  call i1 @llvm.coro.end(ptr %0, i1 %1, token none)
   ret void
 }
 
@@ -706,24 +722,35 @@ define void @coro_resume(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @coro_promise
+define void @coro_promise(ptr %0, i32 %1, i1 %2) {
+  ; CHECK: llvm.intr.coro.promise %{{.*}}, %{{.*}}, %{{.*}} : (!llvm.ptr, i32, i1) -> !llvm.ptr
+  %4 = call ptr @llvm.coro.promise(ptr %0, i32 %1, i1 %2)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @eh_typeid_for
 define void @eh_typeid_for(ptr %0) {
   ; CHECK: llvm.intr.eh.typeid.for %{{.*}} : (!llvm.ptr) -> i32
-  %2 = call i32 @llvm.eh.typeid.for(ptr %0)
+  %2 = call i32 @llvm.eh.typeid.for.p0(ptr %0)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @stack_save() {
 define void @stack_save() {
   ; CHECK: llvm.intr.stacksave : !llvm.ptr
-  %1 = call ptr @llvm.stacksave()
+  %1 = call ptr @llvm.stacksave.p0()
+  ; CHECK: llvm.intr.stacksave : !llvm.ptr<1>
+  %2 = call ptr addrspace(1) @llvm.stacksave.p1()
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @stack_restore
-define void @stack_restore(ptr %0) {
-  ; CHECK: llvm.intr.stackrestore %{{.*}}
-  call void @llvm.stackrestore(ptr %0)
+define void @stack_restore(ptr %0, ptr addrspace(1) %1) {
+  ; CHECK: llvm.intr.stackrestore %{{.*}} : !llvm.ptr
+  call void @llvm.stackrestore.p0(ptr %0)
+  ; CHECK: llvm.intr.stackrestore %{{.*}} : !llvm.ptr<1>
+  call void @llvm.stackrestore.p1(ptr addrspace(1) %1)
   ret void
 }
 
@@ -733,6 +760,38 @@ define void @lifetime(ptr %0) {
   call void @llvm.lifetime.start.p0(i64 16, ptr %0)
   ; CHECK: llvm.intr.lifetime.end 32, %{{.*}} : !llvm.ptr
   call void @llvm.lifetime.end.p0(i64 32, ptr %0)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @invariant
+define void @invariant(ptr %0) {
+  ; CHECK: %[[START:.*]] = llvm.intr.invariant.start 16, %{{.*}} : !llvm.ptr
+  %2 = call ptr @llvm.invariant.start.p0(i64 16, ptr %0)
+  ; CHECK: llvm.intr.invariant.end %[[START]], 32, %{{.*}} : !llvm.ptr
+  call void @llvm.invariant.end.p0(ptr %2, i64 32, ptr %0)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_insert
+define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
+  ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into !llvm.vec<? x 4 x  f32>
+  %3 = call <vscale x 4 x float>  @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> %0, <4 x float> %1, i64 4);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_extract
+define void @vector_extract(<vscale x 4 x float> %0) {
+  ; llvm.intr.vector.extract %{{.*}}[0] : vector<4xf32> from !llvm.vec<? x 4 x  f32>
+  %2 = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> %0, i64 0);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_deinterleave2
+define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<4xf64>) -> !llvm.struct<(vector<2xf64>, vector<2xf64>)>
+  %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (!llvm.vec<? x 8 x i32>) -> !llvm.struct<(vec<? x 4 x i32>, vec<? x 4 x i32>)>
+  %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
   ret void
 }
 
@@ -839,6 +898,30 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @ssa_copy
+define float @ssa_copy(float %0) {
+  ; CHECK: %{{.*}} = llvm.intr.ssa.copy %{{.*}} : f32
+  %2 = call float @llvm.ssa.copy.f32(float %0)
+  ret float %2
+}
+
+; CHECK-LABEL: experimental_constrained_fptrunc
+define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
+  %1 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearest maytrap : f64 to f32
+  %2 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} upward strict : f64 to f32
+  %3 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.upward", metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} downward ignore : f64 to f32
+  %4 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.downward", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearestaway ignore : f64 to f32
+  %5 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.tonearestaway", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearestaway ignore : vector<4xf64> to vector<4xf16>
+  %6 = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double> %v, metadata !"round.tonearestaway", metadata !"fpexcept.ignore")
+  ret void
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare float @llvm.fma.f32(float, float, float)
@@ -926,6 +1009,8 @@ declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.and.v8i32(<8 x i32>)
 declare float @llvm.vector.reduce.fmax.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fmin.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmaximum.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float>)
 declare i32 @llvm.vector.reduce.mul.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.smax.v8i32(<8 x i32>)
@@ -946,6 +1031,9 @@ declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, i32 immarg, <7 x i
 declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
 declare <7 x float> @llvm.masked.expandload.v7f32(ptr, <7 x i1>, <7 x float>)
 declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr, <7 x i1>)
+declare void @llvm.var.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
+declare ptr @llvm.ptr.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
+declare i16 @llvm.annotation.i16.p0(i16, ptr, ptr, i32)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()
 declare void @llvm.ubsantrap(i8 immarg)
@@ -990,15 +1078,18 @@ declare i64 @llvm.coro.align.i64()
 declare i32 @llvm.coro.align.i32()
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
-declare i32 @llvm.eh.typeid.for(ptr)
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_copy(ptr, ptr)
-declare void @llvm.va_end(ptr)
+declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
+declare i32 @llvm.eh.typeid.for.p0(ptr)
+declare ptr @llvm.stacksave.p0()
+declare ptr addrspace(1) @llvm.stacksave.p1()
+declare void @llvm.stackrestore.p0(ptr)
+declare void @llvm.stackrestore.p1(ptr addrspace(1))
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_copy.p0(ptr, ptr)
+declare void @llvm.va_end.p0(ptr)
 declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -1050,4 +1141,12 @@ declare <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr>, <8 x i1>, i32)
 declare <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64>, <8 x i1>, i32)
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 declare void @llvm.assume(i1)
+declare float @llvm.ssa.copy.f32(float returned)
+declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
+declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)

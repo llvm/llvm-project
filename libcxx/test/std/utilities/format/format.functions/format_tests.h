@@ -37,9 +37,9 @@ case #T[0]:                                                                     
   break;
 
 #if TEST_STD_VER > 20
-  constexpr std::string_view types = "aAbBcdeEfFgGopsxX?";
+  constexpr std::string_view types = "aAbBcdeEfFgGopPsxX?";
 #else
-  constexpr std::string_view types = "aAbBcdeEfFgGopsxX";
+  constexpr std::string_view types = "aAbBcdeEfFgGopPsxX";
 #endif
 
   for (auto type : types) {
@@ -61,6 +61,7 @@ case #T[0]:                                                                     
       CASE(G)
       CASE(o)
       CASE(p)
+      CASE(P)
       CASE(s)
       CASE(x)
       CASE(X)
@@ -74,6 +75,397 @@ case #T[0]:                                                                     
 #undef CASE
 
   return result;
+}
+
+template <class CharT, class TestFunction>
+void format_test_buffer_copy(TestFunction check) {
+  // *** copy ***
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+      SV("{}"),
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  // *** copy + push_back ***
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "X"),
+      SV("{}X"),
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  // ***  push_back + copy ***
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(
+      SV("X"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+      SV("X{}"),
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+}
+
+template <class CharT, class TestFunction>
+void format_test_buffer_full(TestFunction check) {
+  // *** fill ***
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"), SV("{:|<64}"), SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<128}"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<256}"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<512}"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<1024}"),
+        SV(""));
+
+  // *** fill + push_back ***
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<64}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<128}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<256}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<512}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<1024}X"),
+        SV(""));
+
+  // *** push_back + fill ***
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<64}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<128}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<256}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<512}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<1024}"),
+        SV(""));
 }
 
 // Using a const ref for world and universe so a string literal will be a character array.
@@ -130,13 +522,13 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check(SV("hello uni#####"), SV("hello {:#<8.3s}"), universe);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:-}"), world);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("hello {:-}"), world);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:#}"), world);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("hello {:#}"), world);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("hello {:0}"), world);
+  check_exception("The width option should not have a leading zero", SV("hello {:0}"), world);
 
   // *** width ***
   // Width 0 allowed, but not useful for string arguments.
@@ -145,39 +537,39 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
 #ifdef _LIBCPP_VERSION
   // This limit isn't specified in the Standard.
   static_assert(std::__format::__number_max == 2'147'483'647, "Update the assert and the test.");
-  check_exception("The numeric value of the format-spec is too large", SV("{:2147483648}"), world);
-  check_exception("The numeric value of the format-spec is too large", SV("{:5000000000}"), world);
-  check_exception("The numeric value of the format-spec is too large", SV("{:10000000000}"), world);
+  check_exception("The numeric value of the format specifier is too large", SV("{:2147483648}"), world);
+  check_exception("The numeric value of the format specifier is too large", SV("{:5000000000}"), world);
+  check_exception("The numeric value of the format specifier is too large", SV("{:10000000000}"), world);
 #endif
 
-  check_exception("A format-spec arg-id replacement shouldn't have a negative value", SV("hello {:{}}"), world, -1);
-  check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:{}}"), world,
-                  unsigned(-1));
-  check_exception("Argument index out of bounds", SV("hello {:{}}"), world);
+  check_exception("An argument index may not have a negative value", SV("hello {:{}}"), world, -1);
+  check_exception("The value of the argument index exceeds its maximum value", SV("hello {:{}}"), world, unsigned(-1));
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("hello {:{}}"), world);
   check_exception(
       "Replacement argument isn't a standard signed or unsigned integer type", SV("hello {:{}}"), world, universe);
   check_exception("Using manual argument numbering in automatic argument numbering mode", SV("hello {:{0}}"), world, 1);
   check_exception("Using automatic argument numbering in manual argument numbering mode", SV("hello {0:{}}"), world, 1);
   // Arg-id may not have leading zeros.
-  check_exception("Invalid arg-id", SV("hello {0:{01}}"), world, 1);
+  check_exception("The argument index is invalid", SV("hello {0:{01}}"), world, 1);
 
   // *** precision ***
 #ifdef _LIBCPP_VERSION
   // This limit isn't specified in the Standard.
   static_assert(std::__format::__number_max == 2'147'483'647, "Update the assert and the test.");
-  check_exception("The numeric value of the format-spec is too large", SV("{:.2147483648}"), world);
-  check_exception("The numeric value of the format-spec is too large", SV("{:.5000000000}"), world);
-  check_exception("The numeric value of the format-spec is too large", SV("{:.10000000000}"), world);
+  check_exception("The numeric value of the format specifier is too large", SV("{:.2147483648}"), world);
+  check_exception("The numeric value of the format specifier is too large", SV("{:.5000000000}"), world);
+  check_exception("The numeric value of the format specifier is too large", SV("{:.10000000000}"), world);
 #endif
 
   // Precision 0 allowed, but not useful for string arguments.
   check(SV("hello "), SV("hello {:.{}}"), world, 0);
   // Precision may have leading zeros. Secondly tests the value is still base 10.
   check(SV("hello 0123456789"), SV("hello {:.000010}"), STR("0123456789abcdef"));
-  check_exception("A format-spec arg-id replacement shouldn't have a negative value", SV("hello {:.{}}"), world, -1);
-  check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:.{}}"), world,
-                  ~0u);
-  check_exception("Argument index out of bounds", SV("hello {:.{}}"), world);
+  check_exception("An argument index may not have a negative value", SV("hello {:.{}}"), world, -1);
+  check_exception("The value of the argument index exceeds its maximum value", SV("hello {:.{}}"), world, ~0u);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("hello {:.{}}"), world);
   check_exception(
       "Replacement argument isn't a standard signed or unsigned integer type", SV("hello {:.{}}"), world, universe);
   check_exception("Using manual argument numbering in automatic argument numbering mode", SV("hello {:.{0}}"), world,
@@ -185,10 +577,10 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("Using automatic argument numbering in manual argument numbering mode", SV("hello {0:.{}}"), world,
                   1);
   // Arg-id may not have leading zeros.
-  check_exception("Invalid arg-id", SV("hello {0:.{01}}"), world, 1);
+  check_exception("The argument index is invalid", SV("hello {0:.{01}}"), world, 1);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:L}"), world);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("hello {:L}"), world);
 
   // *** type ***
 #if TEST_STD_VER > 20
@@ -197,7 +589,7 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   const char* valid_types = "s";
 #endif
   for (const auto& fmt : invalid_types<CharT>(valid_types))
-    check_exception("The format-spec type has a type not supported for a string argument", fmt, world);
+    check_exception("The type option contains an invalid value for a string formatting argument", fmt, world);
 }
 
 template <class CharT, class TestFunction>
@@ -341,37 +733,37 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '-false--'"), SV("answer is '{:-^8s}'"), false);
 
   // *** Sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: }"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:-}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:+}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{: }"), true);
 
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-s}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+s}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: s}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:-s}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:+s}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{: s}"), true);
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#}"), true);
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#s}"), true);
+  check_exception("The format specifier for a bool does not allow the alternate form option", SV("{:#}"), true);
+  check_exception("The format specifier for a bool does not allow the alternate form option", SV("{:#s}"), true);
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0}"), true);
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0s}"), true);
+  check_exception("The format specifier for a bool does not allow the zero-padding option", SV("{:0}"), true);
+  check_exception("The format specifier for a bool does not allow the zero-padding option", SV("{:0s}"), true);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), true);
 
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.s}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0s}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42s}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.s}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0s}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42s}"), true);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, true);
+    check_exception("The type option contains an invalid value for a bool formatting argument", fmt, true);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -449,16 +841,16 @@ void format_test_bool_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is 0X0000000000"), SV("answer is {:#012X}"), false);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), true);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, true);
+    check_exception("The type option contains an invalid value for a bool formatting argument", fmt, true);
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
@@ -582,16 +974,20 @@ void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exce
   check(SV("answer is +0X00000002A"), SV("answer is {:+#012X}"), I(42));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), I(0));
+
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}}"), I(0), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}}"), I(0), 1.0);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
-    check_exception("The format-spec type has a type not supported for an integer argument", fmt, 42);
+    check_exception("The type option contains an invalid value for an integer formatting argument", fmt, I(0));
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
@@ -609,20 +1005,26 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
 
   // *** Sign ***
   check(SV("answer is *"), SV("answer is {:c}"), I(42));
-  check_exception("A sign field isn't allowed in this format-spec", SV("answer is {:-c}"), I(42));
-  check_exception("A sign field isn't allowed in this format-spec", SV("answer is {:+c}"), I(42));
-  check_exception("A sign field isn't allowed in this format-spec", SV("answer is {: c}"), I(42));
+  check_exception("The format specifier for an integer does not allow the sign option", SV("answer is {:-c}"), I(42));
+  check_exception("The format specifier for an integer does not allow the sign option", SV("answer is {:+c}"), I(42));
+  check_exception("The format specifier for an integer does not allow the sign option", SV("answer is {: c}"), I(42));
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("answer is {:#c}"), I(42));
+  check_exception(
+      "The format specifier for an integer does not allow the alternate form option", SV("answer is {:#c}"), I(42));
 
   // *** zero-padding & width ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("answer is {:01c}"), I(42));
+  check_exception(
+      "The format specifier for an integer does not allow the zero-padding option", SV("answer is {:01c}"), I(42));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.c}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0c}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42c}"), I(0));
+
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}c}"), I(0), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}c}"), I(0), 1.0);
 
   // *** locale-specific form ***
   // Note it has no effect but it's allowed.
@@ -630,7 +1032,7 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
-    check_exception("The format-spec type has a type not supported for an integer argument", fmt, I(42));
+    check_exception("The type option contains an invalid value for an integer formatting argument", fmt, I(42));
 
   // *** Validate range ***
   // The code has some duplications to keep the if statement readable.
@@ -797,30 +1199,34 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '--*---'"), SV("answer is '{:-^6c}'"), CharT('*'));
 
   // *** Sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: }"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:-}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:+}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{: }"), CharT('*'));
 
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-c}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+c}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: c}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:-c}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:+c}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{: c}"), CharT('*'));
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#}"), CharT('*'));
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#c}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the alternate form option", SV("{:#}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the alternate form option", SV("{:#c}"), CharT('*'));
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0}"), CharT('*'));
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0c}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the zero-padding option", SV("{:0}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the zero-padding option", SV("{:0c}"), CharT('*'));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), CharT('*'));
 
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.c}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0c}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42c}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.c}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0c}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42c}"), CharT('*'));
 
   // *** locale-specific form ***
   // Note it has no effect but it's allowed.
@@ -834,7 +1240,7 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   const char* valid_types = "bBcdoxX";
 #endif
   for (const auto& fmt : invalid_types<CharT>(valid_types))
-    check_exception("The format-spec type has a type not supported for a char argument", fmt, CharT('*'));
+    check_exception("The type option contains an invalid value for a character formatting argument", fmt, CharT('*'));
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -892,9 +1298,9 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is +0X00000002A"), SV("answer is {:+#012X}"), CharT('*'));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.d}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0d}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42d}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.d}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0d}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42d}"), CharT('*'));
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -906,7 +1312,7 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
   const char* valid_types = "bBcdoxX";
 #endif
   for (const auto& fmt : invalid_types<CharT>(valid_types))
-    check_exception("The format-spec type has a type not supported for a char argument", fmt, '*');
+    check_exception("The type option contains an invalid value for a character formatting argument", fmt, CharT('*'));
 }
 
 template <class F, class CharT, class TestFunction>
@@ -2524,7 +2930,7 @@ void format_test_floating_point(TestFunction check, ExceptionTest check_exceptio
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("aAeEfFgG"))
-    check_exception("The format-spec type has a type not supported for a floating-point argument", fmt, F(1));
+    check_exception("The type option contains an invalid value for a floating-point formatting argument", fmt, F(1));
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -2547,31 +2953,44 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '0x0:::'"), SV("answer is '{::<6}'"), P(nullptr));
   check(SV("answer is ':0x0::'"), SV("answer is '{::^6}'"), P(nullptr));
 
+  // Test whether zero padding is ignored
+  check(SV("answer is ':::0x0'"), SV("answer is '{::>06}'"), P(nullptr));
+  check(SV("answer is '0x0:::'"), SV("answer is '{::<06}'"), P(nullptr));
+  check(SV("answer is ':0x0::'"), SV("answer is '{::^06}'"), P(nullptr));
+
   // *** Sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), P(nullptr));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), P(nullptr));
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), P(nullptr));
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), P(nullptr));
+  check(SV("answer is '0x0000'"), SV("answer is '{:06}'"), P(nullptr));
+  check(SV("answer is '0x0000'"), SV("answer is '{:06p}'"), P(nullptr));
+  check(SV("answer is '0X0000'"), SV("answer is '{:06P}'"), P(nullptr));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), nullptr);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), nullptr);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), nullptr);
+
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}}"), nullptr);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}}"), nullptr, true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.{}}"), nullptr, 1.0);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), P(nullptr));
 
   // *** type ***
-  for (const auto& fmt : invalid_types<CharT>("p"))
-    check_exception("The format-spec type has a type not supported for a pointer argument", fmt, P(nullptr));
+  for (const auto& fmt : invalid_types<CharT>("pP"))
+    check_exception("The type option contains an invalid value for a pointer formatting argument", fmt, P(nullptr));
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_test_handle(TestFunction check, ExceptionTest check_exception) {
-  // *** Valid permuatations ***
+  // *** Valid permutations ***
   check(SV("answer is '0xaaaa'"), SV("answer is '{}'"), status::foo);
   check(SV("answer is '0xaaaa'"), SV("answer is '{:x}'"), status::foo);
   check(SV("answer is '0XAAAA'"), SV("answer is '{:X}'"), status::foo);
@@ -2594,7 +3013,7 @@ void format_test_handle(TestFunction check, ExceptionTest check_exception) {
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("xXs"))
-    check_exception("The format-spec type has a type not supported for a status argument", fmt, status::foo);
+    check_exception("The type option contains an invalid value for a status formatting argument", fmt, status::foo);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -2668,7 +3087,6 @@ void format_test_buffer_optimizations(TestFunction check) {
 template <class CharT, execution_modus modus, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
-
   check(SV("{"), SV("{{"));
   check(SV("}"), SV("}}"));
   check(SV("{:^}"), SV("{{:^}}"));
@@ -2719,18 +3137,29 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
       9,
       0);
 
-  // ** Test invalid format strings ***
+  // *** Test buffer boundaries format strings ***
+  if constexpr (modus == execution_modus::full) {
+    format_test_buffer_copy<CharT>(check);
+    format_test_buffer_full<CharT>(check);
+  }
+
+  // *** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("{:"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);
+
+  check_exception("The argument index should end with a ':' or a '}'", SV("{0"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("{0:"));
+  check_exception("The replacement field misses a terminating '}'", SV("{0:"), 42);
 
   check_exception("The format string contains an invalid escape sequence", SV("}"));
   check_exception("The format string contains an invalid escape sequence", SV("{:}-}"), 42);
 
   check_exception("The format string contains an invalid escape sequence", SV("} "));
-  check_exception("The arg-id of the format-spec starts with an invalid character", SV("{-"), 42);
-  check_exception("Argument index out of bounds", SV("hello {}"));
-  check_exception("Argument index out of bounds", SV("hello {0}"));
-  check_exception("Argument index out of bounds", SV("hello {1}"), 42);
+  check_exception("The argument index starts with an invalid character", SV("{-"), 42);
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("hello {}"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("hello {0}"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("hello {1}"), 42);
 
   // *** Test char format argument ***
   // The `char` to `wchar_t` formatting is tested separately.
@@ -2778,7 +3207,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     format_test_bool<CharT>(check, check_exception);
     format_test_bool_as_integer<CharT>(check, check_exception);
   }
-
   // *** Test signed integral format argument ***
   check(SV("hello 42"), SV("hello {}"), static_cast<signed char>(42));
   check(SV("hello 42"), SV("hello {}"), static_cast<short>(42));
@@ -2788,6 +3216,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #ifndef TEST_HAS_NO_INT128
   check(SV("hello 42"), SV("hello {}"), static_cast<__int128_t>(42));
 #endif
+
   if constexpr (modus == execution_modus::full)
     format_test_signed_integer<CharT>(check, check_exception);
 
@@ -2810,7 +3239,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   if constexpr (modus == execution_modus::full)
     format_test_floating_point<CharT>(check, check_exception);
 
-  // *** Test pointer formater argument ***
+  // *** Test pointer formatter argument ***
   check(SV("hello 0x0"), SV("hello {}"), nullptr);
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<void*>(0x42));
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<const void*>(0x42));
@@ -2820,7 +3249,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test handle formatter argument ***
   format_test_handle<CharT>(check, check_exception);
 
-  // *** Test the interal buffer optimizations ***
+  // *** Test the internal buffer optimizations ***
   if constexpr (modus == execution_modus::full)
     format_test_buffer_optimizations<CharT>(check);
 }

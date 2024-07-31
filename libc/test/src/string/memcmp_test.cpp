@@ -7,39 +7,47 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
 #include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcMemcmpTest, CmpZeroByte) {
   const char *lhs = "ab";
   const char *rhs = "yz";
-  EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(lhs, rhs, 0), 0);
 }
 
 TEST(LlvmLibcMemcmpTest, LhsRhsAreTheSame) {
   const char *lhs = "ab";
   const char *rhs = "ab";
-  EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 2), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcMemcmpTest, LhsBeforeRhsLexically) {
   const char *lhs = "ab";
   const char *rhs = "az";
-  EXPECT_LT(__llvm_libc::memcmp(lhs, rhs, 2), 0);
+  EXPECT_LT(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcMemcmpTest, LhsAfterRhsLexically) {
   const char *lhs = "az";
   const char *rhs = "ab";
-  EXPECT_GT(__llvm_libc::memcmp(lhs, rhs, 2), 0);
+  EXPECT_GT(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
+}
+
+TEST(LlvmLibcMemcmpTest, Issue77080) {
+  // https://github.com/llvm/llvm-project/issues/77080
+  constexpr char lhs[35] = "1.069cd68bbe76eb2143a3284d27ebe220";
+  constexpr char rhs[35] = "1.0500185b5d966a544e2d0fa40701b0f3";
+  ASSERT_GE(LIBC_NAMESPACE::memcmp(lhs, rhs, 34), 1);
 }
 
 // Adapt CheckMemcmp signature to memcmp.
 static inline int Adaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
-  return __llvm_libc::memcmp(p1.begin(), p2.begin(), size);
+  return LIBC_NAMESPACE::memcmp(p1.begin(), p2.begin(), size);
 }
 
 TEST(LlvmLibcMemcmpTest, SizeSweep) {
@@ -57,4 +65,4 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

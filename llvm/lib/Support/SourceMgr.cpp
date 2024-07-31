@@ -117,7 +117,7 @@ unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
   return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
 }
 
-/// Look up a given \p Ptr in in the buffer, determining which line it came
+/// Look up a given \p Ptr in the buffer, determining which line it came
 /// from.
 unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
   size_t Sz = Buffer->getBufferSize();
@@ -482,7 +482,7 @@ static void printSourceLine(raw_ostream &S, StringRef LineContents) {
 static bool isNonASCII(char c) { return c & 0x80; }
 
 void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
-                         bool ShowKindLabel) const {
+                         bool ShowKindLabel, bool ShowLocation) const {
   ColorMode Mode = ShowColors ? ColorMode::Auto : ColorMode::Disable;
 
   {
@@ -491,7 +491,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
     if (ProgName && ProgName[0])
       S << ProgName << ": ";
 
-    if (!Filename.empty()) {
+    if (ShowLocation && !Filename.empty()) {
       if (Filename == "-")
         S << "<stdin>";
       else

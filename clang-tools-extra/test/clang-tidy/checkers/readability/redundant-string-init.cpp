@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-redundant-string-init %t \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: readability-redundant-string-init.StringNames, \
-// RUN:               value: '::std::basic_string;::std::basic_string_view;our::TestString'}] \
+// RUN:             {readability-redundant-string-init.StringNames: \
+// RUN:                '::std::basic_string;::std::basic_string_view;our::TestString'} \
 // RUN:             }"
 
 namespace std {

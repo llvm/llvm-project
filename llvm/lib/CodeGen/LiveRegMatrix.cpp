@@ -38,7 +38,7 @@ STATISTIC(NumUnassigned , "Number of registers unassigned");
 char LiveRegMatrix::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveRegMatrix, "liveregmatrix",
                       "Live Register Matrix", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_END(LiveRegMatrix, "liveregmatrix",
                     "Live Register Matrix", false, false)
@@ -47,14 +47,14 @@ LiveRegMatrix::LiveRegMatrix() : MachineFunctionPass(ID) {}
 
 void LiveRegMatrix::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequiredTransitive<LiveIntervals>();
+  AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.addRequiredTransitive<VirtRegMap>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool LiveRegMatrix::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   VRM = &getAnalysis<VirtRegMap>();
 
   unsigned NumRegUnits = TRI->getNumRegUnits();
@@ -93,8 +93,8 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
       }
     }
   } else {
-    for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      if (Func(*Units, VRegInterval))
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      if (Func(Unit, VRegInterval))
         return true;
     }
   }
@@ -136,8 +136,8 @@ void LiveRegMatrix::unassign(const LiveInterval &VirtReg) {
 }
 
 bool LiveRegMatrix::isPhysRegUsed(MCRegister PhysReg) const {
-  for (MCRegUnitIterator Unit(PhysReg, TRI); Unit.isValid(); ++Unit) {
-    if (!Matrix[*Unit].empty())
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    if (!Matrix[Unit].empty())
       return true;
   }
   return false;
@@ -216,7 +216,7 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
   LR.addSegment(Seg);
 
   // Check for interference with that segment
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     // LR is stack-allocated. LiveRegMatrix caches queries by a key that
     // includes the address of the live range. If (for the same reg unit) this
     // checkInterference overload is called twice, without any other query()
@@ -230,7 +230,7 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
     // subtle bugs due to query identity. Avoiding caching, for example, would
     // greatly simplify things.
     LiveIntervalUnion::Query Q;
-    Q.reset(UserTag, LR, Matrix[*Units]);
+    Q.reset(UserTag, LR, Matrix[Unit]);
     if (Q.checkInterference())
       return true;
   }
@@ -239,8 +239,8 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
 
 Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
   const LiveInterval *VRegInterval = nullptr;
-  for (MCRegUnitIterator Unit(PhysReg, TRI); Unit.isValid(); ++Unit) {
-    if ((VRegInterval = Matrix[*Unit].getOneVReg()))
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    if ((VRegInterval = Matrix[Unit].getOneVReg()))
       return VRegInterval->reg();
   }
 

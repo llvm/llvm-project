@@ -17,9 +17,9 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,6 +35,7 @@ extern cl::opt<bool> DisableGISelLegalityCheck;
 class MachineFunction;
 class raw_ostream;
 class LegalizerHelper;
+class LostDebugLocObserver;
 class MachineInstr;
 class MachineRegisterInfo;
 class MCInstrInfo;
@@ -222,6 +223,11 @@ struct TypePairAndMemDesc {
            MemTy.getSizeInBits() == Other.MemTy.getSizeInBits();
   }
 };
+
+/// True iff P is false.
+template <typename Predicate> Predicate predNot(Predicate P) {
+  return [=](const LegalityQuery &Query) { return !P(Query); };
+}
 
 /// True iff P0 and P1 are true.
 template<typename Predicate>
@@ -709,7 +715,7 @@ public:
     using namespace LegalityPredicates;
     return actionForCartesianProduct(LegalizeAction::Lower, Types0, Types1);
   }
-  /// The instruction is lowered when when type indexes 0, 1, and 2 are all in
+  /// The instruction is lowered when type indexes 0, 1, and 2 are all in
   /// their respective lists.
   LegalizeRuleSet &lowerForCartesianProduct(std::initializer_list<LLT> Types0,
                                             std::initializer_list<LLT> Types1,
@@ -857,7 +863,7 @@ public:
                             std::initializer_list<LLT> Types1) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
   }
-  /// The instruction is custom when when type indexes 0, 1, and 2 are all in
+  /// The instruction is custom when type indexes 0, 1, and 2 are all in
   /// their respective lists.
   LegalizeRuleSet &
   customForCartesianProduct(std::initializer_list<LLT> Types0,
@@ -873,7 +879,8 @@ public:
   }
 
   /// Widen the scalar to the next power of two that is at least MinSize.
-  /// No effect if the type is not a scalar or is a power of two.
+  /// No effect if the type is a power of two, except if the type is smaller
+  /// than MinSize, or if the type is a vector type.
   LegalizeRuleSet &widenScalarToNextPow2(unsigned TypeIdx,
                                          unsigned MinSize = 0) {
     using namespace LegalityPredicates;
@@ -899,6 +906,18 @@ public:
     using namespace LegalityPredicates;
     return actionIf(
         LegalizeAction::WidenScalar, scalarOrEltSizeNotPow2(typeIdx(TypeIdx)),
+        LegalizeMutations::widenScalarOrEltToNextPow2(TypeIdx, MinSize));
+  }
+
+  /// Widen the scalar or vector element type to the next power of two that is
+  /// at least MinSize.  No effect if the scalar size is a power of two.
+  LegalizeRuleSet &widenScalarOrEltToNextPow2OrMinSize(unsigned TypeIdx,
+                                                       unsigned MinSize = 0) {
+    using namespace LegalityPredicates;
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        any(scalarOrEltNarrowerThan(TypeIdx, MinSize),
+            scalarOrEltSizeNotPow2(typeIdx(TypeIdx))),
         LegalizeMutations::widenScalarOrEltToNextPow2(TypeIdx, MinSize));
   }
 
@@ -939,6 +958,28 @@ public:
                     all(Predicate, scalarOrEltNarrowerThan(
                                        TypeIdx, Ty.getScalarSizeInBits())),
                     changeElementTo(typeIdx(TypeIdx), Ty));
+  }
+
+  /// Ensure the vector size is at least as wide as VectorSize by promoting the
+  /// element.
+  LegalizeRuleSet &widenVectorEltsToVectorMinSize(unsigned TypeIdx,
+                                                  unsigned VectorSize) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        [=](const LegalityQuery &Query) {
+          const LLT VecTy = Query.Types[TypeIdx];
+          return VecTy.isVector() && !VecTy.isScalable() &&
+                 VecTy.getSizeInBits() < VectorSize;
+        },
+        [=](const LegalityQuery &Query) {
+          const LLT VecTy = Query.Types[TypeIdx];
+          unsigned NumElts = VecTy.getNumElements();
+          unsigned MinSize = VectorSize / NumElts;
+          LLT NewTy = LLT::fixed_vector(NumElts, LLT::scalar(MinSize));
+          return std::make_pair(TypeIdx, NewTy);
+        });
   }
 
   /// Ensure the scalar is at least as wide as Ty.
@@ -1056,7 +1097,7 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT T = Query.Types[LargeTypeIdx];
-          if (T.isVector() && T.getElementType().isPointer())
+          if (T.isPointerVector())
             T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
           return std::make_pair(TypeIdx, T);
         });
@@ -1266,8 +1307,8 @@ public:
                        const MachineRegisterInfo &MRI) const;
 
   /// Called for instructions with the Custom LegalizationAction.
-  virtual bool legalizeCustom(LegalizerHelper &Helper,
-                              MachineInstr &MI) const {
+  virtual bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                              LostDebugLocObserver &LocObserver) const {
     llvm_unreachable("must implement this if custom action is used");
   }
 

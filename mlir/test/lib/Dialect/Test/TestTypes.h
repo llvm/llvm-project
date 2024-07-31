@@ -14,8 +14,8 @@
 #ifndef MLIR_TESTTYPES_H
 #define MLIR_TESTTYPES_H
 
-#include <tuple>
 #include <optional>
+#include <tuple>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
@@ -31,11 +31,11 @@ class TestAttrWithFormatAttr;
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
 struct FieldInfo {
-  ::llvm::StringRef name;
-  ::mlir::Type type;
+  llvm::StringRef name;
+  mlir::Type type;
 
   // Custom allocation called from generated constructor code
-  FieldInfo allocateInto(::mlir::TypeStorageAllocator &alloc) const {
+  FieldInfo allocateInto(mlir::TypeStorageAllocator &alloc) const {
     return FieldInfo{alloc.copyInto(name), type};
   }
 };
@@ -91,9 +91,6 @@ struct FieldParser<std::optional<int>> {
 
 #include "TestTypeInterfaces.h.inc"
 
-#define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.h.inc"
-
 namespace test {
 
 /// Storage for simple named recursive types, where the type is identified by
@@ -111,7 +108,7 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
         TestRecursiveTypeStorage(allocator.copyInto(key));
   }
 
-  ::mlir::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator,
+  ::llvm::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator,
                                ::mlir::Type newBody) {
     // Cannot set a different body than before.
     if (body && body != newBody)
@@ -135,13 +132,15 @@ class TestRecursiveType
 public:
   using Base::Base;
 
+  static constexpr ::mlir::StringLiteral name = "test.recursive";
+
   static TestRecursiveType get(::mlir::MLIRContext *ctx,
                                ::llvm::StringRef name) {
     return Base::get(ctx, name);
   }
 
   /// Body getter and setter.
-  ::mlir::LogicalResult setBody(Type body) { return Base::mutate(body); }
+  ::llvm::LogicalResult setBody(Type body) { return Base::mutate(body); }
   ::mlir::Type getBody() const { return getImpl()->body; }
 
   /// Name/key getter.
@@ -149,5 +148,8 @@ public:
 };
 
 } // namespace test
+
+#define GET_TYPEDEF_CLASSES
+#include "TestTypeDefs.h.inc"
 
 #endif // MLIR_TESTTYPES_H

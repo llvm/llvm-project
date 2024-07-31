@@ -47,11 +47,23 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case LoongArchII::MO_PCREL_LO:
     Kind = LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
     break;
+  case LoongArchII::MO_PCREL64_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_PCALA64_LO20;
+    break;
+  case LoongArchII::MO_PCREL64_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_PCALA64_HI12;
+    break;
   case LoongArchII::MO_GOT_PC_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20;
     break;
   case LoongArchII::MO_GOT_PC_LO:
     Kind = LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12;
+    break;
+  case LoongArchII::MO_GOT_PC64_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20;
+    break;
+  case LoongArchII::MO_GOT_PC64_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12;
     break;
   case LoongArchII::MO_LE_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20;
@@ -59,17 +71,50 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case LoongArchII::MO_LE_LO:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12;
     break;
+  case LoongArchII::MO_LE64_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE64_LO20;
+    break;
+  case LoongArchII::MO_LE64_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE64_HI12;
+    break;
   case LoongArchII::MO_IE_PC_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20;
     break;
   case LoongArchII::MO_IE_PC_LO:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12;
     break;
+  case LoongArchII::MO_IE_PC64_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_LO20;
+    break;
+  case LoongArchII::MO_IE_PC64_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_HI12;
+    break;
   case LoongArchII::MO_LD_PC_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20;
     break;
   case LoongArchII::MO_GD_PC_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20;
+    break;
+  case LoongArchII::MO_CALL36:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL36;
+    break;
+  case LoongArchII::MO_DESC_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20;
+    break;
+  case LoongArchII::MO_DESC_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12;
+    break;
+  case LoongArchII::MO_DESC64_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20;
+    break;
+  case LoongArchII::MO_DESC64_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12;
+    break;
+  case LoongArchII::MO_DESC_LD:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
+    break;
+  case LoongArchII::MO_DESC_CALL:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL;
     break;
     // TODO: Handle more target-flags.
   }

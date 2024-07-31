@@ -8,6 +8,11 @@
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10
 
+// RUN: %clang -x c++ -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -fsyntax-only
+// RUN: %clang -x c++ -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -fsyntax-only
+
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
@@ -516,14 +521,14 @@ test_converts() {
 // CHECK: sitofp i64 %{{[0-9a-zA-Z_.]+}} to double
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_cvtsi64_si128
-// CHECK: %[[INS:[0-9a-zA-Z_.]+]] = insertelement <2 x i64> undef, i64 %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[INS:[0-9a-zA-Z_.]+]] = insertelement <2 x i64> poison, i64 %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x i64> %[[INS]], i64 0, i32 1
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_cvtsi64x_sd
 // CHECK: call <2 x double> @_mm_cvtsi64_sd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_cvtsi64x_si128
-// CHECK: %[[INS:[0-9a-zA-Z_.]+]] = insertelement <2 x i64> undef, i64 %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[INS:[0-9a-zA-Z_.]+]] = insertelement <2 x i64> poison, i64 %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x i64> %[[INS]], i64 0, i32 1
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_cvtss_sd
@@ -901,35 +906,35 @@ test_set() {
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi16
 // CHECK-COUNT-8: store i16 {{[0-9a-zA-Z_%.]+}}, ptr {{[0-9a-zA-Z_%.]+}}, align 2
-// CHECK: insertelement <8 x i16> undef, i16 {{[0-9a-zA-Z_%.]+}}, i32 0
+// CHECK: insertelement <8 x i16> poison, i16 {{[0-9a-zA-Z_%.]+}}, i32 0
 // CHECK-COUNT-7: insertelement <8 x i16> {{[0-9a-zA-Z_%.]+}}, i16 {{[0-9a-zA-Z_%.]+}}, i32 {{[1-7]}}
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi32
 // CHECK-COUNT-4: store i32 {{[0-9a-zA-Z_%.]+}}, ptr {{[0-9a-zA-Z_%.]+}}, align 4
-// CHECK: insertelement <4 x i32> undef, i32 {{[0-9a-zA-Z_%.]+}}, i32 0
+// CHECK: insertelement <4 x i32> poison, i32 {{[0-9a-zA-Z_%.]+}}, i32 0
 // CHECK-COUNT-3: insertelement <4 x i32> {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9a-zA-Z_%.]+}}, i32 {{[1-3]}}
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi64
 // CHECK: call <2 x i64> @_mm_set_epi64x(i64 noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi64x
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x i64> undef, i64 %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x i64> poison, i64 %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x i64> %[[VEC]], i64 %{{[0-9a-zA-Z_.]+}}, i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi8
 // CHECK-COUNT-16: store i8 {{[0-9a-zA-Z_%.]+}}, ptr {{[0-9a-zA-Z_%.]+}}, align 1
-// CHECK: insertelement <16 x i8> undef, i8 {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9]+}}
+// CHECK: insertelement <16 x i8> poison, i8 {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9]+}}
 // CHECK-COUNT-15: {{[0-9a-zA-Z_%.]+}} = insertelement <16 x i8> {{[0-9a-zA-Z_%.]+}}, i8 {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9]+}}
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_set_pd
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> undef, double %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> poison, double %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x double> %[[VEC]], double %{{[0-9a-zA-Z_.]+}}, i32 1
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_set_pd1
 // CHECK: call <2 x double> @_mm_set1_pd(double noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_set_sd
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> undef, double %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> poison, double %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x double> %[[VEC]], double 0.000000e+00, i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set1_epi16
@@ -955,7 +960,7 @@ test_set() {
 // CHECK: call <2 x i64> @_mm_set_epi8
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_set1_pd
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> undef, double %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> poison, double %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x double> %[[VEC]], double %{{[0-9a-zA-Z_.]+}}, i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_setr_epi16
@@ -976,7 +981,7 @@ test_set() {
 // CHECK: call <2 x i64> @_mm_set_epi8
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_setr_pd
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> undef, double %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <2 x double> poison, double %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x double> %[[VEC]], double %{{[0-9a-zA-Z_.]+}}, i32 1
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_setzero_pd()

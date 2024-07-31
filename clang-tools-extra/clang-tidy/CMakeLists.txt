@@ -22,6 +22,7 @@ add_clang_library(clangTidy
   DEPENDS
   ClangSACheckers
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidy
@@ -120,7 +121,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.h"
     )
   add_custom_target(clang-tidy-headers)
-  set_target_properties(clang-tidy-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(clang-tidy-headers PROPERTIES FOLDER "Clang Tools Extra/Resources")
   if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-clang-tidy-headers
                              DEPENDS clang-tidy-headers

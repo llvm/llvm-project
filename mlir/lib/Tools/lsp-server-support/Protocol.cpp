@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/Protocol.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -156,7 +156,7 @@ static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath,
 
   // If authority if empty, we only print body if it starts with "/"; otherwise,
   // the URI is invalid.
-  if (!authority.empty() || StringRef(body).startswith("/")) {
+  if (!authority.empty() || StringRef(body).starts_with("/")) {
     uri.append("//");
     percentEncode(authority, uri);
   }
@@ -166,7 +166,7 @@ static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath,
 
 static llvm::Expected<std::string> getAbsolutePath(StringRef authority,
                                                    StringRef body) {
-  if (!body.startswith("/"))
+  if (!body.starts_with("/"))
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "File scheme: expect body to be an absolute path starting "
@@ -294,6 +294,21 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 }
 
 //===----------------------------------------------------------------------===//
+// ClientInfo
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  if (!o || !o.map("name", result.name))
+    return false;
+
+  // Don't fail if we can't parse version.
+  o.map("version", result.version);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -324,6 +339,8 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
   // We deliberately don't fail if we can't parse individual fields.
   o.map("capabilities", result.capabilities);
   o.map("trace", result.trace);
+  mapOptOrNull(value, "clientInfo", result.clientInfo, path);
+
   return true;
 }
 
@@ -628,6 +645,20 @@ llvm::json::Value mlir::lsp::toJSON(const DiagnosticRelatedInformation &info) {
 // Diagnostic
 //===----------------------------------------------------------------------===//
 
+llvm::json::Value mlir::lsp::toJSON(DiagnosticTag tag) {
+  return static_cast<int>(tag);
+}
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
+                         llvm::json::Path path) {
+  if (std::optional<int64_t> i = value.getAsInteger()) {
+    result = (DiagnosticTag)*i;
+    return true;
+  }
+
+  return false;
+}
+
 llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
   llvm::json::Object result{
       {"range", diag.range},
@@ -640,6 +671,8 @@ llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
     result["source"] = diag.source;
   if (diag.relatedInformation)
     result["relatedInformation"] = *diag.relatedInformation;
+  if (!diag.tags.empty())
+    result["tags"] = diag.tags;
   return std::move(result);
 }
 
@@ -657,7 +690,8 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
          mapOptOrNull(value, "category", result.category, path) &&
          mapOptOrNull(value, "source", result.source, path) &&
          mapOptOrNull(value, "relatedInformation", result.relatedInformation,
-                      path);
+                      path) &&
+         mapOptOrNull(value, "tags", result.tags, path);
 }
 
 //===----------------------------------------------------------------------===//

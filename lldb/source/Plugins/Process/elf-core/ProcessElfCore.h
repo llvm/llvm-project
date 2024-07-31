@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "lldb/Target/PostMortemProcess.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
@@ -117,7 +116,11 @@ private:
     lldb::addr_t start;
     lldb::addr_t end;
     lldb::addr_t file_ofs;
-    lldb_private::ConstString path;
+    std::string path;
+    // Add a UUID member for convenient access. The UUID value is not in the
+    // NT_FILE entries, we will find it in core memory and store it here for
+    // easy access.
+    lldb_private::UUID uuid;
   };
 
   // For ProcessElfCore only
@@ -128,7 +131,6 @@ private:
       VMRangeToPermissions;
 
   lldb::ModuleSP m_core_module_sp;
-  lldb_private::FileSpec m_core_file;
   std::string m_dyld_plugin_name;
 
   // True if m_thread_contexts contains valid entries
@@ -159,6 +161,12 @@ private:
 
   // Returns number of thread contexts stored in the core file
   uint32_t GetNumThreadContexts();
+
+  // Populate gnu uuid for each NT_FILE entry
+  void UpdateBuildIdForNTFileEntries();
+
+  // Returns the value of certain type of note of a given start address
+  lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t

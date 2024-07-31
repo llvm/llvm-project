@@ -119,8 +119,29 @@ constexpr RegsetDesc AARCH64_SVE_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_SVE},
 };
 
+constexpr RegsetDesc AARCH64_SSVE_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_SSVE},
+};
+
+constexpr RegsetDesc AARCH64_ZA_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_ZA},
+};
+
+constexpr RegsetDesc AARCH64_ZT_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_ZT},
+};
+
 constexpr RegsetDesc AARCH64_PAC_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_PAC_MASK},
+};
+
+constexpr RegsetDesc AARCH64_TLS_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_TLS},
+};
+
+constexpr RegsetDesc AARCH64_MTE_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64,
+     llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL},
 };
 
 constexpr RegsetDesc PPC_VMX_Desc[] = {

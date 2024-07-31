@@ -22,16 +22,18 @@
 #include <complex>
 #include <concepts>
 #include <deque>
+#include <filesystem>
 #include <format>
 #include <forward_list>
 #include <list>
-#include <memory>
 #include <map>
+#include <memory>
 #include <optional>
 #include <queue>
 #include <set>
-#include <stack>
 #include <span>
+#include <stack>
+#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
@@ -42,9 +44,6 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-#ifndef TEST_HAS_NO_FILESYSTEM
-#  include <filesystem>
-#endif
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <regex>
 #endif
@@ -54,7 +53,14 @@
 
 template <class T, class CharT>
 void assert_is_not_formattable() {
-  static_assert(!std::formattable<T, CharT>);
+  // clang-format off
+  static_assert(!std::formattable<      T   , CharT>);
+  static_assert(!std::formattable<      T&  , CharT>);
+  static_assert(!std::formattable<      T&& , CharT>);
+  static_assert(!std::formattable<const T   , CharT>);
+  static_assert(!std::formattable<const T&  , CharT>);
+  static_assert(!std::formattable<const T&& , CharT>);
+  // clang-format on
 }
 
 template <class T, class CharT>
@@ -66,9 +72,16 @@ void assert_is_formattable() {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
                 || std::same_as<CharT, wchar_t>
 #endif
-  )
-    static_assert(std::formattable<T, CharT>);
-  else
+  ) {
+    // clang-format off
+    static_assert(std::formattable<      T   , CharT>);
+    static_assert(std::formattable<      T&  , CharT>);
+    static_assert(std::formattable<      T&& , CharT>);
+    static_assert(std::formattable<const T   , CharT>);
+    static_assert(std::formattable<const T&  , CharT>);
+    static_assert(std::formattable<const T&& , CharT>);
+    // clang-format on
+  } else
     assert_is_not_formattable<T, CharT>();
 }
 
@@ -163,10 +176,12 @@ void test_P1361() {
 
   assert_is_formattable<std::chrono::hh_mm_ss<std::chrono::microseconds>, CharT>();
 
-  //assert_is_formattable<std::chrono::sys_info, CharT>();
-  //assert_is_formattable<std::chrono::local_info, CharT>();
+#  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
+  assert_is_formattable<std::chrono::sys_info, CharT>();
+  assert_is_formattable<std::chrono::local_info, CharT>();
 
   //assert_is_formattable<std::chrono::zoned_time, CharT>();
+#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }
@@ -182,9 +197,7 @@ void test_P1636() {
   assert_is_not_formattable<std::bitset<42>, CharT>();
   assert_is_not_formattable<std::complex<double>, CharT>();
   assert_is_not_formattable<std::error_code, CharT>();
-#ifndef TEST_HAS_NO_FILESYSTEM
   assert_is_not_formattable<std::filesystem::path, CharT>();
-#endif
   assert_is_not_formattable<std::shared_ptr<int>, CharT>();
 #ifndef TEST_HAS_NO_LOCALIZATION
   if constexpr (!std::same_as<CharT, int>) // sub_match only works with proper character types
@@ -241,6 +254,27 @@ void test_P2286() {
   test_P2286_vector_bool<CharT, std::vector<bool>>();
   test_P2286_vector_bool<CharT, std::vector<bool, std::allocator<bool>>>();
   test_P2286_vector_bool<CharT, std::vector<bool, min_allocator<bool>>>();
+}
+
+// Tests volatile qualified objects are no longer formattable.
+template <class CharT>
+void test_LWG3631() {
+  assert_is_not_formattable<volatile CharT, CharT>();
+
+  assert_is_not_formattable<volatile bool, CharT>();
+
+  assert_is_not_formattable<volatile signed int, CharT>();
+  assert_is_not_formattable<volatile unsigned int, CharT>();
+
+  assert_is_not_formattable<volatile std::chrono::microseconds, CharT>();
+  assert_is_not_formattable<volatile std::chrono::sys_time<std::chrono::microseconds>, CharT>();
+  assert_is_not_formattable<volatile std::chrono::day, CharT>();
+
+  assert_is_not_formattable<std::array<volatile int, 42>, CharT>();
+
+  assert_is_not_formattable<std::pair<volatile int, int>, CharT>();
+  assert_is_not_formattable<std::pair<int, volatile int>, CharT>();
+  assert_is_not_formattable<std::pair<volatile int, volatile int>, CharT>();
 }
 
 class c {
@@ -335,12 +369,40 @@ void test_disabled() {
   assert_is_not_formattable<std::variant<c>, CharT>();
 }
 
+struct abstract {
+  virtual ~abstract() = 0;
+};
+
+template <class CharT>
+  requires std::same_as<CharT, char>
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+        || std::same_as<CharT, wchar_t>
+#endif
+struct std::formatter<abstract, CharT> {
+  template <class ParseContext>
+  constexpr typename ParseContext::iterator parse(ParseContext& parse_ctx) {
+    return parse_ctx.begin();
+  }
+
+  template <class FormatContext>
+  typename FormatContext::iterator format(const abstract&, FormatContext& ctx) const {
+    return ctx.out();
+  }
+};
+
+template <class CharT>
+void test_abstract_class() {
+  assert_is_formattable<abstract, CharT>();
+}
+
 template <class CharT>
 void test() {
   test_P0645<CharT>();
   test_P1361<CharT>();
   test_P1636<CharT>();
   test_P2286<CharT>();
+  test_LWG3631<CharT>();
+  test_abstract_class<CharT>();
   test_disabled<CharT>();
 }
 
@@ -352,6 +414,4 @@ void test() {
   test<char8_t>();
   test<char16_t>();
   test<char32_t>();
-
-  test<int>();
 }

@@ -96,6 +96,7 @@ def main():
             # now, we just ignore all but the last.
             prefix_list.append((check_prefixes, tool_cmd_args))
 
+        ginfo = common.make_analyze_generalizer(version=1)
         builder = common.FunctionTestBuilder(
             run_list=prefix_list,
             flags=type(
@@ -111,6 +112,7 @@ def main():
             ),
             scrubber_args=[],
             path=ti.path,
+            ginfo=ginfo,
         )
 
         for prefixes, opt_args in prefix_list:
@@ -131,19 +133,19 @@ def main():
                         common.scrub_body,
                         raw_tool_output,
                         prefixes,
-                        False,
                     )
-            elif re.search(r"LV: Checking a loop in ", raw_tool_outputs) is not None:
-                # Split analysis outputs by "Printing analysis " declarations.
+            elif (
+                re.search(r"(LV|LDist): Checking a loop in ", raw_tool_outputs)
+                is not None
+            ):
                 for raw_tool_output in re.split(
-                    r"LV: Checking a loop in ", raw_tool_outputs
+                    r"(LV|LDist): Checking a loop in ", raw_tool_outputs
                 ):
                     builder.process_run_line(
-                        common.LV_DEBUG_RE,
+                        common.LOOP_PASS_DEBUG_RE,
                         common.scrub_body,
                         raw_tool_output,
                         prefixes,
-                        False,
                     )
             else:
                 common.warn("Don't know how to deal with this output")
@@ -179,6 +181,7 @@ def main():
                         prefix_list,
                         func_dict,
                         func_name,
+                        ginfo,
                         is_filtered=builder.is_filtered(),
                     )
                 )
@@ -187,10 +190,6 @@ def main():
             if is_in_function:
                 if common.should_add_line_to_output(input_line, prefix_set):
                     # This input line of the function body will go as-is into the output.
-                    # Except make leading whitespace uniform: 2 spaces.
-                    input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(
-                        r"  ", input_line
-                    )
                     output_lines.append(input_line)
                 else:
                     continue

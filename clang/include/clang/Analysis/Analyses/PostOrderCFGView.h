@@ -70,7 +70,41 @@ public:
   };
 
 private:
-  using po_iterator = llvm::po_iterator<const CFG *, CFGBlockSet, true>;
+  // The CFG orders the blocks of loop bodies before those of loop successors
+  // (both numerically, and in the successor order of the loop condition
+  // block). So, RPO necessarily reverses that order, placing the loop successor
+  // *before* the loop body. For many analyses, particularly those that converge
+  // to a fixpoint, this results in potentially significant extra work because
+  // loop successors will necessarily need to be reconsidered once the algorithm
+  // has reached a fixpoint on the loop body.
+  //
+  // This definition of CFG graph traits reverses the order of children, so that
+  // loop bodies will come first in an RPO.
+  struct CFGLoopBodyFirstTraits {
+    using NodeRef = const ::clang::CFGBlock *;
+    using ChildIteratorType = ::clang::CFGBlock::const_succ_reverse_iterator;
+
+    static ChildIteratorType child_begin(NodeRef N) { return N->succ_rbegin(); }
+    static ChildIteratorType child_end(NodeRef N) { return N->succ_rend(); }
+
+    using nodes_iterator = ::clang::CFG::const_iterator;
+
+    static NodeRef getEntryNode(const ::clang::CFG *F) {
+      return &F->getEntry();
+    }
+
+    static nodes_iterator nodes_begin(const ::clang::CFG *F) {
+      return F->nodes_begin();
+    }
+
+    static nodes_iterator nodes_end(const ::clang::CFG *F) {
+      return F->nodes_end();
+    }
+
+    static unsigned size(const ::clang::CFG *F) { return F->size(); }
+  };
+  using po_iterator =
+      llvm::po_iterator<const CFG *, CFGBlockSet, true, CFGLoopBodyFirstTraits>;
   std::vector<const CFGBlock *> Blocks;
 
   using BlockOrderTy = llvm::DenseMap<const CFGBlock *, unsigned>;

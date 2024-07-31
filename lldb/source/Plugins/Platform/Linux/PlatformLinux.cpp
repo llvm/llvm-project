@@ -205,7 +205,7 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("__restore_rt"));
 }
 
-static lldb::UnwindPlanSP GetAArch64TrapHanlderUnwindPlan(ConstString name) {
+static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   UnwindPlanSP unwind_plan_sp;
   if (name != "__kernel_rt_sigreturn")
     return unwind_plan_sp;
@@ -290,7 +290,7 @@ lldb::UnwindPlanSP
 PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
                                         ConstString name) {
   if (triple.isAArch64())
-    return GetAArch64TrapHanlderUnwindPlan(name);
+    return GetAArch64TrapHandlerUnwindPlan(name);
 
   return {};
 }
@@ -348,7 +348,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   CompilerType sigval_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_sigval_t",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigval_type);
   ast->AddFieldToRecordType(sigval_type, "sival_int", int_type,
                             lldb::eAccessPublic, 0);
@@ -358,15 +358,16 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   CompilerType sigfault_bounds_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigfault_bounds_type);
-  ast->AddFieldToRecordType(sigfault_bounds_type, "_addr_bnd",
-      ast->CreateStructForIdentifier(ConstString(),
+  ast->AddFieldToRecordType(
+      sigfault_bounds_type, "_addr_bnd",
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_lower", voidp_type},
                                          {"_upper", voidp_type},
                                      }),
-                            lldb::eAccessPublic, 0);
+      lldb::eAccessPublic, 0);
   ast->AddFieldToRecordType(sigfault_bounds_type, "_pkey", uint_type,
                             lldb::eAccessPublic, 0);
   ast->CompleteTagDeclarationDefinition(sigfault_bounds_type);
@@ -374,7 +375,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
   // siginfo_t
   CompilerType siginfo_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
-      clang::TTK_Struct, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(siginfo_type);
   ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type,
                             lldb::eAccessPublic, 0);
@@ -399,12 +400,12 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
   // union used to hold the signal data
   CompilerType union_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(union_type);
 
   ast->AddFieldToRecordType(
       union_type, "_kill",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"si_pid", pid_type},
                                          {"si_uid", uid_type},
@@ -413,7 +414,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_timer",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"si_tid", int_type},
                                          {"si_overrun", int_type},
@@ -423,7 +424,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_rt",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"si_pid", pid_type},
                                          {"si_uid", uid_type},
@@ -433,7 +434,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_sigchld",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"si_pid", pid_type},
                                          {"si_uid", uid_type},
@@ -445,7 +446,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_sigfault",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"si_addr", voidp_type},
                                          {"si_addr_lsb", short_type},
@@ -455,7 +456,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_sigpoll",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"si_band", band_type},
                                          {"si_fd", int_type},
@@ -465,7 +466,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
   // NB: SIGSYS is not present on ia64 but we don't seem to support that
   ast->AddFieldToRecordType(
       union_type, "_sigsys",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_call_addr", voidp_type},
                                          {"_syscall", int_type},

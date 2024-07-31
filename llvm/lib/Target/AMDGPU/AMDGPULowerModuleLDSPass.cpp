@@ -73,8 +73,6 @@
 // The "module" lowering implemented here finds LDS variables which are used by
 // non-kernel functions and creates a new struct with a field for each of those
 // LDS variables. Variables that are only used from kernels are excluded.
-// Kernels that do not use this struct are annoteated with the attribute
-// amdgpu-elide-module-lds which allows the back end to elide the allocation.
 //
 // The "table" lowering implemented here has three components.
 // First kernels are assigned a unique integer identifier which is available in
@@ -179,6 +177,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"
@@ -186,8 +185,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -200,11 +199,12 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <tuple>
 #include <vector>
 
 #include <cstdio>
@@ -212,6 +212,7 @@
 #define DEBUG_TYPE "amdgpu-lower-module-lds"
 
 using namespace llvm;
+using namespace AMDGPU;
 
 namespace {
 
@@ -234,18 +235,15 @@ cl::opt<LoweringKind> LoweringKindLoc(
         clEnumValN(LoweringKind::hybrid, "hybrid",
                    "Lower via mixture of above strategies")));
 
-bool isKernelLDS(const Function *F) {
-  // Some weirdness here. AMDGPU::isKernelCC does not call into
-  // AMDGPU::isKernel with the calling conv, it instead calls into
-  // isModuleEntryFunction which returns true for more calling conventions
-  // than AMDGPU::isKernel does. There's a FIXME on AMDGPU::isKernel.
-  // There's also a test that checks that the LDS lowering does not hit on
-  // a graphics shader, denoted amdgpu_ps, so stay with the limited case.
-  // Putting LDS in the name of the function to draw attention to this.
-  return AMDGPU::isKernel(F->getCallingConv());
+template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
+  llvm::sort(V.begin(), V.end(), [](const auto *L, const auto *R) {
+    return L->getName() < R->getName();
+  });
+  return {std::move(V)};
 }
 
-class AMDGPULowerModuleLDS : public ModulePass {
+class AMDGPULowerModuleLDS {
+  const AMDGPUTargetMachine &TM;
 
   static void
   removeLocalVarsFromUsedLists(Module &M,
@@ -263,8 +261,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
       LocalVar->removeDeadConstantUsers();
   }
 
-  static void markUsedByKernel(IRBuilder<> &Builder, Function *Func,
-                               GlobalVariable *SGV) {
+  static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
     // The llvm.amdgcn.module.lds instance is implicitly used by all kernels
     // that might call a function which accesses a field within it. This is
     // presently approximated to 'all kernels' if there are any such functions
@@ -284,181 +281,22 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // immediately used by the kernel must still be allocated by it. An
     // equivalent target specific intrinsic which lasts until immediately after
     // codegen would suffice for that, but one would still need to ensure that
-    // the variables are allocated in the anticpated order.
-
-    LLVMContext &Ctx = Func->getContext();
-
-    Builder.SetInsertPoint(Func->getEntryBlock().getFirstNonPHI());
-
-    FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), {});
+    // the variables are allocated in the anticipated order.
+    BasicBlock *Entry = &Func->getEntryBlock();
+    IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
     Function *Decl =
         Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});
 
-    Value *UseInstance[1] = {Builder.CreateInBoundsGEP(
-        SGV->getValueType(), SGV, ConstantInt::get(Type::getInt32Ty(Ctx), 0))};
+    Value *UseInstance[1] = {
+        Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
 
-    Builder.CreateCall(FTy, Decl, {},
-                       {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)},
-                       "");
-  }
-
-  static bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
-    // Constants are uniqued within LLVM. A ConstantExpr referring to a LDS
-    // global may have uses from multiple different functions as a result.
-    // This pass specialises LDS variables with respect to the kernel that
-    // allocates them.
-
-    // This is semantically equivalent to (the unimplemented as slow):
-    // for (auto &F : M.functions())
-    //   for (auto &BB : F)
-    //     for (auto &I : BB)
-    //       for (Use &Op : I.operands())
-    //         if (constantExprUsesLDS(Op))
-    //           replaceConstantExprInFunction(I, Op);
-
-    SmallVector<Constant *> LDSGlobals;
-    for (auto &GV : M.globals())
-      if (AMDGPU::isLDSVariableToLower(GV))
-        LDSGlobals.push_back(&GV);
-
-    return convertUsersOfConstantsToInstructions(LDSGlobals);
+    Builder.CreateCall(
+        Decl, {}, {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)});
   }
 
 public:
-  static char ID;
-
-  AMDGPULowerModuleLDS() : ModulePass(ID) {
-    initializeAMDGPULowerModuleLDSPass(*PassRegistry::getPassRegistry());
-  }
-
-  using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
-
-  using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
-
-  static void getUsesOfLDSByFunction(CallGraph const &CG, Module &M,
-                                     FunctionVariableMap &kernels,
-                                     FunctionVariableMap &functions) {
-
-    // Get uses from the current function, excluding uses by called functions
-    // Two output variables to avoid walking the globals list twice
-    for (auto &GV : M.globals()) {
-      if (!AMDGPU::isLDSVariableToLower(GV)) {
-        continue;
-      }
-
-      SmallVector<User *, 16> Stack(GV.users());
-      for (User *V : GV.users()) {
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          Function *F = I->getFunction();
-          if (isKernelLDS(F)) {
-            kernels[F].insert(&GV);
-          } else {
-            functions[F].insert(&GV);
-          }
-        }
-      }
-    }
-  }
-
-  struct LDSUsesInfoTy {
-    FunctionVariableMap direct_access;
-    FunctionVariableMap indirect_access;
-  };
-
-  static LDSUsesInfoTy getTransitiveUsesOfLDS(CallGraph const &CG, Module &M) {
-
-    FunctionVariableMap direct_map_kernel;
-    FunctionVariableMap direct_map_function;
-    getUsesOfLDSByFunction(CG, M, direct_map_kernel, direct_map_function);
-
-    // Collect variables that are used by functions whose address has escaped
-    DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
-    for (Function &F : M.functions()) {
-      if (!isKernelLDS(&F))
-        if (F.hasAddressTaken(nullptr,
-                              /* IgnoreCallbackUses */ false,
-                              /* IgnoreAssumeLikeCalls */ false,
-                              /* IgnoreLLVMUsed */ true,
-                              /* IgnoreArcAttachedCall */ false)) {
-          set_union(VariablesReachableThroughFunctionPointer,
-                    direct_map_function[&F]);
-        }
-    }
-
-    auto functionMakesUnknownCall = [&](const Function *F) -> bool {
-      assert(!F->isDeclaration());
-      for (CallGraphNode::CallRecord R : *CG[F]) {
-        if (!R.second->getFunction()) {
-          return true;
-        }
-      }
-      return false;
-    };
-
-    // Work out which variables are reachable through function calls
-    FunctionVariableMap transitive_map_function = direct_map_function;
-
-    // If the function makes any unknown call, assume the worst case that it can
-    // access all variables accessed by functions whose address escaped
-    for (Function &F : M.functions()) {
-      if (!F.isDeclaration() && functionMakesUnknownCall(&F)) {
-        if (!isKernelLDS(&F)) {
-          set_union(transitive_map_function[&F],
-                    VariablesReachableThroughFunctionPointer);
-        }
-      }
-    }
-
-    // Direct implementation of collecting all variables reachable from each
-    // function
-    for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || isKernelLDS(&Func))
-        continue;
-
-      DenseSet<Function *> seen; // catches cycles
-      SmallVector<Function *, 4> wip{&Func};
-
-      while (!wip.empty()) {
-        Function *F = wip.pop_back_val();
-
-        // Can accelerate this by referring to transitive map for functions that
-        // have already been computed, with more care than this
-        set_union(transitive_map_function[&Func], direct_map_function[F]);
-
-        for (CallGraphNode::CallRecord R : *CG[F]) {
-          Function *ith = R.second->getFunction();
-          if (ith) {
-            if (!seen.contains(ith)) {
-              seen.insert(ith);
-              wip.push_back(ith);
-            }
-          }
-        }
-      }
-    }
-
-    // direct_map_kernel lists which variables are used by the kernel
-    // find the variables which are used through a function call
-    FunctionVariableMap indirect_map_kernel;
-
-    for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
-        continue;
-
-      for (CallGraphNode::CallRecord R : *CG[&Func]) {
-        Function *ith = R.second->getFunction();
-        if (ith) {
-          set_union(indirect_map_kernel[&Func], transitive_map_function[ith]);
-        } else {
-          set_union(indirect_map_kernel[&Func],
-                    VariablesReachableThroughFunctionPointer);
-        }
-      }
-    }
-
-    return {std::move(direct_map_kernel), std::move(indirect_map_kernel)};
-  }
+  AMDGPULowerModuleLDS(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
 
   struct LDSVariableReplacement {
     GlobalVariable *SGV = nullptr;
@@ -472,7 +310,7 @@ public:
 
   static Constant *getAddressesOfVariablesInKernel(
       LLVMContext &Ctx, ArrayRef<GlobalVariable *> Variables,
-      DenseMap<GlobalVariable *, Constant *> &LDSVarsToConstantGEP) {
+      const DenseMap<GlobalVariable *, Constant *> &LDSVarsToConstantGEP) {
     // Create a ConstantArray containing the address of each Variable within the
     // kernel corresponding to LDSVarsToConstantGEP, or poison if that kernel
     // does not allocate it
@@ -483,10 +321,10 @@ public:
     ArrayType *KernelOffsetsType = ArrayType::get(I32, Variables.size());
 
     SmallVector<Constant *> Elements;
-    for (size_t i = 0; i < Variables.size(); i++) {
-      GlobalVariable *GV = Variables[i];
-      if (LDSVarsToConstantGEP.count(GV) != 0) {
-        auto elt = ConstantExpr::getPtrToInt(LDSVarsToConstantGEP[GV], I32);
+    for (GlobalVariable *GV : Variables) {
+      auto ConstantGepIt = LDSVarsToConstantGEP.find(GV);
+      if (ConstantGepIt != LDSVarsToConstantGEP.end()) {
+        auto elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
         Elements.push_back(elt);
       } else {
         Elements.push_back(PoisonValue::get(I32));
@@ -513,11 +351,15 @@ public:
     ArrayType *AllKernelsOffsetsType =
         ArrayType::get(KernelOffsetsType, NumberKernels);
 
+    Constant *Missing = PoisonValue::get(KernelOffsetsType);
     std::vector<Constant *> overallConstantExprElts(NumberKernels);
     for (size_t i = 0; i < NumberKernels; i++) {
-      LDSVariableReplacement Replacement = KernelToReplacement[kernels[i]];
-      overallConstantExprElts[i] = getAddressesOfVariablesInKernel(
-          Ctx, Variables, Replacement.LDSVarsToConstantGEP);
+      auto Replacement = KernelToReplacement.find(kernels[i]);
+      overallConstantExprElts[i] =
+          (Replacement == KernelToReplacement.end())
+              ? Missing
+              : getAddressesOfVariablesInKernel(
+                    Ctx, Variables, Replacement->second.LDSVarsToConstantGEP);
     }
 
     Constant *init =
@@ -685,28 +527,24 @@ public:
     // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
     // lowers to a read from a live in register. Emit it once in the entry
     // block to spare deduplicating it later.
-    if (tableKernelIndexCache.count(F) == 0) {
-      LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
-      FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
+    auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
+    if (Inserted) {
       Function *Decl =
           Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
 
-      BasicBlock::iterator it =
-          F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
-      Instruction &i = *it;
-      Builder.SetInsertPoint(&i);
+      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      IRBuilder<> Builder(&*InsertAt);
 
-      tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
+      It->second = Builder.CreateCall(Decl, {});
     }
 
-    return tableKernelIndexCache[F];
+    return It->second;
   }
 
   static std::vector<Function *> assignLDSKernelIDToEachKernel(
       Module *M, DenseSet<Function *> const &KernelsThatAllocateTableLDS,
       DenseSet<Function *> const &KernelsThatIndirectlyAllocateDynamicLDS) {
-    // Associate kernels in the set with an arbirary but reproducible order and
+    // Associate kernels in the set with an arbitrary but reproducible order and
     // annotate them with that order in metadata. This metadata is recognised by
     // the backend and lowered to a SGPR which can be read from using
     // amdgcn_lds_kernel_id.
@@ -729,10 +567,7 @@ public:
       }
 
       // Put them in an arbitrary but reproducible order
-      llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
-                 [](const Function *lhs, const Function *rhs) -> bool {
-                   return lhs->getName() < rhs->getName();
-                 });
+      OrderedKernels = sortByName(std::move(OrderedKernels));
 
       // Annotate the kernels with their order in this vector
       LLVMContext &Ctx = M->getContext();
@@ -852,7 +687,7 @@ public:
     appendToCompilerUsed(M, {static_cast<GlobalValue *>(
                                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
                                     cast<Constant>(ModuleScopeReplacement.SGV),
-                                    Type::getInt8PtrTy(Ctx)))});
+                                    PointerType::getUnqual(Ctx)))});
 
     // module.lds will be allocated at zero in any kernel that allocates it
     recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);
@@ -875,8 +710,6 @@ public:
     // allocate the module scope variable, otherwise leave them unchanged
     // Record on each kernel whether the module scope global is used by it
 
-    IRBuilder<> Builder(Ctx);
-
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
         continue;
@@ -892,10 +725,7 @@ public:
               return F == &Func;
             });
 
-        markUsedByKernel(Builder, &Func, ModuleScopeReplacement.SGV);
-
-      } else {
-        markElideModuleLDS(Func);
+        markUsedByKernel(&Func, ModuleScopeReplacement.SGV);
       }
     }
 
@@ -962,6 +792,14 @@ public:
 
       auto Replacement =
           createLDSVariableReplacement(M, VarName, KernelUsedVariables);
+
+      // If any indirect uses, create a direct use to ensure allocation
+      // TODO: Simpler to unconditionally mark used but that regresses
+      // codegen in test/CodeGen/AMDGPU/noclobber-barrier.ll
+      auto Accesses = LDSUsesInfo.indirect_access.find(&Func);
+      if ((Accesses != LDSUsesInfo.indirect_access.end()) &&
+          !Accesses->second.empty())
+        markUsedByKernel(&Func, Replacement.SGV);
 
       // remove preserves existing codegen
       removeLocalVarsFromUsedLists(M, KernelUsedVariables);
@@ -1050,7 +888,7 @@ public:
 
           KernelToCreatedDynamicLDS[func] = N;
 
-          markUsedByKernel(Builder, func, N);
+          markUsedByKernel(func, N);
 
           auto emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
           auto GEP = ConstantExpr::getGetElementPtr(
@@ -1084,15 +922,7 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
-  static bool canElideModuleLDS(const Function &F) {
-    return F.hasFnAttribute("amdgpu-elide-module-lds");
-  }
-
-  static void markElideModuleLDS(Function &F) {
-    F.addFnAttr("amdgpu-elide-module-lds");
-  }
-
-  bool runOnModule(Module &M) override {
+  bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
@@ -1127,14 +957,14 @@ public:
     // If the kernel accesses a variable that is going to be stored in the
     // module instance through a call then that kernel needs to allocate the
     // module instance
-    DenseSet<Function *> KernelsThatAllocateModuleLDS =
+    const DenseSet<Function *> KernelsThatAllocateModuleLDS =
         kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
                                                         ModuleScopeVariables);
-    DenseSet<Function *> KernelsThatAllocateTableLDS =
+    const DenseSet<Function *> KernelsThatAllocateTableLDS =
         kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
                                                         TableLookupVariables);
 
-    DenseSet<Function *> KernelsThatIndirectlyAllocateDynamicLDS =
+    const DenseSet<Function *> KernelsThatIndirectlyAllocateDynamicLDS =
         kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
                                                         DynamicVariables);
 
@@ -1156,8 +986,6 @@ public:
       DenseSet<GlobalVariable *> Vec;
       Vec.insert(GV);
 
-      // TODO: Looks like a latent bug, Replacement may not be marked
-      // UsedByKernel here
       replaceLDSVariablesWithStruct(M, Vec, Replacement, [](Use &U) {
         return isa<Instruction>(U.getUser());
       });
@@ -1172,25 +1000,23 @@ public:
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(Ctx);
 
-      for (size_t i = 0; i < OrderedKernels.size(); i++) {
-        markUsedByKernel(Builder, OrderedKernels[i],
-                         KernelToReplacement[OrderedKernels[i]].SGV);
-      }
-
       // The order must be consistent between lookup table and accesses to
       // lookup table
-      std::vector<GlobalVariable *> TableLookupVariablesOrdered(
-          TableLookupVariables.begin(), TableLookupVariables.end());
-      llvm::sort(TableLookupVariablesOrdered.begin(),
-                 TableLookupVariablesOrdered.end(),
-                 [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
-                   return lhs->getName() < rhs->getName();
-                 });
+      auto TableLookupVariablesOrdered =
+          sortByName(std::vector<GlobalVariable *>(TableLookupVariables.begin(),
+                                                   TableLookupVariables.end()));
 
       GlobalVariable *LookupTable = buildLookupTable(
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
       replaceUsesInInstructionsWithTableLookup(M, TableLookupVariablesOrdered,
                                                LookupTable);
+
+      // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
+      // kernel. We may have inferred this wasn't used prior to the pass.
+      //
+      // TODO: We could filter out subgraphs that do not access LDS globals.
+      for (Function *F : KernelsThatAllocateTableLDS)
+        removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =
@@ -1200,7 +1026,6 @@ public:
 
     // All kernel frames have been allocated. Calculate and record the
     // addresses.
-
     {
       const DataLayout &DL = M.getDataLayout();
 
@@ -1209,8 +1034,8 @@ public:
           continue;
 
         // All three of these are optional. The first variable is allocated at
-        // zero. They are allocated by allocateKnownAddressLDSGlobal in the
-        // following order:
+        // zero. They are allocated by AMDGPUMachineFunction as one block.
+        // Layout:
         //{
         //  module.lds
         //  alignment padding
@@ -1220,10 +1045,12 @@ public:
         //}
 
         const bool AllocateModuleScopeStruct =
-            MaybeModuleScopeStruct && !canElideModuleLDS(Func);
+            MaybeModuleScopeStruct &&
+            KernelsThatAllocateModuleLDS.contains(&Func);
 
+        auto Replacement = KernelToReplacement.find(&Func);
         const bool AllocateKernelScopeStruct =
-            KernelToReplacement.contains(&Func);
+            Replacement != KernelToReplacement.end();
 
         const bool AllocateDynamicVariable =
             KernelToCreatedDynamicLDS.contains(&Func);
@@ -1237,22 +1064,38 @@ public:
         }
 
         if (AllocateKernelScopeStruct) {
-          GlobalVariable *KernelStruct = KernelToReplacement[&Func].SGV;
-
+          GlobalVariable *KernelStruct = Replacement->second.SGV;
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
-
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
-
           Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
-
         }
 
+        // If there is dynamic allocation, the alignment needed is included in
+        // the static frame size. There may be no reference to the dynamic
+        // variable in the kernel itself, so without including it here, that
+        // alignment padding could be missed.
         if (AllocateDynamicVariable) {
           GlobalVariable *DynamicVariable = KernelToCreatedDynamicLDS[&Func];
-
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, DynamicVariable));
-
           recordLDSAbsoluteAddress(&M, DynamicVariable, Offset);
+        }
+
+        if (Offset != 0) {
+          (void)TM; // TODO: Account for target maximum LDS
+          std::string Buffer;
+          raw_string_ostream SS{Buffer};
+          SS << format("%u", Offset);
+
+          // Instead of explicitly marking kernels that access dynamic variables
+          // using special case metadata, annotate with min-lds == max-lds, i.e.
+          // that there is no more space available for allocating more static
+          // LDS variables. That is the right condition to prevent allocating
+          // more variables which would collide with the addresses assigned to
+          // dynamic variables.
+          if (AllocateDynamicVariable)
+            SS << format(",%u", Offset);
+
+          Func.addFnAttr("amdgpu-lds-size", Buffer);
         }
       }
     }
@@ -1329,14 +1172,11 @@ private:
     LayoutFields.reserve(LDSVarsToTransform.size());
     {
       // The order of fields in this struct depends on the order of
-      // varables in the argument which varies when changing how they
+      // variables in the argument which varies when changing how they
       // are identified, leading to spurious test breakage.
-      std::vector<GlobalVariable *> Sorted(LDSVarsToTransform.begin(),
-                                           LDSVarsToTransform.end());
-      llvm::sort(Sorted.begin(), Sorted.end(),
-                 [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
-                   return lhs->getName() < rhs->getName();
-                 });
+      auto Sorted = sortByName(std::vector<GlobalVariable *>(
+          LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
+
       for (GlobalVariable *GV : Sorted) {
         OptimizedStructLayoutField F(GV,
                                      DL.getTypeAllocSize(GV->getValueType()),
@@ -1353,10 +1193,10 @@ private:
     IsPaddingField.reserve(LDSVarsToTransform.size());
     {
       uint64_t CurrentOffset = 0;
-      for (size_t I = 0; I < LayoutFields.size(); I++) {
-        GlobalVariable *FGV = static_cast<GlobalVariable *>(
-            const_cast<void *>(LayoutFields[I].Id));
-        Align DataAlign = LayoutFields[I].Alignment;
+      for (auto &F : LayoutFields) {
+        GlobalVariable *FGV =
+            static_cast<GlobalVariable *>(const_cast<void *>(F.Id));
+        Align DataAlign = F.Alignment;
 
         uint64_t DataAlignV = DataAlign.value();
         if (uint64_t Rem = CurrentOffset % DataAlignV) {
@@ -1368,16 +1208,16 @@ private:
 
           Type *ATy = ArrayType::get(Type::getInt8Ty(Ctx), Padding);
           LocalVars.push_back(new GlobalVariable(
-              M, ATy, false, GlobalValue::InternalLinkage, UndefValue::get(ATy),
-              "", nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
-              false));
+              M, ATy, false, GlobalValue::InternalLinkage,
+              PoisonValue::get(ATy), "", nullptr, GlobalValue::NotThreadLocal,
+              AMDGPUAS::LOCAL_ADDRESS, false));
           IsPaddingField.push_back(true);
           CurrentOffset += Padding;
         }
 
         LocalVars.push_back(FGV);
         IsPaddingField.push_back(false);
-        CurrentOffset += LayoutFields[I].Size;
+        CurrentOffset += F.Size;
       }
     }
 
@@ -1392,7 +1232,7 @@ private:
     Align StructAlign = AMDGPU::getAlign(DL, LocalVars[0]);
 
     GlobalVariable *SGV = new GlobalVariable(
-        M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
+        M, LDSTy, false, GlobalValue::InternalLinkage, PoisonValue::get(LDSTy),
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
     SGV->setAlignment(StructAlign);
@@ -1417,19 +1257,15 @@ private:
   template <typename PredicateTy>
   static void replaceLDSVariablesWithStruct(
       Module &M, DenseSet<GlobalVariable *> const &LDSVarsToTransformArg,
-      LDSVariableReplacement Replacement, PredicateTy Predicate) {
+      const LDSVariableReplacement &Replacement, PredicateTy Predicate) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
 
     // A hack... we need to insert the aliasing info in a predictable order for
     // lit tests. Would like to have them in a stable order already, ideally the
     // same order they get allocated, which might mean an ordered set container
-    std::vector<GlobalVariable *> LDSVarsToTransform(
-        LDSVarsToTransformArg.begin(), LDSVarsToTransformArg.end());
-    llvm::sort(LDSVarsToTransform.begin(), LDSVarsToTransform.end(),
-               [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
-                 return lhs->getName() < rhs->getName();
-               });
+    auto LDSVarsToTransform = sortByName(std::vector<GlobalVariable *>(
+        LDSVarsToTransformArg.begin(), LDSVarsToTransformArg.end()));
 
     // Create alias.scope and their lists. Each field in the new structure
     // does not alias with all other fields.
@@ -1451,7 +1287,7 @@ private:
     // field of the instance that will be allocated by AMDGPUMachineFunction
     for (size_t I = 0; I < NumberVars; I++) {
       GlobalVariable *GV = LDSVarsToTransform[I];
-      Constant *GEP = Replacement.LDSVarsToConstantGEP[GV];
+      Constant *GEP = Replacement.LDSVarsToConstantGEP.at(GV);
 
       GV->replaceUsesWithIf(GEP, Predicate);
 
@@ -1535,21 +1371,51 @@ private:
   }
 };
 
+class AMDGPULowerModuleLDSLegacy : public ModulePass {
+public:
+  const AMDGPUTargetMachine *TM;
+  static char ID;
+
+  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM_ = nullptr)
+      : ModulePass(ID), TM(TM_) {
+    initializeAMDGPULowerModuleLDSLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (!TM)
+      AU.addRequired<TargetPassConfig>();
+  }
+
+  bool runOnModule(Module &M) override {
+    if (!TM) {
+      auto &TPC = getAnalysis<TargetPassConfig>();
+      TM = &TPC.getTM<AMDGPUTargetMachine>();
+    }
+
+    return AMDGPULowerModuleLDS(*TM).runOnModule(M);
+  }
+};
+
 } // namespace
-char AMDGPULowerModuleLDS::ID = 0;
+char AMDGPULowerModuleLDSLegacy::ID = 0;
 
-char &llvm::AMDGPULowerModuleLDSID = AMDGPULowerModuleLDS::ID;
+char &llvm::AMDGPULowerModuleLDSLegacyPassID = AMDGPULowerModuleLDSLegacy::ID;
 
-INITIALIZE_PASS(AMDGPULowerModuleLDS, DEBUG_TYPE,
-                "Lower uses of LDS variables from non-kernel functions", false,
-                false)
+INITIALIZE_PASS_BEGIN(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                      "Lower uses of LDS variables from non-kernel functions",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                    "Lower uses of LDS variables from non-kernel functions",
+                    false, false)
 
-ModulePass *llvm::createAMDGPULowerModuleLDSPass() {
-  return new AMDGPULowerModuleLDS();
+ModulePass *
+llvm::createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM) {
+  return new AMDGPULowerModuleLDSLegacy(TM);
 }
 
 PreservedAnalyses AMDGPULowerModuleLDSPass::run(Module &M,
                                                 ModuleAnalysisManager &) {
-  return AMDGPULowerModuleLDS().runOnModule(M) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return AMDGPULowerModuleLDS(TM).runOnModule(M) ? PreservedAnalyses::none()
+                                                 : PreservedAnalyses::all();
 }

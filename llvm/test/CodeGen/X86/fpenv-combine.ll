@@ -15,19 +15,19 @@ define void @get_fpenv_02(ptr %ptr1, ptr %ptr2) #0 {
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rdi, %r14
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq fegetenv@PLT
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; X64-NEXT:    movq (%rsp), %rcx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; X64-NEXT:    movq %rsi, 24(%r14)
+; X64-NEXT:    movq %rsi, 16(%r14)
 ; X64-NEXT:    movq %rcx, (%r14)
+; X64-NEXT:    movq %rax, 24(%r14)
 ; X64-NEXT:    movq %rdx, 8(%r14)
-; X64-NEXT:    movq %rax, 16(%r14)
-; X64-NEXT:    movq %rax, 16(%rbx)
-; X64-NEXT:    movq %rsi, 24(%rbx)
+; X64-NEXT:    movq %rsi, 16(%rbx)
 ; X64-NEXT:    movq %rcx, (%rbx)
+; X64-NEXT:    movq %rax, 24(%rbx)
 ; X64-NEXT:    movq %rdx, 8(%rbx)
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    popq %rbx
@@ -72,9 +72,9 @@ define void @get_fpenv_04(ptr %ptr) #0 {
 ; X64-NEXT:    movq (%rsp), %rax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    movq %rax, (%rbx)
-; X64-NEXT:    movq $0, 16(%rbx)
 ; X64-NEXT:    movq $0, 24(%rbx)
 ; X64-NEXT:    movq $0, 8(%rbx)
+; X64-NEXT:    movq $0, 16(%rbx)
 ; X64-NEXT:    addq $32, %rsp
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
@@ -94,9 +94,9 @@ define void @get_fpenv_05(ptr %ptr1, ptr %ptr2) #0 {
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rdi, %r14
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq fegetenv@PLT
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; X64-NEXT:    movq (%rsp), %rax
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -129,8 +129,8 @@ define void @set_fpenv_02(ptr %ptr1, ptr %ptr2) #0 {
 ; X64-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    movq %rax, (%rsp)
+; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq fesetenv@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
@@ -182,11 +182,11 @@ define void @set_fpenv_04(ptr %ptr) #0 {
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movq %rax, (%rsp)
 ; X64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq fesetenv@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq

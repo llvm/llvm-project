@@ -151,8 +151,8 @@ bool ExecutionEngine::removeModule(Module *M) {
 }
 
 Function *ExecutionEngine::FindFunctionNamed(StringRef FnName) {
-  for (unsigned i = 0, e = Modules.size(); i != e; ++i) {
-    Function *F = Modules[i]->getFunction(FnName);
+  for (const auto &M : Modules) {
+    Function *F = M->getFunction(FnName);
     if (F && !F->isDeclaration())
       return F;
   }
@@ -160,8 +160,8 @@ Function *ExecutionEngine::FindFunctionNamed(StringRef FnName) {
 }
 
 GlobalVariable *ExecutionEngine::FindGlobalVariableNamed(StringRef Name, bool AllowInternal) {
-  for (unsigned i = 0, e = Modules.size(); i != e; ++i) {
-    GlobalVariable *GV = Modules[i]->getGlobalVariable(Name,AllowInternal);
+  for (const auto &M : Modules) {
+    GlobalVariable *GV = M->getGlobalVariable(Name, AllowInternal);
     if (GV && !GV->isDeclaration())
       return GV;
   }
@@ -192,12 +192,12 @@ std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
   SmallString<128> FullName;
 
   const DataLayout &DL =
-    GV->getParent()->getDataLayout().isDefault()
+    GV->getDataLayout().isDefault()
       ? getDataLayout()
-      : GV->getParent()->getDataLayout();
+      : GV->getDataLayout();
 
   Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 void ExecutionEngine::addGlobalMapping(const GlobalValue *GV, void *Addr) {
@@ -314,8 +314,8 @@ const GlobalValue *ExecutionEngine::getGlobalValueAtAddress(void *Addr) {
 
   if (I != EEState.getGlobalAddressReverseMap().end()) {
     StringRef Name = I->second;
-    for (unsigned i = 0, e = Modules.size(); i != e; ++i)
-      if (GlobalValue *GV = Modules[i]->getNamedValue(Name))
+    for (const auto &M : Modules)
+      if (GlobalValue *GV = M->getNamedValue(Name))
         return GV;
   }
   return nullptr;
@@ -340,7 +340,7 @@ void *ArgvArray::reset(LLVMContext &C, ExecutionEngine *EE,
   Array = std::make_unique<char[]>((InputArgv.size()+1)*PtrSize);
 
   LLVM_DEBUG(dbgs() << "JIT: ARGV = " << (void *)Array.get() << "\n");
-  Type *SBytePtr = Type::getInt8PtrTy(C);
+  Type *SBytePtr = PointerType::getUnqual(C);
 
   for (unsigned i = 0; i != InputArgv.size(); ++i) {
     unsigned Size = InputArgv[i].size()+1;
@@ -386,7 +386,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
 
     Constant *FP = CS->getOperand(1);
     if (FP->isNullValue())
-      continue;  // Found a sentinal value, ignore.
+      continue;  // Found a sentinel value, ignore.
 
     // Strip off constant expression casts.
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(FP))
@@ -430,7 +430,7 @@ int ExecutionEngine::runFunctionAsMain(Function *Fn,
   // Check main() type
   unsigned NumArgs = Fn->getFunctionType()->getNumParams();
   FunctionType *FTy = Fn->getFunctionType();
-  Type* PPInt8Ty = Type::getInt8PtrTy(Fn->getContext())->getPointerTo();
+  Type *PPInt8Ty = PointerType::get(Fn->getContext(), 0);
 
   // Check the argument types.
   if (NumArgs > 3)
@@ -471,7 +471,7 @@ EngineBuilder::EngineBuilder() : EngineBuilder(nullptr) {}
 
 EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
     : M(std::move(M)), WhichEngine(EngineKind::Either), ErrorStr(nullptr),
-      OptLevel(CodeGenOpt::Default), MemMgr(nullptr), Resolver(nullptr) {
+      OptLevel(CodeGenOptLevel::Default), MemMgr(nullptr), Resolver(nullptr) {
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
@@ -618,7 +618,18 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       case Type::ScalableVectorTyID:
         report_fatal_error(
             "Scalable vector support not yet implemented in ExecutionEngine");
-      case Type::FixedVectorTyID:
+      case Type::ArrayTyID: {
+        auto *ArrTy = cast<ArrayType>(C->getType());
+        Type *ElemTy = ArrTy->getElementType();
+        unsigned int elemNum = ArrTy->getNumElements();
+        Result.AggregateVal.resize(elemNum);
+        if (ElemTy->isIntegerTy())
+          for (unsigned int i = 0; i < elemNum; ++i)
+            Result.AggregateVal[i].IntVal =
+                APInt(ElemTy->getPrimitiveSizeInBits(), 0);
+        break;
+      }
+      case Type::FixedVectorTyID: {
         // if the whole vector is 'undef' just reserve memory for the value.
         auto *VTy = cast<FixedVectorType>(C->getType());
         Type *ElemTy = VTy->getElementType();
@@ -629,6 +640,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
             Result.AggregateVal[i].IntVal =
                 APInt(ElemTy->getPrimitiveSizeInBits(), 0);
         break;
+      }
     }
     return Result;
   }
@@ -1207,9 +1219,8 @@ void ExecutionEngine::emitGlobals() {
            const GlobalValue*> LinkedGlobalsMap;
 
   if (Modules.size() != 1) {
-    for (unsigned m = 0, e = Modules.size(); m != e; ++m) {
-      Module &M = *Modules[m];
-      for (const auto &GV : M.globals()) {
+    for (const auto &M : Modules) {
+      for (const auto &GV : M->globals()) {
         if (GV.hasLocalLinkage() || GV.isDeclaration() ||
             GV.hasAppendingLinkage() || !GV.hasName())
           continue;// Ignore external globals and globals with internal linkage.
@@ -1237,9 +1248,8 @@ void ExecutionEngine::emitGlobals() {
   }
 
   std::vector<const GlobalValue*> NonCanonicalGlobals;
-  for (unsigned m = 0, e = Modules.size(); m != e; ++m) {
-    Module &M = *Modules[m];
-    for (const auto &GV : M.globals()) {
+  for (const auto &M : Modules) {
+    for (const auto &GV : M->globals()) {
       // In the multi-module case, see what this global maps to.
       if (!LinkedGlobalsMap.empty()) {
         if (const GlobalValue *GVEntry = LinkedGlobalsMap[std::make_pair(
@@ -1281,7 +1291,7 @@ void ExecutionEngine::emitGlobals() {
 
     // Now that all of the globals are set up in memory, loop through them all
     // and initialize their contents.
-    for (const auto &GV : M.globals()) {
+    for (const auto &GV : M->globals()) {
       if (!GV.isDeclaration()) {
         if (!LinkedGlobalsMap.empty()) {
           if (const GlobalValue *GVEntry = LinkedGlobalsMap[std::make_pair(

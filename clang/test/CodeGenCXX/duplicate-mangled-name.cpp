@@ -1,11 +1,10 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST1
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST2 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple-only %s -verify -DTEST2 -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST3
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST4
 
 #ifdef TEST1
 
-// rdar://15522601
 class MyClass {
  static void meth();
 };

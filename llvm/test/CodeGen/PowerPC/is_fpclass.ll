@@ -58,7 +58,7 @@ define i1 @isnan_float_strictfp(float %x) strictfp nounwind {
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
-  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 
@@ -70,7 +70,7 @@ define i1 @isnan_double_strictfp(double %x) strictfp nounwind {
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
-  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 
@@ -86,7 +86,7 @@ define i1 @isnan_ppc_fp128_strictfp(ppc_fp128 %x) strictfp nounwind {
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    iselgt 3, 4, 3
 ; CHECK-NEXT:    blr
-  %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 
@@ -98,7 +98,7 @@ define i1 @isnan_f128_strictfp(fp128 %x) strictfp nounwind {
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
-  %1 = call i1 @llvm.is.fpclass.f128(fp128 %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f128(fp128 %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 
@@ -117,11 +117,7 @@ define i1 @isinf_float(float %x) nounwind {
 define i1 @isinf_ppc_fp128(ppc_fp128 %x) nounwind {
 ; CHECK-LABEL: isinf_ppc_fp128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mffprd 3, 1
-; CHECK-NEXT:    li 4, 2047
-; CHECK-NEXT:    clrldi 3, 3, 1
-; CHECK-NEXT:    rldic 4, 4, 52, 1
-; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    xststdcdp 0, 1, 48
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    iseleq 3, 4, 3

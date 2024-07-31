@@ -18,8 +18,10 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
@@ -30,6 +32,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
 #include <limits>
@@ -37,6 +40,8 @@
 #include <optional>
 
 using namespace llvm::COFF;
+using namespace llvm::object;
+using namespace llvm::opt;
 using namespace llvm;
 using llvm::sys::Process;
 
@@ -262,6 +267,19 @@ void LinkerDriver::parseFunctionPadMin(llvm::opt::Arg *a) {
   }
 }
 
+// Parses /dependentloadflag option argument.
+void LinkerDriver::parseDependentLoadFlags(llvm::opt::Arg *a) {
+  StringRef arg = a->getNumValues() ? a->getValue() : "";
+  if (!arg.empty()) {
+    if (arg.getAsInteger(0, ctx.config.dependentLoadFlags))
+      error("/dependentloadflag: invalid argument: " + arg);
+    return;
+  }
+  // MSVC linker reports error "no argument specified", although MSDN describes
+  // argument as optional.
+  error("/dependentloadflag: no argument specified");
+}
+
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to
 // Config.
@@ -294,13 +312,11 @@ void LinkerDriver::parseManifestUAC(StringRef arg) {
     arg = arg.ltrim();
     if (arg.empty())
       return;
-    if (arg.starts_with_insensitive("level=")) {
-      arg = arg.substr(strlen("level="));
+    if (arg.consume_front_insensitive("level=")) {
       std::tie(ctx.config.manifestLevel, arg) = arg.split(" ");
       continue;
     }
-    if (arg.starts_with_insensitive("uiaccess=")) {
-      arg = arg.substr(strlen("uiaccess="));
+    if (arg.consume_front_insensitive("uiaccess=")) {
       std::tie(ctx.config.manifestUIAccess, arg) = arg.split(" ");
       continue;
     }
@@ -336,7 +352,7 @@ public:
     SmallString<128> s;
     if (auto ec = sys::fs::createTemporaryFile("lld-" + prefix, extn, s))
       fatal("cannot create a temporary file: " + ec.message());
-    path = std::string(s.str());
+    path = std::string(s);
 
     if (!contents.empty()) {
       std::error_code ec;
@@ -563,16 +579,16 @@ Export LinkerDriver::parseExport(StringRef arg) {
     if (y.contains(".")) {
       e.name = x;
       e.forwardTo = y;
-      return e;
+    } else {
+      e.extName = x;
+      e.name = y;
+      if (e.name.empty())
+        goto err;
     }
-
-    e.extName = x;
-    e.name = y;
-    if (e.name.empty())
-      goto err;
   }
 
-  // If "<name>=<internalname>[,@ordinal[,NONAME]][,DATA][,PRIVATE]"
+  // Optional parameters
+  // "[,@ordinal[,NONAME]][,DATA][,PRIVATE][,EXPORTAS,exportname]"
   while (!rest.empty()) {
     StringRef tok;
     std::tie(tok, rest) = rest.split(",");
@@ -594,6 +610,13 @@ Export LinkerDriver::parseExport(StringRef arg) {
       e.isPrivate = true;
       continue;
     }
+    if (tok.equals_insensitive("exportas")) {
+      if (!rest.empty() && !rest.contains(','))
+        e.exportAs = rest;
+      else
+        error("invalid EXPORTAS value: " + rest);
+      break;
+    }
     if (tok.starts_with("@")) {
       int32_t ord;
       if (tok.substr(1).getAsInteger(0, ord))
@@ -609,18 +632,6 @@ Export LinkerDriver::parseExport(StringRef arg) {
 
 err:
   fatal("invalid /export: " + arg);
-}
-
-static StringRef undecorate(COFFLinkerContext &ctx, StringRef sym) {
-  if (ctx.config.machine != I386)
-    return sym;
-  // In MSVC mode, a fully decorated stdcall function is exported
-  // as-is with the leading underscore (with type IMPORT_NAME).
-  // In MinGW mode, a decorated stdcall function gets the underscore
-  // removed, just like normal cdecl functions.
-  if (sym.starts_with("_") && sym.contains('@') && !ctx.config.mingw)
-    return sym;
-  return sym.starts_with("_") ? sym.substr(1) : sym;
 }
 
 // Convert stdcall/fastcall style symbols into unsuffixed symbols,
@@ -659,6 +670,7 @@ static StringRef exportSourceName(ExportSource s) {
 // Performs error checking on all /export arguments.
 // It also sets ordinals.
 void LinkerDriver::fixupExports() {
+  llvm::TimeTraceScope timeScope("Fixup exports");
   // Symbol ordinals must be unique.
   std::set<uint16_t> ords;
   for (Export &e : ctx.config.exports) {
@@ -669,11 +681,31 @@ void LinkerDriver::fixupExports() {
   }
 
   for (Export &e : ctx.config.exports) {
-    if (!e.forwardTo.empty()) {
-      e.exportName = undecorate(ctx, e.name);
-    } else {
-      e.exportName = undecorate(ctx, e.extName.empty() ? e.name : e.extName);
+    if (!e.exportAs.empty()) {
+      e.exportName = e.exportAs;
+      continue;
     }
+
+    StringRef sym =
+        !e.forwardTo.empty() || e.extName.empty() ? e.name : e.extName;
+    if (ctx.config.machine == I386 && sym.starts_with("_")) {
+      // In MSVC mode, a fully decorated stdcall function is exported
+      // as-is with the leading underscore (with type IMPORT_NAME).
+      // In MinGW mode, a decorated stdcall function gets the underscore
+      // removed, just like normal cdecl functions.
+      if (ctx.config.mingw || !sym.contains('@')) {
+        e.exportName = sym.substr(1);
+        continue;
+      }
+    }
+    if (isArm64EC(ctx.config.machine) && !e.data && !e.constant) {
+      if (std::optional<std::string> demangledName =
+              getArm64ECDemangledFunctionName(sym)) {
+        e.exportName = saver().save(*demangledName);
+        continue;
+      }
+    }
+    e.exportName = sym;
   }
 
   if (ctx.config.killAt && ctx.config.machine == I386) {
@@ -817,9 +849,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
 // Create table mapping all options defined in Options.td
 static constexpr llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };

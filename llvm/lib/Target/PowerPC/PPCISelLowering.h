@@ -18,11 +18,11 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
@@ -332,11 +332,11 @@ namespace llvm {
     /// finds the offset of "sym" relative to the thread pointer.
     LD_GOT_TPREL_L,
 
-    /// G8RC = ADD_TLS G8RReg, Symbol - Used by the initial-exec TLS
-    /// model, produces an ADD instruction that adds the contents of
-    /// G8RReg to the thread pointer.  Symbol contains a relocation
-    /// sym\@tls which is to be replaced by the thread pointer and
-    /// identifies to the linker that the instruction is part of a
+    /// G8RC = ADD_TLS G8RReg, Symbol - Can be used by the initial-exec
+    /// and local-exec TLS models, produces an ADD instruction that adds
+    /// the contents of G8RReg to the thread pointer.  Symbol contains a
+    /// relocation sym\@tls which is to be replaced by the thread pointer
+    /// and identifies to the linker that the instruction is part of a
     /// TLS sequence.
     ADD_TLS,
 
@@ -356,6 +356,11 @@ namespace llvm {
     /// ADDIS_TLSGD_L_ADDR until after register assignment.
     GET_TLS_ADDR,
 
+    /// %x3 = GET_TPOINTER - Used for the local- and initial-exec TLS model on
+    /// 32-bit AIX, produces a call to .__get_tpointer to retrieve the thread
+    /// pointer. At the end of the call, the thread pointer is found in R3.
+    GET_TPOINTER,
+
     /// G8RC = ADDI_TLSGD_L_ADDR G8RReg, Symbol, Symbol - Op that
     /// combines ADDI_TLSGD_L and GET_TLS_ADDR until expansion following
     /// register assignment.
@@ -365,10 +370,21 @@ namespace llvm {
     /// G8RC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
     /// Op that combines two register copies of TOC entries
     /// (region handle into R3 and variable offset into R4) followed by a
-    /// GET_TLS_ADDR node which will be expanded to a call to __get_tls_addr.
+    /// GET_TLS_ADDR node which will be expanded to a call to .__tls_get_addr.
     /// This node is used in 64-bit mode as well (in which case the result is
     /// G8RC and inputs are X3/X4).
     TLSGD_AIX,
+
+    /// %x3 = GET_TLS_MOD_AIX _$TLSML - For the AIX local-dynamic TLS model,
+    /// produces a call to .__tls_get_mod(_$TLSML\@ml).
+    GET_TLS_MOD_AIX,
+
+    /// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(module handle)
+    /// Op that requires a single input of the module handle TOC entry in R3,
+    /// and generates a GET_TLS_MOD_AIX node which will be expanded into a call
+    /// to .__tls_get_mod. This node is used in both 32-bit and 64-bit modes.
+    /// The only difference is the register class.
+    TLSLD_AIX,
 
     /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
     /// model, produces an ADDIS8 instruction that adds the GOT base
@@ -786,6 +802,11 @@ namespace llvm {
       return true;
     }
 
+    bool
+    shallExtractConstSplatVectorElementToStore(Type *VectorTy,
+                                               unsigned ElemSizeInBits,
+                                               unsigned &Index) const override;
+
     bool isCtlzFast() const override {
       return true;
     }
@@ -965,21 +986,20 @@ namespace llvm {
 
     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
     /// vector.  If it is invalid, don't add anything to Ops.
-    void LowerAsmOperandForConstraint(SDValue Op,
-                                      std::string &Constraint,
+    void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "es")
-        return InlineAsm::Constraint_es;
+        return InlineAsm::ConstraintCode::es;
       else if (ConstraintCode == "Q")
-        return InlineAsm::Constraint_Q;
+        return InlineAsm::ConstraintCode::Q;
       else if (ConstraintCode == "Z")
-        return InlineAsm::Constraint_Z;
+        return InlineAsm::ConstraintCode::Z;
       else if (ConstraintCode == "Zy")
-        return InlineAsm::Constraint_Zy;
+        return InlineAsm::ConstraintCode::Zy;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 

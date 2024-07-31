@@ -137,7 +137,7 @@ TEST_F(CloneInstruction, OverflowBits) {
 }
 
 TEST_F(CloneInstruction, Inbounds) {
-  V = new Argument(Type::getInt32PtrTy(context));
+  V = new Argument(PointerType::get(context, 0));
 
   Constant *Z = Constant::getNullValue(Type::getInt32Ty(context));
   std::vector<Value *> ops;
@@ -161,8 +161,9 @@ TEST_F(CloneInstruction, Exact) {
 }
 
 TEST_F(CloneInstruction, Attributes) {
-  Type *ArgTy1[] = { Type::getInt32PtrTy(context) };
-  FunctionType *FT1 =  FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
+  FunctionType *FT1 =
+      FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
 
   Function *F1 = Function::Create(FT1, Function::ExternalLinkage);
   BasicBlock *BB = BasicBlock::Create(context, "", F1);
@@ -187,8 +188,9 @@ TEST_F(CloneInstruction, Attributes) {
 }
 
 TEST_F(CloneInstruction, CallingConvention) {
-  Type *ArgTy1[] = { Type::getInt32PtrTy(context) };
-  FunctionType *FT1 =  FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
+  FunctionType *FT1 =
+      FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
 
   Function *F1 = Function::Create(FT1, Function::ExternalLinkage);
   F1->setCallingConv(CallingConv::Cold);
@@ -211,7 +213,7 @@ TEST_F(CloneInstruction, CallingConvention) {
 }
 
 TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
   V = new Argument(Type::getInt32Ty(context));
 
@@ -260,7 +262,7 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
 }
 
 TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq1) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
   V = new Argument(Type::getInt32Ty(context));
 
@@ -313,7 +315,7 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq1) {
 }
 
 TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq2) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
   V = new Argument(Type::getInt32Ty(context));
 
@@ -438,11 +440,11 @@ for.end:
         EXPECT_NE(NewLoop, nullptr);
         EXPECT_EQ(NewLoop->getSubLoops().size(), 1u);
         Loop::block_iterator BI = NewLoop->block_begin();
-        EXPECT_TRUE((*BI)->getName().startswith("for.outer"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.inner.preheader"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.inner"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.inner.exit"));
-        EXPECT_TRUE((*(++BI))->getName().startswith("for.outer.latch"));
+        EXPECT_TRUE((*BI)->getName().starts_with("for.outer"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.inner.preheader"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.inner"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.inner.exit"));
+        EXPECT_TRUE((*(++BI))->getName().starts_with("for.outer.latch"));
       });
 }
 
@@ -842,8 +844,9 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
   EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
 
   // Check that DILexicalBlock of inlined function was not cloned.
-  auto DbgDeclareI = Func->begin()->begin();
-  auto ClonedDbgDeclareI = ClonedFunc->begin()->begin();
+  auto DbgDeclareI = Func->begin()->begin()->getDbgRecordRange().begin();
+  auto ClonedDbgDeclareI =
+      ClonedFunc->begin()->begin()->getDbgRecordRange().begin();
   const DebugLoc &DbgLoc = DbgDeclareI->getDebugLoc();
   const DebugLoc &ClonedDbgLoc = ClonedDbgDeclareI->getDebugLoc();
   EXPECT_NE(DbgLoc.get(), ClonedDbgLoc.get());
@@ -925,7 +928,7 @@ protected:
     // Add ifuncs
     {
       const unsigned AddrSpace = 123;
-      auto *FuncPtrTy = Type::getInt8Ty(C)->getPointerTo(123);
+      auto *FuncPtrTy = PointerType::get(C, AddrSpace);
       auto *FuncTy = FunctionType::get(FuncPtrTy, false);
 
       auto *ResolverF = Function::Create(FuncTy, GlobalValue::PrivateLinkage,
@@ -1119,4 +1122,41 @@ TEST_F(CloneModule, IFunc) {
   EXPECT_EQ("resolver", Resolver->getName());
   EXPECT_EQ(GlobalValue::PrivateLinkage, Resolver->getLinkage());
 }
+
+TEST_F(CloneModule, CloneDbgLabel) {
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context,
+                                      R"M(
+define void @noop(ptr nocapture noundef writeonly align 4 %dst) local_unnamed_addr !dbg !3 {
+entry:
+  %call = tail call spir_func i64 @foo(i32 noundef 0)
+    #dbg_label(!11, !12)
+  store i64 %call, ptr %dst, align 4
+  ret void
 }
+
+declare i64 @foo(i32 noundef) local_unnamed_addr
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 19.0.0git", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = !DIFile(filename: "<stdin>", directory: "foo")
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = distinct !DISubprogram(name: "noop", scope: !4, file: !4, line: 17, type: !5, scopeLine: 17, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !9)
+!4 = !DIFile(filename: "file", directory: "foo")
+!5 = !DISubroutineType(types: !6)
+!6 = !{null, !7}
+!7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64)
+!8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!9 = !{}
+!11 = !DILabel(scope: !3, name: "foo", file: !4, line: 23)
+!12 = !DILocation(line: 23, scope: !3)
+)M");
+
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  auto NewM = llvm::CloneModule(*M);
+  EXPECT_FALSE(verifyModule(*NewM, &errs()));
+}
+} // namespace

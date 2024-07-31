@@ -54,13 +54,14 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                        Objective-C: .m .mm
                                        Proto: .proto .protodevel
                                        TableGen: .td
-                                       TextProto: .textpb .pb.txt .textproto .asciipb
+                                       TextProto: .txtpb .textpb .pb.txt .textproto .asciipb
                                        Verilog: .sv .svh .v .vh
     --cursor=<uint>                - The position of the cursor when invoking
                                      clang-format from an editor integration
     --dry-run                      - If set, do not actually make the formatting changes
     --dump-config                  - Dump configuration options to stdout and exit.
                                      Can be used with -style option.
+    --fail-on-incomplete-format    - If set, fail with exit code 1 on incomplete format.
     --fallback-style=<string>      - The name of the predefined style used as a
                                      fallback in case clang-format is invoked with
                                      -style=file, but can not find the .clang-format
@@ -69,8 +70,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --ferror-limit=<uint>          - Set the maximum number of clang-format errors to emit
                                      before stopping (0 = no limit).
                                      Used only with --dry-run or -n
-    --files=<filename>             - A file containing a list of files to process, one
-                                     per line.
+    --files=<filename>             - A file containing a list of files to process, one per line.
     -i                             - Inplace edit <file>s, if specified.
     --length=<uint>                - Format a range of this length (in bytes).
                                      Multiple ranges can be formatted by specifying
@@ -132,6 +132,31 @@ An easy way to create the ``.clang-format`` file is:
 
 Available style options are described in :doc:`ClangFormatStyleOptions`.
 
+.clang-format-ignore
+====================
+
+You can create ``.clang-format-ignore`` files to make ``clang-format`` ignore
+certain files. A ``.clang-format-ignore`` file consists of patterns of file path
+names. It has the following format:
+
+* A blank line is skipped.
+* Leading and trailing spaces of a line are trimmed.
+* A line starting with a hash (``#``) is a comment.
+* A non-comment line is a single pattern.
+* The slash (``/``) is used as the directory separator.
+* A pattern is relative to the directory of the ``.clang-format-ignore`` file
+  (or the root directory if the pattern starts with a slash). Patterns
+  containing drive names (e.g. ``C:``) are not supported.
+* Patterns follow the rules specified in `POSIX 2.13.1, 2.13.2, and Rule 1 of
+  2.13.3 <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/
+  V3_chap02.html#tag_18_13>`_.
+* A pattern is negated if it starts with a bang (``!``).
+
+To match all files in a directory, use e.g. ``foo/bar/*``. To match all files in
+the directory of the ``.clang-format-ignore`` file, use ``*``.
+Multiple ``.clang-format-ignore`` files are supported similar to the
+``.clang-format`` files, with a lower directory level file voiding the higher
+level ones.
 
 Vim Integration
 ===============
@@ -145,8 +170,13 @@ This can be integrated by adding the following to your `.vimrc`:
 
 .. code-block:: vim
 
-  map <C-K> :pyf <path-to-this-file>/clang-format.py<cr>
-  imap <C-K> <c-o>:pyf <path-to-this-file>/clang-format.py<cr>
+  if has('python')
+    map <C-K> :pyf <path-to-this-file>/clang-format.py<cr>
+    imap <C-K> <c-o>:pyf <path-to-this-file>/clang-format.py<cr>
+  elseif has('python3')
+    map <C-K> :py3f <path-to-this-file>/clang-format.py<cr>
+    imap <C-K> <c-o>:py3f <path-to-this-file>/clang-format.py<cr>
+  endif
 
 The first line enables :program:`clang-format` for NORMAL and VISUAL mode, the
 second line adds support for INSERT mode. Change "C-K" to another binding if

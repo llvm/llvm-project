@@ -21,6 +21,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <cstdint>
@@ -39,7 +40,6 @@ class MCSection;
 class MCStreamer;
 class MCSymbol;
 class raw_ostream;
-class SMLoc;
 class SourceMgr;
 
 namespace mcdwarf {
@@ -70,6 +70,10 @@ public:
 
   /// Returns finalized section.
   SmallString<0> getFinalizedData();
+
+  /// Adds path \p Path to the line string. Returns offset in the
+  /// .debug_line_str section.
+  size_t addString(StringRef Path);
 };
 
 /// Instances of this class represent the name of the dwarf .file directive and
@@ -261,7 +265,8 @@ struct MCDwarfLineTableHeader {
   StringMap<unsigned> SourceIdMap;
   std::string CompilationDir;
   MCDwarfFile RootFile;
-  bool HasSource = false;
+  bool HasAnySource = false;
+
 private:
   bool HasAllMD5 = true;
   bool HasAnyMD5 = false;
@@ -301,7 +306,7 @@ public:
     RootFile.Checksum = Checksum;
     RootFile.Source = Source;
     trackMD5Usage(Checksum.has_value());
-    HasSource = Source.has_value();
+    HasAnySource |= Source.has_value();
   }
 
   void resetFileTable() {
@@ -309,7 +314,7 @@ public:
     MCDwarfFiles.clear();
     RootFile.Name.clear();
     resetMD5Usage();
-    HasSource = false;
+    HasAnySource = false;
   }
 
 private:
@@ -381,7 +386,7 @@ public:
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
     Header.trackMD5Usage(Checksum.has_value());
-    Header.HasSource = Source.has_value();
+    Header.HasAnySource |= Source.has_value();
   }
 
   void resetFileTable() { Header.resetFileTable(); }
@@ -478,7 +483,7 @@ public:
 
 class MCCFIInstruction {
 public:
-  enum OpType {
+  enum OpType : uint8_t {
     OpSameValue,
     OpRememberState,
     OpRestoreState,
@@ -495,64 +500,87 @@ public:
     OpRegister,
     OpWindowSave,
     OpNegateRAState,
-    OpGnuArgsSize
+    OpGnuArgsSize,
+    OpLabel,
   };
 
 private:
-  OpType Operation;
   MCSymbol *Label;
-  unsigned Register;
   union {
-    int Offset;
-    unsigned Register2;
-  };
-  unsigned AddressSpace = ~0u;
+    struct {
+      unsigned Register;
+      int64_t Offset;
+    } RI;
+    struct {
+      unsigned Register;
+      int64_t Offset;
+      unsigned AddressSpace;
+    } RIA;
+    struct {
+      unsigned Register;
+      unsigned Register2;
+    } RR;
+    MCSymbol *CfiLabel;
+  } U;
+  OpType Operation;
+  SMLoc Loc;
   std::vector<char> Values;
   std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V,
-                   StringRef Comment = "")
-      : Operation(Op), Label(L), Register(R), Offset(O),
-        Values(V.begin(), V.end()), Comment(Comment) {
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, SMLoc Loc,
+                   StringRef V = "", StringRef Comment = "")
+      : Label(L), Operation(Op), Loc(Loc), Values(V.begin(), V.end()),
+        Comment(Comment) {
     assert(Op != OpRegister && Op != OpLLVMDefAspaceCfa);
+    U.RI = {R, O};
   }
-
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2)
-      : Operation(Op), Label(L), Register(R1), Register2(R2) {
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
     assert(Op == OpRegister);
+    U.RR = {R1, R2};
+  }
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, unsigned AS,
+                   SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpLLVMDefAspaceCfa);
+    U.RIA = {R, O, AS};
   }
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, unsigned AS)
-      : Operation(Op), Label(L), Register(R), Offset(O), AddressSpace(AS) {
-    assert(Op == OpLLVMDefAspaceCfa);
+  MCCFIInstruction(OpType Op, MCSymbol *L, MCSymbol *CfiLabel, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpLabel);
+    U.CfiLabel = CfiLabel;
   }
 
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
   static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
-                                    int Offset) {
-    return MCCFIInstruction(OpDefCfa, L, Register, Offset, "");
+                                    int64_t Offset, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpDefCfa, L, Register, Offset, Loc);
   }
 
   /// .cfi_def_cfa_register modifies a rule for computing CFA. From now
   /// on Register will be used instead of the old one. Offset remains the same.
-  static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register) {
-    return MCCFIInstruction(OpDefCfaRegister, L, Register, 0, "");
+  static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register,
+                                               SMLoc Loc = {}) {
+    return MCCFIInstruction(OpDefCfaRegister, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset) {
-    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, "");
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int64_t Offset,
+                                          SMLoc Loc = {}) {
+    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, Loc);
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
   /// Offset is a relative value that is added/subtracted from the previous
   /// offset.
-  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int Adjustment) {
-    return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, "");
+  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int64_t Adjustment,
+                                                SMLoc Loc = {}) {
+    return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, Loc);
   }
 
   // FIXME: Update the remaining docs to use the new proposal wording.
@@ -560,113 +588,132 @@ public:
   /// be the result of evaluating the DWARF operation expression
   /// `DW_OP_constu AS; DW_OP_aspace_bregx R, B` as a location description.
   static MCCFIInstruction createLLVMDefAspaceCfa(MCSymbol *L, unsigned Register,
-                                                 int Offset,
-                                                 unsigned AddressSpace) {
+                                                 int64_t Offset,
+                                                 unsigned AddressSpace,
+                                                 SMLoc Loc) {
     return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, Offset,
-                            AddressSpace);
+                            AddressSpace, Loc);
   }
 
   /// .cfi_offset Previous value of Register is saved at offset Offset
   /// from CFA.
   static MCCFIInstruction createOffset(MCSymbol *L, unsigned Register,
-                                       int Offset) {
-    return MCCFIInstruction(OpOffset, L, Register, Offset, "");
+                                       int64_t Offset, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpOffset, L, Register, Offset, Loc);
   }
 
   /// .cfi_rel_offset Previous value of Register is saved at offset
   /// Offset from the current CFA register. This is transformed to .cfi_offset
   /// using the known displacement of the CFA register from the CFA.
   static MCCFIInstruction createRelOffset(MCSymbol *L, unsigned Register,
-                                          int Offset) {
-    return MCCFIInstruction(OpRelOffset, L, Register, Offset, "");
+                                          int64_t Offset, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpRelOffset, L, Register, Offset, Loc);
   }
 
   /// .cfi_register Previous value of Register1 is saved in
   /// register Register2.
   static MCCFIInstruction createRegister(MCSymbol *L, unsigned Register1,
-                                         unsigned Register2) {
-    return MCCFIInstruction(OpRegister, L, Register1, Register2);
+                                         unsigned Register2, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpRegister, L, Register1, Register2, Loc);
   }
 
   /// .cfi_window_save SPARC register window is saved.
-  static MCCFIInstruction createWindowSave(MCSymbol *L) {
-    return MCCFIInstruction(OpWindowSave, L, 0, 0, "");
+  static MCCFIInstruction createWindowSave(MCSymbol *L, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpWindowSave, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_negate_ra_state AArch64 negate RA state.
-  static MCCFIInstruction createNegateRAState(MCSymbol *L) {
-    return MCCFIInstruction(OpNegateRAState, L, 0, 0, "");
+  static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpNegateRAState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
   /// was at the beginning of the function, after all initial instructions added
   /// by .cfi_startproc were executed.
-  static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register) {
-    return MCCFIInstruction(OpRestore, L, Register, 0, "");
+  static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register,
+                                        SMLoc Loc = {}) {
+    return MCCFIInstruction(OpRestore, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_undefined From now on the previous value of Register can't be
   /// restored anymore.
-  static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register) {
-    return MCCFIInstruction(OpUndefined, L, Register, 0, "");
+  static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register,
+                                          SMLoc Loc = {}) {
+    return MCCFIInstruction(OpUndefined, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_same_value Current value of Register is the same as in the
   /// previous frame. I.e., no restoration is needed.
-  static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register) {
-    return MCCFIInstruction(OpSameValue, L, Register, 0, "");
+  static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register,
+                                          SMLoc Loc = {}) {
+    return MCCFIInstruction(OpSameValue, L, Register, INT64_C(0), Loc);
   }
 
   /// .cfi_remember_state Save all current rules for all registers.
-  static MCCFIInstruction createRememberState(MCSymbol *L) {
-    return MCCFIInstruction(OpRememberState, L, 0, 0, "");
+  static MCCFIInstruction createRememberState(MCSymbol *L, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpRememberState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_restore_state Restore the previously saved state.
-  static MCCFIInstruction createRestoreState(MCSymbol *L) {
-    return MCCFIInstruction(OpRestoreState, L, 0, 0, "");
+  static MCCFIInstruction createRestoreState(MCSymbol *L, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpRestoreState, L, 0, INT64_C(0), Loc);
   }
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
   /// info.
   static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals,
-                                       StringRef Comment = "") {
-    return MCCFIInstruction(OpEscape, L, 0, 0, Vals, Comment);
+                                       SMLoc Loc = {}, StringRef Comment = "") {
+    return MCCFIInstruction(OpEscape, L, 0, 0, Loc, Vals, Comment);
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
-  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int Size) {
-    return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, "");
+  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int64_t Size,
+                                            SMLoc Loc = {}) {
+    return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
+  }
+
+  static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
+                                      SMLoc Loc) {
+    return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
   }
 
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
   unsigned getRegister() const {
+    if (Operation == OpRegister)
+      return U.RR.Register;
+    if (Operation == OpLLVMDefAspaceCfa)
+      return U.RIA.Register;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset || Operation == OpRegister ||
-           Operation == OpLLVMDefAspaceCfa);
-    return Register;
+           Operation == OpRelOffset);
+    return U.RI.Register;
   }
 
   unsigned getRegister2() const {
     assert(Operation == OpRegister);
-    return Register2;
+    return U.RR.Register2;
   }
 
   unsigned getAddressSpace() const {
     assert(Operation == OpLLVMDefAspaceCfa);
-    return AddressSpace;
+    return U.RIA.AddressSpace;
   }
 
-  int getOffset() const {
+  int64_t getOffset() const {
+    if (Operation == OpLLVMDefAspaceCfa)
+      return U.RIA.Offset;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
-           Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
-           Operation == OpLLVMDefAspaceCfa);
-    return Offset;
+           Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize);
+    return U.RI.Offset;
+  }
+
+  MCSymbol *getCfiLabel() const {
+    assert(Operation == OpLabel);
+    return U.CfiLabel;
   }
 
   StringRef getValues() const {
@@ -674,9 +721,8 @@ public:
     return StringRef(&Values[0], Values.size());
   }
 
-  StringRef getComment() const {
-    return Comment;
-  }
+  StringRef getComment() const { return Comment; }
+  SMLoc getLoc() const { return Loc; }
 };
 
 struct MCDwarfFrameInfo {
@@ -690,7 +736,7 @@ struct MCDwarfFrameInfo {
   unsigned CurrentCfaRegister = 0;
   unsigned PersonalityEncoding = 0;
   unsigned LsdaEncoding = 0;
-  uint32_t CompactUnwindEncoding = 0;
+  uint64_t CompactUnwindEncoding = 0;
   bool IsSignalFrame = false;
   bool IsSimple = false;
   unsigned RAReg = static_cast<unsigned>(INT_MAX);

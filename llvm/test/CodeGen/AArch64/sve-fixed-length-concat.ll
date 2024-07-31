@@ -35,12 +35,12 @@ define <16 x i8> @concat_v16i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #
 define void @concat_v32i8(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.b, p0, z1.b, z0.b
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    st1b { z1.b }, p0, [x2]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i8>, ptr %a
   %op2 = load <16 x i8>, ptr %b
@@ -56,11 +56,11 @@ define void @concat_v64i8(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_256-NEXT:    mov w8, #32
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x2, x8]
-; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x2, x8]
+; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v64i8:
@@ -195,12 +195,12 @@ define <8 x i16> @concat_v8i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0)
 define void @concat_v16i16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.h, p0, z1.h, z0.h
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    st1h { z1.h }, p0, [x2]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %op2 = load <8 x i16>, ptr %b
@@ -214,11 +214,11 @@ define void @concat_v32i16(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    mov x8, #16
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v32i16:
@@ -325,12 +325,12 @@ define <4 x i32> @concat_v4i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0)
 define void @concat_v8i32(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    st1w { z1.s }, p0, [x2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i32>, ptr %a
   %op2 = load <4 x i32>, ptr %b
@@ -343,11 +343,11 @@ define void @concat_v16i32(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    mov x8, #8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v16i32:
@@ -430,12 +430,12 @@ define <2 x i64> @concat_v2i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0)
 define void @concat_v4i64(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.d, p0, z1.d, z0.d
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    st1d { z1.d }, p0, [x2]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i64>, ptr %a
   %op2 = load <2 x i64>, ptr %b
@@ -448,11 +448,11 @@ define void @concat_v8i64(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    mov x8, #4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v8i64:
@@ -538,12 +538,12 @@ define <8 x half> @concat_v8f16(<4 x half> %op1, <4 x half> %op2) vscale_range(2
 define void @concat_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.h, p0, z1.h, z0.h
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    st1h { z1.h }, p0, [x2]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
   %op2 = load <8 x half>, ptr %b
@@ -557,11 +557,11 @@ define void @concat_v32f16(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    mov x8, #16
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v32f16:
@@ -668,12 +668,12 @@ define <4 x float> @concat_v4f32(<2 x float> %op1, <2 x float> %op2) vscale_rang
 define void @concat_v8f32(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    st1w { z1.s }, p0, [x2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x float>, ptr %a
   %op2 = load <4 x float>, ptr %b
@@ -686,11 +686,11 @@ define void @concat_v16f32(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    mov x8, #8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v16f32:
@@ -773,12 +773,12 @@ define <2 x double> @concat_v2f64(<1 x double> %op1, <1 x double> %op2) vscale_r
 define void @concat_v4f64(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    splice z1.d, p0, z1.d, z0.d
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    st1d { z1.d }, p0, [x2]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <2 x double>, ptr %a
   %op2 = load <2 x double>, ptr %b
@@ -791,11 +791,11 @@ define void @concat_v8f64(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: concat_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    mov x8, #4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: concat_v8f64:
@@ -859,8 +859,8 @@ define void @concat_v32f64(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #0 {
 define void @concat_v32i8_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v32i8_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i8>, ptr %a
@@ -875,8 +875,8 @@ define void @concat_v32i8_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v16i16_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v16i16_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
@@ -889,8 +889,8 @@ define void @concat_v16i16_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v8i32_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v8i32_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i32>, ptr %a
@@ -902,8 +902,8 @@ define void @concat_v8i32_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v4i64_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v4i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i64>, ptr %a
@@ -919,8 +919,8 @@ define void @concat_v4i64_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v32i8_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v32i8_4op:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
@@ -937,8 +937,8 @@ define void @concat_v32i8_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v16i16_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v16i16_4op:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i16>, ptr %a
@@ -952,8 +952,8 @@ define void @concat_v16i16_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v8i32_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v8i32_4op:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i32>, ptr %a
@@ -966,8 +966,8 @@ define void @concat_v8i32_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @concat_v4i64_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v4i64_4op:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <1 x i64>, ptr %a

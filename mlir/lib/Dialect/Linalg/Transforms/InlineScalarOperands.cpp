@@ -23,7 +23,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDS
+#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -35,7 +35,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     SmallVector<size_t> scalarOperands;
@@ -54,8 +54,9 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     if (scalarOperands.empty())
       return failure();
 
-    for (OpOperand *opOperand : genericOp.getDpsInitOperands())
-      newIndexingMaps.emplace_back(genericOp.getMatchingIndexingMap(opOperand));
+    for (OpOperand &opOperand : genericOp.getDpsInitsMutable())
+      newIndexingMaps.emplace_back(
+          genericOp.getMatchingIndexingMap(&opOperand));
 
     Location loc = genericOp->getLoc();
     SmallVector<Value> outputOperands = genericOp.getOutputs();
@@ -100,20 +101,16 @@ void mlir::linalg::populateInlineConstantOperandsPatterns(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgInlineScalarOperandsPass
-    : public impl::LinalgInlineScalarOperandsBase<
+    : public impl::LinalgInlineScalarOperandsPassBase<
           LinalgInlineScalarOperandsPass> {
+  using impl::LinalgInlineScalarOperandsPassBase<
+      LinalgInlineScalarOperandsPass>::LinalgInlineScalarOperandsPassBase;
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *context = funcOp.getContext();
-    RewritePatternSet patterns(context);
-
+    Operation *op = getOperation();
+    MLIRContext &ctx = getContext();
+    RewritePatternSet patterns(&ctx);
     populateInlineConstantOperandsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgInlineScalarOperandsPass() {
-  return std::make_unique<LinalgInlineScalarOperandsPass>();
-}

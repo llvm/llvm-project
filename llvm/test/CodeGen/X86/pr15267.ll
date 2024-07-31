@@ -71,8 +71,7 @@ define <4 x i64> @test3(ptr %in) nounwind {
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %wide.load35 = load <4 x i1>, ptr %in, align 1

@@ -323,19 +323,21 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
                                      ompt_state_t ompt_state,
                                      ompt_data_t *tId) {
   int ds_tid = this_thr->th.th_info.ds.ds_tid;
-  if (ompt_state == ompt_state_wait_barrier_implicit) {
+  if (ompt_state == ompt_state_wait_barrier_implicit_parallel ||
+      ompt_state == ompt_state_wait_barrier_teams) {
     this_thr->th.ompt_thread_info.state = ompt_state_overhead;
 #if OMPT_OPTIONAL
     void *codeptr = NULL;
+    ompt_sync_region_t sync_kind = ompt_sync_region_barrier_implicit_parallel;
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
+      sync_kind = ompt_sync_region_barrier_teams;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
-          codeptr);
+          sync_kind, ompt_scope_end, NULL, tId, codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
-          codeptr);
+          sync_kind, ompt_scope_end, NULL, tId, codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid)) {
@@ -455,7 +457,9 @@ final_spin=FALSE)
   ompt_data_t *tId;
   if (ompt_enabled.enabled) {
     ompt_entry_state = this_thr->th.ompt_thread_info.state;
-    if (!final_spin || ompt_entry_state != ompt_state_wait_barrier_implicit ||
+    if (!final_spin ||
+        (ompt_entry_state != ompt_state_wait_barrier_implicit_parallel &&
+         ompt_entry_state != ompt_state_wait_barrier_teams) ||
         KMP_MASTER_TID(this_thr->th.th_info.ds.ds_tid)) {
       ompt_lw_taskteam_t *team = NULL;
       if (this_thr->th.th_team)
@@ -1038,15 +1042,9 @@ static inline void __kmp_null_resume_wrapper(kmp_info_t *thr) {
   case flag_oncore:
     __kmp_resume_oncore(gtid, RCAST(kmp_flag_oncore *, flag));
     break;
-#ifdef KMP_DEBUG
   case flag_unset:
     KF_TRACE(100, ("__kmp_null_resume_wrapper: flag type %d is unset\n", type));
     break;
-  default:
-    KF_TRACE(100, ("__kmp_null_resume_wrapper: flag type %d does not match any "
-                   "known flag type\n",
-                   type));
-#endif
   }
 }
 

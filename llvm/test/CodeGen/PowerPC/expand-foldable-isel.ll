@@ -2,12 +2,12 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 ; This file mainly tests the case that the two input registers of the ISEL instruction are the same register.
-; The foldable ISEL in this test case is introduced at simple register coalescing stage.
+; The foldable ISEL in this test case is introduced at register coalescing stage.
 
 ; Before that stage we have:
 ; %vreg18<def> = ISEL8 %vreg5, %vreg2, %vreg15<undef>;
 
-; At simple register coalescing stage, the register coalescer figures out it could remove the copy
+; At register coalescing stage, the register coalescer figures out it could remove the copy
 ; from %vreg2 to %vreg5, put the original value %X3 into %vreg5 directly
 ;  erased: 336r    %vreg5<def> = COPY %vreg2
 ;  updated: 288B   %vreg5<def> = COPY %X3;
@@ -17,11 +17,11 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 ; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=true < %s | FileCheck %s --check-prefix=CHECK-GEN-ISEL-TRUE
 ; RUN: llc -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
-%"struct.pov::ot_block_struct" = type { %"struct.pov::ot_block_struct"*, [3 x double], [3 x double], float, float, float, float, float, float, float, float, float, [3 x float], float, float, [3 x double], i16 }
-%"struct.pov::ot_node_struct" = type { %"struct.pov::ot_id_struct", %"struct.pov::ot_block_struct"*, [8 x %"struct.pov::ot_node_struct"*] }
+%"struct.pov::ot_block_struct" = type { ptr, [3 x double], [3 x double], float, float, float, float, float, float, float, float, float, [3 x float], float, float, [3 x double], i16 }
+%"struct.pov::ot_node_struct" = type { %"struct.pov::ot_id_struct", ptr, [8 x ptr] }
 %"struct.pov::ot_id_struct" = type { i32, i32, i32, i32 }
 
-define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE(%"struct.pov::ot_block_struct"* %new_block) {
+define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE(ptr %new_block) {
 ; CHECK-GEN-ISEL-TRUE-LABEL: _ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot_id_structE:
 ; CHECK-GEN-ISEL-TRUE:       # %bb.0: # %entry
 ; CHECK-GEN-ISEL-TRUE-NEXT:    mflr r0
@@ -33,9 +33,9 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ; CHECK-GEN-ISEL-TRUE-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-GEN-ISEL-TRUE-NEXT:    stdu r1, -64(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    mr r30, r3
+; CHECK-GEN-ISEL-TRUE-NEXT:    std r0, 80(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    # implicit-def: $x3
 ; CHECK-GEN-ISEL-TRUE-NEXT:    # implicit-def: $r29
-; CHECK-GEN-ISEL-TRUE-NEXT:    std r0, 80(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    b .LBB0_2
 ; CHECK-GEN-ISEL-TRUE-NEXT:    .p2align 4
 ; CHECK-GEN-ISEL-TRUE-NEXT:  .LBB0_1: # %cond.false21.i156
@@ -78,9 +78,9 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    mr r30, r3
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    # implicit-def: $r29
-; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %cond.false21.i156
@@ -115,21 +115,21 @@ entry:
   br label %while.cond11
 
 while.cond11:
-  %this_node.0250 = phi %"struct.pov::ot_node_struct"* [ undef, %entry ], [ %1, %cond.false21.i156 ], [ %1, %cond.true18.i153 ]
+  %this_node.0250 = phi ptr [ undef, %entry ], [ %1, %cond.false21.i156 ], [ %1, %cond.true18.i153 ]
   %temp_id.sroa.21.1 = phi i32 [ undef, %entry ], [ %shr2039.i152, %cond.true18.i153 ], [ %div24.i155, %cond.false21.i156 ]
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %cmp17 = icmp eq i32 0, %0
   br i1 %cmp17, label %lor.rhs, label %while.body21
 
 lor.rhs:
-  %Values = getelementptr inbounds %"struct.pov::ot_node_struct", %"struct.pov::ot_node_struct"* %this_node.0250, i64 0, i32 1
-  store %"struct.pov::ot_block_struct"* %new_block, %"struct.pov::ot_block_struct"** %Values, align 8
+  %Values = getelementptr inbounds %"struct.pov::ot_node_struct", ptr %this_node.0250, i64 0, i32 1
+  store ptr %new_block, ptr %Values, align 8
   ret void
 
 while.body21:
-  %call.i84 = tail call i8* @ZN3pov10pov_callocEmmPKciS1_pov()
-  store i8* %call.i84, i8** undef, align 8
-  %1 = bitcast i8* %call.i84 to %"struct.pov::ot_node_struct"*
+  %call.i84 = tail call ptr @ZN3pov10pov_callocEmmPKciS1_pov()
+  store ptr %call.i84, ptr undef, align 8
+  %1 = bitcast ptr %call.i84 to ptr
   br i1 undef, label %cond.true18.i153, label %cond.false21.i156
 
 cond.true18.i153:
@@ -142,4 +142,4 @@ cond.false21.i156:
   br label %while.cond11
 }
 
-declare i8* @ZN3pov10pov_callocEmmPKciS1_pov()
+declare ptr @ZN3pov10pov_callocEmmPKciS1_pov()

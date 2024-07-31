@@ -15,6 +15,7 @@
 #include "support/Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -843,7 +844,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {
   if (!S.containerName.empty()) {
     O << S.containerName;
     llvm::StringRef ContNameRef;
-    if (!ContNameRef.endswith("::")) {
+    if (!ContNameRef.ends_with("::")) {
       O << " ";
     }
   }
@@ -1186,6 +1187,23 @@ bool fromJSON(const llvm::json::Value &Params, RenameParams &R,
          O.map("position", R.position) && O.map("newName", R.newName);
 }
 
+llvm::json::Value toJSON(const RenameParams &R) {
+  return llvm::json::Object{
+      {"textDocument", R.textDocument},
+      {"position", R.position},
+      {"newName", R.newName},
+  };
+}
+
+llvm::json::Value toJSON(const PrepareRenameResult &PRR) {
+  if (PRR.placeholder.empty())
+    return toJSON(PRR.range);
+  return llvm::json::Object{
+      {"range", toJSON(PRR.range)},
+      {"placeholder", PRR.placeholder},
+  };
+}
+
 llvm::json::Value toJSON(const DocumentHighlight &DH) {
   return llvm::json::Object{
       {"range", toJSON(DH.range)},
@@ -1394,7 +1412,7 @@ bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R,
 }
 
 llvm::json::Value toJSON(SymbolTag Tag) {
-  return llvm::json::Value{static_cast<int>(Tag)};
+  return llvm::json::Value(static_cast<int>(Tag));
 }
 
 llvm::json::Value toJSON(const CallHierarchyItem &I) {
@@ -1457,7 +1475,9 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
     return 1;
   case InlayHintKind::Parameter:
     return 2;
-  case InlayHintKind::Designator: // This is an extension, don't serialize.
+  case InlayHintKind::Designator:
+  case InlayHintKind::BlockEnd:
+    // This is an extension, don't serialize.
     return nullptr;
   }
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
@@ -1481,6 +1501,10 @@ bool operator<(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) <
          std::tie(B.position, B.range, B.kind, B.label);
 }
+std::string InlayHint::joinLabels() const {
+  return llvm::join(llvm::map_range(label, [](auto &L) { return L.value; }),
+                    "");
+}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
   auto ToString = [](InlayHintKind K) {
@@ -1491,10 +1515,39 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
       return "type";
     case InlayHintKind::Designator:
       return "designator";
+    case InlayHintKind::BlockEnd:
+      return "block-end";
     }
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };
   return OS << ToString(Kind);
+}
+
+llvm::json::Value toJSON(const InlayHintLabelPart &L) {
+  llvm::json::Object Result{{"value", L.value}};
+  if (L.tooltip)
+    Result["tooltip"] = *L.tooltip;
+  if (L.location)
+    Result["location"] = *L.location;
+  if (L.command)
+    Result["command"] = *L.command;
+  return Result;
+}
+
+bool operator==(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) == std::tie(RHS.value, RHS.location);
+}
+
+bool operator<(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) < std::tie(RHS.value, RHS.location);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const InlayHintLabelPart &L) {
+  OS << L.value;
+  if (L.location)
+    OS << " (" << L.location << ")";
+  return OS;
 }
 
 static const char *toString(OffsetEncoding OE) {

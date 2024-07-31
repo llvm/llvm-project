@@ -17,6 +17,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 
@@ -103,8 +104,8 @@ bool StaticInitGVIterator::isStaticInitGlobal(GlobalValue &GV) {
     // FIXME: These section checks are too strict: We should match first and
     // second word split by comma.
     if (GV.hasSection() &&
-        (GV.getSection().startswith("__DATA,__objc_classlist") ||
-         GV.getSection().startswith("__DATA,__objc_selrefs")))
+        (GV.getSection().starts_with("__DATA,__objc_classlist") ||
+         GV.getSection().starts_with("__DATA,__objc_selrefs")))
       return true;
   }
 
@@ -117,7 +118,7 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
 
   MangleAndInterner Mangle(
       JD.getExecutionSession(),
-      (*CtorDtors.begin()).Func->getParent()->getDataLayout());
+      (*CtorDtors.begin()).Func->getDataLayout());
 
   for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
@@ -218,19 +219,23 @@ void ItaniumCXAAtExitSupport::runAtExits(void *DSOHandle) {
 }
 
 DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
-    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow)
+    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow,
+    AddAbsoluteSymbolsFn AddAbsoluteSymbols)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
+      AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)),
       GlobalPrefix(GlobalPrefix) {}
 
 Expected<std::unique_ptr<DynamicLibrarySearchGenerator>>
 DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
-                                    SymbolPredicate Allow) {
+                                    SymbolPredicate Allow,
+                                    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   std::string ErrMsg;
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   return std::make_unique<DynamicLibrarySearchGenerator>(
-      std::move(Lib), GlobalPrefix, std::move(Allow));
+      std::move(Lib), GlobalPrefix, std::move(Allow),
+      std::move(AddAbsoluteSymbols));
 }
 
 Error DynamicLibrarySearchGenerator::tryToGenerate(
@@ -261,6 +266,8 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
   if (NewSymbols.empty())
     return Error::success();
 
+  if (AddAbsoluteSymbols)
+    return AddAbsoluteSymbols(JD, std::move(NewSymbols));
   return JD.define(absoluteSymbols(std::move(NewSymbols)));
 }
 
@@ -284,7 +291,7 @@ StaticLibraryDefinitionGenerator::Load(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->getBinary())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -347,7 +354,7 @@ StaticLibraryDefinitionGenerator::Create(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->get())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -416,6 +423,7 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
   DenseMap<uint64_t, MemoryBufferRef> MemoryBuffers;
   DenseSet<uint64_t> Visited;
   DenseSet<uint64_t> Excluded;
+  StringSaver FileNames(ObjFileNameStorage);
   for (auto &S : Archive->symbols()) {
     StringRef SymName = S.getName();
     auto Member = S.getMember();
@@ -432,7 +440,17 @@ Error StaticLibraryDefinitionGenerator::buildObjectFilesMap() {
         Excluded.insert(DataOffset);
         continue;
       }
-      MemoryBuffers[DataOffset] = (*Child)->getMemoryBufferRef();
+
+      // Give members of the archive a name that contains the archive path so
+      // that they can be differentiated from a member with the same name in a
+      // different archive. This also ensure initializer symbols names will be
+      // unique within a JITDylib.
+      StringRef FullName = FileNames.save(Archive->getFileName() + "(" +
+                                          (*Child)->getFileName() + ")");
+      MemoryBufferRef MemBuffer((*Child)->getMemoryBufferRef().getBuffer(),
+                                FullName);
+
+      MemoryBuffers[DataOffset] = MemBuffer;
     }
     if (!Excluded.count(DataOffset))
       ObjectFilesMap[L.getExecutionSession().intern(SymName)] =
@@ -503,7 +521,7 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   DenseMap<StringRef, SymbolLookupFlags> ToLookUpSymbols;
   for (auto &KV : Symbols) {
     StringRef Deinterned = *KV.first;
-    if (Deinterned.startswith(getImpPrefix()))
+    if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
     if (ToLookUpSymbols.count(Deinterned) &&
@@ -538,11 +556,11 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
   }
 }
 
-Expected<support::endianness>
-DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
+Expected<llvm::endianness>
+DLLImportDefinitionGenerator::getEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
-    return support::endianness::little;
+    return llvm::endianness::little;
   default:
     return make_error<StringError>(
         "architecture unsupported by DLLImportDefinitionGenerator",
@@ -553,10 +571,10 @@ DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   Triple TT = ES.getTargetTriple();
-  auto PointerSize = getTargetEndianness(TT);
+  auto PointerSize = getTargetPointerSize(TT);
   if (!PointerSize)
     return PointerSize.takeError();
-  auto Endianness = getTargetEndianness(TT);
+  auto Endianness = getEndianness(TT);
   if (!Endianness)
     return Endianness.takeError();
 

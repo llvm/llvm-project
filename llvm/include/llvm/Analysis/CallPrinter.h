@@ -24,12 +24,14 @@ class ModulePass;
 class CallGraphDOTPrinterPass : public PassInfoMixin<CallGraphDOTPrinterPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Pass for viewing the call graph
 class CallGraphViewerPass : public PassInfoMixin<CallGraphViewerPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 ModulePass *createCallGraphViewerPass();

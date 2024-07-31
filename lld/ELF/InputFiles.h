@@ -39,14 +39,13 @@ namespace elf {
 class InputSection;
 class Symbol;
 
-// If --reproduce is specified, all input files are written to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> tar;
-
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
+void parseFiles(const std::vector<InputFile *> &files,
+                InputFile *armCmseImpLib);
 
 // The root class of input files.
 class InputFile {
@@ -61,14 +60,17 @@ public:
     SharedKind,
     BitcodeKind,
     BinaryKind,
+    InternalKind,
   };
 
+  InputFile(Kind k, MemoryBufferRef m);
   Kind kind() const { return fileKind; }
 
   bool isElf() const {
     Kind k = kind();
     return k == ObjKind || k == SharedKind;
   }
+  bool isInternal() const { return kind() == InternalKind; }
 
   StringRef getName() const { return mb.getBufferIdentifier(); }
   MemoryBufferRef mb;
@@ -88,12 +90,30 @@ public:
     return {symbols.get(), numSymbols};
   }
 
+  MutableArrayRef<Symbol *> getMutableSymbols() {
+    assert(fileKind == BinaryKind || fileKind == ObjKind ||
+           fileKind == BitcodeKind);
+    return {symbols.get(), numSymbols};
+  }
+
+  Symbol &getSymbol(uint32_t symbolIndex) const {
+    assert(fileKind == ObjKind);
+    if (symbolIndex >= numSymbols)
+      fatal(toString(this) + ": invalid symbol index");
+    return *this->symbols[symbolIndex];
+  }
+
+  template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
+    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
+    return getSymbol(symIndex);
+  }
+
   // Get filename to use for linker script processing.
   StringRef getNameForScript() const;
 
   // Check if a non-common symbol should be extracted to override a common
   // definition.
-  bool shouldExtractForCommon(StringRef name);
+  bool shouldExtractForCommon(StringRef name) const;
 
   // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
   // offsets in PLT call stubs.
@@ -118,14 +138,14 @@ public:
   uint8_t osabi = 0;
   uint8_t abiVersion = 0;
 
-  // True if this is a relocatable object file/bitcode file between --start-lib
-  // and --end-lib.
+  // True if this is a relocatable object file/bitcode file in an ar archive
+  // or between --start-lib and --end-lib.
   bool lazy = false;
 
   // True if this is an argument for --just-symbols. Usually false.
   bool justSymbols = false;
 
-  std::string getSrcMsg(const Symbol &sym, InputSectionBase &sec,
+  std::string getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
                         uint64_t offset);
 
   // On PPC64 we need to keep track of which files contain small code model
@@ -142,9 +162,6 @@ public:
   // True if the file has TLSGD/TLSLD GOT relocations without R_PPC64_TLSGD or
   // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
   bool ppc64DisableTLSRelax = false;
-
-protected:
-  InputFile(Kind k, MemoryBufferRef m);
 
 public:
   // If not empty, this stores the name of the archive containing this file.
@@ -210,6 +227,7 @@ protected:
 public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.
@@ -234,20 +252,10 @@ public:
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                  const Elf_Shdr &sec);
 
-  Symbol &getSymbol(uint32_t symbolIndex) const {
-    if (symbolIndex >= numSymbols)
-      fatal(toString(this) + ": invalid symbol index");
-    return *this->symbols[symbolIndex];
-  }
-
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
 
-  template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
-    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
-    return getSymbol(symIndex);
-  }
-
-  std::optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
+  std::optional<llvm::DILineInfo> getDILineInfo(const InputSectionBase *,
+                                                uint64_t);
   std::optional<std::pair<std::string, unsigned>>
   getVariableLoc(StringRef name);
 
@@ -280,6 +288,7 @@ public:
 
   void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
+  void importCmseSymbols();
 
 private:
   void initializeSections(bool ignoreComdats,
@@ -287,8 +296,7 @@ private:
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
-                                   uint32_t info);
+  InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
                                        StringRef name);
 
@@ -370,6 +378,7 @@ public:
   void parse();
 };
 
+InputFile *createInternalFile(StringRef name);
 ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
                            bool lazy = false);
 

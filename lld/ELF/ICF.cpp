@@ -103,12 +103,12 @@ private:
   void segregate(size_t begin, size_t end, uint32_t eqClassBase, bool constant);
 
   template <class RelTy>
-  bool constantEq(const InputSection *a, ArrayRef<RelTy> relsA,
-                  const InputSection *b, ArrayRef<RelTy> relsB);
+  bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
+                  const InputSection *b, Relocs<RelTy> relsB);
 
   template <class RelTy>
-  bool variableEq(const InputSection *a, ArrayRef<RelTy> relsA,
-                  const InputSection *b, ArrayRef<RelTy> relsB);
+  bool variableEq(const InputSection *a, Relocs<RelTy> relsA,
+                  const InputSection *b, Relocs<RelTy> relsB);
 
   bool equalsConstant(const InputSection *a, const InputSection *b);
   bool equalsVariable(const InputSection *a, const InputSection *b);
@@ -235,20 +235,21 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
-                           const InputSection *secB, ArrayRef<RelTy> rb) {
+bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
+                           const InputSection *secB, Relocs<RelTy> rb) {
   if (ra.size() != rb.size())
     return false;
-  for (size_t i = 0; i < ra.size(); ++i) {
-    if (ra[i].r_offset != rb[i].r_offset ||
-        ra[i].getType(config->isMips64EL) != rb[i].getType(config->isMips64EL))
+  auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
+  for (; rai != rae; ++rai, ++rbi) {
+    if (rai->r_offset != rbi->r_offset ||
+        rai->getType(config->isMips64EL) != rbi->getType(config->isMips64EL))
       return false;
 
-    uint64_t addA = getAddend<ELFT>(ra[i]);
-    uint64_t addB = getAddend<ELFT>(rb[i]);
+    uint64_t addA = getAddend<ELFT>(*rai);
+    uint64_t addB = getAddend<ELFT>(*rbi);
 
-    Symbol &sa = secA->template getFile<ELFT>()->getRelocTargetSym(ra[i]);
-    Symbol &sb = secB->template getFile<ELFT>()->getRelocTargetSym(rb[i]);
+    Symbol &sa = secA->file->getRelocTargetSym(*rai);
+    Symbol &sb = secB->file->getRelocTargetSym(*rbi);
     if (&sa == &sb) {
       if (addA == addB)
         continue;
@@ -332,14 +333,15 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection *secA, ArrayRef<RelTy> ra,
-                           const InputSection *secB, ArrayRef<RelTy> rb) {
+bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
+                           const InputSection *secB, Relocs<RelTy> rb) {
   assert(ra.size() == rb.size());
 
-  for (size_t i = 0; i < ra.size(); ++i) {
+  auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
+  for (; rai != rae; ++rai, ++rbi) {
     // The two sections must be identical.
-    Symbol &sa = secA->template getFile<ELFT>()->getRelocTargetSym(ra[i]);
-    Symbol &sb = secB->template getFile<ELFT>()->getRelocTargetSym(rb[i]);
+    Symbol &sa = secA->file->getRelocTargetSym(*rai);
+    Symbol &sb = secB->file->getRelocTargetSym(*rbi);
     if (&sa == &sb)
       continue;
 
@@ -437,12 +439,12 @@ void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
 
 // Combine the hashes of the sections referenced by the given section into its
 // hash.
-template <class ELFT, class RelTy>
+template <class RelTy>
 static void combineRelocHashes(unsigned cnt, InputSection *isec,
-                               ArrayRef<RelTy> rels) {
+                               Relocs<RelTy> rels) {
   uint32_t hash = isec->eqClass[cnt % 2];
   for (RelTy rel : rels) {
-    Symbol &s = isec->template getFile<ELFT>()->getRelocTargetSym(rel);
+    Symbol &s = isec->file->getRelocTargetSym(rel);
     if (auto *d = dyn_cast<Defined>(&s))
       if (auto *relSec = dyn_cast_or_null<InputSection>(d->section))
         hash += relSec->eqClass[cnt % 2];
@@ -494,7 +496,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(sections, [&](InputSection *s) {
     // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxHash64(s->content()) | (1U << 31);
+    s->eqClass[0] = xxh3_64bits(s->content()) | (1U << 31);
   });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
@@ -504,9 +506,9 @@ template <class ELFT> void ICF<ELFT>::run() {
     parallelForEach(sections, [&](InputSection *s) {
       const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
       if (rels.areRelocsRel())
-        combineRelocHashes<ELFT>(cnt, s, rels.rels);
+        combineRelocHashes(cnt, s, rels.rels);
       else
-        combineRelocHashes<ELFT>(cnt, s, rels.relas);
+        combineRelocHashes(cnt, s, rels.relas);
     });
   }
 

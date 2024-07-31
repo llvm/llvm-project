@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 \
 // RUN:    -Wno-coroutine-missing-unhandled-exception -emit-llvm %s -o - -disable-llvm-passes \
 // RUN:   | FileCheck %s
 
@@ -70,7 +70,8 @@ extern "C" void f0(global_new_delete_tag) {
   // CHECK: br i1 %[[NeedDealloc]], label %[[FreeBB:.+]], label %[[Afterwards:.+]]
 
   // CHECK: [[FreeBB]]:
-  // CHECK: call void @_ZdlPv(ptr noundef %[[MEM]])
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZdlPvm(ptr noundef %[[MEM]], i64 noundef %[[SIZE]])
   // CHECK: br label %[[Afterwards]]
 
   // CHECK: [[Afterwards]]:
@@ -99,7 +100,8 @@ extern "C" void f1(promise_new_tag ) {
 
   // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call ptr @llvm.coro.free(token %[[ID]], ptr %[[FRAME]])
-  // CHECK: call void @_ZdlPv(ptr noundef %[[MEM]])
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZdlPvm(ptr noundef %[[MEM]], i64 noundef %[[SIZE]])
   co_return;
 }
 
@@ -228,6 +230,7 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: %[[MEM:.+]] = call noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef %[[SIZE]], ptr noundef nonnull align 1 dereferenceable(1) @_ZStL7nothrow)
   // CHECK: %[[OK:.+]] = icmp ne ptr %[[MEM]], null
+  // CHECK: call i1 @llvm.expect.i1(i1 %[[OK]], i1 true)
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 
   // CHECK: [[ERRBB]]:

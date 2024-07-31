@@ -14,6 +14,7 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDCOFFTHUMB_H
 
 #include "../RuntimeDyldCOFF.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 
@@ -51,6 +52,28 @@ public:
 
   unsigned getMaxStubSize() const override {
     return 16; // 8-byte load instructions, 4-byte jump, 4-byte padding
+  }
+
+  Expected<JITSymbolFlags> getJITSymbolFlags(const SymbolRef &SR) override {
+
+    auto Flags = RuntimeDyldImpl::getJITSymbolFlags(SR);
+
+    if (!Flags) {
+      return Flags.takeError();
+    }
+    auto SectionIterOrErr = SR.getSection();
+    if (!SectionIterOrErr) {
+      return SectionIterOrErr.takeError();
+    }
+    SectionRef Sec = *SectionIterOrErr.get();
+    const object::COFFObjectFile *COFFObjPtr =
+        cast<object::COFFObjectFile>(Sec.getObject());
+    const coff_section *CoffSec = COFFObjPtr->getCOFFSection(Sec);
+    bool isThumb = CoffSec->Characteristics & COFF::IMAGE_SCN_MEM_16BIT;
+
+    Flags->getTargetFlags() = isThumb;
+
+    return Flags;
   }
 
   Align getStubAlignment() override { return Align(1); }
@@ -106,7 +129,7 @@ public:
     unsigned TargetSectionID = -1;
     uint64_t TargetOffset = -1;
 
-    if (TargetName.startswith(getImportSymbolPrefix())) {
+    if (TargetName.starts_with(getImportSymbolPrefix())) {
       TargetSectionID = SectionID;
       TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName, true);
       TargetName = StringRef();

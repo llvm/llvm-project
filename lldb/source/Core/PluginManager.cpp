@@ -12,8 +12,8 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
@@ -640,6 +640,18 @@ static ObjectFileInstances &GetObjectFileInstances() {
   return g_instances;
 }
 
+bool PluginManager::IsRegisteredObjectFilePluginName(llvm::StringRef name) {
+  if (name.empty())
+    return false;
+
+  const auto &instances = GetObjectFileInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.name == name)
+      return true;
+  }
+  return false;
+}
+
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ObjectFileCreateInstance create_callback,
@@ -690,12 +702,22 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style,
-                               llvm::StringRef plugin_name) {
-  if (plugin_name.empty()) {
+                               const lldb_private::SaveCoreOptions &options) {
+  Status error;
+  if (!options.GetOutputFile()) {
+    error.SetErrorString("No output file specified");
+    return error;
+  }
+
+  if (!process_sp) {
+    error.SetErrorString("Invalid process");
+    return error;
+  }
+
+  if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
-    llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
+    llvm::Expected<bool> ret =
+        process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
       return Status(ret.takeError());
     if (ret.get())
@@ -703,17 +725,20 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   }
 
   // Fall back to object plugins.
-  Status error;
+  const auto &plugin_name = options.GetPluginName().value_or("");
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
     if (plugin_name.empty() || instance.name == plugin_name) {
-      if (instance.save_core &&
-          instance.save_core(process_sp, outfile, core_style, error))
+      if (instance.save_core && instance.save_core(process_sp, options, error))
         return error;
     }
   }
-  error.SetErrorString(
-      "no ObjectFile plugins were able to save a core for this process");
+
+  // Check to see if any of the object file plugins tried and failed to save.
+  // If none ran, set the error message.
+  if (error.Success())
+    error.SetErrorString(
+        "no ObjectFile plugins were able to save a core for this process");
   return error;
 }
 
@@ -822,7 +847,7 @@ PluginManager::GetPlatformCreateCallbackForPluginName(llvm::StringRef name) {
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
                                              CompletionRequest &request) {
   for (const auto &instance : GetPlatformInstances().GetInstances()) {
-    if (instance.name.startswith(name))
+    if (instance.name.starts_with(name))
       request.AddCompletion(instance.name);
   }
 }
@@ -870,7 +895,7 @@ PluginManager::GetProcessCreateCallbackForPluginName(llvm::StringRef name) {
 void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
                                             CompletionRequest &request) {
   for (const auto &instance : GetProcessInstances().GetInstances()) {
-    if (instance.name.startswith(name))
+    if (instance.name.starts_with(name))
       request.AddCompletion(instance.name, instance.description);
   }
 }
@@ -1080,6 +1105,119 @@ bool PluginManager::UnregisterPlugin(
 SymbolVendorCreateInstance
 PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
   return GetSymbolVendorInstances().GetCallbackAtIndex(idx);
+}
+
+#pragma mark SymbolLocator
+
+struct SymbolLocatorInstance
+    : public PluginInstance<SymbolLocatorCreateInstance> {
+  SymbolLocatorInstance(
+      llvm::StringRef name, llvm::StringRef description,
+      CallbackType create_callback,
+      SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
+      SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
+      SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
+      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
+      DebuggerInitializeCallback debugger_init_callback)
+      : PluginInstance<SymbolLocatorCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
+        locate_executable_object_file(locate_executable_object_file),
+        locate_executable_symbol_file(locate_executable_symbol_file),
+        download_object_symbol_file(download_object_symbol_file),
+        find_symbol_file_in_bundle(find_symbol_file_in_bundle) {}
+
+  SymbolLocatorLocateExecutableObjectFile locate_executable_object_file;
+  SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file;
+  SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file;
+  SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle;
+};
+typedef PluginInstances<SymbolLocatorInstance> SymbolLocatorInstances;
+
+static SymbolLocatorInstances &GetSymbolLocatorInstances() {
+  static SymbolLocatorInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    SymbolLocatorCreateInstance create_callback,
+    SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
+    SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
+    SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
+    SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
+    DebuggerInitializeCallback debugger_init_callback) {
+  return GetSymbolLocatorInstances().RegisterPlugin(
+      name, description, create_callback, locate_executable_object_file,
+      locate_executable_symbol_file, download_object_symbol_file,
+      find_symbol_file_in_bundle, debugger_init_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    SymbolLocatorCreateInstance create_callback) {
+  return GetSymbolLocatorInstances().UnregisterPlugin(create_callback);
+}
+
+SymbolLocatorCreateInstance
+PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
+  return GetSymbolLocatorInstances().GetCallbackAtIndex(idx);
+}
+
+ModuleSpec
+PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.locate_executable_object_file) {
+      std::optional<ModuleSpec> result =
+          instance.locate_executable_object_file(module_spec);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
+}
+
+FileSpec PluginManager::LocateExecutableSymbolFile(
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.locate_executable_symbol_file) {
+      std::optional<FileSpec> result = instance.locate_executable_symbol_file(
+          module_spec, default_search_paths);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
+}
+
+bool PluginManager::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                                Status &error,
+                                                bool force_lookup,
+                                                bool copy_executable) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.download_object_symbol_file) {
+      if (instance.download_object_symbol_file(module_spec, error, force_lookup,
+                                               copy_executable))
+        return true;
+    }
+  }
+  return false;
+}
+
+FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
+                                               const UUID *uuid,
+                                               const ArchSpec *arch) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.find_symbol_file_in_bundle) {
+      std::optional<FileSpec> result =
+          instance.find_symbol_file_in_bundle(symfile_bundle, uuid, arch);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
 }
 
 #pragma mark Trace
@@ -1367,6 +1505,70 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
   return all;
 }
 
+#pragma mark ScriptedInterfaces
+
+struct ScriptedInterfaceInstance
+    : public PluginInstance<ScriptedInterfaceCreateInstance> {
+  ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
+                            ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptLanguage language,
+                            ScriptedInterfaceUsages usages)
+      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
+                                                        create_callback),
+        language(language), usages(usages) {}
+
+  lldb::ScriptLanguage language;
+  ScriptedInterfaceUsages usages;
+};
+
+typedef PluginInstances<ScriptedInterfaceInstance> ScriptedInterfaceInstances;
+
+static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
+  static ScriptedInterfaceInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    ScriptedInterfaceCreateInstance create_callback,
+    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+  return GetScriptedInterfaceInstances().RegisterPlugin(
+      name, description, create_callback, language, usages);
+}
+
+bool PluginManager::UnregisterPlugin(
+    ScriptedInterfaceCreateInstance create_callback) {
+  return GetScriptedInterfaceInstances().UnregisterPlugin(create_callback);
+}
+
+uint32_t PluginManager::GetNumScriptedInterfaces() {
+  return GetScriptedInterfaceInstances().GetInstances().size();
+}
+
+llvm::StringRef PluginManager::GetScriptedInterfaceNameAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetNameAtIndex(index);
+}
+
+llvm::StringRef
+PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
+}
+
+lldb::ScriptLanguage
+PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  return idx < instances.size() ? instances[idx].language
+                                : ScriptLanguage::eScriptLanguageNone;
+}
+
+ScriptedInterfaceUsages
+PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  if (idx >= instances.size())
+    return {};
+  return instances[idx].usages;
+}
+
 #pragma mark REPL
 
 struct REPLInstance : public PluginInstance<REPLCreateInstance> {
@@ -1423,22 +1625,24 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetPlatformInstances().PerformDebuggerCallback(debugger);
   GetProcessInstances().PerformDebuggerCallback(debugger);
   GetSymbolFileInstances().PerformDebuggerCallback(debugger);
+  GetSymbolLocatorInstances().PerformDebuggerCallback(debugger);
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
+  GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.
 // This will put a plugin's settings under e.g.
 // "plugin.<plugin_type_name>.<plugin_type_desc>.SETTINGNAME".
 static lldb::OptionValuePropertiesSP
-GetDebuggerPropertyForPlugins(Debugger &debugger, ConstString plugin_type_name,
+GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_name,
                               llvm::StringRef plugin_type_desc,
                               bool can_create) {
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {
-    static ConstString g_property_name("plugin");
+    static constexpr llvm::StringLiteral g_property_name("plugin");
 
     OptionValuePropertiesSP plugin_properties_sp =
         parent_properties_sp->GetSubProperty(nullptr, g_property_name);
@@ -1469,9 +1673,9 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, ConstString plugin_type_name,
 // "<plugin_type_name>.plugin.<plugin_type_desc>.SETTINGNAME" and Platform
 // generic settings would be under "platform.SETTINGNAME".
 static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
-    Debugger &debugger, ConstString plugin_type_name,
+    Debugger &debugger, llvm::StringRef plugin_type_name,
     llvm::StringRef plugin_type_desc, bool can_create) {
-  static ConstString g_property_name("plugin");
+  static constexpr llvm::StringLiteral g_property_name("plugin");
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {
@@ -1503,13 +1707,13 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
 namespace {
 
 typedef lldb::OptionValuePropertiesSP
-GetDebuggerPropertyForPluginsPtr(Debugger &, ConstString, llvm::StringRef,
+GetDebuggerPropertyForPluginsPtr(Debugger &, llvm::StringRef, llvm::StringRef,
                                  bool can_create);
 }
 
 static lldb::OptionValuePropertiesSP
-GetSettingForPlugin(Debugger &debugger, ConstString setting_name,
-                    ConstString plugin_type_name,
+GetSettingForPlugin(Debugger &debugger, llvm::StringRef setting_name,
+                    llvm::StringRef plugin_type_name,
                     GetDebuggerPropertyForPluginsPtr get_debugger_property =
                         GetDebuggerPropertyForPlugins) {
   lldb::OptionValuePropertiesSP properties_sp;
@@ -1524,7 +1728,7 @@ GetSettingForPlugin(Debugger &debugger, ConstString setting_name,
 }
 
 static bool
-CreateSettingForPlugin(Debugger &debugger, ConstString plugin_type_name,
+CreateSettingForPlugin(Debugger &debugger, llvm::StringRef plugin_type_name,
                        llvm::StringRef plugin_type_desc,
                        const lldb::OptionValuePropertiesSP &properties_sp,
                        llvm::StringRef description, bool is_global_property,
@@ -1544,42 +1748,42 @@ CreateSettingForPlugin(Debugger &debugger, ConstString plugin_type_name,
   return false;
 }
 
-static const char *kDynamicLoaderPluginName("dynamic-loader");
-static const char *kPlatformPluginName("platform");
-static const char *kProcessPluginName("process");
-static const char *kTracePluginName("trace");
-static const char *kObjectFilePluginName("object-file");
-static const char *kSymbolFilePluginName("symbol-file");
-static const char *kJITLoaderPluginName("jit-loader");
-static const char *kStructuredDataPluginName("structured-data");
+static constexpr llvm::StringLiteral kDynamicLoaderPluginName("dynamic-loader");
+static constexpr llvm::StringLiteral kPlatformPluginName("platform");
+static constexpr llvm::StringLiteral kProcessPluginName("process");
+static constexpr llvm::StringLiteral kTracePluginName("trace");
+static constexpr llvm::StringLiteral kObjectFilePluginName("object-file");
+static constexpr llvm::StringLiteral kSymbolFilePluginName("symbol-file");
+static constexpr llvm::StringLiteral kSymbolLocatorPluginName("symbol-locator");
+static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
+static constexpr llvm::StringLiteral
+    kStructuredDataPluginName("structured-data");
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForDynamicLoaderPlugin(Debugger &debugger,
-                                                ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kDynamicLoaderPluginName));
+                                                llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kDynamicLoaderPluginName);
 }
 
 bool PluginManager::CreateSettingForDynamicLoaderPlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kDynamicLoaderPluginName),
+  return CreateSettingForPlugin(debugger, kDynamicLoaderPluginName,
                                 "Settings for dynamic loader plug-ins",
                                 properties_sp, description, is_global_property);
 }
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForPlatformPlugin(Debugger &debugger,
-                                           ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kPlatformPluginName),
+                                           llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kPlatformPluginName,
                              GetDebuggerPropertyForPluginsOldStyle);
 }
 
 bool PluginManager::CreateSettingForPlatformPlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kPlatformPluginName),
+  return CreateSettingForPlugin(debugger, kPlatformPluginName,
                                 "Settings for platform plug-ins", properties_sp,
                                 description, is_global_property,
                                 GetDebuggerPropertyForPluginsOldStyle);
@@ -1587,68 +1791,78 @@ bool PluginManager::CreateSettingForPlatformPlugin(
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForProcessPlugin(Debugger &debugger,
-                                          ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kProcessPluginName));
+                                          llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kProcessPluginName);
 }
 
 bool PluginManager::CreateSettingForProcessPlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kProcessPluginName),
+  return CreateSettingForPlugin(debugger, kProcessPluginName,
                                 "Settings for process plug-ins", properties_sp,
                                 description, is_global_property);
+}
+
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForSymbolLocatorPlugin(Debugger &debugger,
+                                                llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kSymbolLocatorPluginName);
+}
+
+bool PluginManager::CreateSettingForSymbolLocatorPlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    llvm::StringRef description, bool is_global_property) {
+  return CreateSettingForPlugin(debugger, kSymbolLocatorPluginName,
+                                "Settings for symbol locator plug-ins",
+                                properties_sp, description, is_global_property);
 }
 
 bool PluginManager::CreateSettingForTracePlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kTracePluginName),
+  return CreateSettingForPlugin(debugger, kTracePluginName,
                                 "Settings for trace plug-ins", properties_sp,
                                 description, is_global_property);
 }
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForObjectFilePlugin(Debugger &debugger,
-                                             ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kObjectFilePluginName));
+                                             llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kObjectFilePluginName);
 }
 
 bool PluginManager::CreateSettingForObjectFilePlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kObjectFilePluginName),
+  return CreateSettingForPlugin(debugger, kObjectFilePluginName,
                                 "Settings for object file plug-ins",
                                 properties_sp, description, is_global_property);
 }
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForSymbolFilePlugin(Debugger &debugger,
-                                             ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kSymbolFilePluginName));
+                                             llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kSymbolFilePluginName);
 }
 
 bool PluginManager::CreateSettingForSymbolFilePlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kSymbolFilePluginName),
+  return CreateSettingForPlugin(debugger, kSymbolFilePluginName,
                                 "Settings for symbol file plug-ins",
                                 properties_sp, description, is_global_property);
 }
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForJITLoaderPlugin(Debugger &debugger,
-                                            ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kJITLoaderPluginName));
+                                            llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kJITLoaderPluginName);
 }
 
 bool PluginManager::CreateSettingForJITLoaderPlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger, ConstString(kJITLoaderPluginName),
+  return CreateSettingForPlugin(debugger, kJITLoaderPluginName,
                                 "Settings for JIT loader plug-ins",
                                 properties_sp, description, is_global_property);
 }
@@ -1657,11 +1871,11 @@ static const char *kOperatingSystemPluginName("os");
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForOperatingSystemPlugin(Debugger &debugger,
-                                                  ConstString setting_name) {
+                                                  llvm::StringRef setting_name) {
   lldb::OptionValuePropertiesSP properties_sp;
   lldb::OptionValuePropertiesSP plugin_type_properties_sp(
       GetDebuggerPropertyForPlugins(
-          debugger, ConstString(kOperatingSystemPluginName),
+          debugger, kOperatingSystemPluginName,
           "", // not creating to so we don't need the description
           false));
   if (plugin_type_properties_sp)
@@ -1675,9 +1889,9 @@ bool PluginManager::CreateSettingForOperatingSystemPlugin(
     llvm::StringRef description, bool is_global_property) {
   if (properties_sp) {
     lldb::OptionValuePropertiesSP plugin_type_properties_sp(
-        GetDebuggerPropertyForPlugins(
-            debugger, ConstString(kOperatingSystemPluginName),
-            "Settings for operating system plug-ins", true));
+        GetDebuggerPropertyForPlugins(debugger, kOperatingSystemPluginName,
+                                      "Settings for operating system plug-ins",
+                                      true));
     if (plugin_type_properties_sp) {
       plugin_type_properties_sp->AppendProperty(properties_sp->GetName(),
                                                 description, is_global_property,
@@ -1690,16 +1904,14 @@ bool PluginManager::CreateSettingForOperatingSystemPlugin(
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForStructuredDataPlugin(Debugger &debugger,
-                                                 ConstString setting_name) {
-  return GetSettingForPlugin(debugger, setting_name,
-                             ConstString(kStructuredDataPluginName));
+                                                 llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kStructuredDataPluginName);
 }
 
 bool PluginManager::CreateSettingForStructuredDataPlugin(
     Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
     llvm::StringRef description, bool is_global_property) {
-  return CreateSettingForPlugin(debugger,
-                                ConstString(kStructuredDataPluginName),
+  return CreateSettingForPlugin(debugger, kStructuredDataPluginName,
                                 "Settings for structured data plug-ins",
                                 properties_sp, description, is_global_property);
 }

@@ -22,14 +22,15 @@ ClangTidyCheck::ClangTidyCheck(StringRef CheckName, ClangTidyContext *Context)
   assert(!CheckName.empty());
 }
 
-DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,
+DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc,
+                                       StringRef Description,
                                        DiagnosticIDs::Level Level) {
-  return Context->diag(CheckName, Loc, Message, Level);
+  return Context->diag(CheckName, Loc, Description, Level);
 }
 
-DiagnosticBuilder ClangTidyCheck::diag(StringRef Message,
+DiagnosticBuilder ClangTidyCheck::diag(StringRef Description,
                                        DiagnosticIDs::Level Level) {
-  return Context->diag(CheckName, Message, Level);
+  return Context->diag(CheckName, Description, Level);
 }
 
 DiagnosticBuilder
@@ -93,10 +94,10 @@ static std::optional<bool> getAsBool(StringRef Value,
                                      const llvm::Twine &LookupName) {
 
   if (std::optional<bool> Parsed = llvm::yaml::parseBool(Value))
-    return *Parsed;
+    return Parsed;
   // To maintain backwards compatability, we support parsing numbers as
   // booleans, even though its not supported in YAML.
-  long long Number;
+  long long Number = 0;
   if (!Value.getAsInteger(10, Number))
     return Number != 0;
   return std::nullopt;
@@ -138,6 +139,12 @@ void ClangTidyCheck::OptionsView::storeInt(ClangTidyOptions::OptionMap &Options,
   store(Options, LocalName, llvm::itostr(Value));
 }
 
+void ClangTidyCheck::OptionsView::storeUnsigned(
+    ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+    uint64_t Value) const {
+  store(Options, LocalName, llvm::utostr(Value));
+}
+
 template <>
 void ClangTidyCheck::OptionsView::store<bool>(
     ClangTidyOptions::OptionMap &Options, StringRef LocalName,
@@ -164,7 +171,7 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
     if (IgnoreCase) {
       if (Value.equals_insensitive(NameAndEnum.second))
         return NameAndEnum.first;
-    } else if (Value.equals(NameAndEnum.second)) {
+    } else if (Value == NameAndEnum.second) {
       return NameAndEnum.first;
     } else if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;

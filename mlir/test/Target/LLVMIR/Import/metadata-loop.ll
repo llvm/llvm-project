@@ -1,19 +1,17 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
-; CHECK: llvm.metadata @__llvm_global_metadata {
-; CHECK:   llvm.access_group @[[$GROUP0:.*]]
-; CHECK:   llvm.access_group @[[$GROUP1:.*]]
-; CHECK:   llvm.access_group @[[$GROUP2:.*]]
-; CHECK:   llvm.access_group @[[$GROUP3:.*]]
-; CHECK: }
+; CHECK-DAG: #[[$GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK-DAG: #[[$GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK-DAG: #[[$GROUP2:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK-DAG: #[[$GROUP3:.*]] = #llvm.access_group<id = {{.*}}>
 
 ; CHECK-LABEL: llvm.func @access_group
 define void @access_group(ptr %arg1) {
-  ; CHECK:  access_groups = [@__llvm_global_metadata::@[[$GROUP0]], @__llvm_global_metadata::@[[$GROUP1]]]
+  ; CHECK:  access_groups = [#[[$GROUP0]], #[[$GROUP1]]]
   %1 = load i32, ptr %arg1, !llvm.access.group !0
-  ; CHECK:  access_groups = [@__llvm_global_metadata::@[[$GROUP2]], @__llvm_global_metadata::@[[$GROUP0]]]
+  ; CHECK:  access_groups = [#[[$GROUP2]], #[[$GROUP0]]]
   %2 = load i32, ptr %arg1, !llvm.access.group !1
-  ; CHECK:  access_groups = [@__llvm_global_metadata::@[[$GROUP3]]]
+  ; CHECK:  access_groups = [#[[$GROUP3]]]
   %3 = load i32, ptr %arg1, !llvm.access.group !2
   ret void
 }
@@ -284,10 +282,8 @@ end:
 
 ; // -----
 
-; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = @__llvm_global_metadata::@[[GROUP0:.*]]>
-
-; CHECK: llvm.metadata @__llvm_global_metadata {
-; CHECK:   llvm.access_group @[[GROUP0]]
+; CHECK: #[[GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = #[[GROUP0]]>
 
 ; CHECK-LABEL: @parallel_accesses
 define void @parallel_accesses(ptr %arg) {
@@ -305,11 +301,9 @@ end:
 
 ; // -----
 
-; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = @__llvm_global_metadata::@[[GROUP0:.*]], @__llvm_global_metadata::@[[GROUP1:.*]]>
-
-; CHECK: llvm.metadata @__llvm_global_metadata {
-; CHECK:   llvm.access_group @[[GROUP0]]
-; CHECK:   llvm.access_group @[[GROUP1]]
+; CHECK: #[[GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK: #[[GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<parallelAccesses = #[[GROUP0]], #[[GROUP1]]>
 
 ; CHECK-LABEL: @multiple_parallel_accesses
 define void @multiple_parallel_accesses(ptr %arg) {
@@ -330,8 +324,7 @@ end:
 ; // -----
 
 ; Verify the unused access group is not imported.
-; CHECK:   llvm.metadata @__llvm_global_metadata {
-; CHECK-COUNT1: llvm.access_group
+; CHECK-COUNT-1: #llvm.access_group
 
 ; CHECK-LABEL: @unused_parallel_access
 define void @unused_parallel_access(ptr %arg) {

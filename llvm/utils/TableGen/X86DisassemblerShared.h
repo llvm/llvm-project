@@ -49,9 +49,7 @@ struct OpcodeDecision {
 struct ContextDecision {
   OpcodeDecision opcodeDecisions[llvm::X86Disassembler::IC_max];
 
-  ContextDecision() {
-    memset(opcodeDecisions, 0, sizeof(opcodeDecisions));
-  }
+  ContextDecision() { memset(opcodeDecisions, 0, sizeof(opcodeDecisions)); }
 };
 
 #endif

@@ -20,7 +20,7 @@
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
-#include <__ranges/copyable_box.h>
+#include <__ranges/movable_box.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/decay.h>
@@ -35,32 +35,23 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
-// The spec uses the unnamed requirement inside the `begin` and `end` member functions:
-//     constexpr auto begin() const
-//       requires range<const V> && indirect_unary_predicate<const Pred, iterator_t<const V>>
-// However, due to a clang-14 and clang-15 bug, the above produces a hard error when `const V` is not a range.
-// The workaround is to create a named concept and use the concept instead.
-// As of take_while_view is implemented, the clang-trunk has already fixed the bug.
-// It is OK to remove the workaround once our CI no longer uses clang-14, clang-15 based compilers,
-// because we don't actually expect a lot of vendors to ship a new libc++ with an old clang.
-template <class _View, class _Pred>
-concept __take_while_const_is_range =
-    range<const _View> && indirect_unary_predicate<const _Pred, iterator_t<const _View>>;
-
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class take_while_view : public view_interface<take_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS take_while_view : public view_interface<take_while_view<_View, _Pred>> {
   template <bool>
   class __sentinel;
 
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
-  _LIBCPP_NO_UNIQUE_ADDRESS __copyable_box<_Pred> __pred_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI take_while_view()
@@ -87,7 +78,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
-    requires __take_while_const_is_range<_View, _Pred>
+    requires range<const _View> && indirect_unary_predicate<const _Pred, iterator_t<const _View>>
   {
     return ranges::begin(__base_);
   }
@@ -99,7 +90,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
-    requires __take_while_const_is_range<_View, _Pred>
+    requires range<const _View> && indirect_unary_predicate<const _Pred, iterator_t<const _View>>
   {
     return __sentinel</*_Const=*/true>(ranges::end(__base_), std::addressof(*__pred_));
   }
@@ -173,5 +164,7 @@ inline constexpr auto take_while = __take_while::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_TAKE_WHILE_VIEW_H

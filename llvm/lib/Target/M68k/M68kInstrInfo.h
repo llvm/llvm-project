@@ -302,6 +302,9 @@ public:
   void AddZExt(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                DebugLoc DL, unsigned Reg, MVT From, MVT To) const;
 
+  /// Move immediate to register
+  bool ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const;
+
   /// Move across register classes without extension
   bool ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst, MVT MVTSrc) const;
 
@@ -324,7 +327,7 @@ public:
   bool ExpandMOVEM(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                    bool IsRM) const;
 
-  /// Return a virtual register initialized with the the global base register
+  /// Return a virtual register initialized with the global base register
   /// value. Output instructions required to initialize the register in the
   /// function entry block, if necessary.
   unsigned getGlobalBaseReg(MachineFunction *MF) const;

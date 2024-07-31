@@ -21,11 +21,11 @@
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -43,6 +43,7 @@
 
 using namespace llvm;
 using namespace llvm::rc;
+using namespace llvm::opt;
 
 namespace {
 
@@ -50,9 +51,7 @@ namespace {
 
 enum ID {
   OPT_INVALID = 0, // This is not a correct option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -66,13 +65,7 @@ namespace rc_opt {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -85,9 +78,7 @@ public:
 
 enum Windres_ID {
   WINDRES_INVALID = 0, // This is not a correct option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  WINDRES_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(WINDRES_, __VA_ARGS__),
 #include "WindresOpts.inc"
 #undef OPTION
 };
@@ -101,12 +92,8 @@ namespace windres_opt {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,          NAME,         HELPTEXT,                                    \
-   METAVAR,         WINDRES_##ID, opt::Option::KIND##Class,                    \
-   PARAM,           FLAGS,        WINDRES_##GROUP,                             \
-   WINDRES_##ALIAS, ALIASARGS,    VALUES},
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(WINDRES_, __VA_ARGS__),
 #include "WindresOpts.inc"
 #undef OPTION
 };
@@ -136,20 +123,30 @@ std::string createTempFile(const Twine &Prefix, StringRef Suffix) {
 }
 
 ErrorOr<std::string> findClang(const char *Argv0, StringRef Triple) {
-  StringRef Parent = llvm::sys::path::parent_path(Argv0);
+  // This just needs to be some symbol in the binary.
+  void *P = (void*) (intptr_t) findClang;
+  std::string MainExecPath = llvm::sys::fs::getMainExecutable(Argv0, P);
+  if (MainExecPath.empty())
+    MainExecPath = Argv0;
+
   ErrorOr<std::string> Path = std::error_code();
   std::string TargetClang = (Triple + "-clang").str();
   std::string VersionedClang = ("clang-" + Twine(LLVM_VERSION_MAJOR)).str();
-  if (!Parent.empty()) {
-    // First look for the tool with all potential names in the specific
-    // directory of Argv0, if known
-    for (const auto *Name :
-         {TargetClang.c_str(), VersionedClang.c_str(), "clang", "clang-cl"}) {
+  for (const auto *Name :
+       {TargetClang.c_str(), VersionedClang.c_str(), "clang", "clang-cl"}) {
+    for (const StringRef Parent :
+         {llvm::sys::path::parent_path(MainExecPath),
+          llvm::sys::path::parent_path(Argv0)}) {
+      // Look for various versions of "clang" first in the MainExecPath parent
+      // directory and then in the argv[0] parent directory.
+      // On Windows (but not Unix) argv[0] is overwritten with the eqiuvalent
+      // of MainExecPath by InitLLVM.
       Path = sys::findProgramByName(Name, Parent);
       if (Path)
         return Path;
     }
   }
+
   // If no parent directory known, or not found there, look everywhere in PATH
   for (const auto *Name : {"clang", "clang-cl"}) {
     Path = sys::findProgramByName(Name);
@@ -211,7 +208,7 @@ struct RcOptions {
   bool Preprocess = true;
   bool PrintCmdAndExit = false;
   std::string Triple;
-  std::vector<std::string> PreprocessCmd;
+  std::optional<std::string> Preprocessor;
   std::vector<std::string> PreprocessArgs;
 
   std::string InputFile;
@@ -231,7 +228,7 @@ struct RcOptions {
 void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
                 const char *Argv0) {
   std::string Clang;
-  if (Opts.PrintCmdAndExit || !Opts.PreprocessCmd.empty()) {
+  if (Opts.PrintCmdAndExit || Opts.Preprocessor) {
     Clang = "clang";
   } else {
     ErrorOr<std::string> ClangOrErr = findClang(Argv0, Opts.Triple);
@@ -250,16 +247,22 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   SmallVector<StringRef, 8> Args = {
       Clang, "--driver-mode=gcc", "-target", Opts.Triple, "-E",
       "-xc", "-DRC_INVOKED"};
-  if (!Opts.PreprocessCmd.empty()) {
+  std::string PreprocessorExecutable;
+  if (Opts.Preprocessor) {
     Args.clear();
-    for (const auto &S : Opts.PreprocessCmd)
-      Args.push_back(S);
+    Args.push_back(*Opts.Preprocessor);
+    if (!sys::fs::can_execute(Args[0])) {
+      if (auto P = sys::findProgramByName(Args[0])) {
+        PreprocessorExecutable = *P;
+        Args[0] = PreprocessorExecutable;
+      }
+    }
   }
+  for (const auto &S : Opts.PreprocessArgs)
+    Args.push_back(S);
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);
-  for (const auto &S : Opts.PreprocessArgs)
-    Args.push_back(S);
   if (Opts.PrintCmdAndExit || Opts.BeVerbose) {
     for (const auto &A : Args) {
       outs() << " ";
@@ -271,9 +274,15 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   }
   // The llvm Support classes don't handle reading from stdout of a child
   // process; otherwise we could avoid using a temp file.
-  int Res = sys::ExecuteAndWait(Args[0], Args);
+  std::string ErrMsg;
+  int Res =
+      sys::ExecuteAndWait(Args[0], Args, /*Env=*/std::nullopt, /*Redirects=*/{},
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
   if (Res) {
-    fatalError("llvm-rc: Preprocessing failed.");
+    if (!ErrMsg.empty())
+      fatalError("llvm-rc: Preprocessing failed: " + ErrMsg);
+    else
+      fatalError("llvm-rc: Preprocessing failed.");
   }
 }
 
@@ -329,36 +338,6 @@ std::string unescape(StringRef S) {
     Out.push_back(S[I]);
   }
   return Out;
-}
-
-std::vector<std::string> unescapeSplit(StringRef S) {
-  std::vector<std::string> OutArgs;
-  std::string Out;
-  bool InQuote = false;
-  for (int I = 0, E = S.size(); I < E; I++) {
-    if (S[I] == '\\') {
-      if (I + 1 < E)
-        Out.push_back(S[++I]);
-      else
-        fatalError("Unterminated escape");
-      continue;
-    }
-    if (S[I] == '"') {
-      InQuote = !InQuote;
-      continue;
-    }
-    if (S[I] == ' ' && !InQuote) {
-      OutArgs.push_back(Out);
-      Out.clear();
-      continue;
-    }
-    Out.push_back(S[I]);
-  }
-  if (InQuote)
-    fatalError("Unterminated quote");
-  if (!Out.empty())
-    OutArgs.push_back(Out);
-  return OutArgs;
 }
 
 RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
@@ -463,7 +442,14 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
     // done this double escaping) probably is confined to cases like these
     // quoted string defines, and those happen to work the same across unix
     // and windows.
-    std::string Unescaped = unescape(Arg->getValue());
+    //
+    // If GNU windres is executed with --use-temp-file, it doesn't use
+    // popen() to invoke the preprocessor, but uses another function which
+    // actually preserves tricky characters better. To mimic this behaviour,
+    // don't unescape arguments here.
+    std::string Value = Arg->getValue();
+    if (!InputArgs.hasArg(WINDRES_use_temp_file))
+      Value = unescape(Value);
     switch (Arg->getOption().getID()) {
     case WINDRES_include_dir:
       // Technically, these are handled the same way as e.g. defines, but
@@ -477,20 +463,19 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
       break;
     case WINDRES_define:
       Opts.PreprocessArgs.push_back("-D");
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     case WINDRES_undef:
       Opts.PreprocessArgs.push_back("-U");
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     case WINDRES_preprocessor_arg:
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     }
   }
   if (InputArgs.hasArg(WINDRES_preprocessor))
-    Opts.PreprocessCmd =
-        unescapeSplit(InputArgs.getLastArgValue(WINDRES_preprocessor));
+    Opts.Preprocessor = InputArgs.getLastArgValue(WINDRES_preprocessor);
 
   Opts.Params.CodePage = CpWin1252; // Different default
   if (InputArgs.hasArg(WINDRES_codepage)) {
@@ -521,7 +506,8 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(OPT_help)) {
-    T.printHelp(outs(), "rc [options] file...", "Resource Converter", false);
+    T.printHelp(outs(), "llvm-rc [options] file...", "LLVM Resource Converter",
+                false);
     exit(0);
   }
 
@@ -575,7 +561,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
     SmallString<128> OutputFile(Opts.InputFile);
     llvm::sys::fs::make_absolute(OutputFile);
     llvm::sys::path::replace_extension(OutputFile, "res");
-    OutArgsInfo.push_back(std::string(OutputFile.str()));
+    OutArgsInfo.push_back(std::string(OutputFile));
   }
   if (!Opts.IsDryRun) {
     if (OutArgsInfo.size() != 1)
@@ -724,7 +710,10 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
     MachineType = COFF::IMAGE_FILE_MACHINE_ARMNT;
     break;
   case Triple::aarch64:
-    MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
+    if (T.isWindowsArm64EC())
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64EC;
+    else
+      MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
     break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +
@@ -744,7 +733,6 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
 } // anonymous namespace
 
 int llvm_rc_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-rc: ");
 
   char **DashDash = std::find_if(Argv + 1, Argv + Argc,

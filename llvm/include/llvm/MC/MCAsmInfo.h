@@ -240,6 +240,9 @@ protected:
   /// True if the target supports LEB128 directives.
   bool HasLEB128Directives = true;
 
+  /// True if full register names are printed.
+  bool PPCUseFullRegisterNames = false;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -390,7 +393,7 @@ protected:
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
 
-  /// True if the target has a four strings .file directive, strings seperated
+  /// True if the target has a four strings .file directive, strings separated
   /// by comma. Defaults to false.
   bool HasFourStringsDotFile = false;
 
@@ -521,16 +524,9 @@ protected:
   /// Preserve Comments in assembly
   bool PreserveAsmComments;
 
-  /// Compress DWARF debug sections. Defaults to no compression.
-  DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
-
-  // If true, emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL, on
-  // X86_64 ELF.
-  bool RelaxELFRelocations = true;
 
   // If true, then the lexer and expression parser will support %neg(),
   // %hi(), and similar unary operators.
@@ -583,12 +579,6 @@ public:
   virtual MCSection *getNonexecutableStackSection(MCContext &Ctx) const {
     return nullptr;
   }
-
-  /// True if the section is atomized using the symbols in it.
-  /// This is false if the section is not atomized at all (most ELF sections) or
-  /// if it is atomized based on its contents (MachO' __TEXT,__cstring for
-  /// example).
-  virtual bool isSectionAtomizableBySymbols(const MCSection &Section) const;
 
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,
@@ -710,6 +700,9 @@ public:
 
   bool hasLEB128Directives() const { return HasLEB128Directives; }
 
+  bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
+  void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
+
   const char *getZeroDirective() const { return ZeroDirective; }
   bool doesZeroDirectiveSupportNonZeroValue() const {
     return ZeroDirectiveSupportsNonZeroValue;
@@ -793,7 +786,8 @@ public:
   /// frame information to unwind.
   bool usesCFIForEH() const {
     return (ExceptionsType == ExceptionHandling::DwarfCFI ||
-            ExceptionsType == ExceptionHandling::ARM || usesWindowsCFI());
+            ExceptionsType == ExceptionHandling::ARM ||
+            ExceptionsType == ExceptionHandling::ZOS || usesWindowsCFI());
   }
 
   bool usesWindowsCFI() const {
@@ -868,18 +862,9 @@ public:
     PreserveAsmComments = Value;
   }
 
-  DebugCompressionType compressDebugSections() const {
-    return CompressDebugSections;
-  }
-
-  void setCompressDebugSections(DebugCompressionType CompressDebugSections) {
-    this->CompressDebugSections = CompressDebugSections;
-  }
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
-  bool canRelaxRelocations() const { return RelaxELFRelocations; }
-  void setRelaxELFRelocations(bool V) { RelaxELFRelocations = V; }
   bool hasMipsExpressions() const { return HasMipsExpressions; }
   bool needsFunctionDescriptors() const { return NeedsFunctionDescriptors; }
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }

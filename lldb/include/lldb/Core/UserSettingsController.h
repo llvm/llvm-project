@@ -23,7 +23,6 @@
 
 namespace lldb_private {
 class CommandInterpreter;
-class ConstString;
 class ExecutionContext;
 class Property;
 class Stream;
@@ -33,12 +32,11 @@ namespace lldb_private {
 
 class Properties {
 public:
-  Properties() = default;
+  Properties();
 
-  Properties(const lldb::OptionValuePropertiesSP &collection_sp)
-      : m_collection_sp(collection_sp) {}
+  Properties(const lldb::OptionValuePropertiesSP &collection_sp);
 
-  virtual ~Properties() = default;
+  virtual ~Properties();
 
   virtual lldb::OptionValuePropertiesSP GetValueProperties() const {
     // This function is virtual in case subclasses want to lazily implement
@@ -68,9 +66,6 @@ public:
 
   size_t Apropos(llvm::StringRef keyword,
                  std::vector<const Property *> &matching_properties) const;
-
-  lldb::OptionValuePropertiesSP GetSubProperty(const ExecutionContext *exe_ctx,
-                                               ConstString name);
 
   // We sometimes need to introduce a setting to enable experimental features,
   // but then we don't want the setting for these to cause errors when the

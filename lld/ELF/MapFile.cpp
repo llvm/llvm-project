@@ -121,7 +121,7 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
     if (!pieces.empty()) {
       EhSectionPiece &last = pieces.back();
       if (last.sec == p.sec && last.inputOff + last.size == p.inputOff &&
-          last.outputOff + last.size == p.outputOff) {
+          last.outputOff + last.size == (unsigned)p.outputOff) {
         last.size += p.size;
         return;
       }
@@ -229,7 +229,7 @@ static void writeCref(raw_fd_ostream &os) {
       if (isa<SharedSymbol>(sym))
         map[sym].insert(file);
       if (auto *d = dyn_cast<Defined>(sym))
-        if (!d->isLocal() && (!d->section || d->section->isLive()))
+        if (!d->isLocal())
           map[d].insert(file);
     }
   }
@@ -263,7 +263,7 @@ void elf::writeMapAndCref() {
   // Open a map file for writing.
   std::error_code ec;
   StringRef mapFile = config->mapFile.empty() ? "-" : config->mapFile;
-  raw_fd_ostream os(mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
     error("cannot open " + mapFile + ": " + ec.message());
     return;

@@ -1,10 +1,10 @@
 .. title:: clang-tidy - hicpp-no-assembler
 
 hicpp-no-assembler
-===================
+==================
 
-Check for assembler statements. No fix is offered.
+Checks for assembler statements. Use of inline assembly should be avoided since
+it restricts the portability of the code.
 
-Inline assembler is forbidden by the `High Integrity C++ Coding Standard
-<http://www.codingstandard.com/section/7-5-the-asm-declaration/>`_
-as it restricts the portability of code.
+This enforces `rule 7.5.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/declarations>`_
+of the High Integrity C++ Coding Standard.

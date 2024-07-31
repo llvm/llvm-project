@@ -1,6 +1,6 @@
-// RUN: %check_clang_tidy %s readability-operators-representation %t -- -config="{CheckOptions: [\
-// RUN: {key: readability-operators-representation.BinaryOperators, value: '&&;&=;&;|;~;!;!=;||;|=;^;^='}, \
-// RUN: {key: readability-operators-representation.OverloadedOperators, value: '&&;&=;&;|;~;!;!=;||;|=;^;^='}]}" --
+// RUN: %check_clang_tidy %s readability-operators-representation %t -- -config="{CheckOptions: {\
+// RUN: readability-operators-representation.BinaryOperators: '&&;&=;&;|;~;!;!=;||;|=;^;^=', \
+// RUN: readability-operators-representation.OverloadedOperators: '&&;&=;&;|;~;!;!=;||;|=;^;^='}}" --
 
 void testAllTokensToAlternative(int a, int b) {
   int value = 0;

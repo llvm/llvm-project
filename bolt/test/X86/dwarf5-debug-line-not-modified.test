@@ -1,0 +1,29 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-debug-line-not-modified-main.s -o %t1.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-debug-line-not-modified-helper-variable.s -o %t2.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-debug-line-not-modified-helper.s -o %t3.o
+# RUN: %clang %cflags -dwarf-5 %t1.o %t2.o %t3.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+
+## This test checks that BOLT generates correct debug_line_str when one of CU contributions is not modified.
+
+# POSTCHECK: version: 5
+# POSTCHECK: include_directories[  0] =  .debug_line_str[{{.*}}] = "/test"
+# POSTCHECK: file_names[  0]:
+# POSTCHECK: name:  .debug_line_str[{{.*}}] = "main.cpp"
+# POSTCHECK: dir_index: 0
+# POSTCHECK: md5_checksum: 7228a872dc174332f3151a7ac3344b26
+# POSTCHECK: version: 5
+# POSTCHECK: include_directories[  0] =  .debug_line_str[{{.*}}] = "/test"
+# POSTCHECK: file_names[  0]:
+# POSTCHECK: name:  .debug_line_str[{{.*}}] = "helperVariable.cpp"
+# POSTCHECK: dir_index: 0
+# POSTCHECK: md5_checksum: b6e6130198b21a44b5db4247fccb359d
+# POSTCHECK: version: 5
+# POSTCHECK: include_directories[  0] =  .debug_line_str[{{.*}}] = "/test"
+# POSTCHECK: file_names[  0]:
+# POSTCHECK: name:  .debug_line_str[{{.*}}] = "helper.cpp"
+# POSTCHECK: dir_index: 0
+# POSTCHECK: md5_checksum: 95a4a33e7fe9423970d3c798fdf8ed43

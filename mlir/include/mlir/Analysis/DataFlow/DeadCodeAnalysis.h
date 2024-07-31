@@ -26,6 +26,7 @@ class CallOpInterface;
 class CallableOpInterface;
 class BranchOpInterface;
 class RegionBranchOpInterface;
+class RegionBranchTerminatorOpInterface;
 
 namespace dataflow {
 

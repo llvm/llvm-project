@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s 2>&1 | FileCheck %s --check-prefix=IR
 ;
 ;    void f(long *A, long *ptr, long val) {
 ;      for (long i = 0; i < 100; i++) {
@@ -11,9 +11,9 @@
 ;
 ; CHECK:        ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + val] };
-; CHECK-NEXT:   ReadAccess :=	[Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:   ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
-; CHECK-NEXT:   MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:   MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
 ;
 ; IR:      entry:

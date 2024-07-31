@@ -17,8 +17,7 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[MUL3]], [[TMP2]]
-; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[AND]] to i32
-; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i32 [[CONV4]], 0
+; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i64 [[AND]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL7_NOT]] to i32
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
@@ -61,7 +60,7 @@ define void @PR33765(i8 %beth) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[TINKY:%.*]] = load i16, ptr @glob, align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[MUL]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[MUL]] to i16
 ; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[TINKY]], [[TMP1]]
 ; CHECK-NEXT:    store i16 [[CONV14]], ptr @glob, align 2
 ; CHECK-NEXT:    ret void
@@ -129,12 +128,12 @@ define i1 @PR46561(i1 %a, i1 %x, i1 %y, i8 %z) {
 ; CHECK-NEXT:    br i1 [[A:%.*]], label [[COND_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[Z:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], [[MULBOOL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[Z:%.*]] to i1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[MULBOOL]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[TMP2]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[TMP3]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[P]]
 ;
 entry:

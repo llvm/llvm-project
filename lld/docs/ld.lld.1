@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd Feb 9, 2023
+.Dd Jul 25, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -27,8 +27,8 @@ It accepts most of the same command line arguments and linker scripts
 as GNU linkers.
 .Pp
 .Nm
-currently supports i386, x86-64, ARM, AArch64, PowerPC32, PowerPC64,
-MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
+currently supports i386, x86-64, ARM, AArch64, LoongArch, PowerPC32,
+PowerPC64, MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
 .Nm
 acts as a Microsoft link.exe-compatible linker if invoked as
 .Nm lld-link
@@ -82,12 +82,17 @@ Bind default visibility defined symbols locally for
 Also set the
 .Dv DF_SYMBOLIC
 flag.
+.It Fl Bsymbolic-non-weak
+Bind default visibility defined STB_GLOBAL symbols locally for
+.Fl shared.
 .It Fl Bsymbolic-functions
 Bind default visibility defined function symbols locally for
 .Fl shared.
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
+.It Fl --be8
+Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -114,7 +119,20 @@ are calculated from the object contents.
 is not intended to be cryptographically secure.
 .It Fl -build-id
 Synonym for
-.Fl -build-id Ns = Ns Cm fast .
+.Fl -build-id Ns = Ns Cm sha1 .
+.It Fl -call-graph-profile-sort Ns = Ns Ar algorithm
+.Ar algorithm
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+Ignore call graph profile.
+.It Cm hfsort
+Use hfsort.
+.It Cm cdsort
+Use cdsort (default).
+.El
+.Pp
 .It Fl -color-diagnostics Ns = Ns Ar value
 Use colors in diagnostics.
 .Ar value
@@ -130,6 +148,7 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
+The sections remain uncompressed if compressed content would be larger.
 .Cm value
 may be
 .Pp
@@ -138,18 +157,31 @@ may be
 No compression.
 .It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level. If you want to compress it more,
-you can specify
-.Fl O2
-to set the compression level to 6.
+compresses well at that level.
 .It Cm zstd
-The compression level is 5.
+Use the default compression level in zstd.
 .El
 .Pp
+.It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
+Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The matched sections remain uncompressed if compressed content would be larger.
+The compression level is
+.Cm level
+(if specified) or a default speed-focused level.
+This is like a generalized
+.Cm --compress-debug-sections.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
 is specified, print to the map file.
+.It Fl -debug-names
+Generate a merged
+.Li .debug_names
+section.
+.It Fl -default-script Ns = Ns Ar file , Fl dT Ar file
+In the absence of
+.Fl -script ,
+read this default linker script.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
 Define a symbol alias.
 .Ar expression
@@ -192,6 +224,8 @@ segment header.
 Generate relocations in the output.
 .It Fl -enable-new-dtags
 Enable new dynamic tags.
+.It Fl -enable-non-contiguous-regions
+Spill input sections to later matching output sections to avoid memory region overflow.
 .It Fl -end-lib
 End a grouping of objects that should be treated as if they were together
 in an archive.
@@ -244,6 +278,8 @@ Set the
 field to the specified value.
 .It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
+.It Fl -force-group-allocation
+Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well.
 .It Fl -format Ns = Ns Ar input-format , Fl b Ar input-format
 Specify the format of the inputs following this option.
 .Ar input-format
@@ -356,6 +392,8 @@ Do not put read-only non-executable sections in their own segment.
 Do not report version scripts that refer to undefined symbols.
 .It Fl -no-undefined
 Report unresolved symbols even if the linker is creating a shared library.
+.It Fl -no-warn-mismatch
+Do not reject unknown section types.
 .It Fl -no-warn-symbol-ordering
 Do not warn about problems with the symbol ordering file or call graph profile.
 .It Fl -no-warnings , Fl w
@@ -386,9 +424,7 @@ Disable string merging.
 .It Cm 1
 Enable string merging.
 .It Cm 2
-Enable string tail merging. If
-.Fl -compress-debug-sections
-is given, compress debug sections at compression level 6 instead of 1.
+Enable string tail merging.
 .El
 .Pp
 .Fl O Ns Cm 1
@@ -619,6 +655,10 @@ Number of threads.
 (default) means all of concurrent threads supported.
 .Cm 1
 disables multi-threading.
+.It Fl -fat-lto-objects
+Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.
+.It Fl -no-fat-lto-objects
+Ignore the .llvm.lto section in relocatable object files (default).
 .It Fl -time-trace
 Record time trace.
 .It Fl -time-trace-file Ns = Ns Ar file
@@ -734,6 +774,11 @@ Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp
+.It Cm pauth-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
 .It Cm force-bti
 Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
 .Pp
@@ -768,6 +813,9 @@ Set the
 flag to indicate to the runtime linker that the object is an interposer.
 During symbol resolution interposers are searched after the application
 but before other dependencies.
+.Pp
+.It Cm lrodata-after-bss
+Place .lrodata after .bss.
 .Pp
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.

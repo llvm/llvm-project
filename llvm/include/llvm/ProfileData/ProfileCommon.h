@@ -28,14 +28,19 @@
 
 namespace llvm {
 
+extern cl::opt<bool> UseContextLessSummary;
+extern cl::opt<int> ProfileSummaryCutoffHot;
+extern cl::opt<int> ProfileSummaryCutoffCold;
+extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
+extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
+extern cl::opt<uint64_t> ProfileSummaryHotCount;
+extern cl::opt<uint64_t> ProfileSummaryColdCount;
+
 namespace sampleprof {
 
 class FunctionSamples;
 
 } // end namespace sampleprof
-
-inline const char *getHotSectionPrefix() { return "hot"; }
-inline const char *getUnlikelySectionPrefix() { return "unlikely"; }
 
 class ProfileSummaryBuilder {
 private:

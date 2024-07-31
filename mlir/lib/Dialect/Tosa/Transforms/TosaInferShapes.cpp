@@ -18,14 +18,10 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/IRMapping.h"
-#include "mlir/IR/Matchers.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 namespace tosa {
@@ -39,10 +35,86 @@ using namespace mlir::tosa;
 
 namespace {
 
-void propagateShapesInRegion(Region &region);
+// Check whether this use case is replaceable. We define an op as
+// being replaceable if it is used by a TosaOp, or an op with a
+// type-inference related interface.
+// When a non-replaceable use is encountered, the value is wrapped in a
+// cast back to the original type after inference.
+bool canBeRefined(Operation *user) {
+  if (!user->getDialect())
+    return false;
+  return user->getDialect()->getTypeID() == TypeID::get<TosaDialect>() ||
+         isa<InferTypeOpInterface, InferShapedTypeOpInterface>(user);
+}
 
-void propagateShapesToTosaIf(
-    Operation &op, DenseMap<Value, ShapedTypeComponents> &shapesStorage) {
+// During type propagation, the types of values in the operator graph are
+// updated. For the tosa.while_loop operation, types are speculatively updated
+// within the body region to determine the output type of the while_loop. This
+// process is performed until a fixed point is reached, then the types are
+// rolled back.
+//
+// This class encapsulates the state information needed to perform the roll back
+// process or to commit to the final changes.
+class TypeModificationState {
+public:
+  TypeModificationState() = default;
+
+  ~TypeModificationState() {
+    // Ensure the recorded modifications are either committed or rolled back.
+    assert(oldTypes.empty() && "unhandled type modifications");
+  }
+
+  // Update the state of the value and record the old type.
+  void setType(Value value, Type type) {
+    if (value.getType() != type) {
+      oldTypes.emplace_back(value, value.getType());
+      value.setType(type);
+    }
+  }
+
+  // Roll back changes made to the types in the IR by setting all the affected
+  // values to their old types.
+  void rollBack() {
+    for (auto [value, type] : oldTypes)
+      value.setType(type);
+
+    oldTypes.clear();
+  }
+
+  // Commit the changes to the types in the IR.
+  // This requires inserting tensor.cast operations to mediate the newly
+  // inferred result types with users that do not support type inference.
+  void commit() {
+    // For each use whose type changed, cast the value with the new type back to
+    // the old type.
+    for (auto [value, oldType] : oldTypes) {
+      tensor::CastOp castedValue;
+      for (auto &use : value.getUses()) {
+        if (canBeRefined(use.getOwner()))
+          continue;
+
+        // Cache the cast to avoid generating duplicates
+        if (!castedValue) {
+          ImplicitLocOpBuilder builder{value.getLoc(), use.getOwner()};
+          castedValue = builder.create<tensor::CastOp>(oldType, value);
+        }
+
+        use.set(castedValue);
+      }
+    }
+
+    oldTypes.clear();
+  }
+
+private:
+  // A record of each value whose type was updated along with that value's
+  // previous type.
+  llvm::SmallVector<std::pair<Value, Type>> oldTypes;
+};
+
+void propagateShapesInRegion(Region &region, TypeModificationState &state);
+
+void propagateShapesToTosaIf(Operation &op, TypeModificationState &state) {
   IfOp ifOp = dyn_cast<IfOp>(op);
   if (!ifOp)
     return;
@@ -53,13 +125,13 @@ void propagateShapesToTosaIf(
       return;
 
     for (unsigned int i = 1, s = op.getNumOperands(); i < s; i++) {
-      auto inferredTy = shapesStorage[op.getOperand(i)];
+      auto inferredTy = cast<ShapedType>(op.getOperand(i).getType());
       auto blockArg = frontBlock.getArgument(i - 1);
       auto oldType = cast<ShapedType>(blockArg.getType());
 
       if (inferredTy.hasRank()) {
-        Type newType = oldType.clone(inferredTy.getDims());
-        blockArg.setType(newType);
+        Type newType = oldType.clone(inferredTy.getShape());
+        state.setType(blockArg, newType);
       }
     }
 
@@ -72,15 +144,14 @@ void propagateShapesToTosaIf(
           ValueKnowledge::join(operandKnowledge, blockKnowledge);
       if (!joinedKnowledge)
         continue;
-      frontBlock.getArgument(i).setType(joinedKnowledge.getType());
+      state.setType(frontBlock.getArgument(i), joinedKnowledge.getType());
     }
 
-    propagateShapesInRegion(region);
+    propagateShapesInRegion(region, state);
   }
 }
 
-void propagateShapesToTosaWhile(
-    Operation &op, DenseMap<Value, ShapedTypeComponents> &shapesStorage) {
+void propagateShapesToTosaWhile(Operation &op, TypeModificationState &state) {
   WhileOp whileOp = dyn_cast<WhileOp>(op);
   if (!whileOp)
     return;
@@ -88,50 +159,29 @@ void propagateShapesToTosaWhile(
   // Determine what the expected argument types are to the cond/body blocks.
   // The expected arguments should be compatible with ever iteration of the
   // loop body / condition for tosa.while.
-  llvm::SmallVector<Type> argTypes;
-  for (auto operand : op.getOperands()) {
-    auto operandTy = cast<ShapedType>(operand.getType());
-    auto shapedTypeComponent = shapesStorage[operand];
-    if (shapedTypeComponent.hasRank()) {
-      auto newTy = operandTy.clone(shapedTypeComponent.getDims());
-      argTypes.push_back(newTy);
-    } else {
-      argTypes.push_back(operand.getType());
-    }
-  }
-
-  // Save out the type information so we can restore at the end.
-  llvm::DenseMap<Value, Type> originalTypeMap;
-  for (auto &block : op.getRegion(1)) {
-    for (auto arg : block.getArguments())
-      originalTypeMap[arg] = arg.getType();
-    for (auto &op : block)
-      for (auto result : op.getResults())
-        originalTypeMap[result] = result.getType();
-  }
+  SmallVector<Type> argTypes = llvm::to_vector(op.getOperandTypes());
 
   bool hasNewTypes = true;
   while (hasNewTypes) {
+    TypeModificationState localState;
 
     // Set types on the block args.
     Region &bodyRegion = op.getRegion(1);
     Block &block = bodyRegion.front();
     for (int i = 0, s = argTypes.size(); i < s; i++) {
-      block.getArgument(i).setType(argTypes[i]);
+      localState.setType(block.getArgument(i), argTypes[i]);
     }
 
     // Propagate to the end.
-    propagateShapesInRegion(bodyRegion);
+    propagateShapesInRegion(bodyRegion, localState);
 
-    // Find all the tosa yield types and verify there is atleast one.
+    // Find all the tosa yield types and verify there is a single one.
     llvm::SmallVector<YieldOp> yieldOps;
     for (auto &block : bodyRegion)
       if (auto yieldOp = dyn_cast<YieldOp>(block.getTerminator()))
         yieldOps.push_back(yieldOp);
 
-    if (yieldOps.empty())
-      return;
-
+    assert(yieldOps.size() == 1 && "missing or non-unique yield op");
     // Using the new tosa.yield operand types, infer the new subtypes.
     llvm::SmallVector<ValueKnowledge> yieldTypeInfo;
     for (auto ty : argTypes) {
@@ -161,17 +211,8 @@ void propagateShapesToTosaWhile(
       argTypes[i] = newType;
     }
 
-    // The types inferred in the block assume the operand types specified for
-    // this iteration. We need to restore the original types to ensure that
-    // future iterations only use the already specified types, not possible
-    // types from previous iterations.
-    for (auto &block : bodyRegion) {
-      for (auto arg : block.getArguments())
-        arg.setType(originalTypeMap[arg]);
-      for (auto &op : block)
-        for (auto result : op.getResults())
-          result.setType(originalTypeMap[result]);
-    }
+    // Roll back all changes made during the speculative part of the algorithm.
+    localState.rollBack();
   }
 
   // We now set the block arguments according to the most recent shape
@@ -179,46 +220,23 @@ void propagateShapesToTosaWhile(
   // iteration.
   for (auto &region : op.getRegions()) {
     for (unsigned int i = 0, s = argTypes.size(); i < s; i++) {
-      region.front().getArgument(i).setType(argTypes[i]);
+      state.setType(region.front().getArgument(i), argTypes[i]);
     }
 
-    propagateShapesInRegion(region);
+    propagateShapesInRegion(region, state);
   }
 }
 
-void propagateShapesInRegion(Region &region) {
-  DenseMap<Value, ShapedTypeComponents> shapesStorage;
-  auto setShapes = [&](Value val, Type t) {
-    if (auto st = dyn_cast<ShapedType>(t))
-      shapesStorage[val] = st;
-    else
-      shapesStorage[val] = t;
-  };
-  auto operandShape = [&](Value val) -> ShapeAdaptor {
-    // Query the WIP mapping rather than the type if set.
-    auto it = shapesStorage.find(val);
-    if (it == shapesStorage.end())
-      return nullptr;
-    return it->second;
-  };
-
-  // Check whether this use case is replaceable. We define an op as
-  // being replaceable if it is used by a ReturnOp, a TosaOp, or an op with a
-  // type-inference related interface.
-  auto isReplaceableUser = [](Operation *user) -> bool {
-    return isa<func::ReturnOp>(user) ||
-           user->getDialect()->getNamespace() ==
-               TosaDialect::getDialectNamespace() ||
-           isa<InferTypeOpInterface, InferShapedTypeOpInterface>(user);
-  };
+void propagateShapesInRegion(Region &region, TypeModificationState &state) {
+  Dialect *tosaDialect = region.getContext()->getLoadedDialect<TosaDialect>();
 
   for (auto &block : region) {
     for (Operation &op : block) {
-      if (op.getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
+      if (op.getDialect() != tosaDialect)
         continue;
 
-      propagateShapesToTosaIf(op, shapesStorage);
-      propagateShapesToTosaWhile(op, shapesStorage);
+      propagateShapesToTosaIf(op, state);
+      propagateShapesToTosaWhile(op, state);
 
       InferShapedTypeOpInterface shapeInterface =
           dyn_cast<InferShapedTypeOpInterface>(op);
@@ -227,19 +245,15 @@ void propagateShapesInRegion(Region &region) {
 
       SmallVector<ShapedTypeComponents> returnedShapes;
 
-      ValueShapeRange range(op.getOperands(), operandShape);
       if (shapeInterface
-              .inferReturnTypeComponents(op.getContext(), op.getLoc(), range,
-                                         op.getDiscardableAttrDictionary(),
-                                         op.getPropertiesStorage(),
-                                         op.getRegions(), returnedShapes)
+              .inferReturnTypeComponents(
+                  op.getContext(), op.getLoc(), op.getOperands(),
+                  op.getDiscardableAttrDictionary(), op.getPropertiesStorage(),
+                  op.getRegions(), returnedShapes)
               .succeeded()) {
         for (auto it : llvm::zip(op.getResults(), returnedShapes)) {
           Value result = std::get<0>(it);
           ShapedTypeComponents predictedShape = std::get<1>(it);
-
-          if (!llvm::all_of(result.getUsers(), isReplaceableUser))
-            continue;
 
           // Determine the knowledge based on the output type.
           // TODO: should also query WIP type probably
@@ -262,18 +276,11 @@ void propagateShapesInRegion(Region &region) {
               ValueKnowledge::join(currentKnowledge, inferredKnowledge);
           if (!newKnowledge)
             continue;
-          setShapes(result, newKnowledge.getType());
+
+          // Set new type
+          state.setType(result, newKnowledge.getType());
         }
       }
-    }
-  }
-
-  // Actually update types with updated shape knowledge.
-  for (auto it : shapesStorage) {
-    auto result = it.second;
-    if (result.hasRank()) {
-      Type t = cast<ShapedType>(it.first.getType()).clone(result.getDims());
-      it.first.setType(t);
     }
   }
 }
@@ -285,44 +292,9 @@ struct TosaInferShapes
 public:
   void runOnOperation() override {
     func::FuncOp func = getOperation();
-
-    IRRewriter rewriter(func.getContext());
-
-    propagateShapesInRegion(func.getBody());
-
-    // Insert UnrealizedConversionCasts to guarantee ReturnOp agress with
-    // the FuncOp type.
-    func.walk([&](func::ReturnOp op) {
-      func::FuncOp parent = dyn_cast<func::FuncOp>(op->getParentOp());
-      if (!parent)
-        return;
-
-      rewriter.setInsertionPoint(op);
-      FunctionType funcTy = func.getFunctionType();
-      auto resultTys = funcTy.getResults();
-
-      bool castAdded = false;
-      SmallVector<Value> castedValues;
-      for (auto it : llvm::zip(op->getOperands(), resultTys)) {
-        auto operand = std::get<0>(it);
-        auto currentTy = operand.getType();
-        auto castTy = std::get<1>(it);
-        if (currentTy == castTy) {
-          castedValues.push_back(operand);
-          continue;
-        }
-
-        castedValues.push_back(
-            rewriter.create<tensor::CastOp>(op.getLoc(), castTy, operand)
-                .getResult());
-
-        castAdded = true;
-      }
-
-      if (castAdded) {
-        rewriter.replaceOpWithNewOp<func::ReturnOp>(op, castedValues);
-      }
-    });
+    TypeModificationState state;
+    propagateShapesInRegion(func.getBody(), state);
+    state.commit();
   }
 };
 } // namespace

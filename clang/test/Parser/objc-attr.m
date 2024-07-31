@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -triple x86_64-apple-macosx10.10.0 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-macosx10.10.0 -verify %s
 // expected-no-diagnostics
 
 @interface NSObject
@@ -14,7 +14,7 @@
 
 [[clang::objc_runtime_name("name")]] @protocol Bar;
 
-[[clang::objc_protocol_requires_explicit_implementation]] 
+[[clang::objc_protocol_requires_explicit_implementation]]
 @protocol Baz
 @end
 

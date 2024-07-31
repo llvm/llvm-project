@@ -20,11 +20,15 @@ function(lldb_tablegen)
   endif()
 
   set(LLVM_TARGET_DEFINITIONS ${LTG_SOURCE})
+
+  if (LLVM_USE_SANITIZER MATCHES ".*Address.*")
+    list(APPEND LTG_UNPARSED_ARGUMENTS -DLLDB_SANITIZED)
+  endif()
+
   tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})
-    set_target_properties( ${LTG_TARGET} PROPERTIES FOLDER "LLDB tablegenning")
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
 endfunction(lldb_tablegen)
@@ -160,10 +164,10 @@ function(add_lldb_library name)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)
     if(EXISTS ${parent_dir})
       get_filename_component(category ${parent_dir} NAME)
-      set_target_properties(${name} PROPERTIES FOLDER "lldb plugins/${category}")
+      set_target_properties(${name} PROPERTIES FOLDER "LLDB/Plugins/${category}")
     endif()
   else()
-    set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "LLDB/Libraries")
   endif()
 
   # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
@@ -203,7 +207,6 @@ function(add_lldb_executable name)
   else()
     target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
 
   if (ARG_BUILD_RPATH)
     set_target_properties(${name} PROPERTIES BUILD_RPATH "${ARG_BUILD_RPATH}")
@@ -255,6 +258,7 @@ function(add_lldb_tool name)
   endif()
 
   add_lldb_executable(${name} GENERATE_INSTALL ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # The test suite relies on finding LLDB.framework binary resources in the
@@ -378,7 +382,7 @@ endfunction()
 
 function(lldb_find_python_module module)
   set(MODULE_FOUND PY_${module}_FOUND)
-  if (DEFINED ${MODULE_FOUND})
+  if (${MODULE_FOUND})
     return()
   endif()
 
@@ -387,10 +391,10 @@ function(lldb_find_python_module module)
     ERROR_QUIET)
 
   if (status)
-    set(${MODULE_FOUND} OFF CACHE BOOL "Failed to find python module '${module}'")
+    set(${MODULE_FOUND} OFF PARENT_SCOPE)
     message(STATUS "Could NOT find Python module '${module}'")
   else()
-    set(${MODULE_FOUND} ON CACHE BOOL "Found python module '${module}'")
+    set(${MODULE_FOUND} ON PARENT_SCOPE)
     message(STATUS "Found Python module '${module}'")
   endif()
 endfunction()

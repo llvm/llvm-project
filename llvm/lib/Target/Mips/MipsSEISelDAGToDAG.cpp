@@ -44,9 +44,9 @@ bool MipsSEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return MipsDAGToDAGISel::runOnMachineFunction(MF);
 }
 
-void MipsSEDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
+void MipsSEDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
-  SelectionDAGISel::getAnalysisUsage(AU);
+  SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
 void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
@@ -76,7 +76,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
 }
 
 unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
-  uint64_t RegNum = cast<ConstantSDNode>(RegIdx)->getZExtValue();
+  uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
 
@@ -741,8 +741,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   switch(Opcode) {
   default: break;
 
-  case Mips::PseudoD_SELECT_I:
-  case Mips::PseudoD_SELECT_I64: {
+  case MipsISD::DOUBLE_SELECT_I:
+  case MipsISD::DOUBLE_SELECT_I64: {
     MVT VT = Subtarget->isGP64bit() ? MVT::i64 : MVT::i32;
     SDValue cond = Node->getOperand(0);
     SDValue Hi1 = Node->getOperand(1);
@@ -831,8 +831,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_W_CHAIN: {
-    const unsigned IntrinsicOpcode =
-        cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    const unsigned IntrinsicOpcode = Node->getConstantOperandVal(1);
     switch (IntrinsicOpcode) {
     default:
       break;
@@ -885,7 +884,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_WO_CHAIN: {
-    switch (cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue()) {
+    switch (Node->getConstantOperandVal(0)) {
     default:
       break;
 
@@ -901,8 +900,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_VOID: {
-    const unsigned IntrinsicOpcode =
-        cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    const unsigned IntrinsicOpcode = Node->getConstantOperandVal(1);
     switch (IntrinsicOpcode) {
     default:
       break;
@@ -1377,17 +1375,17 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   return false;
 }
 
-bool MipsSEDAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool MipsSEDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   SDValue Base, Offset;
 
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
   // All memory constraints can at least accept raw pointers.
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_o:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
     if (selectAddrRegImm16(Op, Base, Offset)) {
       OutOps.push_back(Base);
       OutOps.push_back(Offset);
@@ -1396,7 +1394,7 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
     OutOps.push_back(Op);
     OutOps.push_back(CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32));
     return false;
-  case InlineAsm::Constraint_R:
+  case InlineAsm::ConstraintCode::R:
     // The 'R' constraint is supposed to be much more complicated than this.
     // However, it's becoming less useful due to architectural changes and
     // ought to be replaced by other constraints such as 'ZC'.
@@ -1410,7 +1408,7 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
     OutOps.push_back(Op);
     OutOps.push_back(CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32));
     return false;
-  case InlineAsm::Constraint_ZC:
+  case InlineAsm::ConstraintCode::ZC:
     // ZC matches whatever the pref, ll, and sc instructions can handle for the
     // given subtarget.
     if (Subtarget->inMicroMipsMode()) {
@@ -1441,7 +1439,11 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
   return true;
 }
 
+MipsSEDAGToDAGISelLegacy::MipsSEDAGToDAGISelLegacy(MipsTargetMachine &TM,
+                                                   CodeGenOptLevel OL)
+    : MipsDAGToDAGISelLegacy(std::make_unique<MipsSEDAGToDAGISel>(TM, OL)) {}
+
 FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM,
-                                        CodeGenOpt::Level OptLevel) {
-  return new MipsSEDAGToDAGISel(TM, OptLevel);
+                                        CodeGenOptLevel OptLevel) {
+  return new MipsSEDAGToDAGISelLegacy(TM, OptLevel);
 }

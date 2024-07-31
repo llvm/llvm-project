@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX10,W32 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX10,W64 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX10,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX10,W64 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_VOP2.
@@ -12931,11 +12931,11 @@ v_ldexp_f16_e64 v5, v1, 0
 v_ldexp_f16_e64 v5, v1, -1
 // GFX10: encoding: [0x05,0x00,0x3b,0xd5,0x01,0x83,0x01,0x00]
 
-v_ldexp_f16_e64 v5, v1, 0x3800
-// GFX10: encoding: [0x05,0x00,0x3b,0xd5,0x01,0xff,0x01,0x00,0x00,0x38,0x00,0x00]
+v_ldexp_f16_e64 v5, v1, 0.5
+// GFX10: encoding: [0x05,0x00,0x3b,0xd5,0x01,0xe1,0x01,0x00]
 
 v_ldexp_f16_e64 v5, v1, -4.0
-// GFX10: encoding: [0x05,0x00,0x3b,0xd5,0x01,0xff,0x01,0x00,0x00,0xc4,0x00,0x00]
+// GFX10: encoding: [0x05,0x00,0x3b,0xd5,0x01,0xef,0x01,0x00]
 
 v_ldexp_f16_e64 v5, -v1, v2
 // GFX10: encoding: [0x05,0x00,0x3b,0xd5,0x01,0x05,0x02,0x20]

@@ -4,6 +4,24 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple i386-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple x86_64-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN64
 
+// PR63618: make sure we generate definitions for all the globals defined in the test
+// MSABI: @"?b@@3UB@@A" = {{.*}} zeroinitializer
+// MSABI: @"?d@@3UD@@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@noninline_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@noninline_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@noninline_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@noninline_virt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inalloca_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inalloca_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inalloca_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inalloca_virt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inline_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inline_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inline_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inline_virt@@3UC@1@A" = {{.*}} zeroinitializer
+
+// MSABI-NOT: @this
+
 // PR12219
 struct A { A(int); virtual ~A(); };
 struct B : A { using A::A; ~B(); };
@@ -122,7 +140,7 @@ namespace inalloca_nonvirt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call ptr @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
   // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
@@ -135,7 +153,7 @@ namespace inalloca_nonvirt {
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
   // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
 
@@ -158,7 +176,7 @@ namespace inalloca_nonvirt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call ptr @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
   // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
@@ -171,7 +189,7 @@ namespace inalloca_nonvirt {
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
   // WIN32: call {{.*}} @"??0A@inalloca_nonvirt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(
   // WIN32: call {{.*}} @"??1Q@@QAE@XZ"(
 
@@ -198,7 +216,7 @@ namespace inalloca_virt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call ptr @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
   // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
@@ -217,7 +235,7 @@ namespace inalloca_virt {
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
   // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: br
   //
   // Note that if we jumped directly to here we would fail to stackrestore and
@@ -249,7 +267,7 @@ namespace inalloca_virt {
 
   // On Win32, the inalloca call can't be forwarded so we force inlining.
   // WIN32: %[[TMP:.*]] = alloca
-  // WIN32: call ptr @llvm.stacksave()
+  // WIN32: call ptr @llvm.stacksave.p0()
   // WIN32: %[[ARGMEM:.*]] = alloca inalloca
   // WIN32: call {{.*}} @"??0Q@@QAE@H@Z"(ptr {{[^,]*}} %[[TMP]], i32 4)
   // WIN32: %[[ARG3:.*]] = getelementptr {{.*}} %[[ARGMEM]]
@@ -267,7 +285,7 @@ namespace inalloca_virt {
   // WIN32: %[[ARG4:.*]] = getelementptr {{.*}} %[[ARGMEM]]
   // WIN32: store ptr %[[TMP]], ptr %[[ARG4]]
   // WIN32: call {{.*}} @"??0A@inalloca_virt@@QAE@UQ@@H0$$QAU2@@Z"(ptr{{[^,]*}}, ptr inalloca(<{{.*}}>) %[[ARGMEM]])
-  // WIN32: call void @llvm.stackrestore(
+  // WIN32: call void @llvm.stackrestore.p0(
   // WIN32: br
   //
   // WIN32: call {{.*}} @"??0Z@@QAE@XZ"(

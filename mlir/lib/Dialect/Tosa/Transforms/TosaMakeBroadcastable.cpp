@@ -54,24 +54,24 @@ LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter, Location loc,
     return rewriter.notifyMatchFailure(loc,
                                        "cannot rewrite as its already correct");
 
-  Value input1_copy = input1;
-  Value input2_copy = input2;
-  if (EqualizeRanks(rewriter, loc, input1_copy, input2_copy).failed()) {
+  Value input1Copy = input1;
+  Value input2Copy = input2;
+  if (EqualizeRanks(rewriter, loc, input1Copy, input2Copy).failed()) {
     return rewriter.notifyMatchFailure(loc, "failed to reshape inputs");
   }
 
   // Verify the rank agrees with the output type if the output type is ranked.
   if (outputType) {
     if (outputType.getRank() !=
-            llvm::cast<RankedTensorType>(input1_copy.getType()).getRank() ||
+            llvm::cast<RankedTensorType>(input1Copy.getType()).getRank() ||
         outputType.getRank() !=
-            llvm::cast<RankedTensorType>(input2_copy.getType()).getRank())
+            llvm::cast<RankedTensorType>(input2Copy.getType()).getRank())
       return rewriter.notifyMatchFailure(
           loc, "the reshaped type doesn't agrees with the ranked output type");
   }
 
-  input1 = input1_copy;
-  input2 = input2_copy;
+  input1 = input1Copy;
+  input2 = input2Copy;
 
   return success();
 }
@@ -232,7 +232,7 @@ public:
     patterns.add<ConvertTosaOp<tosa::AddOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::SubOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MulOp>>(ctx);
-    patterns.add<ConvertTosaOp<tosa::DivOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::IntDivOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MaximumOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MinimumOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::EqualOp>>(ctx);

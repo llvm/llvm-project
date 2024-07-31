@@ -5,7 +5,136 @@ declare i8 @llvm.abs.i8(i8, i1)
 declare i32 @llvm.abs.i32(i32, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 declare <3 x i82> @llvm.abs.v3i82(<3 x i82>, i1)
+declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
 declare void @llvm.assume(i1)
+declare void @use(i32)
+
+define i8 @test_abs_abs_a_mul_b_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 true)
+  %mul = mul i8 %abs1, %b
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 true)
+  ret i8 %abs2
+}
+
+define i8 @test_abs_a_mul_abs_b_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_abs_a_mul_abs_b_i8(
+; CHECK-NEXT:    [[A1:%.*]] = urem i8 123, [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[A1]], [[B:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %a1 = urem i8 123, %a  ; thwart complexity-based canonicalization
+  %abs1 = call i8 @llvm.abs.i8(i8 %b, i1 true)
+  %mul = mul i8 %a1, %abs1
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 true)
+  ret i8 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 true)
+  ret i32 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32_abs_false_true(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_false_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 true)
+  ret i32 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32_abs_true_false(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_true_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 false)
+  ret i32 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_i32_abs_false_false(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_false_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 false)
+  ret i32 %abs2
+}
+
+; this should work
+define i8 @test_nsw_with_true(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_nsw_with_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 false)
+  %mul = mul nsw i8 %abs1, %b
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 true)
+  ret i8 %abs2
+}
+
+; this should't propagate the nsw
+define i8 @test_nsw_with_false(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_nsw_with_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i8 [[ABS2]]
+;
+  %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 false)
+  %mul = mul nsw i8 %abs1, %b
+  %abs2 = call i8 @llvm.abs.i8(i8 %mul, i1 false)
+  ret i8 %abs2
+}
+
+define i32 @test_abs_abs_a_mul_b_more_one_use(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_more_one_use(
+; CHECK-NEXT:    [[ABS1:%.*]] = call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS1]], [[B:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[MUL]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i32 [[ABS2]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %mul = mul i32 %abs1, %b
+  %abs2 = call i32 @llvm.abs.i32(i32 %mul, i1 false)
+  call void @use(i32 %mul)
+  ret i32 %abs2
+}
+
+define <2 x i8> @test_abs_abs_a_mul_b_vector_i8(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @test_abs_abs_a_mul_b_vector_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[TMP1]], i1 true)
+; CHECK-NEXT:    ret <2 x i8> [[ABS2]]
+;
+  %abs = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %a, i1 true)
+  %mul = mul <2 x i8> %abs, %b
+  %abs2 = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %mul, i1 true)
+  ret <2 x i8> %abs2
+}
 
 ; abs preserves trailing zeros so the second and is unneeded
 define i32 @abs_trailing_zeros(i32 %x) {
@@ -452,13 +581,94 @@ cond.end:
   ret i32 %r
 }
 
+; https://alive2.llvm.org/ce/z/VSumU5
+define i32 @sub_abs_sgeT(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_abs_sgeT(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp = icmp sge i32 %x, %y
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i32 %x, %y
+  %0 = call i32 @llvm.abs.i32(i32 %sub, i1 true)
+  br label %cond.end
+
+cond.end:
+  %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
+  ret i32 %r
+}
+
+; https://alive2.llvm.org/ce/z/BSM6UR
+define i32 @sub_abs_sgeT_swap(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_abs_sgeT_swap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub nsw i32 [[Y]], [[X]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp = icmp sge i32 %y, %x   ; swap the operands
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i32 %x, %y
+  %0 = call i32 @llvm.abs.i32(i32 %sub, i1 true)
+  br label %cond.end
+
+cond.end:
+  %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
+  ret i32 %r
+}
+
+; https://alive2.llvm.org/ce/z/BSM6UR
+define i32 @sub_abs_sgeT_false(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_abs_sgeT_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT_NOT:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT_NOT]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub nsw i32 [[Y]], [[X]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB_NEG]], [[COND_FALSE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp.not = icmp sge i32 %x, %y
+  br i1 %cmp.not, label %cond.end, label %cond.false
+
+cond.false:
+  %sub = sub nsw i32 %x, %y
+  %0 = call i32 @llvm.abs.i32(i32 %sub, i1 true) ; abs in false case
+  br label %cond.end
+
+cond.end:
+  %r = phi i32 [ %0, %cond.false ], [ 0, %entry ]
+  ret i32 %r
+}
+
 define i32 @sub_abs_lt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_abs_lt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub nsw i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
@@ -476,6 +686,86 @@ cond.true:
 cond.end:
   %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
   ret i32 %r
+}
+
+; https://alive2.llvm.org/ce/z/9wQo6G
+define i32 @sub_abs_sle(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_abs_sle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub nsw i32 [[Y]], [[X]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp = icmp sle i32 %x, %y
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i32 %x, %y
+  %0 = call i32 @llvm.abs.i32(i32 %sub, i1 true)
+  br label %cond.end
+
+cond.end:
+  %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
+  ret i32 %r
+}
+
+; https://alive2.llvm.org/ce/z/xlpSO0
+define i8 @sub_abs_sleF(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_abs_sleF(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %cmp = icmp sle i8 %x, %y
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i8 %x, %y
+  %0 = call i8 @llvm.abs.i8(i8 %sub, i1 false)
+  br label %cond.end
+
+cond.end:
+  %r = phi i8 [ %0, %cond.true ], [ 0, %entry ]
+  ret i8 %r
+}
+
+define i8 @sub_abs_sleT(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_abs_sleT(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[COND_END:%.*]], label [[COND_TRUE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %cmp = icmp sle i8 %x, %y
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i8 %x, %y
+  %0 = call i8 @llvm.abs.i8(i8 %sub, i1 true)
+  br label %cond.end
+
+cond.end:
+  %r = phi i8 [ %0, %cond.true ], [ 0, %entry ]
+  ret i8 %r
 }
 
 define i32 @sub_abs_lt_min_not_poison(i32 %x, i32 %y) {
@@ -510,7 +800,7 @@ define i32 @sub_abs_wrong_pred(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:

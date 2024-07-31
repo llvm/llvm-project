@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // typedef TrivialClock file_time_type;
 
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src/filesystem -Wno-macro-redefined
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src -Wno-macro-redefined
 
 #include <cassert>
 #include <chrono>
@@ -22,14 +23,14 @@
 #include <string>
 #include <type_traits>
 
-#include "filesystem_common.h"
+#include "filesystem/time_utils.h"
 
 #ifndef __SIZEOF_INT128__
 #define TEST_HAS_NO_INT128_T
 #endif
 
 using namespace std::chrono;
-namespace fs = std::__fs::filesystem;
+namespace fs = std::filesystem;
 using fs::file_time_type;
 using fs::detail::time_util;
 

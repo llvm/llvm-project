@@ -49,13 +49,13 @@ using namespace llvm::pdb;
 static int TranslateUdtKind(PDB_UdtType pdb_kind) {
   switch (pdb_kind) {
   case PDB_UdtType::Class:
-    return clang::TTK_Class;
+    return llvm::to_underlying(clang::TagTypeKind::Class);
   case PDB_UdtType::Struct:
-    return clang::TTK_Struct;
+    return llvm::to_underlying(clang::TagTypeKind::Struct);
   case PDB_UdtType::Union:
-    return clang::TTK_Union;
+    return llvm::to_underlying(clang::TagTypeKind::Union);
   case PDB_UdtType::Interface:
-    return clang::TTK_Interface;
+    return llvm::to_underlying(clang::TagTypeKind::Interface);
   }
   llvm_unreachable("unsuported PDB UDT type");
 }
@@ -407,8 +407,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     // symbols in PDB for types with const or volatile modifiers, but we need
     // to create only one declaration for them all.
     Type::ResolveState type_resolve_state;
-    CompilerType clang_type = m_ast.GetTypeForIdentifier<clang::CXXRecordDecl>(
-        ConstString(name), decl_context);
+    CompilerType clang_type =
+        m_ast.GetTypeForIdentifier<clang::CXXRecordDecl>(name, decl_context);
     if (!clang_type.IsValid()) {
       auto access = GetAccessibilityForUdt(*udt);
 
@@ -479,8 +479,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     uint64_t bytes = enum_type->getLength();
 
     // Check if such an enum already exists in the current context
-    CompilerType ast_enum = m_ast.GetTypeForIdentifier<clang::EnumDecl>(
-        ConstString(name), decl_context);
+    CompilerType ast_enum =
+        m_ast.GetTypeForIdentifier<clang::EnumDecl>(name, decl_context);
     if (!ast_enum.IsValid()) {
       auto underlying_type_up = enum_type->getUnderlyingType();
       if (!underlying_type_up)
@@ -557,8 +557,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     // Check if such a typedef already exists in the current context
     CompilerType ast_typedef =
-        m_ast.GetTypeForIdentifier<clang::TypedefNameDecl>(ConstString(name),
-                                                           decl_ctx);
+        m_ast.GetTypeForIdentifier<clang::TypedefNameDecl>(name, decl_ctx);
     if (!ast_typedef.IsValid()) {
       CompilerType target_ast_type = target_type->GetFullCompilerType();
 
@@ -1140,7 +1139,7 @@ PDBASTParser::FindNamespaceDecl(const clang::DeclContext *parent,
   assert(set);
 
   for (clang::NamespaceDecl *namespace_decl : *set)
-    if (namespace_decl->getName().equals(name))
+    if (namespace_decl->getName() == name)
       return namespace_decl;
 
   for (clang::NamespaceDecl *namespace_decl : *set)
@@ -1388,9 +1387,9 @@ void PDBASTParser::AddRecordBases(
     auto is_virtual = base->isVirtualBaseClass();
 
     std::unique_ptr<clang::CXXBaseSpecifier> base_spec =
-        m_ast.CreateBaseClassSpecifier(base_comp_type.GetOpaqueQualType(),
-                                       access, is_virtual,
-                                       record_kind == clang::TTK_Class);
+        m_ast.CreateBaseClassSpecifier(
+            base_comp_type.GetOpaqueQualType(), access, is_virtual,
+            record_kind == llvm::to_underlying(clang::TagTypeKind::Class));
     lldbassert(base_spec);
 
     base_classes.push_back(std::move(base_spec));

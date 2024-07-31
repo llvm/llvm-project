@@ -17,8 +17,17 @@ class ARMMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
     VK_ARM_None,
-    VK_ARM_HI16,  // The R_ARM_MOVT_ABS relocation (:upper16: in the .s file)
-    VK_ARM_LO16   // The R_ARM_MOVW_ABS_NC relocation (:lower16: in the .s file)
+    VK_ARM_HI16, // The R_ARM_MOVT_ABS relocation (:upper16: in the .s file)
+    VK_ARM_LO16, // The R_ARM_MOVW_ABS_NC relocation (:lower16: in the .s file)
+
+    VK_ARM_HI_8_15, // The R_ARM_THM_ALU_ABS_G3    relocation (:upper8_15: in
+                    // the .s file)
+    VK_ARM_HI_0_7,  // The R_ARM_THM_ALU_ABS_G2_NC relocation (:upper0_8: in the
+                    // .s file)
+    VK_ARM_LO_8_15, // The R_ARM_THM_ALU_ABS_G1_NC relocation (:lower8_15: in
+                    // the .s file)
+    VK_ARM_LO_0_7,  // The R_ARM_THM_ALU_ABS_G0_NC relocation (:lower0_7: in the
+                    // .s file)
   };
 
 private:
@@ -43,6 +52,22 @@ public:
     return create(VK_ARM_LO16, Expr, Ctx);
   }
 
+  static const ARMMCExpr *createUpper8_15(const MCExpr *Expr, MCContext &Ctx) {
+    return create(VK_ARM_HI_8_15, Expr, Ctx);
+  }
+
+  static const ARMMCExpr *createUpper0_7(const MCExpr *Expr, MCContext &Ctx) {
+    return create(VK_ARM_HI_0_7, Expr, Ctx);
+  }
+
+  static const ARMMCExpr *createLower8_15(const MCExpr *Expr, MCContext &Ctx) {
+    return create(VK_ARM_LO_8_15, Expr, Ctx);
+  }
+
+  static const ARMMCExpr *createLower0_7(const MCExpr *Expr, MCContext &Ctx) {
+    return create(VK_ARM_LO_0_7, Expr, Ctx);
+  }
+
   /// @}
   /// @name Accessors
   /// @{
@@ -56,8 +81,7 @@ public:
   /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override {
     return false;
   }

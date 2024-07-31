@@ -56,7 +56,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -66,7 +66,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIOptimizeExecMaskingPreRA, DEBUG_TYPE,
                       "SI optimize exec mask operations pre-RA", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeExecMaskingPreRA, DEBUG_TYPE,
                     "SI optimize exec mask operations pre-RA", false, false)
 
@@ -96,8 +96,8 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   if (Reg.isVirtual())
     return isDefBetween(LIS->getInterval(Reg), AndIdx, SelIdx);
 
-  for (MCRegUnitIterator UI(Reg.asMCReg(), &TRI); UI.isValid(); ++UI) {
-    if (isDefBetween(LIS->getRegUnit(*UI), AndIdx, SelIdx))
+  for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg())) {
+    if (isDefBetween(LIS->getRegUnit(Unit), AndIdx, SelIdx))
       return true;
   }
 
@@ -320,8 +320,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   // Instead just check that the def segments are adjacent.
   SlotIndex StartIdx = LIS->getInstructionIndex(SaveExecMI);
   SlotIndex EndIdx = LIS->getInstructionIndex(*AndExecMI);
-  for (MCRegUnitIterator UI(ExecReg, TRI); UI.isValid(); ++UI) {
-    LiveRange &RegUnit = LIS->getRegUnit(*UI);
+  for (MCRegUnit Unit : TRI->regunits(ExecReg)) {
+    LiveRange &RegUnit = LIS->getRegUnit(Unit);
     if (RegUnit.find(StartIdx) != std::prev(RegUnit.find(EndIdx)))
       return false;
   }
@@ -348,7 +348,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   const bool Wave32 = ST.isWave32();
   AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
@@ -456,7 +456,8 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
       Register SavedExec = I->getOperand(0).getReg();
       if (SavedExec.isVirtual() && MRI->hasOneNonDBGUse(SavedExec)) {
         MachineInstr *SingleExecUser = &*MRI->use_instr_nodbg_begin(SavedExec);
-        int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec);
+        int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec,
+                                                            /*TRI=*/nullptr);
         assert(Idx != -1);
         if (SingleExecUser->getParent() == I->getParent() &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&

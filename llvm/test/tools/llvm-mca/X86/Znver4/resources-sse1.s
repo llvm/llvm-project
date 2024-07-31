@@ -203,7 +203,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        andps	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   andps	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        cmpeqps	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   cmpeqps	(%rax), %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   cmpeqps	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        cmpeqss	%xmm0, %xmm2
 # CHECK-NEXT:  1      9     1.00    *                   cmpeqss	(%rax), %xmm2
 # CHECK-NEXT:  2      4     1.00                        comiss	%xmm0, %xmm1
@@ -232,12 +232,12 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      18    3.00    *                   divss	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.50    *      *      U     ldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     0.50    *      *      U     maskmovq	%mm0, %mm1
-# CHECK-NEXT:  1      1     0.50                        maxps	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   maxps	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        maxps	%xmm0, %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   maxps	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        maxss	%xmm0, %xmm2
 # CHECK-NEXT:  1      9     1.00    *                   maxss	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        minps	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   minps	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        minps	%xmm0, %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   minps	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        minss	%xmm0, %xmm2
 # CHECK-NEXT:  1      9     1.00    *                   minss	(%rax), %xmm2
 # CHECK-NEXT:  1      0     0.17                        movaps	%xmm0, %xmm2

@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Tests various aspect of the lowering of polymorphic entities.
 
@@ -298,7 +298,7 @@ module polymorphic_test
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK: fir.store %[[ZERO]] to %[[PTR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[ARG0]] : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
-! CHECK: %[[CONVERT:.*]] = fir.convert %3 : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: %[[CONVERT:.*]] = fir.convert %{{[0-9]+}} : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK: fir.store %[[CONVERT]] to %[[PTR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 
   subroutine nullify_pointer_array(a)
@@ -310,9 +310,9 @@ module polymorphic_test
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[FIELD_P:.*]] = fir.field_index p, !fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>
 ! CHECK: %[[COORD_P:.*]] = fir.coordinate_of %[[ARG0]], %[[FIELD_P]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>, !fir.field) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>>>>
-! CHECK: %[[TYPE_DESC_ADDR:.*]] = fir.address_of(@_QMpolymorphic_testE.dt.p3) : !fir.ref<!fir.type<{{.*}}>>
+! CHECK: %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}> 
 ! CHECK: %[[CONV_P:.*]] = fir.convert %[[COORD_P]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[CONV_TDESC:.*]] = fir.convert %[[TYPE_DESC_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CHECK: %[[CONV_TDESC:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>) -> !fir.ref<none>
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[CONV_P]], %[[CONV_TDESC]], %[[C1]], %[[C0]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
@@ -330,7 +330,7 @@ module polymorphic_test
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpass_trivial_to_up() {
-! CHECK: %[[CHAR:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,5>>
+! CHECK: %[[CHAR:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,5>>
 ! CHECK: %[[BOX_CHAR:.*]] = fir.embox %[[CHAR]] : (!fir.ref<!fir.char<1,5>>) -> !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_CHAR]]) {{.*}} : (!fir.class<none>) -> ()
 
@@ -519,8 +519,8 @@ module polymorphic_test
     end subroutine
   end subroutine
 
-! CHECK-LABEL: func.func @_QMpolymorphic_testFhost_assocPinternal(
-! CHECK-SAME: %[[TUPLE:.*]]: !fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+! CHECK-LABEL: func.func private @_QMpolymorphic_testFhost_assocPinternal(
+! CHECK-SAME: %[[TUPLE:.*]]: !fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
 ! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 ! CHECK: %[[CLASS:.*]] = fir.load %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
@@ -766,7 +766,7 @@ module polymorphic_test
 ! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {bindc_name = "p", uniq_name = "_QMpolymorphic_testFtest_polymorphic_ioEp"}
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAioInputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}} : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK: %{{.*}} = fir.call @_FortranAioInputDerivedType(%{{.*}}, %[[BOX_NONE]], %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
 
   function unlimited_polymorphic_alloc_array_ret()
     class(*), allocatable :: unlimited_polymorphic_alloc_array_ret(:)
@@ -839,9 +839,7 @@ module polymorphic_test
 ! CHECK: %[[IS_ALLOCATED_OR_ASSOCIATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_I64]], %[[C0]] : i64
 ! CHECK: %[[ABSENT:.*]] = fir.absent !fir.class<none>
 ! CHECK: %[[PTR_LOAD2:.*]] = fir.load %[[NULL_PTR]] : !fir.ref<!fir.box<!fir.ptr<none>>>
-! CHECK: %[[BOX_ADDR2:.*]] = fir.box_addr %[[PTR_LOAD2]] : (!fir.box<!fir.ptr<none>>) -> !fir.ptr<none>
-! CHECK: %[[BOX_NONE:.*]] = fir.embox %[[BOX_ADDR2]] : (!fir.ptr<none>) -> !fir.box<none>
-! CHECK: %[[CLASS_NONE:.*]] = fir.convert %[[BOX_NONE]] : (!fir.box<none>) -> !fir.class<none>
+! CHECK: %[[CLASS_NONE:.*]] = fir.rebox %[[PTR_LOAD2]] : (!fir.box<!fir.ptr<none>>) -> !fir.class<none>
 ! CHECK: %[[ARG:.*]] = arith.select %[[IS_ALLOCATED_OR_ASSOCIATED]], %[[CLASS_NONE]], %[[ABSENT]] : !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_optional(%[[ARG]]) {{.*}} : (!fir.class<none>) -> ()
 

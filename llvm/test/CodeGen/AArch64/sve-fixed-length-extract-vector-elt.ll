@@ -46,8 +46,8 @@ define half @extractelement_v16f16(ptr %a) vscale_range(2,0) #0 {
 define half @extractelement_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: extractelement_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    mov z0.h, z0.h[15]
 ; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 killed $z0
@@ -69,7 +69,7 @@ define half @extractelement_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: extractelement_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    whilels p0.h, xzr, x8
 ; CHECK-NEXT:    lastb h0, p0, z0.h
@@ -83,7 +83,7 @@ define half @extractelement_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: extractelement_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
-; CHECK-NEXT:    mov w8, #127
+; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    whilels p0.h, xzr, x8
 ; CHECK-NEXT:    lastb h0, p0, z0.h
@@ -130,8 +130,8 @@ define float @extractelement_v8f32(ptr %a) vscale_range(2,0) #0 {
 define float @extractelement_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: extractelement_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    mov z0.s, z0.s[7]
 ; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 killed $z0
@@ -153,7 +153,7 @@ define float @extractelement_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: extractelement_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    whilels p0.s, xzr, x8
 ; CHECK-NEXT:    lastb s0, p0, z0.s
@@ -167,7 +167,7 @@ define float @extractelement_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: extractelement_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    whilels p0.s, xzr, x8
 ; CHECK-NEXT:    lastb s0, p0, z0.s
@@ -212,8 +212,8 @@ define double @extractelement_v4f64(ptr %a) vscale_range(2,0) #0 {
 define double @extractelement_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: extractelement_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    mov z0.d, z0.d[3]
 ; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -235,7 +235,7 @@ define double @extractelement_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: extractelement_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
-; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w8, #15 // =0xf
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb d0, p0, z0.d
@@ -249,7 +249,7 @@ define double @extractelement_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: extractelement_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb d0, p0, z0.d

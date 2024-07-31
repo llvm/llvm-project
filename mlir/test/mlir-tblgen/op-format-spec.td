@@ -41,6 +41,12 @@ def DirectiveCustomValidB : TestFormat_Op<[{
 def DirectiveCustomValidC : TestFormat_Op<[{
   custom<MyDirective>($attr) attr-dict
 }]>, Arguments<(ins I64Attr:$attr)>;
+def DirectiveCustomValidD : TestFormat_Op<[{
+  (`(` custom<MyDirective>($operand)^ `)`)? attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
+def DirectiveCustomValidE : TestFormat_Op<[{
+  custom<MyDirective>(prop-dict) attr-dict
+}]>, Arguments<(ins UnitAttr:$flag)>;
 
 //===----------------------------------------------------------------------===//
 // functional-type

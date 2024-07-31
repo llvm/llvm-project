@@ -13,7 +13,6 @@ define float @ldexp_f32(i8 zeroext %x) {
 ; CHECK-NEXT:    vspltisw v2, 1
 ; CHECK-NEXT:    mr r4, r3
 ; CHECK-NEXT:    xvcvsxwdp vs1, v2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -36,7 +35,6 @@ define double @ldexp_f64(i8 zeroext %x) {
 ; CHECK-NEXT:    vspltisw v2, 1
 ; CHECK-NEXT:    mr r4, r3
 ; CHECK-NEXT:    xvcvsxwdp vs1, v2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl ldexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -52,56 +50,37 @@ define <2 x float> @ldexp_v2f32(<2 x float> %val, <2 x i32> %exp) {
 ; CHECK-LABEL: ldexp_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    stdu r1, -96(r1)
-; CHECK-NEXT:    std r0, 112(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    stdu r1, -80(r1)
+; CHECK-NEXT:    std r0, 96(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset v28, -64
 ; CHECK-NEXT:    .cfi_offset v29, -48
 ; CHECK-NEXT:    .cfi_offset v30, -32
 ; CHECK-NEXT:    .cfi_offset v31, -16
-; CHECK-NEXT:    li r3, 12
-; CHECK-NEXT:    xscvspdpn f1, v2
-; CHECK-NEXT:    stxv v28, 32(r1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv v29, 48(r1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv v30, 64(r1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv v31, 80(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    stxv v29, 32(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    xscvspdpn f1, vs0
+; CHECK-NEXT:    vextuwrx r4, r3, v3
+; CHECK-NEXT:    stxv v30, 48(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    stxv v31, 64(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    vmr v31, v3
 ; CHECK-NEXT:    vmr v30, v2
-; CHECK-NEXT:    vextuwrx r4, r3, v3
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs0, v30
 ; CHECK-NEXT:    li r3, 4
-; CHECK-NEXT:    xscpsgndp v29, f1, f1
+; CHECK-NEXT:    xscvdpspn v29, f1
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    vextuwrx r4, r3, v31
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; CHECK-NEXT:    xxmrghd vs0, v29, vs1
-; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    vextuwrx r4, r3, v31
-; CHECK-NEXT:    xvcvdpsp v28, vs0
-; CHECK-NEXT:    xxsldwi vs0, v30, v30, 3
-; CHECK-NEXT:    xscvspdpn f1, vs0
-; CHECK-NEXT:    bl ldexpf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    xxsldwi vs0, v30, v30, 1
-; CHECK-NEXT:    xscpsgndp v29, f1, f1
-; CHECK-NEXT:    mfvsrwz r4, v31
-; CHECK-NEXT:    xscvspdpn f1, vs0
-; CHECK-NEXT:    bl ldexpf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; CHECK-NEXT:    xxmrghd vs0, vs1, v29
-; CHECK-NEXT:    lxv v31, 80(r1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv v30, 64(r1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv v29, 48(r1) # 16-byte Folded Reload
-; CHECK-NEXT:    xvcvdpsp v2, vs0
-; CHECK-NEXT:    vmrgew v2, v28, v2
-; CHECK-NEXT:    lxv v28, 32(r1) # 16-byte Folded Reload
-; CHECK-NEXT:    addi r1, r1, 96
+; CHECK-NEXT:    xscvdpspn vs0, f1
+; CHECK-NEXT:    lxv v31, 64(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    lxv v30, 48(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    xxmrghw v2, vs0, v29
+; CHECK-NEXT:    lxv v29, 32(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    addi r1, r1, 80
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
@@ -139,7 +118,6 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) {
 ; CHECK-NEXT:    vextuwrx r4, r3, v31
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd vs0, v29, vs1
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vextuwrx r4, r3, v31
@@ -154,7 +132,6 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd vs0, vs1, v29
 ; CHECK-NEXT:    lxv v31, 80(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v30, 64(r1) # 16-byte Folded Reload

@@ -36,12 +36,7 @@ void reportBug(const CheckerBase *Checker, const CallEvent &Call,
 }
 
 class CXXDeallocatorChecker : public Checker<check::PreCall> {
-  std::unique_ptr<BuiltinBug> BT_uninitField;
-
 public:
-  CXXDeallocatorChecker()
-      : BT_uninitField(new BuiltinBug(this, "CXXDeallocator")) {}
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call);
     if (!DC) {
@@ -81,7 +76,12 @@ TEST(CXXDeallocatorCall, SimpleDestructor) {
     }
   )",
                                                          Diags));
+#if defined(_AIX) || defined(__MVS__) || defined(__MINGW32__)
+  // AIX, ZOS and MinGW default to -fno-sized-deallocation.
   EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 1\n");
+#else
+  EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 2\n");
+#endif
 }
 
 } // namespace

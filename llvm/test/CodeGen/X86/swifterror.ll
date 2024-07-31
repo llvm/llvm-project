@@ -17,7 +17,7 @@ define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
 ; CHECK-APPLE-NEXT:    popq %rax
 ; CHECK-APPLE-NEXT:    retq
@@ -30,7 +30,7 @@ define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rax)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    retq
 ;
@@ -83,7 +83,7 @@ define float @caller(ptr %error_ref) {
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB1_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    addq $8, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -112,7 +112,7 @@ define float @caller(ptr %error_ref) {
 ; CHECK-O0-NEXT:  LBB1_2: ## %handler
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $32, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
@@ -187,7 +187,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-APPLE-NEXT:  LBB2_4: ## %handler
 ; CHECK-APPLE-NEXT:    movq %r12, %rdi
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    addq $8, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -215,7 +215,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-O0-NEXT:    ## in Loop: Header=BB2_1 Depth=1
 ; CHECK-O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
 ; CHECK-O0-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    jbe LBB2_1
 ; CHECK-O0-NEXT:  ## %bb.3: ## %bb_end
@@ -226,7 +226,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-O0-NEXT:  LBB2_4: ## %handler
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $32, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
@@ -243,8 +243,6 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -8
 ; CHECK-i386-NEXT:    movl 32(%esp), %esi
 ; CHECK-i386-NEXT:    leal 16(%esp), %edi
-; CHECK-i386-NEXT:    fld1
-; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:  LBB2_1: ## %bb_loop
 ; CHECK-i386-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-i386-NEXT:    movl $0, 16(%esp)
@@ -255,7 +253,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    jne LBB2_4
 ; CHECK-i386-NEXT:  ## %bb.2: ## %cont
 ; CHECK-i386-NEXT:    ## in Loop: Header=BB2_1 Depth=1
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    fxch %st(1)
 ; CHECK-i386-NEXT:    fucompp
 ; CHECK-i386-NEXT:    fnstsw %ax
@@ -270,7 +268,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    fstp %st(0)
 ; CHECK-i386-NEXT:    movl %ecx, (%esp)
 ; CHECK-i386-NEXT:    calll _free
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    addl $20, %esp
 ; CHECK-i386-NEXT:    popl %esi
 ; CHECK-i386-NEXT:    popl %edi
@@ -312,7 +310,7 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
 ; CHECK-APPLE-NEXT:    popq %rax
 ; CHECK-APPLE-NEXT:    retq
@@ -332,7 +330,7 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rax)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    retq
 ; CHECK-O0-NEXT:  LBB3_2: ## %normal
@@ -446,7 +444,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jbe LBB4_1
@@ -470,8 +468,6 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:    movl 36(%esp), %esi
 ; CHECK-i386-NEXT:    movl 32(%esp), %edi
-; CHECK-i386-NEXT:    fld1
-; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:  LBB4_1: ## %bb_loop
 ; CHECK-i386-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-i386-NEXT:    testl %esi, %esi
@@ -486,7 +482,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-i386-NEXT:  LBB4_3: ## %bb_cont
 ; CHECK-i386-NEXT:    ## in Loop: Header=BB4_1 Depth=1
 ; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    fxch %st(1)
 ; CHECK-i386-NEXT:    fucompp
 ; CHECK-i386-NEXT:    fnstsw %ax
@@ -636,7 +632,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB6_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    addq $40, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -667,7 +663,7 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-NEXT:  LBB6_2: ## %handler
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $48, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
@@ -761,7 +757,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB7_4: ## %handler2
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    leaq -24(%rbp), %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -814,7 +810,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-O0-NEXT:  LBB7_4: ## %handler2
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    popq %rbp
@@ -1037,7 +1033,7 @@ define swiftcc float @foo_swiftcc(ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
 ; CHECK-APPLE-NEXT:    popq %rax
 ; CHECK-APPLE-NEXT:    retq
@@ -1050,7 +1046,7 @@ define swiftcc float @foo_swiftcc(ptr swifterror %error_ptr_ref) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rax)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1263,12 +1259,7 @@ entry:
 define swiftcc void @dont_crash_on_new_isel_blocks(ptr nocapture swifterror, i1, ptr) {
 ; CHECK-APPLE-LABEL: dont_crash_on_new_isel_blocks:
 ; CHECK-APPLE:       ## %bb.0: ## %entry
-; CHECK-APPLE-NEXT:    xorl %eax, %eax
-; CHECK-APPLE-NEXT:    testb %al, %al
-; CHECK-APPLE-NEXT:    jne LBB15_2
-; CHECK-APPLE-NEXT:  ## %bb.1: ## %entry
 ; CHECK-APPLE-NEXT:    testb $1, %dil
-; CHECK-APPLE-NEXT:  LBB15_2: ## %cont
 ; CHECK-APPLE-NEXT:    pushq %rax
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-APPLE-NEXT:    callq *%rax
@@ -1294,12 +1285,7 @@ define swiftcc void @dont_crash_on_new_isel_blocks(ptr nocapture swifterror, i1,
 ;
 ; CHECK-i386-LABEL: dont_crash_on_new_isel_blocks:
 ; CHECK-i386:       ## %bb.0: ## %entry
-; CHECK-i386-NEXT:    xorl %eax, %eax
-; CHECK-i386-NEXT:    testb %al, %al
-; CHECK-i386-NEXT:    jne LBB15_2
-; CHECK-i386-NEXT:  ## %bb.1: ## %entry
 ; CHECK-i386-NEXT:    testb $1, 8(%esp)
-; CHECK-i386-NEXT:  LBB15_2: ## %cont
 ; CHECK-i386-NEXT:    jmpl *%eax ## TAILCALL
 entry:
   %3 = or i1 false, %1
@@ -1566,11 +1552,11 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    .cfi_offset %r14, -32
 ; CHECK-APPLE-NEXT:    .cfi_offset %r15, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbp, -16
-; CHECK-APPLE-NEXT:    movq %r12, %rbx
-; CHECK-APPLE-NEXT:    movq %r13, (%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r12, (%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %rcx, %rbx
 ; CHECK-APPLE-NEXT:    movq %rdx, %r14
 ; CHECK-APPLE-NEXT:    movq %rsi, %r15
 ; CHECK-APPLE-NEXT:    movq %rdi, %rbp
@@ -1587,16 +1573,16 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    movq %rbp, %rdi
 ; CHECK-APPLE-NEXT:    movq %r15, %rsi
 ; CHECK-APPLE-NEXT:    movq %r14, %rdx
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq %rbx, %rcx
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq (%rsp), %r13 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq %rbx, %r12
+; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    callq _params_and_return_in_reg2
-; CHECK-APPLE-NEXT:    movq %rax, %r14
-; CHECK-APPLE-NEXT:    movq %rdx, %r15
-; CHECK-APPLE-NEXT:    movq %rcx, %rbp
-; CHECK-APPLE-NEXT:    movq %r8, %rbx
+; CHECK-APPLE-NEXT:    movq %rax, %rbx
+; CHECK-APPLE-NEXT:    movq %rdx, %r14
+; CHECK-APPLE-NEXT:    movq %rcx, %r15
+; CHECK-APPLE-NEXT:    movq %r8, %rbp
 ; CHECK-APPLE-NEXT:    movq %r12, (%rsp) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movl $1, %edi
 ; CHECK-APPLE-NEXT:    movl $2, %esi
@@ -1607,10 +1593,10 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    xorl %r13d, %r13d
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
-; CHECK-APPLE-NEXT:    movq %r14, %rax
-; CHECK-APPLE-NEXT:    movq %r15, %rdx
-; CHECK-APPLE-NEXT:    movq %rbp, %rcx
-; CHECK-APPLE-NEXT:    movq %rbx, %r8
+; CHECK-APPLE-NEXT:    movq %rbx, %rax
+; CHECK-APPLE-NEXT:    movq %r14, %rdx
+; CHECK-APPLE-NEXT:    movq %r15, %rcx
+; CHECK-APPLE-NEXT:    movq %rbp, %r8
 ; CHECK-APPLE-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    addq $48, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
@@ -1708,11 +1694,11 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -16
 ; CHECK-i386-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-i386-NEXT:    .cfi_offset %ebp, -8
+; CHECK-i386-NEXT:    movl 148(%esp), %esi
 ; CHECK-i386-NEXT:    movl $0, 64(%esp)
-; CHECK-i386-NEXT:    movl 188(%esp), %ebp
 ; CHECK-i386-NEXT:    movl 192(%esp), %ebx
-; CHECK-i386-NEXT:    movl 196(%esp), %edi
-; CHECK-i386-NEXT:    movl 200(%esp), %esi
+; CHECK-i386-NEXT:    movl 196(%esp), %ebp
+; CHECK-i386-NEXT:    movl 200(%esp), %edi
 ; CHECK-i386-NEXT:    leal 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1729,10 +1715,11 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
-; CHECK-i386-NEXT:    movl %esi, 56(%esp)
-; CHECK-i386-NEXT:    movl %edi, 52(%esp)
+; CHECK-i386-NEXT:    movl %edi, 56(%esp)
+; CHECK-i386-NEXT:    movl %ebp, 52(%esp)
 ; CHECK-i386-NEXT:    movl %ebx, 48(%esp)
-; CHECK-i386-NEXT:    movl %ebp, 44(%esp)
+; CHECK-i386-NEXT:    movl 188(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 44(%esp)
 ; CHECK-i386-NEXT:    movl 184(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 40(%esp)
 ; CHECK-i386-NEXT:    movl 180(%esp), %eax
@@ -1751,8 +1738,7 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %eax, 12(%esp)
 ; CHECK-i386-NEXT:    movl 152(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 8(%esp)
-; CHECK-i386-NEXT:    movl 148(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 4(%esp)
+; CHECK-i386-NEXT:    movl %esi, 4(%esp)
 ; CHECK-i386-NEXT:    leal 88(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, (%esp)
 ; CHECK-i386-NEXT:    calll _params_and_return_in_reg2
@@ -1767,8 +1753,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 104(%esp), %ebp
 ; CHECK-i386-NEXT:    movl 108(%esp), %edi
-; CHECK-i386-NEXT:    movl 112(%esp), %ebx
-; CHECK-i386-NEXT:    movl 116(%esp), %esi
+; CHECK-i386-NEXT:    movl 112(%esp), %esi
+; CHECK-i386-NEXT:    movl 116(%esp), %ebx
 ; CHECK-i386-NEXT:    leal 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1786,8 +1772,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
 ; CHECK-i386-NEXT:    movl 144(%esp), %eax
-; CHECK-i386-NEXT:    movl %esi, 28(%eax)
-; CHECK-i386-NEXT:    movl %ebx, 24(%eax)
+; CHECK-i386-NEXT:    movl %ebx, 28(%eax)
+; CHECK-i386-NEXT:    movl %esi, 24(%eax)
 ; CHECK-i386-NEXT:    movl %edi, 20(%eax)
 ; CHECK-i386-NEXT:    movl %ebp, 16(%eax)
 ; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload

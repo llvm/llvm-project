@@ -32,9 +32,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-static cl::opt<bool> UseDFS("icf-dfs",
-                            cl::desc("use DFS ordering when using -icf option"),
-                            cl::ReallyHidden, cl::cat(BoltOptCategory));
+static cl::opt<bool>
+    ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
+              cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 TimeICF("time-icf",
@@ -170,7 +170,7 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   // Process both functions in either DFS or existing order.
   SmallVector<const BinaryBasicBlock *, 0> OrderA;
   SmallVector<const BinaryBasicBlock *, 0> OrderB;
-  if (opts::UseDFS) {
+  if (opts::ICFUseDFS) {
     copy(A.dfs(), std::back_inserter(OrderA));
     copy(B.dfs(), std::back_inserter(OrderB));
   } else {
@@ -341,7 +341,7 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 
-void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
+Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   const size_t OriginalFunctionCount = BC.getBinaryFunctions().size();
   uint64_t NumFunctionsFolded = 0;
   std::atomic<uint64_t> NumJTFunctionsFolded{0};
@@ -356,13 +356,16 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                         "ICF breakdown", opts::TimeICF);
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       // Make sure indices are in-order.
-      BF.getLayout().updateLayoutIndices();
+      if (opts::ICFUseDFS)
+        BF.getLayout().updateLayoutIndices(BF.dfs());
+      else
+        BF.getLayout().updateLayoutIndices();
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.
-      BF.computeHash(opts::UseDFS, [&BC](const MCOperand &Op) {
-        return hashInstOperand(BC, Op);
-      });
+      BF.computeHash(
+          opts::ICFUseDFS, HashFunction::Default,
+          [&BC](const MCOperand &Op) { return hashInstOperand(BC, Op); });
     };
 
     ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
@@ -397,7 +400,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     Timer SinglePass("single fold pass", "single fold pass");
     LLVM_DEBUG(SinglePass.startTimer());
 
-    ThreadPool *ThPool;
+    ThreadPoolInterface *ThPool;
     if (!opts::NoThreads)
       ThPool = &ParallelUtilities::getThreadPool();
 
@@ -508,14 +511,16 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   });
 
   if (NumFunctionsFolded)
-    outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
-           << OriginalFunctionCount << " functions in " << Iteration
-           << " passes. " << NumJTFunctionsFolded
-           << " functions had jump tables.\n"
-           << "BOLT-INFO: Removing all identical functions will save "
-           << format("%.2lf", (double)BytesSavedEstimate / 1024)
-           << " KB of code space. Folded functions were called " << NumCalled
-           << " times based on profile.\n";
+    BC.outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
+              << OriginalFunctionCount << " functions in " << Iteration
+              << " passes. " << NumJTFunctionsFolded
+              << " functions had jump tables.\n"
+              << "BOLT-INFO: Removing all identical functions will save "
+              << format("%.2lf", (double)BytesSavedEstimate / 1024)
+              << " KB of code space. Folded functions were called " << NumCalled
+              << " times based on profile.\n";
+
+  return Error::success();
 }
 
 } // namespace bolt

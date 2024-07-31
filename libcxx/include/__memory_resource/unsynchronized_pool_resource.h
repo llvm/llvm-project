@@ -27,7 +27,7 @@ namespace pmr {
 
 // [mem.res.pool.overview]
 
-class _LIBCPP_EXPORTED_FROM_ABI unsynchronized_pool_resource : public memory_resource {
+class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI unsynchronized_pool_resource : public memory_resource {
   class __fixed_pool;
 
   class __adhoc_pool {

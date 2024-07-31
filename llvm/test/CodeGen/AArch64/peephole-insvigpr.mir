@@ -26,13 +26,17 @@
     ret void
   }
 
-  ; The optimization is not applicable when the source is not a virtual register
   define void @insert_vec_from_gpr(i32 %v, ptr %p) {
   entry:
     ret void
   }
 
   define void @fadd(double %v, double %p) {
+  entry:
+    ret void
+  }
+
+  define void @asm(ptr %hist) {
   entry:
     ret void
   }
@@ -448,5 +452,73 @@ body:             |
     %9:fpr128 = INSvi64lane %7, 1, killed %5, 0
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
+
+...
+---
+name:            asm
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '' }
+  - { id: 1, class: fpr64, preferred-register: '' }
+  - { id: 2, class: gpr64all, preferred-register: '' }
+  - { id: 3, class: gpr64sp, preferred-register: '' }
+  - { id: 4, class: fpr128, preferred-register: '' }
+  - { id: 5, class: fpr64, preferred-register: '' }
+  - { id: 6, class: fpr128, preferred-register: '' }
+  - { id: 7, class: fpr128, preferred-register: '' }
+  - { id: 8, class: fpr128, preferred-register: '' }
+  - { id: 9, class: fpr128, preferred-register: '' }
+  - { id: 10, class: fpr128, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: fpr64, preferred-register: '' }
+  - { id: 13, class: fpr128, preferred-register: '' }
+  - { id: 14, class: fpr128, preferred-register: '' }
+  - { id: 15, class: gpr32all, preferred-register: '' }
+  - { id: 16, class: fpr32, preferred-register: '' }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: asm
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[DEF]]
+    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", 8 /* mayload attdialect */, 2621450 /* regdef:FPR64 */, def %1, 262158 /* mem:m */, killed [[COPY1]]
+    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[COPY2]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], %1, %subreg.dsub
+    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, killed [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[TBLv8i8One:%[0-9]+]]:fpr64 = TBLv8i8One killed [[INSvi64lane]], killed [[DEF3]]
+    ; CHECK-NEXT: [[DEF4:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], killed [[TBLv8i8One]], %subreg.dsub
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr32 = COPY [[INSERT_SUBREG2]].ssub
+    ; CHECK-NEXT: STRSui killed [[COPY3]], [[COPY]], 0 :: (store (s32) into %ir.hist)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:gpr64common = COPY $x0
+    %2:gpr64all = IMPLICIT_DEF
+    %3:gpr64sp = COPY %2
+    INLINEASM &"ldr ${0:s}, $1", 8 /* mayload attdialect */, 2621450 /* regdef:FPR64 */, def %1, 262158 /* mem:m */, killed %3
+    %4:fpr128 = MOVIv2d_ns 0
+    %5:fpr64 = COPY %4.dsub
+    %7:fpr128 = IMPLICIT_DEF
+    %6:fpr128 = INSERT_SUBREG %7, killed %5, %subreg.dsub
+    %9:fpr128 = IMPLICIT_DEF
+    %8:fpr128 = INSERT_SUBREG %9, %1, %subreg.dsub
+    %10:fpr128 = INSvi64lane %8, 1, killed %6, 0
+    %12:fpr64 = IMPLICIT_DEF
+    %11:fpr64 = TBLv8i8One killed %10, killed %12
+    %14:fpr128 = IMPLICIT_DEF
+    %13:fpr128 = INSERT_SUBREG %14, killed %11, %subreg.dsub
+    %16:fpr32 = COPY %13.ssub
+    STRSui killed %16, %0, 0 :: (store (s32) into %ir.hist)
+    RET_ReallyLR
 
 ...

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OptEmitter.h"
+#include "Common/OptEmitter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
@@ -34,30 +34,14 @@ static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
   return OS;
 }
 
-static std::string getOptionSpelling(const Record &R, size_t &PrefixLength) {
+static std::string getOptionPrefixedName(const Record &R) {
   std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
   StringRef Name = R.getValueAsString("Name");
 
-  if (Prefixes.empty()) {
-    PrefixLength = 0;
+  if (Prefixes.empty())
     return Name.str();
-  }
 
-  PrefixLength = Prefixes[0].size();
-  return (Twine(Prefixes[0]) + Twine(Name)).str();
-}
-
-static std::string getOptionSpelling(const Record &R) {
-  size_t PrefixLength;
-  return getOptionSpelling(R, PrefixLength);
-}
-
-static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
-  size_t PrefixLength;
-  OS << "llvm::StringLiteral(";
-  write_cstring(
-      OS, StringRef(getOptionSpelling(R, PrefixLength)).substr(PrefixLength));
-  OS << ")";
+  return (Prefixes[0] + Twine(Name)).str();
 }
 
 class MarshallingInfo {
@@ -105,8 +89,6 @@ struct SimpleEnumValueTable {
   }
 
   void emit(raw_ostream &OS) const {
-    write_cstring(OS, StringRef(getOptionSpelling(R)));
-    OS << ", ";
     OS << ShouldParse;
     OS << ", ";
     OS << ShouldAlwaysEmit;
@@ -209,14 +191,70 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
+static void EmitHelpTextsForVariants(
+    raw_ostream &OS, std::vector<std::pair<std::vector<std::string>, StringRef>>
+                         HelpTextsForVariants) {
+  // OptTable must be constexpr so it uses std::arrays with these capacities.
+  const unsigned MaxVisibilityPerHelp = 2;
+  const unsigned MaxVisibilityHelp = 1;
+
+  assert(HelpTextsForVariants.size() <= MaxVisibilityHelp &&
+         "Too many help text variants to store in "
+         "OptTable::HelpTextsForVariants");
+
+  // This function must initialise any unused elements of those arrays.
+  for (auto [Visibilities, _] : HelpTextsForVariants)
+    while (Visibilities.size() < MaxVisibilityPerHelp)
+      Visibilities.push_back("0");
+
+  while (HelpTextsForVariants.size() < MaxVisibilityHelp)
+    HelpTextsForVariants.push_back(
+        {std::vector<std::string>(MaxVisibilityPerHelp, "0"), ""});
+
+  OS << ", (std::array<std::pair<std::array<unsigned, " << MaxVisibilityPerHelp
+     << ">, const char*>, " << MaxVisibilityHelp << ">{{ ";
+
+  auto VisibilityHelpEnd = HelpTextsForVariants.cend();
+  for (auto VisibilityHelp = HelpTextsForVariants.cbegin();
+       VisibilityHelp != VisibilityHelpEnd; ++VisibilityHelp) {
+    auto [Visibilities, Help] = *VisibilityHelp;
+
+    assert(Visibilities.size() <= MaxVisibilityPerHelp &&
+           "Too many visibilities to store in an "
+           "OptTable::HelpTextsForVariants entry");
+    OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
+       << ">{{";
+
+    auto VisibilityEnd = Visibilities.cend();
+    for (auto Visibility = Visibilities.cbegin(); Visibility != VisibilityEnd;
+         ++Visibility) {
+      OS << *Visibility;
+      if (std::next(Visibility) != VisibilityEnd)
+        OS << ", ";
+    }
+
+    OS << "}}, ";
+
+    if (Help.size())
+      write_cstring(OS, Help);
+    else
+      OS << "nullptr";
+    OS << ")";
+
+    if (std::next(VisibilityHelp) != VisibilityHelpEnd)
+      OS << ", ";
+  }
+  OS << " }})";
+}
+
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
 static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   // Get the option groups and options.
-  const std::vector<Record*> &Groups =
-    Records.getAllDerivedDefinitions("OptionGroup");
-  std::vector<Record*> Opts = Records.getAllDerivedDefinitions("Option");
+  const std::vector<Record *> &Groups =
+      Records.getAllDerivedDefinitions("OptionGroup");
+  std::vector<Record *> Opts = Records.getAllDerivedDefinitions("Option");
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
@@ -225,14 +263,14 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   typedef SmallVector<SmallString<2>, 2> PrefixKeyT;
   typedef std::map<PrefixKeyT, std::string> PrefixesT;
   PrefixesT Prefixes;
-  Prefixes.insert(std::make_pair(PrefixKeyT(), "prefix_0"));
+  Prefixes.insert(std::pair(PrefixKeyT(), "prefix_0"));
   unsigned CurPrefix = 0;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
     unsigned NewPrefix = CurPrefix + 1;
     std::string Prefix = (Twine("prefix_") + Twine(NewPrefix)).str();
-    if (Prefixes.insert(std::make_pair(PrefixKey, Prefix)).second)
+    if (Prefixes.insert(std::pair(PrefixKey, Prefix)).second)
       CurPrefix = NewPrefix;
   }
 
@@ -320,7 +358,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "INVALID";
 
     // The other option arguments (unused for groups).
-    OS << ", INVALID, nullptr, 0, 0";
+    OS << ", INVALID, nullptr, 0, 0, 0";
 
     // The option help text.
     if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
@@ -329,6 +367,9 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("HelpText"));
     } else
       OS << ", nullptr";
+
+    // Not using Visibility specific text for group help.
+    EmitHelpTextsForVariants(OS, {});
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
@@ -346,8 +387,8 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())] << ", ";
 
-    // The option string.
-    emitNameUsingSpelling(OS, R);
+    // The option prefixed name.
+    write_cstring(OS, getOptionPrefixedName(R));
 
     // The option identifier name.
     OS << ", " << getOptionName(R);
@@ -358,8 +399,10 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // The containing option group (if any).
     OS << ", ";
     const ListInit *GroupFlags = nullptr;
+    const ListInit *GroupVis = nullptr;
     if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       GroupFlags = DI->getDef()->getValueAsListInit("Flags");
+      GroupVis = DI->getDef()->getValueAsListInit("Visibility");
       OS << getOptionName(*DI->getDef());
     } else
       OS << "INVALID";
@@ -386,7 +429,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "\"";
     }
 
-    // The option flags.
+    // "Flags" for the option, such as HelpHidden and Render*
     OS << ", ";
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
@@ -400,6 +443,21 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     if (NumFlags == 0)
       OS << '0';
 
+    // Option visibility, for sharing options between drivers.
+    OS << ", ";
+    int NumVisFlags = 0;
+    LI = R.getValueAsListInit("Visibility");
+    for (Init *I : *LI)
+      OS << (NumVisFlags++ ? " | " : "")
+         << cast<DefInit>(I)->getDef()->getName();
+    if (GroupVis) {
+      for (Init *I : *GroupVis)
+        OS << (NumVisFlags++ ? " | " : "")
+           << cast<DefInit>(I)->getDef()->getName();
+    }
+    if (NumVisFlags == 0)
+      OS << '0';
+
     // The option parameter field.
     OS << ", " << R.getValueAsInt("NumArgs");
 
@@ -410,6 +468,22 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("HelpText"));
     } else
       OS << ", nullptr";
+
+    std::vector<std::pair<std::vector<std::string>, StringRef>>
+        HelpTextsForVariants;
+    for (Record *VisibilityHelp :
+         R.getValueAsListOfDefs("HelpTextsForVariants")) {
+      ArrayRef<Init *> Visibilities =
+          VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+
+      std::vector<std::string> VisibilityNames;
+      for (Init *Visibility : Visibilities)
+        VisibilityNames.push_back(Visibility->getAsUnquotedString());
+
+      HelpTextsForVariants.push_back(std::make_pair(
+          VisibilityNames, VisibilityHelp->getValueAsString("Text")));
+    }
+    EmitHelpTextsForVariants(OS, HelpTextsForVariants);
 
     // The option meta-variable name.
     OS << ", ";
@@ -424,8 +498,7 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("Values"));
     else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
       OS << getOptionName(R) << "_Values";
-    }
-    else
+    } else
       OS << "nullptr";
   };
 

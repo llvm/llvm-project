@@ -151,6 +151,7 @@ public:
 
   void ClearSearchPath();
   void AppendSearchPathDirectory(std::string); // new last directory
+  const SourceFile *OpenPath(std::string path, llvm::raw_ostream &error);
   const SourceFile *Open(std::string path, llvm::raw_ostream &error,
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
@@ -161,21 +162,27 @@ public:
       ProvenanceRange def, ProvenanceRange use, const std::string &expansion);
   ProvenanceRange AddCompilerInsertion(std::string);
 
+  // If provenance is in an expanded macro, return the starting provenance of
+  // the replaced macro. Otherwise, return the input provenance.
+  Provenance GetReplacedProvenance(Provenance) const;
+
   bool IsValid(Provenance at) const { return range_.Contains(at); }
   bool IsValid(ProvenanceRange range) const {
     return range.size() > 0 && range_.Contains(range);
   }
   void setShowColors(bool showColors) { showColors_ = showColors; }
   bool getShowColors() const { return showColors_; }
+  std::optional<ProvenanceRange> GetInclusionInfo(
+      const std::optional<ProvenanceRange> &) const;
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
       const std::string &message, const std::string &prefix,
       llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
-      Provenance, std::size_t *offset = nullptr) const;
+      Provenance, std::size_t *offset = nullptr, bool topLevel = false) const;
   const char *GetSource(ProvenanceRange) const;
   std::optional<SourcePosition> GetSourcePosition(Provenance) const;
   std::optional<ProvenanceRange> GetFirstFileProvenance() const;
-  std::string GetPath(Provenance) const; // __FILE__
+  std::string GetPath(Provenance, bool topLevel = false) const; // __FILE__
   int GetLineNumber(Provenance) const; // __LINE__
   Provenance CompilerInsertionProvenance(char ch);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;
@@ -225,6 +232,8 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
+  explicit CookedSource(AllSources &allSources) : allSources_{allSources} {};
+
   int number() const { return number_; }
   void set_number(int n) { number_ = n; }
 
@@ -250,17 +259,23 @@ public:
     provenanceMap_.Put(pm);
   }
 
+  void MarkPossibleFixedFormContinuation() {
+    possibleFixedFormContinuations_.push_back(BufferedBytes());
+  }
+
   std::size_t BufferedBytes() const;
   void Marshal(AllCookedSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  AllSources &allSources_;
   int number_{0}; // for sorting purposes
   CharBuffer buffer_; // before Marshal()
   std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
   ProvenanceRangeToOffsetMappings invertedMap_;
+  std::list<std::size_t> possibleFixedFormContinuations_;
 };
 
 class AllCookedSources {
@@ -296,18 +311,6 @@ private:
   AllSources &allSources_;
   std::list<CookedSource> cooked_; // owns all CookedSource instances
   std::map<CharBlock, const CookedSource &, CharBlockPointerComparator> index_;
-};
-
-// For use as a Comparator for maps, sets, sorting, &c.
-class CharBlockComparator {
-public:
-  explicit CharBlockComparator(const AllCookedSources &all) : all_{all} {}
-  bool operator()(CharBlock x, CharBlock y) const {
-    return all_.Precedes(x, y);
-  }
-
-private:
-  const AllCookedSources &all_;
 };
 
 } // namespace Fortran::parser

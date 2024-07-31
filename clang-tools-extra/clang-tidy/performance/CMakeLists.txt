@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyPerformanceModule
   AvoidEndlCheck.cpp
+  EnumSizeCheck.cpp
   FasterStringFindCheck.cpp
   ForRangeCopyCheck.cpp
   ImplicitConversionInLoopCheck.cpp
@@ -16,6 +17,7 @@ add_clang_library(clangTidyPerformanceModule
   NoAutomaticMoveCheck.cpp
   NoIntToPtrCheck.cpp
   NoexceptDestructorCheck.cpp
+  NoexceptFunctionBaseCheck.cpp
   NoexceptMoveConstructorCheck.cpp
   NoexceptSwapCheck.cpp
   PerformanceTidyModule.cpp
@@ -30,6 +32,7 @@ add_clang_library(clangTidyPerformanceModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyPerformanceModule

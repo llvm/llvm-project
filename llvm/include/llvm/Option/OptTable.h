@@ -30,6 +30,18 @@ class ArgList;
 class InputArgList;
 class Option;
 
+/// Helper for overload resolution while transitioning from
+/// FlagsToInclude/FlagsToExclude APIs to VisibilityMask APIs.
+class Visibility {
+  unsigned Mask = ~0U;
+
+public:
+  explicit Visibility(unsigned Mask) : Mask(Mask) {}
+  Visibility() = default;
+
+  operator unsigned() const { return Mask; }
+};
+
 /// Provide access to the Option info table.
 ///
 /// The OptTable class provides a layer of indirection which allows Option
@@ -44,17 +56,34 @@ public:
     /// A null terminated array of prefix strings to apply to name while
     /// matching.
     ArrayRef<StringLiteral> Prefixes;
-    StringRef Name;
+    StringLiteral PrefixedName;
     const char *HelpText;
+    // Help text for specific visibilities. A list of pairs, where each pair
+    // is a list of visibilities and a specific help string for those
+    // visibilities. If no help text is found in this list for the visibility of
+    // the program, HelpText is used instead. This cannot use std::vector
+    // because OptTable is used in constexpr contexts. Increase the array sizes
+    // here if you need more entries and adjust the constants in
+    // OptParserEmitter::EmitHelpTextsForVariants.
+    std::array<std::pair<std::array<unsigned int, 2 /*MaxVisibilityPerHelp*/>,
+                         const char *>,
+               1 /*MaxVisibilityHelp*/>
+        HelpTextsForVariants;
     const char *MetaVar;
     unsigned ID;
     unsigned char Kind;
     unsigned char Param;
     unsigned int Flags;
+    unsigned int Visibility;
     unsigned short GroupID;
     unsigned short AliasID;
     const char *AliasArgs;
     const char *Values;
+
+    StringRef getName() const {
+      unsigned PrefixLength = Prefixes.empty() ? 0 : Prefixes[0].size();
+      return PrefixedName.drop_front(PrefixLength);
+    }
   };
 
 private:
@@ -111,7 +140,9 @@ public:
   const Option getOption(OptSpecifier Opt) const;
 
   /// Lookup the name of the given option.
-  StringRef getOptionName(OptSpecifier id) const { return getInfo(id).Name; }
+  StringRef getOptionName(OptSpecifier id) const {
+    return getInfo(id).getName();
+  }
 
   /// Get the kind of the given option.
   unsigned getOptionKind(OptSpecifier id) const {
@@ -125,7 +156,20 @@ public:
 
   /// Get the help text to use to describe this option.
   const char *getOptionHelpText(OptSpecifier id) const {
-    return getInfo(id).HelpText;
+    return getOptionHelpText(id, Visibility(0));
+  }
+
+  // Get the help text to use to describe this option.
+  // If it has visibility specific help text and that visibility is in the
+  // visibility mask, use that text instead of the generic text.
+  const char *getOptionHelpText(OptSpecifier id,
+                                Visibility VisibilityMask) const {
+    auto Info = getInfo(id);
+    for (auto [Visibilities, Text] : Info.HelpTextsForVariants)
+      for (auto Visibility : Visibilities)
+        if (VisibilityMask & Visibility)
+          return Text;
+    return Info.HelpText;
   }
 
   /// Get the meta-variable name to use when describing
@@ -164,6 +208,7 @@ public:
   ///
   /// \return The vector of flags which start with Cur.
   std::vector<std::string> findByPrefix(StringRef Cur,
+                                        Visibility VisibilityMask,
                                         unsigned int DisableFlags) const;
 
   /// Find the OptTable option that most closely matches the given string.
@@ -173,10 +218,8 @@ public:
   /// string includes prefix dashes "-" as well as values "=l".
   /// \param [out] NearestString - The nearest option string found in the
   /// OptTable.
-  /// \param [in] FlagsToInclude - Only find options with any of these flags.
-  /// Zero is the default, which includes all flags.
-  /// \param [in] FlagsToExclude - Don't find options with this flag. Zero
-  /// is the default, and means exclude nothing.
+  /// \param [in] VisibilityMask - Only include options with any of these
+  ///                              visibility flags set.
   /// \param [in] MinimumLength - Don't find options shorter than this length.
   /// For example, a minimum length of 3 prevents "-x" from being considered
   /// near to "-S".
@@ -185,13 +228,29 @@ public:
   ///
   /// \return The edit distance of the nearest string found.
   unsigned findNearest(StringRef Option, std::string &NearestString,
-                       unsigned FlagsToInclude = 0, unsigned FlagsToExclude = 0,
+                       Visibility VisibilityMask = Visibility(),
                        unsigned MinimumLength = 4,
                        unsigned MaximumDistance = UINT_MAX) const;
 
+  unsigned findNearest(StringRef Option, std::string &NearestString,
+                       unsigned FlagsToInclude, unsigned FlagsToExclude = 0,
+                       unsigned MinimumLength = 4,
+                       unsigned MaximumDistance = UINT_MAX) const;
+
+private:
+  unsigned
+  internalFindNearest(StringRef Option, std::string &NearestString,
+                      unsigned MinimumLength, unsigned MaximumDistance,
+                      std::function<bool(const Info &)> ExcludeOption) const;
+
+public:
   bool findExact(StringRef Option, std::string &ExactString,
-                 unsigned FlagsToInclude = 0,
-                 unsigned FlagsToExclude = 0) const {
+                 Visibility VisibilityMask = Visibility()) const {
+    return findNearest(Option, ExactString, VisibilityMask, 4, 0) == 0;
+  }
+
+  bool findExact(StringRef Option, std::string &ExactString,
+                 unsigned FlagsToInclude, unsigned FlagsToExclude = 0) const {
     return findNearest(Option, ExactString, FlagsToInclude, FlagsToExclude, 4,
                        0) == 0;
   }
@@ -202,18 +261,26 @@ public:
   /// \param [in,out] Index - The current parsing position in the argument
   /// string list; on return this will be the index of the next argument
   /// string to parse.
-  /// \param [in] FlagsToInclude - Only parse options with any of these flags.
-  /// Zero is the default which includes all flags.
-  /// \param [in] FlagsToExclude - Don't parse options with this flag.  Zero
-  /// is the default and means exclude nothing.
+  /// \param [in] VisibilityMask - Only include options with any of these
+  /// visibility flags set.
   ///
   /// \return The parsed argument, or 0 if the argument is missing values
   /// (in which case Index still points at the conceptual next argument string
   /// to parse).
-  std::unique_ptr<Arg> ParseOneArg(const ArgList &Args, unsigned &Index,
-                                   unsigned FlagsToInclude = 0,
-                                   unsigned FlagsToExclude = 0) const;
+  std::unique_ptr<Arg>
+  ParseOneArg(const ArgList &Args, unsigned &Index,
+              Visibility VisibilityMask = Visibility()) const;
 
+  std::unique_ptr<Arg> ParseOneArg(const ArgList &Args, unsigned &Index,
+                                   unsigned FlagsToInclude,
+                                   unsigned FlagsToExclude) const;
+
+private:
+  std::unique_ptr<Arg>
+  internalParseOneArg(const ArgList &Args, unsigned &Index,
+                      std::function<bool(const Option &)> ExcludeOption) const;
+
+public:
   /// Parse an list of arguments into an InputArgList.
   ///
   /// The resulting InputArgList will reference the strings in [\p ArgBegin,
@@ -226,16 +293,25 @@ public:
   /// \param MissingArgIndex - On error, the index of the option which could
   /// not be parsed.
   /// \param MissingArgCount - On error, the number of missing options.
-  /// \param FlagsToInclude - Only parse options with any of these flags.
-  /// Zero is the default which includes all flags.
-  /// \param FlagsToExclude - Don't parse options with this flag.  Zero
-  /// is the default and means exclude nothing.
+  /// \param VisibilityMask - Only include options with any of these
+  /// visibility flags set.
   /// \return An InputArgList; on error this will contain all the options
   /// which could be parsed.
   InputArgList ParseArgs(ArrayRef<const char *> Args, unsigned &MissingArgIndex,
-                         unsigned &MissingArgCount, unsigned FlagsToInclude = 0,
+                         unsigned &MissingArgCount,
+                         Visibility VisibilityMask = Visibility()) const;
+
+  InputArgList ParseArgs(ArrayRef<const char *> Args, unsigned &MissingArgIndex,
+                         unsigned &MissingArgCount, unsigned FlagsToInclude,
                          unsigned FlagsToExclude = 0) const;
 
+private:
+  InputArgList
+  internalParseArgs(ArrayRef<const char *> Args, unsigned &MissingArgIndex,
+                    unsigned &MissingArgCount,
+                    std::function<bool(const Option &)> ExcludeOption) const;
+
+public:
   /// A convenience helper which handles optional initial options populated from
   /// an environment variable, expands response files recursively and parses
   /// options.
@@ -246,26 +322,33 @@ public:
   /// could be parsed.
   InputArgList parseArgs(int Argc, char *const *Argv, OptSpecifier Unknown,
                          StringSaver &Saver,
-                         function_ref<void(StringRef)> ErrorFn) const;
+                         std::function<void(StringRef)> ErrorFn) const;
 
   /// Render the help text for an option table.
   ///
   /// \param OS - The stream to write the help text to.
   /// \param Usage - USAGE: Usage
   /// \param Title - OVERVIEW: Title
-  /// \param FlagsToInclude - If non-zero, only include options with any
-  ///                         of these flags set.
-  /// \param FlagsToExclude - Exclude options with any of these flags set.
+  /// \param VisibilityMask - Only in                 Visibility VisibilityMask,clude options with any of these
+  ///                         visibility flags set.
+  /// \param ShowHidden     - If true, display options marked as HelpHidden
   /// \param ShowAllAliases - If true, display all options including aliases
   ///                         that don't have help texts. By default, we display
   ///                         only options that are not hidden and have help
   ///                         texts.
   void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
+                 bool ShowHidden = false, bool ShowAllAliases = false,
+                 Visibility VisibilityMask = Visibility()) const;
+
+  void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                  unsigned FlagsToInclude, unsigned FlagsToExclude,
                  bool ShowAllAliases) const;
 
-  void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
-                 bool ShowHidden = false, bool ShowAllAliases = false) const;
+private:
+  void internalPrintHelp(raw_ostream &OS, const char *Usage, const char *Title,
+                         bool ShowHidden, bool ShowAllAliases,
+                         std::function<bool(const Info &)> ExcludeOption,
+                         Visibility VisibilityMask) const;
 };
 
 /// Specialization of OptTable
@@ -297,5 +380,33 @@ protected:
 } // end namespace opt
 
 } // end namespace llvm
+
+#define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                       \
+    ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
+  ID_PREFIX##ID
+
+#define LLVM_MAKE_OPT_ID(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS,        \
+                         ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT,        \
+                         HELPTEXTSFORVARIANTS, METAVAR, VALUES)                \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                             \
+      OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
+      VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUE)
+
+#define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
+    ID_PREFIX, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES) \
+  llvm::opt::OptTable::Info {                                                  \
+    PREFIX, PREFIXED_NAME, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,            \
+        ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,           \
+        VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES      \
+  }
+
+#define LLVM_CONSTRUCT_OPT_INFO(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, \
+                                ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, \
+                                HELPTEXTSFORVARIANTS, METAVAR, VALUES)         \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                      \
+      OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
+      VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES)
 
 #endif // LLVM_OPTION_OPTTABLE_H

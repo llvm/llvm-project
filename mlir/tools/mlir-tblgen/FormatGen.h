@@ -15,7 +15,6 @@
 #define MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
@@ -235,7 +234,15 @@ private:
 class VariableElement : public FormatElementBase<FormatElement::Variable> {
 public:
   /// These are the kinds of variables.
-  enum Kind { Attribute, Operand, Region, Result, Successor, Parameter };
+  enum Kind {
+    Attribute,
+    Operand,
+    Region,
+    Result,
+    Successor,
+    Parameter,
+    Property
+  };
 
   /// Get the kind of variable.
   Kind getKind() const { return kind; }
@@ -487,9 +494,12 @@ protected:
   FailureOr<FormatElement *> parseDirective(Context ctx);
   /// Parse an optional group.
   FailureOr<FormatElement *> parseOptionalGroup(Context ctx);
-
   /// Parse a custom directive.
   FailureOr<FormatElement *> parseCustomDirective(llvm::SMLoc loc, Context ctx);
+  /// Parse a ref directive.
+  FailureOr<FormatElement *> parseRefDirective(SMLoc loc, Context context);
+  /// Parse a qualified directive.
+  FailureOr<FormatElement *> parseQualifiedDirective(SMLoc loc, Context ctx);
 
   /// Parse a format-specific variable kind.
   virtual FailureOr<FormatElement *>
@@ -513,6 +523,11 @@ protected:
   verifyOptionalGroupElements(llvm::SMLoc loc,
                               ArrayRef<FormatElement *> elements,
                               FormatElement *anchor) = 0;
+
+  /// Mark 'element' as qualified. If 'element' cannot be qualified an error
+  /// should be emitted and failure returned.
+  virtual LogicalResult markQualified(llvm::SMLoc loc,
+                                      FormatElement *element) = 0;
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities

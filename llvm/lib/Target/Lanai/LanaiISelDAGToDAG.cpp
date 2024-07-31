@@ -48,18 +48,13 @@ namespace {
 
 class LanaiDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   LanaiDAGToDAGISel() = delete;
 
   explicit LanaiDAGToDAGISel(LanaiTargetMachine &TargetMachine)
-      : SelectionDAGISel(ID, TargetMachine) {}
+      : SelectionDAGISel(TargetMachine) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    return SelectionDAGISel::runOnMachineFunction(MF);
-  }
-
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintCode,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintCode,
                                     std::vector<SDValue> &OutOps) override;
 
 private:
@@ -96,11 +91,18 @@ bool canBeRepresentedAsSls(const ConstantSDNode &CN) {
   return isInt<21>(CN.getSExtValue()) && ((CN.getSExtValue() & 0x3) == 0);
 }
 
+class LanaiDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit LanaiDAGToDAGISelLegacy(LanaiTargetMachine &TM)
+      : SelectionDAGISelLegacy(ID, std::make_unique<LanaiDAGToDAGISel>(TM)) {}
+};
+
 } // namespace
 
-char LanaiDAGToDAGISel::ID = 0;
+char LanaiDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(LanaiDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(LanaiDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Helper functions for ComplexPattern used on LanaiInstrInfo
 // Used on Lanai Load/Store instructions.
@@ -212,6 +214,37 @@ bool LanaiDAGToDAGISel::selectAddrSpls(SDValue Addr, SDValue &Base,
   return selectAddrRiSpls(Addr, Base, Offset, AluOp, /*RiMode=*/false);
 }
 
+namespace llvm {
+namespace LPAC {
+static AluCode isdToLanaiAluCode(ISD::NodeType Node_type) {
+  switch (Node_type) {
+  case ISD::ADD:
+    return AluCode::ADD;
+  case ISD::ADDE:
+    return AluCode::ADDC;
+  case ISD::SUB:
+    return AluCode::SUB;
+  case ISD::SUBE:
+    return AluCode::SUBB;
+  case ISD::AND:
+    return AluCode::AND;
+  case ISD::OR:
+    return AluCode::OR;
+  case ISD::XOR:
+    return AluCode::XOR;
+  case ISD::SHL:
+    return AluCode::SHL;
+  case ISD::SRL:
+    return AluCode::SRL;
+  case ISD::SRA:
+    return AluCode::SRA;
+  default:
+    return AluCode::UNKNOWN;
+  }
+}
+} // namespace LPAC
+} // namespace llvm
+
 bool LanaiDAGToDAGISel::selectAddrRr(SDValue Addr, SDValue &R1, SDValue &R2,
                                      SDValue &AluOp) {
   // if Address is FI, get the TargetFrameIndex.
@@ -253,12 +286,13 @@ bool LanaiDAGToDAGISel::selectAddrRr(SDValue Addr, SDValue &R1, SDValue &R2,
 }
 
 bool LanaiDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintCode, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
+    std::vector<SDValue> &OutOps) {
   SDValue Op0, Op1, AluOp;
   switch (ConstraintCode) {
   default:
     return true;
-  case InlineAsm::Constraint_m: // memory
+  case InlineAsm::ConstraintCode::m: // memory
     if (!selectAddrRr(Op, Op0, Op1, AluOp) &&
         !selectAddrRi(Op, Op0, Op1, AluOp))
       return true;
@@ -333,5 +367,5 @@ void LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
 // createLanaiISelDag - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createLanaiISelDag(LanaiTargetMachine &TM) {
-  return new LanaiDAGToDAGISel(TM);
+  return new LanaiDAGToDAGISelLegacy(TM);
 }

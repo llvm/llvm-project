@@ -7,7 +7,8 @@ target triple = "armv4t-unknown-linux-gnueabi"
 
 define i32 @foo() {
 entry:
-  ret i32 and (i32 ptrtoint (ptr @a to i32), i32 255)
+  %and = and i32 ptrtoint (ptr @a to i32), 255
+  ret i32 %and
 }
 
 ; CHECK-LABEL: foo:

@@ -7,7 +7,7 @@
 // RUN: rm -rf %t
 
 template<typename T, int U = 1>
-void function<bool, 0>(T x) {}
+void function(T x) {}
 
 template<>
 void function<bool, 0>(bool x) {}

@@ -81,9 +81,9 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
               WritableDataBufferSP buffer_sp(
                   new DataBufferHeap(max_len + 1, 0));
               Address address(valobj->GetPointerValue());
-              if (target_sp->ReadCStringFromMemory(
-                      address, (char *)buffer_sp->GetBytes(), max_len, error) &&
-                  error.Success())
+              target_sp->ReadCStringFromMemory(
+                  address, (char *)buffer_sp->GetBytes(), max_len, error);
+              if (error.Success())
                 data.SetData(buffer_sp);
             }
           }
@@ -161,13 +161,12 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     if (!target_sp)
       return false;
     const ModuleList &images(target_sp->GetImages());
-    TypeList types;
-    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    images.FindTypes(nullptr, m_enum_type, false, UINT32_MAX,
-                     searched_symbol_files, types);
-    if (types.Empty())
+    TypeQuery query(m_enum_type.GetStringRef());
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    if (results.GetTypeMap().Empty())
       return false;
-    for (lldb::TypeSP type_sp : types.Types()) {
+    for (lldb::TypeSP type_sp : results.GetTypeMap().Types()) {
       if (!type_sp)
         continue;
       if ((type_sp->GetForwardCompilerType().GetTypeInfo() &

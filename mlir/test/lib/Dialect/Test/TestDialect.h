@@ -14,9 +14,10 @@
 #ifndef MLIR_TESTDIALECT_H
 #define MLIR_TESTDIALECT_H
 
-#include "TestTypes.h"
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
+#include "TestTypes.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -40,54 +41,40 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SetVector.h"
 
 #include <memory>
 
 namespace mlir {
-class DLTIDialect;
 class RewritePatternSet;
-} // namespace mlir
+} // end namespace mlir
 
 //===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//
 
-#include "TestOpInterfaces.h.inc"
 #include "TestOpsDialect.h.inc"
 
 namespace test {
-// Define some classes to exercises the Properties feature.
 
-struct PropertiesWithCustomPrint {
-  /// A shared_ptr to a const object is safe: it is equivalent to a value-based
-  /// member. Here the label will be deallocated when the last operation
-  /// refering to it is destroyed. However there is no pool-allocation: this is
-  /// offloaded to the client.
-  std::shared_ptr<const std::string> label;
-  int value;
-  bool operator==(const PropertiesWithCustomPrint &rhs) const {
-    return value == rhs.value && *label == *rhs.label;
-  }
+//===----------------------------------------------------------------------===//
+// TestDialect version utilities
+//===----------------------------------------------------------------------===//
+
+struct TestDialectVersion : public mlir::DialectVersion {
+  TestDialectVersion() = default;
+  TestDialectVersion(uint32_t majorVersion, uint32_t minorVersion)
+      : major_(majorVersion), minor_(minorVersion){};
+  // We cannot use 'major' and 'minor' here because these identifiers may
+  // already be used by <sys/types.h> on many POSIX systems including Linux and
+  // FreeBSD.
+  uint32_t major_ = 2;
+  uint32_t minor_ = 0;
 };
-class MyPropStruct {
-public:
-  std::string content;
-  // These three methods are invoked through the  `MyStructProperty` wrapper
-  // defined in TestOps.td
-  mlir::Attribute asAttribute(mlir::MLIRContext *ctx) const;
-  static mlir::LogicalResult setFromAttr(MyPropStruct &prop,
-                                         mlir::Attribute attr,
-                                         mlir::InFlightDiagnostic *diag);
-  llvm::hash_code hash() const;
-  bool operator==(const MyPropStruct &rhs) const {
-    return content == rhs.content;
-  }
-};
+
 } // namespace test
-
-#define GET_OP_CLASSES
-#include "TestOps.h.inc"
 
 namespace test {
 
@@ -109,6 +96,10 @@ public:
 
 void registerTestDialect(::mlir::DialectRegistry &registry);
 void populateTestReductionPatterns(::mlir::RewritePatternSet &patterns);
+void testSideEffectOpGetEffect(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::TestEffects::Effect>> &effects);
 } // namespace test
 
 #endif // MLIR_TESTDIALECT_H

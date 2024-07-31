@@ -353,17 +353,17 @@ Bound ArraySpecAnalyzer::GetBound(const parser::SpecificationExpr &x) {
   return Bound{std::move(expr)};
 }
 
-// If SAVE is set on src, set it on all members of dst
+// If src is SAVE (explicitly or implicitly),
+// set SAVE attribute on all members of dst.
 static void PropagateSaveAttr(
     const EquivalenceObject &src, EquivalenceSet &dst) {
-  if (src.symbol.attrs().test(Attr::SAVE)) {
-    bool isImplicit{src.symbol.implicitAttrs().test(Attr::SAVE)};
+  if (IsSaved(src.symbol)) {
     for (auto &obj : dst) {
       if (!obj.symbol.attrs().test(Attr::SAVE)) {
         obj.symbol.attrs().set(Attr::SAVE);
-        if (isImplicit) {
-          obj.symbol.implicitAttrs().set(Attr::SAVE);
-        }
+        // If the other equivalenced symbol itself is not SAVE,
+        // then adding SAVE here implies that it has to be implicit.
+        obj.symbol.implicitAttrs().set(Attr::SAVE);
       }
     }
   }
@@ -376,25 +376,35 @@ static void PropagateSaveAttr(const EquivalenceSet &src, EquivalenceSet &dst) {
 
 void EquivalenceSets::AddToSet(const parser::Designator &designator) {
   if (CheckDesignator(designator)) {
-    Symbol &symbol{*currObject_.symbol};
-    if (!currSet_.empty()) {
-      // check this symbol against first of set for compatibility
-      Symbol &first{currSet_.front().symbol};
-      CheckCanEquivalence(designator.source, first, symbol) &&
-          CheckCanEquivalence(designator.source, symbol, first);
-    }
-    auto subscripts{currObject_.subscripts};
-    if (subscripts.empty() && symbol.IsObjectArray()) {
-      // record a whole array as its first element
-      for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
-        auto &lbound{spec.lbound().GetExplicit().value()};
-        subscripts.push_back(evaluate::ToInt64(lbound).value());
+    if (Symbol * symbol{currObject_.symbol}) {
+      if (!currSet_.empty()) {
+        // check this symbol against first of set for compatibility
+        Symbol &first{currSet_.front().symbol};
+        CheckCanEquivalence(designator.source, first, *symbol) &&
+            CheckCanEquivalence(designator.source, *symbol, first);
       }
+      auto subscripts{currObject_.subscripts};
+      if (subscripts.empty()) {
+        if (const ArraySpec * shape{symbol->GetShape()};
+            shape && shape->IsExplicitShape()) {
+          // record a whole array as its first element
+          for (const ShapeSpec &spec : *shape) {
+            if (auto lbound{spec.lbound().GetExplicit()}) {
+              if (auto lbValue{evaluate::ToInt64(*lbound)}) {
+                subscripts.push_back(*lbValue);
+                continue;
+              }
+            }
+            subscripts.clear(); // error recovery
+            break;
+          }
+        }
+      }
+      auto substringStart{currObject_.substringStart};
+      currSet_.emplace_back(
+          *symbol, subscripts, substringStart, designator.source);
+      PropagateSaveAttr(currSet_.back(), currSet_);
     }
-    auto substringStart{currObject_.substringStart};
-    currSet_.emplace_back(
-        symbol, subscripts, substringStart, designator.source);
-    PropagateSaveAttr(currSet_.back(), currSet_);
   }
   currObject_ = {};
 }
@@ -568,75 +578,9 @@ bool EquivalenceSets::CheckDataRef(
       x.u);
 }
 
-static bool InCommonWithBind(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-    const Symbol *commonBlock{details->commonBlock()};
-    return commonBlock && commonBlock->attrs().test(Attr::BIND_C);
-  } else {
-    return false;
-  }
-}
-
-// If symbol can't be in equivalence set report error and return false;
 bool EquivalenceSets::CheckObject(const parser::Name &name) {
-  if (!name.symbol) {
-    return false; // an error has already occurred
-  }
   currObject_.symbol = name.symbol;
-  parser::MessageFixedText msg;
-  const Symbol &symbol{*name.symbol};
-  if (symbol.owner().IsDerivedType()) { // C8107
-    msg = "Derived type component '%s'"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (IsDummy(symbol)) { // C8106
-    msg = "Dummy argument '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.IsFuncResult()) { // C8106
-    msg = "Function result '%s' is not allow in an equivalence set"_err_en_US;
-  } else if (IsPointer(symbol)) { // C8106
-    msg = "Pointer '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (IsAllocatable(symbol)) { // C8106
-    msg = "Allocatable variable '%s'"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.Corank() > 0) { // C8106
-    msg = "Coarray '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.has<UseDetails>()) { // C8115
-    msg = "Use-associated variable '%s'"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.attrs().test(Attr::BIND_C)) { // C8106
-    msg = "Variable '%s' with BIND attribute"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.attrs().test(Attr::TARGET)) { // C8108
-    msg = "Variable '%s' with TARGET attribute"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (IsNamedConstant(symbol)) { // C8106
-    msg = "Named constant '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (InCommonWithBind(symbol)) { // C8106
-    msg = "Variable '%s' in common block with BIND attribute"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (const auto *type{symbol.GetType()}) {
-    const auto *derived{type->AsDerived()};
-    if (derived && !derived->IsVectorType()) {
-      if (const auto *comp{FindUltimateComponent(
-              *derived, IsAllocatableOrPointer)}) { // C8106
-        msg = IsPointer(*comp)
-            ? "Derived type object '%s' with pointer ultimate component"
-              " is not allowed in an equivalence set"_err_en_US
-            : "Derived type object '%s' with allocatable ultimate component"
-              " is not allowed in an equivalence set"_err_en_US;
-      } else if (!derived->typeSymbol().get<DerivedTypeDetails>().sequence()) {
-        msg = "Nonsequence derived type object '%s'"
-              " is not allowed in an equivalence set"_err_en_US;
-      }
-    } else if (IsAutomatic(symbol)) {
-      msg = "Automatic object '%s'"
-            " is not allowed in an equivalence set"_err_en_US;
-    }
-  }
-  if (!msg.text().empty()) {
-    context_.Say(name.source, std::move(msg), name.source);
-    return false;
-  }
-  return true;
+  return currObject_.symbol != nullptr;
 }
 
 bool EquivalenceSets::CheckArrayBound(const parser::Expr &bound) {
@@ -766,24 +710,27 @@ public:
   SymbolMapper(Scope &scope, SymbolAndTypeMappings &map)
       : Base{*this}, scope_{scope}, map_{map} {}
   using Base::operator();
-  bool operator()(const SymbolRef &ref) const {
+  bool operator()(const SymbolRef &ref) {
     if (const Symbol *mapped{MapSymbol(*ref)}) {
       const_cast<SymbolRef &>(ref) = *mapped;
+    } else if (ref->has<UseDetails>()) {
+      CopySymbol(&*ref);
     }
     return false;
   }
-  bool operator()(const Symbol &x) const {
+  bool operator()(const Symbol &x) {
     if (MapSymbol(x)) {
       DIE("SymbolMapper hit symbol outside SymbolRef");
     }
     return false;
   }
   void MapSymbolExprs(Symbol &);
+  Symbol *CopySymbol(const Symbol *);
 
 private:
-  void MapParamValue(ParamValue &param) const { (*this)(param.GetExplicit()); }
-  void MapBound(Bound &bound) const { (*this)(bound.GetExplicit()); }
-  void MapShapeSpec(ShapeSpec &spec) const {
+  void MapParamValue(ParamValue &param) { (*this)(param.GetExplicit()); }
+  void MapBound(Bound &bound) { (*this)(bound.GetExplicit()); }
+  void MapShapeSpec(ShapeSpec &spec) {
     MapBound(spec.lbound());
     MapBound(spec.ubound());
   }
@@ -797,16 +744,44 @@ private:
   SymbolAndTypeMappings &map_;
 };
 
-void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
-  if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (const DeclTypeSpec *type{object->type()}) {
-      if (const DeclTypeSpec *newType{MapType(*type)}) {
-        object->ReplaceType(*newType);
+Symbol *SymbolMapper::CopySymbol(const Symbol *symbol) {
+  if (symbol) {
+    if (auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
+      if (subp->isInterface()) {
+        if (auto pair{scope_.try_emplace(symbol->name(), symbol->attrs())};
+            pair.second) {
+          Symbol &copy{*pair.first->second};
+          map_.symbolMap[symbol] = &copy;
+          copy.set(symbol->test(Symbol::Flag::Subroutine)
+                  ? Symbol::Flag::Subroutine
+                  : Symbol::Flag::Function);
+          Scope &newScope{scope_.MakeScope(Scope::Kind::Subprogram, &copy)};
+          copy.set_scope(&newScope);
+          copy.set_details(SubprogramDetails{});
+          auto &newSubp{copy.get<SubprogramDetails>()};
+          newSubp.set_isInterface(true);
+          newSubp.set_isDummy(subp->isDummy());
+          newSubp.set_defaultIgnoreTKR(subp->defaultIgnoreTKR());
+          MapSubprogramToNewSymbols(*symbol, copy, newScope, &map_);
+          return &copy;
+        }
       }
+    } else if (Symbol * copy{scope_.CopySymbol(*symbol)}) {
+      map_.symbolMap[symbol] = copy;
+      return copy;
     }
   }
+  return nullptr;
+}
+
+void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
   common::visit(
       common::visitors{[&](ObjectEntityDetails &object) {
+                         if (const DeclTypeSpec * type{object.type()}) {
+                           if (const DeclTypeSpec * newType{MapType(*type)}) {
+                             object.ReplaceType(*newType);
+                           }
+                         }
                          for (ShapeSpec &spec : object.shape()) {
                            MapShapeSpec(spec);
                          }
@@ -816,8 +791,9 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
                        },
           [&](ProcEntityDetails &proc) {
             if (const Symbol *
-                mappedSymbol{MapInterface(proc.procInterface())}) {
-              proc.set_procInterface(*mappedSymbol);
+                mappedSymbol{MapInterface(proc.rawProcInterface())}) {
+              proc.set_procInterfaces(
+                  *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
               proc.set_type(*mappedType);
             }
@@ -892,13 +868,7 @@ const Symbol *SymbolMapper::MapInterface(const Symbol *interface) {
       return interface;
     } else if (const auto *subp{interface->detailsIf<SubprogramDetails>()};
                subp && subp->isInterface()) {
-      if (Symbol *newSymbol{scope_.CopySymbol(*interface)}) {
-        newSymbol->get<SubprogramDetails>().set_isInterface(true);
-        map_.symbolMap[interface] = newSymbol;
-        Scope &newScope{scope_.MakeScope(Scope::Kind::Subprogram, newSymbol)};
-        MapSubprogramToNewSymbols(*interface, *newSymbol, newScope, &map_);
-        return newSymbol;
-      }
+      return CopySymbol(interface);
     }
   }
   return nullptr;
@@ -913,22 +883,24 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
   mappings->symbolMap[&oldSymbol] = &newSymbol;
   const auto &oldDetails{oldSymbol.get<SubprogramDetails>()};
   auto &newDetails{newSymbol.get<SubprogramDetails>()};
+  SymbolMapper mapper{newScope, *mappings};
   for (const Symbol *dummyArg : oldDetails.dummyArgs()) {
     if (!dummyArg) {
       newDetails.add_alternateReturn();
-    } else if (Symbol *copy{newScope.CopySymbol(*dummyArg)}) {
+    } else if (Symbol * copy{mapper.CopySymbol(dummyArg)}) {
+      copy->set(Symbol::Flag::Implicit, false);
       newDetails.add_dummyArg(*copy);
       mappings->symbolMap[dummyArg] = copy;
     }
   }
   if (oldDetails.isFunction()) {
     newScope.erase(newSymbol.name());
-    if (Symbol *copy{newScope.CopySymbol(oldDetails.result())}) {
+    const Symbol &result{oldDetails.result()};
+    if (Symbol * copy{mapper.CopySymbol(&result)}) {
       newDetails.set_result(*copy);
-      mappings->symbolMap[&oldDetails.result()] = copy;
+      mappings->symbolMap[&result] = copy;
     }
   }
-  SymbolMapper mapper{newScope, *mappings};
   for (auto &[_, ref] : newScope) {
     mapper.MapSymbolExprs(*ref);
   }

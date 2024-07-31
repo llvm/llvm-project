@@ -457,20 +457,54 @@ public:
     if (attributes.set(name, value) != value)
       attrs = attributes.getDictionary(getContext());
   }
+  void setDiscardableAttr(StringRef name, Attribute value) {
+    setDiscardableAttr(StringAttr::get(getContext(), name), value);
+  }
 
-  /// Return all of the discardable attributes on this operation.
-  ArrayRef<NamedAttribute> getDiscardableAttrs() { return attrs.getValue(); }
+  /// Remove the discardable attribute with the specified name if it exists.
+  /// Return the attribute that was erased, or nullptr if there was no attribute
+  /// with such name.
+  Attribute removeDiscardableAttr(StringAttr name) {
+    NamedAttrList attributes(attrs);
+    Attribute removedAttr = attributes.erase(name);
+    if (removedAttr)
+      attrs = attributes.getDictionary(getContext());
+    return removedAttr;
+  }
+  Attribute removeDiscardableAttr(StringRef name) {
+    return removeDiscardableAttr(StringAttr::get(getContext(), name));
+  }
+
+  /// Return a range of all of discardable attributes on this operation. Note
+  /// that for unregistered operations that are not storing inherent attributes
+  /// as properties, all attributes are considered discardable.
+  auto getDiscardableAttrs() {
+    std::optional<RegisteredOperationName> opName = getRegisteredInfo();
+    ArrayRef<StringAttr> attributeNames =
+        opName ? getRegisteredInfo()->getAttributeNames()
+               : ArrayRef<StringAttr>();
+    return llvm::make_filter_range(
+        attrs.getValue(),
+        [this, attributeNames](const NamedAttribute attribute) {
+          return getPropertiesStorage() ||
+                 !llvm::is_contained(attributeNames, attribute.getName());
+        });
+  }
 
   /// Return all of the discardable attributes on this operation as a
   /// DictionaryAttr.
-  DictionaryAttr getDiscardableAttrDictionary() { return attrs; }
+  DictionaryAttr getDiscardableAttrDictionary() {
+    if (getPropertiesStorage())
+      return attrs;
+    return DictionaryAttr::get(getContext(),
+                               llvm::to_vector(getDiscardableAttrs()));
+  }
+
+  /// Return all attributes that are not stored as properties.
+  DictionaryAttr getRawDictionaryAttrs() { return attrs; }
 
   /// Return all of the attributes on this operation.
-  ArrayRef<NamedAttribute> getAttrs() {
-    if (!getPropertiesStorage())
-      return getDiscardableAttrs();
-    return getAttrDictionary().getValue();
-  }
+  ArrayRef<NamedAttribute> getAttrs() { return getAttrDictionary().getValue(); }
 
   /// Return all of the attributes on this operation as a DictionaryAttr.
   DictionaryAttr getAttrDictionary();
@@ -542,7 +576,7 @@ public:
   /// value. Otherwise, add a new attribute with the specified name/value.
   void setAttr(StringAttr name, Attribute value) {
     if (getPropertiesStorageSize()) {
-      if (std::optional<Attribute> inherentAttr = getInherentAttr(name)) {
+      if (getInherentAttr(name)) {
         setInherentAttr(name, value);
         return;
       }
@@ -679,10 +713,31 @@ public:
 
   /// Attempt to fold this operation with the specified constant operand values
   /// - the elements in "operands" will correspond directly to the operands of
-  /// the operation, but may be null if non-constant. If folding is successful,
-  /// this fills in the `results` vector. If not, `results` is unspecified.
+  /// the operation, but may be null if non-constant.
+  ///
+  /// If folding was successful, this function returns "success".
+  /// * If this operation was modified in-place (but not folded away),
+  ///   `results` is empty.
+  /// * Otherwise, `results` is filled with the folded results.
+  /// If folding was unsuccessful, this function returns "failure".
   LogicalResult fold(ArrayRef<Attribute> operands,
                      SmallVectorImpl<OpFoldResult> &results);
+
+  /// Attempt to fold this operation.
+  ///
+  /// If folding was successful, this function returns "success".
+  /// * If this operation was modified in-place (but not folded away),
+  ///   `results` is empty.
+  /// * Otherwise, `results` is filled with the folded results.
+  /// If folding was unsuccessful, this function returns "failure".
+  LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
+
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return name.hasPromiseOrImplementsInterface<InterfaceT>();
+  }
 
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
@@ -840,8 +895,7 @@ public:
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
     if (propertiesStorageSize)
-      return {
-          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+      return getPropertiesStorageUnsafe();
     return {nullptr};
   }
   OpaqueProperties getPropertiesStorage() const {
@@ -850,19 +904,27 @@ public:
           getTrailingObjects<detail::OpProperties>()))};
     return {nullptr};
   }
+  /// Returns the properties storage without checking whether properties are
+  /// present.
+  OpaqueProperties getPropertiesStorageUnsafe() {
+    return {
+        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+  }
 
   /// Return the properties converted to an attribute.
   /// This is expensive, and mostly useful when dealing with unregistered
   /// operation. Returns an empty attribute if no properties are present.
   Attribute getPropertiesAsAttribute();
 
-  /// Set the properties from the provided  attribute.
+  /// Set the properties from the provided attribute.
   /// This is an expensive operation that can fail if the attribute is not
   /// matching the expectations of the properties for this operation. This is
   /// mostly useful for unregistered operations or used when parsing the
-  /// generic format. An optional diagnostic can be passed in for richer errors.
-  LogicalResult setPropertiesFromAttribute(Attribute attr,
-                                           InFlightDiagnostic *diagnostic);
+  /// generic format. An optional diagnostic emitter can be passed in for richer
+  /// errors, if none is passed then behavior is undefined in error case.
+  LogicalResult
+  setPropertiesFromAttribute(Attribute attr,
+                             function_ref<InFlightDiagnostic()> emitError);
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.

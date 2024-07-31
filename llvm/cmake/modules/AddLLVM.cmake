@@ -4,6 +4,21 @@ include(LLVMProcessSources)
 include(LLVM-Config)
 include(DetermineGCCCompatible)
 
+# get_subproject_title(titlevar)
+#   Set ${outvar} to the title of the current LLVM subproject (Clang, MLIR ...)
+# 
+# The title is set in the subproject's top-level using the variable
+# LLVM_SUBPROJECT_TITLE. If it does not exist, it is assumed it is LLVM itself.
+# The title is not semantically significant, but use to create folders in
+# CMake-generated IDE projects (Visual Studio/XCode).
+function(get_subproject_title outvar)
+  if (LLVM_SUBPROJECT_TITLE)
+    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE) 
+  else ()
+    set(${outvar} "LLVM" PARENT_SCOPE)
+  endif ()
+endfunction(get_subproject_title)
+
 function(llvm_update_compile_flags name)
   get_property(sources TARGET ${name} PROPERTY SOURCES)
   if("${sources}" MATCHES "\\.c(;|$)")
@@ -108,7 +123,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMAND "${Python3_EXECUTABLE}" "-c"
       "import sys; \
        lines = ['    ' + l.rstrip() for l in sys.stdin] + ['  local: *;']; \
-       print('LLVM_${LLVM_VERSION_MAJOR} {'); \
+       print('LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} {'); \
        print('  global:') if len(lines) > 1 else None; \
        print(';\\n'.join(lines) + '\\n};')"
       < ${export_file} > ${native_export_file}
@@ -151,7 +166,8 @@ function(add_llvm_symbol_exports target_name export_file)
   endif()
 
   add_custom_target(${target_name}_exports DEPENDS ${native_export_file})
-  set_target_properties(${target_name}_exports PROPERTIES FOLDER "Misc")
+  get_subproject_title(subproject_title)
+  set_target_properties(${target_name}_exports PROPERTIES FOLDER "${subproject_title}/API")
 
   get_property(srcs TARGET ${target_name} PROPERTY SOURCES)
   foreach(src ${srcs})
@@ -211,10 +227,10 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     )
 
   if(APPLE)
-    if("${stderr}" MATCHES "PROJECT:ld64")
+    if("${stderr}" MATCHES "PROGRAM:ld")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_LD64 YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: ld64")
+      set(LLVM_LINKER_IS_APPLE YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Apple")
     elseif("${stderr}" MATCHES "^LLD" OR
            "${stdout}" MATCHES "^LLD")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -241,6 +257,12 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU ld")
+    elseif("${stderr}" MATCHES "(illumos)" OR
+           "${stdout}" MATCHES "(illumos)")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD_ILLUMOS YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Solaris ld (illumos)")
     elseif("${stderr}" MATCHES "Solaris Link Editors" OR
            "${stdout}" MATCHES "Solaris Link Editors")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -250,6 +272,26 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED NO CACHE INTERNAL "")
       message(STATUS "Linker detection: unknown")
     endif()
+  endif()
+
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    include(CheckLinkerFlag)
+    # Linkers that support Darwin allow a setting to internalize all symbol exports,
+    # aiding in reducing binary size and often is applicable for executables.
+    check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+
+    if (NOT LLVM_USE_LINKER)
+      # Apple's linker complains about duplicate libraries, which CMake likes to do
+      # to support ELF platforms. To silence that warning, we can use
+      # -no_warn_duplicate_libraries, but only in versions of the linker that
+      # support that flag.
+      check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    else()
+      set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
+    endif()
+
+  else()
+    set(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS OFF CACHE INTERNAL "")
   endif()
 endif()
 
@@ -282,11 +324,11 @@ function(add_link_opts target_name)
         # ld64's implementation of -dead_strip breaks tools that use plugins.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-dead_strip")
-      elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+      elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
-        # Solaris 11.4.
-        include(LLVMCheckLinkerFlag)
-        llvm_check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
+        # Solaris 11.4.  GNU ld ignores it, but warns every time.
+        include(CheckLinkerFlag)
+        check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
@@ -302,6 +344,11 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
     endif()
+  endif()
+
+  if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                 LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
@@ -512,6 +559,8 @@ function(llvm_add_library name)
     endif()
   endif()
 
+  get_subproject_title(subproject_title)
+
   # Generate objlib
   if((ARG_SHARED AND ARG_STATIC) OR ARG_OBJECT)
     # Generate an obj library for both targets.
@@ -533,7 +582,7 @@ function(llvm_add_library name)
     # Bring in the target include directories from our original target.
     target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
 
-    set_target_properties(${obj_name} PROPERTIES FOLDER "Object Libraries")
+    set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
@@ -572,6 +621,7 @@ function(llvm_add_library name)
       LINK_LIBS ${ARG_LINK_LIBS}
       LINK_COMPONENTS ${ARG_LINK_COMPONENTS}
       )
+    set_target_properties(${name_static} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
     # Bring in the target link info from our original target.
     target_link_directories(${name_static} PRIVATE $<TARGET_PROPERTY:${name},LINK_DIRECTORIES>)
@@ -589,6 +639,7 @@ function(llvm_add_library name)
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
@@ -640,9 +691,9 @@ function(llvm_add_library name)
     if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
       set_target_properties(${name}
         PROPERTIES
-        # Since 4.0.0, the ABI version is indicated by the major version
-        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        # Since 18.1.0, the ABI version is indicated by the major and minor version.
+        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
     endif()
   endif()
 
@@ -726,6 +777,8 @@ function(llvm_add_library name)
     endforeach()
   endif()
 
+  add_custom_linker_flags(${name})
+
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
     llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
@@ -763,6 +816,8 @@ function(add_llvm_install_targets target)
     endif()
   endforeach()
 
+  get_subproject_title(subproject_title)
+
   add_custom_target(${target}
                     DEPENDS ${file_dependencies}
                     COMMAND "${CMAKE_COMMAND}"
@@ -770,7 +825,7 @@ function(add_llvm_install_targets target)
                             ${prefix_option}
                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                     USES_TERMINAL)
-  set_target_properties(${target} PROPERTIES FOLDER "Component Install Targets")
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Installation")
   add_custom_target(${target}-stripped
                     DEPENDS ${file_dependencies}
                     COMMAND "${CMAKE_COMMAND}"
@@ -779,7 +834,7 @@ function(add_llvm_install_targets target)
                             -DCMAKE_INSTALL_DO_STRIP=1
                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                     USES_TERMINAL)
-  set_target_properties(${target}-stripped PROPERTIES FOLDER "Component Install Targets (Stripped)")
+  set_target_properties(${target}-stripped PROPERTIES FOLDER "${subproject_title}/Installation")
   if(target_dependencies)
     add_dependencies(${target} ${target_dependencies})
     add_dependencies(${target}-stripped ${target_dependencies})
@@ -799,6 +854,8 @@ endfunction()
 function(add_llvm_component_group name)
   cmake_parse_arguments(ARG "HAS_JIT" "" "LINK_COMPONENTS" ${ARGN})
   add_custom_target(${name})
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Component Groups")
   if(ARG_HAS_JIT)
     set_property(TARGET ${name} PROPERTY COMPONENT_HAS_JIT ON)
   endif()
@@ -832,6 +889,8 @@ function(add_llvm_component_library name)
 
   if(ARG_ADD_TO_COMPONENT)
     set_property(TARGET ${ARG_ADD_TO_COMPONENT} APPEND PROPERTY LLVM_LINK_COMPONENTS ${component_name})
+    get_subproject_title(subproject_title)
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries/${ARG_ADD_TO_COMPONENT}")
   endif()
 
 endfunction()
@@ -888,10 +947,12 @@ macro(add_llvm_library name)
     endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
   endif()
+
+  get_subproject_title(subproject_title)
   if (ARG_MODULE)
-    set_target_properties(${name} PROPERTIES FOLDER "Loadable modules")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Loadable Modules")
   else()
-    set_target_properties(${name} PROPERTIES FOLDER "Libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
   endif()
 endmacro(add_llvm_library name)
 
@@ -915,7 +976,8 @@ macro(generate_llvm_objects name)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
 
-    set_target_properties(${obj_name} PROPERTIES FOLDER "Object Libraries")
+    get_subproject_title(subproject_title)
+    set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
   endif()
 
   if (ARG_GENERATE_DRIVER)
@@ -966,6 +1028,8 @@ macro(add_llvm_executable name)
   else()
     add_executable(${name} ${ALL_FILES})
   endif()
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Executables")
 
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
@@ -1005,6 +1069,17 @@ macro(add_llvm_executable name)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
+  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
+      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
+    if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+      set_property(TARGET ${name} APPEND_STRING PROPERTY
+        LINK_FLAGS " -Wl,-no_exported_symbols")
+    else()
+      message(FATAL_ERROR
+        "LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES cannot be disabled when linker does not support \"-no_exported_symbols\"")
+    endif()
+  endif()
+
   if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
     set(USE_SHARED USE_SHARED)
   endif()
@@ -1018,6 +1093,8 @@ macro(add_llvm_executable name)
       add_dependencies(${objlib} ${LLVM_COMMON_DEPENDS})
     endforeach()
   endif( LLVM_COMMON_DEPENDS )
+
+  add_custom_linker_flags(${name})
 
   if(NOT ARG_IGNORE_EXTERNALIZE_DEBUGINFO)
     llvm_externalize_debuginfo(${name})
@@ -1281,7 +1358,10 @@ function(export_executable_symbols target)
     # the size of the exported symbol table, but on other platforms we can do
     # it without any trouble.
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
-    if (APPLE)
+    # CMake doesn't set CMAKE_EXE_EXPORTS_${lang}_FLAG on Solaris, so
+    # ENABLE_EXPORTS has no effect.  While Solaris ld defaults to -rdynamic
+    # behaviour, GNU ld needs it.
+    if (APPLE OR ${CMAKE_SYSTEM_NAME} STREQUAL "SunOS")
       set_property(TARGET ${target} APPEND_STRING PROPERTY
         LINK_FLAGS " -rdynamic")
     endif()
@@ -1300,9 +1380,11 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-ar
     llvm-cov
     llvm-cxxfilt
+    llvm-dlltool
     llvm-dwp
     llvm-ranlib
     llvm-lib
+    llvm-mca
     llvm-ml
     llvm-nm
     llvm-objcopy
@@ -1367,8 +1449,10 @@ macro(llvm_add_tool project name)
     if( LLVM_BUILD_TOOLS )
       set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
     endif()
-    set_target_properties(${name} PROPERTIES FOLDER "Tools")
   endif()
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Tools")
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro(llvm_add_tool project name)
 
 macro(add_llvm_tool name)
@@ -1384,7 +1468,8 @@ macro(add_llvm_example name)
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Examples")
 endmacro(add_llvm_example name)
 
 macro(add_llvm_example_library name)
@@ -1395,7 +1480,8 @@ macro(add_llvm_example_library name)
     add_llvm_library(${name} ${ARGN})
   endif()
 
-  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Examples")
 endmacro(add_llvm_example_library name)
 
 # This is a macro that is used to create targets for executables that are needed
@@ -1406,7 +1492,8 @@ macro(add_llvm_utility name)
   endif()
 
   add_llvm_executable(${name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "Utils")
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Utils")
   if ( ${name} IN_LIST LLVM_TOOLCHAIN_UTILITIES OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if (LLVM_INSTALL_UTILS AND LLVM_BUILD_UTILS)
       get_target_export_arg(${name} LLVM export_to_llvmexports)
@@ -1429,19 +1516,20 @@ endmacro(add_llvm_utility name)
 
 macro(add_llvm_fuzzer name)
   cmake_parse_arguments(ARG "" "DUMMY_MAIN" "" ${ARGN})
+  get_subproject_title(subproject_title)
   if( LLVM_LIB_FUZZING_ENGINE )
     set(LLVM_OPTIONAL_SOURCES ${ARG_DUMMY_MAIN})
     add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
     target_link_libraries(${name} PRIVATE ${LLVM_LIB_FUZZING_ENGINE})
-    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Fuzzers")
   elseif( LLVM_USE_SANITIZE_COVERAGE )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=fuzzer")
     set(LLVM_OPTIONAL_SOURCES ${ARG_DUMMY_MAIN})
     add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
-    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Fuzzers")
   elseif( ARG_DUMMY_MAIN )
     add_llvm_executable(${name} ${ARG_DUMMY_MAIN} ${ARG_UNPARSED_ARGUMENTS})
-    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Fuzzers")
   endif()
 endmacro()
 
@@ -1521,6 +1609,13 @@ macro(add_llvm_tool_subdirectory name)
   add_llvm_external_project(${name})
 endmacro(add_llvm_tool_subdirectory)
 
+macro(add_custom_linker_flags name)
+  if (LLVM_${name}_LINKER_FLAGS)
+    message(DEBUG "Applying ${LLVM_${name}_LINKER_FLAGS} to ${name}")
+    target_link_options(${name} PRIVATE ${LLVM_${name}_LINKER_FLAGS})
+  endif()
+endmacro()
+
 function(get_project_name_from_src_var var output)
   string(REGEX MATCH "LLVM_EXTERNAL_(.*)_SOURCE_DIR"
          MACHED_TOOL "${var}")
@@ -1583,7 +1678,7 @@ function(add_unittest test_suite test_name)
 
   if (SUPPORTS_VARIADIC_MACROS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")
-  endif ()
+  endif()
   # Some parts of gtest rely on this GNU extension, don't warn on it.
   if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-gnu-zero-variadic-macro-arguments")
@@ -1595,12 +1690,20 @@ function(add_unittest test_suite test_name)
 
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
   add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+  get_subproject_title(subproject_title)
+  set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
   # The runtime benefits of LTO don't outweight the compile time costs for tests.
   if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,--lto-O0")
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
     elseif(LINKER_IS_LLD_LINK)
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " /opt:lldlto=0")
@@ -1610,6 +1713,8 @@ function(add_unittest test_suite test_name)
     endif()
   endif()
 
+  target_link_options(${test_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   # libpthreads overrides some standard library symbols, so main
@@ -1618,10 +1723,6 @@ function(add_unittest test_suite test_name)
   target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
 
   add_dependencies(${test_suite} ${test_name})
-  get_target_property(test_suite_folder ${test_suite} FOLDER)
-  if (test_suite_folder)
-    set_property(TARGET ${test_name} PROPERTY FOLDER "${test_suite_folder}")
-  endif ()
 endfunction()
 
 # Use for test binaries that call llvm::getInputFileDirectory(). Use of this
@@ -1644,7 +1745,8 @@ function(add_benchmark benchmark_name)
   add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
-  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "Utils")
+  get_subproject_title(subproject_title)
+  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "${subproject_title}/Benchmarks")
   target_link_libraries(${benchmark_name} PRIVATE benchmark)
 endfunction()
 
@@ -1709,10 +1811,15 @@ endfunction()
 # use it and can't be in a lit module. Use with make_paths_relative().
 string(CONCAT LLVM_LIT_PATH_FUNCTION
   "# Allow generated file to be relocatable.\n"
-  "from pathlib import Path\n"
+  "import os\n"
+  "import platform\n"
   "def path(p):\n"
   "    if not p: return ''\n"
-  "    return str((Path(__file__).parent / p).resolve())\n"
+  "    # Follows lit.util.abs_path_preserve_drive, which cannot be imported here.\n"
+  "    if platform.system() == 'Windows':\n"
+  "        return os.path.abspath(os.path.join(os.path.dirname(__file__), p))\n"
+  "    else:\n"
+  "        return os.path.realpath(os.path.join(os.path.dirname(__file__), p))\n"
   )
 
 # This function provides an automatic way to 'configure'-like generate a file
@@ -1928,6 +2035,8 @@ function(add_lit_target target comment)
       COMMAND ${CMAKE_COMMAND} -E echo "${target} does nothing, no tools built.")
     message(STATUS "${target} does nothing.")
   endif()
+  get_subproject_title(subproject_title)
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tests")
 
   if (ARG_DEPENDS)
     add_dependencies(${target} ${ARG_DEPENDS})
@@ -1935,6 +2044,7 @@ function(add_lit_target target comment)
 
   # Tests should be excluded from "Build Solution".
   set_target_properties(${target} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+  set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # Convert a target name like check-clang to a variable name like CLANG.
@@ -2009,7 +2119,8 @@ function(add_lit_testsuites project directory)
     cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
     if (NOT ARG_FOLDER)
-      set(ARG_FOLDER "Test Subdirectories")
+      get_subproject_title(subproject_title)
+      set(ARG_FOLDER "${subproject_title}/Tests/LIT Testsuites")
     endif()
 
     # Search recursively for test directories by assuming anything not
@@ -2045,7 +2156,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "" "COMPONENT" "" ${ARGN})
+  cmake_parse_arguments(ARG "FULL_DEST" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -2059,7 +2170,11 @@ function(llvm_install_library_symlink name dest type)
   endif()
 
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
-  set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+  if (ARG_FULL_DEST)
+    set(full_dest ${dest})
+  else()
+    set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+  endif()
 
   if(LLVM_USE_SYMLINKS)
     set(LLVM_LINK_OR_COPY create_symlink)
@@ -2207,7 +2322,8 @@ function(llvm_add_tool_symlink project link_name target)
       set(should_build_all ALL)
     endif()
     add_custom_target(${target_name} ${should_build_all} DEPENDS ${target} ${output_path})
-    set_target_properties(${target_name} PROPERTIES FOLDER Tools)
+    get_subproject_title(subproject_title)
+    set_target_properties(${target_name} PROPERTIES FOLDER "${subproject_title}/Tools")
 
     # Make sure both the link and target are toolchain tools
     if (${link_name} IN_LIST LLVM_TOOLCHAIN_TOOLS AND ${target} IN_LIST LLVM_TOOLCHAIN_TOOLS)
@@ -2356,7 +2472,7 @@ function(llvm_setup_rpath name)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-z,origin ")
     endif()
-    if(LLVM_LINKER_IS_GNULD)
+    if(LLVM_LINKER_IS_GNULD AND NOT ${LLVM_LIBRARY_OUTPUT_INTDIR} STREQUAL "")
       # $ORIGIN is not interpreted at link time by ld.bfd
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-rpath-link,${LLVM_LIBRARY_OUTPUT_INTDIR} ")
@@ -2467,5 +2583,7 @@ function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
   if(LLVM_USE_HOST_TOOLS AND NOT ${setting_name})
     build_native_tool(${tool_name} exe_name DEPENDS ${tool_name})
     add_custom_target(${target_var_name} DEPENDS ${exe_name})
+    get_subproject_title(subproject_title)
+    set_target_properties(${target_var_name} PROPERTIES FOLDER "${subproject_title}/Native")
   endif()
 endfunction()

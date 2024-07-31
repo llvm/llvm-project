@@ -12,6 +12,7 @@
 #include "Lexer.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
@@ -36,6 +37,9 @@ struct SymbolState {
   DenseMap<const OpAsmDialectInterface *,
            llvm::StringMap<std::pair<std::string, AsmDialectResourceHandle>>>
       dialectResources;
+
+  /// A map from unique integer identifier to DistinctAttr.
+  DenseMap<uint64_t, DistinctAttr> distinctAttributes;
 };
 
 //===----------------------------------------------------------------------===//
@@ -50,8 +54,8 @@ struct ParserState {
               AsmParserCodeCompleteContext *codeCompleteContext)
       : config(config),
         lex(sourceMgr, config.getContext(), codeCompleteContext),
-        curToken(lex.lexToken()), symbols(symbols), asmState(asmState),
-        codeCompleteContext(codeCompleteContext) {}
+        curToken(lex.lexToken()), lastToken(Token::error, ""), symbols(symbols),
+        asmState(asmState), codeCompleteContext(codeCompleteContext) {}
   ParserState(const ParserState &) = delete;
   void operator=(const ParserState &) = delete;
 
@@ -64,8 +68,15 @@ struct ParserState {
   /// This is the next token that hasn't been consumed yet.
   Token curToken;
 
+  /// This is the last token that has been consumed.
+  Token lastToken;
+
   /// The current state for symbol parsing.
   SymbolState &symbols;
+
+  /// Stack of potentially cyclic mutable attributes or type currently being
+  /// parsed.
+  SetVector<const void *> cyclicParsingStack;
 
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.

@@ -68,7 +68,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     Location loc = dimOp->getLoc();
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
         dimOp, resultShape,
-        rewriter.createOrFold<arith::ConstantIndexOp>(loc, *dimIndex));
+        rewriter.create<arith::ConstantIndexOp>(loc, *dimIndex).getResult());
     return success();
   }
 };
@@ -94,6 +94,9 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
                                  reifiedResultShapes)))
       return failure();
     unsigned resultNumber = dimValue.getResultNumber();
+    // Do not apply pattern if the IR is invalid (dim out of bounds).
+    if ((size_t)(*dimIndex) >= reifiedResultShapes[resultNumber].size())
+      return rewriter.notifyMatchFailure(dimOp, "dimension is out of bounds");
     Value replacement = getValueOrCreateConstantIndexOp(
         rewriter, dimOp.getLoc(), reifiedResultShapes[resultNumber][*dimIndex]);
     rewriter.replaceOp(dimOp, replacement);

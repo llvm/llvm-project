@@ -159,6 +159,11 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
                                     /*hasElseRegion*/ false);
     ifInbound.getThenRegion().takeBody(op.getRegion());
     Block &thenBlock = ifInbound.getThenRegion().front();
+    // Replace the scf.reduce terminator with an scf.yield terminator.
+    Operation *reduceOp = thenBlock.getTerminator();
+    b.setInsertionPointToEnd(&thenBlock);
+    b.create<scf::YieldOp>(reduceOp->getLoc());
+    reduceOp->erase();
     b.setInsertionPointToStart(innerLoop.getBody());
     for (const auto &ivs : llvm::enumerate(llvm::zip(
              innerLoop.getInductionVars(), outerLoop.getInductionVars()))) {
@@ -195,6 +200,12 @@ struct ParallelLoopTiling
   }
 
   void runOnOperation() override {
+    for (auto tileSize : tileSizes)
+      if (tileSize == 0) {
+        mlir::emitError(mlir::UnknownLoc::get(&Pass::getContext()),
+                        "tile size cannot be 0");
+        return signalPassFailure();
+      }
     auto *parentOp = getOperation();
     SmallVector<ParallelOp, 2> innermostPloops;
     getInnermostParallelLoops(parentOp, innermostPloops);

@@ -270,17 +270,6 @@ unsigned AVRMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return getExprOpValue(MO.getExpr(), Fixups, STI);
 }
 
-void AVRMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
-                                       const MCSubtargetInfo &STI,
-                                       SmallVectorImpl<char> &CB) const {
-  size_t WordCount = Size / 2;
-
-  for (int64_t i = WordCount - 1; i >= 0; --i) {
-    uint16_t Word = (Val >> (i * 16)) & 0xFFFF;
-    support::endian::write(CB, Word, support::endianness::little);
-  }
-}
-
 void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                          SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
@@ -293,7 +282,11 @@ void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI,
   assert(Size > 0 && "Instruction size cannot be zero");
 
   uint64_t BinaryOpCode = getBinaryCodeForInstr(MI, Fixups, STI);
-  emitInstruction(BinaryOpCode, Size, STI, CB);
+
+  for (int64_t i = Size / 2 - 1; i >= 0; --i) {
+    uint16_t Word = (BinaryOpCode >> (i * 16)) & 0xFFFF;
+    support::endian::write(CB, Word, llvm::endianness::little);
+  }
 }
 
 MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,

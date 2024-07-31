@@ -17,18 +17,18 @@
 ; STATIC-DAG: R_MIPS_32 00000000 .gcc_except_table
 
 ; PIC-LABEL: Relocation section '.rel.eh_frame'
-; PIC-DAG: R_MIPS_32   00000000 DW.ref.__gxx_personality_v0
-; PIC-DAG: R_MIPS_PC32
-; PIC-DAG: R_MIPS_32   00000000 .gcc_except_table
+; PIC-DAG: R_MIPS_PC32   00000000 DW.ref.__gxx_personality_v0
+; PIC-DAG: R_MIPS_PC32   00000000 .L0
+; PIC-DAG: R_MIPS_PC32   00000000 .L0
 
 ; CHECK-READELF: DW.ref.__gxx_personality_v0
 ; CHECK-READELF-STATIC-NEXT: R_MIPS_32 00000000 .text
 ; CHECK-READELF-PIC-NEXT: R_MIPS_PC32
 ; CHECK-READELF-NEXT: .gcc_except_table
 
-; EXCEPT-TABLE-STATIC: 0000 ff9b1501 0c011500 00150e23 01231e00  ...........#.#..
+; EXCEPT-TABLE-STATIC: 0000 ff9b1501 0c001400 00140e22 01221e00 ..........."."..
 ; EXCEPT-TABLE-STATIC: 0010 00010000 00000000
-; EXCEPT-TABLE-PIC:    0000 ff9b1501 0c012d00 002d133f 013f2a00 ......-..-.?.?*.
+; EXCEPT-TABLE-PIC:    0000 ff9b1501 0c002c00 002c123e 013e2a00 ......,..,.>.>*.
 ; EXCEPT-TABLE-PIC:    0010 00010000 00000000                    ........
 
 @_ZTIi = external constant ptr

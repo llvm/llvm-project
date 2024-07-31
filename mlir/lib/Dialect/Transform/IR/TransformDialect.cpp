@@ -8,9 +8,10 @@
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Analysis/CallGraph.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SCCIterator.h"
 
@@ -28,10 +29,15 @@ void transform::detail::checkImplementsTransformOpInterface(
       *RegisteredOperationName::lookup(name, context);
   assert((opName.hasInterface<TransformOpInterface>() ||
           opName.hasInterface<PatternDescriptorOpInterface>() ||
+          opName.hasInterface<ConversionPatternDescriptorOpInterface>() ||
+          opName.hasInterface<TypeConverterBuilderOpInterface>() ||
           opName.hasTrait<OpTrait::IsTerminator>()) &&
          "non-terminator ops injected into the transform dialect must "
-         "implement TransformOpInterface or PatternDescriptorOpInterface");
-  if (!opName.hasInterface<PatternDescriptorOpInterface>()) {
+         "implement TransformOpInterface or PatternDescriptorOpInterface or "
+         "ConversionPatternDescriptorOpInterface");
+  if (!opName.hasInterface<PatternDescriptorOpInterface>() &&
+      !opName.hasInterface<ConversionPatternDescriptorOpInterface>() &&
+      !opName.hasInterface<TypeConverterBuilderOpInterface>()) {
     assert(opName.hasInterface<MemoryEffectOpInterface>() &&
            "ops injected into the transform dialect must implement "
            "MemoryEffectsOpInterface");
@@ -60,6 +66,7 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
   initializeTypes();
+  initializeLibraryModule();
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {
@@ -82,6 +89,20 @@ void transform::TransformDialect::printType(Type type,
   auto it = typePrintingHooks.find(type.getTypeID());
   assert(it != typePrintingHooks.end() && "printing unknown type");
   it->getSecond()(type, printer);
+}
+
+LogicalResult transform::TransformDialect::loadIntoLibraryModule(
+    ::mlir::OwningOpRef<::mlir::ModuleOp> &&library) {
+  return detail::mergeSymbolsInto(getLibraryModule(), std::move(library));
+}
+
+void transform::TransformDialect::initializeLibraryModule() {
+  MLIRContext *context = getContext();
+  auto loc =
+      FileLineColLoc::get(context, "<transform-dialect-library-module>", 0, 0);
+  libraryModule = ModuleOp::create(loc, "__transform_library");
+  libraryModule.get()->setAttr(TransformDialect::kWithNamedSequenceAttrName,
+                               UnitAttr::get(context));
 }
 
 void transform::TransformDialect::reportDuplicateTypeRegistration(
@@ -151,6 +172,14 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
   }
   if (attribute.getName().getValue() == kArgConsumedAttrName ||
       attribute.getName().getValue() == kArgReadOnlyAttrName) {
+    if (!llvm::isa<UnitAttr>(attribute.getValue())) {
+      return op->emitError()
+             << attribute.getName() << " must be a unit attribute";
+    }
+    return success();
+  }
+  if (attribute.getName().getValue() ==
+      FindPayloadReplacementOpInterface::kSilenceTrackingFailuresAttrName) {
     if (!llvm::isa<UnitAttr>(attribute.getValue())) {
       return op->emitError()
              << attribute.getName() << " must be a unit attribute";

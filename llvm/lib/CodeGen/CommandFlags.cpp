@@ -18,10 +18,12 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -58,6 +60,7 @@ CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
 CGOPT(ThreadModel::Model, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
+CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
@@ -81,16 +84,19 @@ CGOPT(bool, StackSymbolOrdering)
 CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
-CGOPT(bool, RelaxELFRelocations)
+CGOPT(bool, DisableIntegratedAS)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
+CGOPT(bool, EnableBBAddrMap)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
 CGOPT_EXP(bool, EmulatedTLS)
+CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
+CGOPT(bool, SeparateNamedSections)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
@@ -161,6 +167,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                  clEnumValN(CodeModel::Large, "large", "Large code model")));
   CGBINDOPT(CodeModel);
 
+  static cl::opt<uint64_t> LargeDataThreshold(
+      "large-data-threshold",
+      cl::desc("Choose large data threshold for x86_64 medium code model"),
+      cl::init(0));
+  CGBINDOPT(LargeDataThreshold);
+
   static cl::opt<ExceptionHandling> ExceptionModel(
       "exception-model", cl::desc("exception model"),
       cl::init(ExceptionHandling::None),
@@ -179,15 +191,15 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(ExceptionModel);
 
   static cl::opt<CodeGenFileType> FileType(
-      "filetype", cl::init(CGFT_AssemblyFile),
+      "filetype", cl::init(CodeGenFileType::AssemblyFile),
       cl::desc(
           "Choose a file type (not all types are supported by all targets):"),
-      cl::values(
-          clEnumValN(CGFT_AssemblyFile, "asm", "Emit an assembly ('.s') file"),
-          clEnumValN(CGFT_ObjectFile, "obj",
-                     "Emit a native object ('.o') file"),
-          clEnumValN(CGFT_Null, "null",
-                     "Emit nothing, for performance testing")));
+      cl::values(clEnumValN(CodeGenFileType::AssemblyFile, "asm",
+                            "Emit an assembly ('.s') file"),
+                 clEnumValN(CodeGenFileType::ObjectFile, "obj",
+                            "Emit a native object ('.o') file"),
+                 clEnumValN(CodeGenFileType::Null, "null",
+                            "Emit nothing, for performance testing")));
   CGBINDOPT(FileType);
 
   static cl::opt<FramePointerKind> FramePointerUsage(
@@ -199,6 +211,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
                      "Disable frame pointer elimination for non-leaf frame"),
+          clEnumValN(FramePointerKind::Reserved, "reserved",
+                     "Enable frame pointer elimination, but reserve the frame "
+                     "pointer register"),
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
@@ -350,13 +365,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                                 cl::init(false));
   CGBINDOPT(UseCtors);
 
-  static cl::opt<bool> RelaxELFRelocations(
-      "relax-elf-relocations",
-      cl::desc(
-          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
-      cl::init(true));
-  CGBINDOPT(RelaxELFRelocations);
-
   static cl::opt<bool> DataSections(
       "data-sections", cl::desc("Emit data into separate sections"),
       cl::init(false));
@@ -379,6 +387,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(true));
   CGBINDOPT(XCOFFTracebackTable);
 
+  static cl::opt<bool> EnableBBAddrMap(
+      "basic-block-address-map",
+      cl::desc("Emit the basic block address map section"), cl::init(false));
+  CGBINDOPT(EnableBBAddrMap);
+
   static cl::opt<std::string> BBSections(
       "basic-block-sections",
       cl::desc("Emit basic blocks into separate sections"),
@@ -394,6 +407,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       "emulated-tls", cl::desc("Use emulated TLS model"), cl::init(false));
   CGBINDOPT(EmulatedTLS);
 
+  static cl::opt<bool> EnableTLSDESC(
+      "enable-tlsdesc", cl::desc("Enable the use of TLS Descriptors"),
+      cl::init(false));
+  CGBINDOPT(EnableTLSDESC);
+
   static cl::opt<bool> UniqueSectionNames(
       "unique-section-names", cl::desc("Give unique names to every section"),
       cl::init(true));
@@ -404,6 +422,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Give unique names to every basic block section"),
       cl::init(false));
   CGBINDOPT(UniqueBasicBlockSectionNames);
+
+  static cl::opt<bool> SeparateNamedSections(
+      "separate-named-sections",
+      cl::desc("Use separate unique sections for named sections"),
+      cl::init(false));
+  CGBINDOPT(SeparateNamedSections);
 
   static cl::opt<EABI> EABIVersion(
       "meabi", cl::desc("Set EABI type (default depends on triple):"),
@@ -487,6 +511,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
+  static cl::opt<bool> DisableIntegratedAS(
+      "no-integrated-as", cl::desc("Disable integrated assembler"),
+      cl::init(false));
+  CGBINDOPT(DisableIntegratedAS);
+
 #undef CGBINDOPT
 
   mc::RegisterMCTargetOptionsFlags();
@@ -540,18 +569,22 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
-  Options.RelaxELFRelocations = getRelaxELFRelocations();
+  Options.DisableIntegratedAS = getDisableIntegratedAS();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();
   Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
   Options.XCOFFTracebackTable = getXCOFFTracebackTable();
+  Options.BBAddrMap = getEnableBBAddrMap();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
+  Options.SeparateNamedSections = getSeparateNamedSections();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS =
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
+  Options.EnableTLSDESC =
+      getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
@@ -591,12 +624,9 @@ std::string codegen::getFeaturesStr() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -611,12 +641,9 @@ std::vector<std::string> codegen::getFeatureList() {
   // This is necessary for x86 where the CPU might not support all the
   // features the autodetected CPU name lists in the target. For example,
   // not all Sandybridge processors support AVX.
-  if (getMCPU() == "native") {
-    StringMap<bool> HostFeatures;
-    if (sys::getHostCPUFeatures(HostFeatures))
-      for (const auto &[Feature, IsEnabled] : HostFeatures)
-        Features.AddFeature(Feature, IsEnabled);
-  }
+  if (getMCPU() == "native")
+    for (const auto &[Feature, IsEnabled] : sys::getHostCPUFeatures())
+      Features.AddFeature(Feature, IsEnabled);
 
   for (auto const &MAttr : getMAttrs())
     Features.AddFeature(MAttr);
@@ -663,6 +690,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (getFramePointerUsage() == FramePointerKind::NonLeaf)
       NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (getFramePointerUsage() == FramePointerKind::Reserved)
+      NewAttrs.addAttribute("frame-pointer", "reserved");
     else if (getFramePointerUsage() == FramePointerKind::None)
       NewAttrs.addAttribute("frame-pointer", "none");
   }
@@ -717,4 +746,25 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
                                     Module &M) {
   for (Function &F : M)
     setFunctionAttributes(CPU, Features, F);
+}
+
+Expected<std::unique_ptr<TargetMachine>>
+codegen::createTargetMachineForTriple(StringRef TargetTriple,
+                                      CodeGenOptLevel OptLevel) {
+  Triple TheTriple(TargetTriple);
+  std::string Error;
+  const auto *TheTarget =
+      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+  if (!TheTarget)
+    return createStringError(inconvertibleErrorCode(), Error);
+  auto *Target = TheTarget->createTargetMachine(
+      TheTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
+      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
+      codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+      OptLevel);
+  if (!Target)
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("could not allocate target machine for ") +
+                                 TargetTriple);
+  return std::unique_ptr<TargetMachine>(Target);
 }

@@ -11,6 +11,7 @@ add_clang_library(clangStaticAnalyzerCore
   BlockCounter.cpp
   BugReporter.cpp
   BugReporterVisitors.cpp
+  BugSuppression.cpp
   CallDescription.cpp
   CallEvent.cpp
   Checker.cpp
@@ -50,6 +51,7 @@ add_clang_library(clangStaticAnalyzerCore
   SymbolManager.cpp
   TextDiagnostics.cpp
   WorkList.cpp
+  Z3CrosscheckVisitor.cpp
 
   LINK_LIBS
   clangAST

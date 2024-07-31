@@ -38,7 +38,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSHA2 = false;
   bool HasSHA3 = false;
   bool HasSM4 = false;
-  bool HasUnaligned = true;
   bool HasFullFP16 = false;
   bool HasDotProd = false;
   bool HasFP16FML = false;
@@ -50,6 +49,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasMatMul = false;
   bool HasBFloat16 = false;
   bool HasSVE2 = false;
+  bool HasSVE2p1 = false;
   bool HasSVE2AES = false;
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
@@ -68,8 +68,10 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasCCDP = false;
   bool HasFRInt3264 = false;
   bool HasSME = false;
+  bool HasSME2 = false;
   bool HasSMEF64F64 = false;
   bool HasSMEI16I64 = false;
+  bool HasSME2p1 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -82,6 +84,9 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasNoSVE = false;
   bool HasFMV = true;
   bool HasGCS = false;
+  bool HasRCPC3 = false;
+  bool HasSMEFA64 = false;
+  bool HasPAuthLR = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
@@ -104,10 +109,6 @@ public:
   unsigned multiVersionSortPriority(StringRef Name) const override;
   unsigned multiVersionFeatureCost() const override;
 
-  bool
-  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
-                 StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override;
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
@@ -142,6 +143,8 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV94A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV95A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -150,7 +153,6 @@ public:
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
-  StringRef getFeatureDependencies(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
@@ -159,7 +161,7 @@ public:
                             DiagnosticsEngine &Diags) override;
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool supportsTargetAttributeTune() const override { return true; }
-
+  bool supportsCpuSupports() const override { return true; }
   bool checkArithmeticFenceSupported() const override { return true; }
 
   bool hasBFloat16Type() const override;
@@ -189,10 +191,17 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
+  bool validatePointerAuthKey(const llvm::APSInt &value) const override;
+
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
+
+  bool validateTarget(DiagnosticsEngine &Diags) const override;
+
+  bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
+                                      bool &HasSizeMismatch) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {
@@ -232,7 +241,8 @@ public:
   TargetInfo::CallingConvKind
   getCallingConvKind(bool ClangABICompat4) const override;
 
-  unsigned getMinGlobalAlign(uint64_t TypeSize) const override;
+  unsigned getMinGlobalAlign(uint64_t TypeSize,
+                             bool HasNonWeakDef) const override;
 };
 
 // ARM64 MinGW target

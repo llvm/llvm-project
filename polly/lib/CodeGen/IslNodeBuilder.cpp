@@ -1212,7 +1212,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   BasicBlock *EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   auto *Alloca = new AllocaInst(AccInstTy, DL.getAllocaAddrSpace(),
                                 AccInst->getName() + ".preload.s2a",
-                                &*EntryBB->getFirstInsertionPt());
+                                EntryBB->getFirstInsertionPt());
   Builder.CreateStore(PreloadVal, Alloca);
   ValueMapT PreloadedPointer;
   PreloadedPointer[PreloadVal] = AccInst;
@@ -1292,9 +1292,9 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       unsigned Size = SAI->getElemSizeInBytes();
 
       // Insert the malloc call at polly.start
-      auto InstIt = std::get<0>(StartExitBlocks)->getTerminator();
-      auto *CreatedArray = CallInst::CreateMalloc(
-          &*InstIt, IntPtrTy, SAI->getElementType(),
+      Builder.SetInsertPoint(std::get<0>(StartExitBlocks)->getTerminator());
+      auto *CreatedArray = Builder.CreateMalloc(
+          IntPtrTy, SAI->getElementType(),
           ConstantInt::get(Type::getInt64Ty(Ctx), Size),
           ConstantInt::get(Type::getInt64Ty(Ctx), ArraySizeInt), nullptr,
           SAI->getName());
@@ -1302,16 +1302,17 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       SAI->setBasePtr(CreatedArray);
 
       // Insert the free call at polly.exiting
-      CallInst::CreateFree(CreatedArray,
-                           std::get<1>(StartExitBlocks)->getTerminator());
+      Builder.SetInsertPoint(std::get<1>(StartExitBlocks)->getTerminator());
+      Builder.CreateFree(CreatedArray);
     } else {
       auto InstIt = Builder.GetInsertBlock()
                         ->getParent()
                         ->getEntryBlock()
-                        .getTerminator();
+                        .getTerminator()
+                        ->getIterator();
 
       auto *CreatedArray = new AllocaInst(NewArrayType, DL.getAllocaAddrSpace(),
-                                          SAI->getName(), &*InstIt);
+                                          SAI->getName(), InstIt);
       if (PollyTargetFirstLevelCacheLineSize)
         CreatedArray->setAlignment(Align(PollyTargetFirstLevelCacheLineSize));
       SAI->setBasePtr(CreatedArray);

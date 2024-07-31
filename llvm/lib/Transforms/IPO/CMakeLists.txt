@@ -11,6 +11,8 @@ add_llvm_component_library(LLVMipo
   CrossDSOCFI.cpp
   DeadArgumentElimination.cpp
   ElimAvailExtern.cpp
+  EmbedBitcodePass.cpp
+  ExpandVariadics.cpp
   ExtractGV.cpp
   ForceFunctionAttrs.cpp
   FunctionAttrs.cpp
@@ -34,6 +36,7 @@ add_llvm_component_library(LLVMipo
   PartialInlining.cpp
   SampleContextTracker.cpp
   SampleProfile.cpp
+  SampleProfileMatcher.cpp
   SampleProfileProbe.cpp
   SCCP.cpp
   StripDeadPrototypes.cpp

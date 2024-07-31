@@ -44,7 +44,7 @@ static bool recordIsNotEmpty(const RecordDecl *RD) {
   // We consider a record decl to be empty if it contains only unnamed bit-
   // fields, zero-width fields, and fields of empty record type.
   for (const auto *FD : RD->fields()) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
     if (FD->isZeroSize(FD->getASTContext()))
       continue;
@@ -64,7 +64,7 @@ static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
     QualType ty = vd->getType();
     if (const auto *RD = ty->getAsRecordDecl())
       return recordIsNotEmpty(RD);
-    return ty->isScalarType() || ty->isVectorType() || ty->isRVVType();
+    return ty->isScalarType() || ty->isVectorType() || ty->isRVVSizelessBuiltinType();
   }
   return false;
 }
@@ -896,7 +896,7 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
     hadUse[currentBlock] = true;
     hadAnyUse = true;
   }
-  
+
   /// Called when the uninitialized variable analysis detects the
   /// idiom 'int x = x'.  All other uses of 'x' within the initializer
   /// are handled by handleUseOfUninitVariable.

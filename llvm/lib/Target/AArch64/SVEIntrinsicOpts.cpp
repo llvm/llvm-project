@@ -31,6 +31,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -138,8 +139,8 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
     return false;
 
   // Find the ptrue with the most lanes.
-  auto *MostEncompassingPTrue = *std::max_element(
-      PTrues.begin(), PTrues.end(), [](auto *PTrue1, auto *PTrue2) {
+  auto *MostEncompassingPTrue =
+      *llvm::max_element(PTrues, [](auto *PTrue1, auto *PTrue2) {
         auto *PTrue1VTy = cast<ScalableVectorType>(PTrue1->getType());
         auto *PTrue2VTy = cast<ScalableVectorType>(PTrue2->getType());
         return PTrue1VTy->getElementCount().getKnownMinValue() <
@@ -325,10 +326,7 @@ bool SVEIntrinsicOpts::optimizePredicateStore(Instruction *I) {
   IRBuilder<> Builder(I->getContext());
   Builder.SetInsertPoint(I);
 
-  auto *PtrBitCast = Builder.CreateBitCast(
-      Store->getPointerOperand(),
-      PredType->getPointerTo(Store->getPointerAddressSpace()));
-  Builder.CreateStore(BitCast->getOperand(0), PtrBitCast);
+  Builder.CreateStore(BitCast->getOperand(0), Store->getPointerOperand());
 
   Store->eraseFromParent();
   if (IntrI->getNumUses() == 0)
@@ -385,10 +383,7 @@ bool SVEIntrinsicOpts::optimizePredicateLoad(Instruction *I) {
   IRBuilder<> Builder(I->getContext());
   Builder.SetInsertPoint(Load);
 
-  auto *PtrBitCast = Builder.CreateBitCast(
-      Load->getPointerOperand(),
-      PredType->getPointerTo(Load->getPointerAddressSpace()));
-  auto *LoadPred = Builder.CreateLoad(PredType, PtrBitCast);
+  auto *LoadPred = Builder.CreateLoad(PredType, Load->getPointerOperand());
 
   BitCast->replaceAllUsesWith(LoadPred);
   BitCast->eraseFromParent();

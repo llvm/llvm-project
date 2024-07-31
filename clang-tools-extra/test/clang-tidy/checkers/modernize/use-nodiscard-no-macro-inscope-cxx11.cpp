@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-nodiscard %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-nodiscard.ReplacementString, value: 'CUSTOM_NO_DISCARD'}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: 'CUSTOM_NO_DISCARD'}}"
 
 // As if the macro was not defined.
 // #define CUSTOM_NO_DISCARD __attribute_((warn_unused_result))

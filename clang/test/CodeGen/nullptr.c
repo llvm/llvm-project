@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S %s -std=c2x -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -std=c2x -emit-llvm -o - | FileCheck %s
 
 // Test that null <-> nullptr_t conversions work as expected.
 typedef typeof(nullptr) nullptr_t;

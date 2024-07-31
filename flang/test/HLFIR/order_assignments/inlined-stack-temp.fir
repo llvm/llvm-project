@@ -237,7 +237,7 @@ func.func @test_where_mask_save(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i1) -> !fir.logical<4>
 // CHECK:             hlfir.yield_element %[[VAL_11]] : !fir.logical<4>
 // CHECK:           }
-// CHECK:           %[[VAL_12:.*]]:3 = hlfir.associate %[[VAL_13:.*]](%[[VAL_5]]) {uniq_name = ".tmp.forall"} : (!hlfir.expr<?x!fir.logical<4>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>, i1)
+// CHECK:           %[[VAL_12:.*]]:3 = hlfir.associate %[[VAL_13:.*]](%[[VAL_5]]) {uniq_name = ".tmp.where"} : (!hlfir.expr<?x!fir.logical<4>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>, i1)
 // CHECK:           hlfir.destroy %[[VAL_13]] : !hlfir.expr<?x!fir.logical<4>>
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_4]]#1 step %[[VAL_14]] {
@@ -282,7 +282,6 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:           %[[VAL_7:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_5]]:%[[VAL_4]]:%[[VAL_3]])  shape %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
 // CHECK:           %[[VAL_11:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_7]], %[[VAL_9]] : index
 // CHECK:           %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_9]] : index
@@ -292,14 +291,15 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:           %[[VAL_17:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_18:.*]] = arith.constant 1 : index
 // CHECK:           fir.store %[[VAL_17]] to %[[VAL_2]] : !fir.ref<index>
-// CHECK:           %[[VAL_19:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_16]] {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[VAL_19:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_16]] {bindc_name = ".tmp.where", uniq_name = ""}
 // CHECK:           %[[VAL_20:.*]] = fir.shape %[[VAL_16]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_20]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_20]]) {uniq_name = ".tmp.where"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.do_loop %[[VAL_22:.*]] = %[[VAL_9]] to %[[VAL_7]] step %[[VAL_9]] {
 // CHECK:             %[[VAL_23:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_22]])  : (!fir.ref<!fir.array<10x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.logical<4>) -> i1
 // CHECK:             fir.if %[[VAL_25]] {
+// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_5]]:%[[VAL_4]]:%[[VAL_3]])  shape %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
 // CHECK:               %[[VAL_26:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_22]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<i32>
 // CHECK:               %[[VAL_28:.*]] = fir.load %[[VAL_2]] : !fir.ref<index>

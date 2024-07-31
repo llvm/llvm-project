@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"
 
 using namespace llvm;
@@ -88,6 +89,8 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     MF.print(OS);
   }
 
+  MFProps.reset(ClearedProperties);
+
   bool RV = runOnMachineFunction(MF);
 
   if (ShouldEmitSizeRemarks) {
@@ -114,7 +117,6 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   }
 
   MFProps.set(SetProperties);
-  MFProps.reset(ClearedProperties);
 
   // For --print-changed, print if the serialized MF has changed. Modes other
   // than quiet/verbose are unimplemented and treated the same as 'quiet'.

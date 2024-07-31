@@ -1,14 +1,14 @@
-; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca \
+; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca -asan-use-stack-safety=0 \
 ; RUN:       -asan-use-after-return=runtime -S | FileCheck %s \
 ; RUN:       --check-prefixes=CHECK,CHECK-RUNTIME
-; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca -asan-mapping-scale=5 \
+; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca -asan-mapping-scale=5 -asan-use-stack-safety=0 \
 ; RUN:       -asan-use-after-return=runtime -S | FileCheck %s \
 ; RUN:       --check-prefixes=CHECK,CHECK-RUNTIME
-; RUN: opt < %s -passes=asan  -asan-stack-dynamic-alloca \
+; RUN: opt < %s -passes=asan  -asan-stack-dynamic-alloca -asan-use-stack-safety=0 \
 ; RUN:       -asan-use-after-return=always -S | FileCheck %s \
 ; RUN:       --check-prefixes=CHECK,CHECK-ALWAYS \
 ; RUN:       --implicit-check-not=__asan_option_detect_stack_use_after_return
-; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca \
+; RUN: opt < %s -passes=asan -asan-stack-dynamic-alloca -asan-use-stack-safety=0 \
 ; RUN:       -asan-use-after-return=always -S | FileCheck %s \
 ; RUN:       --check-prefixes=CHECK,CHECK-ALWAYS \
 ; RUN:       --implicit-check-not=__asan_option_detect_stack_use_after_return

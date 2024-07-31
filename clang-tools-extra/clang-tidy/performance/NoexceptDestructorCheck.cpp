@@ -7,51 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "NoexceptDestructorCheck.h"
-#include "../utils/LexerUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
+// FixItHint - comment added to fix list.rst generation in add_new_check.py.
+// Do not remove. Fixes are generated in base class.
+
 namespace clang::tidy::performance {
 
 void NoexceptDestructorCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      functionDecl(unless(isDeleted()), cxxDestructorDecl()).bind("decl"),
-      this);
+  Finder->addMatcher(functionDecl(unless(isDeleted()), cxxDestructorDecl())
+                         .bind(BindFuncDeclName),
+                     this);
 }
 
-void NoexceptDestructorCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
-  assert(FuncDecl);
+DiagnosticBuilder
+NoexceptDestructorCheck::reportMissingNoexcept(const FunctionDecl *FuncDecl) {
+  return diag(FuncDecl->getLocation(), "destructors should "
+                                       "be marked noexcept");
+}
 
-  if (SpecAnalyzer.analyze(FuncDecl) !=
-      utils::ExceptionSpecAnalyzer::State::Throwing)
-    return;
-
-  // Don't complain about nothrow(false), but complain on nothrow(expr)
-  // where expr evaluates to false.
-  const auto *ProtoType = FuncDecl->getType()->castAs<FunctionProtoType>();
-  const Expr *NoexceptExpr = ProtoType->getNoexceptExpr();
-  if (NoexceptExpr) {
-    NoexceptExpr = NoexceptExpr->IgnoreImplicit();
-    if (!isa<CXXBoolLiteralExpr>(NoexceptExpr)) {
-      diag(NoexceptExpr->getExprLoc(),
-           "noexcept specifier on the destructor evaluates to 'false'");
-    }
-    return;
-  }
-
-  auto Diag = diag(FuncDecl->getLocation(), "destructors should "
-                                            "be marked noexcept");
-
-  // Add FixIt hints.
-  const SourceManager &SM = *Result.SourceManager;
-
-  const SourceLocation NoexceptLoc =
-      utils::lexer::getLocationForNoexceptSpecifier(FuncDecl, SM);
-  if (NoexceptLoc.isValid())
-    Diag << FixItHint::CreateInsertion(NoexceptLoc, " noexcept ");
+void NoexceptDestructorCheck::reportNoexceptEvaluatedToFalse(
+    const FunctionDecl *FuncDecl, const Expr *NoexceptExpr) {
+  diag(NoexceptExpr->getExprLoc(),
+       "noexcept specifier on the destructor evaluates to 'false'");
 }
 
 } // namespace clang::tidy::performance

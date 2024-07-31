@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c++ -triple x86_64-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 
-// rdar: // 8399655
 @interface TestClass
 @property (readonly) int myProperty;
 - (int)myProperty;

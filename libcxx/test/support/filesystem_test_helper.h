@@ -1,7 +1,7 @@
 #ifndef FILESYSTEM_TEST_HELPER_H
 #define FILESYSTEM_TEST_HELPER_H
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <sys/stat.h> // for stat, mkdir, mkfifo
 #ifndef _WIN32
@@ -18,6 +18,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio> // for printf
+#include <cstring>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -33,6 +34,7 @@
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
+namespace fs = std::filesystem;
 
 namespace utils {
 #ifdef _WIN32
@@ -180,13 +182,22 @@ struct scoped_test_env
         std::string cmd = "chmod -R 777 " + test_root.string();
 #endif // defined(__MVS__)
         int ret = std::system(cmd.c_str());
-#if !defined(_AIX)
+#  if !defined(_AIX) && !defined(__ANDROID__)
         // On AIX the chmod command will return non-zero when trying to set
         // the permissions on a directory that contains a bad symlink. This triggers
         // the assert, despite being able to delete everything with the following
         // `rm -r` command.
+        //
+        // Android's chmod was buggy in old OSs, but skipping this assert is
+        // sufficient to ensure that the `rm -rf` succeeds for almost all tests:
+        //  - Android L: chmod aborts after one error
+        //  - Android L and M: chmod -R tries to set permissions of a symlink
+        //    target.
+        // LIBCXX-ANDROID-FIXME: Other fixes to consider: place a toybox chmod
+        // onto old devices, re-enable this assert for devices running Android N
+        // and up, rewrite this chmod+rm in C or C++.
         assert(ret == 0);
-#endif
+#  endif
 
         cmd = "rm -rf " + test_root.string();
         ret = std::system(cmd.c_str());
@@ -222,9 +233,9 @@ struct scoped_test_env
         if (size >
             static_cast<typename std::make_unsigned<utils::off64_t>::type>(
                 std::numeric_limits<utils::off64_t>::max())) {
-            fprintf(stderr, "create_file(%s, %ju) too large\n",
-                    filename.c_str(), size);
-            abort();
+            std::fprintf(stderr, "create_file(%s, %ju) too large\n",
+                         filename.c_str(), size);
+            std::abort();
         }
 
 #if defined(_WIN32) || defined(__MVS__)
@@ -234,20 +245,20 @@ struct scoped_test_env
 #endif
         FILE* file = utils::fopen64(filename.c_str(), "w" FOPEN_CLOEXEC_FLAG);
         if (file == nullptr) {
-            fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
-                    strerror(errno));
-            abort();
+            std::fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
+                         std::strerror(errno));
+            std::abort();
         }
 
         if (utils::ftruncate64(
                 fileno(file), static_cast<utils::off64_t>(size)) == -1) {
-            fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
-                    size, strerror(errno));
-            fclose(file);
-            abort();
+            std::fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
+                         size, std::strerror(errno));
+            std::fclose(file);
+            std::abort();
         }
 
-        fclose(file);
+        std::fclose(file);
         return filename;
     }
 
@@ -310,16 +321,26 @@ struct scoped_test_env
   // allow tests to call this unguarded.
 #if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
     std::string create_socket(std::string file) {
-        file = sanitize_path(std::move(file));
+      file = sanitize_path(std::move(file));
 
-        ::sockaddr_un address;
-        address.sun_family = AF_UNIX;
-        assert(file.size() <= sizeof(address.sun_path));
-        ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
-        int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
-        ::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address));
-        return file;
+      ::sockaddr_un address;
+      address.sun_family = AF_UNIX;
+
+// If file.size() is too big, try to create a file directly inside
+// /tmp to make sure file path is short enough.
+// Android platform warns about tmpnam, since the problem does not appear
+// on Android, let's not apply it for Android.
+#  if !defined(__ANDROID__)
+    if (file.size() > sizeof(address.sun_path)) {
+      file = std::tmpnam(nullptr);
     }
+#  endif
+    assert(file.size() <= sizeof(address.sun_path));
+    ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
+    int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
+    return file;
+  }
 #endif
 
     fs::path test_root;
@@ -466,111 +487,6 @@ struct CWDGuard {
   CWDGuard& operator=(CWDGuard const&) = delete;
 };
 
-// Misc test types
-
-const MultiStringType PathList[] = {
-        MKSTR(""),
-        MKSTR(" "),
-        MKSTR("//"),
-        MKSTR("."),
-        MKSTR(".."),
-        MKSTR("foo"),
-        MKSTR("/"),
-        MKSTR("/foo"),
-        MKSTR("foo/"),
-        MKSTR("/foo/"),
-        MKSTR("foo/bar"),
-        MKSTR("/foo/bar"),
-        MKSTR("//net"),
-        MKSTR("//net/foo"),
-        MKSTR("///foo///"),
-        MKSTR("///foo///bar"),
-        MKSTR("/."),
-        MKSTR("./"),
-        MKSTR("/.."),
-        MKSTR("../"),
-        MKSTR("foo/."),
-        MKSTR("foo/.."),
-        MKSTR("foo/./"),
-        MKSTR("foo/./bar"),
-        MKSTR("foo/../"),
-        MKSTR("foo/../bar"),
-        MKSTR("c:"),
-        MKSTR("c:/"),
-        MKSTR("c:foo"),
-        MKSTR("c:/foo"),
-        MKSTR("c:foo/"),
-        MKSTR("c:/foo/"),
-        MKSTR("c:/foo/bar"),
-        MKSTR("prn:"),
-        MKSTR("c:\\"),
-        MKSTR("c:\\foo"),
-        MKSTR("c:foo\\"),
-        MKSTR("c:\\foo\\"),
-        MKSTR("c:\\foo/"),
-        MKSTR("c:/foo\\bar"),
-        MKSTR("//"),
-        MKSTR("/finally/we/need/one/really/really/really/really/really/really/really/long/string")
-};
-const unsigned PathListSize = sizeof(PathList) / sizeof(MultiStringType);
-
-template <class Iter>
-Iter IterEnd(Iter B) {
-  using VT = typename std::iterator_traits<Iter>::value_type;
-  for (; *B != VT{}; ++B)
-    ;
-  return B;
-}
-
-template <class CharT>
-const CharT* StrEnd(CharT const* P) {
-    return IterEnd(P);
-}
-
-template <class CharT>
-std::size_t StrLen(CharT const* P) {
-    return StrEnd(P) - P;
-}
-
-// Testing the allocation behavior of the code_cvt functions requires
-// *knowing* that the allocation was not done by "path::__str_".
-// This hack forces path to allocate enough memory.
-inline void PathReserve(fs::path& p, std::size_t N) {
-  auto const& native_ref = p.native();
-  const_cast<fs::path::string_type&>(native_ref).reserve(N);
-}
-
-template <class Iter1, class Iter2>
-bool checkCollectionsEqual(
-    Iter1 start1, Iter1 const end1
-  , Iter2 start2, Iter2 const end2
-  )
-{
-    while (start1 != end1 && start2 != end2) {
-        if (*start1 != *start2) {
-            return false;
-        }
-        ++start1; ++start2;
-    }
-    return (start1 == end1 && start2 == end2);
-}
-
-
-template <class Iter1, class Iter2>
-bool checkCollectionsEqualBackwards(
-    Iter1 const start1, Iter1 end1
-  , Iter2 const start2, Iter2 end2
-  )
-{
-    while (start1 != end1 && start2 != end2) {
-        --end1; --end2;
-        if (*end1 != *end2) {
-            return false;
-        }
-    }
-    return (start1 == end1 && start2 == end2);
-}
-
 // We often need to test that the error_code was cleared if no error occurs
 // this function returns an error_code which is set to an error that will
 // never be returned by the filesystem functions.
@@ -622,16 +538,6 @@ template <class Dur> void SleepFor(Dur dur) {
     const auto wake_time = Clock::now() + dur;
     while (Clock::now() < wake_time)
         ;
-}
-
-inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
-  return LHS.native() == RHS.native();
-}
-
-inline bool PathEqIgnoreSep(fs::path LHS, fs::path RHS) {
-  LHS.make_preferred();
-  RHS.make_preferred();
-  return LHS.native() == RHS.native();
 }
 
 inline fs::perms NormalizeExpectedPerms(fs::perms P) {
@@ -711,10 +617,9 @@ struct ExceptionChecker {
     }();
     assert(format == Err.what());
     if (format != Err.what()) {
-      fprintf(stderr,
-              "filesystem_error::what() does not match expected output:\n");
-      fprintf(stderr, "  expected: \"%s\"\n", format.c_str());
-      fprintf(stderr, "  actual:   \"%s\"\n\n", Err.what());
+      std::fprintf(stderr, "filesystem_error::what() does not match expected output:\n");
+      std::fprintf(stderr, "  expected: \"%s\"\n", format.c_str());
+      std::fprintf(stderr, "  actual:   \"%s\"\n\n", Err.what());
     }
   }
 
@@ -734,23 +639,23 @@ inline fs::path GetWindowsInaccessibleDir() {
       continue;
     // Basic sanity checks on the directory_entry
     if (!ent.exists() || !ent.is_directory()) {
-      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
-                      "but doesn't behave as expected, skipping tests "
-                      "regarding it\n", dir.string().c_str());
+      std::fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                           "but doesn't behave as expected, skipping tests "
+                           "regarding it\n", dir.string().c_str());
       return fs::path();
     }
     // Check that it indeed is inaccessible as expected
     (void)fs::exists(ent, ec);
     if (!ec) {
-      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
-                      "but seems to be accessible, skipping tests "
-                      "regarding it\n", dir.string().c_str());
+      std::fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                           "but seems to be accessible, skipping tests "
+                           "regarding it\n", dir.string().c_str());
       return fs::path();
     }
     return ent;
   }
-  fprintf(stderr, "No inaccessible directory \"%s\" found, skipping tests "
-                  "regarding it\n", dir.string().c_str());
+  std::fprintf(stderr, "No inaccessible directory \"%s\" found, skipping tests "
+                       "regarding it\n", dir.string().c_str());
   return fs::path();
 }
 

@@ -41,6 +41,7 @@ struct RecordsEntry {
   std::unique_ptr<Record> Rec;
   std::unique_ptr<ForeachLoop> Loop;
   std::unique_ptr<Record::AssertionInfo> Assertion;
+  std::unique_ptr<Record::DumpInfo> Dump;
 
   void dump() const;
 
@@ -49,6 +50,8 @@ struct RecordsEntry {
   RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
   RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
       : Assertion(std::move(Assertion)) {}
+  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
+      : Dump(std::move(Dump)) {}
 };
 
 /// ForeachLoop - Record the iteration state associated with a for loop.
@@ -82,7 +85,7 @@ struct MultiClass {
   void dump() const;
 
   MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records)
-      : Rec(Name, Loc, Records) {}
+      : Rec(Name, Loc, Records, Record::RK_MultiClass) {}
 };
 
 class TGVarScope {
@@ -140,6 +143,7 @@ class TGParser {
   TGLexer Lex;
   std::vector<SmallVector<LetRecord, 4>> LetStack;
   std::map<std::string, std::unique_ptr<MultiClass>> MultiClasses;
+  std::map<std::string, RecTy *> TypeAliases;
 
   /// Loops - Keep track of any foreach loops we are within.
   ///
@@ -242,6 +246,16 @@ private: // Semantic analysis methods.
                SMLoc *Loc = nullptr);
   bool addDefOne(std::unique_ptr<Record> Rec);
 
+  using ArgValueHandler = std::function<void(Init *, Init *)>;
+  bool resolveArguments(
+      Record *Rec, ArrayRef<ArgumentInit *> ArgValues, SMLoc Loc,
+      ArgValueHandler ArgValueHandler = [](Init *, Init *) {});
+  bool resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+                               ArrayRef<ArgumentInit *> ArgValues, SMLoc Loc);
+  bool resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
+                                    ArrayRef<ArgumentInit *> ArgValues,
+                                    Init *DefmName, SMLoc Loc);
+
 private:  // Parser methods.
   bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
@@ -251,7 +265,9 @@ private:  // Parser methods.
   bool ParseDefm(MultiClass *CurMultiClass);
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseDefset();
+  bool ParseDeftype();
   bool ParseDefvar(Record *CurRec = nullptr);
+  bool ParseDump(MultiClass *CurMultiClass, Record *CurRec = nullptr);
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseIf(MultiClass *CurMultiClass);
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
@@ -278,7 +294,7 @@ private:  // Parser methods.
                    IDParseMode Mode = ParseValueMode);
   void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
                       Record *CurRec, RecTy *ItemType = nullptr);
-  bool ParseTemplateArgValueList(SmallVectorImpl<llvm::Init *> &Result,
+  bool ParseTemplateArgValueList(SmallVectorImpl<llvm::ArgumentInit *> &Result,
                                  Record *CurRec, Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
@@ -302,7 +318,7 @@ private:  // Parser methods.
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
-  bool CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
+  bool CheckTemplateArgValues(SmallVectorImpl<llvm::ArgumentInit *> &Values,
                               SMLoc Loc, Record *ArgsRec);
 };
 

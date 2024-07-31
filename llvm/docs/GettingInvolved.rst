@@ -14,7 +14,6 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    CodeReview
    SupportPolicy
    SphinxQuickstartTemplate
-   Phabricator
    HowToSubmitABug
    BugLifeCycle
    CodingStandards
@@ -38,10 +37,6 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
   A template + tutorial for writing new Sphinx documentation. It is meant
   to be read in source form.
 
-:doc:`Phabricator`
-   Describes how to use the Phabricator code review tool hosted on
-   http://reviews.llvm.org/ and its command line interface, Arcanist.
-
 :doc:`HowToSubmitABug`
    Instructions for properly submitting information about any bugs you run into
    in the LLVM system.
@@ -54,7 +49,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
   efficient C++ code.
 
 :doc:`GitHub`
-  Describes how to use the llvm-project repository on GitHub.
+  Describes how to use the llvm-project repository and code reviews on GitHub.
 
 :doc:`GitBisecting`
   Describes how to use ``git bisect`` on LLVM's repository.
@@ -74,7 +69,6 @@ Information about LLVM's development process.
 
    Projects
    HowToReleaseLLVM
-   Packaging
    ReleaseProcess
    HowToAddABuilder
    ReleaseNotes
@@ -94,9 +88,6 @@ Information about LLVM's development process.
 :doc:`HowToAddABuilder`
    Instructions for adding new builder to LLVM buildbot master.
 
-:doc:`Packaging`
-   Advice on packaging LLVM into a distribution.
-
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
 
@@ -110,7 +101,7 @@ Discourse forums. There are also commit mailing lists for all commits to the LLV
 The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
 
 `LLVM Discourse`__
-  The forums for all things LLVM and related sub-projects. There are categories and subcategories for a wide variety of areas within LLVM. You can also view tags or search for a specific topic. 
+  The forums for all things LLVM and related sub-projects. There are categories and subcategories for a wide variety of areas within LLVM. You can also view tags or search for a specific topic.
 
   .. __: https://discourse.llvm.org/
 
@@ -130,9 +121,9 @@ The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
   .. __: http://lists.llvm.org/pipermail/llvm-bugs/
 
 `LLVM Announcements`__
-  If you just want project wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse. 
+  If you just want project wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse.
 
-  .. __: https://discourse.llvm.org/c/announce/46 
+  .. __: https://discourse.llvm.org/c/announce/46
 
 .. _online-sync-ups:
 
@@ -146,7 +137,7 @@ The :doc:`CodeOfConduct` applies to all online sync-ups.
 
 If you'd like to organize a new sync-up, please add the info in the table
 below. Please also create a calendar event for it and invite calendar@llvm.org
-to the event, so that it'll show up on the :ref:`llvm-community-calendar`. 
+to the event, so that it'll show up on the :ref:`llvm-community-calendar`.
 Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
 what to add to your calendar invite.
 
@@ -166,12 +157,7 @@ what to add to your calendar invite.
      - Every 2 weeks on Thursday
      - `ics <https://calendar.google.com/calendar/ical/lowrisc.org_0n5pkesfjcnp0bh5hps1p0bd80%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/b/1?cid=bG93cmlzYy5vcmdfMG41cGtlc2ZqY25wMGJoNWhwczFwMGJkODBAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
-     -
-   * - Scalable Vectors and Arm SVE
-     - Monthly, every 3rd Tuesday
-     - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/u/0/embed?src=bjms39pe6k6bo5egtsp7don414@group.calendar.google.com>`__
-     - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1G3ocHm2zE6AYTS2N3_3w2UxFnSEyKkcF57siLWe-NVs>`__
    * - ML Guided Compiler Optimizations
      - Monthly
      -
@@ -185,10 +171,6 @@ what to add to your calendar invite.
      - Weekly, on Wednesday
      -
      - `Minutes/docs <https://docs.google.com/document/d/1fOSRdyZR2w75D87yU2Ma9h2-_lEPL4NxvhJGJd-s5pk/edit#heading=h.mulvhjtr8dk9>`__
-   * - `MLIR <https://mlir.llvm.org>`__ design meetings
-     - Weekly, on Thursdays
-     -
-     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
    * - flang
      - Multiple meeting series, `documented here <https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md#calls>`__
      -
@@ -201,19 +183,10 @@ what to add to your calendar invite.
      - Every 4 weeks on Tuesdays
      - `ics <http://lists.llvm.org/pipermail/llvm-dev/attachments/20201103/a3499a67/attachment-0001.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw>`__
-   * - Vector Predication
-     - Every 2 weeks on Tuesdays, 3pm UTC
-     -
-     - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
    * - LLVM Pointer Authentication
      - Every month on Mondays
      - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
      - `Minutes/docs <https://discourse.llvm.org/t/llvm-pointer-authentication-sync-ups/62661>`__
-   * - MemorySSA in LLVM
-     - Every 8 weeks on Mondays
-     - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
-     - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
    * - LLVM Embedded Toolchains
      - Every 4 weeks on Thursdays
      - `ics <https://drive.google.com/file/d/1uNa-PFYkhAfT83kR2Nc4Fi706TAQFBEL/view?usp=sharing>`__
@@ -224,13 +197,60 @@ what to add to your calendar invite.
      - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
    * - LLVM SPIR-V Backend Working Group
-     - Every week on Thursday
+     - Every week on Monday
      -
      - `Meeting details/agenda <https://docs.google.com/document/d/1UjX-LAwPjJ75Nmb8a5jz-Qrm-pPtKtQw0k1S1Lop9jU/edit?usp=sharing>`__
    * - SYCL Upstream Working Group
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
+   * - Floating Point Working Group
+     - Every 3rd Wednesday of the month
+     - `ics <https://calendar.google.com/calendar/ical/02582507bac79d186900712566ec3fc69b33ac24d7de0a8c76c7b19976f190c0%40group.calendar.google.com/private-6e35506dbfe13812e92e9aa8cd5d761d/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
+   * - Vectorizer Improvement Working Group
+     - Every 3rd Thursday of the month
+     - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
+
+Past online sync-ups
+^^^^^^^^^^^^^^^^^^^^
+
+Some online sync-ups are no longer happening. We keep pointing to them here to
+keep track of the meeting notes and in case anyone would want to revive them in
+the future.
+
+.. list-table:: LLVM no-longer-happening sync-up calls
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Topic
+     - Frequency
+     - Calendar link
+     - Minutes/docs link
+   * - Scalable Vectors and Arm SVE
+     - Monthly, every 3rd Tuesday
+     - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0/embed?src=bjms39pe6k6bo5egtsp7don414@group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
+   * - MemorySSA in LLVM
+     - Every 8 weeks on Mondays
+     - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
+   * - GlobalISel
+     - Every 2nd Tuesday of the month
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
+   * - Vector Predication
+     - Every 2 weeks on Tuesdays, 3pm UTC
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
+   * - `MLIR <https://mlir.llvm.org>`__ design meetings
+     - Weekly, on Thursdays
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
 
 .. _office-hours:
 
@@ -242,10 +262,11 @@ on a regular schedule, to anyone who is looking for some guidance. Please find
 the list of who is available when, through which medium, and what their area of
 expertise is. Don't be too shy to dial in!
 
-The :doc:`CodeOfConduct` applies to all office hours.
+Office hours are also listed on the :ref:`llvm-community-calendar`. Of course,
+people take time off from time to time, so if you dial in and you don't find
+anyone present, chances are they happen to be off that day.
 
-Of course, people take time off from time to time, so if you dial in and you
-don't find anyone present, chances are they happen to be off that day.
+The :doc:`CodeOfConduct` applies to all office hours.
 
 .. list-table:: LLVM office hours
   :widths: 15 40 15 15 15
@@ -291,7 +312,7 @@ don't find anyone present, chances are they happen to be off that day.
     - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
     - English, German, Spanish, French
   * - Anastasia Stulova
-    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers. 
+    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers.
     - Monthly, 1st Tuesday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 30 mins slot.
     - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
     - English, Russian, German (not fluently)
@@ -305,11 +326,6 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
     - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
     - English, Russian
-  * - Michal Paszkowski
-    - SPIR-V backend, IGC, OpenCL, and IR transformations
-    - Monthly, 3rd Thursday of the month at 21:00 Warsaw/Poland time, 1 hour slot.
-    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_ODRmN2UwYTgtODdiOS00N2VkLTgxZjgtNDUxYjI3YmNkM2Ri%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%220c2b140d-8412-4963-a118-0f7534426b65%22%7d>`__
-    - English, Polish
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
       Register allocation, etc.); Optimizations; MCA
@@ -323,6 +339,26 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 3rd Wednesday of the month at 8:30am Beijing time, for 30 minutes.
     - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWQ0MjU0NjYtZjUyMi00YTU3LThmM2EtY2Y2YTE4NGM3NmFi%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%227b309d9c-a9bb-44c8-a940-ab97eef42d4d%22%7d>`__
     - English, Chinese
+  * - Amara Emerson
+    - GlobalISel questions.
+    - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
+    - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
+    - English
+  * - Maksim Levental and Jeremy Kun
+    - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
+    - Every two weeks, Wednesdays at 2:00pm US Pacific, for 90 minutes.
+    - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
+    - English
+  * - Renato Golin
+    - General LLVM, MLIR & Linalg, distributed computing, research, socials.
+    - Every first Tuesday of the month, 11:00am UK time, for 60 minutes.
+    - `Google meet <https://meet.google.com/esg-fggc-hfe>`__
+    - English, Portuguese
+  * - Rotating hosts
+    - Getting Started, beginner questions, new contributors.
+    - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.
+    - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
+    - English
 
 
 Guidance for office hours hosts
@@ -330,7 +366,7 @@ Guidance for office hours hosts
 
 * If you're interested in becoming an office hours host, please add your
   information to the list above. Please create a calendar event for it and
-  invite calendar@llvm.org to the event so that it'll show up on the 
+  invite calendar@llvm.org to the event so that it'll show up on the
   :ref:`llvm-community-calendar`.
   Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
   what to add to your calendar invite.
@@ -407,7 +443,6 @@ can be better.
    BugpointRedesign
    Proposals/TestSuite
    Proposals/VariableNames
-   Proposals/VectorizationPlan
    Proposals/VectorPredication
 
 :doc:`Proposals/GitHubMove`
@@ -421,9 +456,6 @@ can be better.
 
 :doc:`Proposals/VariableNames`
    Proposal to change the variable names coding standard.
-
-:doc:`Proposals/VectorizationPlan`
-   Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.
 
 :doc:`Proposals/VectorPredication`
    Proposal for predicated vector instructions in LLVM.
@@ -443,6 +475,11 @@ also be seen inline below:
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
 
+Note that the web view of the LLVM community calendar shows events in
+Coordinated Universal Time (UTC). If you use Google Calendar, consider
+subscribing to it with the + button in the bottom-right corner to view all
+events in your local timezone alongside your other calendars.
+
 .. _llvm-community-calendar-host-guidance:
 
 Guidance on what to put into LLVM community calendar invites
@@ -450,7 +487,7 @@ Guidance on what to put into LLVM community calendar invites
 
 To add your event, create a calendar event for it and invite calendar@llvm.org
 on it. Your event should then show up on the community calendar.
- 
+
 Please put the following pieces of information in your calendar invite:
 
 * Write a single paragraph describing what the event is about. Include things

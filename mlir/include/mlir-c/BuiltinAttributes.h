@@ -266,6 +266,10 @@ mlirSymbolRefAttrGetNestedReference(MlirAttribute attr, intptr_t pos);
 /// Returns the typeID of an SymbolRef attribute.
 MLIR_CAPI_EXPORTED MlirTypeID mlirSymbolRefAttrGetTypeID(void);
 
+/// Creates a DisctinctAttr with the referenced attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirDisctinctAttrCreate(MlirAttribute referencedAttr);
+
 //===----------------------------------------------------------------------===//
 // Flat SymbolRef attribute.
 //===----------------------------------------------------------------------===//
@@ -282,9 +286,6 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx,
 /// as long as the context in which the attribute lives.
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirFlatSymbolRefAttrGetValue(MlirAttribute attr);
-
-/// Returns the typeID of an FlatSymbolRef attribute.
-MLIR_CAPI_EXPORTED MlirTypeID mlirFlatSymbolRefAttrGetTypeID(void);
 
 //===----------------------------------------------------------------------===//
 // Type attribute.
@@ -560,6 +561,23 @@ mlirDenseElementsAttrGetRawData(MlirAttribute attr);
 //===----------------------------------------------------------------------===//
 // Resource blob attributes.
 //===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool
+mlirAttributeIsADenseResourceElements(MlirAttribute attr);
+
+/// Unlike the typed accessors below, constructs the attribute with a raw
+/// data buffer and no type/alignment checking. Use a more strongly typed
+/// accessor if possible. If dataIsMutable is false, then an immutable
+/// AsmResourceBlob will be created and that passed data contents will be
+/// treated as const.
+/// If the deleter is non NULL, then it will be called when the data buffer
+/// can no longer be accessed (passing userData to it).
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, void *data, size_t dataLength,
+    size_t dataAlignment, bool dataIsMutable,
+    void (*deleter)(void *userData, const void *data, size_t size,
+                    size_t align),
+    void *userData);
 
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseBoolResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,

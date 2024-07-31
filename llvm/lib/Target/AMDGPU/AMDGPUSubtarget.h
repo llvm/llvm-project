@@ -39,7 +39,8 @@ public:
     VOLCANIC_ISLANDS = 7,
     GFX9 = 8,
     GFX10 = 9,
-    GFX11 = 10
+    GFX11 = 10,
+    GFX12 = 11,
   };
 
 private:
@@ -49,6 +50,7 @@ protected:
   bool GCN3Encoding = false;
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
+  bool EnableRealTrue16Insts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -61,6 +63,7 @@ protected:
   bool HasFminFmaxLegacy = true;
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
+  bool FastFMAF32 = false;
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -68,7 +71,7 @@ protected:
   char WavefrontSizeLog2 = 0;
 
 public:
-  AMDGPUSubtarget(const Triple &TT);
+  AMDGPUSubtarget(Triple TT);
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -107,6 +110,9 @@ public:
   std::pair<unsigned, unsigned>
   getWavesPerEU(const Function &F,
                 std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+  std::pair<unsigned, unsigned> getEffectiveWavesPerEU(
+      std::pair<unsigned, unsigned> WavesPerEU,
+      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
@@ -149,7 +155,16 @@ public:
     return Has16BitInsts;
   }
 
+  /// Return true if the subtarget supports True16 instructions.
   bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
+
+  /// Return true if real (non-fake) variants of True16 instructions using
+  /// 16-bit registers should be code-generated. Fake True16 instructions are
+  /// identical to non-fake ones except that they take 32-bit registers as
+  /// operands and always use their low halves.
+  // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
+  // supported and the support for fake True16 instructions is removed.
+  bool useRealTrue16Insts() const;
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
@@ -193,6 +208,10 @@ public:
 
   bool hasTrigReducedRange() const {
     return HasTrigReducedRange;
+  }
+
+  bool hasFastFMAF32() const {
+    return FastFMAF32;
   }
 
   bool isPromoteAllocaEnabled() const {
@@ -268,6 +287,12 @@ public:
   /// Return the maximum workitem ID value in the function, for the given (0, 1,
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
+
+  /// Return the number of work groups for the function.
+  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
+
+  /// Return true if only a single workitem can be active in a wave.
+  bool isSingleLaneExecution(const Function &Kernel) const;
 
   /// Creates value range metadata on an workitemid.* intrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;

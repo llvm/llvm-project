@@ -21,9 +21,9 @@ entry:
 define void @scalable4i32_to_fixed16i32(ptr %out) {
 ; CHECK-LABEL: @scalable4i32_to_fixed16i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 4 x i32>, align 64
-; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr [[TMP]], align 64
-; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <16 x i32>, ptr [[TMP]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 4 x i32>, align 16
+; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <16 x i32>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    store <16 x i32> [[RELOAD]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -55,9 +55,9 @@ entry:
 define void @scalable16i32_to_fixed16i32(ptr %out) {
 ; CHECK-LABEL: @scalable16i32_to_fixed16i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 16 x i32>, align 64
-; CHECK-NEXT:    store volatile <16 x i32> zeroinitializer, ptr [[TMP]], align 64
-; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <16 x i32>, ptr [[TMP]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 16 x i32>, align 16
+; CHECK-NEXT:    store volatile <16 x i32> zeroinitializer, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <16 x i32>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    store <16 x i32> [[RELOAD]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -72,9 +72,9 @@ entry:
 define void @scalable32i32_to_scalable16i32(ptr %out) {
 ; CHECK-LABEL: @scalable32i32_to_scalable16i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 32 x i32>, align 64
-; CHECK-NEXT:    store volatile <vscale x 16 x i32> zeroinitializer, ptr [[TMP]], align 64
-; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <vscale x 16 x i32>, ptr [[TMP]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 32 x i32>, align 16
+; CHECK-NEXT:    store volatile <vscale x 16 x i32> zeroinitializer, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <vscale x 16 x i32>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    store <vscale x 16 x i32> [[RELOAD]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -89,9 +89,9 @@ entry:
 define void @scalable32i16_to_scalable16i32(ptr %out) {
 ; CHECK-LABEL: @scalable32i16_to_scalable16i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 32 x i16>, align 64
-; CHECK-NEXT:    store volatile <vscale x 16 x i32> zeroinitializer, ptr [[TMP]], align 64
-; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <vscale x 16 x i32>, ptr [[TMP]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 32 x i16>, align 16
+; CHECK-NEXT:    store volatile <vscale x 16 x i32> zeroinitializer, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <vscale x 16 x i32>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    store <vscale x 16 x i32> [[RELOAD]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -106,11 +106,11 @@ entry:
 define void @scalable32i16_to_scalable16i32_multiuse(ptr %out, ptr %out2) {
 ; CHECK-LABEL: @scalable32i16_to_scalable16i32_multiuse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 32 x i16>, align 64
-; CHECK-NEXT:    store volatile <vscale x 16 x i32> zeroinitializer, ptr [[TMP]], align 64
-; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <vscale x 16 x i32>, ptr [[TMP]], align 64
+; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 32 x i16>, align 16
+; CHECK-NEXT:    store volatile <vscale x 16 x i32> zeroinitializer, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[RELOAD:%.*]] = load volatile <vscale x 16 x i32>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    store <vscale x 16 x i32> [[RELOAD]], ptr [[OUT:%.*]], align 16
-; CHECK-NEXT:    [[RELOAD2:%.*]] = load volatile <vscale x 32 x i16>, ptr [[TMP]], align 64
+; CHECK-NEXT:    [[RELOAD2:%.*]] = load volatile <vscale x 32 x i16>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    store <vscale x 32 x i16> [[RELOAD2]], ptr [[OUT2:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -1158,9 +1158,9 @@ defm ATMAM : RRCASm<"atmam", 0x53, I64, i64, uimm0to2>;
 
 // Section 8.2.20 - CAS (Compare and Swap)
 let DecoderMethod = "DecodeCASI64" in
-defm CASL : RRCASm<"cas.l", 0x62, I64, i64, simm7, atomic_cmp_swap_64>;
+defm CASL : RRCASm<"cas.l", 0x62, I64, i64, simm7, atomic_cmp_swap_i64>;
 let DecoderMethod = "DecodeCASI32", cx = 1 in
-defm CASW : RRCASm<"cas.w", 0x62, I32, i32, simm7, atomic_cmp_swap_32>;
+defm CASW : RRCASm<"cas.w", 0x62, I32, i32, simm7, atomic_cmp_swap_i32>;
 
 //-----------------------------------------------------------------------------
 // Section 8.3 - Transfer Control Instructions
@@ -1785,14 +1785,14 @@ defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
-// Atomic loads
+// Atomic loads (FIXME: replace iAny with the correct integer VT:)
 multiclass ATMLDm<SDPatternOperator from,
                   RM torri, RM torii,
                   RM tozri, RM tozii> {
-  def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
-  def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
-  def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
-  def : Pat<(from ADDRzii:$addr), (tozii MEMzii:$addr)>;
+  def : Pat<(iAny (from ADDRrri:$addr)), (torri MEMrri:$addr)>;
+  def : Pat<(iAny (from ADDRrii:$addr)), (torii MEMrii:$addr)>;
+  def : Pat<(iAny (from ADDRzri:$addr)), (tozri MEMzri:$addr)>;
+  def : Pat<(iAny (from ADDRzii:$addr)), (tozii MEMzii:$addr)>;
 }
 defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
 defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
@@ -1864,10 +1864,10 @@ defm : ZXATMLD32m<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
 multiclass ATMSTm<SDPatternOperator from, ValueType ty,
                   RM torri, RM torii,
                   RM tozri, RM tozii> {
-  def : Pat<(from ADDRrri:$addr, ty:$src), (torri MEMrri:$addr, $src)>;
-  def : Pat<(from ADDRrii:$addr, ty:$src), (torii MEMrii:$addr, $src)>;
-  def : Pat<(from ADDRzri:$addr, ty:$src), (tozri MEMzri:$addr, $src)>;
-  def : Pat<(from ADDRzii:$addr, ty:$src), (tozii MEMzii:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRrri:$addr), (torri MEMrri:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRrii:$addr), (torii MEMrii:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRzri:$addr), (tozri MEMzri:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRzii:$addr), (tozii MEMzii:$addr, $src)>;
 }
 defm : ATMSTm<atomic_store_8, i32, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : ATMSTm<atomic_store_16, i32, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
@@ -1880,14 +1880,14 @@ multiclass TRATMSTm<SDPatternOperator from,
                   RM torii,
                   RM tozri,
                   RM tozii> {
-  def : Pat<(from ADDRrri:$addr, (i32 (trunc i64:$src))),
-            (torri MEMrri:$addr, (l2i $src))>;
-  def : Pat<(from ADDRrii:$addr, (i32 (trunc i64:$src))),
-            (torii MEMrii:$addr, (l2i $src))>;
-  def : Pat<(from ADDRzri:$addr, (i32 (trunc i64:$src))),
-            (tozri MEMzri:$addr, (l2i $src))>;
-  def : Pat<(from ADDRzii:$addr, (i32 (trunc i64:$src))),
-            (tozii MEMzii:$addr, (l2i $src))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRrri:$addr),
+            (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRrii:$addr),
+            (torii MEMrii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRzri:$addr),
+            (tozri MEMzri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRzii:$addr),
+            (tozii MEMzii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
 }
 defm : TRATMSTm<atomic_store_8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRATMSTm<atomic_store_16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
@@ -1896,9 +1896,9 @@ defm : TRATMSTm<atomic_store_32, STLrri, STLrii, STLzri, STLzii>;
 // Atomic swaps
 def : Pat<(i32 (ts1am i64:$src, i32:$flag, i32:$new)),
           (TS1AMWrir $src, 0, $flag, $new)>;
-def : Pat<(i32 (atomic_swap_32 ADDRri:$src, i32:$new)),
+def : Pat<(i32 (atomic_swap_i32 ADDRri:$src, i32:$new)),
           (TS1AMWrii MEMriRRM:$src, 15, $new)>;
-def : Pat<(i64 (atomic_swap_64 ADDRri:$src, i64:$new)),
+def : Pat<(i64 (atomic_swap_i64 ADDRri:$src, i64:$new)),
           (TS1AMLrir MEMriRRM:$src, (LEAzii 0, 0, 255), i64:$new)>;
 
 //===----------------------------------------------------------------------===//

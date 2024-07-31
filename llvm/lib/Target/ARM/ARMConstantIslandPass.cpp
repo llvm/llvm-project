@@ -229,7 +229,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -343,9 +343,9 @@ LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
 
 // Align blocks where the previous block does not fall through. This may add
 // extra NOP's but they will not be executed. It uses the PrefLoopAlignment as a
-// measure of how much to align, and only runs at CodeGenOpt::Aggressive.
+// measure of how much to align, and only runs at CodeGenOptLevel::Aggressive.
 static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
-  if (MF->getTarget().getOptLevel() != CodeGenOpt::Aggressive ||
+  if (MF->getTarget().getOptLevel() != CodeGenOptLevel::Aggressive ||
       MF->getFunction().hasOptSize())
     return false;
 
@@ -388,7 +388,7 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
 bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MCP = mf.getConstantPool();
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(mf));
+  BBUtils = std::make_unique<ARMBasicBlockUtils>(mf);
 
   LLVM_DEBUG(dbgs() << "***** ARMConstantIslands: "
                     << MCP->getConstants().size() << " CP entries, aligned to "
@@ -399,7 +399,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isPositionIndependentOrROPI =
       STI->getTargetLowering()->isPositionIndependent() || STI->isROPI();
   AFI = MF->getInfo<ARMFunctionInfo>();
-  DT = &getAnalysis<MachineDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   isThumb = AFI->isThumbFunction();
   isThumb1 = AFI->isThumb1OnlyFunction();
@@ -605,6 +605,10 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   auto MJTI = MF->getJumpTableInfo();
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
 
+  // Only inline jump tables are placed in the function.
+  if (MJTI->getEntryKind() != MachineJumpTableInfo::EK_Inline)
+    return;
+
   MachineBasicBlock *LastCorrectlyNumberedBB = nullptr;
   for (MachineBasicBlock &MBB : *MF) {
     auto MI = MBB.getLastNonDebugInstr();
@@ -777,6 +781,11 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   // Compute block offsets and known bits.
   BBUtils->adjustBBOffsetsAfter(&MF->front());
 
+  // We only care about jump table instructions when jump tables are inline.
+  MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  bool InlineJumpTables =
+      MJTI && MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline;
+
   // Now go back through the instructions and build up our data structures.
   for (MachineBasicBlock &MBB : *MF) {
     // If this block doesn't fall through into the next MBB, then this is
@@ -799,7 +808,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           continue;  // Ignore other JT branches
         case ARM::t2BR_JT:
         case ARM::tBR_JTr:
-          T2JumpTables.push_back(&I);
+          if (InlineJumpTables)
+            T2JumpTables.push_back(&I);
           continue;   // Does not get an entry in ImmBranches
         case ARM::Bcc:
           isCond = true;
@@ -846,7 +856,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
 
       // Scan the instructions for constant pool operands.
       for (unsigned op = 0, e = I.getNumOperands(); op != e; ++op)
-        if (I.getOperand(op).isCPI() || I.getOperand(op).isJTI()) {
+        if (I.getOperand(op).isCPI() ||
+            (I.getOperand(op).isJTI() && InlineJumpTables)) {
           // We found one.  The addressing mode tells us the max displacement
           // from the PC that this instruction permits.
 
@@ -1926,7 +1937,7 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
 
     // If the conditional branch doesn't kill CPSR, then CPSR can be liveout
     // so this transformation is not safe.
-    if (!Br.MI->killsRegister(ARM::CPSR))
+    if (!Br.MI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
       return false;
 
     Register PredReg;
@@ -2222,8 +2233,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
   if (!MJTI) return false;
 
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  for (unsigned i = 0, e = T2JumpTables.size(); i != e; ++i) {
-    MachineInstr *MI = T2JumpTables[i];
+  for (MachineInstr *MI : T2JumpTables) {
     const MCInstrDesc &MCID = MI->getDesc();
     unsigned NumOps = MCID.getNumOperands();
     unsigned JTOpIdx = NumOps - (MI->isPredicable() ? 2 : 1);
@@ -2418,8 +2428,7 @@ bool ARMConstantIslands::reorderThumb2JumpTables() {
   if (!MJTI) return false;
 
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  for (unsigned i = 0, e = T2JumpTables.size(); i != e; ++i) {
-    MachineInstr *MI = T2JumpTables[i];
+  for (MachineInstr *MI : T2JumpTables) {
     const MCInstrDesc &MCID = MI->getDesc();
     unsigned NumOps = MCID.getNumOperands();
     unsigned JTOpIdx = NumOps - (MI->isPredicable() ? 2 : 1);

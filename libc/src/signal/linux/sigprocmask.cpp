@@ -7,22 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/sigprocmask.h"
-#include "include/sys/syscall.h"          // For syscall numbers.
+
+#include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
-#include "src/__support/common.h"
+#include <sys/syscall.h> // For syscall numbers.
 
-#include <signal.h>
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sigprocmask,
                    (int how, const sigset_t *__restrict set,
                     sigset_t *__restrict oldset)) {
-  int ret = __llvm_libc::syscall_impl(SYS_rt_sigprocmask, how, set, oldset,
-                                      sizeof(sigset_t));
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, how, set,
+                                              oldset, sizeof(sigset_t));
   if (!ret)
     return 0;
 
@@ -30,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, sigprocmask,
   return -1;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

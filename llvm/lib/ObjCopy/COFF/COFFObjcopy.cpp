@@ -13,6 +13,7 @@
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CRC.h"
@@ -28,7 +29,7 @@ using namespace object;
 using namespace COFF;
 
 static bool isDebugSection(const Section &Sec) {
-  return Sec.Name.startswith(".debug");
+  return Sec.Name.starts_with(".debug");
 }
 
 static uint64_t getNextRVA(const Object &Obj) {

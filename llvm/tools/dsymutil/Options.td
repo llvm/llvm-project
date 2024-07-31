@@ -24,6 +24,14 @@ def verbose: F<"verbose">,
   HelpText<"Enable verbose mode.">,
   Group<grp_general>;
 
+def quiet: F<"quiet">,
+  HelpText<"Enable quiet mode.">,
+  Group<grp_general>;
+def: Flag<["-"], "q">,
+  Alias<quiet>,
+  HelpText<"Alias for --quiet">,
+  Group<grp_general>;
+
 def keep_func_for_static: F<"keep-function-for-static">,
   HelpText<"Make a static variable keep the enclosing function even if it would have been omitted otherwise.">,
   Group<grp_general>;
@@ -67,10 +75,6 @@ def dump_debug_map: F<"dump-debug-map">,
 
 def yaml_input: Flag<["-", "--"], "y">,
   HelpText<"Treat the input file is a YAML debug map rather than a binary.">,
-  Group<grp_general>;
-
-def papertrail: F<"papertrail">,
-  HelpText<"Embed warnings in the linked DWARF debug info.">,
   Group<grp_general>;
 
 def assembly: Flag<["-", "--"], "S">,
@@ -131,12 +135,6 @@ def object_prefix_map: Separate<["--", "-"], "object-prefix-map">,
              "find the Clang module cache.">,
     Group<grp_general>;
 def: Joined<["--", "-"], "object-prefix-map=">, Alias<object_prefix_map>;
-
-def symbolmap: Separate<["--", "-"], "symbol-map">,
-  MetaVarName<"<bcsymbolmap>">,
-  HelpText<"Updates the existing dSYMs inplace using symbol map specified.">,
-  Group<grp_general>;
-def: Joined<["--", "-"], "symbol-map=">, Alias<symbolmap>;
 
 def arch: Separate<["--", "-"], "arch">,
   MetaVarName<"<arch>">,
@@ -202,6 +200,17 @@ def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'apple'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
+
+def build_variant_suffix: Separate<["--", "-"], "build-variant-suffix">,
+  MetaVarName<"<suffix=buildvariant>">,
+  HelpText<"Specify the build variant suffix used to build the executabe file.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "build-variant-suffix=">, Alias<build_variant_suffix>;
+
+def dsym_search_path: Separate<["-", "--"], "D">,
+  MetaVarName<"<path>">,
+  HelpText<"Specify a directory that contain dSYM files to search for.">,
+  Group<grp_general>;

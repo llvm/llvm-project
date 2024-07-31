@@ -7,7 +7,7 @@ namespace clang {
 namespace format {
 namespace {
 
-class SortImportsTestJava : public ::testing::Test {
+class SortImportsTestJava : public testing::Test {
 protected:
   std::vector<tooling::Range> GetCodeRange(StringRef Code) {
     return std::vector<tooling::Range>(1, tooling::Range(0, Code.size()));
@@ -39,18 +39,18 @@ public:
 TEST_F(SortImportsTestJava, StaticSplitFromNormal) {
   EXPECT_EQ("import static org.b;\n"
             "\n"
-            "import org.a;\n",
+            "import org.a;",
             sort("import org.a;\n"
-                 "import static org.b;\n"));
+                 "import static org.b;"));
 }
 
 TEST_F(SortImportsTestJava, CapitalBeforeLowercase) {
   EXPECT_EQ("import org.Test;\n"
             "import org.a.Test;\n"
-            "import org.b;\n",
+            "import org.b;",
             sort("import org.a.Test;\n"
                  "import org.Test;\n"
-                 "import org.b;\n"));
+                 "import org.b;"));
 }
 
 TEST_F(SortImportsTestJava, KeepSplitGroupsWithOneNewImport) {
@@ -65,7 +65,7 @@ TEST_F(SortImportsTestJava, KeepSplitGroupsWithOneNewImport) {
             "\n"
             "import org.b;\n"
             "\n"
-            "import com.b;\n",
+            "import com.b;",
             sort("import static com.test.a;\n"
                  "\n"
                  "import static org.a;\n"
@@ -77,7 +77,7 @@ TEST_F(SortImportsTestJava, KeepSplitGroupsWithOneNewImport) {
                  "import org.b;\n"
                  "\n"
                  "import com.b;\n"
-                 "import com.test.c;\n"));
+                 "import com.test.c;"));
 }
 
 TEST_F(SortImportsTestJava, SplitGroupsWithNewline) {
@@ -91,13 +91,13 @@ TEST_F(SortImportsTestJava, SplitGroupsWithNewline) {
             "\n"
             "import org.b;\n"
             "\n"
-            "import com.b;\n",
+            "import com.b;",
             sort("import static com.test.a;\n"
                  "import static org.a;\n"
                  "import static com.a;\n"
                  "import com.test.b;\n"
                  "import org.b;\n"
-                 "import com.b;\n"));
+                 "import com.b;"));
 }
 
 TEST_F(SortImportsTestJava, UnspecifiedGroupAfterAllGroups) {
@@ -108,12 +108,12 @@ TEST_F(SortImportsTestJava, UnspecifiedGroupAfterAllGroups) {
             "import com.a;\n"
             "\n"
             "import abc.a;\n"
-            "import xyz.b;\n",
+            "import xyz.b;",
             sort("import com.test.a;\n"
                  "import com.a;\n"
                  "import xyz.b;\n"
                  "import abc.a;\n"
-                 "import org.a;\n"));
+                 "import org.a;"));
 }
 
 TEST_F(SortImportsTestJava, NoSortOutsideRange) {
@@ -122,12 +122,12 @@ TEST_F(SortImportsTestJava, NoSortOutsideRange) {
             "import org.a;\n"
             "// comments\n"
             "// that do\n"
-            "// nothing\n",
+            "// nothing",
             sort("import org.b;\n"
                  "import org.a;\n"
                  "// comments\n"
                  "// that do\n"
-                 "// nothing\n",
+                 "// nothing",
                  Ranges));
 }
 
@@ -139,13 +139,13 @@ TEST_F(SortImportsTestJava, SortWhenRangeContainsOneLine) {
             "import com.a;\n"
             "// comments\n"
             "// that do\n"
-            "// nothing\n",
+            "// nothing",
             sort("import org.b;\n"
                  "import org.a;\n"
                  "import com.a;\n"
                  "// comments\n"
                  "// that do\n"
-                 "// nothing\n",
+                 "// nothing",
                  Ranges));
 }
 
@@ -153,20 +153,20 @@ TEST_F(SortImportsTestJava, SortLexicographically) {
   EXPECT_EQ("import org.a.*;\n"
             "import org.a.a;\n"
             "import org.aA;\n"
-            "import org.aa;\n",
+            "import org.aa;",
             sort("import org.aa;\n"
                  "import org.a.a;\n"
                  "import org.a.*;\n"
-                 "import org.aA;\n"));
+                 "import org.aA;"));
 }
 
 TEST_F(SortImportsTestJava, StaticInCommentHasNoEffect) {
   EXPECT_EQ("import org.a; // static\n"
             "import org.b;\n"
-            "import org.c; // static\n",
+            "import org.c; // static",
             sort("import org.a; // static\n"
                  "import org.c; // static\n"
-                 "import org.b;\n"));
+                 "import org.b;"));
 }
 
 TEST_F(SortImportsTestJava, CommentsWithAffectedImports) {
@@ -176,63 +176,63 @@ TEST_F(SortImportsTestJava, CommentsWithAffectedImports) {
             " commentB*/\n"
             "import org.b;\n"
             "// commentC\n"
-            "import org.c;\n",
+            "import org.c;",
             sort("import org.a;\n"
                  "// commentC\n"
                  "import org.c;\n"
                  "// commentB\n"
                  "/* commentB\n"
                  " commentB*/\n"
-                 "import org.b;\n"));
+                 "import org.b;"));
 }
 
 TEST_F(SortImportsTestJava, CommentWithUnaffectedImports) {
   EXPECT_EQ("import org.a;\n"
             "// comment\n"
-            "import org.b;\n",
+            "import org.b;",
             sort("import org.a;\n"
                  "// comment\n"
-                 "import org.b;\n"));
+                 "import org.b;"));
 }
 
 TEST_F(SortImportsTestJava, CommentAfterAffectedImports) {
   EXPECT_EQ("import org.a;\n"
             "import org.b;\n"
-            "// comment\n",
+            "// comment",
             sort("import org.b;\n"
                  "import org.a;\n"
-                 "// comment\n"));
+                 "// comment"));
 }
 
 TEST_F(SortImportsTestJava, CommentBeforeAffectedImports) {
   EXPECT_EQ("// comment\n"
             "import org.a;\n"
-            "import org.b;\n",
+            "import org.b;",
             sort("// comment\n"
                  "import org.b;\n"
-                 "import org.a;\n"));
+                 "import org.a;"));
 }
 
 TEST_F(SortImportsTestJava, FormatTotallyOff) {
   EXPECT_EQ("// clang-format off\n"
             "import org.b;\n"
             "import org.a;\n"
-            "// clang-format on\n",
+            "// clang-format on",
             sort("// clang-format off\n"
                  "import org.b;\n"
                  "import org.a;\n"
-                 "// clang-format on\n"));
+                 "// clang-format on"));
 }
 
 TEST_F(SortImportsTestJava, FormatTotallyOn) {
   EXPECT_EQ("// clang-format off\n"
             "// clang-format on\n"
             "import org.a;\n"
-            "import org.b;\n",
+            "import org.b;",
             sort("// clang-format off\n"
                  "// clang-format on\n"
                  "import org.b;\n"
-                 "import org.a;\n"));
+                 "import org.a;"));
 }
 
 TEST_F(SortImportsTestJava, FormatPariallyOnShouldNotReorder) {
@@ -241,13 +241,13 @@ TEST_F(SortImportsTestJava, FormatPariallyOnShouldNotReorder) {
             "import org.a;\n"
             "// clang-format on\n"
             "import org.d;\n"
-            "import org.c;\n",
+            "import org.c;",
             sort("// clang-format off\n"
                  "import org.b;\n"
                  "import org.a;\n"
                  "// clang-format on\n"
                  "import org.d;\n"
-                 "import org.c;\n"));
+                 "import org.c;"));
 }
 
 TEST_F(SortImportsTestJava, SortJavaStaticImport) {
@@ -262,13 +262,13 @@ TEST_F(SortImportsTestJava, SortJavaStaticImport) {
             "\n"
             "import org.b;\n"
             "\n"
-            "import com.b;\n",
+            "import com.b;",
             sort("import static com.test.a;\n"
                  "import static org.a;\n"
                  "import static com.a;\n"
                  "import com.test.b;\n"
                  "import org.b;\n"
-                 "import com.b;\n"));
+                 "import com.b;"));
 
   FmtStyle.SortJavaStaticImport = FormatStyle::SJSIO_After;
   EXPECT_EQ("import com.test.b;\n"
@@ -282,14 +282,14 @@ TEST_F(SortImportsTestJava, SortJavaStaticImport) {
             "\n"
             "import static org.a;\n"
             "\n"
-            "import static com.a;\n",
+            "import static com.a;",
             sort("import static com.test.a;\n"
                  "import static org.a;\n"
                  "import static com.a;\n"
                  "import com.test.b;\n"
                  "import org.b;\n"
                  "import com.b;\n"
-                 "import com.test.c;\n"));
+                 "import com.test.c;"));
 }
 
 TEST_F(SortImportsTestJava, SortJavaStaticImportAsGroup) {
@@ -299,16 +299,16 @@ TEST_F(SortImportsTestJava, SortJavaStaticImportAsGroup) {
             "import com.test.b;\n"
             "\n"
             "import static org.a;\n"
-            "import static org.b;\n",
+            "import static org.b;",
             sort("import com.test.a;\n"
                  "import static org.a;\n"
                  "import com.test.b;\n"
-                 "import static org.b;\n"));
+                 "import static org.b;"));
 }
 
 TEST_F(SortImportsTestJava, DeduplicateImports) {
-  EXPECT_EQ("import org.a;\n", sort("import org.a;\n"
-                                    "import org.a;\n"));
+  EXPECT_EQ("import org.a;", sort("import org.a;\n"
+                                  "import org.a;"));
 }
 
 TEST_F(SortImportsTestJava, NoNewlineAtEnd) {
@@ -324,13 +324,13 @@ TEST_F(SortImportsTestJava, ImportNamedFunction) {
             "  void m() {\n"
             "    importFile();\n"
             "  }\n"
-            "}\n",
+            "}",
             sort("import X;\n"
                  "class C {\n"
                  "  void m() {\n"
                  "    importFile();\n"
                  "  }\n"
-                 "}\n"));
+                 "}"));
 }
 
 TEST_F(SortImportsTestJava, NoReplacementsForValidImports) {

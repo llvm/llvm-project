@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t %s 
 ; RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
 
-; CHECK:        Address            Line   Column File   ISA Discriminator Flags
-; CHECK-NEXT:   ------------------ ------ ------ ------ --- ------------- -------------
-; CHECK-NEXT:   0x0000000000000000      3      0      1   0             0  is_stmt prologue_end
-; CHECK-NEXT:   0x000000000000001c      3      0      1   0             0  is_stmt end_sequence
+; CHECK:        Address            Line   Column File   ISA Discriminator OpIndex Flags
+; CHECK-NEXT:   ------------------ ------ ------ ------ --- ------------- ------- -------------
+; CHECK-NEXT:   0x0000000000000000      3      0      1   0             0       0  is_stmt prologue_end
+; CHECK-NEXT:   0x000000000000001c      3      0      1   0             0       0  is_stmt end_sequence
 
 define i32 @main() !dbg !7 {
 entry:

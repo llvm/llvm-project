@@ -17,10 +17,12 @@
 // RUN: %clang -S -### -cl-denorms-are-zero %s 2>&1 | FileCheck --check-prefix=CHECK-DENORMS-ARE-ZERO %s
 // RUN: %clang -S -### -cl-fp32-correctly-rounded-divide-sqrt %s 2>&1 | FileCheck --check-prefix=CHECK-ROUND-DIV %s
 // RUN: %clang -S -### -cl-uniform-work-group-size %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
+// RUN: %clang -S -### -foffload-uniform-block %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
+// RUN: %clang -S -### -fno-offload-uniform-block -cl-uniform-work-group-size %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
 // RUN: not %clang -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
-// RUN: %clang -S -### -target spir-unknown-unknown %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
-// RUN: %clang -S -### -target amdgcn-amd-amdhsa-opencl %s 2>&1 | FileCheck --check-prefix=CHECK-NO-W-SPIR-COMPAT %s
+// RUN: %clang -S -### --target=spir %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
+// RUN: %clang -S -### --target=amdgcn-amd-amdhsa-opencl -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefix=CHECK-NO-W-SPIR-COMPAT %s
 // RUN: %clang -S -### -cl-ext="+test_ext" %s 2>&1 | FileCheck --check-prefix=CHECK-EXT %s
 
 // CHECK-CL: "-cc1" {{.*}} "-cl-std=CL"
@@ -33,7 +35,7 @@
 // CHECK-OPT-DISABLE: "-cc1" {{.*}} "-cl-opt-disable"
 // CHECK-STRICT-ALIASING: "-cc1" {{.*}} "-cl-strict-aliasing"
 // CHECK-SINGLE-PRECISION-CONST: "-cc1" {{.*}} "-cl-single-precision-constant"
-// CHECK-FINITE-MATH-ONLY: "-cc1" {{.*}} "-cl-finite-math-only"
+// CHECK-FINITE-MATH-ONLY: "-cc1" {{.*}} "-menable-no-infs" "-menable-no-nans" "-cl-finite-math-only"
 // CHECK-KERNEL-ARG-INFO: "-cc1" {{.*}} "-cl-kernel-arg-info"
 // CHECK-UNSAFE-MATH-OPT: "-cc1" {{.*}} "-cl-unsafe-math-optimizations"
 // CHECK-FAST-RELAXED-MATH: "-cc1" {{.*}} "-cl-fast-relaxed-math"
@@ -44,7 +46,7 @@
 // CHECK-DENORMS-ARE-ZERO-NOT: "-cl-denorms-are-zero"
 
 // CHECK-ROUND-DIV: "-cc1" {{.*}} "-cl-fp32-correctly-rounded-divide-sqrt"
-// CHECK-UNIFORM-WG: "-cc1" {{.*}} "-cl-uniform-work-group-size"
+// CHECK-UNIFORM-WG: "-cc1" {{.*}} "-foffload-uniform-block"
 // CHECK-C99: error: invalid value 'c99' in '-cl-std=c99'
 // CHECK-INVALID: error: invalid value 'invalid' in '-cl-std=invalid'
 

@@ -13,7 +13,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
 
@@ -21,12 +21,14 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // TODO: Change the name of __unwrap_iter_impl to something more appropriate
 // The job of __unwrap_iter is to remove iterator wrappers (like reverse_iterator or __wrap_iter),
 // to reduce the number of template instantiations and to enable pointer-based optimizations e.g. in std::copy.
-// In debug mode, we don't do this.
 //
 // Some algorithms (e.g. std::copy, but not std::sort) need to convert an
 // "unwrapped" result back into the original iterator type. Doing that is the job of __rewrap_iter.
@@ -38,7 +40,8 @@ struct __unwrap_iter_impl {
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iter __unwrap(_Iter __i) _NOEXCEPT { return __i; }
 };
 
-#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+// TODO(hardening): make sure that the following unwrapping doesn't unexpectedly turn hardened iterators into raw
+// pointers.
 
 // It's a contiguous iterator, so we can use a raw pointer instead
 template <class _Iter>
@@ -54,13 +57,11 @@ struct __unwrap_iter_impl<_Iter, true> {
   }
 };
 
-#endif // !_LIBCPP_ENABLE_DEBUG_MODE
-
-template<class _Iter,
-         class _Impl = __unwrap_iter_impl<_Iter>,
-         __enable_if_t<is_copy_constructible<_Iter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-decltype(_Impl::__unwrap(std::declval<_Iter>())) __unwrap_iter(_Iter __i) _NOEXCEPT {
+template <class _Iter,
+          class _Impl                                             = __unwrap_iter_impl<_Iter>,
+          __enable_if_t<is_copy_constructible<_Iter>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 decltype(_Impl::__unwrap(std::declval<_Iter>()))
+__unwrap_iter(_Iter __i) _NOEXCEPT {
   return _Impl::__unwrap(__i);
 }
 
@@ -78,5 +79,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H

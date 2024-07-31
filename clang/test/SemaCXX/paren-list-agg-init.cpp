@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++20 %s -fsyntax-only
+// RUN: %clang_cc1 -verify -std=c++20 %s -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=expected,beforecxx20 -Wc++20-extensions -std=c++20 %s -fsyntax-only -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -verify=expected,beforecxx20 -Wc++20-extensions -std=c++20 %s -fsyntax-only
 
 struct A { // expected-note 4{{candidate constructor}}
@@ -90,7 +92,7 @@ T Construct(Args... args) {
   // beforecxx20-warning@-1 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
 }
 
-void foo(int n) {
+void foo(int n) { // expected-note {{declared here}}
   A a1(1954, 9, 21);
   // expected-error@-1 {{excess elements in struct initializer}}
   A a2(2.1);
@@ -173,8 +175,9 @@ void foo(int n) {
   int arr5[2](1, 2);
   // beforecxx20-warning@-1 {{aggregate initialization of type 'int[2]' from a parenthesized list of values is a C++20 extension}}
 
-  int arr6[n](1, 2, 3);
-  // expected-error@-1 {{variable-sized object may not be initialized}}
+  int arr6[n](1, 2, 3); // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                           expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}} \
+                           expected-error {{variable-sized object may not be initialized}}
 
   I i(1, 2);
   // expected-error@-1 {{no matching constructor for initialization of 'I'}}
@@ -271,4 +274,82 @@ namespace gh63008 {
 auto a = new A('a', {1.1});
 // expected-warning@-1 {{braces around scalar init}}
 // beforecxx20-warning@-2 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
+}
+
+
+namespace GH63278 {
+struct S {
+  int a = 0;
+  int b {0};
+  auto x = 1; // expected-error {{'auto' not allowed in non-static struct member}}
+  static const auto y = 1;
+};
+
+int test() {
+  // used to crash
+  S a(0, 1);
+  S b(0);
+  S c(0, 0, 1);
+
+  S d {0, 1};
+  S e {0};
+  S f {0, 0, 1};
+}
+
+}
+
+namespace gh63758 {
+  struct S {} s;
+  auto words = (char[])s; // expected-error {{C-style cast from 'struct S' to 'char[]' is not allowed}}
+};
+
+namespace GH63903 {
+  constexpr int f(); // expected-note {{declared here}}
+  struct S {
+    int a = 0, b = f(); // expected-note {{undefined function 'f' cannot be used in a constant expression}}
+  };
+
+  // Test that errors produced by default members are produced at the location of the initialization
+  constexpr S s(0); // beforecxx20-warning {{aggregate initialization of type 'const S' from a parenthesized list of values is a C++20 extension}} \
+                    // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
+}
+
+namespace gh62863 {
+
+int (&&arr)[] = static_cast<int[]>(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr1)[1] = static_cast<int[]>(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr2)[2] = static_cast<int[]>(42); // expected-error {{reference to type 'int[2]' could not bind to an rvalue of type 'int[1]'}}
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr3)[3] = static_cast<int[3]>(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[3]' from a parenthesized list of values is a C++20 extension}}
+
+int (&&arr4)[] = (int[])(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr5)[1] = (int[])(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr6)[2] = (int[])(42); // expected-error {{reference to type 'int[2]' could not bind to an rvalue of type 'int[1]'}}
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr7)[3] = (int[3])(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[3]' from a parenthesized list of values is a C++20 extension}}
+
+}
+
+namespace GH92284 {
+
+using T = int[1]; T x(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'T' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}}
+using Ta = int[2]; Ta a(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'Ta' (aka 'int[2]') from a parenthesized list of values is a C++20 extension}}
+using Tb = int[2]; Tb b(42,43);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'Tb' (aka 'int[2]') from a parenthesized list of values is a C++20 extension}}
+using Tc = int[]; Tc c(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+using Td = int[]; Td d(42,43);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[2]' from a parenthesized list of values is a C++20 extension}}
+template<typename T, int Sz> using ThroughAlias = T[Sz];
+ThroughAlias<int, 1> e(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'ThroughAlias<int, 1>' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}} 
+
 }

@@ -41,12 +41,18 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
   }
 
   if (const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
+    if (const auto *MethodDecl =
+            dyn_cast_or_null<CXXMethodDecl>(OpCallExpr->getDirectCallee()))
+      if (MethodDecl->isConst())
+        return false;
+
     OverloadedOperatorKind OpKind = OpCallExpr->getOperator();
     return OpKind == OO_Equal || OpKind == OO_PlusEqual ||
            OpKind == OO_MinusEqual || OpKind == OO_StarEqual ||
            OpKind == OO_SlashEqual || OpKind == OO_AmpEqual ||
            OpKind == OO_PipeEqual || OpKind == OO_CaretEqual ||
            OpKind == OO_LessLessEqual || OpKind == OO_GreaterGreaterEqual ||
+           OpKind == OO_LessLess || OpKind == OO_GreaterGreater ||
            OpKind == OO_PlusPlus || OpKind == OO_MinusMinus ||
            OpKind == OO_PercentEqual || OpKind == OO_New ||
            OpKind == OO_Delete || OpKind == OO_Array_New ||
@@ -54,16 +60,26 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
   }
 
   if (const auto *CExpr = dyn_cast<CallExpr>(E)) {
-    bool Result = CheckFunctionCalls;
+    if (!CheckFunctionCalls)
+      return false;
     if (const auto *FuncDecl = CExpr->getDirectCallee()) {
       if (FuncDecl->getDeclName().isIdentifier() &&
           IgnoredFunctionsMatcher.matches(*FuncDecl, Finder,
                                           Builder)) // exceptions come here
-        Result = false;
-      else if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
-        Result &= !MethodDecl->isConst();
+        return false;
+      for (size_t I = 0; I < FuncDecl->getNumParams(); I++) {
+        const ParmVarDecl *P = FuncDecl->getParamDecl(I);
+        const Expr *ArgExpr =
+            I < CExpr->getNumArgs() ? CExpr->getArg(I) : nullptr;
+        const QualType PT = P->getType().getCanonicalType();
+        if (ArgExpr && !ArgExpr->isXValue() && PT->isReferenceType() &&
+            !PT.getNonReferenceType().isConstQualified())
+          return true;
+      }
+      if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
+        return !MethodDecl->isConst();
     }
-    return Result;
+    return true;
   }
 
   return isa<CXXNewExpr>(E) || isa<CXXDeleteExpr>(E) || isa<CXXThrowExpr>(E);

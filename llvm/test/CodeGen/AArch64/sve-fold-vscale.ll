@@ -7,9 +7,9 @@
 define void @ld1w_reg_loop(ptr %addr) {
 ; CHECK-LABEL: ld1w_reg_loop:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
@@ -25,7 +25,7 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %2 = getelementptr inbounds [32000 x i32], ptr %addr, i64 0, i64 %index
-  %load = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %2, align 16
+  %load = load volatile <vscale x 4 x i32>, ptr %2, align 16
   %index.next = add i64 %index, %1
   %3 = icmp eq i64 %index.next, 0
   br i1 %3, label %for.cond.cleanup, label %vector.body
@@ -37,9 +37,9 @@ for.cond.cleanup:
 define void @st1w_reg_loop(ptr %addr, <vscale x 4 x i32> %val) {
 ; CHECK-LABEL: st1w_reg_loop:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
@@ -55,7 +55,7 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %2 = getelementptr inbounds [32000 x i32], ptr %addr, i64 0, i64 %index
-  store volatile <vscale x 4 x i32> %val, <vscale x 4 x i32>* %2, align 16
+  store volatile <vscale x 4 x i32> %val, ptr %2, align 16
   %index.next = add i64 %index, %1
   %3 = icmp eq i64 %index.next, 0
   br i1 %3, label %for.cond.cleanup, label %vector.body

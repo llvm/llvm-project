@@ -6,7 +6,11 @@ set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
+
 project(Runtimes C CXX ASM)
+set(LLVM_SUBPROJECT_TITLE "Runtimes")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -19,7 +23,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;offload")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -151,17 +155,52 @@ endif()
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
 
+# This can be used to detect whether we're targeting a GPU architecture.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
+   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+  set(LLVM_RUNTIMES_GPU_BUILD ON)
+endif()
+
 # Handle common options used by all runtimes.
 include(AddLLVM)
 include(HandleLLVMOptions)
 
+# Loot at the PATH first to avoid a version mismatch between the command-line
+# python and the CMake-found version
+set(Python3_FIND_REGISTRY LAST)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Host triple is used by tests to check if they are running natively.
 include(GetHostTriple)
 get_host_triple(LLVM_HOST_TRIPLE)
+message(STATUS "LLVM host triple: ${LLVM_HOST_TRIPLE}")
+
+# TODO: We shouldn't be using LLVM_DEFAULT_TARGET_TRIPLE for runtimes since we
+# aren't generating code, LLVM_TARGET_TRIPLE is a better fit.
 set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
-  "Default target for which the runtimes will be built.")
+    "Default target for which the runtimes will be built.")
+message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set(option_prefix "")
+  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+    set(option_prefix "/clang:")
+  endif()
+  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
+  execute_process(COMMAND ${print_target_triple}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE output
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(result EQUAL 0)
+    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
+  else()
+    string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+    # TODO(#97876): Report an error.
+    message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+  endif()
+endif()
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
@@ -174,9 +213,6 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
-
-include(SetTargetTriple)
-set_llvm_target_triple()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
@@ -212,23 +248,6 @@ if(LLVM_INCLUDE_TESTS)
   umbrella_lit_testsuite_begin(check-runtimes)
 endif()
 
-# llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
-# specific flags, which causes clashes when they're independently built too.
-if("llvm-libgcc" IN_LIST runtimes)
-  if("compiler-rt" IN_LIST runtimes OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR
-      "Attempting to build both compiler-rt and llvm-libgcc will cause irreconcilable "
-      "target clashes. Please choose one or the other, but not both.")
-  endif()
-
-  if("libunwind" IN_LIST runtimes)
-    message(
-      FATAL_ERROR
-      "Attempting to build both libunwind and llvm-libgcc will cause irreconcilable "
-      "target clashes. Please choose one or the other, but not both.")
-  endif()
-endif()
-
 # We do this in two loops so that HAVE_* is set for each runtime before the
 # other runtimes are added.
 foreach(entry ${runtimes})
@@ -237,12 +256,14 @@ foreach(entry ${runtimes})
   add_subdirectory(${entry} ${projName})
 endforeach()
 
+# Define runtimes-test-depends so the parent build can use it unconditionally.
+add_custom_target(runtimes-test-depends)
+
 if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
   get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
-  add_custom_target(runtimes-test-depends)
   if(LLVM_RUNTIMES_LIT_DEPENDS)
     # add_dependencies complains if called with no dependencies
     add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})

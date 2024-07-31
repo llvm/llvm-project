@@ -92,9 +92,10 @@ struct FormatStyle {
     ///   )
     /// \endcode
     ///
-    /// \warning
-    ///  Note: This currently only applies to parentheses.
-    /// \endwarning
+    /// \note
+    ///  This currently only applies to braced initializer lists (when
+    ///  ``Cpp11BracedListStyle`` is ``true``) and parentheses.
+    /// \endnote
     BAS_BlockIndent,
   };
 
@@ -133,8 +134,10 @@ struct FormatStyle {
   /// if not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
   ///
-  /// NOTE: As of clang-format 15 this option only applied to arrays with equal
-  /// number of columns per row.
+  /// \note
+  ///  As of clang-format 15 this option only applied to arrays with equal
+  ///  number of columns per row.
+  /// \endnote
   ///
   /// \version 13
   ArrayInitializerAlignmentStyle AlignArrayOfStructures;
@@ -151,9 +154,9 @@ struct FormatStyle {
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
   /// \code
-  ///   AlignConsecutiveMacros: AcrossEmptyLines
+  ///   <option-name>: AcrossEmptyLines
   ///
-  ///   AlignConsecutiveMacros:
+  ///   <option-name>:
   ///     Enabled: true
   ///     AcrossEmptyLines: true
   ///     AcrossComments: false
@@ -222,6 +225,22 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    /// aligned.
+    /// \code
+    ///   true:
+    ///   unsigned i;
+    ///   int     &r;
+    ///   int     *p;
+    ///   int      (*f)();
+    ///
+    ///   false:
+    ///   unsigned i;
+    ///   int     &r;
+    ///   int     *p;
+    ///   int (*f)();
+    /// \endcode
+    bool AlignFunctionPointers;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     /// operators are left-padded to the same length as long ones in order to
     /// put all assignment operators to the right of the left hand side.
@@ -244,7 +263,9 @@ struct FormatStyle {
     bool operator==(const AlignConsecutiveStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
-             AlignCompound == R.AlignCompound && PadOperators == R.PadOperators;
+             AlignCompound == R.AlignCompound &&
+             AlignFunctionPointers == R.AlignFunctionPointers &&
+             PadOperators == R.PadOperators;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
       return !(*this == R);
@@ -296,6 +317,157 @@ struct FormatStyle {
   /// \version 3.8
   AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
+  /// Alignment options.
+  ///
+  struct ShortCaseStatementsAlignmentStyle {
+    /// Whether aligning is enabled.
+    /// \code
+    ///   true:
+    ///   switch (level) {
+    ///   case log::info:    return "info:";
+    ///   case log::warning: return "warning:";
+    ///   default:           return "";
+    ///   }
+    ///
+    ///   false:
+    ///   switch (level) {
+    ///   case log::info: return "info:";
+    ///   case log::warning: return "warning:";
+    ///   default: return "";
+    ///   }
+    /// \endcode
+    bool Enabled;
+    /// Whether to align across empty lines.
+    /// \code
+    ///   true:
+    ///   switch (level) {
+    ///   case log::info:    return "info:";
+    ///   case log::warning: return "warning:";
+    ///
+    ///   default:           return "";
+    ///   }
+    ///
+    ///   false:
+    ///   switch (level) {
+    ///   case log::info:    return "info:";
+    ///   case log::warning: return "warning:";
+    ///
+    ///   default: return "";
+    ///   }
+    /// \endcode
+    bool AcrossEmptyLines;
+    /// Whether to align across comments.
+    /// \code
+    ///   true:
+    ///   switch (level) {
+    ///   case log::info:    return "info:";
+    ///   case log::warning: return "warning:";
+    ///   /* A comment. */
+    ///   default:           return "";
+    ///   }
+    ///
+    ///   false:
+    ///   switch (level) {
+    ///   case log::info:    return "info:";
+    ///   case log::warning: return "warning:";
+    ///   /* A comment. */
+    ///   default: return "";
+    ///   }
+    /// \endcode
+    bool AcrossComments;
+    /// Whether to align the case arrows when aligning short case expressions.
+    /// \code{.java}
+    ///   true:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY          -> 9;
+    ///     default                 -> 0;
+    ///   };
+    ///
+    ///   false:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY ->          9;
+    ///     default ->                 0;
+    ///   };
+    /// \endcode
+    bool AlignCaseArrows;
+    /// Whether aligned case labels are aligned on the colon, or on the tokens
+    /// after the colon.
+    /// \code
+    ///   true:
+    ///   switch (level) {
+    ///   case log::info   : return "info:";
+    ///   case log::warning: return "warning:";
+    ///   default          : return "";
+    ///   }
+    ///
+    ///   false:
+    ///   switch (level) {
+    ///   case log::info:    return "info:";
+    ///   case log::warning: return "warning:";
+    ///   default:           return "";
+    ///   }
+    /// \endcode
+    bool AlignCaseColons;
+    bool operator==(const ShortCaseStatementsAlignmentStyle &R) const {
+      return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
+             AcrossComments == R.AcrossComments &&
+             AlignCaseArrows == R.AlignCaseArrows &&
+             AlignCaseColons == R.AlignCaseColons;
+    }
+  };
+
+  /// Style of aligning consecutive short case labels.
+  /// Only applies if ``AllowShortCaseExpressionOnASingleLine`` or
+  /// ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+  ///
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   AlignConsecutiveShortCaseStatements:
+  ///     Enabled: true
+  ///     AcrossEmptyLines: true
+  ///     AcrossComments: true
+  ///     AlignCaseColons: false
+  /// \endcode
+  /// \version 17
+  ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
+
+  /// Style of aligning consecutive TableGen DAGArg operator colons.
+  /// If enabled, align the colon inside DAGArg which have line break inside.
+  /// This works only when TableGenBreakInsideDAGArg is BreakElements or
+  /// BreakAll and the DAGArg is not excepted by
+  /// TableGenBreakingDAGArgOperators's effect.
+  /// \code
+  ///   let dagarg = (ins
+  ///       a  :$src1,
+  ///       aa :$src2,
+  ///       aaa:$src3
+  ///   )
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
+
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// Align the colons of cases inside !cond operators.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
+  /// Style of aligning consecutive TableGen definition colons.
+  /// This aligns the inheritance colons of consecutive definitions.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
+
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
     /// Don't align escaped newlines.
@@ -308,15 +480,21 @@ struct FormatStyle {
     ENAS_DontAlign,
     /// Align escaped newlines as far left as possible.
     /// \code
-    ///   true:
     ///   #define A   \
     ///     int aaaa; \
     ///     int b;    \
     ///     int dddddddddd;
-    ///
-    ///   false:
     /// \endcode
     ENAS_Left,
+    /// Align escaped newlines as far left as possible, using the last line of
+    /// the preprocessor directive as the reference if it's the longest.
+    /// \code
+    ///   #define A         \
+    ///     int aaaa;       \
+    ///     int b;          \
+    ///     int dddddddddd;
+    /// \endcode
+    ENAS_LeftWithLastLine,
     /// Align escaped newlines in the right-most column.
     /// \code
     ///   #define A                                                                      \
@@ -439,8 +617,14 @@ struct FormatStyle {
 
   /// Control of trailing comments.
   ///
-  /// NOTE: As of clang-format 16 this option is not a bool but can be set
-  /// to the options. Conventional bool options still can be parsed as before.
+  /// The alignment stops at closing braces after a line break, and only
+  /// followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  /// a semicolon.
+  ///
+  /// \note
+  ///  As of clang-format 16 this option is not a bool but can be set
+  ///  to the options. Conventional bool options still can be parsed as before.
+  /// \endnote
   ///
   /// \code{.yaml}
   ///   # Example of usage:
@@ -491,6 +675,47 @@ struct FormatStyle {
   /// \version 3.3
   bool AllowAllParametersOfDeclarationOnNextLine;
 
+  /// Different ways to break before a noexcept specifier.
+  enum BreakBeforeNoexceptSpecifierStyle : int8_t {
+    /// No line break allowed.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2) noexcept(
+    ///       noexcept(baz(arg1)) &&
+    ///       noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Never,
+    /// For a simple ``noexcept`` there is no line break allowed, but when we
+    /// have a condition it is.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_OnlyWithParen,
+    /// Line breaks are allowed. But note that because of the associated
+    /// penalties ``clang-format`` often prefers not to break before the
+    /// ``noexcept``.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Always,
+  };
+
+  /// Controls if there could be a line break before a ``noexcept`` specifier.
+  /// \version 18
+  BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -524,6 +749,19 @@ struct FormatStyle {
   /// \version 3.5
   ShortBlockStyle AllowShortBlocksOnASingleLine;
 
+  /// Whether to merge a short switch labeled rule into a single line.
+  /// \code{.java}
+  ///   true:                               false:
+  ///   switch (a) {           vs.          switch (a) {
+  ///   case 1 -> 1;                        case 1 ->
+  ///   default -> 0;                         1;
+  ///   };                                  default ->
+  ///                                         0;
+  ///                                       };
+  /// \endcode
+  /// \version 19
+  bool AllowShortCaseExpressionOnASingleLine;
+
   /// If ``true``, short case labels will be contracted to a single line.
   /// \code
   ///   true:                                   false:
@@ -537,6 +775,25 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.6
   bool AllowShortCaseLabelsOnASingleLine;
+
+  /// Allow short compound requirement on a single line.
+  /// \code
+  ///   true:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     { x + 1 } -> std::same_as<int>;
+  ///   };
+  ///
+  ///   false:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     {
+  ///       x + 1
+  ///     } -> std::same_as<int>;
+  ///   };
+  /// \endcode
+  /// \version 18
+  bool AllowShortCompoundRequirementOnASingleLine;
 
   /// Allow short enums on a single line.
   /// \code
@@ -557,8 +814,8 @@ struct FormatStyle {
   enum ShortFunctionStyle : int8_t {
     /// Never merge functions into a single line.
     SFS_None,
-    /// Only merge functions defined inside a class. Same as "inline",
-    /// except it does not implies "empty": i.e. top level empty functions
+    /// Only merge functions defined inside a class. Same as ``inline``,
+    /// except it does not implies ``empty``: i.e. top level empty functions
     /// are not merged either.
     /// \code
     ///   class Foo {
@@ -579,7 +836,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     SFS_Empty,
-    /// Only merge functions defined inside a class. Implies "empty".
+    /// Only merge functions defined inside a class. Implies ``empty``.
     /// \code
     ///   class Foo {
     ///     void f() { foo(); }
@@ -730,16 +987,31 @@ struct FormatStyle {
   /// Different ways to break after the function definition or
   /// declaration return type.
   enum ReturnTypeBreakingStyle : int8_t {
-    /// Break after return type automatically.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// This is **deprecated**. See ``Automatic`` below.
+    RTBS_None,
+    /// Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
     /// \code
     ///   class A {
     ///     int f() { return 0; };
     ///   };
     ///   int f();
     ///   int f() { return 1; }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
-    RTBS_None,
+    RTBS_Automatic,
+    /// Same as ``Automatic`` above, except that there is no break after short
+    /// return types.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int f() { return 1; }
+    ///   int LongName::
+    ///       AnotherLongName();
+    /// \endcode
+    RTBS_ExceptShortType,
     /// Always break after the return type.
     /// \code
     ///   class A {
@@ -754,6 +1026,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_All,
     /// Always break after the return types of top-level functions.
@@ -767,6 +1041,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevel,
     /// Always break after the return type of function definitions.
@@ -782,6 +1058,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllDefinitions,
     /// Always break after the return type of top-level definitions.
@@ -794,6 +1072,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevelDefinitions,
   };
@@ -803,9 +1083,10 @@ struct FormatStyle {
   /// \version 3.7
   DefinitionReturnTypeBreakingStyle AlwaysBreakAfterDefinitionReturnType;
 
-  /// The function declaration return type breaking style to use.
+  /// This option is renamed to ``BreakAfterReturnType``.
   /// \version 3.8
-  ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
+  /// @deprecated
+  // ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
 
   /// If ``true``, always break before multiline string literals.
   ///
@@ -824,6 +1105,16 @@ struct FormatStyle {
 
   /// Different ways to break after the template declaration.
   enum BreakTemplateDeclarationsStyle : int8_t {
+    /// Do not change the line breaking before the declaration.
+    /// \code
+    ///    template <typename T>
+    ///    T foo() {
+    ///    }
+    ///    template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+    ///                                int bbbbbbbbbbbbbbbbbbbbb) {
+    ///    }
+    /// \endcode
+    BTDS_Leave,
     /// Do not force break before declaration.
     /// ``PenaltyBreakTemplateDeclaration`` is taken into account.
     /// \code
@@ -858,9 +1149,10 @@ struct FormatStyle {
     BTDS_Yes
   };
 
-  /// The template declaration breaking style to use.
+  /// This option is renamed to ``BreakTemplateDeclarations``.
   /// \version 3.4
-  BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
+  /// @deprecated
+  // BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
 
   /// A vector of strings that should be interpreted as attributes/qualifiers
   /// instead of identifiers. This can be useful for language extensions or
@@ -869,13 +1161,13 @@ struct FormatStyle {
   /// For example:
   /// \code
   ///   x = (char *__capability)&y;
-  ///   int function(void) __ununsed;
+  ///   int function(void) __unused;
   ///   void only_writes_to_buffer(char *__output buffer);
   /// \endcode
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   AttributeMacros: ['__capability', '__output', '__ununsed']
+  ///   AttributeMacros: [__capability, __output, __unused]
   /// \endcode
   ///
   /// \version 12
@@ -1093,8 +1385,10 @@ struct FormatStyle {
     /// \endcode
     bool AfterNamespace;
     /// Wrap ObjC definitions (interfaces, implementations...).
-    /// \note @autoreleasepool and @synchronized blocks are wrapped
-    /// according to `AfterControlStatement` flag.
+    /// \note
+    ///  @autoreleasepool and @synchronized blocks are wrapped
+    ///  according to ``AfterControlStatement`` flag.
+    /// \endnote
     bool AfterObjCDeclaration;
     /// Wrap struct definitions.
     /// \code
@@ -1203,9 +1497,10 @@ struct FormatStyle {
     bool IndentBraces;
     /// If ``false``, empty function body can be put on a single line.
     /// This option is used only if the opening brace of the function has
-    /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    /// already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is
     /// set, and the function could/should not be put on a single line (as per
-    /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    /// ``AllowShortFunctionsOnASingleLine`` and constructor formatting
+    /// options).
     /// \code
     ///   false:          true:
     ///   int f()   vs.   int f()
@@ -1216,7 +1511,7 @@ struct FormatStyle {
     bool SplitEmptyFunction;
     /// If ``false``, empty record (e.g. class, struct or union) body
     /// can be put on a single line. This option is used only if the opening
-    /// brace of the record has already been wrapped, i.e. the `AfterClass`
+    /// brace of the record has already been wrapped, i.e. the ``AfterClass``
     /// (for classes) brace wrapping mode is set.
     /// \code
     ///   false:           true:
@@ -1228,7 +1523,7 @@ struct FormatStyle {
     bool SplitEmptyRecord;
     /// If ``false``, empty namespace body can be put on a single line.
     /// This option is used only if the opening brace of the namespace has
-    /// already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
+    /// already been wrapped, i.e. the ``AfterNamespace`` brace wrapping mode is
     /// set.
     /// \code
     ///   false:               true:
@@ -1255,41 +1550,117 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
+  /// Break between adjacent string literals.
+  /// \code
+  ///    true:
+  ///    return "Code"
+  ///           "\0\52\26\55\55\0"
+  ///           "x013"
+  ///           "\02\xBA";
+  ///    false:
+  ///    return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+  /// \endcode
+  /// \version 18
+  bool BreakAdjacentStringLiterals;
+
   /// Different ways to break after attributes.
   enum AttributeBreakingStyle : int8_t {
     /// Always break after attributes.
     /// \code
+    ///   [[maybe_unused]]
+    ///   const int i;
+    ///   [[gnu::const]] [[maybe_unused]]
+    ///   int j;
+    ///
     ///   [[nodiscard]]
     ///   inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
+    ///
+    ///   [[likely]]
+    ///   if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]]
+    ///   case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]]
+    ///   default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Always,
     /// Leave the line breaking after attributes as is.
     /// \code
+    ///   [[maybe_unused]] const int i;
+    ///   [[gnu::const]] [[maybe_unused]]
+    ///   int j;
+    ///
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
+    ///
+    ///   [[likely]] if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]] case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]]
+    ///   default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Leave,
     /// Never break after attributes.
     /// \code
+    ///   [[maybe_unused]] const int i;
+    ///   [[gnu::const]] [[maybe_unused]] int j;
+    ///
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]] int g();
+    ///
+    ///   [[likely]] if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]] case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]] default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Never,
   };
 
-  /// Break after a group of C++11 attributes before a function
-  /// declaration/definition name.
+  /// Break after a group of C++11 attributes before variable or function
+  /// (including constructor/destructor) declaration/definition names or before
+  /// control statements, i.e. ``if``, ``switch`` (including ``case`` and
+  /// ``default`` labels), ``for``, and ``while`` statements.
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
-  /// If ``true``, clang-format will always break after a Json array `[`
-  /// otherwise it will scan until the closing `]` to determine if it should add
-  /// newlines between elements (prettier compatible).
+  /// The function declaration return type breaking style to use.
+  /// \version 19
+  ReturnTypeBreakingStyle BreakAfterReturnType;
+
+  /// If ``true``, clang-format will always break after a Json array ``[``
+  /// otherwise it will scan until the closing ``]`` to determine if it should
+  /// add newlines between elements (prettier compatible).
   ///
-  /// NOTE: This is currently only for formatting JSON.
+  /// \note
+  ///  This is currently only for formatting JSON.
+  /// \endnote
   /// \code
   ///    true:                                  false:
   ///    [                          vs.      [1, 2, 3, 4]
@@ -1784,7 +2155,7 @@ struct FormatStyle {
     ///   } // namespace N
     /// \endcode
     BS_WebKit,
-    /// Configure each individual brace in `BraceWrapping`.
+    /// Configure each individual brace in ``BraceWrapping``.
     BS_Custom
   };
 
@@ -1890,6 +2261,20 @@ struct FormatStyle {
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
+  /// If ``true``, clang-format will always break before function definition
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDefinition(
+  ///             int A, int B) {}
+  ///
+  ///    false:
+  ///    void functionDefinition(int A, int B) {}
+  ///
+  /// \endcode
+  /// \version 19
+  bool BreakFunctionDefinitionParameters;
+
   /// Break after each annotation on a field in Java files.
   /// \code{.java}
   ///    true:                                  false:
@@ -1901,6 +2286,8 @@ struct FormatStyle {
   bool BreakAfterJavaFieldAnnotations;
 
   /// Allow breaking string literals when formatting.
+  ///
+  /// In C, C++, and Objective-C:
   /// \code
   ///    true:
   ///    const char* x = "veryVeryVeryVeryVeryVe"
@@ -1909,8 +2296,35 @@ struct FormatStyle {
   ///
   ///    false:
   ///    const char* x =
-  ///      "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
+  ///
+  /// In C# and Java:
+  /// \code
+  ///    true:
+  ///    string x = "veryVeryVeryVeryVeryVe" +
+  ///               "ryVeryVeryVeryVeryVery" +
+  ///               "VeryLongString";
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
+  /// C# interpolated strings are not broken.
+  ///
+  /// In Verilog:
+  /// \code
+  ///    true:
+  ///    string x = {"veryVeryVeryVeryVeryVe",
+  ///                "ryVeryVeryVeryVeryVery",
+  ///                "VeryLongString"};
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
   /// \version 3.9
   bool BreakStringLiterals;
 
@@ -1971,6 +2385,10 @@ struct FormatStyle {
   /// The inheritance list style to use.
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
+
+  /// The template declaration breaking style to use.
+  /// \version 19
+  BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
   /// If ``true``, consecutive namespace declarations will be on the same
   /// line. If ``false``, each namespace is declared on a new line.
@@ -2179,8 +2597,10 @@ struct FormatStyle {
   /// made, clang-format analyzes whether there are other bin-packed cases in
   /// the input file and act accordingly.
   ///
-  /// NOTE: This is an experimental flag, that might go away or be renamed. Do
-  /// not use this in config files, etc. Use at your own risk.
+  /// \note
+  ///  This is an experimental flag, that might go away or be renamed. Do
+  ///  not use this in config files, etc. Use at your own risk.
+  /// \endnote
   /// \version 3.7
   bool ExperimentalAutoDetectBinPacking;
 
@@ -2211,7 +2631,7 @@ struct FormatStyle {
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   ForEachMacros: ['RANGES_FOR', 'FOREACH']
+  ///   ForEachMacros: [RANGES_FOR, FOREACH]
   /// \endcode
   ///
   /// For example: BOOST_FOREACH.
@@ -2233,7 +2653,7 @@ struct FormatStyle {
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   IfMacros: ['IF']
+  ///   IfMacros: [IF]
   /// \endcode
   ///
   /// For example: `KJ_IF_MAYBE
@@ -2456,9 +2876,9 @@ struct FormatStyle {
   /// and ``while``) in C++ unless the control statements are inside macro
   /// definitions or the braces would enclose preprocessor directives.
   /// \warning
-  ///  Setting this option to `true` could lead to incorrect code formatting due
-  ///  to clang-format's lack of complete semantic information. As such, extra
-  ///  care should be taken to review code changes made by this option.
+  ///  Setting this option to ``true`` could lead to incorrect code formatting
+  ///  due to clang-format's lack of complete semantic information. As such,
+  ///  extra care should be taken to review code changes made by this option.
   /// \endwarning
   /// \code
   ///   false:                                    true:
@@ -2610,7 +3030,7 @@ struct FormatStyle {
   /// in the following yaml example. This will result in imports being
   /// formatted as in the Java example below.
   /// \code{.yaml}
-  ///   JavaImportGroups: ['com.example', 'com', 'org']
+  ///   JavaImportGroups: [com.example, com, org]
   /// \endcode
   ///
   /// \code{.java}
@@ -2666,7 +3086,7 @@ struct FormatStyle {
   ///        VeryLongImportsAreAnnoying,
   ///        VeryLongImportsAreAnnoying,
   ///        VeryLongImportsAreAnnoying,
-  ///    } from 'some/module.js'
+  ///    } from "some/module.js"
   ///
   ///    false:
   ///    import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,} from "some/module.js"
@@ -2675,20 +3095,49 @@ struct FormatStyle {
   bool JavaScriptWrapImports;
   // clang-format on
 
-  /// Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
-  /// \version 17
-  bool KeepEmptyLinesAtEOF;
-
-  /// If true, the empty line at the start of blocks is kept.
+  /// Options regarding which empty lines are kept.
+  ///
+  /// For example, the config below will remove empty lines at start of the
+  /// file, end of the file, and start of blocks.
+  ///
   /// \code
-  ///    true:                                  false:
-  ///    if (foo) {                     vs.     if (foo) {
-  ///                                             bar();
-  ///      bar();                               }
-  ///    }
+  ///   KeepEmptyLines:
+  ///     AtEndOfFile: false
+  ///     AtStartOfBlock: false
+  ///     AtStartOfFile: false
   /// \endcode
+  struct KeepEmptyLinesStyle {
+    /// Keep empty lines at end of file.
+    bool AtEndOfFile;
+    /// Keep empty lines at start of a block.
+    /// \code
+    ///    true:                                  false:
+    ///    if (foo) {                     vs.     if (foo) {
+    ///                                             bar();
+    ///      bar();                               }
+    ///    }
+    /// \endcode
+    bool AtStartOfBlock;
+    /// Keep empty lines at start of file.
+    bool AtStartOfFile;
+    bool operator==(const KeepEmptyLinesStyle &R) const {
+      return AtEndOfFile == R.AtEndOfFile &&
+             AtStartOfBlock == R.AtStartOfBlock &&
+             AtStartOfFile == R.AtStartOfFile;
+    }
+  };
+  /// Which empty lines are kept.  See ``MaxEmptyLinesToKeep`` for how many
+  /// consecutive empty lines are kept.
+  /// \version 19
+  KeepEmptyLinesStyle KeepEmptyLines;
+
+  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// \version 17
+  // bool KeepEmptyLinesAtEOF;
+
+  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
   /// \version 3.7
-  bool KeepEmptyLinesAtTheStartOfBlocks;
+  // bool KeepEmptyLinesAtTheStartOfBlocks;
 
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
@@ -2700,8 +3149,8 @@ struct FormatStyle {
     ///        });
     /// \endcode
     LBI_Signature,
-    /// Align lambda body relative to the indentation level of the outer scope
-    /// the lambda signature resides in.
+    /// For statements within block scope, align lambda body relative to the
+    /// indentation level of the outer scope the lambda signature resides in.
     /// \code
     ///    someMethod(
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {
@@ -2762,7 +3211,10 @@ struct FormatStyle {
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
   bool isVerilog() const { return Language == LK_Verilog; }
-  bool isProto() const { return Language == LK_Proto; }
+  bool isProto() const {
+    return Language == LK_Proto || Language == LK_TextProto;
+  }
+  bool isTableGen() const { return Language == LK_TableGen; }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
@@ -2828,7 +3280,7 @@ struct FormatStyle {
   /// \endcode
   ///
   /// will usually be interpreted as a call to a function A, and the
-  /// multiplication expression will be formatted as `a * b`.
+  /// multiplication expression will be formatted as ``a * b``.
   ///
   /// If we specify the macro definition:
   /// \code{.yaml}
@@ -2837,7 +3289,7 @@ struct FormatStyle {
   /// \endcode
   ///
   /// the code will now be parsed as a declaration of the variable b of type a*,
-  /// and formatted as `a* b` (depending on pointer-binding rules).
+  /// and formatted as ``a* b`` (depending on pointer-binding rules).
   ///
   /// Features and restrictions:
   ///  * Both function-like macros and object-like macros are supported.
@@ -2854,7 +3306,7 @@ struct FormatStyle {
   ///    A(a, b); // will not be expanded.
   /// \endcode
   ///
-  /// \version 17.0
+  /// \version 17
   std::vector<std::string> Macros;
 
   /// The maximum number of consecutive empty lines to keep.
@@ -2990,6 +3442,29 @@ struct FormatStyle {
   /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
 
+  /// The order in which ObjC property attributes should appear.
+  ///
+  /// Attributes in code will be sorted in the order specified. Any attributes
+  /// encountered that are not mentioned in this array will be sorted last, in
+  /// stable order. Comments between attributes will leave the attributes
+  /// untouched.
+  /// \warning
+  ///  Using this option could lead to incorrect code formatting due to
+  ///  clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code{.yaml}
+  ///   ObjCPropertyAttributeOrder: [
+  ///       class, direct,
+  ///       atomic, nonatomic,
+  ///       assign, retain, strong, copy, weak, unsafe_unretained,
+  ///       readonly, readwrite, getter, setter,
+  ///       nullable, nonnull, null_resettable, null_unspecified
+  ///   ]
+  /// \endcode
+  /// \version 18
+  std::vector<std::string> ObjCPropertyAttributeOrder;
+
   /// Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
   /// \version 3.7
@@ -3082,6 +3557,10 @@ struct FormatStyle {
   /// \version 14
   unsigned PenaltyBreakOpenParenthesis;
 
+  /// The penalty for breaking after ``::``.
+  /// \version 18
+  unsigned PenaltyBreakScopeResolution;
+
   /// The penalty for each line break introduced inside a string literal.
   /// \version 3.7
   unsigned PenaltyBreakString;
@@ -3165,7 +3644,7 @@ struct FormatStyle {
     /// Change specifiers/qualifiers to be aligned based on ``QualifierOrder``.
     /// With:
     /// \code{.yaml}
-    ///   QualifierOrder: ['inline', 'static', 'type', 'const']
+    ///   QualifierOrder: [inline, static, type, const]
     /// \endcode
     ///
     /// \code
@@ -3178,7 +3657,7 @@ struct FormatStyle {
 
   /// Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
   /// \warning
-  ///  Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+  ///  Setting ``QualifierAlignment``  to something other than ``Leave``, COULD
   ///  lead to incorrect code formatting due to incorrect decisions made due to
   ///  clang-formats lack of complete semantic information.
   ///  As such extra care should be taken to review code changes made by the use
@@ -3199,13 +3678,16 @@ struct FormatStyle {
   ///   * restrict
   ///   * type
   ///
-  /// Note: it MUST contain 'type'.
-  /// Items to the left of 'type' will be placed to the left of the type and
-  /// aligned in the order supplied. Items to the right of 'type' will be placed
-  /// to the right of the type and aligned in the order supplied.
+  /// \note
+  ///  It **must** contain ``type``.
+  /// \endnote
+  ///
+  /// Items to the left of ``type`` will be placed to the left of the type and
+  /// aligned in the order supplied. Items to the right of ``type`` will be
+  /// placed to the right of the type and aligned in the order supplied.
   ///
   /// \code{.yaml}
-  ///   QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]
+  ///   QualifierOrder: [inline, static, type, const, volatile]
   /// \endcode
   /// \version 14
   std::vector<std::string> QualifierOrder;
@@ -3239,10 +3721,10 @@ struct FormatStyle {
   /// name will be reformatted assuming the specified language based on the
   /// style for that language defined in the .clang-format file. If no style has
   /// been defined in the .clang-format file for the specific language, a
-  /// predefined style given by 'BasedOnStyle' is used. If 'BasedOnStyle' is not
-  /// found, the formatting is based on llvm style. A matching delimiter takes
-  /// precedence over a matching enclosing function name for determining the
-  /// language of the raw string contents.
+  /// predefined style given by ``BasedOnStyle`` is used. If ``BasedOnStyle`` is
+  /// not found, the formatting is based on ``LLVM`` style. A matching delimiter
+  /// takes precedence over a matching enclosing function name for determining
+  /// the language of the raw string contents.
   ///
   /// If a canonical delimiter is specified, occurrences of other delimiters for
   /// the same language will be updated to the canonical if possible.
@@ -3255,17 +3737,17 @@ struct FormatStyle {
   ///   RawStringFormats:
   ///     - Language: TextProto
   ///         Delimiters:
-  ///           - 'pb'
-  ///           - 'proto'
+  ///           - pb
+  ///           - proto
   ///         EnclosingFunctions:
-  ///           - 'PARSE_TEXT_PROTO'
+  ///           - PARSE_TEXT_PROTO
   ///         BasedOnStyle: google
   ///     - Language: Cpp
   ///         Delimiters:
-  ///           - 'cc'
-  ///           - 'cpp'
-  ///         BasedOnStyle: llvm
-  ///         CanonicalDelimiter: 'cc'
+  ///           - cc
+  ///           - cpp
+  ///         BasedOnStyle: LLVM
+  ///         CanonicalDelimiter: cc
   /// \endcode
   /// \version 6
   std::vector<RawStringFormat> RawStringFormats;
@@ -3321,9 +3803,9 @@ struct FormatStyle {
   ///  This option will be renamed and expanded to support other styles.
   /// \endwarning
   /// \warning
-  ///  Setting this option to `true` could lead to incorrect code formatting due
-  ///  to clang-format's lack of complete semantic information. As such, extra
-  ///  care should be taken to review code changes made by this option.
+  ///  Setting this option to ``true`` could lead to incorrect code formatting
+  ///  due to clang-format's lack of complete semantic information. As such,
+  ///  extra care should be taken to review code changes made by this option.
   /// \endwarning
   /// \code
   ///   false:                                     true:
@@ -3369,11 +3851,48 @@ struct FormatStyle {
   /// \version 14
   bool RemoveBracesLLVM;
 
-  /// Remove semicolons after the closing brace of a non-empty function.
+  /// Types of redundant parentheses to remove.
+  enum RemoveParenthesesStyle : int8_t {
+    /// Do not remove parentheses.
+    /// \code
+    ///   class __declspec((dllimport)) X {};
+    ///   co_return (((0)));
+    ///   return ((a + b) - ((c + d)));
+    /// \endcode
+    RPS_Leave,
+    /// Replace multiple parentheses with single parentheses.
+    /// \code
+    ///   class __declspec(dllimport) X {};
+    ///   co_return (0);
+    ///   return ((a + b) - (c + d));
+    /// \endcode
+    RPS_MultipleParentheses,
+    /// Also remove parentheses enclosing the expression in a
+    /// ``return``/``co_return`` statement.
+    /// \code
+    ///   class __declspec(dllimport) X {};
+    ///   co_return 0;
+    ///   return (a + b) - (c + d);
+    /// \endcode
+    RPS_ReturnStatement,
+  };
+
+  /// Remove redundant parentheses.
   /// \warning
-  ///  Setting this option to `true` could lead to incorrect code formatting due
-  ///  to clang-format's lack of complete semantic information. As such, extra
-  ///  care should be taken to review code changes made by this option.
+  ///  Setting this option to any value other than ``Leave`` could lead to
+  ///  incorrect code formatting due to clang-format's lack of complete semantic
+  ///  information. As such, extra care should be taken to review code changes
+  ///  made by this option.
+  /// \endwarning
+  /// \version 17
+  RemoveParenthesesStyle RemoveParentheses;
+
+  /// Remove semicolons after the closing braces of functions and
+  /// constructors/destructors.
+  /// \warning
+  ///  Setting this option to ``true`` could lead to incorrect code formatting
+  ///  due to clang-format's lack of complete semantic information. As such,
+  ///  extra care should be taken to review code changes made by this option.
   /// \endwarning
   /// \code
   ///   false:                                     true:
@@ -3479,7 +3998,7 @@ struct FormatStyle {
     ///    }
     /// \endcode
     REI_OuterScope,
-    /// Align requires expression body relative to the `requires` keyword.
+    /// Align requires expression body relative to the ``requires`` keyword.
     /// \code
     ///    template <typename T>
     ///    concept C = requires(T t) {
@@ -3556,7 +4075,7 @@ struct FormatStyle {
   ///
   /// This determines the maximum length of short namespaces by counting
   /// unwrapped lines (i.e. containing neither opening nor closing
-  /// namespace brace) and makes "FixNamespaceComments" omit adding
+  /// namespace brace) and makes ``FixNamespaceComments`` omit adding
   /// end comments for those.
   /// \code
   ///    ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
@@ -3572,6 +4091,10 @@ struct FormatStyle {
   /// \endcode
   /// \version 13
   unsigned ShortNamespaceLines;
+
+  /// Do not format macro definition body.
+  /// \version 18
+  bool SkipMacroDefinitionBody;
 
   /// Include sorting options.
   enum SortIncludesOptions : int8_t {
@@ -3644,7 +4167,7 @@ struct FormatStyle {
     /// \endcode
     SUD_Never,
     /// Using declarations are sorted in the order defined as follows:
-    /// Split the strings by "::" and discard any initial empty strings. Sort
+    /// Split the strings by ``::`` and discard any initial empty strings. Sort
     /// the lists of names lexicographically, and within those groups, names are
     /// in case-insensitive lexicographic order.
     /// \code
@@ -3656,7 +4179,7 @@ struct FormatStyle {
     /// \endcode
     SUD_Lexicographic,
     /// Using declarations are sorted in the order defined as follows:
-    /// Split the strings by "::" and discard any initial empty strings. The
+    /// Split the strings by ``::`` and discard any initial empty strings. The
     /// last element of each list is a non-namespace name; all others are
     /// namespace names. Sort the lists of names lexicographically, where the
     /// sort order of individual names is that all non-namespace names come
@@ -3692,7 +4215,7 @@ struct FormatStyle {
   /// \version 9
   bool SpaceAfterLogicalNot;
 
-  /// If \c true, a space will be inserted after the 'template' keyword.
+  /// If \c true, a space will be inserted after the ``template`` keyword.
   /// \code
   ///    true:                                  false:
   ///    template <int> void foo();     vs.     template<int> void foo();
@@ -3794,14 +4317,9 @@ struct FormatStyle {
 
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
-    /// Never put a space before opening parentheses.
-    /// \code
-    ///    void f() {
-    ///      if(true) {
-    ///        f();
-    ///      }
-    ///    }
-    /// \endcode
+    /// This is **deprecated** and replaced by ``Custom`` below, with all
+    /// ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    /// ``false``.
     SBPO_Never,
     /// Put a space before opening parentheses only after control statement
     /// keywords (``for/if/while...``).
@@ -3827,7 +4345,7 @@ struct FormatStyle {
     /// \endcode
     SBPO_ControlStatementsExceptControlMacros,
     /// Put a space before opening parentheses only if the parentheses are not
-    /// empty i.e. '()'
+    /// empty.
     /// \code
     ///   void() {
     ///     if (true) {
@@ -3850,7 +4368,7 @@ struct FormatStyle {
     /// \endcode
     SBPO_Always,
     /// Configure each individual space before parentheses in
-    /// `SpaceBeforeParensOptions`.
+    /// ``SpaceBeforeParensOptions``.
     SBPO_Custom,
   };
 
@@ -3867,7 +4385,7 @@ struct FormatStyle {
   ///     AfterFunctionDefinitionName: true
   /// \endcode
   struct SpaceBeforeParensCustom {
-    /// If ``true``, put space betwee control statement keywords
+    /// If ``true``, put space between control statement keywords
     /// (for/if/while...) and opening parentheses.
     /// \code
     ///    true:                                  false:
@@ -3910,6 +4428,14 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
+    /// If ``true``, put a space between operator ``new``/``delete`` and opening
+    /// parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    new (buf) T;                    vs.    new(buf) T;
+    ///    delete (buf) T;                        delete(buf) T;
+    /// \endcode
+    bool AfterPlacementOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -3942,8 +4468,9 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterRequiresInClause(false),
-          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
+          AfterOverloadedOperator(false), AfterPlacementOperator(true),
+          AfterRequiresInClause(false), AfterRequiresInExpression(false),
+          BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -3953,6 +4480,7 @@ struct FormatStyle {
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
+             AfterPlacementOperator == Other.AfterPlacementOperator &&
              AfterRequiresInClause == Other.AfterRequiresInClause &&
              AfterRequiresInExpression == Other.AfterRequiresInExpression &&
              BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
@@ -4003,17 +4531,10 @@ struct FormatStyle {
   bool SpaceInEmptyBlock;
 
   /// If ``true``, spaces may be inserted into ``()``.
-  /// \code
-  ///    true:                                false:
-  ///    void f( ) {                    vs.   void f() {
-  ///      int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
-  ///      if (true) {                          if (true) {
-  ///        f( );                                f();
-  ///      }                                    }
-  ///    }                                    }
-  /// \endcode
+  /// This option is **deprecated**. See ``InEmptyParentheses`` of
+  /// ``SpacesInParensOptions``.
   /// \version 3.7
-  bool SpaceInEmptyParentheses;
+  // bool SpaceInEmptyParentheses;
 
   /// The number of spaces before trailing line comments
   /// (``//`` - comments).
@@ -4035,7 +4556,7 @@ struct FormatStyle {
   /// \version 3.7
   unsigned SpacesBeforeTrailingComments;
 
-  /// Styles for adding spacing after ``<`` and before ``>`
+  /// Styles for adding spacing after ``<`` and before ``>``
   ///  in template argument lists.
   enum SpacesInAnglesStyle : int8_t {
     /// Remove spaces after ``<`` and before ``>``.
@@ -4060,13 +4581,10 @@ struct FormatStyle {
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
-  /// \code
-  ///    true:                                  false:
-  ///    if ( a )  { ... }              vs.     if (a) { ... }
-  ///    while ( i < 5 )  { ... }               while (i < 5) { ... }
-  /// \endcode
+  /// This option is **deprecated**. See ``InConditionalStatements`` of
+  /// ``SpacesInParensOptions``.
   /// \version 10
-  bool SpacesInConditionalStatement;
+  // bool SpacesInConditionalStatement;
 
   /// If ``true``, spaces are inserted inside container literals (e.g.  ObjC and
   /// Javascript array and dict literals). For JSON, use
@@ -4080,12 +4598,10 @@ struct FormatStyle {
   bool SpacesInContainerLiterals;
 
   /// If ``true``, spaces may be inserted into C style casts.
-  /// \code
-  ///    true:                                  false:
-  ///    x = ( int32 )y                 vs.     x = (int32)y
-  /// \endcode
+  /// This option is **deprecated**. See ``InCStyleCasts`` of
+  /// ``SpacesInParensOptions``.
   /// \version 3.7
-  bool SpacesInCStyleCastParentheses;
+  // bool SpacesInCStyleCastParentheses;
 
   /// Control of spaces within a single line comment.
   struct SpacesInLineComment {
@@ -4129,13 +4645,127 @@ struct FormatStyle {
   /// \version 13
   SpacesInLineComment SpacesInLineCommentPrefix;
 
+  /// Different ways to put a space before opening and closing parentheses.
+  enum SpacesInParensStyle : int8_t {
+    /// Never put a space in parentheses.
+    /// \code
+    ///    void f() {
+    ///      if(true) {
+    ///        f();
+    ///      }
+    ///    }
+    /// \endcode
+    SIPO_Never,
+    /// Configure each individual space in parentheses in
+    /// `SpacesInParensOptions`.
+    SIPO_Custom,
+  };
+
   /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
-  /// \code
-  ///    true:                                  false:
-  ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
-  /// \endcode
+  /// This option is **deprecated**. The previous behavior is preserved by using
+  /// ``SpacesInParens`` with ``Custom`` and by setting all
+  /// ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
+  /// ``InEmptyParentheses``.
   /// \version 3.7
-  bool SpacesInParentheses;
+  // bool SpacesInParentheses;
+
+  /// Defines in which cases spaces will be inserted after ``(`` and before
+  /// ``)``.
+  /// \version 17
+  SpacesInParensStyle SpacesInParens;
+
+  /// Precise control over the spacing in parentheses.
+  /// \code
+  ///   # Should be declared this way:
+  ///   SpacesInParens: Custom
+  ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
+  ///     InConditionalStatements: true
+  ///     Other: true
+  /// \endcode
+  struct SpacesInParensCustom {
+    /// Override any of the following options to prevent addition of space
+    /// when both opening and closing parentheses use multiple parentheses.
+    /// \code
+    ///   true:
+    ///   __attribute__(( noreturn ))
+    ///   __decltype__(( x ))
+    ///   if (( a = b ))
+    /// \endcode
+    ///  false:
+    ///    Uses the applicable option.
+    bool ExceptDoubleParentheses;
+    /// Put a space in parentheses only inside conditional statements
+    /// (``for/if/while/switch...``).
+    /// \code
+    ///    true:                                  false:
+    ///    if ( a )  { ... }              vs.     if (a) { ... }
+    ///    while ( i < 5 )  { ... }               while (i < 5) { ... }
+    /// \endcode
+    bool InConditionalStatements;
+    /// Put a space in C style casts.
+    /// \code
+    ///   true:                                  false:
+    ///   x = ( int32 )y                  vs.    x = (int32)y
+    ///   y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
+    /// \endcode
+    bool InCStyleCasts;
+    /// Insert a space in empty parentheses, i.e. ``()``.
+    /// \code
+    ///    true:                                false:
+    ///    void f( ) {                    vs.   void f() {
+    ///      int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
+    ///      if (true) {                          if (true) {
+    ///        f( );                                f();
+    ///      }                                    }
+    ///    }                                    }
+    /// \endcode
+    bool InEmptyParentheses;
+    /// Put a space in parentheses not covered by preceding options.
+    /// \code
+    ///   true:                                 false:
+    ///   t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
+    /// \endcode
+    bool Other;
+
+    SpacesInParensCustom()
+        : ExceptDoubleParentheses(false), InConditionalStatements(false),
+          InCStyleCasts(false), InEmptyParentheses(false), Other(false) {}
+
+    SpacesInParensCustom(bool ExceptDoubleParentheses,
+                         bool InConditionalStatements, bool InCStyleCasts,
+                         bool InEmptyParentheses, bool Other)
+        : ExceptDoubleParentheses(ExceptDoubleParentheses),
+          InConditionalStatements(InConditionalStatements),
+          InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
+          Other(Other) {}
+
+    bool operator==(const SpacesInParensCustom &R) const {
+      return ExceptDoubleParentheses == R.ExceptDoubleParentheses &&
+             InConditionalStatements == R.InConditionalStatements &&
+             InCStyleCasts == R.InCStyleCasts &&
+             InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
+    }
+    bool operator!=(const SpacesInParensCustom &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Control of individual spaces in parentheses.
+  ///
+  /// If ``SpacesInParens`` is set to ``Custom``, use this to specify
+  /// how each individual space in parentheses case should be handled.
+  /// Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   SpacesInParens: Custom
+  ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
+  ///     InConditionalStatements: true
+  ///     InEmptyParentheses: true
+  /// \endcode
+  /// \version 17
+  SpacesInParensCustom SpacesInParensOptions;
 
   /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
   /// Lambdas without arguments or unspecified size array declarations will not
@@ -4211,9 +4841,73 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
+  /// Works only when TableGenBreakInsideDAGArg is not DontBreak.
+  /// The string list needs to consist of identifiers in TableGen.
+  /// If any identifier is specified, this limits the line breaks by
+  /// TableGenBreakInsideDAGArg option only on DAGArg values beginning with
+  /// the specified identifiers.
+  ///
+  /// For example the configuration,
+  /// \code{.yaml}
+  ///   TableGenBreakInsideDAGArg: BreakAll
+  ///   TableGenBreakingDAGArgOperators: [ins, outs]
+  /// \endcode
+  ///
+  /// makes the line break only occurs inside DAGArgs beginning with the
+  /// specified identifiers ``ins`` and ``outs``.
+  ///
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  ///   let DAGArgOtherID = (other i32:$other1, i32:$other2);
+  ///   let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+  /// \endcode
+  /// \version 19
+  std::vector<std::string> TableGenBreakingDAGArgOperators;
+
+  /// Different ways to control the format inside TableGen DAGArg.
+  enum DAGArgStyle : int8_t {
+    /// Never break inside DAGArg.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1, i32:$src2);
+    /// \endcode
+    DAS_DontBreak,
+    /// Break inside DAGArg after each list element but for the last.
+    /// This aligns to the first element.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1,
+    ///                        i32:$src2);
+    /// \endcode
+    DAS_BreakElements,
+    /// Break inside DAGArg after the operator and the all elements.
+    /// \code
+    ///   let DAGArgIns = (ins
+    ///       i32:$src1,
+    ///       i32:$src2
+    ///   );
+    /// \endcode
+    DAS_BreakAll,
+  };
+
+  /// The styles of the line break inside the DAGArg in TableGen.
+  /// \version 19
+  DAGArgStyle TableGenBreakInsideDAGArg;
+
   /// The number of columns used for tab stops.
   /// \version 3.7
   unsigned TabWidth;
+
+  /// A vector of non-keyword identifiers that should be interpreted as type
+  /// names.
+  ///
+  /// A ``*``, ``&``, or ``&&`` between a type name and another non-keyword
+  /// identifier is annotated as a pointer or reference token instead of a
+  /// binary operator.
+  ///
+  /// \version 17
+  std::vector<std::string> TypeNames;
 
   /// \brief A vector of macros that should be interpreted as type declarations
   /// instead of as function calls.
@@ -4225,7 +4919,7 @@ struct FormatStyle {
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   TypenameMacros: ['STACK_OF', 'LIST']
+  ///   TypenameMacros: [STACK_OF, LIST]
   /// \endcode
   ///
   /// For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
@@ -4281,7 +4975,7 @@ struct FormatStyle {
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
+  ///   WhitespaceSensitiveMacros: [STRINGIZE, PP_STRINGIZE]
   /// \endcode
   ///
   /// For example: BOOST_PP_STRINGIZE
@@ -4296,15 +4990,29 @@ struct FormatStyle {
            AlignConsecutiveBitFields == R.AlignConsecutiveBitFields &&
            AlignConsecutiveDeclarations == R.AlignConsecutiveDeclarations &&
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
+           AlignConsecutiveShortCaseStatements ==
+               R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenBreakingDAGArgColons ==
+               R.AlignConsecutiveTableGenBreakingDAGArgColons &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
            AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
+           AllowBreakBeforeNoexceptSpecifier ==
+               R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
+           AllowShortCaseExpressionOnASingleLine ==
+               R.AllowShortCaseExpressionOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
+           AllowShortCompoundRequirementOnASingleLine ==
+               R.AllowShortCompoundRequirementOnASingleLine &&
            AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortFunctionsOnASingleLine ==
                R.AllowShortFunctionsOnASingleLine &&
@@ -4312,18 +5020,17 @@ struct FormatStyle {
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
-           AlwaysBreakAfterReturnType == R.AlwaysBreakAfterReturnType &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
-           AlwaysBreakTemplateDeclarations ==
-               R.AlwaysBreakTemplateDeclarations &&
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
+           BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
@@ -4331,8 +5038,11 @@ struct FormatStyle {
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDefinitionParameters ==
+               R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
+           BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
            CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
@@ -4353,6 +5063,7 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainRegex &&
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
+           IncludeStyle.MainIncludeChar == R.IncludeStyle.MainIncludeChar &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
@@ -4368,10 +5079,7 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLinesAtEOF == R.KeepEmptyLinesAtEOF &&
-           KeepEmptyLinesAtTheStartOfBlocks ==
-               R.KeepEmptyLinesAtTheStartOfBlocks &&
-           Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
@@ -4382,6 +5090,7 @@ struct FormatStyle {
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
+           ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
@@ -4391,6 +5100,7 @@ struct FormatStyle {
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
+           PenaltyBreakScopeResolution == R.PenaltyBreakScopeResolution &&
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyBreakTemplateDeclaration ==
                R.PenaltyBreakTemplateDeclaration &&
@@ -4402,11 +5112,13 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RemoveParentheses == R.RemoveParentheses &&
            RemoveSemicolon == R.RemoveSemicolon &&
            RequiresClausePosition == R.RequiresClausePosition &&
            RequiresExpressionIndentation == R.RequiresExpressionIndentation &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
+           SkipMacroDefinitionBody == R.SkipMacroDefinitionBody &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
@@ -4426,21 +5138,23 @@ struct FormatStyle {
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            SpaceInEmptyBlock == R.SpaceInEmptyBlock &&
-           SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
-           SpacesInConditionalStatement == R.SpacesInConditionalStatement &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
-           SpacesInCStyleCastParentheses == R.SpacesInCStyleCastParentheses &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&
            SpacesInLineCommentPrefix.Maximum ==
                R.SpacesInLineCommentPrefix.Maximum &&
-           SpacesInParentheses == R.SpacesInParentheses &&
+           SpacesInParens == R.SpacesInParens &&
+           SpacesInParensOptions == R.SpacesInParensOptions &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
-           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
+           StatementMacros == R.StatementMacros &&
+           TableGenBreakingDAGArgOperators ==
+               R.TableGenBreakingDAGArgOperators &&
+           TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
+           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
@@ -4520,6 +5234,8 @@ FormatStyle getGNUStyle();
 /// https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017
 FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language);
 
+FormatStyle getClangFormatStyle();
+
 /// Returns style indicating formatting should be not applied at all.
 FormatStyle getNoStyle();
 
@@ -4572,7 +5288,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
 /// Returns the replacements corresponding to applying and formatting
 /// \p Replaces on success; otheriwse, return an llvm::Error carrying
 /// llvm::StringError.
-llvm::Expected<tooling::Replacements>
+Expected<tooling::Replacements>
 formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
                    const FormatStyle &Style);
 
@@ -4586,10 +5302,10 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// - If a replacement has offset UINT_MAX, length 1, and a replacement text
 ///   that is the name of the header to be removed, the header will be removed
 ///   from \p Code if it exists.
-/// The include manipulation is done via `tooling::HeaderInclude`, see its
+/// The include manipulation is done via ``tooling::HeaderInclude``, see its
 /// documentation for more details on how include insertion points are found and
 /// what edits are produced.
-llvm::Expected<tooling::Replacements>
+Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
 
@@ -4677,11 +5393,11 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style = getLLVMStyle());
 extern const char *StyleOptionHelpDescription;
 
 /// The suggested format style to use by default. This allows tools using
-/// `getStyle` to have a consistent default style.
+/// ``getStyle`` to have a consistent default style.
 /// Different builds can modify the value to the preferred styles.
 extern const char *DefaultFormatStyle;
 
-/// The suggested predefined style to use as the fallback style in `getStyle`.
+/// The suggested predefined style to use as the fallback style in ``getStyle``.
 /// Different builds can modify the value to the preferred styles.
 extern const char *DefaultFallbackStyle;
 
@@ -4714,11 +5430,11 @@ extern const char *DefaultFallbackStyle;
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                                     StringRef FallbackStyle,
-                                     StringRef Code = "",
-                                     llvm::vfs::FileSystem *FS = nullptr,
-                                     bool AllowUnknownOptions = false);
+Expected<FormatStyle>
+getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
+         StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
+         bool AllowUnknownOptions = false,
+         llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.
@@ -4758,9 +5474,7 @@ bool isClangFormatOff(StringRef Comment);
 } // end namespace format
 } // end namespace clang
 
-namespace std {
 template <>
-struct is_error_code_enum<clang::format::ParseError> : std::true_type {};
-} // namespace std
+struct std::is_error_code_enum<clang::format::ParseError> : std::true_type {};
 
 #endif // LLVM_CLANG_FORMAT_FORMAT_H

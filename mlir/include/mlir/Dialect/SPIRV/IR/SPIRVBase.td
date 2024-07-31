@@ -52,7 +52,6 @@ def SPIRV_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
-  let usePropertiesForAttributes = 1;
 
   let extraClassDeclaration = [{
     void registerAttributes();
@@ -343,6 +342,7 @@ def SPV_KHR_uniform_group_instructions       : I32EnumAttrCase<"SPV_KHR_uniform_
 def SPV_KHR_subgroup_rotate                  : I32EnumAttrCase<"SPV_KHR_subgroup_rotate", 28>;
 def SPV_KHR_non_semantic_info                : I32EnumAttrCase<"SPV_KHR_non_semantic_info", 29>;
 def SPV_KHR_terminate_invocation             : I32EnumAttrCase<"SPV_KHR_terminate_invocation", 30>;
+def SPV_KHR_cooperative_matrix               : I32EnumAttrCase<"SPV_KHR_cooperative_matrix", 31>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -435,6 +435,7 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_fragment_shader_barycentric, SPV_KHR_ray_cull_mask,
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
       SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
+      SPV_KHR_cooperative_matrix,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
@@ -833,6 +834,12 @@ def SPIRV_C_DotProduct                                  : I32EnumAttrCase<"DotPr
 def SPIRV_C_RayCullMaskKHR                              : I32EnumAttrCase<"RayCullMaskKHR", 6020> {
   list<Availability> availability = [
     Extension<[SPV_KHR_ray_cull_mask]>
+  ];
+}
+def SPIRV_C_CooperativeMatrixKHR                        : I32EnumAttrCase<"CooperativeMatrixKHR", 6022> {
+  list<Availability> availability = [
+    Extension<[SPV_KHR_cooperative_matrix]>,
+    MinVersion<SPIRV_V_1_6>
   ];
 }
 def SPIRV_C_BitInstructions                             : I32EnumAttrCase<"BitInstructions", 6025> {
@@ -1246,12 +1253,6 @@ def SPIRV_C_RayTracingProvisionalKHR                    : I32EnumAttrCase<"RayTr
     Extension<[SPV_KHR_ray_tracing]>
   ];
 }
-def SPIRV_C_CooperativeMatrixNV                         : I32EnumAttrCase<"CooperativeMatrixNV", 5357> {
-  list<I32EnumAttrCase> implies = [SPIRV_C_Shader];
-  list<Availability> availability = [
-    Extension<[SPV_NV_cooperative_matrix]>
-  ];
-}
 def SPIRV_C_FragmentShaderSampleInterlockEXT            : I32EnumAttrCase<"FragmentShaderSampleInterlockEXT", 5363> {
   list<I32EnumAttrCase> implies = [SPIRV_C_Shader];
   list<Availability> availability = [
@@ -1457,6 +1458,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_USMStorageClassesINTEL, SPIRV_C_IOPipesINTEL, SPIRV_C_BlockingPipesINTEL,
       SPIRV_C_FPGARegINTEL, SPIRV_C_DotProductInputAll,
       SPIRV_C_DotProductInput4x8BitPacked, SPIRV_C_DotProduct, SPIRV_C_RayCullMaskKHR,
+      SPIRV_C_CooperativeMatrixKHR,
       SPIRV_C_BitInstructions, SPIRV_C_AtomicFloat32AddEXT, SPIRV_C_AtomicFloat64AddEXT,
       SPIRV_C_LongConstantCompositeINTEL, SPIRV_C_OptNoneINTEL,
       SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_DebugInfoModuleINTEL, SPIRV_C_SplitBarrierINTEL,
@@ -1493,7 +1495,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_ShaderNonUniform, SPIRV_C_RuntimeDescriptorArray,
       SPIRV_C_StorageTexelBufferArrayDynamicIndexing, SPIRV_C_RayTracingNV,
       SPIRV_C_RayTracingMotionBlurNV, SPIRV_C_PhysicalStorageBufferAddresses,
-      SPIRV_C_RayTracingProvisionalKHR, SPIRV_C_CooperativeMatrixNV,
+      SPIRV_C_RayTracingProvisionalKHR,
       SPIRV_C_FragmentShaderSampleInterlockEXT,
       SPIRV_C_FragmentShaderShadingRateInterlockEXT, SPIRV_C_ShaderSMBuiltinsNV,
       SPIRV_C_FragmentShaderPixelInterlockEXT, SPIRV_C_DemoteToHelperInvocation,
@@ -4017,7 +4019,7 @@ def SPIRV_ArrayedAttr : SPIRV_I32EnumAttr<
 def SPIRV_ISI_SingleSampled : I32EnumAttrCase<"SingleSampled", 0>;
 def SPIRV_ISI_MultiSampled  : I32EnumAttrCase<"MultiSampled", 1>;
 
-def SPIRV_SamplingAttr: SPIRV_I32EnumAttr<
+def SPIRV_SamplingAttr : SPIRV_I32EnumAttr<
   "ImageSamplingInfo", "valid SPIR-V Image Sampling specification",
   "image_sampling_info", [SPIRV_ISI_SingleSampled, SPIRV_ISI_MultiSampled]>;
 
@@ -4035,9 +4037,53 @@ def SPIRV_ML_RowMajor    : I32EnumAttrCase<"RowMajor", 1>;
 def SPIRV_ML_PackedA     : I32EnumAttrCase<"PackedA", 2>;
 def SPIRV_ML_PackedB     : I32EnumAttrCase<"PackedB", 3>;
 
-def SPIRV_MatrixLayoutAttr  :
+def SPIRV_MatrixLayoutAttr :
     SPIRV_I32EnumAttr<"MatrixLayout", "valid SPIR-V MatrixLayout", "matrixLayout", [
       SPIRV_ML_ColumnMajor, SPIRV_ML_RowMajor, SPIRV_ML_PackedA, SPIRV_ML_PackedB
+    ]>;
+
+// Cooperative Matrix Use for the SPV_KHR_cooperative_matrix extension.
+def SPIRV_KHR_CMU_MatrixA   : I32EnumAttrCase<"MatrixA", 0>;
+def SPIRV_KHR_CMU_MatrixB   : I32EnumAttrCase<"MatrixB", 1>;
+def SPIRV_KHR_CMU_MatrixAcc : I32EnumAttrCase<"MatrixAcc", 2>;
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
+def SPIRV_KHR_CooperativeMatrixUseAttr :
+    SPIRV_I32EnumAttr<"CooperativeMatrixUseKHR",
+                      "valid SPIR-V Cooperative Matrix Use (KHR)",
+                      "coop_matrix_use_khr", [
+      SPIRV_KHR_CMU_MatrixA, SPIRV_KHR_CMU_MatrixB, SPIRV_KHR_CMU_MatrixAcc
+    ]>;
+
+// Cooperative Matrix Layout for the SPV_KHR_cooperative_matrix extension.
+def SPIRV_KHR_CML_RowMajor    : I32EnumAttrCase<"RowMajor", 0>;
+def SPIRV_KHR_CML_ColumnMajor : I32EnumAttrCase<"ColumnMajor", 1>;
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
+def SPIRV_KHR_CooperativeMatrixLayoutAttr :
+    SPIRV_I32EnumAttr<"CooperativeMatrixLayoutKHR",
+                      "valid SPIR-V Cooperative Matrix Layout (KHR)",
+                      "coop_matrix_layout_khr", [
+      SPIRV_KHR_CML_RowMajor, SPIRV_KHR_CML_ColumnMajor
+    ]>;
+
+// Cooperative Matrix Operands for the SPV_KHR_cooperative_matrix extension.
+def SPIRV_KHR_CMO_None           : I32BitEnumAttrCaseNone<"None">;
+def SPIRV_KHR_CMO_MatrixA_Signed : I32BitEnumAttrCaseBit<"ASigned", 0>;
+def SPIRV_KHR_CMO_MatrixB_Signed : I32BitEnumAttrCaseBit<"BSigned", 1>;
+def SPIRV_KHR_CMO_MatrixC_Signed : I32BitEnumAttrCaseBit<"CSigned", 2>;
+def SPIRV_KHR_CMO_Result_Signed  : I32BitEnumAttrCaseBit<"ResultSigned", 3>;
+def SPIRV_KHR_CMO_AccSat         : I32BitEnumAttrCaseBit<"AccSat", 4>;
+
+def SPIRV_KHR_CooperativeMatrixOperandsAttr :
+    SPIRV_BitEnumAttr<"CooperativeMatrixOperandsKHR",
+                      "valid SPIR-V Cooperative Matrix Operands (KHR)",
+                      "cooperative_matrix_operands_khr", [
+      SPIRV_KHR_CMO_None, SPIRV_KHR_CMO_MatrixA_Signed,
+      SPIRV_KHR_CMO_MatrixB_Signed, SPIRV_KHR_CMO_MatrixC_Signed,
+      SPIRV_KHR_CMO_Result_Signed, SPIRV_KHR_CMO_AccSat
     ]>;
 
 //===----------------------------------------------------------------------===//
@@ -4070,7 +4116,7 @@ class SignlessOrUnsignedIntOfWidths<list<int> widths> :
 
 def SPIRV_IsArrayType : CPred<"::llvm::isa<::mlir::spirv::ArrayType>($_self)">;
 def SPIRV_IsCooperativeMatrixType :
-  CPred<"::llvm::isa<::mlir::spirv::CooperativeMatrixNVType>($_self)">;
+  CPred<"::llvm::isa<::mlir::spirv::CooperativeMatrixType>($_self)">;
 def SPIRV_IsImageType : CPred<"::llvm::isa<::mlir::spirv::ImageType>($_self)">;
 def SPIRV_IsJointMatrixType :
   CPred<"::llvm::isa<::mlir::spirv::JointMatrixINTELType>($_self)">;
@@ -4101,8 +4147,8 @@ def SPIRV_AnyPtr : DialectType<SPIRV_Dialect, SPIRV_IsPtrType,
 def SPIRV_AnyArray : DialectType<SPIRV_Dialect, SPIRV_IsArrayType,
                                "any SPIR-V array type">;
 def SPIRV_AnyCooperativeMatrix : DialectType<SPIRV_Dialect,
-                               SPIRV_IsCooperativeMatrixType,
-                               "any SPIR-V cooperative matrix type">;
+                                   SPIRV_IsCooperativeMatrixType,
+                                  "any SPIR-V cooperative matrix type">;
 def SPIRV_AnyImage : DialectType<SPIRV_Dialect, SPIRV_IsImageType,
                                 "any SPIR-V image type">;
 def SPIRV_AnyJointMatrix : DialectType<SPIRV_Dialect, SPIRV_IsJointMatrixType,
@@ -4134,7 +4180,7 @@ def SPIRV_SignlessOrUnsignedInt : SignlessOrUnsignedIntOfWidths<[8, 16, 32, 64]>
 
 class SPIRV_CoopMatrixOfType<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsCooperativeMatrixType,
-    "::llvm::cast<::mlir::spirv::CooperativeMatrixNVType>($_self).getElementType()",
+    "::llvm::cast<::mlir::spirv::CooperativeMatrixType>($_self).getElementType()",
     "Cooperative Matrix">;
 
 class SPIRV_JointMatrixOfType<list<Type> allowedTypes> :
@@ -4142,15 +4188,19 @@ class SPIRV_JointMatrixOfType<list<Type> allowedTypes> :
     "::llvm::cast<::mlir::spirv::JointMatrixINTELType>($_self).getElementType()",
     "Joint Matrix">;
 
+class SPIRV_VectorOf<Type type> :
+    VectorOfLengthAndType<[2, 3, 4, 8,16], [type]>;
+
 class SPIRV_ScalarOrVectorOf<Type type> :
-    AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>]>;
+    AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
 
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
-    AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>,
+    AnyTypeOf<[type, SPIRV_VectorOf<type>,
                SPIRV_CoopMatrixOfType<[type]>]>;
 
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
-    AnyTypeOf<[SPIRV_AnyMatrix, SPIRV_CoopMatrixOfType<[type]>]>;
+    AnyTypeOf<[SPIRV_AnyMatrix,
+               SPIRV_CoopMatrixOfType<[type]>]>;
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
@@ -4292,6 +4342,7 @@ def SPIRV_OC_OpFMod                       : I32EnumAttrCase<"OpFMod", 141>;
 def SPIRV_OC_OpVectorTimesScalar          : I32EnumAttrCase<"OpVectorTimesScalar", 142>;
 def SPIRV_OC_OpMatrixTimesScalar          : I32EnumAttrCase<"OpMatrixTimesScalar", 143>;
 def SPIRV_OC_OpMatrixTimesMatrix          : I32EnumAttrCase<"OpMatrixTimesMatrix", 146>;
+def SPIRV_OC_OpDot                        : I32EnumAttrCase<"OpDot", 148>;
 def SPIRV_OC_OpIAddCarry                  : I32EnumAttrCase<"OpIAddCarry", 149>;
 def SPIRV_OC_OpISubBorrow                 : I32EnumAttrCase<"OpISubBorrow", 150>;
 def SPIRV_OC_OpUMulExtended               : I32EnumAttrCase<"OpUMulExtended", 151>;
@@ -4393,6 +4444,12 @@ def SPIRV_OC_OpGroupNonUniformFMin        : I32EnumAttrCase<"OpGroupNonUniformFM
 def SPIRV_OC_OpGroupNonUniformSMax        : I32EnumAttrCase<"OpGroupNonUniformSMax", 356>;
 def SPIRV_OC_OpGroupNonUniformUMax        : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
 def SPIRV_OC_OpGroupNonUniformFMax        : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
+def SPIRV_OC_OpGroupNonUniformBitwiseAnd  : I32EnumAttrCase<"OpGroupNonUniformBitwiseAnd", 359>;
+def SPIRV_OC_OpGroupNonUniformBitwiseOr   : I32EnumAttrCase<"OpGroupNonUniformBitwiseOr", 360>;
+def SPIRV_OC_OpGroupNonUniformBitwiseXor  : I32EnumAttrCase<"OpGroupNonUniformBitwiseXor", 361>;
+def SPIRV_OC_OpGroupNonUniformLogicalAnd  : I32EnumAttrCase<"OpGroupNonUniformLogicalAnd", 362>;
+def SPIRV_OC_OpGroupNonUniformLogicalOr   : I32EnumAttrCase<"OpGroupNonUniformLogicalOr", 363>;
+def SPIRV_OC_OpGroupNonUniformLogicalXor  : I32EnumAttrCase<"OpGroupNonUniformLogicalXor", 364>;
 def SPIRV_OC_OpSubgroupBallotKHR          : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
 def SPIRV_OC_OpSDot                       : I32EnumAttrCase<"OpSDot", 4450>;
 def SPIRV_OC_OpUDot                       : I32EnumAttrCase<"OpUDot", 4451>;
@@ -4400,11 +4457,11 @@ def SPIRV_OC_OpSUDot                      : I32EnumAttrCase<"OpSUDot", 4452>;
 def SPIRV_OC_OpSDotAccSat                 : I32EnumAttrCase<"OpSDotAccSat", 4453>;
 def SPIRV_OC_OpUDotAccSat                 : I32EnumAttrCase<"OpUDotAccSat", 4454>;
 def SPIRV_OC_OpSUDotAccSat                : I32EnumAttrCase<"OpSUDotAccSat", 4455>;
-def SPIRV_OC_OpTypeCooperativeMatrixNV    : I32EnumAttrCase<"OpTypeCooperativeMatrixNV", 5358>;
-def SPIRV_OC_OpCooperativeMatrixLoadNV    : I32EnumAttrCase<"OpCooperativeMatrixLoadNV", 5359>;
-def SPIRV_OC_OpCooperativeMatrixStoreNV   : I32EnumAttrCase<"OpCooperativeMatrixStoreNV", 5360>;
-def SPIRV_OC_OpCooperativeMatrixMulAddNV  : I32EnumAttrCase<"OpCooperativeMatrixMulAddNV", 5361>;
-def SPIRV_OC_OpCooperativeMatrixLengthNV  : I32EnumAttrCase<"OpCooperativeMatrixLengthNV", 5362>;
+def SPIRV_OC_OpTypeCooperativeMatrixKHR   : I32EnumAttrCase<"OpTypeCooperativeMatrixKHR", 4456>;
+def SPIRV_OC_OpCooperativeMatrixLoadKHR   : I32EnumAttrCase<"OpCooperativeMatrixLoadKHR", 4457>;
+def SPIRV_OC_OpCooperativeMatrixStoreKHR  : I32EnumAttrCase<"OpCooperativeMatrixStoreKHR", 4458>;
+def SPIRV_OC_OpCooperativeMatrixMulAddKHR : I32EnumAttrCase<"OpCooperativeMatrixMulAddKHR", 4459>;
+def SPIRV_OC_OpCooperativeMatrixLengthKHR : I32EnumAttrCase<"OpCooperativeMatrixLengthKHR", 4460>;
 def SPIRV_OC_OpSubgroupBlockReadINTEL     : I32EnumAttrCase<"OpSubgroupBlockReadINTEL", 5575>;
 def SPIRV_OC_OpSubgroupBlockWriteINTEL    : I32EnumAttrCase<"OpSubgroupBlockWriteINTEL", 5576>;
 def SPIRV_OC_OpAssumeTrueKHR              : I32EnumAttrCase<"OpAssumeTrueKHR", 5630>;
@@ -4456,7 +4513,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpFSub, SPIRV_OC_OpIMul, SPIRV_OC_OpFMul, SPIRV_OC_OpUDiv,
       SPIRV_OC_OpSDiv, SPIRV_OC_OpFDiv, SPIRV_OC_OpUMod, SPIRV_OC_OpSRem,
       SPIRV_OC_OpSMod, SPIRV_OC_OpFRem, SPIRV_OC_OpFMod,
-      SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar,
+      SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar, SPIRV_OC_OpDot,
       SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpIAddCarry, SPIRV_OC_OpISubBorrow,
       SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended, SPIRV_OC_OpIsNan,
       SPIRV_OC_OpIsInf, SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
@@ -4496,11 +4553,15 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupNonUniformSMin, SPIRV_OC_OpGroupNonUniformUMin,
       SPIRV_OC_OpGroupNonUniformFMin, SPIRV_OC_OpGroupNonUniformSMax,
       SPIRV_OC_OpGroupNonUniformUMax, SPIRV_OC_OpGroupNonUniformFMax,
+      SPIRV_OC_OpGroupNonUniformBitwiseAnd, SPIRV_OC_OpGroupNonUniformBitwiseOr,
+      SPIRV_OC_OpGroupNonUniformBitwiseXor, SPIRV_OC_OpGroupNonUniformLogicalAnd,
+      SPIRV_OC_OpGroupNonUniformLogicalOr, SPIRV_OC_OpGroupNonUniformLogicalXor,
       SPIRV_OC_OpSubgroupBallotKHR, SPIRV_OC_OpSDot, SPIRV_OC_OpUDot,
       SPIRV_OC_OpSUDot, SPIRV_OC_OpSDotAccSat, SPIRV_OC_OpUDotAccSat,
-      SPIRV_OC_OpSUDotAccSat, SPIRV_OC_OpTypeCooperativeMatrixNV,
-      SPIRV_OC_OpCooperativeMatrixLoadNV, SPIRV_OC_OpCooperativeMatrixStoreNV,
-      SPIRV_OC_OpCooperativeMatrixMulAddNV, SPIRV_OC_OpCooperativeMatrixLengthNV,
+      SPIRV_OC_OpSUDotAccSat,
+      SPIRV_OC_OpTypeCooperativeMatrixKHR, SPIRV_OC_OpCooperativeMatrixLoadKHR,
+      SPIRV_OC_OpCooperativeMatrixStoreKHR, SPIRV_OC_OpCooperativeMatrixMulAddKHR,
+      SPIRV_OC_OpCooperativeMatrixLengthKHR,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
       SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpAtomicFAddEXT, SPIRV_OC_OpGroupIMulKHR,
       SPIRV_OC_OpGroupFMulKHR,
@@ -4667,5 +4728,29 @@ class SPIRV_IntelVendorOp<string mnemonic, list<Trait> traits = []> :
 class SPIRV_NvVendorOp<string mnemonic, list<Trait> traits = []> :
   SPIRV_VendorOp<mnemonic, "NV", traits> {
 }
+
+def SPIRV_FPFMM_None         : I32BitEnumAttrCaseNone<"None">;
+def SPIRV_FPFMM_NotNaN       : I32BitEnumAttrCaseBit<"NotNaN", 0>;
+def SPIRV_FPFMM_NotInf       : I32BitEnumAttrCaseBit<"NotInf", 1>;
+def SPIRV_FPFMM_NSZ          : I32BitEnumAttrCaseBit<"NSZ", 2>;
+def SPIRV_FPFMM_AllowRecip   : I32BitEnumAttrCaseBit<"AllowRecip", 3>;
+def SPIRV_FPFMM_Fast         : I32BitEnumAttrCaseBit<"Fast", 4>;
+def SPIRV_FPFMM_AllowContractFastINTEL : I32BitEnumAttrCaseBit<"AllowContractFastINTEL", 16> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FPFastMathModeINTEL]>
+  ];
+}
+def SPIRV_FPFMM_AllowReassocINTEL : I32BitEnumAttrCaseBit<"AllowReassocINTEL", 17> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FPFastMathModeINTEL]>
+  ];
+}
+
+def SPIRV_FPFastMathModeAttr :
+    SPIRV_BitEnumAttr<"FPFastMathMode", "Indicates a floating-point fast math flag", "fastmath_mode", [
+      SPIRV_FPFMM_None, SPIRV_FPFMM_NotNaN, SPIRV_FPFMM_NotInf, SPIRV_FPFMM_NSZ,
+      SPIRV_FPFMM_AllowRecip, SPIRV_FPFMM_Fast, SPIRV_FPFMM_AllowContractFastINTEL,
+      SPIRV_FPFMM_AllowReassocINTEL
+    ]>;
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

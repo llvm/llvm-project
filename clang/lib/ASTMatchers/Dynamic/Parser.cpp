@@ -187,10 +187,10 @@ private:
             break;
           ++TokenLength;
         }
-        if (TokenLength == 4 && Code.startswith("true")) {
+        if (TokenLength == 4 && Code.starts_with("true")) {
           Result.Kind = TokenInfo::TK_Literal;
           Result.Value = true;
-        } else if (TokenLength == 5 && Code.startswith("false")) {
+        } else if (TokenLength == 5 && Code.starts_with("false")) {
           Result.Kind = TokenInfo::TK_Literal;
           Result.Value = false;
         } else {
@@ -299,10 +299,8 @@ private:
 
   /// Consume all leading whitespace from \c Code.
   void consumeWhitespace() {
-    Code = Code.drop_while([](char c) {
-      // Don't trim newlines.
-      return StringRef(" \t\v\f\r").contains(c);
-    });
+    // Don't trim newlines.
+    Code = Code.ltrim(" \t\v\f\r");
   }
 
   SourceLocation currentLocation() {
@@ -737,7 +735,7 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &NameToken,
 // Completions minus the prefix.
 void Parser::addCompletion(const TokenInfo &CompToken,
                            const MatcherCompletion& Completion) {
-  if (StringRef(Completion.TypedText).startswith(CompToken.Text) &&
+  if (StringRef(Completion.TypedText).starts_with(CompToken.Text) &&
       Completion.Specificity > 0) {
     Completions.emplace_back(Completion.TypedText.substr(CompToken.Text.size()),
                              Completion.MatcherDecl, Completion.Specificity);

@@ -39,13 +39,13 @@ v8i16 test_v8i16(v8i16 x)
   return x;
 }
 
-// CHECK: define{{.*}} void @test_v16i16(ptr noalias sret(<16 x i16>) align 32 %agg.result, ptr noundef %0)
+// CHECK: define{{.*}} void @test_v16i16(ptr dead_on_unwind noalias writable sret(<16 x i16>) align 32 %agg.result, ptr noundef %0)
 v16i16 test_v16i16(v16i16 x)
 {
   return x;
 }
 
-// CHECK: define{{.*}} void @test_struct_v16i16(ptr noalias sret(%struct.v16i16) align 32 %agg.result, [2 x i128] %x.coerce)
+// CHECK: define{{.*}} void @test_struct_v16i16(ptr dead_on_unwind noalias writable sret(%struct.v16i16) align 32 %agg.result, [2 x i128] %x.coerce)
 struct v16i16 test_struct_v16i16(struct v16i16 x)
 {
   return x;

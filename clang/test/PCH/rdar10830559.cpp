@@ -1,5 +1,5 @@
 // Test this without pch.
-// RUN: %clang_cc1 -fsyntax-only -emit-llvm-only %s
+// RUN: %clang_cc1 -emit-llvm-only %s
 
 // Test with pch.
 // RUN: touch %t.empty.cpp
@@ -8,8 +8,6 @@
 
 // RUN: %clang_cc1 -emit-pch -fpch-instantiate-templates -o %t %s
 // RUN: %clang_cc1 -include-pch %t -emit-llvm-only %t.empty.cpp
-
-// rdar://10830559
 
 //#pragma ms_struct on
 

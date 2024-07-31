@@ -53,9 +53,19 @@ public:
   ///
   /// Results in resolve(B) returning {B, C}
   ValueSetT resolve(Value value) const;
+  ValueSetT resolveReverse(Value value) const;
 
   /// Removes the given values from all alias sets.
   void remove(const SetVector<Value> &aliasValues);
+
+  /// Replaces all occurrences of 'from' in the internal datastructures with
+  /// 'to'. This is useful when the defining operation of a value has to be
+  /// re-built because additional results have to be added or the types of
+  /// results have to be changed.
+  void rename(Value from, Value to);
+
+  /// Returns "true" if the given value may be a terminal.
+  bool mayBeTerminalBuffer(Value value) const;
 
 private:
   /// This function constructs a mapping from values to its immediate
@@ -64,6 +74,44 @@ private:
 
   /// Maps values to all immediate dependencies this value can have.
   ValueMapT dependencies;
+  ValueMapT reverseDependencies;
+
+  /// A set of all SSA values that may be terminal buffers.
+  DenseSet<Value> terminals;
+};
+
+/// An is-same-buffer analysis that checks if two SSA values belong to the same
+/// buffer allocation or not.
+class BufferOriginAnalysis {
+public:
+  BufferOriginAnalysis(Operation *op);
+
+  /// Return "true" if `v1` and `v2` originate from the same buffer allocation.
+  /// Return "false" if `v1` and `v2` originate from different allocations.
+  /// Return "nullopt" if we do not know for sure.
+  ///
+  /// Example 1: isSameAllocation(%0, %1) == true
+  /// ```
+  /// %0 = memref.alloc()
+  /// %1 = memref.subview %0
+  /// ```
+  ///
+  /// Example 2: isSameAllocation(%0, %1) == false
+  /// ```
+  /// %0 = memref.alloc()
+  /// %1 = memref.alloc()
+  /// ```
+  ///
+  /// Example 3: isSameAllocation(%0, %2) == nullopt
+  /// ```
+  /// %0 = memref.alloc()
+  /// %1 = memref.alloc()
+  /// %2 = arith.select %c, %0, %1
+  /// ```
+  std::optional<bool> isSameAllocation(Value v1, Value v2);
+
+private:
+  BufferViewFlowAnalysis analysis;
 };
 
 } // namespace mlir

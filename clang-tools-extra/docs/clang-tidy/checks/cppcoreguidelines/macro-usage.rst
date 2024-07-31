@@ -7,8 +7,8 @@ Finds macro usage that is considered problematic because better language
 constructs exist for the task.
 
 The relevant sections in the C++ Core Guidelines are
-`ES.31 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es31-dont-use-macros-for-constants-or-functions>`_, and
-`ES.32 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es32-use-all_caps-for-all-macro-names>`_.
+`ES.31 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es31-dont-use-macros-for-constants-or-functions>`_, and
+`ES.32 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es32-use-all_caps-for-all-macro-names>`_.
 
 Examples:
 
@@ -17,6 +17,7 @@ Examples:
   #define C 0
   #define F1(x, y) ((a) > (b) ? (a) : (b))
   #define F2(...) (__VA_ARGS__)
+  #define F3(x, y) x##y
   #define COMMA ,
   #define NORETURN [[noreturn]]
   #define DEPRECATED attribute((deprecated))

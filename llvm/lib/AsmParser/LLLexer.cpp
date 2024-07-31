@@ -279,7 +279,7 @@ lltok::Kind LLLexer::LexDollar() {
       if (CurChar == '"') {
         StrVal.assign(TokStart + 2, CurPtr - 1);
         UnEscapeLexed(StrVal);
-        if (StringRef(StrVal).find_first_of(0) != StringRef::npos) {
+        if (StringRef(StrVal).contains(0)) {
           Error("Null bytes are not allowed in names");
           return lltok::Error;
         }
@@ -362,7 +362,7 @@ lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
       if (CurChar == '"') {
         StrVal.assign(TokStart+2, CurPtr-1);
         UnEscapeLexed(StrVal);
-        if (StringRef(StrVal).find_first_of(0) != StringRef::npos) {
+        if (StringRef(StrVal).contains(0)) {
           Error("Null bytes are not allowed in names");
           return lltok::Error;
         }
@@ -397,7 +397,7 @@ lltok::Kind LLLexer::LexQuote() {
 
   if (CurPtr[0] == ':') {
     ++CurPtr;
-    if (StringRef(StrVal).find_first_of(0) != StringRef::npos) {
+    if (StringRef(StrVal).contains(0)) {
       Error("Null bytes are not allowed in names");
       kind = lltok::Error;
     } else {
@@ -438,9 +438,12 @@ lltok::Kind LLLexer::LexCaret() {
 
 /// Lex all tokens that start with a # character.
 ///    AttrGrpID ::= #[0-9]+
+///    Hash ::= #
 lltok::Kind LLLexer::LexHash() {
   // Handle AttrGrpID: #[0-9]+
-  return LexUIntID(lltok::AttrGrpID);
+  if (isdigit(static_cast<unsigned char>(CurPtr[0])))
+    return LexUIntID(lltok::AttrGrpID);
+  return lltok::hash;
 }
 
 /// Lex a label, integer type, keyword, or hexadecimal integer constant.
@@ -563,12 +566,16 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(fast);
   KEYWORD(nuw);
   KEYWORD(nsw);
+  KEYWORD(nusw);
   KEYWORD(exact);
+  KEYWORD(disjoint);
   KEYWORD(inbounds);
+  KEYWORD(nneg);
   KEYWORD(inrange);
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(partition);
+  KEYWORD(code_model);
   KEYWORD(alias);
   KEYWORD(ifunc);
   KEYWORD(module);
@@ -597,6 +604,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(aarch64_vector_pcs);
   KEYWORD(aarch64_sve_vector_pcs);
   KEYWORD(aarch64_sme_preservemost_from_x0);
+  KEYWORD(aarch64_sme_preservemost_from_x1);
   KEYWORD(aarch64_sme_preservemost_from_x2);
   KEYWORD(msp430_intrcc);
   KEYWORD(avr_intrcc);
@@ -609,12 +617,12 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(x86_64_sysvcc);
   KEYWORD(win64cc);
   KEYWORD(x86_regcallcc);
-  KEYWORD(webkit_jscc);
   KEYWORD(swiftcc);
   KEYWORD(swifttailcc);
   KEYWORD(anyregcc);
   KEYWORD(preserve_mostcc);
   KEYWORD(preserve_allcc);
+  KEYWORD(preserve_nonecc);
   KEYWORD(ghccc);
   KEYWORD(x86_intrcc);
   KEYWORD(hhvmcc);
@@ -627,9 +635,14 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gs);
   KEYWORD(amdgpu_ps);
   KEYWORD(amdgpu_cs);
+  KEYWORD(amdgpu_cs_chain);
+  KEYWORD(amdgpu_cs_chain_preserve);
   KEYWORD(amdgpu_kernel);
   KEYWORD(amdgpu_gfx);
   KEYWORD(tailcc);
+  KEYWORD(m68k_rtdcc);
+  KEYWORD(graalcc);
+  KEYWORD(riscv_vector_cc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -692,11 +705,13 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
 
+  KEYWORD(splat);
   KEYWORD(vscale);
   KEYWORD(x);
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);
   KEYWORD(no_cfi);
+  KEYWORD(ptrauth);
 
   // Metadata types.
   KEYWORD(distinct);
@@ -725,6 +740,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(live);
   KEYWORD(dsoLocal);
   KEYWORD(canAutoHide);
+  KEYWORD(importType);
+  KEYWORD(definition);
+  KEYWORD(declaration);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
@@ -820,18 +838,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("ppc_fp128", Type::getPPC_FP128Ty(Context));
   TYPEKEYWORD("label",     Type::getLabelTy(Context));
   TYPEKEYWORD("metadata",  Type::getMetadataTy(Context));
-  TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
-
-  if (Keyword == "ptr") {
-    if (Context.supportsTypedPointers()) {
-      Warning("ptr type is only supported in -opaque-pointers mode");
-      return lltok::Error;
-    }
-    TyVal = PointerType::getUnqual(Context);
-    return lltok::Type;
-  }
+  TYPEKEYWORD("ptr",       PointerType::getUnqual(Context));
 
 #undef TYPEKEYWORD
 
@@ -907,7 +916,7 @@ lltok::Kind LLLexer::LexIdentifier() {
 
 #define DWKEYWORD(TYPE, TOKEN)                                                 \
   do {                                                                         \
-    if (Keyword.startswith("DW_" #TYPE "_")) {                                 \
+    if (Keyword.starts_with("DW_" #TYPE "_")) {                                \
       StrVal.assign(Keyword.begin(), Keyword.end());                           \
       return lltok::TOKEN;                                                     \
     }                                                                          \
@@ -923,17 +932,32 @@ lltok::Kind LLLexer::LexIdentifier() {
 
 #undef DWKEYWORD
 
-  if (Keyword.startswith("DIFlag")) {
+// Keywords for debug record types.
+#define DBGRECORDTYPEKEYWORD(STR)                                              \
+  do {                                                                         \
+    if (Keyword == "dbg_" #STR) {                                              \
+      StrVal = #STR;                                                           \
+      return lltok::DbgRecordType;                                             \
+    }                                                                          \
+  } while (false)
+
+  DBGRECORDTYPEKEYWORD(value);
+  DBGRECORDTYPEKEYWORD(declare);
+  DBGRECORDTYPEKEYWORD(assign);
+  DBGRECORDTYPEKEYWORD(label);
+#undef DBGRECORDTYPEKEYWORD
+
+  if (Keyword.starts_with("DIFlag")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DIFlag;
   }
 
-  if (Keyword.startswith("DISPFlag")) {
+  if (Keyword.starts_with("DISPFlag")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DISPFlag;
   }
 
-  if (Keyword.startswith("CSK_")) {
+  if (Keyword.starts_with("CSK_")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::ChecksumKind;
   }

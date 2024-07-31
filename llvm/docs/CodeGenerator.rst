@@ -726,7 +726,7 @@ The table below captures a snapshot of object file support in LLVM:
      ``COFF``            AArch64, ARM, X86
      ``DXContainer``     DirectX
      ``ELF``             AArch64, AMDGPU, ARM, AVR, BPF, CSKY, Hexagon, Lanai, LoongArch, M86k, MSP430, MIPS, PowerPC, RISCV, SPARC, SystemZ, VE, X86
-     ``GCOFF``           SystemZ
+     ``GOFF``            SystemZ
      ``MachO``           AArch64, ARM, X86
      ``SPIR-V``          SPIRV
      ``WASM``            WebAssembly
@@ -856,6 +856,12 @@ SelectionDAG-based instruction selection consists of the following steps:
 
 After all of these steps are complete, the SelectionDAG is destroyed and the
 rest of the code generation passes are run.
+
+One of the most common ways to debug these steps is using ``-debug-only=isel``,
+which prints out the DAG, along with other information like debug info,
+after each of these steps. Alternatively, ``-debug-only=isel-dump`` shows only
+the DAG dumps, but the results can be filtered by function names using
+``-filter-print-funcs=<function names>``.
 
 One great way to visualize what is going on here is to take advantage of a few
 LLC command line options.  The following options pop up a window displaying the

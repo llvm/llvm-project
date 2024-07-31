@@ -16,8 +16,6 @@
 // something that needs to be run (or even defined) for Release builds so the
 // entire file is guarded by NDEBUG.
 #ifndef NDEBUG
-#include <vector>
-
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
 #include "llvm/ADT/SmallSet.h"
@@ -57,7 +55,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -72,7 +70,7 @@ namespace {
 
 INITIALIZE_PASS_BEGIN(PPCCTRLoopsVerify, "ppc-ctr-loops-verify",
                       "PowerPC CTR Loops Verify", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCCTRLoopsVerify, "ppc-ctr-loops-verify",
                     "PowerPC CTR Loops Verify", false, false)
 
@@ -162,7 +160,7 @@ queue_preds:
 }
 
 bool PPCCTRLoopsVerify::runOnMachineFunction(MachineFunction &MF) {
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Verify that all bdnz/bdz instructions are dominated by a loop mtctr before
   // any other instructions that might clobber the ctr register.

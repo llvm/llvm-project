@@ -12,9 +12,17 @@
 
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TensorEncoding.h"
+#include "mlir/IR/Types.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <limits>
 #include <optional>
 
 using namespace mlir;
@@ -32,12 +40,14 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_vector:
   case Token::inttype:
   case Token::kw_f8E5M2:
+  case Token::kw_f8E4M3:
   case Token::kw_f8E4M3FN:
   case Token::kw_f8E5M2FNUZ:
   case Token::kw_f8E4M3FNUZ:
   case Token::kw_f8E4M3B11FNUZ:
   case Token::kw_bf16:
   case Token::kw_f16:
+  case Token::kw_tf32:
   case Token::kw_f32:
   case Token::kw_f64:
   case Token::kw_f80:
@@ -295,6 +305,9 @@ Type Parser::parseNonFunctionType() {
   case Token::kw_f8E5M2:
     consumeToken(Token::kw_f8E5M2);
     return builder.getFloat8E5M2Type();
+  case Token::kw_f8E4M3:
+    consumeToken(Token::kw_f8E4M3);
+    return builder.getFloat8E4M3Type();
   case Token::kw_f8E4M3FN:
     consumeToken(Token::kw_f8E4M3FN);
     return builder.getFloat8E4M3FNType();
@@ -313,6 +326,9 @@ Type Parser::parseNonFunctionType() {
   case Token::kw_f16:
     consumeToken(Token::kw_f16);
     return builder.getF16Type();
+  case Token::kw_tf32:
+    consumeToken(Token::kw_tf32);
+    return builder.getTF32Type();
   case Token::kw_f32:
     consumeToken(Token::kw_f32);
     return builder.getF32Type();
@@ -382,11 +398,15 @@ Type Parser::parseTensorType() {
   // Parse an optional encoding attribute.
   Attribute encoding;
   if (consumeIf(Token::comma)) {
-    encoding = parseAttribute();
-    if (auto v = dyn_cast_or_null<VerifiableTensorEncoding>(encoding)) {
-      if (failed(v.verifyEncoding(dimensions, elementType,
-                                  [&] { return emitError(); })))
+    auto parseResult = parseOptionalAttribute(encoding);
+    if (parseResult.has_value()) {
+      if (failed(parseResult.value()))
         return nullptr;
+      if (auto v = dyn_cast_or_null<VerifiableTensorEncoding>(encoding)) {
+        if (failed(v.verifyEncoding(dimensions, elementType,
+                                    [&] { return emitError(); })))
+          return nullptr;
+      }
     }
   }
 
@@ -440,8 +460,8 @@ VectorType Parser::parseVectorType() {
     return nullptr;
 
   SmallVector<int64_t, 4> dimensions;
-  unsigned numScalableDims;
-  if (parseVectorDimensionList(dimensions, numScalableDims))
+  SmallVector<bool, 4> scalableDims;
+  if (parseVectorDimensionList(dimensions, scalableDims))
     return nullptr;
   if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
     return emitError(getToken().getLoc(),
@@ -458,50 +478,36 @@ VectorType Parser::parseVectorType() {
     return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
-  return VectorType::get(dimensions, elementType, numScalableDims);
+  return VectorType::get(dimensions, elementType, scalableDims);
 }
 
-/// Parse a dimension list in a vector type. This populates the dimension list,
-/// and returns the number of scalable dimensions in `numScalableDims`.
+/// Parse a dimension list in a vector type. This populates the dimension list.
+/// For i-th dimension, `scalableDims[i]` contains either:
+///   * `false` for a non-scalable dimension (e.g. `4`),
+///   * `true` for a scalable dimension (e.g. `[4]`).
 ///
-/// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
-/// static-dim-list ::= decimal-literal (`x` decimal-literal)*
+/// vector-dim-list := (static-dim-list `x`)?
+/// static-dim-list ::= static-dim (`x` static-dim)*
+/// static-dim ::= (decimal-literal | `[` decimal-literal `]`)
 ///
 ParseResult
 Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                 unsigned &numScalableDims) {
-  numScalableDims = 0;
+                                 SmallVectorImpl<bool> &scalableDims) {
   // If there is a set of fixed-length dimensions, consume it
-  while (getToken().is(Token::integer)) {
+  while (getToken().is(Token::integer) || getToken().is(Token::l_square)) {
     int64_t value;
+    bool scalable = consumeIf(Token::l_square);
     if (parseIntegerInDimensionList(value))
       return failure();
     dimensions.push_back(value);
+    if (scalable) {
+      if (!consumeIf(Token::r_square))
+        return emitWrongTokenError("missing ']' closing scalable dimension");
+    }
+    scalableDims.push_back(scalable);
     // Make sure we have an 'x' or something like 'xbf32'.
     if (parseXInDimensionList())
       return failure();
-  }
-  // If there is a set of scalable dimensions, consume it
-  if (consumeIf(Token::l_square)) {
-    while (getToken().is(Token::integer)) {
-      int64_t value;
-      if (parseIntegerInDimensionList(value))
-        return failure();
-      dimensions.push_back(value);
-      numScalableDims++;
-      // Check if we have reached the end of the scalable dimension list
-      if (consumeIf(Token::r_square)) {
-        // Make sure we have something like 'xbf32'.
-        return parseXInDimensionList();
-      }
-      // Make sure we have an 'x'
-      if (parseXInDimensionList())
-        return failure();
-    }
-    // If we make it here, we've finished parsing the dimension list
-    // without finding ']' closing the set of scalable dimensions
-    return emitWrongTokenError(
-        "missing ']' closing set of scalable dimensions");
   }
 
   return success();

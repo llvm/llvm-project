@@ -194,6 +194,8 @@ template <typename T, char F> struct PassthroughFormat {
 };
 
 template <> struct PythonFormat<char *> : PassthroughFormat<char *, 's'> {};
+template <> struct PythonFormat<const char *> : 
+    PassthroughFormat<const char *, 's'> {};
 template <> struct PythonFormat<char> : PassthroughFormat<char, 'b'> {};
 template <>
 struct PythonFormat<unsigned char> : PassthroughFormat<unsigned char, 'B'> {};
@@ -338,6 +340,15 @@ public:
     if (!m_py_obj)
       return nullDeref();
     PyObject *obj = PyObject_GetAttrString(m_py_obj, NullTerminated(name));
+    if (!obj)
+      return exception();
+    return python::Take<PythonObject>(obj);
+  }
+
+  llvm::Expected<PythonObject> GetType() const {
+    if (!m_py_obj)
+      return nullDeref();
+    PyObject *obj = PyObject_Type(m_py_obj);
     if (!obj)
       return exception();
     return python::Take<PythonObject>(obj);
@@ -552,6 +563,8 @@ public:
   explicit PythonDictionary(PyInitialValue value);
 
   static bool Check(PyObject *py_obj);
+
+  bool HasKey(const llvm::Twine &key) const;
 
   uint32_t GetSize() const;
 

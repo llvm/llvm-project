@@ -19,7 +19,7 @@ pdl_interp.func @rewriter() {
     inferredResultTypes,
     inputAttributeNames = [],
     name = "foo.op",
-    operand_segment_sizes = array<i32: 0, 0, 1>
+    operandSegmentSizes = array<i32: 0, 0, 1>
   } : (!pdl.type) -> (!pdl.operation)
   pdl_interp.finalize
 }

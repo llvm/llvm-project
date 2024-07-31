@@ -26,13 +26,15 @@ namespace {
 
 class FalsePositiveGenerator : public Checker<eval::Call> {
   using Self = FalsePositiveGenerator;
-  const BuiltinBug FalsePositiveGeneratorBug{this, "FalsePositiveGenerator"};
+  const BugType FalsePositiveGeneratorBug{this, "FalsePositiveGenerator"};
   using HandlerFn = bool (Self::*)(const CallEvent &Call,
                                    CheckerContext &) const;
   CallDescriptionMap<HandlerFn> Callbacks = {
-      {{{"reachedWithContradiction"}, 0}, &Self::reachedWithContradiction},
-      {{{"reachedWithNoContradiction"}, 0}, &Self::reachedWithNoContradiction},
-      {{{"reportIfCanBeTrue"}, 1}, &Self::reportIfCanBeTrue},
+      {{CDM::SimpleFunc, {"reachedWithContradiction"}, 0},
+       &Self::reachedWithContradiction},
+      {{CDM::SimpleFunc, {"reachedWithNoContradiction"}, 0},
+       &Self::reachedWithNoContradiction},
+      {{CDM::SimpleFunc, {"reportIfCanBeTrue"}, 1}, &Self::reportIfCanBeTrue},
   };
 
   bool report(CheckerContext &C, ProgramStateRef State,

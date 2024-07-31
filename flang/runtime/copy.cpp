@@ -14,16 +14,19 @@
 #include <cstring>
 
 namespace Fortran::runtime {
+RT_OFFLOAD_API_GROUP_BEGIN
 
-void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
+RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     const Descriptor &from, const SubscriptValue fromAt[],
     Terminator &terminator) {
   char *toPtr{to.Element<char>(toAt)};
-  const char *fromPtr{from.Element<const char>(fromAt)};
+  char *fromPtr{from.Element<char>(fromAt)};
   RUNTIME_CHECK(terminator, to.ElementBytes() == from.ElementBytes());
   std::memcpy(toPtr, fromPtr, to.ElementBytes());
+  // Deep copy allocatable and automatic components if any.
   if (const auto *addendum{to.Addendum()}) {
-    if (const auto *derived{addendum->derivedType()}) {
+    if (const auto *derived{addendum->derivedType()};
+        derived && !derived->noDestructionNeeded()) {
       RUNTIME_CHECK(terminator,
           from.Addendum() && derived == from.Addendum()->derivedType());
       const Descriptor &componentDesc{derived->component()};
@@ -42,13 +45,33 @@ void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
                 fromPtr + component->offset())};
             CopyArray(toDesc, fromDesc, terminator);
           }
+        } else if (component->genre() == typeInfo::Component::Genre::Data &&
+            component->derivedType() &&
+            !component->derivedType()->noDestructionNeeded()) {
+          SubscriptValue extents[maxRank];
+          const typeInfo::Value *bounds{component->bounds()};
+          for (int dim{0}; dim < component->rank(); ++dim) {
+            SubscriptValue lb{bounds[2 * dim].GetValue(&to).value_or(0)};
+            SubscriptValue ub{bounds[2 * dim + 1].GetValue(&to).value_or(0)};
+            extents[dim] = ub >= lb ? ub - lb + 1 : 0;
+          }
+          const typeInfo::DerivedType &compType{*component->derivedType()};
+          StaticDescriptor<maxRank, true, 0> toStaticDescriptor;
+          Descriptor &toCompDesc{toStaticDescriptor.descriptor()};
+          toCompDesc.Establish(compType, toPtr + component->offset(),
+              component->rank(), extents);
+          StaticDescriptor<maxRank, true, 0> fromStaticDescriptor;
+          Descriptor &fromCompDesc{fromStaticDescriptor.descriptor()};
+          fromCompDesc.Establish(compType, fromPtr + component->offset(),
+              component->rank(), extents);
+          CopyArray(toCompDesc, fromCompDesc, terminator);
         }
       }
     }
   }
 }
 
-void CopyArray(
+RT_API_ATTRS void CopyArray(
     const Descriptor &to, const Descriptor &from, Terminator &terminator) {
   std::size_t elements{to.Elements()};
   RUNTIME_CHECK(terminator, elements == from.Elements());
@@ -61,4 +84,6 @@ void CopyArray(
     from.IncrementSubscripts(fromAt);
   }
 }
+
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

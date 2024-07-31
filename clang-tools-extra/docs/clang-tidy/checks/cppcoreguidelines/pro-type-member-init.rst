@@ -3,7 +3,7 @@
 cppcoreguidelines-pro-type-member-init
 ======================================
 
-The check flags user-defined constructor definitions that do not
+The check flags user-provided constructor definitions that do not
 initialize all fields that would be left in an undefined state by
 default construction, e.g. builtins, pointers and record types without
 user-provided default constructors containing at least one such
@@ -38,6 +38,6 @@ Options
    If set to `true`, the check will provide fix-its with literal initializers
    \( ``int i = 0;`` \) instead of curly braces \( ``int i{};`` \).
 
-This rule is part of the "Type safety" profile of the C++ Core
-Guidelines, corresponding to rule Type.6. See
-https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Pro-type-memberinit.
+This rule is part of the `Type safety (Type.6)
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-memberinit>`_
+profile from the C++ Core Guidelines.

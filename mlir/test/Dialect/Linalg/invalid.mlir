@@ -70,7 +70,7 @@ func.func @generic_no_region(%arg0: memref<f32>) {
 // -----
 
 func.func @generic_mismatched_num_returns(%arg0: memref<f32>) {
-  // expected-error @+6 {{op expected number of yield values (1) to match the number of operands of the enclosing LinalgOp (0)}}
+  // expected-error @+6 {{op expected number of yield values (0) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
   linalg.generic {
       indexing_maps =  [ affine_map<() -> ()> ],
       iterator_types = []}
@@ -202,7 +202,7 @@ func.func @generic_empty_region(%arg0: memref<f32>) {
 // -----
 
 func.func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
-  // expected-error @+6 {{'linalg.yield' op expected number of yield values (2) to match the number of operands of the enclosing LinalgOp (1)}}
+  // expected-error @+6 {{'linalg.yield' op expected number of yield values (1) to match the number of inits / outs operands of the enclosing LinalgOp (2)}}
   linalg.generic {
       indexing_maps =  [ affine_map<() -> ()>, affine_map<() -> ()> ],
       iterator_types = []}
@@ -345,7 +345,7 @@ func.func @illegal_fill_memref_with_tensor_return
 func.func @illegal_fill_tensor_with_memref_return
   (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
-  // expected-error @+1 {{result #0 must be ranked tensor of any type values, but got 'memref<?x?xf32>'}}
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any type values, but got 'memref<?x?xf32>'}}
   %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : tensor<?x?xf32>) -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
@@ -399,7 +399,7 @@ func.func @map_binary_wrong_yield_operands(
           outs(%init:tensor<64xf32>)
           (%lhs_elem: f32, %rhs_elem: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem: f32
-            // expected-error @+1{{'linalg.yield' op expected number of yield values (1) to match the number of operands of the enclosing LinalgOp (2)}}
+            // expected-error @+1{{'linalg.yield' op expected number of yield values (2) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
             linalg.yield %0, %0: f32, f32
           }
   func.return %add : tensor<64xf32>
@@ -451,6 +451,32 @@ func.func @map_input_output_shape_mismatch(
         linalg.yield %0: f32
       }
   func.return %add : tensor<32xf32>
+}
+
+// -----
+
+func.func @map_no_operands1() {
+  // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
+  linalg.map { arith.addf }
+}
+
+// -----
+
+func.func @map_no_operands2() {
+  // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
+  "linalg.map"() ({
+    ^bb0:
+  }) : () -> ()
+}
+
+// -----
+
+func.func @map_no_operands3(
+    %lhs: tensor<64xf32>, %rhs: tensor<64xf32>, %init: tensor<64xf32>)
+    -> tensor<64xf32> {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %add = linalg.map { arith.addf }
+  func.return %add : tensor<64xf32>
 }
 
 // -----
@@ -676,6 +702,30 @@ func.func @transpose_input_init_rank_mismatch(%input: tensor<16x32xf32>,
 
 // -----
 
+func.func @transpose_no_operands1() {
+  // expected-error @+1 {{'linalg.transpose' op expected 2 operands, but found 0}}
+  linalg.transpose permutation = [1, 0, 2]
+}
+
+// -----
+
+func.func @transpose_no_operands2() {
+  // expected-error @+1 {{'linalg.transpose' op expected 2 operands, but found 0}}
+  "linalg.transpose"() <{permutation = array<i64: 1, 0, 2>}> ({
+    ^bb0:
+  }) : () -> ()
+}
+
+// -----
+
+func.func @transpose_no_operands3() -> tensor<32x64x16xf32> {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %transpose = linalg.transpose permutation = [1, 0, 2]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+
+// -----
+
 func.func @broadcast_input_dims_rank_mismatch(
     %input: tensor<4x16xf32>, %init: tensor<4x8x16xf32>)
     -> tensor<4x8x16xf32> {
@@ -728,8 +778,199 @@ func.func @broadcast_size_1_extension_not_supported(
 
 // -----
 
+func.func @broadcast_no_operands1() {
+  // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
+  linalg.broadcast dimensions = [1]
+}
+
+// -----
+
+func.func @broadcast_no_operands2() {
+  // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
+  "linalg.broadcast"() <{dimensions = array<i64: 1>}> ({
+    ^bb0:
+  }) : () -> ()
+}
+
+// -----
+
+func.func @broadcast_no_operands3()
+    -> tensor<4x?x16xf32> {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %broadcast = linalg.broadcast dimensions = [1]
+  func.return %broadcast : tensor<32x64x16xf32>
+}
+
+// -----
+
 func.func @missing_iterator_types() {
   // expected-error @below {{expected "iterator_types" array attribute}}
   linalg.generic {} ins() outs()
   return
+}
+
+// -----
+
+func.func @illegal_softmax_output_shape(%arg0: tensor<2x16x32xf32>) -> tensor<2x16xf32> {
+  %0 = tensor.empty() : tensor<2x16xf32>
+  // expected-error @+1 {{incompatible output shape}}
+  %1 = linalg.softmax dimension(2) ins(%arg0 : tensor<2x16x32xf32>)
+                                   outs(%0: tensor<2x16xf32>)
+    -> tensor<2x16xf32>
+  return %1 : tensor<2x16xf32>
+}
+
+// -----
+
+func.func @mmt4d_dims_mismatch(%A: tensor<16x16x8x1xf32>,
+                               %B: tensor<16x16x8x1xf32>,
+                               %C_in: tensor<16x16x8x1xf32>) -> tensor<16x16x8x1xf32> {
+    // expected-error @+1 {{inferred input/output operand #2 has shape's dimension #3 to be 8, but found 1}}
+    %res = linalg.mmt4d
+                     ins(%A, %B: tensor<16x16x8x1xf32>, tensor<16x16x8x1xf32>)
+                     outs(%C_in: tensor<16x16x8x1xf32>)
+                     -> tensor<16x16x8x1xf32>
+    return %res : tensor<16x16x8x1xf32>
+}
+
+// -----
+
+func.func @mmt4d_rank_mismatch(%A: tensor<16x16x8x1xf32>,
+                 %B: tensor<16x16x8x1xf32>,
+                 %C_in: tensor<8x8xf32>) -> tensor<8x8xf32> {
+    // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #2 (4)}}
+    %res = linalg.mmt4d
+                     ins(%A, %B: tensor<16x16x8x1xf32>, tensor<16x16x8x1xf32>)
+                     outs(%C_in: tensor<8x8xf32>)
+                     -> tensor<8x8xf32>
+    return %res : tensor<8x8xf32>
+}
+
+// -----
+
+func.func @mixed_semantics(%a: tensor<?x?xf32>, %b: tensor<?x?xf32>, %c: memref<?x?xf32>) {
+  // expected-error @+1 {{expected to have pure tensor or buffer semantics}}
+  linalg.matmul ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
+               outs(%c: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @winograd_filter_transform_height(%arg0: tensor<2x4x3x5xf32>, %arg1: tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32> {
+  // expected-error @+1 {{expect filter height either equals to r or 1}}
+  %0 = linalg.winograd_filter_transform m(4) r(3) ins(%arg0 : tensor<2x4x3x5xf32>) outs(%arg1 : tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32>
+  return %0 : tensor<6x6x5x2xf32>
+}
+
+// -----
+
+func.func @winograd_filter_transform_width(%arg0: tensor<2x3x4x5xf32>, %arg1: tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32> {
+  // expected-error @+1 {{expect filter width either equals to r or 1}}
+  %0 = linalg.winograd_filter_transform m(4) r(3) ins(%arg0 : tensor<2x3x4x5xf32>) outs(%arg1 : tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32>
+  return %0 : tensor<6x6x5x2xf32>
+}
+
+// -----
+
+func.func @winograd_filter_transform(%arg0: tensor<2x1x1x5xf32>, %arg1: tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32> {
+  // expected-error @+1 {{expect either filter height or width equals to r}}
+  %0 = linalg.winograd_filter_transform m(4) r(3) ins(%arg0 : tensor<2x1x1x5xf32>) outs(%arg1 : tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32>
+  return %0 : tensor<6x6x5x2xf32>
+}
+
+// -----
+
+func.func @winograd_filter_dyn(%arg0: tensor<?x3x3x?xf32>, %arg1: tensor<6x5x?x?xf32>) -> tensor<6x5x?x?xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_filter_transform m(4) r(3) ins(%arg0 : tensor<?x3x3x?xf32>) outs(%arg1 : tensor<6x5x?x?xf32>) -> tensor<6x5x?x?xf32>
+  return %0 : tensor<6x5x?x?xf32>
+}
+
+// -----
+
+func.func @winograd_input_transform_height(%arg0: tensor<2x13x14x5xf32>, %arg1: tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x13x14x5xf32>) outs(%arg1 : tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32>
+  return %0 : tensor<6x6x3x3x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_transform_width(%arg0: tensor<2x14x13x5xf32>, %arg1: tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x13x5xf32>) outs(%arg1 : tensor<6x6x3x3x2x5xf32>) -> tensor<6x6x3x3x2x5xf32>
+  return %0 : tensor<6x6x3x3x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_transform_output_tileH(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<6x6x2x3x2x5xf32>) -> tensor<6x6x2x3x2x5xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<6x6x2x3x2x5xf32>) -> tensor<6x6x2x3x2x5xf32>
+  return %0 : tensor<6x6x2x3x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_transform_output_tileW(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<6x6x3x2x2x5xf32>) -> tensor<6x6x3x2x2x5xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<6x6x3x2x2x5xf32>) -> tensor<6x6x3x2x2x5xf32>
+  return %0 : tensor<6x6x3x2x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_transform_output_height(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<5x6x3x3x2x5xf32>) -> tensor<5x6x3x3x2x5xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<5x6x3x3x2x5xf32>) -> tensor<5x6x3x3x2x5xf32>
+  return %0 : tensor<5x6x3x3x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_transform_output_width(%arg0: tensor<2x14x14x5xf32>, %arg1: tensor<6x5x3x3x2x5xf32>) -> tensor<6x5x3x3x2x5xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<2x14x14x5xf32>) outs(%arg1 : tensor<6x5x3x3x2x5xf32>) -> tensor<6x5x3x3x2x5xf32>
+  return %0 : tensor<6x5x3x3x2x5xf32>
+}
+
+// -----
+
+func.func @winograd_input_dyn(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<6x5x?x?x?x?xf32>) -> tensor<6x5x?x?x?x?xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_input_transform m(4) r(3) ins(%arg0 : tensor<?x?x?x?xf32>) outs(%arg1 : tensor<6x5x?x?x?x?xf32>) -> tensor<6x5x?x?x?x?xf32>
+  return %0 : tensor<6x5x?x?x?x?xf32>
+}
+
+// -----
+
+func.func @winograd_output_transform_input_height(%arg0: tensor<5x6x3x3x2x2xf32>, %arg1: tensor<2x12x12x2xf32>) -> tensor<2x12x12x2xf32> {
+  // expected-error @+1 {{expect input height equals to input tile size}}
+  %0 = linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<5x6x3x3x2x2xf32>) outs(%arg1 : tensor<2x12x12x2xf32>) -> tensor<2x12x12x2xf32>
+  return %0 : tensor<2x12x12x2xf32>
+}
+
+// -----
+
+func.func @winograd_output_transform_input_width(%arg0: tensor<6x5x3x3x2x2xf32>, %arg1: tensor<2x12x12x2xf32>) -> tensor<2x12x12x2xf32> {
+  // expected-error @+1 {{expect input width equals to input tile size}}
+  %0 = linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<6x5x3x3x2x2xf32>) outs(%arg1 : tensor<2x12x12x2xf32>) -> tensor<2x12x12x2xf32>
+  return %0 : tensor<2x12x12x2xf32>
+}
+
+// -----
+
+func.func @winograd_output_transform_output_height(%arg0: tensor<6x6x3x3x2x2xf32>, %arg1: tensor<2x11x12x2xf32>) -> tensor<2x11x12x2xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<6x6x3x3x2x2xf32>) outs(%arg1 : tensor<2x11x12x2xf32>) -> tensor<2x11x12x2xf32>
+  return %0 : tensor<2x11x12x2xf32>
+}
+
+// -----
+
+func.func @winograd_output_transform_output_width(%arg0: tensor<6x6x3x3x2x2xf32>, %arg1: tensor<2x12x11x2xf32>) -> tensor<2x12x11x2xf32> {
+  // expected-error @+1 {{the output shape is not expected}}
+  %0 = linalg.winograd_output_transform m(4) r(3) ins(%arg0 : tensor<6x6x3x3x2x2xf32>) outs(%arg1 : tensor<2x12x11x2xf32>) -> tensor<2x12x11x2xf32>
+  return %0 : tensor<2x12x11x2xf32>
 }

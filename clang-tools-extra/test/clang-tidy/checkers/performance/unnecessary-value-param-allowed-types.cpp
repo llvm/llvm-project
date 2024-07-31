@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -config="{CheckOptions: [{key: performance-unnecessary-value-param.AllowedTypes, value: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$'}]}" --
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -config="{CheckOptions: {performance-unnecessary-value-param.AllowedTypes: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$'}}" --
 
 struct SmartPointer {
   ~SmartPointer();

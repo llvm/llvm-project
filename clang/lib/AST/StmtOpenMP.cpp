@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the subclesses of Stmt class declared in StmtOpenMP.h
+// This file implements the subclasses of Stmt class declared in StmtOpenMP.h
 //
 //===----------------------------------------------------------------------===//
 
@@ -447,6 +447,44 @@ OMPUnrollDirective *OMPUnrollDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation());
 }
 
+OMPReverseDirective *
+OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                            SourceLocation EndLoc, Stmt *AssociatedStmt,
+                            Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
+      C, std::nullopt, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
+      EndLoc);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C) {
+  return createEmptyDirective<OMPReverseDirective>(
+      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
+      TransformedStmtOffset + 1, SourceLocation(), SourceLocation());
+}
+
+OMPInterchangeDirective *OMPInterchangeDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+    Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPInterchangeDirective *Dir = createDirective<OMPInterchangeDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPInterchangeDirective *
+OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
+                                     unsigned NumLoops) {
+  return createEmptyDirective<OMPInterchangeDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
 OMPForSimdDirective *
 OMPForSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, unsigned CollapsedNum,
@@ -527,6 +565,23 @@ OMPSectionDirective *OMPSectionDirective::CreateEmpty(const ASTContext &C,
                                                       EmptyShell) {
   return createEmptyDirective<OMPSectionDirective>(C, /*NumClauses=*/0,
                                                    /*HasAssociatedStmt=*/true);
+}
+
+OMPScopeDirective *OMPScopeDirective::Create(const ASTContext &C,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc,
+                                             ArrayRef<OMPClause *> Clauses,
+                                             Stmt *AssociatedStmt) {
+  return createDirective<OMPScopeDirective>(C, Clauses, AssociatedStmt,
+                                            /*NumChildren=*/0, StartLoc,
+                                            EndLoc);
+}
+
+OMPScopeDirective *OMPScopeDirective::CreateEmpty(const ASTContext &C,
+                                                  unsigned NumClauses,
+                                                  EmptyShell) {
+  return createEmptyDirective<OMPScopeDirective>(C, NumClauses,
+                                                 /*HasAssociatedStmt=*/true);
 }
 
 OMPSingleDirective *OMPSingleDirective::Create(const ASTContext &C,
@@ -1512,10 +1567,11 @@ OMPParallelMaskedTaskLoopSimdDirective::CreateEmpty(const ASTContext &C,
       CollapsedNum);
 }
 
-OMPDistributeDirective *OMPDistributeDirective::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    const HelperExprs &Exprs) {
+OMPDistributeDirective *
+OMPDistributeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                               SourceLocation EndLoc, unsigned CollapsedNum,
+                               ArrayRef<OMPClause *> Clauses,
+                               Stmt *AssociatedStmt, const HelperExprs &Exprs) {
   auto *Dir = createDirective<OMPDistributeDirective>(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_distribute), StartLoc, EndLoc,
@@ -2374,6 +2430,10 @@ OMPTeamsGenericLoopDirective *OMPTeamsGenericLoopDirective::Create(
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
   Dir->setNumIterations(Exprs.NumIterations);
+  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
+  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
+  Dir->setDistInc(Exprs.DistInc);
+  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -2383,6 +2443,15 @@ OMPTeamsGenericLoopDirective *OMPTeamsGenericLoopDirective::Create(
   Dir->setDependentInits(Exprs.DependentInits);
   Dir->setFinalsConditions(Exprs.FinalsConditions);
   Dir->setPreInits(Exprs.PreInits);
+  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
+  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
+  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
+  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
+  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
+  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
+  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
+  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
+  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
   return Dir;
 }
 
@@ -2398,7 +2467,7 @@ OMPTeamsGenericLoopDirective::CreateEmpty(const ASTContext &C,
 OMPTargetTeamsGenericLoopDirective *OMPTargetTeamsGenericLoopDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    const HelperExprs &Exprs) {
+    const HelperExprs &Exprs, bool CanBeParallelFor) {
   auto *Dir = createDirective<OMPTargetTeamsGenericLoopDirective>(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_teams_loop), StartLoc, EndLoc,
@@ -2418,6 +2487,10 @@ OMPTargetTeamsGenericLoopDirective *OMPTargetTeamsGenericLoopDirective::Create(
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
   Dir->setNumIterations(Exprs.NumIterations);
+  Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
+  Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
+  Dir->setDistInc(Exprs.DistInc);
+  Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -2427,6 +2500,16 @@ OMPTargetTeamsGenericLoopDirective *OMPTargetTeamsGenericLoopDirective::Create(
   Dir->setDependentInits(Exprs.DependentInits);
   Dir->setFinalsConditions(Exprs.FinalsConditions);
   Dir->setPreInits(Exprs.PreInits);
+  Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
+  Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
+  Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
+  Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
+  Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
+  Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
+  Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
+  Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
+  Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setCanBeParallelFor(CanBeParallelFor);
   return Dir;
 }
 

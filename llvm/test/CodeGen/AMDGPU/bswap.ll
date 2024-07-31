@@ -19,7 +19,7 @@ declare i48 @llvm.bswap.i48(i48) #1
 define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -34,7 +34,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; VI-LABEL: test_bswap_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -49,7 +49,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; GFX11-LABEL: test_bswap_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -57,6 +57,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s2, 0x10203
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -68,7 +69,7 @@ define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v2i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -86,7 +87,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v2i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -102,7 +103,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v2i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -111,6 +112,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s5, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s4, 0x10203
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <2 x i32>, ptr addrspace(1) %in, align 8
@@ -122,7 +124,7 @@ define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v4i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -146,7 +148,7 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v4i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -164,7 +166,7 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v4i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -175,6 +177,7 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s5, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s4, 0x10203
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <4 x i32>, ptr addrspace(1) %in, align 16
@@ -186,29 +189,29 @@ define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v8i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_load_dwordx8 s[0:7], s[10:11], 0x0
-; SI-NEXT:    s_mov_b32 s11, 0xf000
-; SI-NEXT:    s_mov_b32 s10, -1
+; SI-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s12, 0xff00ff
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v0, s3, s3, 8
-; SI-NEXT:    v_alignbit_b32 v1, s3, s3, 24
-; SI-NEXT:    v_alignbit_b32 v2, s2, s2, 8
-; SI-NEXT:    v_alignbit_b32 v4, s2, s2, 24
-; SI-NEXT:    v_alignbit_b32 v5, s1, s1, 8
-; SI-NEXT:    v_alignbit_b32 v6, s1, s1, 24
-; SI-NEXT:    v_alignbit_b32 v7, s0, s0, 8
-; SI-NEXT:    v_alignbit_b32 v8, s0, s0, 24
-; SI-NEXT:    v_alignbit_b32 v9, s7, s7, 8
-; SI-NEXT:    v_alignbit_b32 v10, s7, s7, 24
-; SI-NEXT:    v_alignbit_b32 v11, s6, s6, 8
-; SI-NEXT:    v_alignbit_b32 v12, s6, s6, 24
-; SI-NEXT:    v_alignbit_b32 v13, s5, s5, 8
-; SI-NEXT:    v_alignbit_b32 v14, s5, s5, 24
-; SI-NEXT:    v_alignbit_b32 v15, s4, s4, 8
-; SI-NEXT:    v_alignbit_b32 v16, s4, s4, 24
+; SI-NEXT:    v_alignbit_b32 v0, s7, s7, 8
+; SI-NEXT:    v_alignbit_b32 v1, s7, s7, 24
+; SI-NEXT:    v_alignbit_b32 v2, s6, s6, 8
+; SI-NEXT:    v_alignbit_b32 v4, s6, s6, 24
+; SI-NEXT:    v_alignbit_b32 v5, s5, s5, 8
+; SI-NEXT:    v_alignbit_b32 v6, s5, s5, 24
+; SI-NEXT:    v_alignbit_b32 v7, s4, s4, 8
+; SI-NEXT:    v_alignbit_b32 v8, s4, s4, 24
+; SI-NEXT:    v_alignbit_b32 v9, s11, s11, 8
+; SI-NEXT:    v_alignbit_b32 v10, s11, s11, 24
+; SI-NEXT:    v_alignbit_b32 v11, s10, s10, 8
+; SI-NEXT:    v_alignbit_b32 v12, s10, s10, 24
+; SI-NEXT:    v_alignbit_b32 v13, s9, s9, 8
+; SI-NEXT:    v_alignbit_b32 v14, s9, s9, 24
+; SI-NEXT:    v_alignbit_b32 v15, s8, s8, 8
+; SI-NEXT:    v_alignbit_b32 v16, s8, s8, 24
 ; SI-NEXT:    v_bfi_b32 v3, s12, v1, v0
 ; SI-NEXT:    v_bfi_b32 v2, s12, v4, v2
 ; SI-NEXT:    v_bfi_b32 v1, s12, v6, v5
@@ -217,13 +220,13 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 ; SI-NEXT:    v_bfi_b32 v6, s12, v12, v11
 ; SI-NEXT:    v_bfi_b32 v5, s12, v14, v13
 ; SI-NEXT:    v_bfi_b32 v4, s12, v16, v15
-; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[8:11], 0 offset:16
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_bswap_v8i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x10203
 ; VI-NEXT:    s_mov_b32 s15, 0xf000
 ; VI-NEXT:    s_mov_b32 s14, -1
@@ -246,7 +249,7 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v8i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[8:11], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[8:11], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[10:11], 0x0
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
@@ -263,6 +266,7 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[8:11], 0 offset:16
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <8 x i32>, ptr addrspace(1) %in, align 32
@@ -274,7 +278,7 @@ define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -292,7 +296,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; VI-LABEL: test_bswap_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -308,7 +312,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; GFX11-LABEL: test_bswap_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -317,6 +321,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s4, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s5, 0x10203
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load i64, ptr addrspace(1) %in, align 8
@@ -328,7 +333,7 @@ define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v2i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -352,7 +357,7 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; VI-LABEL: test_bswap_v2i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x10203
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -370,7 +375,7 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v2i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
@@ -381,6 +386,7 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v1, 0, s4, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, s5, 0x10203
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <2 x i64>, ptr addrspace(1) %in, align 16
@@ -392,29 +398,29 @@ define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v4i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_load_dwordx8 s[0:7], s[10:11], 0x0
-; SI-NEXT:    s_mov_b32 s11, 0xf000
-; SI-NEXT:    s_mov_b32 s10, -1
+; SI-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s12, 0xff00ff
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v0, s2, s2, 8
-; SI-NEXT:    v_alignbit_b32 v1, s2, s2, 24
-; SI-NEXT:    v_alignbit_b32 v2, s3, s3, 8
-; SI-NEXT:    v_alignbit_b32 v4, s3, s3, 24
-; SI-NEXT:    v_alignbit_b32 v5, s0, s0, 8
-; SI-NEXT:    v_alignbit_b32 v6, s0, s0, 24
-; SI-NEXT:    v_alignbit_b32 v7, s1, s1, 8
-; SI-NEXT:    v_alignbit_b32 v8, s1, s1, 24
-; SI-NEXT:    v_alignbit_b32 v9, s6, s6, 8
-; SI-NEXT:    v_alignbit_b32 v10, s6, s6, 24
-; SI-NEXT:    v_alignbit_b32 v11, s7, s7, 8
-; SI-NEXT:    v_alignbit_b32 v12, s7, s7, 24
-; SI-NEXT:    v_alignbit_b32 v13, s4, s4, 8
-; SI-NEXT:    v_alignbit_b32 v14, s4, s4, 24
-; SI-NEXT:    v_alignbit_b32 v15, s5, s5, 8
-; SI-NEXT:    v_alignbit_b32 v16, s5, s5, 24
+; SI-NEXT:    v_alignbit_b32 v0, s6, s6, 8
+; SI-NEXT:    v_alignbit_b32 v1, s6, s6, 24
+; SI-NEXT:    v_alignbit_b32 v2, s7, s7, 8
+; SI-NEXT:    v_alignbit_b32 v4, s7, s7, 24
+; SI-NEXT:    v_alignbit_b32 v5, s4, s4, 8
+; SI-NEXT:    v_alignbit_b32 v6, s4, s4, 24
+; SI-NEXT:    v_alignbit_b32 v7, s5, s5, 8
+; SI-NEXT:    v_alignbit_b32 v8, s5, s5, 24
+; SI-NEXT:    v_alignbit_b32 v9, s10, s10, 8
+; SI-NEXT:    v_alignbit_b32 v10, s10, s10, 24
+; SI-NEXT:    v_alignbit_b32 v11, s11, s11, 8
+; SI-NEXT:    v_alignbit_b32 v12, s11, s11, 24
+; SI-NEXT:    v_alignbit_b32 v13, s8, s8, 8
+; SI-NEXT:    v_alignbit_b32 v14, s8, s8, 24
+; SI-NEXT:    v_alignbit_b32 v15, s9, s9, 8
+; SI-NEXT:    v_alignbit_b32 v16, s9, s9, 24
 ; SI-NEXT:    v_bfi_b32 v3, s12, v1, v0
 ; SI-NEXT:    v_bfi_b32 v2, s12, v4, v2
 ; SI-NEXT:    v_bfi_b32 v1, s12, v6, v5
@@ -423,13 +429,13 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; SI-NEXT:    v_bfi_b32 v6, s12, v12, v11
 ; SI-NEXT:    v_bfi_b32 v5, s12, v14, v13
 ; SI-NEXT:    v_bfi_b32 v4, s12, v16, v15
-; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[8:11], 0 offset:16
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_bswap_v4i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x10203
 ; VI-NEXT:    s_mov_b32 s15, 0xf000
 ; VI-NEXT:    s_mov_b32 s14, -1
@@ -452,7 +458,7 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ;
 ; GFX11-LABEL: test_bswap_v4i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[8:11], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[8:11], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[10:11], 0x0
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
@@ -469,6 +475,7 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[8:11], 0 offset:16
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = load <4 x i64>, ptr addrspace(1) %in, align 32
@@ -500,7 +507,6 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX11-LABEL: missing_truncate_promote_bswap:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -534,7 +540,6 @@ define i16 @v_bswap_i16(i16 %src) {
 ; GFX11-LABEL: v_bswap_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
@@ -562,7 +567,6 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ; GFX11-LABEL: v_bswap_i16_zext_to_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
@@ -592,7 +596,6 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX11-LABEL: v_bswap_i16_sext_to_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
@@ -606,17 +609,15 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; SI-LABEL: v_bswap_v2i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v2, v1, v1, 8
-; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
-; SI-NEXT:    s_mov_b32 s4, 0xff00ff
-; SI-NEXT:    v_alignbit_b32 v3, v0, v0, 8
+; SI-NEXT:    v_alignbit_b32 v2, v0, v0, 8
 ; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
-; SI-NEXT:    v_bfi_b32 v1, s4, v1, v2
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v3
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v0, v0, v2
+; SI-NEXT:    s_mov_b32 s4, 0xff00ff
+; SI-NEXT:    v_alignbit_b32 v3, v1, v1, 8
+; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v2
+; SI-NEXT:    v_bfi_b32 v1, s4, v1, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v2i16:
@@ -629,7 +630,6 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; GFX11-LABEL: v_bswap_v2i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %src)
@@ -640,21 +640,20 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ; SI-LABEL: v_bswap_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v3, v1, v1, 8
-; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
-; SI-NEXT:    s_mov_b32 s4, 0xff00ff
-; SI-NEXT:    v_alignbit_b32 v4, v0, v0, 8
+; SI-NEXT:    v_alignbit_b32 v3, v0, v0, 8
 ; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
+; SI-NEXT:    s_mov_b32 s4, 0xff00ff
+; SI-NEXT:    v_alignbit_b32 v4, v1, v1, 8
+; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
 ; SI-NEXT:    v_alignbit_b32 v5, v2, v2, 8
 ; SI-NEXT:    v_alignbit_b32 v2, v2, v2, 24
-; SI-NEXT:    v_bfi_b32 v1, s4, v1, v3
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v4
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v3
+; SI-NEXT:    v_bfi_b32 v1, s4, v1, v4
 ; SI-NEXT:    v_bfi_b32 v2, s4, v2, v5
-; SI-NEXT:    v_and_b32_e32 v3, 0xffff0000, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v0, v3
-; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
+; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v3i16:
@@ -668,7 +667,6 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ; GFX11-LABEL: v_bswap_v3i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX11-NEXT:    v_perm_b32 v1, 0, v1, 0x2030001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -680,27 +678,25 @@ define <4 x i16> @v_bswap_v4i16(<4 x i16> %src) {
 ; SI-LABEL: v_bswap_v4i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v4, v1, v1, 8
-; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
-; SI-NEXT:    s_mov_b32 s4, 0xff00ff
-; SI-NEXT:    v_alignbit_b32 v5, v0, v0, 8
-; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
-; SI-NEXT:    v_alignbit_b32 v6, v3, v3, 8
-; SI-NEXT:    v_alignbit_b32 v3, v3, v3, 24
-; SI-NEXT:    v_alignbit_b32 v7, v2, v2, 8
+; SI-NEXT:    v_alignbit_b32 v4, v2, v2, 8
 ; SI-NEXT:    v_alignbit_b32 v2, v2, v2, 24
-; SI-NEXT:    v_bfi_b32 v1, s4, v1, v4
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v5
-; SI-NEXT:    v_bfi_b32 v3, s4, v3, v6
-; SI-NEXT:    v_bfi_b32 v2, s4, v2, v7
-; SI-NEXT:    v_and_b32_e32 v4, 0xffff0000, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v0, v4
-; SI-NEXT:    v_or_b32_e32 v2, v2, v5
-; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
+; SI-NEXT:    s_mov_b32 s4, 0xff00ff
+; SI-NEXT:    v_alignbit_b32 v5, v3, v3, 8
+; SI-NEXT:    v_alignbit_b32 v3, v3, v3, 24
+; SI-NEXT:    v_alignbit_b32 v6, v0, v0, 8
+; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
+; SI-NEXT:    v_alignbit_b32 v7, v1, v1, 8
+; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
+; SI-NEXT:    v_bfi_b32 v2, s4, v2, v4
+; SI-NEXT:    v_bfi_b32 v3, s4, v3, v5
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v6
+; SI-NEXT:    v_bfi_b32 v1, s4, v1, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_alignbit_b32 v2, v3, v2, 16
+; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
+; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v4i16:
@@ -714,7 +710,6 @@ define <4 x i16> @v_bswap_v4i16(<4 x i16> %src) {
 ; GFX11-LABEL: v_bswap_v4i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX11-NEXT:    v_perm_b32 v1, 0, v1, 0x2030001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -750,7 +745,6 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX11-LABEL: v_bswap_i48:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v1, 0x10203
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)

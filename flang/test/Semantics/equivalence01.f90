@@ -230,3 +230,26 @@ contains
     equivalence (dupName, y)
   end function f17b
 end module m17
+
+module m18
+  ! Regression test: don't loop when checking mutually-referencing types
+  type t1
+    sequence
+    type (t2), pointer :: p
+  end type
+  type t2
+    sequence
+    type (t1), pointer :: p
+  end type
+  type(t1) x
+  common x
+end
+
+subroutine s19
+  entry e19
+  !ERROR: 'e19' in equivalence set is not a data object
+  equivalence (e19, j)
+  !ERROR: 'e20' in equivalence set is not a data object
+  equivalence (e20, j)
+  entry e20
+end

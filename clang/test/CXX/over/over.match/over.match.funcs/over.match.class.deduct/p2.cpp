@@ -35,8 +35,9 @@ namespace std {
 }
 
 namespace p0702r1 {
-  template<typename T> struct X { // expected-note {{candidate}}
-    X(std::initializer_list<T>); // expected-note {{candidate template ignored: could not match 'std::initializer_list<T>' against 'Z'}}
+  template<typename T> struct X { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
+    X(std::initializer_list<T>); // expected-note {{candidate template ignored: could not match 'std::initializer_list<T>' against 'Z'}} \
+                                 // expected-note {{implicit deduction guide declared as 'template <typename T> X(std::initializer_list<T>) -> X<T>'}}
   };
 
   X xi = {0};
@@ -84,4 +85,39 @@ int main() {
 }
 
 
+}
+
+namespace deduceTemplatedConstructor {
+template <typename X, typename Y> struct IsSame {
+    static constexpr bool value = false;
+};
+
+template <typename Z> struct IsSame<Z, Z> {
+    static constexpr bool value = true;
+};
+template <class T> struct A {
+  using value_type = T;
+  A(value_type);
+  A(const A&);
+  A(T, T, int);
+  template<class U>
+  A(int, T, U);
+};
+
+A x(1, 2, 3);       // no-error
+static_assert(IsSame<decltype(x),A<int>>::value);
+
+template <class T>
+A(T) -> A<T>;
+
+A a(42);
+static_assert(IsSame<decltype(a),A<int>>::value);
+A b = a;
+static_assert(IsSame<decltype(b),A<int>>::value);
+
+template <class T>
+A(A<T>) -> A<A<T>>;
+
+A b2 = a;
+static_assert(IsSame<decltype(b2),A<A<int>>>::value);
 }

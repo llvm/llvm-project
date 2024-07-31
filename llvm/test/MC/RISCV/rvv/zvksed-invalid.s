@@ -1,5 +1,6 @@
-# RUN: not llvm-mc -triple=riscv32 --mattr=+zve32x --mattr=+experimental-zvksed -show-encoding %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv64 --mattr=+zve64x --mattr=+zvksed %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
-vsm4k.vi v10, v9, 8
-# CHECK-ERROR: immediate must be an integer in the range [0, 7]
+vsm4r.vs v10, v10
+# CHECK-ERROR: the destination vector register group cannot overlap the source vector register group
+# CHECK-ERROR-LABEL: vsm4r.vs v10, v10

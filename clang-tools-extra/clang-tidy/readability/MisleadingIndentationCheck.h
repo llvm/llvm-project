@@ -32,7 +32,8 @@ public:
 private:
   void danglingElseCheck(const SourceManager &SM, ASTContext *Context,
                          const IfStmt *If);
-  void missingBracesCheck(const SourceManager &SM, const CompoundStmt *CStmt);
+  void missingBracesCheck(const SourceManager &SM, const CompoundStmt *CStmt,
+                          const LangOptions &LangOpts);
 };
 
 } // namespace clang::tidy::readability

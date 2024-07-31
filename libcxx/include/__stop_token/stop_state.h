@@ -10,12 +10,13 @@
 #ifndef _LIBCPP___STOP_TOKEN_STOP_STATE_H
 #define _LIBCPP___STOP_TOKEN_STOP_STATE_H
 
-#include <__availability>
+#include <__assert>
 #include <__config>
 #include <__stop_token/atomic_unique_lock.h>
 #include <__stop_token/intrusive_list_view.h>
+#include <__thread/id.h>
 #include <atomic>
-#include <thread>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
 
 struct __stop_callback_base : __intrusive_node_base<__stop_callback_base> {
   using __callback_fn_t = void(__stop_callback_base*) noexcept;
@@ -62,13 +63,13 @@ class __stop_state {
   using __callback_list      = __intrusive_list_view<__stop_callback_base>;
 
   __callback_list __callback_list_;
-  thread::id __requesting_thread_;
+  __thread_id __requesting_thread_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __stop_state() noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI void __increment_stop_source_counter() noexcept {
-    _LIBCPP_ASSERT(
+    _LIBCPP_ASSERT_UNCATEGORIZED(
         __state_.load(std::memory_order_relaxed) <= static_cast<__state_t>(~(1 << __stop_source_counter_shift)),
         "stop_source's counter reaches the maximum. Incrementing the counter will overflow");
     __state_.fetch_add(1 << __stop_source_counter_shift, std::memory_order_relaxed);
@@ -77,8 +78,9 @@ public:
   // We are not destroying the object after counter decrements to zero, nor do we have
   // operations depend on the ordering of decrementing the counter. relaxed is enough.
   _LIBCPP_HIDE_FROM_ABI void __decrement_stop_source_counter() noexcept {
-    _LIBCPP_ASSERT(__state_.load(std::memory_order_relaxed) >= static_cast<__state_t>(1 << __stop_source_counter_shift),
-                   "stop_source's counter is 0. Decrementing the counter will underflow");
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        __state_.load(std::memory_order_relaxed) >= static_cast<__state_t>(1 << __stop_source_counter_shift),
+        "stop_source's counter is 0. Decrementing the counter will underflow");
     __state_.fetch_sub(1 << __stop_source_counter_shift, std::memory_order_relaxed);
   }
 
@@ -227,7 +229,7 @@ struct __intrusive_shared_ptr_traits<__stop_state> {
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
 
 _LIBCPP_END_NAMESPACE_STD
 

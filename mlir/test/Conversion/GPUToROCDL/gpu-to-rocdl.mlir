@@ -1,12 +1,16 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='use-opaque-pointers=1' -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='index-bitwidth=32 use-opaque-pointers=1' -split-input-file | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
+
+// CHECK-LABEL: @test_module
+// CHECK-SAME: llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()
   // CHECK32-LABEL: func @gpu_index_ops()
   func.func @gpu_index_ops()
       -> (index, index, index, index, index, index,
-          index, index, index, index, index, index) {
+          index, index, index, index, index, index,
+          index) {
     // CHECK32-NOT: = llvm.sext %{{.*}} : i32 to i64
 
     // CHECK: rocdl.workitem.id.x : i32
@@ -49,23 +53,29 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %gDimZ = gpu.grid_dim z
 
+    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} : (i32, i32) -> i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %laneId = gpu.lane_id
+
     func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
-               %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ
+               %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ,
+               %laneId
         : index, index, index, index, index, index,
-          index, index, index, index, index, index
+          index, index, index, index, index, index,
+          index
   }
 }
 
 // -----
 
 gpu.module @test_module {
-  // CHECK-LABEL: func @gpu_index_ops_range()
+  // CHECK-LABEL: func @gpu_index_ops_range
   // CHECK-SAME: rocdl.flat_work_group_size = "1536,1536"
   // CHECK-SAME: rocdl.reqd_work_group_size = array<i32: 8, 12, 16>
-  func.func @gpu_index_ops_range()
-      -> (index, index, index, index, index, index) attributes
-      {gpu.known_block_size = array<i32: 8, 12, 16>,
-       gpu.known_grid_size = array<i32: 20, 24, 28>} {
+  gpu.func @gpu_index_ops_range(%place: memref<i32>)  kernel attributes
+      {known_block_size = array<i32: 8, 12, 16>,
+       known_grid_size = array<i32: 20, 24, 28>} {
 
     // CHECK: rocdl.workitem.id.x {range = array<i32: 0, 8>} : i32
     %tIdX = gpu.thread_id x
@@ -81,8 +91,15 @@ gpu.module @test_module {
     // CHECK: rocdl.workgroup.id.z {range = array<i32: 0, 28>} : i32
     %bIdZ = gpu.block_id z
 
-    func.return %tIdX, %tIdY, %tIdZ, %bIdX, %bIdY, %bIdZ
-        : index, index, index, index, index, index
+    // "Usage" to make the ID calls not die
+    %0 = arith.addi %tIdX, %tIdY : index
+    %1 = arith.addi %0, %tIdZ : index
+    %2 = arith.addi %1, %bIdX : index
+    %3 = arith.addi %2, %bIdY : index
+    %4 = arith.addi %3, %bIdZ : index
+    %5 = arith.index_cast %4 : index to i32
+    memref.store %5, %place[] : memref<i32>
+    gpu.return
   }
 }
 
@@ -456,12 +473,41 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_unroll
   func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
     %result = math.exp %arg0 : vector<4xf32>
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V0:.+]] = llvm.mlir.undef : vector<4xf32>
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V1:.+]] = llvm.insertelement %[[CL]], %[[V0]]
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V2:.+]] = llvm.insertelement %[[CL]], %[[V1]]
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V3:.+]] = llvm.insertelement %[[CL]], %[[V2]]
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V4:.+]] = llvm.insertelement %[[CL]], %[[V3]]
+    // CHECK: return %[[V4]]
     func.return %result : vector<4xf32>
   }
+}
+
+// -----
+
+// Test that the bf16 type is lowered away on this target.
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @bf16_id
+  func.func @bf16_id(%arg0 : bf16) -> bf16 {
+    // CHECK-SAME: (%[[ARG0:.+]]: i16)
+    // CHECK-SAME: -> i16
+    // CHECK: return %[[ARG0]] : i16
+    func.return %arg0 : bf16
+  }
+
+  // CHECK-LABEL: func @bf16x4_id
+  func.func @bf16x4_id(%arg0 : vector<4xbf16>) -> vector<4xbf16> {
+    // CHECK-SAME: (%[[ARG0:.+]]: vector<4xi16>)
+    // CHECK-SAME: -> vector<4xi16>
+    // CHECK: return %[[ARG0]] : vector<4xi16>
+    func.return %arg0 : vector<4xbf16>
+  }
+
 }
 
 // -----
@@ -487,3 +533,115 @@ gpu.module @module {
   }
 }
 
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_all_reduce_op()
+  gpu.func @gpu_all_reduce_op() {
+    %arg0 = arith.constant 1.0 : f32
+    // TODO: Check full IR expansion once lowering has settled.
+    // CHECK: llvm.add
+    // CHECK: llvm.and
+    // CHECK: llvm.xor
+    // CHECK: llvm.icmp "slt"
+    // CHECK: llvm.select
+    // CHECK: llvm.shl
+    // CHECK: rocdl.ds_bpermute {{.*}}
+    // CHECK: rocdl.barrier
+    // CHECK: llvm.bitcast
+    // CHECK: llvm.fadd
+    %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
+
+    gpu.return
+  }
+}
+
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_all_reduce_region()
+  gpu.func @gpu_all_reduce_region() {
+    %arg0 = arith.constant 1 : i32
+    // TODO: Check full IR expansion once lowering has settled.
+    // CHECK: llvm.add
+    // CHECK: llvm.and
+    // CHECK: llvm.xor
+    // CHECK: llvm.icmp "slt"
+    // CHECK: llvm.select
+    // CHECK: llvm.shl
+    // CHECK: rocdl.ds_bpermute {{.*}}
+    // CHECK: rocdl.barrier
+    %result = gpu.all_reduce %arg0 uniform {
+    ^bb(%lhs : i32, %rhs : i32):
+      %xor = arith.xori %lhs, %rhs : i32
+      "gpu.yield"(%xor) : (i32) -> ()
+    } : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_fmod_f32(f32, f32) -> f32
+  // CHECK: llvm.func @__ocml_fmod_f64(f64, f64) -> f64
+  // CHECK-LABEL: func @gpu_fmod
+  func.func @gpu_fmod(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = arith.remf %arg_f32, %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_fmod_f32(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+    %result64 = arith.remf %arg_f64, %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_fmod_f64(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_shuffle()
+  func.func @gpu_shuffle() -> (f32, f32) {
+    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %arg0 = arith.constant 1.0 : f32
+    // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
+    %arg1 = arith.constant 4 : i32
+    // CHECK: %[[#WIDTH:]] = llvm.mlir.constant(23 : i32) : i32
+    %arg2 = arith.constant 23 : i32
+    // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
+    // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[#NEG_WIDTH:]] = llvm.sub %[[#ZERO]], %[[#WIDTH]] : i32
+    // CHECK: %[[#ADD:]] = llvm.add %[[#LANE_ID]], %[[#WIDTH]] : i32
+    // CHECK: %[[#WARP_OR_ZERO:]] = llvm.and %[[#ADD]], %[[#NEG_WIDTH]] : i32
+    // CHECK: %[[#XOR:]] = llvm.xor %[[#LANE_ID]], %{{.*}} : i32
+    // CHECK: %[[#CMP:]] = llvm.icmp "slt" %[[#XOR]], %[[#WARP_OR_ZERO]] : i32
+    // CHECK: %[[#DST_LANE:]] = llvm.select %[[#CMP]], %[[#XOR]], %{{.*}} : i1, i32
+    // CHECK: %[[#TWO:]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK: %[[#ALIGNED_DST_LANE:]] = llvm.shl %[[#DST_LANE]], %[[#TWO]] : i32
+    // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.ds_bpermute %[[#ALIGNED_DST_LANE]], %[[#CAST_VALUE]] : (i32, i32) -> i32
+    // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#PERMUTE]] : i32 to f32
+    %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : f32
+    // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
+    // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[#NEG_WIDTH:]] = llvm.sub %[[#ZERO]], %[[#WIDTH]] : i32
+    // CHECK: %[[#ADD:]] = llvm.add %[[#LANE_ID]], %[[#WIDTH]] : i32
+    // CHECK: %[[#WARP_OR_ZERO:]] = llvm.and %[[#ADD]], %[[#NEG_WIDTH]] : i32
+    // CHECK: %[[#CMP:]] = llvm.icmp "slt" %[[#OFFSET]], %[[#WARP_OR_ZERO]] : i32
+    // CHECK: %[[#DST_LANE:]] = llvm.select %[[#CMP]], %[[#OFFSET]], %{{.*}} : i1, i32
+    // CHECK: %[[#TWO:]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK: %[[#ALIGNED_DST_LANE:]] = llvm.shl %[[#DST_LANE]], %[[#TWO]] : i32
+    // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
+    // CHECK: %[[#PERMUTE:]] = rocdl.ds_bpermute %[[#ALIGNED_DST_LANE]], %[[#CAST_VALUE]] : (i32, i32) -> i32
+    // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#PERMUTE]] : i32 to f32
+    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
+    func.return %shfl, %shfli : f32, f32
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @test_custom_data_layout
+// CHECK-SAME: llvm.data_layout = "e"
+gpu.module @test_custom_data_layout attributes {llvm.data_layout = "e"} {
+
+}

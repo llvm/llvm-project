@@ -10,6 +10,7 @@
 #define LLDB_CORE_PLUGINMANAGER_H
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
@@ -43,7 +44,6 @@
 
 namespace lldb_private {
 class CommandInterpreter;
-class ConstString;
 class Debugger;
 class StringList;
 
@@ -179,6 +179,8 @@ public:
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
 
+  static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
+
   static ObjectFileCreateInstance
   GetObjectFileCreateCallbackAtIndex(uint32_t idx);
 
@@ -192,9 +194,7 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const FileSpec &outfile,
-                         lldb::SaveCoreStyle &core_style,
-                         llvm::StringRef plugin_name);
+                         const lldb_private::SaveCoreOptions &core_options);
 
   // ObjectContainer
   static bool RegisterPlugin(
@@ -346,6 +346,39 @@ public:
   static SymbolVendorCreateInstance
   GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
 
+  // SymbolLocator
+  static bool RegisterPlugin(
+      llvm::StringRef name, llvm::StringRef description,
+      SymbolLocatorCreateInstance create_callback,
+      SymbolLocatorLocateExecutableObjectFile locate_executable_object_file =
+          nullptr,
+      SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file =
+          nullptr,
+      SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
+          nullptr,
+      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
+      DebuggerInitializeCallback debugger_init_callback = nullptr);
+
+  static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
+
+  static SymbolLocatorCreateInstance
+  GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
+
+  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+
+  static FileSpec
+  LocateExecutableSymbolFile(const ModuleSpec &module_spec,
+                             const FileSpecList &default_search_paths);
+
+  static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                          Status &error,
+                                          bool force_lookup = true,
+                                          bool copy_executable = true);
+
+  static FileSpec FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
+                                         const UUID *uuid,
+                                         const ArchSpec *arch);
+
   // Trace
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,
@@ -455,6 +488,25 @@ public:
 
   static LanguageSet GetAllTypeSystemSupportedLanguagesForExpressions();
 
+  // Scripted Interface
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             ScriptedInterfaceCreateInstance create_callback,
+                             lldb::ScriptLanguage language,
+                             ScriptedInterfaceUsages usages);
+
+  static bool UnregisterPlugin(ScriptedInterfaceCreateInstance create_callback);
+
+  static uint32_t GetNumScriptedInterfaces();
+
+  static llvm::StringRef GetScriptedInterfaceNameAtIndex(uint32_t idx);
+
+  static llvm::StringRef GetScriptedInterfaceDescriptionAtIndex(uint32_t idx);
+
+  static lldb::ScriptLanguage GetScriptedInterfaceLanguageAtIndex(uint32_t idx);
+
+  static ScriptedInterfaceUsages
+  GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
+
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              REPLCreateInstance create_callback,
@@ -477,23 +529,31 @@ public:
 
   static lldb::OptionValuePropertiesSP
   GetSettingForDynamicLoaderPlugin(Debugger &debugger,
-                                   ConstString setting_name);
+                                   llvm::StringRef setting_name);
 
   static bool CreateSettingForDynamicLoaderPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
-  GetSettingForPlatformPlugin(Debugger &debugger, ConstString setting_name);
+  GetSettingForPlatformPlugin(Debugger &debugger, llvm::StringRef setting_name);
 
   static bool CreateSettingForPlatformPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
-  GetSettingForProcessPlugin(Debugger &debugger, ConstString setting_name);
+  GetSettingForProcessPlugin(Debugger &debugger, llvm::StringRef setting_name);
 
   static bool CreateSettingForProcessPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForSymbolLocatorPlugin(Debugger &debugger,
+                                   llvm::StringRef setting_name);
+
+  static bool CreateSettingForSymbolLocatorPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 
@@ -502,21 +562,24 @@ public:
       llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
-  GetSettingForObjectFilePlugin(Debugger &debugger, ConstString setting_name);
+  GetSettingForObjectFilePlugin(Debugger &debugger,
+                                llvm::StringRef setting_name);
 
   static bool CreateSettingForObjectFilePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
-  GetSettingForSymbolFilePlugin(Debugger &debugger, ConstString setting_name);
+  GetSettingForSymbolFilePlugin(Debugger &debugger,
+                                llvm::StringRef setting_name);
 
   static bool CreateSettingForSymbolFilePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
-  GetSettingForJITLoaderPlugin(Debugger &debugger, ConstString setting_name);
+  GetSettingForJITLoaderPlugin(Debugger &debugger,
+                               llvm::StringRef setting_name);
 
   static bool CreateSettingForJITLoaderPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
@@ -524,7 +587,7 @@ public:
 
   static lldb::OptionValuePropertiesSP
   GetSettingForOperatingSystemPlugin(Debugger &debugger,
-                                     ConstString setting_name);
+                                     llvm::StringRef setting_name);
 
   static bool CreateSettingForOperatingSystemPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
@@ -532,7 +595,7 @@ public:
 
   static lldb::OptionValuePropertiesSP
   GetSettingForStructuredDataPlugin(Debugger &debugger,
-                                    ConstString setting_name);
+                                    llvm::StringRef setting_name);
 
   static bool CreateSettingForStructuredDataPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,

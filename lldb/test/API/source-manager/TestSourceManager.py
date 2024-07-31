@@ -10,6 +10,7 @@ o test_modify_source_file_while_debugging:
 """
 
 import os
+import io
 import stat
 
 import lldb
@@ -36,6 +37,32 @@ class SourceManagerTestCase(TestBase):
         # Find the line number to break inside main().
         self.file = self.getBuildArtifact("main-copy.c")
         self.line = line_number("main.c", "// Set break point at this line.")
+
+    def modify_content(self):
+        # Read the main.c file content.
+        with io.open(self.file, "r", newline="\n") as f:
+            original_content = f.read()
+            if self.TraceOn():
+                print("original content:", original_content)
+
+        # Modify the in-memory copy of the original source code.
+        new_content = original_content.replace("Hello world", "Hello lldb", 1)
+
+        # Modify the source code file.
+        # If the source was read only, the copy will also be read only.
+        # Run "chmod u+w" on it first so we can modify it.
+        statinfo = os.stat(self.file)
+        os.chmod(self.file, statinfo.st_mode | stat.S_IWUSR)
+
+        with io.open(self.file, "w", newline="\n") as f:
+            time.sleep(1)
+            f.write(new_content)
+            if self.TraceOn():
+                print("new content:", new_content)
+                print(
+                    "os.path.getmtime() after writing new content:",
+                    os.path.getmtime(self.file),
+                )
 
     def get_expected_stop_column_number(self):
         """Return the 1-based column number of the first non-whitespace
@@ -232,34 +259,22 @@ class SourceManagerTestCase(TestBase):
         m = re.search("^\[(\d+)\].*// Set break point at this line.", output)
         if not m:
             self.fail("Fail to display source level breakpoints")
-        self.assertTrue(int(m.group(1)) > 0)
+        self.assertGreater(int(m.group(1)), 0)
 
-        # Read the main.c file content.
-        with io.open(self.file, "r", newline="\n") as f:
-            original_content = f.read()
-            if self.TraceOn():
-                print("original content:", original_content)
+        # Modify content
+        self.modify_content()
 
-        # Modify the in-memory copy of the original source code.
-        new_content = original_content.replace("Hello world", "Hello lldb", 1)
+        # Display the source code again. We should not see the updated line.
+        self.expect(
+            "source list -f main-copy.c -l %d" % self.line,
+            SOURCE_DISPLAYED_CORRECTLY,
+            substrs=["Hello world"],
+        )
 
-        # Modify the source code file.
-        # If the source was read only, the copy will also be read only.
-        # Run "chmod u+w" on it first so we can modify it.
-        statinfo = os.stat(self.file)
-        os.chmod(self.file, statinfo.st_mode | stat.S_IWUSR)
+        # clear the source cache.
+        self.runCmd("source cache clear")
 
-        with io.open(self.file, "w", newline="\n") as f:
-            time.sleep(1)
-            f.write(new_content)
-            if self.TraceOn():
-                print("new content:", new_content)
-                print(
-                    "os.path.getmtime() after writing new content:",
-                    os.path.getmtime(self.file),
-                )
-
-        # Display the source code again.  We should see the updated line.
+        # Display the source code again. Now we should see the updated line.
         self.expect(
             "source list -f main-copy.c -l %d" % self.line,
             SOURCE_DISPLAYED_CORRECTLY,
@@ -308,12 +323,71 @@ class SourceManagerTestCase(TestBase):
         )
 
         self.expect(
-            "run",
-            RUN_SUCCEEDED,
+            "process status",
             substrs=[
                 "stop reason = breakpoint",
-                "%s:%d" % (src_file, 0),
-                "Note: this address is compiler-generated code in " "function",
-                "that has no source code associated " "with it.",
+                f"{src_file}:0",
+                "Note: this address is compiler-generated code in function",
+                "that has no source code associated with it.",
             ],
+        )
+
+    def test_source_cache_dump_and_clear(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        lldbutil.run_break_set_by_file_and_line(
+            self, self.file, self.line, num_expected_locations=1, loc_exact=True
+        )
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # Make sure the main source file is in the source cache.
+        self.expect(
+            "source cache dump",
+            substrs=["Modification time", "Lines", "Path", " 7", self.file],
+        )
+
+        # Clear the cache.
+        self.expect("source cache clear")
+
+        # Make sure the main source file is no longer in the source cache.
+        self.expect("source cache dump", matching=False, substrs=[self.file])
+
+    def test_source_cache_interactions(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a first target.
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        lldbutil.run_break_set_by_symbol(self, "main", num_expected_locations=1)
+        self.expect("run", RUN_SUCCEEDED, substrs=["Hello world"])
+
+        # Create a second target.
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        lldbutil.run_break_set_by_symbol(self, "main", num_expected_locations=1)
+        self.expect("run", RUN_SUCCEEDED, substrs=["Hello world"])
+
+        # Modify the source file content.
+        self.modify_content()
+
+        # Clear the source cache. This will wipe the debugger and the process
+        # cache for the second process.
+        self.runCmd("source cache clear")
+
+        # Make sure we're seeing the new content from the clean process cache.
+        self.expect(
+            "next",
+            SOURCE_DISPLAYED_CORRECTLY,
+            substrs=["Hello lldb"],
+        )
+
+        # Switch back to the first target.
+        self.runCmd("target select 0")
+
+        # Make sure we're seeing the old content from the first target's
+        # process cache.
+        self.expect(
+            "next",
+            SOURCE_DISPLAYED_CORRECTLY,
+            substrs=["Hello world"],
         )

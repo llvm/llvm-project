@@ -102,14 +102,21 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p2 = LLT::pointer(2, PSize); // UniformConstant
   const LLT p3 = LLT::pointer(3, PSize); // Workgroup
   const LLT p4 = LLT::pointer(4, PSize); // Generic
-  const LLT p5 = LLT::pointer(5, PSize); // Input
+  const LLT p5 =
+      LLT::pointer(5, PSize); // Input, SPV_INTEL_usm_storage_classes (Device)
+  const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,    p4,    p5,    s1,     s8,     s16,
-      s32,   s64,   v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,
-      v3s16, v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,
-      v8s8,  v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,    p3,    p4,     p5,     p6,    s1,   s8,   s16,
+      s32,   s64,   v2s1,  v2s8,  v2s16,  v2s32,  v2s64, v3s1, v3s8, v3s16,
+      v3s32, v3s64, v4s1,  v4s8,  v4s16,  v4s32,  v4s64, v8s1, v8s8, v8s16,
+      v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+
+  auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
+                     v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
+                     v4s64, v8s1,   v8s8,   v8s16, v8s32, v8s64, v16s1,
+                     v16s8, v16s16, v16s32, v16s64};
 
   auto allScalarsAndVectors = {
       s1,   s8,   s16,   s32,   s64,   v2s1,  v2s8,  v2s16,  v2s32,  v2s64,
@@ -125,14 +132,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto allIntScalars = {s8, s16, s32, s64};
 
+  auto allFloatScalars = {s16, s32, s64};
+
   auto allFloatScalarsAndVectors = {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
 
-  auto allFloatAndIntScalars = allIntScalars;
+  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,
+                                       p2, p3,  p4,  p5,  p6};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5};
-  auto allWritablePtrs = {p0, p1, p3, p4};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
+  auto allWritablePtrs = {p0, p1, p3, p4, p5, p6};
 
   for (auto Opc : TypeFoldingSupportingOpcs)
     getActionDefinitionsBuilder(Opc).custom();
@@ -140,7 +150,27 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
 
   // TODO: add proper rules for vectors legalization.
-  getActionDefinitionsBuilder({G_BUILD_VECTOR, G_SHUFFLE_VECTOR}).alwaysLegal();
+  getActionDefinitionsBuilder(
+      {G_BUILD_VECTOR, G_SHUFFLE_VECTOR, G_SPLAT_VECTOR})
+      .alwaysLegal();
+
+  // Vector Reduction Operations
+  getActionDefinitionsBuilder(
+      {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
+       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FMUL, G_VECREDUCE_FMIN,
+       G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
+       G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
+      .legalFor(allVectors)
+      .scalarize(1)
+      .lower();
+
+  getActionDefinitionsBuilder({G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL})
+      .scalarize(2)
+      .lower();
+
+  // Merge/Unmerge
+  // TODO: add proper legalization rules.
+  getActionDefinitionsBuilder(G_UNMERGE_VALUES).alwaysLegal();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
       .legalIf(all(typeInSet(0, allWritablePtrs), typeInSet(1, allPtrs)));
@@ -153,7 +183,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE}).legalIf(typeInSet(1, allPtrs));
 
-  getActionDefinitionsBuilder(G_BITREVERSE).legalFor(allFloatScalarsAndVectors);
+  getActionDefinitionsBuilder(G_BITREVERSE).legalFor(allIntScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
 
@@ -173,14 +203,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PHI).legalFor(allPtrsScalarsAndVectors);
 
-  getActionDefinitionsBuilder(G_BITCAST).legalIf(all(
-      typeInSet(0, allPtrsScalarsAndVectors),
-      typeInSet(1, allPtrsScalarsAndVectors),
-      LegalityPredicate(([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() == Query.Types[1].getSizeInBits();
-      }))));
+  getActionDefinitionsBuilder(G_BITCAST).legalIf(
+      all(typeInSet(0, allPtrsScalarsAndVectors),
+          typeInSet(1, allPtrsScalarsAndVectors)));
 
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF).alwaysLegal();
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalForCartesianProduct(allPtrs, allIntScalars);
@@ -205,8 +234,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
       .legalForCartesianProduct(allIntScalars, allWritablePtrs);
 
+  getActionDefinitionsBuilder(
+      {G_ATOMICRMW_FADD, G_ATOMICRMW_FSUB, G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+      .legalForCartesianProduct(allFloatScalars, allWritablePtrs);
+
   getActionDefinitionsBuilder(G_ATOMICRMW_XCHG)
-      .legalForCartesianProduct(allFloatAndIntScalars, allWritablePtrs);
+      .legalForCartesianProduct(allFloatAndIntScalarsAndPtrs, allWritablePtrs);
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS).lower();
   // TODO: add proper legalization rules.
@@ -229,17 +262,29 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
+  // TODO: Review the target OpenCL and GLSL Extended Instruction Set specs to
+  // tighten these requirements. Many of these math functions are only legal on
+  // specific bitwidths, so they are not selectable for
+  // allFloatScalarsAndVectors.
   getActionDefinitionsBuilder({G_FPOW,
                                G_FEXP,
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,
+                               G_FLOG10,
                                G_FABS,
                                G_FMINNUM,
                                G_FMAXNUM,
                                G_FCEIL,
                                G_FCOS,
                                G_FSIN,
+                               G_FTAN,
+                               G_FACOS,
+                               G_FASIN,
+                               G_FATAN,
+                               G_FCOSH,
+                               G_FSINH,
+                               G_FTANH,
                                G_FSQRT,
                                G_FFLOOR,
                                G_FRINT,
@@ -259,8 +304,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
 
   if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
-    getActionDefinitionsBuilder(G_FLOG10).legalFor(allFloatScalarsAndVectors);
-
     getActionDefinitionsBuilder(
         {G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTLZ, G_CTLZ_ZERO_UNDEF})
         .legalForCartesianProduct(allIntScalarsAndVectors,
@@ -268,6 +311,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
     // Struct return types become a single scalar, so cannot easily legalize.
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).alwaysLegal();
+
+    // supported saturation arithmetic
+    getActionDefinitionsBuilder({G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT})
+        .legalFor(allIntScalarsAndVectors);
   }
 
   getLegacyLegalizerInfo().computeTables();
@@ -286,8 +333,9 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpirvType,
   return ConvReg;
 }
 
-bool SPIRVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                        MachineInstr &MI) const {
+bool SPIRVLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   auto Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   if (!isTypeFoldingSupported(Opc)) {

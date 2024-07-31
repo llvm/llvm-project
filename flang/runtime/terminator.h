@@ -11,7 +11,10 @@
 #ifndef FORTRAN_RUNTIME_TERMINATOR_H_
 #define FORTRAN_RUNTIME_TERMINATOR_H_
 
+#include "flang/Common/api-attrs.h"
 #include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 
 namespace Fortran::runtime {
 
@@ -19,23 +22,73 @@ namespace Fortran::runtime {
 // for errors detected in the runtime library
 class Terminator {
 public:
-  Terminator() {}
+  RT_API_ATTRS Terminator() {}
   Terminator(const Terminator &) = default;
-  explicit Terminator(const char *sourceFileName, int sourceLine = 0)
+  explicit RT_API_ATTRS Terminator(
+      const char *sourceFileName, int sourceLine = 0)
       : sourceFileName_{sourceFileName}, sourceLine_{sourceLine} {}
 
-  const char *sourceFileName() const { return sourceFileName_; }
-  int sourceLine() const { return sourceLine_; }
+  RT_API_ATTRS const char *sourceFileName() const { return sourceFileName_; }
+  RT_API_ATTRS int sourceLine() const { return sourceLine_; }
 
-  void SetLocation(const char *sourceFileName = nullptr, int sourceLine = 0) {
+  RT_API_ATTRS void SetLocation(
+      const char *sourceFileName = nullptr, int sourceLine = 0) {
     sourceFileName_ = sourceFileName;
     sourceLine_ = sourceLine;
   }
-  [[noreturn]] void Crash(const char *message, ...) const;
+
+  // Silence compiler warnings about the format string being
+  // non-literal. A more precise control would be
+  // __attribute__((format_arg(2))), but it requires the function
+  // to return 'char *', which does not work well with noreturn.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-security"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#endif
+
+  // Device offload compilers do not normally support varargs and va_list,
+  // so use C++ variadic templates to forward the crash arguments
+  // to regular printf for the device compilation.
+  // Try to keep the inline implementations as small as possible.
+  template <typename... Args>
+  [[noreturn]] RT_DEVICE_NOINLINE RT_API_ATTRS const char *Crash(
+      const char *message, Args... args) const {
+#if !defined(RT_DEVICE_COMPILATION)
+    // Invoke handler set up by the test harness.
+    InvokeCrashHandler(message, args...);
+#endif
+    CrashHeader();
+    PrintCrashArgs(message, args...);
+    CrashFooter();
+  }
+
+  template <typename... Args>
+  RT_API_ATTRS void PrintCrashArgs(const char *message, Args... args) const {
+#if defined(RT_DEVICE_COMPILATION)
+    std::printf(message, args...);
+#else
+    std::fprintf(stderr, message, args...);
+#endif
+  }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
+  RT_API_ATTRS void CrashHeader() const;
+  [[noreturn]] RT_API_ATTRS void CrashFooter() const;
+#if !defined(RT_DEVICE_COMPILATION)
+  void InvokeCrashHandler(const char *message, ...) const;
   [[noreturn]] void CrashArgs(const char *message, va_list &) const;
-  [[noreturn]] void CheckFailed(
+#endif
+  [[noreturn]] RT_API_ATTRS void CheckFailed(
       const char *predicate, const char *file, int line) const;
-  [[noreturn]] void CheckFailed(const char *predicate) const;
+  [[noreturn]] RT_API_ATTRS void CheckFailed(const char *predicate) const;
 
   // For test harnessing - overrides CrashArgs().
   static void RegisterCrashHandler(void (*)(const char *sourceFile,
@@ -59,13 +112,13 @@ private:
   else \
     Terminator{__FILE__, __LINE__}.CheckFailed(#pred)
 
-void NotifyOtherImagesOfNormalEnd();
-void NotifyOtherImagesOfFailImageStatement();
-void NotifyOtherImagesOfErrorTermination();
+RT_API_ATTRS void NotifyOtherImagesOfNormalEnd();
+RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();
+RT_API_ATTRS void NotifyOtherImagesOfErrorTermination();
 } // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
-void FlushOutputOnCrash(const Terminator &);
+RT_API_ATTRS void FlushOutputOnCrash(const Terminator &);
 }
 
 #endif // FORTRAN_RUNTIME_TERMINATOR_H_

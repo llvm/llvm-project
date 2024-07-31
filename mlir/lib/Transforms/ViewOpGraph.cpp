@@ -8,6 +8,7 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
@@ -87,6 +88,7 @@ public:
   PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
 
   void runOnOperation() override {
+    initColorMapping(*getOperation());
     emitGraph([&]() {
       processOperation(getOperation());
       emitAllEdgeStmts();
@@ -97,13 +99,40 @@ public:
   void emitRegionCFG(Region &region) {
     printControlFlowEdges = true;
     printDataFlowEdges = false;
+    initColorMapping(region);
     emitGraph([&]() { processRegion(region); });
   }
 
 private:
+  /// Generate a color mapping that will color every operation with the same
+  /// name the same way. It'll interpolate the hue in the HSV color-space,
+  /// attempting to keep the contrast suitable for black text.
+  template <typename T>
+  void initColorMapping(T &irEntity) {
+    backgroundColors.clear();
+    SmallVector<Operation *> ops;
+    irEntity.walk([&](Operation *op) {
+      auto &entry = backgroundColors[op->getName()];
+      if (entry.first == 0)
+        ops.push_back(op);
+      ++entry.first;
+    });
+    for (auto indexedOps : llvm::enumerate(ops)) {
+      double hue = ((double)indexedOps.index()) / ops.size();
+      backgroundColors[indexedOps.value()->getName()].second =
+          std::to_string(hue) + " 1.0 1.0";
+    }
+  }
+
   /// Emit all edges. This function should be called after all nodes have been
   /// emitted.
   void emitAllEdgeStmts() {
+    if (printDataFlowEdges) {
+      for (const auto &[value, node, label] : dataFlowEdges) {
+        emitEdgeStmt(valueToNode[value], node, label, kLineStyleDataFlow);
+      }
+    }
+
     for (const std::string &edge : edges)
       os << edge << ";\n";
     edges.clear();
@@ -206,11 +235,16 @@ private:
   }
 
   /// Emit a node statement.
-  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode) {
+  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode,
+                    StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;
     attrs["label"] = quoteString(escapeString(std::move(label)));
     attrs["shape"] = shape.str();
+    if (!background.empty()) {
+      attrs["style"] = "filled";
+      attrs["fillcolor"] = ("\"" + background + "\"").str();
+    }
     os << llvm::format("v%i ", nodeId);
     emitAttrList(os, attrs);
     os << ";\n";
@@ -228,7 +262,6 @@ private:
         llvm::raw_string_ostream ss(buf);
         interleaveComma(op->getResultTypes(), ss);
         os << truncateString(ss.str()) << ")";
-        os << ")";
       }
 
       // Print attributes.
@@ -279,16 +312,16 @@ private:
           },
           getLabel(op));
     } else {
-      node = emitNodeStmt(getLabel(op));
+      node = emitNodeStmt(getLabel(op), kShapeNode,
+                          backgroundColors[op->getName()].second);
     }
 
     // Insert data flow edges originating from each operand.
     if (printDataFlowEdges) {
       unsigned numOperands = op->getNumOperands();
       for (unsigned i = 0; i < numOperands; i++)
-        emitEdgeStmt(valueToNode[op->getOperand(i)], node,
-                     /*label=*/numOperands == 1 ? "" : std::to_string(i),
-                     kLineStyleDataFlow);
+        dataFlowEdges.push_back({op->getOperand(i), node,
+                                 numOperands == 1 ? "" : std::to_string(i)});
     }
 
     for (Value result : op->getResults())
@@ -317,8 +350,12 @@ private:
   std::vector<std::string> edges;
   /// Mapping of SSA values to Graphviz nodes/clusters.
   DenseMap<Value, Node> valueToNode;
+  /// Output for data flow edges is delayed until the end to handle cycles
+  std::vector<std::tuple<Value, Node, std::string>> dataFlowEdges;
   /// Counter for generating unique node/subgraph identifiers.
   int counter = 0;
+
+  DenseMap<OperationName, std::pair<int, std::string>> backgroundColors;
 };
 
 } // namespace

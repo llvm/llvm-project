@@ -6,21 +6,33 @@ module {
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
+    // CHECK: endianness = ""
+    // CHECK: global_memory_space = 0
+    // CHECK: index = 64
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 0
     // CHECK: size = 8
     // CHECK: stack_alignment = 0
     "test.data_layout_query"() : () -> !llvm.ptr
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
+    // CHECK: endianness = ""
+    // CHECK: global_memory_space = 0
+    // CHECK: index = 64
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 0
     // CHECK: size = 8
     // CHECK: stack_alignment = 0
     "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
+    // CHECK: endianness = ""
+    // CHECK: global_memory_space = 0
+    // CHECK: index = 64
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 0
     // CHECK: size = 8
     // CHECK: stack_alignment = 0
     "test.data_layout_query"() : () -> !llvm.ptr<5>
@@ -31,49 +43,61 @@ module {
 // -----
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<!llvm.ptr<5>, dense<[64, 64, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<!llvm.ptr<4>, dense<[32, 64, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>,
-  #dlti.dl_entry<"dlti.stack_alignment", 128 : i32>
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi64>>,
+  #dlti.dl_entry<!llvm.ptr<5>, dense<[64, 64, 64]> : vector<3xi64>>,
+  #dlti.dl_entry<!llvm.ptr<4>, dense<[32, 64, 64, 24]> : vector<4xi64>>,
+  #dlti.dl_entry<"dlti.endianness", "little">,
+  #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>,
+  #dlti.dl_entry<"dlti.global_memory_space", 2 : ui64>,
+  #dlti.dl_entry<"dlti.program_memory_space", 3 : ui64>,
+  #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>
 >} {
   // CHECK: @spec
   func.func @spec() {
     // CHECK: alignment = 4
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
+    // CHECK: endianness = "little"
+    // CHECK: global_memory_space = 2
+    // CHECK: index = 32
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 3
     // CHECK: size = 4
     // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr
     // CHECK: alignment = 4
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
+    // CHECK: endianness = "little"
+    // CHECK: global_memory_space = 2
+    // CHECK: index = 32
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 3
     // CHECK: size = 4
     // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 64
+    // CHECK: endianness = "little"
+    // CHECK: global_memory_space = 2
+    // CHECK: index = 64
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 3
     // CHECK: size = 8
     // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr<5>
-    // CHECK: alignment = 4
-    // CHECK: alloca_memory_space = 5
-    // CHECK: bitsize = 32
-    // CHECK: preferred = 8
-    // CHECK: size = 4
-    // CHECK: stack_alignment = 128
-    "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
+    // CHECK: endianness = "little"
+    // CHECK: global_memory_space = 2
+    // CHECK: index = 24
     // CHECK: preferred = 8
+    // CHECK: program_memory_space = 3
     // CHECK: size = 4
     // CHECK: stack_alignment = 128
-	  "test.data_layout_query"() : () -> !llvm.ptr<4>
+    "test.data_layout_query"() : () -> !llvm.ptr<4>
     return
   }
 }
@@ -93,11 +117,19 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // expected-error@below {{preferred alignment is expected to be at least as large as ABI alignment}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 32]> : vector<3xi32>>
+  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 32]> : vector<3xi64>>
 >} {
   func.func @pointer() {
     return
   }
+}
+
+// -----
+
+// expected-error @below {{expected i64 parameters for '!llvm.ptr'}}
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi32>>
+>} {
 }
 
 // -----
@@ -108,6 +140,7 @@ module {
         // simple case
         // CHECK: alignment = 4
         // CHECK: bitsize = 32
+        // CHECK: index = 0
         // CHECK: preferred = 4
         // CHECK: size = 4
         "test.data_layout_query"() : () -> !llvm.struct<(i32)>
@@ -115,6 +148,7 @@ module {
         // padding inbetween
         // CHECK: alignment = 8
         // CHECK: bitsize = 128
+        // CHECK: index = 0
         // CHECK: preferred = 8
         // CHECK: size = 16
         "test.data_layout_query"() : () -> !llvm.struct<(i32, f64)>
@@ -122,6 +156,7 @@ module {
         // padding at end of struct
         // CHECK: alignment = 8
         // CHECK: bitsize = 128
+        // CHECK: index = 0
         // CHECK: preferred = 8
         // CHECK: size = 16
         "test.data_layout_query"() : () -> !llvm.struct<(f64, i32)>
@@ -129,6 +164,7 @@ module {
          // packed
          // CHECK: alignment = 1
          // CHECK: bitsize = 96
+         // CHECK: index = 0
          // CHECK: preferred = 8
          // CHECK: size = 12
          "test.data_layout_query"() : () -> !llvm.struct<packed (f64, i32)>
@@ -136,6 +172,7 @@ module {
          // empty
          // CHECK: alignment = 1
          // CHECK: bitsize = 0
+         // CHECK: index = 0
          // CHECK: preferred = 1
          // CHECK: size = 0
          "test.data_layout_query"() : () -> !llvm.struct<()>
@@ -146,13 +183,14 @@ module {
 // -----
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.struct<()>, dense<[32, 32]> : vector<2xi32>>
+  #dlti.dl_entry<!llvm.struct<()>, dense<[32, 32]> : vector<2xi64>>
 >} {
     // CHECK: @spec
     func.func @spec() {
         // Strict alignment is applied
         // CHECK: alignment = 4
         // CHECK: bitsize = 16
+        // CHECK: index = 0
         // CHECK: preferred = 4
         // CHECK: size = 2
         "test.data_layout_query"() : () -> !llvm.struct<(i16)>
@@ -160,6 +198,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
         // No impact on structs that have stricter requirements
         // CHECK: alignment = 8
         // CHECK: bitsize = 128
+        // CHECK: index = 0
         // CHECK: preferred = 8
         // CHECK: size = 16
         "test.data_layout_query"() : () -> !llvm.struct<(i32, f64)>
@@ -167,6 +206,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
          // Only the preferred alignment of structs is affected
          // CHECK: alignment = 1
          // CHECK: bitsize = 32
+         // CHECK: index = 0
          // CHECK: preferred = 4
          // CHECK: size = 4
          "test.data_layout_query"() : () -> !llvm.struct<packed (i16, i16)>
@@ -174,6 +214,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
          // empty
          // CHECK: alignment = 4
          // CHECK: bitsize = 0
+         // CHECK: index = 0
          // CHECK: preferred = 4
          // CHECK: size = 0
          "test.data_layout_query"() : () -> !llvm.struct<()>
@@ -184,7 +225,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 // -----
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.struct<()>, dense<[32]> : vector<1xi32>>
+  #dlti.dl_entry<!llvm.struct<()>, dense<[32]> : vector<1xi64>>
 >} {
     // CHECK: @spec_without_preferred
     func.func @spec_without_preferred() {
@@ -202,7 +243,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // expected-error@below {{unexpected layout attribute for struct '!llvm.struct<(i8)>'}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.struct<(i8)>, dense<[64, 64]> : vector<2xi32>>
+  #dlti.dl_entry<!llvm.struct<(i8)>, dense<[64, 64]> : vector<2xi64>>
 >} {
   func.func @struct() {
     return
@@ -213,7 +254,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // expected-error@below {{expected layout attribute for '!llvm.struct<()>' to be a dense integer elements attribute of 1 or 2 elements}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.struct<()>, dense<[64, 64, 64]> : vector<3xi32>>
+  #dlti.dl_entry<!llvm.struct<()>, dense<[64, 64, 64]> : vector<3xi64>>
 >} {
   func.func @struct() {
     return
@@ -224,7 +265,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // expected-error@below {{preferred alignment is expected to be at least as large as ABI alignment}}
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.struct<()>, dense<[64, 32]> : vector<2xi32>>
+  #dlti.dl_entry<!llvm.struct<()>, dense<[64, 32]> : vector<2xi64>>
 >} {
   func.func @struct() {
     return
@@ -239,6 +280,7 @@ module {
         // simple case
         // CHECK: alignment = 4
         // CHECK: bitsize = 64
+        // CHECK: index = 0
         // CHECK: preferred = 4
         // CHECK: size = 8
         "test.data_layout_query"() : () -> !llvm.array<2 x i32>
@@ -246,6 +288,7 @@ module {
         // size 0
         // CHECK: alignment = 8
         // CHECK: bitsize = 0
+        // CHECK: index = 0
         // CHECK: preferred = 8
         // CHECK: size = 0
         "test.data_layout_query"() : () -> !llvm.array<0 x f64>
@@ -253,6 +296,7 @@ module {
         // alignment info matches element type
         // CHECK: alignment = 4
         // CHECK: bitsize = 64
+        // CHECK: index = 0
         // CHECK: preferred = 8
         // CHECK: size = 8
         "test.data_layout_query"() : () -> !llvm.array<1 x i64>
@@ -263,7 +307,7 @@ module {
 // -----
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi32>>
+  #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi64>>
 >} {
     // CHECK: @overaligned
     func.func @overaligned() {
@@ -275,4 +319,12 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
         "test.data_layout_query"() : () -> !llvm.array<2 x struct<(i8)>>
          return
     }
+}
+
+// -----
+
+// expected-error @below {{expected i64 entries for '!llvm.struct<()>'}}
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi32>>
+>} {
 }

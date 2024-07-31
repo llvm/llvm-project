@@ -23,7 +23,6 @@ using llvm::yaml::Hex32;
 using llvm::yaml::Hex64;
 using llvm::yaml::Hex8;
 using llvm::yaml::Input;
-using llvm::yaml::IO;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
 using llvm::yaml::MappingTraits;
@@ -551,10 +550,10 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
 
 struct EndianTypes {
   typedef llvm::support::detail::packed_endian_specific_integral<
-      float, llvm::support::little, llvm::support::unaligned>
+      float, llvm::endianness::little, llvm::support::unaligned>
       ulittle_float;
   typedef llvm::support::detail::packed_endian_specific_integral<
-      double, llvm::support::little, llvm::support::unaligned>
+      double, llvm::endianness::little, llvm::support::unaligned>
       ulittle_double;
 
   llvm::support::ulittle64_t u64;
@@ -1390,10 +1389,10 @@ TEST(YAMLIO, TestReadWriteMyFlowSequence) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_TRUE(map2.name.equals("hello"));
+    EXPECT_TRUE(map2.name == "hello");
     EXPECT_EQ(map2.strings.size(), 2UL);
-    EXPECT_TRUE(map2.strings[0].value.equals("one"));
-    EXPECT_TRUE(map2.strings[1].value.equals("two"));
+    EXPECT_TRUE(map2.strings[0].value == "one");
+    EXPECT_TRUE(map2.strings[1].value == "two");
     EXPECT_EQ(map2.single.size(), 1UL);
     EXPECT_EQ(1,       map2.single[0]);
     EXPECT_EQ(map2.numbers.size(), 3UL);
@@ -1437,7 +1436,7 @@ TEST(YAMLIO, TestReadWriteSequenceOfMyFlowSequence) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_TRUE(map2.name.equals("hello"));
+    EXPECT_TRUE(map2.name == "hello");
     EXPECT_EQ(map2.sequenceOfNumbers.size(), 3UL);
     EXPECT_EQ(map2.sequenceOfNumbers[0].size(), 1UL);
     EXPECT_EQ(0,    map2.sequenceOfNumbers[0][0]);
@@ -2393,6 +2392,7 @@ TEST(YAMLIO, TestMalformedMapFailsGracefully) {
 
 struct OptionalTest {
   std::vector<int> Numbers;
+  std::optional<int> MaybeNumber;
 };
 
 struct OptionalTestSeq {
@@ -2406,6 +2406,7 @@ namespace yaml {
   struct MappingTraits<OptionalTest> {
     static void mapping(IO& IO, OptionalTest &OT) {
       IO.mapOptional("Numbers", OT.Numbers);
+      IO.mapOptional("MaybeNumber", OT.MaybeNumber);
     }
   };
 
@@ -2467,6 +2468,7 @@ TEST(YAMLIO, TestEmptyStringSucceedsForMapWithOptionalFields) {
   Input yin("");
   yin >> doc;
   EXPECT_FALSE(yin.error());
+  EXPECT_FALSE(doc.MaybeNumber.has_value());
 }
 
 TEST(YAMLIO, TestEmptyStringSucceedsForSequence) {
@@ -2620,6 +2622,9 @@ template <> struct MappingContextTraits<SimpleMap, MappingContext> {
     io.mapRequired("C", sm.C);
     ++Context.A;
     io.mapRequired("Context", Context.A);
+  }
+  static std::string validate(IO &io, SimpleMap &sm, MappingContext &Context) {
+    return "";
   }
 };
 
@@ -2901,6 +2906,87 @@ TEST(YAMLIO, Numeric) {
 }
 
 //===----------------------------------------------------------------------===//
+//  Test writing and reading escaped keys
+//===----------------------------------------------------------------------===//
+
+// Struct with dynamic string key
+struct QuotedKeyStruct {
+  int unquoted_bool;
+  int unquoted_null;
+  int unquoted_numeric;
+  int unquoted_str;
+  int colon;
+  int just_space;
+  int unprintable;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<QuotedKeyStruct> {
+  static void mapping(IO &io, QuotedKeyStruct &map) {
+    io.mapRequired("true", map.unquoted_bool);
+    io.mapRequired("null", map.unquoted_null);
+    io.mapRequired("42", map.unquoted_numeric);
+    io.mapRequired("unquoted", map.unquoted_str);
+    io.mapRequired(":", map.colon);
+    io.mapRequired(" ", map.just_space);
+    char unprintableKey[] = {/* \f, form-feed */ 0xC, 0};
+    io.mapRequired(unprintableKey, map.unprintable);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+TEST(YAMLIO, TestQuotedKeyRead) {
+  QuotedKeyStruct map = {};
+  Input yin("---\ntrue:  1\nnull:  2\n42:  3\nunquoted:  4\n':':  5\n' ':  "
+            "6\n\"\\f\":  7\n...\n");
+  yin >> map;
+
+  EXPECT_FALSE(yin.error());
+  EXPECT_EQ(map.unquoted_bool, 1);
+  EXPECT_EQ(map.unquoted_null, 2);
+  EXPECT_EQ(map.unquoted_numeric, 3);
+  EXPECT_EQ(map.unquoted_str, 4);
+  EXPECT_EQ(map.colon, 5);
+  EXPECT_EQ(map.just_space, 6);
+  EXPECT_EQ(map.unprintable, 7);
+}
+
+TEST(YAMLIO, TestQuotedKeyWriteRead) {
+  std::string intermediate;
+  {
+    QuotedKeyStruct map = {1, 2, 3, 4, 5, 6, 7};
+    llvm::raw_string_ostream ostr(intermediate);
+    Output yout(ostr);
+    yout << map;
+  }
+
+  EXPECT_NE(std::string::npos, intermediate.find("true:"));
+  EXPECT_NE(std::string::npos, intermediate.find("null:"));
+  EXPECT_NE(std::string::npos, intermediate.find("42:"));
+  EXPECT_NE(std::string::npos, intermediate.find("unquoted:"));
+  EXPECT_NE(std::string::npos, intermediate.find("':':"));
+  EXPECT_NE(std::string::npos, intermediate.find("' '"));
+  EXPECT_NE(std::string::npos, intermediate.find("\"\\f\":"));
+
+  {
+    Input yin(intermediate);
+    QuotedKeyStruct map;
+    yin >> map;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(map.unquoted_bool, 1);
+    EXPECT_EQ(map.unquoted_null, 2);
+    EXPECT_EQ(map.unquoted_numeric, 3);
+    EXPECT_EQ(map.unquoted_str, 4);
+    EXPECT_EQ(map.colon, 5);
+    EXPECT_EQ(map.just_space, 6);
+    EXPECT_EQ(map.unprintable, 7);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 //  Test PolymorphicTraits and TaggedScalarTraits
 //===----------------------------------------------------------------------===//
 
@@ -3154,7 +3240,7 @@ TEST(YAMLIO, TestFlowSequenceTokenErrors) {
 
 TEST(YAMLIO, TestDirectiveMappingNoValue) {
   Input yin("%YAML\n{5:");
-  EXPECT_FALSE(yin.setCurrentDocument());
+  yin.setCurrentDocument();
   EXPECT_TRUE(yin.error());
 
   Input yin2("%TAG\n'\x98!< :\n");

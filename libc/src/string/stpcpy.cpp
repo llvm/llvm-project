@@ -7,22 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/stpcpy.h"
+#include "src/__support/macros/config.h"
 #include "src/string/mempcpy.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, stpcpy,
                    (char *__restrict dest, const char *__restrict src)) {
   size_t size = internal::string_length(src) + 1;
   char *result =
-      reinterpret_cast<char *>(__llvm_libc::mempcpy(dest, src, size));
+      reinterpret_cast<char *>(LIBC_NAMESPACE::mempcpy(dest, src, size));
 
   if (result != nullptr)
     return result - 1;
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

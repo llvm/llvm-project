@@ -147,6 +147,13 @@ getCC1Arguments(DiagnosticsEngine *Diagnostics,
     if (IsCC1Command(Job) && llvm::all_of(Job.getInputInfos(), IsSrcFile))
       CC1Jobs.push_back(&Job);
 
+  // If there are no jobs for source files, try checking again for a single job
+  // with any file type. This accepts a preprocessed file as input.
+  if (CC1Jobs.empty())
+    for (const driver::Command &Job : Jobs)
+      if (IsCC1Command(Job))
+        CC1Jobs.push_back(&Job);
+
   if (CC1Jobs.empty() ||
       (CC1Jobs.size() > 1 && !ignoreExtraCC1Commands(Compilation))) {
     SmallString<256> error_msg;
@@ -248,15 +255,13 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
                                             StringRef File) {
   StringRef RelativePath(File);
   // FIXME: Should '.\\' be accepted on Win32?
-  if (RelativePath.startswith("./")) {
-    RelativePath = RelativePath.substr(strlen("./"));
-  }
+  RelativePath.consume_front("./");
 
   SmallString<1024> AbsolutePath = RelativePath;
   if (auto EC = FS.makeAbsolute(AbsolutePath))
     return llvm::errorCodeToError(EC);
   llvm::sys::path::native(AbsolutePath);
-  return std::string(AbsolutePath.str());
+  return std::string(AbsolutePath);
 }
 
 std::string getAbsolutePath(StringRef File) {
@@ -269,14 +274,14 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
     return;
   const auto &Table = driver::getDriverOptTable();
   // --target=X
-  const std::string TargetOPT =
+  StringRef TargetOPT =
       Table.getOption(driver::options::OPT_target).getPrefixedName();
   // -target X
-  const std::string TargetOPTLegacy =
+  StringRef TargetOPTLegacy =
       Table.getOption(driver::options::OPT_target_legacy_spelling)
           .getPrefixedName();
   // --driver-mode=X
-  const std::string DriverModeOPT =
+  StringRef DriverModeOPT =
       Table.getOption(driver::options::OPT_driver_mode).getPrefixedName();
   auto TargetMode =
       driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
@@ -287,16 +292,16 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
   for (auto Token = ++CommandLine.begin(); Token != CommandLine.end();
        ++Token) {
     StringRef TokenRef(*Token);
-    ShouldAddTarget = ShouldAddTarget && !TokenRef.startswith(TargetOPT) &&
-                      !TokenRef.equals(TargetOPTLegacy);
-    ShouldAddMode = ShouldAddMode && !TokenRef.startswith(DriverModeOPT);
+    ShouldAddTarget = ShouldAddTarget && !TokenRef.starts_with(TargetOPT) &&
+                      TokenRef != TargetOPTLegacy;
+    ShouldAddMode = ShouldAddMode && !TokenRef.starts_with(DriverModeOPT);
   }
   if (ShouldAddMode) {
     CommandLine.insert(++CommandLine.begin(), TargetMode.DriverMode);
   }
   if (ShouldAddTarget) {
     CommandLine.insert(++CommandLine.begin(),
-                       TargetOPT + TargetMode.TargetPrefix);
+                       (TargetOPT + TargetMode.TargetPrefix).str());
   }
 }
 
@@ -500,7 +505,7 @@ static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
                               void *MainAddr) {
   // Allow users to override the resource dir.
   for (StringRef Arg : Args)
-    if (Arg.startswith("-resource-dir"))
+    if (Arg.starts_with("-resource-dir"))
       return;
 
   // If there's no override in place add our resource dir.
@@ -549,6 +554,8 @@ int ClangTool::run(ToolAction *Action) {
                  << CWD.getError().message() << "\n";
   }
 
+  size_t NumOfTotalFiles = AbsolutePaths.size();
+  unsigned ProcessedFileCounter = 0;
   for (llvm::StringRef File : AbsolutePaths) {
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
@@ -604,7 +611,11 @@ int ClangTool::run(ToolAction *Action) {
 
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
-      LLVM_DEBUG({ llvm::dbgs() << "Processing: " << File << ".\n"; });
+      if (NumOfTotalFiles > 1)
+        llvm::errs() << "[" + std::to_string(++ProcessedFileCounter) + "/" +
+                            std::to_string(NumOfTotalFiles) +
+                            "] Processing file " + File
+                     << ".\n";
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
       Invocation.setDiagnosticConsumer(DiagConsumer);

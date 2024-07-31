@@ -36,19 +36,44 @@ private:
   std::string Msg;
 };
 
-// A class representing failures that happened during snippet execution.
-// Instead of terminating the program crashes are logged into the output.
-class SnippetCrash : public ErrorInfo<SnippetCrash> {
+// A class representing a non-descript snippet execution failure. This class
+// is designed to sub-classed into more specific failures that contain
+// additional data about the specific error that they represent. Instead of
+// halting the program, the errors are reported in the output.
+class SnippetExecutionFailure : public ErrorInfo<SnippetExecutionFailure> {
 public:
   static char ID;
-  SnippetCrash(const Twine &S) : Msg(S.str()) {}
+
+  std::error_code convertToErrorCode() const override;
+};
+
+// A class representing specifically segmentation faults that happen during
+// snippet execution.
+class SnippetSegmentationFault : public SnippetExecutionFailure {
+public:
+  static char ID;
+  SnippetSegmentationFault(intptr_t SegFaultAddress)
+      : Address(SegFaultAddress){};
+
+  intptr_t getAddress() { return Address; }
 
   void log(raw_ostream &OS) const override;
 
-  std::error_code convertToErrorCode() const override;
+private:
+  intptr_t Address;
+};
+
+// A class representing all other non-specific failures that happen during
+// snippet execution.
+class SnippetSignal : public SnippetExecutionFailure {
+public:
+  static char ID;
+  SnippetSignal(int Signal) : SignalNumber(Signal){};
+
+  void log(raw_ostream &OS) const override;
 
 private:
-  std::string Msg;
+  int SignalNumber;
 };
 
 } // namespace exegesis

@@ -35,6 +35,18 @@ module {
     llvm.call @printNewline() : () -> ()
     // CHECK: 1
 
+    %maximum = llvm.intr.vector.reduce.fmaximum(%v)
+        : (vector<4xf32>) -> f32
+    llvm.call @printF32(%maximum) : (f32) -> ()
+    llvm.call @printNewline() : () -> ()
+    // CHECK: 4
+
+    %minimum = llvm.intr.vector.reduce.fminimum(%v)
+        : (vector<4xf32>) -> f32
+    llvm.call @printF32(%minimum) : (f32) -> ()
+    llvm.call @printNewline() : () -> ()
+    // CHECK: 1
+
     %add1 = "llvm.intr.vector.reduce.fadd"(%0, %v)
         : (f32, vector<4xf32>) -> f32
     llvm.call @printF32(%add1) : (f32) -> ()

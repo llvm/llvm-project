@@ -1,12 +1,45 @@
 ; NOTE: This test case generates a jump table on PowerPC big and little endian
 ; NOTE: then verifies that the command line option to enable absolute jump
 ; NOTE: table works correctly.
-; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables -ppc-asm-full-reg-names \
 ; RUN:      -verify-machineinstrs %s | FileCheck %s -check-prefix=CHECK-LE
-; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables -ppc-asm-full-reg-names \
 ; RUN:      -verify-machineinstrs %s | FileCheck %s -check-prefix=CHECK-BE
+; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables -ppc-asm-full-reg-names \
+; RUN:      -verify-machineinstrs %s | FileCheck %s -check-prefix=CHECK-AIX
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=pic < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-A-PIC-LE
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=pic < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-R-PIC-LE
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=pic < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-A-PIC-BE
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=pic < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-R-PIC-BE
+; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=pic < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-A-PIC-AIX
+; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=pic < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-R-PIC-AIX
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=static < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-A-STATIC-LE
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=static < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-R-STATIC-LE
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=static < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-A-STATIC-BE
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
+; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=static < %s | FileCheck %s \
+; RUN:      -check-prefix=CHECK-R-STATIC-BE
 
 %struct.node = type { i8, ptr }
 
@@ -27,6 +60,44 @@ define zeroext i32 @jumpTableTest(ptr readonly %list) {
 ; CHECK-BE:       mtctr r[[REG]]
 ; CHECK-BE:       bctr
 ; CHECK-BE:       blr
+;
+; CHECK-AIX-LABEL: jumpTableTest:
+; CHECK-AIX:       # %bb.0: # %entry
+; CHECK-AIX:       rldic r[[REG:[0-9]+]], r[[REG]], 2, 30
+; CHECK-AIX:       lwax r[[REG]], r[[REG]], r[[REG1:[0-9]+]]
+; CHECK-AIX:       mtctr r[[REG]]
+; CHECK-AIX:       bctr
+; CHECK-AIX:       blr
+;
+; CHECK-A-PIC-LE-LABEL:       .LJTI0_0:
+; CHECK-A-PIC-LE:             .long   .LBB0_6-.LJTI0_0
+;
+; CHECK-R-PIC-LE-LABEL:       .LJTI0_0:
+; CHECK-R-PIC-LE:             .long   .LBB0_6-.LJTI0_0
+;
+; CHECK-A-PIC-BE-LABEL:       .LJTI0_0:
+; CHECK-A-PIC-BE:             .long   .LBB0_9-.LJTI0_0
+;
+; CHECK-R-PIC-BE-LABEL:       .LJTI0_0:
+; CHECK-R-PIC-BE:             .long   .LBB0_9-.LJTI0_0
+;
+; CHECK-A-PIC-AIX-LABEL:      L..JTI0_0:
+; CHECK-A-PIC-AIX:            .vbyte  4, L..BB0_9-L..JTI0_0
+;
+; CHECK-R-PIC-AIX-LABEL:      L..JTI0_0:
+; CHECK-R-PIC-AIX:            .vbyte  4, L..BB0_9-L..JTI0_0
+;
+; CHECK-A-STATIC-LE-LABEL:    .LJTI0_0:
+; CHECK-A-STATIC-LE:          .quad   .LBB0_6
+;
+; CHECK-R-STATIC-LE-LABEL:    .LJTI0_0:
+; CHECK-R-STATIC-LE:          .long   .LBB0_6-.LJTI0_0
+;
+; CHECK-A-STATIC-BE-LABEL:    .LJTI0_0:
+; CHECK-A-STATIC-BE:          .quad   .LBB0_9
+;
+; CHECK-R-STATIC-BE-LABEL:    .LJTI0_0:
+; CHECK-R-STATIC-BE:          .long   .LBB0_9-.LJTI0_0
 entry:
   %cmp36 = icmp eq ptr %list, null
   br i1 %cmp36, label %while.end, label %while.body

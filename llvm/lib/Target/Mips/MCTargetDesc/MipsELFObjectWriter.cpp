@@ -62,7 +62,7 @@ public:
 
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCSymbol &Sym,
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
   void sortRelocs(const MCAssembler &Asm,
                   std::vector<ELFRelocationEntry> &Relocs) override;
@@ -498,21 +498,21 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
 
   assert(Relocs.size() == Sorted.size() && "Some relocs were not consumed");
 
-  // Overwrite the original vector with the sorted elements. The caller expects
-  // them in reverse order.
+  // Overwrite the original vector with the sorted elements.
   unsigned CopyTo = 0;
-  for (const auto &R : reverse(Sorted))
+  for (const auto &R : Sorted)
     Relocs[CopyTo++] = R.R;
 }
 
-bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
+bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
+                                                  const MCSymbol &Sym,
                                                   unsigned Type) const {
   // If it's a compound relocation for N64 then we need the relocation if any
   // sub-relocation needs it.
   if (!isUInt<8>(Type))
-    return needsRelocateWithSymbol(Sym, Type & 0xff) ||
-           needsRelocateWithSymbol(Sym, (Type >> 8) & 0xff) ||
-           needsRelocateWithSymbol(Sym, (Type >> 16) & 0xff);
+    return needsRelocateWithSymbol(Val, Sym, Type & 0xff) ||
+           needsRelocateWithSymbol(Val, Sym, (Type >> 8) & 0xff) ||
+           needsRelocateWithSymbol(Val, Sym, (Type >> 16) & 0xff);
 
   switch (Type) {
   default:

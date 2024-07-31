@@ -145,7 +145,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // ensures the filesystem isn't mutated until the cache is.
       if (std::error_code EC = sys::fs::create_directories(
               CacheDirectoryPath, /*IgnoreExisting=*/true))
-        return errorCodeToError(EC);
+        return createStringError(EC, Twine("can't create cache directory ") +
+                                         CacheDirectoryPath + ": " +
+                                         EC.message());
 
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;
@@ -161,8 +163,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // This CacheStream will move the temporary file into the cache when done.
       return std::make_unique<CacheStream>(
           std::make_unique<raw_fd_ostream>(Temp->FD, /* ShouldClose */ false),
-          AddBuffer, std::move(*Temp), std::string(EntryPath.str()),
-          ModuleName.str(), Task);
+          AddBuffer, std::move(*Temp), std::string(EntryPath), ModuleName.str(),
+          Task);
     };
   };
 }

@@ -15,6 +15,7 @@
 
 #include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
 
@@ -62,6 +63,20 @@ void populateGpuShufflePatterns(RewritePatternSet &patterns);
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 
+/// Collect a set of patterns to break down subgroup_reduce ops into smaller
+/// ones supported by the target of `size <= maxShuffleBitwidth`, where `size`
+/// is the subgroup_reduce value bitwidth.
+void populateGpuBreakDownSubgrupReducePatterns(RewritePatternSet &patterns,
+                                               unsigned maxShuffleBitwidth = 32,
+                                               PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to lower `gpu.subgroup_reduce` into `gpu.shuffle`
+/// ops over `shuffleBitwidth` scalar types. Assumes that the subgroup has
+/// `subgroupSize` lanes. Uses the butterfly shuffle algorithm.
+void populateGpuLowerSubgroupReduceToShufflePattenrs(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
+
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
   populateGpuAllReducePatterns(patterns);
@@ -70,81 +85,26 @@ inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
 }
 
 namespace gpu {
-/// Base pass class to serialize kernel functions through LLVM into
-/// user-specified IR and add the resulting blob as module attribute.
-class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {
-public:
-  SerializeToBlobPass(TypeID passID);
-  SerializeToBlobPass(const SerializeToBlobPass &other);
-
-  void runOnOperation() final;
-
-protected:
-  void getDependentDialects(DialectRegistry &registry) const override;
-
-  /// Hook allowing the application of optimizations before codegen
-  /// By default, does nothing
-  virtual LogicalResult optimizeLlvm(llvm::Module &llvmModule,
-                                     llvm::TargetMachine &targetMachine);
-
-  /// Translates the 'getOperation()' result to an LLVM module.
-  virtual std::unique_ptr<llvm::Module>
-  translateToLLVMIR(llvm::LLVMContext &llvmContext);
-
-private:
-  /// Creates the LLVM target machine to generate the ISA.
-  std::unique_ptr<llvm::TargetMachine> createTargetMachine();
-
-  /// Translates the module to ISA
-  std::optional<std::string> translateToISA(llvm::Module &llvmModule,
-                                            llvm::TargetMachine &targetMachine);
-
-  /// Serializes the target ISA to binary form.
-  virtual std::unique_ptr<std::vector<char>>
-  serializeISA(const std::string &isa) = 0;
-
-protected:
-  Option<std::string> triple{*this, "triple",
-                             ::llvm::cl::desc("Target triple")};
-  Option<std::string> chip{*this, "chip",
-                           ::llvm::cl::desc("Target architecture")};
-  Option<std::string> features{*this, "features",
-                               ::llvm::cl::desc("Target features")};
-  Option<int> optLevel{*this, "opt-level",
-                       llvm::cl::desc("Optimization level for compilation"),
-                       llvm::cl::init(2)};
-  Option<std::string> gpuBinaryAnnotation{
-      *this, "gpu-binary-annotation",
-      llvm::cl::desc("Annotation attribute string for GPU binary"),
-      llvm::cl::init(getDefaultGpuBinaryAnnotation())};
-};
+/// Searches for all GPU modules in `op` and transforms them into GPU binary
+/// operations. The resulting `gpu.binary` has `handler` as its offloading
+/// handler attribute.
+LogicalResult transformGpuModulesToBinaries(
+    Operation *op, OffloadingLLVMTranslationAttrInterface handler = nullptr,
+    const gpu::TargetOptions &options = {});
 } // namespace gpu
 
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
 
-/// Register pass to serialize GPU kernel functions to a CUBIN binary
-/// annotation.
-void registerGpuSerializeToCubinPass();
+/// Collect a set of patterns to decompose memrefs ops.
+void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
 
-/// Register pass to serialize GPU kernel functions to a HSAco binary
-/// annotation.
-void registerGpuSerializeToHsacoPass();
+/// Pass decomposes memref ops inside `gpu.launch` body.
+std::unique_ptr<Pass> createGpuDecomposeMemrefsPass();
 
-/// Create an instance of the GPU kernel function to CUBIN binary serialization
-/// pass with optLevel (default level 2).
-std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
-                                                    StringRef chip,
-                                                    StringRef features,
-                                                    int optLevel = 2);
-
-/// Create an instance of the GPU kernel function to HSAco binary serialization
-/// pass.
-std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
-                                                    StringRef arch,
-                                                    StringRef features,
-                                                    int optLevel);
+/// Erase barriers that do not enforce conflicting memory side effects.
+void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION

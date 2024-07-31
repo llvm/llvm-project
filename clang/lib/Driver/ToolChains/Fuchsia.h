@@ -32,7 +32,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("fuchsia::Linker", "ld.lld", TC) {}
 
@@ -55,9 +55,7 @@ public:
           const llvm::opt::ArgList &Args);
 
   bool HasNativeLLVMSupport() const override { return true; }
-  bool IsIntegratedAssemblerDefault() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }
-  bool useRelaxRelocations() const override { return true; };
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
   }

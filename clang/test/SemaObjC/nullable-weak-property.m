@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -Wnullable-to-nonnull-conversion %s -verify
 
-
-// rdar://19985330
 @interface NSObject @end
 
 @class NSFoo;

@@ -13,10 +13,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
@@ -24,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -99,8 +99,8 @@ enum {
 
 class DynamicLoaderDarwinKernelProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin-kernel");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin-kernel");
     return g_setting_name;
   }
 
@@ -168,7 +168,8 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
-    // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+    case llvm::Triple::XROS:
+    case llvm::Triple::BridgeOS:
       if (triple_ref.getVendor() != llvm::Triple::Apple) {
         return nullptr;
       }
@@ -607,8 +608,8 @@ void DynamicLoaderDarwinKernel::KextImageInfo::SetProcessStopId(
   m_load_process_stop_id = stop_id;
 }
 
-bool DynamicLoaderDarwinKernel::KextImageInfo::
-operator==(const KextImageInfo &rhs) {
+bool DynamicLoaderDarwinKernel::KextImageInfo::operator==(
+    const KextImageInfo &rhs) const {
   if (m_uuid.IsValid() || rhs.GetUUID().IsValid()) {
     return m_uuid == rhs.GetUUID();
   }
@@ -714,7 +715,7 @@ void DynamicLoaderDarwinKernel::KextImageInfo::SetIsKernel(bool is_kernel) {
 }
 
 bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
-    Process *process) {
+    Process *process, Progress *progress) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   if (IsLoaded())
     return true;
@@ -757,25 +758,37 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     const ModuleList &target_images = target.GetImages();
     m_module_sp = target_images.FindModule(m_uuid);
 
+    StreamString prog_str;
+    // 'mach_kernel' is a fake name we make up to find kernels
+    // that were located by the local filesystem scan.
+    if (GetName() != "mach_kernel")
+      prog_str << GetName() << " ";
+    if (GetUUID().IsValid())
+      prog_str << GetUUID().GetAsString() << " ";
+    if (GetLoadAddress() != LLDB_INVALID_ADDRESS) {
+      prog_str << "at 0x";
+      prog_str.PutHex64(GetLoadAddress());
+    }
+
+    std::unique_ptr<Progress> progress_up;
+    if (progress)
+      progress->Increment(1, prog_str.GetString().str());
+    else {
+      if (IsKernel())
+        progress_up = std::make_unique<Progress>("Loading kernel",
+                                                 prog_str.GetString().str());
+      else
+        progress_up = std::make_unique<Progress>("Loading kext",
+                                                 prog_str.GetString().str());
+    }
+
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
       module_spec.GetUUID() = m_uuid;
-      module_spec.GetArchitecture() = target.GetArchitecture();
-
-      // For the kernel, we really do need an on-disk file copy of the binary
-      // to do anything useful. This will force a call to dsymForUUID if it
-      // exists, instead of depending on the DebugSymbols preferences being
-      // set.
-      if (IsKernel()) {
-        Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error, true)) {
-          if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-            m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
-                                                   target.GetArchitecture());
-          }
-        }
-      }
+      if (!m_uuid.IsValid())
+        module_spec.GetArchitecture() = target.GetArchitecture();
+      module_spec.GetFileSpec() = FileSpec(m_name);
 
       // If the current platform is PlatformDarwinKernel, create a ModuleSpec
       // with the filename set to be the bundle ID for this kext, e.g.
@@ -783,18 +796,10 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // PlatformDarwinKernel does a special scan for kexts on the local
       // system.
       PlatformSP platform_sp(target.GetPlatform());
-      if (!m_module_sp && platform_sp) {
-        static ConstString g_platform_name(
-            PlatformDarwinKernel::GetPluginNameStatic());
-        if (platform_sp->GetPluginName() == g_platform_name.GetStringRef()) {
-          ModuleSpec kext_bundle_module_spec(module_spec);
-          FileSpec kext_filespec(m_name.c_str());
-          FileSpecList search_paths = target.GetExecutableSearchPaths();
-          kext_bundle_module_spec.GetFileSpec() = kext_filespec;
-          platform_sp->GetSharedModule(kext_bundle_module_spec, process,
-                                       m_module_sp, &search_paths, nullptr,
-                                       nullptr);
-        }
+      if (platform_sp) {
+        FileSpecList search_paths = target.GetExecutableSearchPaths();
+        platform_sp->GetSharedModule(module_spec, process, m_module_sp,
+                                     &search_paths, nullptr, nullptr);
       }
 
       // Ask the Target to find this file on the local system, if possible.
@@ -806,10 +811,30 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
         m_module_sp = target.GetOrCreateModule(module_spec, true /* notify */);
       }
 
+      // For the kernel, we really do need an on-disk file copy of the binary
+      // to do anything useful. This will force a call to dsymForUUID if it
+      // exists, instead of depending on the DebugSymbols preferences being
+      // set.
+      Status kernel_search_error;
+      if (IsKernel() &&
+          (!m_module_sp || !m_module_sp->GetSymbolFileFileSpec())) {
+        if (PluginManager::DownloadObjectAndSymbolFile(
+                module_spec, kernel_search_error, true)) {
+          if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+            m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
+                                                   target.GetArchitecture());
+          }
+        }
+      }
+
       if (IsKernel() && !m_module_sp) {
-        Stream &s = target.GetDebugger().GetOutputStream();
+        Stream &s = target.GetDebugger().GetErrorStream();
         s.Printf("WARNING: Unable to locate kernel binary on the debugger "
                  "system.\n");
+        if (kernel_search_error.Fail() && kernel_search_error.AsCString("") &&
+            kernel_search_error.AsCString("")[0] != '\0') {
+          s << kernel_search_error.AsCString();
+        }
       }
     }
 
@@ -909,10 +934,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
                 ondisk_section_list->GetSectionAtIndex(sect_idx));
             if (ondisk_section_sp) {
               // Don't ever load __LINKEDIT as it may or may not be actually
-              // mapped into memory and there is no current way to tell.
-              // I filed rdar://problem/12851706 to track being able to tell
-              // if the __LINKEDIT is actually mapped, but until then, we need
-              // to not load the __LINKEDIT
+              // mapped into memory and there is no current way to tell. Until
+              // such an ability exists, do not load the __LINKEDIT.
               if (ignore_linkedit &&
                   ondisk_section_sp->GetName() == g_section_name_LINKEDIT)
                 continue;
@@ -1054,12 +1077,9 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
         }
       }
     }
-
-    if (m_kernel.GetLoadAddress() != LLDB_INVALID_ADDRESS) {
-      if (!m_kernel.LoadImageUsingMemoryModule(m_process)) {
+    if (m_kernel.GetLoadAddress() != LLDB_INVALID_ADDRESS)
+      if (!m_kernel.LoadImageUsingMemoryModule(m_process))
         m_kernel.LoadImageAtFileAddress(m_process);
-      }
-    }
 
     // The operating system plugin gets loaded and initialized in
     // LoadImageUsingMemoryModule when we discover the kernel dSYM.  For a core
@@ -1106,7 +1126,7 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
           // T1Sz is 25, then 64-25 == 39, bits 0..38 are used for
           // addressing, bits 39..63 are used for PAC/TBI or whatever.
           uint32_t virt_addr_bits = 64 - sym_value;
-          addr_t mask = ~((1ULL << virt_addr_bits) - 1);
+          addr_t mask = AddressableBits::AddressableBitToMask(virt_addr_bits);
           m_process->SetCodeAddressMask(mask);
           m_process->SetDataAddressMask(mask);
         } else {
@@ -1343,19 +1363,18 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   std::vector<std::pair<std::string, UUID>> kexts_failed_to_load;
   if (number_of_new_kexts_being_added > 0) {
     ModuleList loaded_module_list;
+    Progress progress("Loading kext", "", number_of_new_kexts_being_added);
 
     const uint32_t num_of_new_kexts = kext_summaries.size();
     for (uint32_t new_kext = 0; new_kext < num_of_new_kexts; new_kext++) {
       if (to_be_added[new_kext]) {
         KextImageInfo &image_info = kext_summaries[new_kext];
-        bool kext_successfully_added = true;
         if (load_kexts) {
-          if (!image_info.LoadImageUsingMemoryModule(m_process)) {
+          if (!image_info.LoadImageUsingMemoryModule(m_process, &progress)) {
             kexts_failed_to_load.push_back(std::pair<std::string, UUID>(
                 kext_summaries[new_kext].GetName(),
                 kext_summaries[new_kext].GetUUID()));
             image_info.LoadImageAtFileAddress(m_process);
-            kext_successfully_added = false;
           }
         }
 
@@ -1364,13 +1383,6 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
         if (image_info.GetModule() &&
             m_process->GetStopID() == image_info.GetProcessStopId())
           loaded_module_list.AppendIfNeeded(image_info.GetModule());
-
-        if (load_kexts) {
-          if (kext_successfully_added)
-            s.Printf(".");
-          else
-            s.Printf("-");
-        }
 
         if (log)
           kext_summaries[new_kext].PutToLog(log);

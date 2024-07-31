@@ -64,8 +64,6 @@ std::optional<PseudoProbe> extractProbe(const Instruction &Inst) {
     Probe.Discriminator = 0;
     if (const DebugLoc &DLoc = Inst.getDebugLoc())
       Probe.Discriminator = DLoc->getDiscriminator();
-    assert(Probe.Discriminator == 0 &&
-           "Unexpected non-zero FS-discriminator for IR pseudo probes");
     return Probe;
   }
 
@@ -97,13 +95,16 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
             PseudoProbeDwarfDiscriminator::extractProbeType(Discriminator);
         auto Attr = PseudoProbeDwarfDiscriminator::extractProbeAttributes(
             Discriminator);
+        auto DwarfBaseDiscriminator =
+            PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
+                Discriminator);
         // Round small factors to 0 to avoid over-counting.
         uint32_t IntFactor =
             PseudoProbeDwarfDiscriminator::FullDistributionFactor;
         if (Factor < 1)
           IntFactor *= Factor;
         uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-            Index, Type, Attr, IntFactor);
+            Index, Type, Attr, IntFactor, DwarfBaseDiscriminator);
         DIL = DIL->cloneWithDiscriminator(V);
         Inst.setDebugLoc(DIL);
       }

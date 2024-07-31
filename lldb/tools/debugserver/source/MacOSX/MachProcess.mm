@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <chrono>
 #include <map>
+#include <unordered_set>
 
 #include <TargetConditionals.h>
 #import <Foundation/Foundation.h>
@@ -69,6 +70,14 @@
 
 #ifndef PLATFORM_DRIVERKIT
 #define PLATFORM_DRIVERKIT 10
+#endif
+
+#ifndef PLATFORM_XROS
+#define PLATFORM_XROS 11
+#endif
+
+#ifndef PLATFORM_XR_SIMULATOR
+#define PLATFORM_XR_SIMULATOR 12
 #endif
 
 #ifdef WITH_SPRINGBOARD
@@ -463,6 +472,8 @@ FBSCreateOptionsDictionary(const char *app_bundle_path,
   // And there are some other options at the top level in this dictionary:
   [options setObject:[NSNumber numberWithBool:YES]
               forKey:FBSOpenApplicationOptionKeyUnlockDevice];
+  [options setObject:[NSNumber numberWithBool:YES]
+              forKey:FBSOpenApplicationOptionKeyPromptUnlockDevice];
 
   // We have to get the "sequence ID & UUID" for this app bundle path and send
   // them to FBS:
@@ -745,6 +756,10 @@ MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
+  case PLATFORM_XROS:
+    return "xros";
+  case PLATFORM_XR_SIMULATOR:
+    return "xrossimulator";
   default:
     DNBLogError("Unknown platform %u found for one binary", platform);
     return std::nullopt;
@@ -1053,9 +1068,16 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
     dyld_process_info info =
         m_dyld_process_info_create(m_task.TaskPort(), 0, &kern_ret);
     if (info) {
+      // There's a bug in the interaction between dyld and older dyld_sim's
+      // (e.g. from the iOS 15 simulator) that causes dyld to report the same
+      // binary twice.  We use this set to eliminate the duplicates.
+      __block std::unordered_set<uint64_t> seen_header_addrs;
       m_dyld_process_info_for_each_image(
           info,
           ^(uint64_t mach_header_addr, const uuid_t uuid, const char *path) {
+            auto res_pair = seen_header_addrs.insert(mach_header_addr);
+            if (!res_pair.second)
+              return;
             struct binary_image_information image;
             image.filename = path;
             uuid_copy(image.macho_info.uuid, uuid);
@@ -1089,6 +1111,23 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
     }
   }
   return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+}
+
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
+  int pointer_size = GetInferiorAddrSize(pid);
+  std::vector<struct binary_image_information> image_infos;
+  GetAllLoadedBinariesViaDYLDSPI(image_infos);
+  uint32_t platform = GetPlatform();
+  for (auto &image_info : image_infos)
+    if (GetMachOInformationFromMemory(platform, image_info.load_address,
+                                      pointer_size, image_info.macho_info))
+      if (image_info.macho_info.mach_header.filetype == MH_EXECUTE)
+        return {
+            {static_cast<cpu_type_t>(image_info.macho_info.mach_header.cputype),
+             static_cast<cpu_subtype_t>(
+                 image_info.macho_info.mach_header.cpusubtype)}};
+  return {};
 }
 
 // Fetch information about the shared libraries at the given load addresses
@@ -2821,16 +2860,21 @@ pid_t MachProcess::AttachForDebug(
           "attach to pid %d",
           getpid(), pid);
 
-      struct kinfo_proc kinfo;
-      int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-      size_t len = sizeof(struct kinfo_proc);
-      if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 && len > 0) {
-        if (kinfo.kp_proc.p_flag & P_TRACED) {
-          ::snprintf(err_str, err_len, "%s - process %d is already being debugged", err.AsString(), pid);
+      if (ProcessIsBeingDebugged(pid)) {
+        nub_process_t ppid = GetParentProcessID(pid);
+        if (ppid == getpid()) {
+          snprintf(err_str, err_len,
+                   "%s - Failed to attach to pid %d, AttachForDebug() "
+                   "unable to ptrace(PT_ATTACHEXC)",
+                   err.AsString(), m_pid);
+        } else {
+          snprintf(err_str, err_len,
+                   "%s - process %d is already being debugged by pid %d",
+                   err.AsString(), pid, ppid);
           DNBLogError(
               "[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d is "
-              "already being debugged",
-              getpid(), pid);
+              "already being debugged by pid %d",
+              getpid(), pid, ppid);
         }
       }
     }
@@ -2877,6 +2921,26 @@ std::string MachProcess::GetMacCatalystVersionString() {
       return version_str;
   }
   return {};
+}
+
+nub_process_t MachProcess::GetParentProcessID(nub_process_t child_pid) {
+  struct proc_bsdshortinfo proc;
+  if (proc_pidinfo(child_pid, PROC_PIDT_SHORTBSDINFO, 0, &proc,
+                   PROC_PIDT_SHORTBSDINFO_SIZE) == sizeof(proc)) {
+    return proc.pbsi_ppid;
+  }
+  return INVALID_NUB_PROCESS;
+}
+
+bool MachProcess::ProcessIsBeingDebugged(nub_process_t pid) {
+  struct kinfo_proc kinfo;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  size_t len = sizeof(struct kinfo_proc);
+  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 &&
+      (kinfo.kp_proc.p_flag & P_TRACED))
+    return true;
+  else
+    return false;
 }
 
 #if defined(WITH_SPRINGBOARD) || defined(WITH_BKS) || defined(WITH_FBS)
@@ -3401,7 +3465,13 @@ pid_t MachProcess::LaunchForDebug(
                                       "%d (err = %i, errno = %i (%s))",
                          m_pid, err, ptrace_err.Status(),
                          ptrace_err.AsString());
-        launch_err.SetError(NUB_GENERIC_ERROR, DNBError::Generic);
+        char err_msg[PATH_MAX];
+
+        snprintf(err_msg, sizeof(err_msg),
+                 "Failed to attach to pid %d, LaunchForDebug() unable to "
+                 "ptrace(PT_ATTACHEXC)",
+                 m_pid);
+        launch_err.SetErrorString(err_msg);
       }
     } else {
       launch_err.Clear();
@@ -3777,6 +3847,10 @@ pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
       m_flags |= eMachProcessFlagsAttached;
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", m_pid);
     } else {
+      launch_err.SetErrorString(
+          "Failed to attach to pid %d, SBLaunchForDebug() unable to "
+          "ptrace(PT_ATTACHEXC)",
+          m_pid);
       SetState(eStateExited);
       DNBLogThreadedIf(LOG_PROCESS, "error: failed to attach to pid %d", m_pid);
     }
@@ -3996,6 +4070,10 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLog("[LaunchAttach] successfully attached to pid %d", m_pid);
     } else {
+      std::string errmsg = "Failed to attach to pid ";
+      errmsg += std::to_string(m_pid);
+      errmsg += ", BoardServiceLaunchForDebug() unable to ptrace(PT_ATTACHEXC)";
+      launch_err.SetErrorString(errmsg.c_str());
       SetState(eStateExited);
       DNBLog("[LaunchAttach] END (%d) error: failed to attach to pid %d",
              getpid(), m_pid);

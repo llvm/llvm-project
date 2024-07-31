@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_FENV_FEGETEXCEPTFLAG_H
 #define LLVM_LIBC_SRC_FENV_FEGETEXCEPTFLAG_H
 
-#include <fenv.h>
+#include "hdr/types/fexcept_t.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int fegetexceptflag(fexcept_t *, int excepts);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_FENV_FEGETEXCEPTFLAG_H

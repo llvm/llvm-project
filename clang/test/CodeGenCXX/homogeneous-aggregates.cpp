@@ -39,26 +39,26 @@ struct I2 : Base2 {};
 struct I3 : Base2 {};
 struct D5 : I1, I2, I3 {}; // homogeneous aggregate
 
-// PPC: define{{.*}} void @_Z7func_D12D1(ptr noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D12D1(ptr noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM64: define{{.*}} void @_Z7func_D12D1(ptr noalias sret(%struct.D1) align 8 %agg.result, ptr noundef %x)
-// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(ptr noalias sret(%struct.D1) align 8 %agg.result, ptr noundef %x)
+// PPC: define{{.*}} void @_Z7func_D12D1(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
+// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D12D1(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
+// ARM64: define{{.*}} void @_Z7func_D12D1(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, ptr noundef %x)
+// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(ptr dead_on_unwind noalias writable sret(%struct.D1) align 8 %agg.result, ptr noundef %x)
 D1 CC func_D1(D1 x) { return x; }
 
 // PPC: define{{.*}} [3 x double] @_Z7func_D22D2([3 x double] %x.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc %struct.D2 @_Z7func_D22D2(%struct.D2 %x.coerce)
-// ARM64: define{{.*}} %struct.D2 @_Z7func_D22D2([3 x double] %x.coerce)
+// ARM64: define{{.*}} %struct.D2 @_Z7func_D22D2([3 x double] alignstack(8) %x.coerce)
 // X64: define dso_local x86_vectorcallcc %struct.D2 @"\01_Z7func_D22D2@@24"(%struct.D2 inreg %x.coerce)
 D2 CC func_D2(D2 x) { return x; }
 
-// PPC: define{{.*}} void @_Z7func_D32D3(ptr noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D32D3(ptr noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM64: define{{.*}} void @_Z7func_D32D3(ptr noalias sret(%struct.D3) align 8 %agg.result, ptr noundef %x)
+// PPC: define{{.*}} void @_Z7func_D32D3(ptr dead_on_unwind noalias writable sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
+// ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z7func_D32D3(ptr dead_on_unwind noalias writable sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
+// ARM64: define{{.*}} void @_Z7func_D32D3(ptr dead_on_unwind noalias writable sret(%struct.D3) align 8 %agg.result, ptr noundef %x)
 D3 CC func_D3(D3 x) { return x; }
 
 // PPC: define{{.*}} [4 x double] @_Z7func_D42D4([4 x double] %x.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc %struct.D4 @_Z7func_D42D4(%struct.D4 %x.coerce)
-// ARM64: define{{.*}} %struct.D4 @_Z7func_D42D4([4 x double] %x.coerce)
+// ARM64: define{{.*}} %struct.D4 @_Z7func_D42D4([4 x double] alignstack(8) %x.coerce)
 D4 CC func_D4(D4 x) { return x; }
 
 D5 CC func_D5(D5 x) { return x; }
@@ -68,7 +68,7 @@ D5 CC func_D5(D5 x) { return x; }
 // The C++ multiple inheritance expansion case is a little more complicated, so
 // do some extra checking.
 //
-// ARM64-LABEL: define{{.*}} %struct.D5 @_Z7func_D52D5([3 x double] %x.coerce)
+// ARM64-LABEL: define{{.*}} %struct.D5 @_Z7func_D52D5([3 x double] alignstack(8) %x.coerce)
 // ARM64: store [3 x double] %x.coerce, ptr
 
 void call_D5(D5 *p) {
@@ -79,7 +79,7 @@ void call_D5(D5 *p) {
 //
 // ARM64-LABEL: define{{.*}} void @_Z7call_D5P2D5(ptr noundef %p)
 // ARM64: load [3 x double], ptr
-// ARM64: call %struct.D5 @_Z7func_D52D5([3 x double] %{{.*}})
+// ARM64: call %struct.D5 @_Z7func_D52D5([3 x double] alignstack(8) %{{.*}})
 
 struct Empty { };
 struct Float1 { float x; };
@@ -87,7 +87,7 @@ struct Float2 { float y; };
 struct HVAWithEmptyBase : Float1, Empty, Float2 { float z; };
 
 // PPC: define{{.*}} void @_Z15with_empty_base16HVAWithEmptyBase([3 x float] %a.coerce)
-// ARM64: define{{.*}} void @_Z15with_empty_base16HVAWithEmptyBase([3 x float] %a.coerce)
+// ARM64: define{{.*}} void @_Z15with_empty_base16HVAWithEmptyBase([3 x float] alignstack(8) %a.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z15with_empty_base16HVAWithEmptyBase(%struct.HVAWithEmptyBase %a.coerce)
 void CC with_empty_base(HVAWithEmptyBase a) {}
 
@@ -100,7 +100,7 @@ struct HVAWithEmptyBitField : Float1, Float2 {
 };
 
 // PPC: define{{.*}} void @_Z19with_empty_bitfield20HVAWithEmptyBitField([3 x float] %a.coerce)
-// ARM64: define{{.*}} void @_Z19with_empty_bitfield20HVAWithEmptyBitField([3 x float] %a.coerce)
+// ARM64: define{{.*}} void @_Z19with_empty_bitfield20HVAWithEmptyBitField([3 x float] alignstack(8) %a.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z19with_empty_bitfield20HVAWithEmptyBitField(%struct.HVAWithEmptyBitField %a.coerce)
 // X64: define dso_local x86_vectorcallcc void @"\01_Z19with_empty_bitfield20HVAWithEmptyBitField@@16"(%struct.HVAWithEmptyBitField inreg %a.coerce)
 void CC with_empty_bitfield(HVAWithEmptyBitField a) {}
@@ -133,13 +133,13 @@ struct HasEmptyBase : public Empty {
 struct HasPodBase : public Pod {};
 // WOA64-LABEL: define dso_local %"struct.pr47611::Pod" @"?copy@pr47611@@YA?AUPod@1@PEAU21@@Z"(ptr noundef %x)
 Pod copy(Pod *x) { return *x; } // MSVC: ldp d0,d1,[x0], Clang: ldp d0,d1,[x0]
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, ptr noundef %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %agg.result, ptr noundef %x)
 NotCXX14Aggregate copy(NotCXX14Aggregate *x) { return *x; } // MSVC: stp x8,x9,[x0], Clang: str q0,[x0]
 // WOA64-LABEL: define dso_local [2 x i64] @"?copy@pr47611@@YA?AUNotPod@1@PEAU21@@Z"(ptr noundef %x)
 NotPod copy(NotPod *x) { return *x; }
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, ptr noundef %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr47611::HasEmptyBase") align 8 %agg.result, ptr noundef %x)
 HasEmptyBase copy(HasEmptyBase *x) { return *x; }
-// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, ptr noundef %x)
+// WOA64-LABEL: define dso_local void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr47611::HasPodBase") align 8 %agg.result, ptr noundef %x)
 HasPodBase copy(HasPodBase *x) { return *x; }
 
 void call_copy_pod(Pod *pod) {
@@ -151,7 +151,7 @@ void call_copy_pod(Pod *pod) {
 void call_copy_notcxx14aggregate(NotCXX14Aggregate *notcxx14aggregate) {
   *notcxx14aggregate = copy(notcxx14aggregate);
   // WOA64-LABEL: define dso_local void @"?call_copy_notcxx14aggregate@pr47611@@YAXPEAUNotCXX14Aggregate@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr inreg sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, ptr noundef %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUNotCXX14Aggregate@1@PEAU21@@Z"(ptr dead_on_unwind inreg writable sret(%"struct.pr47611::NotCXX14Aggregate") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
 
 void call_copy_notpod(NotPod *notPod) {
@@ -163,13 +163,13 @@ void call_copy_notpod(NotPod *notPod) {
 void call_copy_hasemptybase(HasEmptyBase *hasEmptyBase) {
   *hasEmptyBase = copy(hasEmptyBase);
   // WOA64-LABEL: define dso_local void @"?call_copy_hasemptybase@pr47611@@YAXPEAUHasEmptyBase@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr inreg sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, ptr noundef %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasEmptyBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg writable sret(%"struct.pr47611::HasEmptyBase") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
 
 void call_copy_haspodbase(HasPodBase *hasPodBase) {
   *hasPodBase = copy(hasPodBase);
   // WOA64-LABEL: define dso_local void @"?call_copy_haspodbase@pr47611@@YAXPEAUHasPodBase@1@@Z"
-  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr inreg sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, ptr noundef %{{.*}})
+  // WOA64: call void @"?copy@pr47611@@YA?AUHasPodBase@1@PEAU21@@Z"(ptr dead_on_unwind inreg writable sret(%"struct.pr47611::HasPodBase") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
 } // namespace pr47611
 
@@ -284,4 +284,21 @@ struct HFA {
 };
 double foo(HFA v) { return v.x + v.y; }
 // WOA64: define dso_local noundef double @"?foo@non_empty_field@@YANUHFA@1@@Z"([4 x double] %{{.*}})
+}
+
+namespace pr62223 {
+// HVAs don't follow the normal rules for return values. That means they can
+// have base classes, user-defined ctors, and protected/private members.
+// (The same restrictions that apply to HVA arguments still apply.)
+typedef double V __attribute((ext_vector_type(2)));
+struct base { V v; };
+struct test : base { test(double); protected: V v2;};
+test f(test *x) { return *x; }
+// WOA64: define dso_local %"struct.pr62223::test" @"?f@pr62223@@YA?AUtest@1@PEAU21@@Z"(ptr noundef %{{.*}})
+
+// The above rule only apples to HVAs, not HFAs.
+struct base2 { double v; };
+struct test2 : base2 { test2(double); protected: double v2;};
+test2 f(test2 *x) { return *x; }
+// WOA64: define dso_local void @"?f@pr62223@@YA?AUtest2@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr62223::test2") align 8 %{{.*}}, ptr noundef %{{.*}})
 }

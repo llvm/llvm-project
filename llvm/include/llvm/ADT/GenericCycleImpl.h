@@ -15,8 +15,8 @@
 ///
 /// This file should only be included by files that implement a
 /// specialization of the relevant templates. Currently these are:
-/// - CycleAnalysis.cpp
-/// - MachineCycleAnalysis.cpp
+/// - llvm/lib/IR/CycleInfo.cpp
+/// - llvm/lib/CodeGen/MachineCycleAnalysis.cpp
 ///
 //===----------------------------------------------------------------------===//
 
@@ -63,6 +63,21 @@ void GenericCycle<ContextT>::getExitBlocks(
     }
 
     TmpStorage.resize(NumExitBlocks);
+  }
+}
+
+template <typename ContextT>
+void GenericCycle<ContextT>::getExitingBlocks(
+    SmallVectorImpl<BlockT *> &TmpStorage) const {
+  TmpStorage.clear();
+
+  for (BlockT *Block : blocks()) {
+    for (BlockT *Succ : successors(Block)) {
+      if (!contains(Succ)) {
+        TmpStorage.push_back(Block);
+        break;
+      }
+    }
   }
 }
 
@@ -118,6 +133,8 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
     DFSInfo() = default;
     explicit DFSInfo(unsigned Start) : Start(Start) {}
+
+    explicit operator bool() const { return Start; }
 
     /// Whether this node is an ancestor (or equal to) the node \p Other
     /// in the DFS tree.
@@ -184,6 +201,24 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
       It.second = NewParent;
 }
 
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
+  // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
+  // printing, cycle NewBlock is at the end of list but it should be in the
+  // middle to represent actual traversal of a cycle.
+  Cycle->appendBlock(Block);
+  BlockMap.try_emplace(Block, Cycle);
+
+  CycleT *ParentCycle = Cycle->getParentCycle();
+  while (ParentCycle) {
+    Cycle = ParentCycle;
+    Cycle->appendBlock(Block);
+    ParentCycle = Cycle->getParentCycle();
+  }
+
+  BlockMapTopLevel.try_emplace(Block, Cycle);
+}
+
 /// \brief Main function of the cycle info computations.
 template <typename ContextT>
 void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
@@ -198,6 +233,8 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
 
     for (BlockT *Pred : predecessors(HeaderCandidate)) {
       const DFSInfo PredDFSInfo = BlockDFSInfo.lookup(Pred);
+      // This automatically ignores unreachable predecessors since they have
+      // zeros in their DFSInfo.
       if (CandidateInfo.isAncestorOf(PredDFSInfo))
         Worklist.push_back(Pred);
     }
@@ -224,6 +261,10 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
         const DFSInfo PredDFSInfo = BlockDFSInfo.lookup(Pred);
         if (CandidateInfo.isAncestorOf(PredDFSInfo)) {
           Worklist.push_back(Pred);
+        } else if (!PredDFSInfo) {
+          // Ignore an unreachable predecessor. It will will incorrectly cause
+          // Block to be treated as a cycle entry.
+          LLVM_DEBUG(errs() << " skipped unreachable predecessor.\n");
         } else {
           IsEntry = true;
         }
@@ -354,12 +395,25 @@ template <typename ContextT> void GenericCycleInfo<ContextT>::clear() {
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
-  Context.setFunction(F);
+  Context = ContextT(&F);
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
-  Compute.run(ContextT::getEntryBlock(F));
+  Compute.run(&F.front());
 
+  assert(validateTree());
+}
+
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
+                                                   BlockT *NewBlock) {
+  // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
+  // cycles that had blocks Pred and Succ also get NewBlock.
+  CycleT *Cycle = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
+  if (!Cycle)
+    return;
+
+  addBlockToCycle(NewBlock, Cycle);
   assert(validateTree());
 }
 
@@ -370,10 +424,36 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
     -> CycleT * {
-  auto MapIt = BlockMap.find(Block);
-  if (MapIt != BlockMap.end())
-    return MapIt->second;
-  return nullptr;
+  return BlockMap.lookup(Block);
+}
+
+/// \brief Find the innermost cycle containing both given cycles.
+///
+/// \returns the innermost cycle containing both \p A and \p B
+///          or nullptr if there is no such cycle.
+template <typename ContextT>
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
+                                                        CycleT *B) const
+    -> CycleT * {
+  if (!A || !B)
+    return nullptr;
+
+  // If cycles A and B have different depth replace them with parent cycle
+  // until they have the same depth.
+  while (A->getDepth() > B->getDepth())
+    A = A->getParentCycle();
+  while (B->getDepth() > A->getDepth())
+    B = B->getParentCycle();
+
+  // Cycles A and B are at same depth but may be disjoint, replace them with
+  // parent cycles until we find cycle that contains both or we run out of
+  // parent cycles.
+  while (A != B) {
+    A = A->getParentCycle();
+    B = B->getParentCycle();
+  }
+
+  return A;
 }
 
 /// \brief get the depth for the cycle which containing a given block.

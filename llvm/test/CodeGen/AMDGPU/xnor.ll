@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx801 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-DL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-DL %s
 
 ; GCN-LABEL: {{^}}scalar_xnor_i32_one_use
 ; GCN: s_xnor_b32
@@ -113,8 +113,7 @@ define amdgpu_kernel void @xnor_v_s_i32_one_use(ptr addrspace(1) %out, i32 %s) {
 ; GCN-LABEL: {{^}}xnor_i64_s_v_one_use
 ; GCN-NOT: s_xnor_b64
 ; GCN: s_not_b64
-; GCN: v_xor_b32
-; GCN: v_xor_b32
+; GCN: v_xor_b32_e32
 ; GCN-DL: v_xnor_b32
 ; GCN-DL: v_xnor_b32
 define amdgpu_kernel void @xnor_i64_s_v_one_use(
@@ -132,8 +131,7 @@ entry:
 ; GCN-LABEL: {{^}}xnor_i64_v_s_one_use
 ; GCN-NOT: s_xnor_b64
 ; GCN: s_not_b64
-; GCN: v_xor_b32
-; GCN: v_xor_b32
+; GCN: v_xor_b32_e32
 ; GCN-DL: v_xnor_b32
 ; GCN-DL: v_xnor_b32
 define amdgpu_kernel void @xnor_i64_v_s_one_use(

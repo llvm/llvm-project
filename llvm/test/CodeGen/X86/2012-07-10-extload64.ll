@@ -30,7 +30,7 @@ define void @store_64(ptr %ptr) {
 ; X86:       # %bb.0: # %BB
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movlps %xmm0, (%eax)
+; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: store_64:

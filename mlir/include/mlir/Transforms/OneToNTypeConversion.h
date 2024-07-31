@@ -151,7 +151,9 @@ protected:
 /// conversions.
 class OneToNPatternRewriter : public PatternRewriter {
 public:
-  OneToNPatternRewriter(MLIRContext *context) : PatternRewriter(context) {}
+  OneToNPatternRewriter(MLIRContext *context,
+                        OpBuilder::Listener *listener = nullptr)
+      : PatternRewriter(context, listener) {}
 
   /// Replaces the results of the operation with the specified list of values
   /// mapped back to the original types as specified in the provided type
@@ -229,12 +231,9 @@ public:
 
     OpAdaptor(const OneToNTypeMapping *operandMapping,
               const OneToNTypeMapping *resultMapping,
-              const ValueRange *convertedOperands, RangeT values,
-              DictionaryAttr attrs = nullptr, Properties &properties = {},
-              RegionRange regions = {})
-        : BaseT(values, attrs, properties, regions),
-          operandMapping(operandMapping), resultMapping(resultMapping),
-          convertedOperands(convertedOperands) {}
+              const ValueRange *convertedOperands, RangeT values, SourceOp op)
+        : BaseT(values, op), operandMapping(operandMapping),
+          resultMapping(resultMapping), convertedOperands(convertedOperands) {}
 
     /// Get the type mapping of the original operands to the converted operands.
     const OneToNTypeMapping &getOperandMapping() const {
@@ -274,8 +273,7 @@ public:
       valueRanges.push_back(values);
     }
     OpAdaptor adaptor(&operandMapping, &resultMapping, &convertedOperands,
-                      valueRanges, op->getAttrDictionary(),
-                      cast<SourceOp>(op).getProperties(), op->getRegions());
+                      valueRanges, cast<SourceOp>(op));
 
     // Call overload implemented by the derived class.
     return matchAndRewrite(cast<SourceOp>(op), adaptor, rewriter);
@@ -298,6 +296,20 @@ public:
 LogicalResult
 applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
                              const FrozenRewritePatternSet &patterns);
+
+/// Add a pattern to the given pattern list to convert the signature of a
+/// FunctionOpInterface op with the given type converter. This only supports
+/// ops which use FunctionType to represent their type. This is intended to be
+/// used with the 1:N dialect conversion.
+void populateOneToNFunctionOpInterfaceTypeConversionPattern(
+    StringRef functionLikeOpName, TypeConverter &converter,
+    RewritePatternSet &patterns);
+template <typename FuncOpT>
+void populateOneToNFunctionOpInterfaceTypeConversionPattern(
+    TypeConverter &converter, RewritePatternSet &patterns) {
+  populateOneToNFunctionOpInterfaceTypeConversionPattern(
+      FuncOpT::getOperationName(), converter, patterns);
+}
 
 } // namespace mlir
 

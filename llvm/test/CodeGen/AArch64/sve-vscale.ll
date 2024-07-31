@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
-; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 -opaque-pointers < %s | FileCheck %s
-; RUN: opt -mtriple=aarch64 -codegenprepare -S < %s | llc -mtriple=aarch64 -mattr=+sve -asm-verbose=0 | FileCheck %s
+; RUN: opt -mtriple=aarch64 -passes='require<profile-summary>,function(codegenprepare)' -S < %s | llc -mtriple=aarch64 -mattr=+sve -asm-verbose=0 | FileCheck %s
 
 ;
 ; RDVL
@@ -100,6 +99,17 @@ define i32 @rdvl_max() nounwind {
   %vscale = call i32 @llvm.vscale.i32()
   %1 = mul nsw i32 %vscale, 496
   ret i32 %1
+}
+
+define i1 @rdvl_i1() {
+; CHECK-LABEL: rdvl_i1:
+; CHECK:         rdvl x8, #-1
+; CHECK-NEXT:    asr x8, x8, #4
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %a = tail call i64 @llvm.vscale.i64()
+  %b = trunc i64 %a to i1
+  ret i1 %b
 }
 
 ;

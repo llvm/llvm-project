@@ -36,7 +36,7 @@
 ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr
 ; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-; CHECK-DAG   llvm.return %[[GEP]] : !llvm.ptr
+; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
 @global_gep_const_expr = internal constant ptr getelementptr (i32, ptr @global_int, i32 2)
 
 ; // -----
@@ -244,3 +244,53 @@ define void @bar() {
 
 ; CHECK: llvm.mlir.global external protected constant @protected(42 : i64)
 @protected = protected constant i64 42
+
+; // -----
+
+; CHECK-DAG: #[[TYPE:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+; CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"source.c" in "/path/to/file">
+; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C99, file = #[[FILE]], isOptimized = false, emissionKind = None>
+; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition>
+; CHECK-DAG: #[[GVAR0:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "foo", linkageName = "foo", file = #[[FILE]], line = 7, type = #[[TYPE]], isLocalToUnit = true>
+; CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "bar", linkageName = "bar", file = #[[FILE]], line = 8, type = #[[TYPE]], isLocalToUnit = true>
+; CHECK-DAG: #[[EXPR0:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR0]], expr = <[DW_OP_LLVM_fragment(0, 16)]>>
+; CHECK-DAG: #[[EXPR1:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR1]], expr = <[DW_OP_constu(3), DW_OP_plus]>>
+; CHECK-DAG: llvm.mlir.global external @foo() {addr_space = 0 : i32, alignment = 8 : i64, dbg_expr = #[[EXPR0]]} : i32
+; CHECK-DAG: llvm.mlir.global external @bar() {addr_space = 0 : i32, alignment = 8 : i64, dbg_expr = #[[EXPR1]]} : i32
+
+@foo = external global i32, align 8, !dbg !5
+@bar = external global i32, align 8, !dbg !7
+!0 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!1 = !DIFile(filename: "source.c", directory: "/path/to/file")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+!3 = distinct !DISubprogram(name: "foo", scope: !2, file: !1, line: 5)
+!4 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !3, file: !1, line: 7, type: !0, isLocal: true, isDefinition: false)
+!5 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression(DW_OP_LLVM_fragment, 0, 16))
+!6 = !DIGlobalVariable(name: "bar", linkageName: "bar", scope: !3, file: !1, line: 8, type: !0, isLocal: true, isDefinition: false)
+!7 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression(DW_OP_constu, 3, DW_OP_plus))
+!100 = !{i32 2, !"Debug Info Version", i32 3}
+!llvm.module.flags = !{!100}
+
+; // -----
+
+; Nameless and scopeless global variable.
+
+; CHECK-DAG: #[[FILE:.*]] = #llvm.di_file
+; CHECK-DAG: #[[COMPOSITE_TYPE:.*]] = #llvm.di_composite_type
+; CHECK-DAG: #[[GLOBAL_VAR:.*]] = #llvm.di_global_variable<file = #[[FILE]], line = 268, type = #[[COMPOSITE_TYPE]], isLocalToUnit = true, isDefined = true>
+; CHECK-DAG: #[[GLOBAL_VAR_EXPR:.*]] = #llvm.di_global_variable_expression<var = #[[GLOBAL_VAR]], expr = <>>
+
+; CHECK-DAG: llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #[[GLOBAL_VAR_EXPR]]}
+
+@.str.1 = external constant [10 x i8], !dbg !0
+
+!llvm.module.flags = !{!7}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(scope: null, file: !2, line: 268, type: !3, isLocal: true, isDefinition: true)
+!2 = !DIFile(filename: "source.c", directory: "/path/to/file")
+!3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 80, elements: !6)
+!4 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !5)
+!5 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+!6 = !{}
+!7 = !{i32 2, !"Debug Info Version", i32 3}

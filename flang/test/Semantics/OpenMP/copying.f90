@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -Werror
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -Werror -pedantic
 ! OpenMP Version 5.0
 ! 2.19.4.4 firstprivate Clause
 ! 2.19.4.5 lastprivate Clause
@@ -44,9 +44,9 @@ subroutine copyprivate()
   class(*), allocatable, save :: x
   !$omp threadprivate(x)
 
-  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYPRIVATE clause, the behavior is unspecified
-  !$omp single copyprivate(x)
+  !$omp single
     call sub()
-  !$omp end single
+  !PORTABILITY: If a polymorphic variable with allocatable attribute 'x' is in COPYPRIVATE clause, the behavior is unspecified
+  !$omp end single copyprivate(x)
 
 end

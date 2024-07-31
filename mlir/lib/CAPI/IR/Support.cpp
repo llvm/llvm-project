@@ -8,6 +8,7 @@
 
 #include "mlir/CAPI/Support.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include <cstring>
 
@@ -18,6 +19,17 @@ MlirStringRef mlirStringRefCreateFromCString(const char *str) {
 bool mlirStringRefEqual(MlirStringRef string, MlirStringRef other) {
   return llvm::StringRef(string.data, string.length) ==
          llvm::StringRef(other.data, other.length);
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM ThreadPool API.
+//===----------------------------------------------------------------------===//
+MlirLlvmThreadPool mlirLlvmThreadPoolCreate() {
+  return wrap(new llvm::DefaultThreadPool());
+}
+
+void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool threadPool) {
+  delete unwrap(threadPool);
 }
 
 //===----------------------------------------------------------------------===//

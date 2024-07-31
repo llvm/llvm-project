@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -83,7 +84,7 @@ private:
   bool doInitialization(Module &M) override {
     if (NotAsRequested)
       M.getContext().emitError("Requested regalloc eviction advisor analysis "
-                               "could be created. Using default");
+                               "could not be created. Using default");
     return RegAllocEvictionAdvisorAnalysis::doInitialization(M);
   }
   const bool NotAsRequested;
@@ -201,8 +202,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
   EvictionCost Cost;
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // If there is 10 or more interferences, chances are one is heavier.
     const auto &Interferences = Q.interferingVRegs(EvictInterferenceCutoff);
     if (Interferences.size() >= EvictInterferenceCutoff)

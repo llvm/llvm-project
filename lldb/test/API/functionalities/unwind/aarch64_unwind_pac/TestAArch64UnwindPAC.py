@@ -42,17 +42,33 @@ class AArch64UnwindPAC(TestBase):
             "func_b",
             "func_a",
             "main",
+        ]
+
+        libc_backtrace = [
             "__libc_start_main",
             "_start",
         ]
-        self.assertEqual(thread.GetNumFrames(), len(backtrace))
-        for frame_idx, frame in enumerate(thread.frames):
-            frame = thread.GetFrameAtIndex(frame_idx)
+
+        self.assertGreaterEqual(
+            thread.GetNumFrames(), len(backtrace) + len(libc_backtrace)
+        )
+
+        # Strictly check frames that are in the test program's source.
+        for frame_idx, frame in enumerate(thread.frames[: len(backtrace)]):
             self.assertTrue(frame)
             self.assertEqual(frame.GetFunctionName(), backtrace[frame_idx])
-            # Check line number for functions in main.c
-            if frame_idx < 4:
-                self.assertEqual(
-                    frame.GetLineEntry().GetLine(),
-                    line_number("main.c", "Frame " + backtrace[frame_idx]),
-                )
+            self.assertEqual(
+                frame.GetLineEntry().GetLine(),
+                line_number("main.c", "Frame " + backtrace[frame_idx]),
+            )
+
+        # After the program comes some libc frames. The number varies by
+        # system, so ensure we have at least these two in this order,
+        # skipping frames in between.
+        start_idx = frame_idx + 1
+        for frame_idx, frame in enumerate(thread.frames[start_idx:], start=start_idx):
+            self.assertTrue(frame)
+            if libc_backtrace[0] == frame.GetFunctionName():
+                libc_backtrace.pop(0)
+
+        self.assertFalse(libc_backtrace, "Did not find expected libc frames.")

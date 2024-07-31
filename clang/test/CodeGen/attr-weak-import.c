@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-darwin-apple -emit-llvm -o - %s | FileCheck %s
-// rdar://9538608
 
 extern int A __attribute__((weak_import));
 int A;

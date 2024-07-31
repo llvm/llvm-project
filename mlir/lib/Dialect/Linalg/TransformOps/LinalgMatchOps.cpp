@@ -9,10 +9,13 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -112,9 +115,9 @@ DiagnosedSilenceableFailure transform::MatchStructuredOp::matchOperation(
 
 void transform::MatchStructuredOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getCurrent(), effects);
+  onlyReadsHandle(getCurrentMutable(), effects);
   onlyReadsPayload(effects);
-  producesHandle(getOutputs(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 LogicalResult transform::MatchStructuredOp::verify() {
@@ -186,15 +189,129 @@ DiagnosedSilenceableFailure transform::MatchStructuredBodyOp::matchOperation(
     }
     return DiagnosedSilenceableFailure::success();
   }
+  if (getElementwise()) {
+    if (!isElementwise(linalgOp))
+      return emitSilenceableError() << "not elementwise";
+    return DiagnosedSilenceableFailure::success();
+  }
+  if (std::optional<ArrayAttr> contractionOps = getContraction()) {
+    Block &body = linalgOp->getRegion(0).front();
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    bool result = linalg::detail::isContractionBody(
+        body,
+        [&](Operation *elem, Operation *red) {
+          return elem->getName().getStringRef() ==
+                     cast<StringAttr>((*contractionOps)[0]).getValue() &&
+                 red->getName().getStringRef() ==
+                     cast<StringAttr>((*contractionOps)[1]).getValue();
+        },
+        os);
+    if (result)
+      return DiagnosedSilenceableFailure::success();
+    return emitSilenceableError() << "contraction: " << os.str();
+  }
   return emitDefiniteFailure() << "unknown body condition";
 }
 
 LogicalResult transform::MatchStructuredBodyOp::verify() {
-  if (getReductionPosition() && getPassthrough()) {
-    return emitOpError() << "reduction position and passthrough conditions are "
-                            "mutually exclusive";
+  int64_t numOptions = getReductionPosition().has_value() + getPassthrough() +
+                       getElementwise() + getContraction().has_value();
+
+  if (numOptions > 1) {
+    std::string attributeNames;
+    llvm::raw_string_ostream os(attributeNames);
+    llvm::interleaveComma(ArrayRef<StringAttr>{getReductionPositionAttrName(),
+                                               getPassthroughAttrName(),
+                                               getElementwiseAttrName(),
+                                               getContractionAttrName()},
+                          os);
+    return emitOpError() << "only one of {" << os.str() << "} is allowed";
+  }
+
+  if (std::optional<ArrayAttr> contractionAttr = getContraction()) {
+    if (contractionAttr->size() != 2) {
+      return emitOpError() << "expects " << getContractionAttrName()
+                           << " to contain two elements";
+    }
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchStructuredClassifyContractionDimsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchStructuredClassifyContractionDimsOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  FailureOr<linalg::ContractionDimensions> contractionDims =
+      linalg::inferContractionDims(cast<linalg::LinalgOp>(current));
+  if (failed(contractionDims))
+    return emitSilenceableError() << "could not infer contraction dimensions";
+
+  MLIRContext *context = current->getContext();
+  Builder builder(context);
+  auto makeI64Attrs = [&](ArrayRef<unsigned> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](unsigned value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(cast<OpResult>(getBatch()),
+                    makeI64Attrs(contractionDims->batch));
+  results.setParams(cast<OpResult>(getM()), makeI64Attrs(contractionDims->m));
+  results.setParams(cast<OpResult>(getN()), makeI64Attrs(contractionDims->n));
+  results.setParams(cast<OpResult>(getK()), makeI64Attrs(contractionDims->k));
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchStructuredClassifyConvolutionDimsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchStructuredClassifyConvolutionDimsOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  FailureOr<linalg::ConvolutionDimensions> convolutionDims =
+      linalg::inferConvolutionDims(cast<linalg::LinalgOp>(current));
+  if (failed(convolutionDims))
+    return emitSilenceableError() << "could not infer convolution dimensions";
+
+  MLIRContext *context = current->getContext();
+  Builder builder(context);
+  auto makeI64Attrs = [&](ArrayRef<unsigned> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](unsigned value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(cast<OpResult>(getBatch()),
+                    makeI64Attrs(convolutionDims->batch));
+  results.setParams(cast<OpResult>(getOutputImage()),
+                    makeI64Attrs(convolutionDims->outputImage));
+  results.setParams(cast<OpResult>(getOutputChannel()),
+                    makeI64Attrs(convolutionDims->outputChannel));
+  results.setParams(cast<OpResult>(getFilterLoop()),
+                    makeI64Attrs(convolutionDims->filterLoop));
+  results.setParams(cast<OpResult>(getInputChannel()),
+                    makeI64Attrs(convolutionDims->inputChannel));
+  results.setParams(cast<OpResult>(getDepth()),
+                    makeI64Attrs(convolutionDims->depth));
+
+  auto makeI64AttrsFromI64 = [&](ArrayRef<int64_t> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](int64_t value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(cast<OpResult>(getStrides()),
+                    makeI64AttrsFromI64(convolutionDims->strides));
+  results.setParams(cast<OpResult>(getDilations()),
+                    makeI64AttrsFromI64(convolutionDims->dilations));
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -219,91 +336,6 @@ static DiagnosedSilenceableFailure containsAll(ArrayRef<unsigned> reference,
     return emitSilenceableFailure(loc) << llvm::formatv(message, value);
   }
   return DiagnosedSilenceableFailure::success();
-}
-
-/// Populates `result` with the positional identifiers relative to `maxNumber`.
-/// If `isAll` is set, the result will contain all numbers from `0` to
-/// `maxNumber - 1` inclusive regardless of `rawList`. Otherwise, negative
-/// values from `rawList` are  are interpreted as counting backwards from
-/// `maxNumber`, i.e., `-1` is interpreted a `maxNumber - 1`, while positive
-/// numbers remain as is. If `isInverted` is set, populates `result` with those
-/// values from the `0` to `maxNumber - 1` inclusive range that don't appear in
-/// `rawList`. If `rawList` contains values that are greater than or equal to
-/// `maxNumber` or less than `-maxNumber`, produces a silenceable error at the
-/// given location. `maxNumber` must be positive. If `rawList` contains
-/// duplicate numbers or numbers that become duplicate after negative value
-/// remapping, emits a silenceable error.
-static DiagnosedSilenceableFailure
-expandTargetSpecification(Location loc, bool isAll, bool isInverted,
-                          ArrayRef<int64_t> rawList, int64_t maxNumber,
-                          SmallVectorImpl<int64_t> &result) {
-  assert(maxNumber > 0 && "expected size to be positive");
-  assert(!(isAll && isInverted) && "cannot invert all");
-  if (isAll) {
-    result = llvm::to_vector(llvm::seq<int64_t>(0, maxNumber));
-    return DiagnosedSilenceableFailure::success();
-  }
-
-  SmallVector<int64_t> expanded;
-  llvm::SmallDenseSet<int64_t> visited;
-  expanded.reserve(rawList.size());
-  SmallVectorImpl<int64_t> &target = isInverted ? expanded : result;
-  for (int64_t raw : rawList) {
-    int64_t updated = raw < 0 ? maxNumber + raw : raw;
-    if (updated >= maxNumber) {
-      return emitSilenceableFailure(loc)
-             << "position overflow " << updated << " (updated from " << raw
-             << ") for maximum " << maxNumber;
-    }
-    if (updated < 0) {
-      return emitSilenceableFailure(loc) << "position underflow " << updated
-                                         << " (updated from " << raw << ")";
-    }
-    if (!visited.insert(updated).second) {
-      return emitSilenceableFailure(loc) << "repeated position " << updated
-                                         << " (updated from " << raw << ")";
-    }
-    target.push_back(updated);
-  }
-
-  if (!isInverted)
-    return DiagnosedSilenceableFailure::success();
-
-  result.reserve(result.size() + (maxNumber - expanded.size()));
-  for (int64_t candidate : llvm::seq<int64_t>(0, maxNumber)) {
-    if (llvm::is_contained(expanded, candidate))
-      continue;
-    result.push_back(candidate);
-  }
-
-  return DiagnosedSilenceableFailure::success();
-}
-
-/// Checks if the positional specification defined is valid and reports errors
-/// otherwise.
-LogicalResult verifyStructuredTransformDimsOp(Operation *op,
-                                              ArrayRef<int64_t> raw,
-                                              bool inverted, bool all) {
-  if (all) {
-    if (inverted) {
-      return op->emitOpError()
-             << "cannot request both 'all' and 'inverted' values in the list";
-    }
-    if (!raw.empty()) {
-      return op->emitOpError()
-             << "cannot both request 'all' and specific values in the list";
-    }
-  }
-  if (!all && raw.empty()) {
-    return op->emitOpError() << "must request specific values in the list if "
-                                "'all' is not specified";
-  }
-  SmallVector<int64_t> rawVector = llvm::to_vector(raw);
-  auto *it = std::unique(rawVector.begin(), rawVector.end());
-  if (it != rawVector.end())
-    return op->emitOpError() << "expected the listed values to be unique";
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -366,8 +398,8 @@ LogicalResult transform::MatchStructuredDimOp::verify() {
     return emitOpError() << "cannot request the same dimension to be both "
                             "parallel and reduction";
   }
-  return verifyStructuredTransformDimsOp(getOperation(), getRawDimList(),
-                                         getIsInverted(), getIsAll());
+  return verifyTransformMatchDimsOp(getOperation(), getRawDimList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -428,6 +460,11 @@ DiagnosedSilenceableFailure transform::MatchStructuredInputOp::matchOperation(
     if (!getResult())
       continue;
 
+    if (isa<AffineMapParamType>(getResult().getType())) {
+      operandMapping.emplace_back(AffineMapAttr::get(indexingMap));
+      continue;
+    }
+
     Value operand = linalgOp.getDpsInputOperand(position)->get();
     if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
       operandMapping.emplace_back(operand);
@@ -478,8 +515,8 @@ LogicalResult verifyStructuredOperandOp(OpTy op) {
 LogicalResult transform::MatchStructuredInputOp::verify() {
   if (failed(verifyStructuredOperandOp(*this)))
     return failure();
-  return verifyStructuredTransformDimsOp(getOperation(), getRawPositionList(),
-                                         getIsInverted(), getIsAll());
+  return verifyTransformMatchDimsOp(getOperation(), getRawPositionList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -512,6 +549,11 @@ DiagnosedSilenceableFailure transform::MatchStructuredInitOp::matchOperation(
     // If capture not requested, skip it.
     if (!getResult())
       continue;
+
+    if (isa<AffineMapParamType>(getResult().getType())) {
+      operandMapping.emplace_back(AffineMapAttr::get(indexingMap));
+      continue;
+    }
 
     Value operand = linalgOp.getDpsInitOperand(position)->get();
     if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
@@ -546,8 +588,8 @@ DiagnosedSilenceableFailure transform::MatchStructuredInitOp::getPositionsFor(
 LogicalResult transform::MatchStructuredInitOp::verify() {
   if (failed(verifyStructuredOperandOp(*this)))
     return failure();
-  return verifyStructuredTransformDimsOp(getOperation(), getRawPositionList(),
-                                         getIsInverted(), getIsAll());
+  return verifyTransformMatchDimsOp(getOperation(), getRawPositionList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -609,7 +651,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredResultOp::matchOperation(
 
   Value result = linalgOp.getTiedOpResult(linalgOp.getDpsInitOperand(position));
   if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
-    results.setValues(cast<OpResult>(getResult()), result);
+    results.setValues(cast<OpResult>(getResult()), {result});
     return DiagnosedSilenceableFailure::success();
   }
 
@@ -665,86 +707,13 @@ LogicalResult transform::MatchStructuredResultOp::verify() {
 
 void transform::MatchStructuredYieldOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getHandles(), effects);
+  onlyReadsHandle(getHandlesMutable(), effects);
   onlyReadsPayload(effects);
 }
 
 void transform::MatchStructuredYieldOp::build(OpBuilder &builder,
                                               OperationState &state) {
   build(builder, state, ValueRange());
-}
-
-//===----------------------------------------------------------------------===//
-// Printing and parsing for structured match ops.
-//===----------------------------------------------------------------------===//
-
-/// Keyword syntax for positional specification inversion.
-constexpr const static llvm::StringLiteral kDimExceptKeyword = "except";
-
-/// Keyword syntax for full inclusion in positional specification.
-constexpr const static llvm::StringLiteral kDimAllKeyword = "all";
-
-/// Parses a positional specification for structured transform operations. The
-/// following forms are accepted:
-///
-///  - `all`: sets `isAll` and returns;
-///  - comma-separated-integer-list: populates `rawDimList` with the values;
-///  - `except` `(` comma-separated-integer-list `)`: populates `rawDimList`
-///  with the values and sets `isInverted`.
-static ParseResult parseStructuredTransformDims(OpAsmParser &parser,
-                                                DenseI64ArrayAttr &rawDimList,
-                                                UnitAttr &isInverted,
-                                                UnitAttr &isAll) {
-  Builder &builder = parser.getBuilder();
-  if (parser.parseOptionalKeyword(kDimAllKeyword).succeeded()) {
-    rawDimList = builder.getDenseI64ArrayAttr({});
-    isInverted = nullptr;
-    isAll = builder.getUnitAttr();
-    return success();
-  }
-
-  isAll = nullptr;
-  isInverted = nullptr;
-  if (parser.parseOptionalKeyword(kDimExceptKeyword).succeeded()) {
-    isInverted = builder.getUnitAttr();
-  }
-
-  if (isInverted) {
-    if (parser.parseLParen().failed())
-      return failure();
-  }
-
-  SmallVector<int64_t> values;
-  ParseResult listResult = parser.parseCommaSeparatedList(
-      [&]() { return parser.parseInteger(values.emplace_back()); });
-  if (listResult.failed())
-    return failure();
-
-  rawDimList = builder.getDenseI64ArrayAttr(values);
-
-  if (isInverted) {
-    if (parser.parseRParen().failed())
-      return failure();
-  }
-  return success();
-}
-
-/// Prints a positional specification for structured transform operations.
-static void printStructuredTransformDims(OpAsmPrinter &printer, Operation *op,
-                                         DenseI64ArrayAttr rawDimList,
-                                         UnitAttr isInverted, UnitAttr isAll) {
-  if (isAll) {
-    printer << kDimAllKeyword;
-    return;
-  }
-  if (isInverted) {
-    printer << kDimExceptKeyword << "(";
-  }
-  llvm::interleaveComma(rawDimList.asArrayRef(), printer.getStream(),
-                        [&](int64_t value) { printer << value; });
-  if (isInverted) {
-    printer << ")";
-  }
 }
 
 #define GET_OP_CLASSES

@@ -14,9 +14,10 @@
 #define MLIR_DIALECT_NVGPU_TRANSFORMS_TRANSFORMS_H_
 
 #include "mlir/IR/Operation.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+class RewriterBase;
+
 namespace nvgpu {
 
 ///
@@ -42,7 +43,7 @@ namespace nvgpu {
 /// function that depends on the row Index. The permutation function is chosen
 /// to ensure that sequential distributed+vectorized reads/writes down a single
 /// dimension of the memref have minimal conflicts.
-mlir::LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
+llvm::LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                        Value memrefValue);
 
 ///
@@ -67,6 +68,13 @@ enum class MmaSyncF32Lowering { TF32 = 0, TF32x3 = 1, Unkown = 2 };
 void populateMmaSyncF32ToTF32Patterns(
     RewritePatternSet &patterns,
     nvgpu::MmaSyncF32Lowering precision = nvgpu::MmaSyncF32Lowering::TF32);
+
+/// Convert global->shared vector transfers to async device copies. This
+/// function looks for suitable vector transfers within the specified op and
+/// converts them to "nvgpu.device_async_copy" ops. Consecutive copies are put
+/// into the same sync group. If `bypassL1` is set, the "bypassL1" attribute is
+/// set for suitable (i.e., transfer size 16 bytes) transfers.
+void createAsyncGroups(RewriterBase &rewriter, Operation *op, bool bypassL1);
 
 } // namespace nvgpu
 } // namespace mlir

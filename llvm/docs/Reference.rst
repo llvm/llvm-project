@@ -16,6 +16,7 @@ LLVM and API reference documentation.
    Bugpoint
    CommandGuide/index
    ConvergenceAndUniformity
+   ConvergentOperations
    Coroutines
    DependenceGraphs/index
    ExceptionHandling
@@ -38,6 +39,7 @@ LLVM and API reference documentation.
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
+   MemoryModelRelaxationAnnotations
    MemTagSanitizer
    Security
    SecurityTransparencyReports
@@ -131,6 +133,9 @@ LLVM IR
 :doc:`GlobalISel/index`
   This describes the prototype instruction selection replacement, GlobalISel.
 
+:doc:`ConvergentOperations`
+  Description of ``convergent`` operation semantics and related intrinsics.
+
 =====================
 Testing and Debugging
 =====================
@@ -189,6 +194,9 @@ Additional Topics
 
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
+
+:doc:`MemoryModelRelaxationAnnotations`
+  Target-defined relaxation to LLVM's concurrency model.
 
 :doc:`MemTagSanitizer`
   Security hardening for production code aiming to mitigate memory

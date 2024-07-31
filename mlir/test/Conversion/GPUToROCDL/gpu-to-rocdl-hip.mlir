@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='runtime=HIP use-opaque-pointers=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='runtime=HIP' -split-input-file | FileCheck %s
 
 gpu.module @test_module {
   // CHECK-DAG: llvm.mlir.global internal constant @[[$PRINT_GLOBAL0:[A-Za-z0-9_]+]]("Hello, world\0A\00")

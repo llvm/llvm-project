@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_H
 
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/ArmSME/Transforms/PassesEnums.h.inc"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -16,18 +18,24 @@ namespace mlir {
 class RewritePatternSet;
 
 namespace arm_sme {
-// Options for Armv9 Streaming SVE mode. By default, streaming-mode is part of
-// the function interface (ABI) and the caller manages PSTATE.SM on entry/exit.
-// In a locally streaming function PSTATE.SM is kept internal and the callee
-// manages it on entry/exit.
-enum class ArmStreaming { Default = 0, Locally = 1 };
-
+//===----------------------------------------------------------------------===//
+// The EnableArmStreaming pass.
+//===----------------------------------------------------------------------===//
 #define GEN_PASS_DECL
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h.inc"
 
 /// Pass to enable Armv9 Streaming SVE mode.
-std::unique_ptr<Pass>
-createEnableArmStreamingPass(const ArmStreaming mode = ArmStreaming::Default);
+std::unique_ptr<Pass> createEnableArmStreamingPass(
+    const ArmStreamingMode = ArmStreamingMode::Streaming,
+    const ArmZaMode = ArmZaMode::Disabled, bool ifRequiredByOps = false,
+    bool ifContainsScalableVectors = false);
+
+/// Pass that fuses 'arm_sme.outerproduct' ops into 2-way or 4-way widening
+/// variants.
+std::unique_ptr<Pass> createOuterProductFusionPass();
+
+/// Pass that legalizes vectors so they can be lowered to ArmSME.
+std::unique_ptr<Pass> createVectorLegalizationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

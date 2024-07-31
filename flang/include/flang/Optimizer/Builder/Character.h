@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
+#include "flang/Optimizer/Builder/Runtime/Character.h"
 
 namespace fir {
 class FirOpBuilder;
@@ -65,6 +66,10 @@ public:
   /// Create lhs // rhs in temp obtained with fir.alloca
   fir::CharBoxValue createConcatenate(const fir::CharBoxValue &lhs,
                                       const fir::CharBoxValue &rhs);
+
+  /// Create {max,min}(lhs,rhs) in temp obtained with fir.alloca
+  fir::CharBoxValue
+  createCharExtremum(bool predIsMin, llvm::ArrayRef<fir::CharBoxValue> opCBVs);
 
   /// LEN_TRIM intrinsic.
   mlir::Value createLenTrim(const fir::CharBoxValue &str);
@@ -229,6 +234,11 @@ mlir::Value createCharacterProcedureTuple(fir::FirOpBuilder &builder,
 std::pair<mlir::Value, mlir::Value>
 extractCharacterProcedureTuple(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value tuple, bool openBoxProc = true);
+
+fir::CharBoxValue convertCharacterKind(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       fir::CharBoxValue srcBoxChar,
+                                       int toKind);
 
 } // namespace fir::factory
 

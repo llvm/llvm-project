@@ -15,9 +15,11 @@
 
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
+class raw_ostream;
 class BranchProbability;
 
 // This class represents Block Frequency as a 64-bit value.
@@ -25,10 +27,11 @@ class BlockFrequency {
   uint64_t Frequency;
 
 public:
-  BlockFrequency(uint64_t Freq = 0) : Frequency(Freq) { }
+  BlockFrequency() : Frequency(0) {}
+  explicit BlockFrequency(uint64_t Freq) : Frequency(Freq) {}
 
   /// Returns the maximum possible frequency, the saturation value.
-  static uint64_t getMaxFrequency() { return UINT64_MAX; }
+  static BlockFrequency max() { return BlockFrequency(UINT64_MAX); }
 
   /// Returns the frequency as a fixpoint number scaled by the entry
   /// frequency.
@@ -76,6 +79,9 @@ public:
     return NewFreq;
   }
 
+  /// Multiplies frequency with `Factor`. Returns `nullopt` in case of overflow.
+  std::optional<BlockFrequency> mul(uint64_t Factor) const;
+
   /// Shift block frequency to the right by count digits saturating to 1.
   BlockFrequency &operator>>=(const unsigned count) {
     // Frequency can never be 0 by design.
@@ -108,7 +114,14 @@ public:
   bool operator==(BlockFrequency RHS) const {
     return Frequency == RHS.Frequency;
   }
+
+  bool operator!=(BlockFrequency RHS) const {
+    return Frequency != RHS.Frequency;
+  }
 };
+
+void printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
+                            BlockFrequency Freq);
 
 } // namespace llvm
 

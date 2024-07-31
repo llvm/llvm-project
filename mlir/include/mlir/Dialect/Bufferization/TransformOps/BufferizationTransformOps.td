@@ -11,13 +11,42 @@
 
 include "mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
 def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
 def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
+
+//===----------------------------------------------------------------------===//
+// BufferLoopHoistingOp
+//===----------------------------------------------------------------------===//
+
+def BufferLoopHoistingOp
+    : Op<Transform_Dialect, "bufferization.buffer_loop_hoisting",
+        [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+         TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Hoist buffer allocations ("memref.alloc" and "memref.alloca") from loops
+    within the targeted op. This transform assumes that there are no buffer
+    deallocation ops in the IR.
+
+    This transform reads the `target` handle and modifies the payload.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // OneShotBufferizeOp
@@ -53,15 +82,18 @@ def OneShotBufferizeOp
   let arguments = (
       ins TransformHandleTypeInterface:$target,
       OptionalAttr<LayoutMapOption>:$function_boundary_type_conversion,
-      DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs,
+      DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs_from_loops,
       DefaultValuedAttr<BoolAttr, "false">:$allow_unknown_ops,
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
-      DefaultValuedAttr<BoolAttr, "true">:$create_deallocs,
+      DefaultValuedAttr<BoolAttr, "false">:$dump_alias_sets,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
-      DefaultValuedAttr<BoolAttr, "false">:$print_conflicts);
+      DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
+      DefaultValuedAttr<BoolAttr, "true">:$check_parallel_regions,
+      DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);
 
   let results = (outs TransformHandleTypeInterface:$transformed);
 
+  let hasVerifier = 1;
   let assemblyFormat = [{
     (`layout` `{` $function_boundary_type_conversion^ `}`)?
     $target attr-dict `:` functional-type($target, results)
@@ -78,19 +110,17 @@ def EliminateEmptyTensorsOp
          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     Try to eliminate all `tensor.empty` ops within the targeted op by replacing
-    them with a destination tensor.
+    them with another destination tensor.
 
-    `tensor.empty` ops cannot be bufferizes. They can either be converted to
-    `bufferization.alloc_tensor` or replaced with another tensor (via this
-    transform). `tensor.empty` does not specify the contents of the returned
+    "tensor.empty" ops cannot be bufferized. They can either be converted to
+    "bufferization.alloc_tensor" or replaced with another tensor (via this
+    transform). "tensor.empty" does not specify the contents of the returned
     tensor so their results can be replaced with arbitrary tensor values as long
     as the dimensions match.
 
-    This transform looks for `tensor.empty` ops where the SSA use-def chain of
-    the result ends in a supported "anchor op" (always following the aliasing
-    OpOperand/OpResult chain). Currently supported anchor ops are:
-    - `tensor.insert_slice`
-    - `bufferization.yield` (inside `bufferization.alloc_tensor`)
+    This transformation looks for subset ops that insert a tensor that
+    originates from a "tensor.empty" (as per the reverse use-def chain). Such
+    "tensor.empty" ops are replaced with the destination subset.
 
     Example:
 
@@ -106,6 +136,10 @@ def EliminateEmptyTensorsOp
     %1 = linalg.fill ... outs(%0)
     %2 = tensor.insert_slice %1 into %t[1][5][1]
     ```
+
+    In the above example, the subset op is "tensor.insert_slice". When tracing
+    back the reverse use-def chain of a the source, we end up at a
+    "tensor.empty" op.
 
     The above example can bufferize without an allocation (in the absence of
     other conflicts) because there is no longer a `tensor.empty` op.
@@ -152,6 +186,7 @@ def EmptyTensorToAllocTensorOp
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::tensor::EmptyOp target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);

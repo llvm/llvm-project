@@ -16,8 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 
-#include <limits>
-
 namespace llvm {
 namespace jitlink {
 namespace x86_64 {
@@ -89,13 +87,26 @@ enum EdgeKind_x86_64 : Edge::Kind {
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- Target - Fixup + Addend : int64
+  ///   Fixup <- Target - Fixup + Addend : int32
   ///
   /// Errors:
   ///   - The result of the fixup expression must fit into an int32, otherwise
   ///     an out-of-range error will be returned.
   ///
   Delta32,
+
+  /// An 8-bit delta.
+  ///
+  /// Delta from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend : int8
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int8, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  Delta8,
 
   /// A 64-bit negative delta.
   ///
@@ -392,17 +403,6 @@ enum EdgeKind_x86_64 : Edge::Kind {
 /// only.
 const char *getEdgeKindName(Edge::Kind K);
 
-/// Returns true if the given uint64_t value is in range for a uint32_t.
-inline bool isInRangeForImmU32(uint64_t Value) {
-  return Value <= std::numeric_limits<uint32_t>::max();
-}
-
-/// Returns true if the given int64_t value is in range for an int32_t.
-inline bool isInRangeForImmS32(int64_t Value) {
-  return (Value >= std::numeric_limits<int32_t>::min() &&
-          Value <= std::numeric_limits<int32_t>::max());
-}
-
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
@@ -422,7 +422,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmU32(Value)))
+    if (LLVM_LIKELY(isUInt<32>(Value)))
       *(ulittle32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -430,7 +430,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Pointer32Signed: {
     int64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -464,7 +464,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case PCRel32TLVPLoadREXRelaxable: {
     int64_t Value =
         E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -479,8 +479,17 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case Delta32: {
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
+    else
+      return makeTargetOutOfRangeError(G, B, E);
+    break;
+  }
+
+  case Delta8: {
+    int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
+    if (LLVM_LIKELY(isInt<8>(Value)))
+      *FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
     break;
@@ -494,7 +503,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case NegDelta32: {
     int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
-    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+    if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
@@ -560,7 +569,7 @@ inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
                                  orc::ExecutorAddr(~uint64_t(5)), 1, 0);
-  B.addEdge(Delta32, 2, PointerSymbol, -4);
+  B.addEdge(BranchPCRel32, 2, PointerSymbol, 0);
   return B;
 }
 

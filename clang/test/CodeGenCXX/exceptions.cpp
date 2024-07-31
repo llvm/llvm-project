@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++98 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck --check-prefixes=CHECK,CHECK11,THROWEND11 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions -fassume-nothrow-exception-dtor | FileCheck --check-prefixes=CHECK,CHECK11,NOTHROWEND11 %s
 
 // CHECK: %[[STRUCT_TEST13_A:.*]] = type { i32, i32 }
 
@@ -75,7 +76,6 @@ namespace test1 {
     return new A(B().x);
   }
 
-  //   rdar://11904428
   //   Terminate landing pads should call __cxa_begin_catch first.
   // CHECK98:      define linkonce_odr hidden void @__clang_call_terminate(ptr %0) [[NI_NR_NUW:#[0-9]+]] comdat
   // CHECK98-NEXT:   [[T0:%.*]] = call ptr @__cxa_begin_catch(ptr %0) [[NUW:#[0-9]+]]
@@ -142,12 +142,12 @@ namespace test1 {
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK:      [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, ptr [[ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN5test15makeBEv(ptr sret([[B:%.*]]) align 4 [[T0:%.*]])
+    // CHECK-NEXT: invoke void @_ZN5test15makeBEv(ptr dead_on_unwind writable sret([[B:%.*]]) align 4 [[T0:%.*]])
     // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv(ptr {{[^,]*}} [[T0]])
     // CHECK:      invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[T1]])
     // CHECK:      store i1 false, ptr [[ACTIVE]]
     // CHECK-NEXT: store ptr [[NEW]], ptr [[X]], align 8
-    // CHECK:      invoke void @_ZN5test15makeBEv(ptr sret([[B:%.*]]) align 4 [[T2:%.*]])
+    // CHECK:      invoke void @_ZN5test15makeBEv(ptr dead_on_unwind writable sret([[B:%.*]]) align 4 [[T2:%.*]])
     // CHECK:      [[RET:%.*]] = load ptr, ptr [[X]], align 8
 
     // CHECK98:      invoke void @_ZN5test11BD1Ev(ptr {{[^,]*}} [[T2]])
@@ -214,7 +214,6 @@ namespace test3 {
     return new(foo(),bar()) A(5);
   }
 
-  // rdar://problem/8439196
   A *b(bool cond) {
 
     // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1 zeroext
@@ -232,7 +231,7 @@ namespace test3 {
     // CHECK-NEXT: store ptr [[NEW]], ptr [[SAVED0]]
     // CHECK-NEXT: store ptr [[FOO]], ptr [[SAVED1]]
     // CHECK-NEXT: store i1 true, ptr [[CLEANUPACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN5test35makeAEv(ptr sret([[A:%.*]]) align 8 [[NEW]])
+    // CHECK-NEXT: invoke void @_ZN5test35makeAEv(ptr dead_on_unwind writable sret([[A:%.*]]) align 8 [[NEW]])
     // CHECK: br label
     //   -> cond.end
             new(foo(),10.0) A(makeA()) :
@@ -481,11 +480,16 @@ namespace test10 {
 
   // CHECK98:      call void @__cxa_end_catch()
   // CHECK98-NEXT: br label
-  // CHECK11:      invoke void @__cxa_end_catch()
-  // CHECK11-NEXT: to label
+  // THROWEND11:        invoke void @__cxa_end_catch()
+  // THROWEND11-NEXT:   to label %invoke.cont[[#]] unwind label %terminate.lpad
+  // NOTHROWEND11:      call void @__cxa_end_catch()
+  // NOTHROWEND11-NEXT: br label %try.cont
 
   // CHECK:      invoke void @__cxa_rethrow()
   // CHECK:      unreachable
+
+  // CHECK:      terminate.lpad:
+  // CHECK:        call void @__clang_call_terminate(
 }
 
 // Ensure that an exception in a constructor destroys
@@ -509,8 +513,7 @@ namespace test11 {
   // CHECK-LABEL:    define{{.*}} void @_ZN6test111CC2Ev(
   // CHECK:      [[THIS:%.*]] = load ptr, ptr {{%.*}}
   //   Construct single.
-  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[THIS]])
   //   Construct array.
   // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[ARRAYBEGIN:%.*]] = getelementptr inbounds [2 x [3 x [[A:%.*]]]], ptr [[ARRAY]], i32 0, i32 0, i32 0
@@ -556,8 +559,8 @@ namespace test11 {
   // CHECK:      br label
   //   Finally, the cleanup for single.
 
-  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
-  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
+  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
 
   // CHECK:      br label
   // CHECK:      resume

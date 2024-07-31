@@ -1,7 +1,7 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple aarch64-none-none-eabi \
+// RUN: %clang_cc1 -triple aarch64-none-elf \
 // RUN:   -O2 \
-// RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN:   -emit-llvm -fexperimental-max-bitint-width=1024 -o - %s | FileCheck %s
 
 extern "C" {
 
@@ -100,4 +100,66 @@ void f5m(int, int, int, int, int, P16);
 // CHECK: declare void @f5(i32 noundef, [2 x i64])
 // CHECK: declare void @f5m(i32 noundef, i32 noundef, i32 noundef, i32 noundef, i32 noundef, [2 x i64])
 
+//BitInt alignment
+struct BITINT129 {
+    char ch;
+    unsigned _BitInt(129) v;
+};
+
+int test_bitint129(){
+  return __builtin_offsetof(struct BITINT129, v);
 }
+// CHECK:  ret i32 16 
+
+struct BITINT127 {
+    char ch;
+    _BitInt(127) v;
+};
+
+int test_bitint127(){
+  return __builtin_offsetof(struct BITINT127, v);
+}
+// CHECK:  ret i32 16 
+
+struct BITINT63 {
+    char ch;
+    _BitInt(63) v;
+};
+
+int test_bitint63(){
+  return __builtin_offsetof(struct BITINT63, v);
+}
+// CHECK:  ret i32 8 
+
+struct BITINT32 {
+    char ch;
+    unsigned _BitInt(32) v;
+};
+
+int test_bitint32(){
+  return __builtin_offsetof(struct BITINT32, v);
+}
+// CHECK:  ret i32 4
+
+struct BITINT9 {
+    char ch;
+    unsigned _BitInt(9) v;
+};
+
+int test_bitint9(){
+  return __builtin_offsetof(struct BITINT9, v);
+}
+// CHECK:  ret i32 2
+
+struct BITINT8 {
+    char ch;
+    unsigned _BitInt(8) v;
+};
+
+int test_bitint8(){
+  return __builtin_offsetof(struct BITINT8, v);
+}
+// CHECK:  ret i32 1
+
+}
+

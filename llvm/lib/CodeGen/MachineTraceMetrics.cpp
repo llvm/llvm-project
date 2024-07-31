@@ -46,8 +46,8 @@ char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
 
 INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE,
                       "Machine Trace Metrics", false, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(MachineTraceMetrics, DEBUG_TYPE,
                     "Machine Trace Metrics", false, true)
 
@@ -57,8 +57,8 @@ MachineTraceMetrics::MachineTraceMetrics() : MachineFunctionPass(ID) {
 
 void MachineTraceMetrics::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -68,10 +68,10 @@ bool MachineTraceMetrics::runOnMachineFunction(MachineFunction &Func) {
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF->getRegInfo();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   SchedModel.init(&ST);
   BlockInfo.resize(MF->getNumBlockIDs());
-  ProcResourceCycles.resize(MF->getNumBlockIDs() *
+  ProcReleaseAtCycles.resize(MF->getNumBlockIDs() *
                             SchedModel.getNumProcResourceKinds());
   return false;
 }
@@ -126,7 +126,7 @@ MachineTraceMetrics::getResources(const MachineBasicBlock *MBB) {
          PI = SchedModel.getWriteProcResBegin(SC),
          PE = SchedModel.getWriteProcResEnd(SC); PI != PE; ++PI) {
       assert(PI->ProcResourceIdx < PRKinds && "Bad processor resource kind");
-      PRCycles[PI->ProcResourceIdx] += PI->Cycles;
+      PRCycles[PI->ProcResourceIdx] += PI->ReleaseAtCycle;
     }
   }
   FBI->InstrCount = InstrCount;
@@ -134,19 +134,19 @@ MachineTraceMetrics::getResources(const MachineBasicBlock *MBB) {
   // Scale the resource cycles so they are comparable.
   unsigned PROffset = MBB->getNumber() * PRKinds;
   for (unsigned K = 0; K != PRKinds; ++K)
-    ProcResourceCycles[PROffset + K] =
+    ProcReleaseAtCycles[PROffset + K] =
       PRCycles[K] * SchedModel.getResourceFactor(K);
 
   return FBI;
 }
 
 ArrayRef<unsigned>
-MachineTraceMetrics::getProcResourceCycles(unsigned MBBNum) const {
+MachineTraceMetrics::getProcReleaseAtCycles(unsigned MBBNum) const {
   assert(BlockInfo[MBBNum].hasResources() &&
-         "getResources() must be called before getProcResourceCycles()");
+         "getResources() must be called before getProcReleaseAtCycles()");
   unsigned PRKinds = SchedModel.getNumProcResourceKinds();
-  assert((MBBNum+1) * PRKinds <= ProcResourceCycles.size());
-  return ArrayRef(ProcResourceCycles.data() + MBBNum * PRKinds, PRKinds);
+  assert((MBBNum+1) * PRKinds <= ProcReleaseAtCycles.size());
+  return ArrayRef(ProcReleaseAtCycles.data() + MBBNum * PRKinds, PRKinds);
 }
 
 //===----------------------------------------------------------------------===//
@@ -197,7 +197,7 @@ computeDepthResources(const MachineBasicBlock *MBB) {
 
   // Compute per-resource depths.
   ArrayRef<unsigned> PredPRDepths = getProcResourceDepths(PredNum);
-  ArrayRef<unsigned> PredPRCycles = MTM.getProcResourceCycles(PredNum);
+  ArrayRef<unsigned> PredPRCycles = MTM.getProcReleaseAtCycles(PredNum);
   for (unsigned K = 0; K != PRKinds; ++K)
     ProcResourceDepths[PROffset + K] = PredPRDepths[K] + PredPRCycles[K];
 }
@@ -212,7 +212,7 @@ computeHeightResources(const MachineBasicBlock *MBB) {
 
   // Compute resources for the current block.
   TBI->InstrHeight = MTM.getResources(MBB)->InstrCount;
-  ArrayRef<unsigned> PRCycles = MTM.getProcResourceCycles(MBB->getNumber());
+  ArrayRef<unsigned> PRCycles = MTM.getProcReleaseAtCycles(MBB->getNumber());
 
   // The trace tail is done.
   if (!TBI->Succ) {
@@ -735,8 +735,8 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     // Identify dependencies.
     if (!MO.readsReg())
       continue;
-    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       Deps.push_back(DataDep(I->MI, I->Op, MO.getOperandNo()));
@@ -747,15 +747,14 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
   // Update RegUnits to reflect live registers after UseMI.
   // First kills.
   for (MCRegister Kill : Kills)
-    for (MCRegUnitIterator Units(Kill, TRI); Units.isValid(); ++Units)
-      RegUnits.erase(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Kill))
+      RegUnits.erase(Unit);
 
   // Second, live defs.
   for (unsigned DefOp : LiveDefOps) {
-    for (MCRegUnitIterator Units(UseMI->getOperand(DefOp).getReg().asMCReg(),
-                                 TRI);
-         Units.isValid(); ++Units) {
-      LiveRegUnit &LRU = RegUnits[*Units];
+    for (MCRegUnit Unit :
+         TRI->regunits(UseMI->getOperand(DefOp).getReg().asMCReg())) {
+      LiveRegUnit &LRU = RegUnits[Unit];
       LRU.MI = UseMI;
       LRU.Op = DefOp;
     }
@@ -922,9 +921,8 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
       continue;
     // This is a def of Reg. Remove corresponding entries from RegUnits, and
     // update MI Height to consider the physreg dependencies.
-    for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-         ++Units) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
+      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       unsigned DepHeight = I->Cycle;
@@ -941,15 +939,15 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
   }
 
   // Now we know the height of MI. Update any regunits read.
-  for (size_t I = 0, E = ReadOps.size(); I != E; ++I) {
-    MCRegister Reg = MI.getOperand(ReadOps[I]).getReg().asMCReg();
-    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
-      LiveRegUnit &LRU = RegUnits[*Units];
+  for (unsigned Op : ReadOps) {
+    MCRegister Reg = MI.getOperand(Op).getReg().asMCReg();
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      LiveRegUnit &LRU = RegUnits[Unit];
       // Set the height to the highest reader of the unit.
       if (LRU.Cycle <= Height && LRU.MI != &MI) {
         LRU.Cycle = Height;
         LRU.MI = &MI;
-        LRU.Op = ReadOps[I];
+        LRU.Op = Op;
       }
     }
   }
@@ -1206,7 +1204,7 @@ unsigned MachineTraceMetrics::Trace::getResourceDepth(bool Bottom) const {
   unsigned PRMax = 0;
   ArrayRef<unsigned> PRDepths = TE.getProcResourceDepths(getBlockNum());
   if (Bottom) {
-    ArrayRef<unsigned> PRCycles = TE.MTM.getProcResourceCycles(getBlockNum());
+    ArrayRef<unsigned> PRCycles = TE.MTM.getProcReleaseAtCycles(getBlockNum());
     for (unsigned K = 0; K != PRDepths.size(); ++K)
       PRMax = std::max(PRMax, PRDepths[K] + PRCycles[K]);
   } else {
@@ -1250,8 +1248,8 @@ unsigned MachineTraceMetrics::Trace::getResourceLength(
            PI != PE; ++PI) {
         if (PI->ProcResourceIdx != ResourceIdx)
           continue;
-        Cycles +=
-            (PI->Cycles * TE.MTM.SchedModel.getResourceFactor(ResourceIdx));
+        Cycles += (PI->ReleaseAtCycle *
+                   TE.MTM.SchedModel.getResourceFactor(ResourceIdx));
       }
     }
     return Cycles;
@@ -1260,7 +1258,7 @@ unsigned MachineTraceMetrics::Trace::getResourceLength(
   for (unsigned K = 0; K != PRDepths.size(); ++K) {
     unsigned PRCycles = PRDepths[K] + PRHeights[K];
     for (const MachineBasicBlock *MBB : Extrablocks)
-      PRCycles += TE.MTM.getProcResourceCycles(MBB->getNumber())[K];
+      PRCycles += TE.MTM.getProcReleaseAtCycles(MBB->getNumber())[K];
     PRCycles += extraCycles(ExtraInstrs, K);
     PRCycles -= extraCycles(RemoveInstrs, K);
     PRMax = std::max(PRMax, PRCycles);

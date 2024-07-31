@@ -11,9 +11,10 @@
 
 #include <time.h>
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 class StructTmMatcher : public Matcher<::tm> {
@@ -57,9 +58,9 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #define EXPECT_TM_EQ(expected, actual)                                         \
-  EXPECT_THAT((actual), __llvm_libc::testing::StructTmMatcher((expected)))
+  EXPECT_THAT((actual), LIBC_NAMESPACE::testing::StructTmMatcher((expected)))
 
 #endif // LLVM_LIBC_TEST_SRC_TIME_TM_MATCHER_H

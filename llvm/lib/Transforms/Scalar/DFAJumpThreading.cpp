@@ -65,6 +65,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
@@ -95,15 +96,20 @@ static cl::opt<bool>
                     cl::desc("View the CFG before DFA Jump Threading"),
                     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> EarlyExitHeuristic(
+    "dfa-early-exit-heuristic",
+    cl::desc("Exit early if an unpredictable value come from the same loop"),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<unsigned> MaxPathLength(
     "dfa-max-path-length",
     cl::desc("Max number of blocks searched to find a threading path"),
     cl::Hidden, cl::init(20));
 
-static cl::opt<unsigned> MaxNumPaths(
-    "dfa-max-num-paths",
-    cl::desc("Max number of paths enumerated around a switch"),
-    cl::Hidden, cl::init(200));
+static cl::opt<unsigned>
+    MaxNumPaths("dfa-max-num-paths",
+                cl::desc("Max number of paths enumerated around a switch"),
+                cl::Hidden, cl::init(200));
 
 static cl::opt<unsigned>
     CostThreshold("dfa-cost-threshold",
@@ -125,33 +131,32 @@ public:
   explicit operator bool() const { return SI && SIUse; }
 };
 
-void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
+void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<SelectInstToUnfold> *NewSIsToUnfold,
             std::vector<BasicBlock *> *NewBBs);
 
 class DFAJumpThreading {
 public:
-  DFAJumpThreading(AssumptionCache *AC, DominatorTree *DT,
+  DFAJumpThreading(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
                    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE)
-      : AC(AC), DT(DT), TTI(TTI), ORE(ORE) {}
+      : AC(AC), DT(DT), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
+  bool LoopInfoBroken;
 
 private:
   void
   unfoldSelectInstrs(DominatorTree *DT,
                      const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-    SmallVector<SelectInstToUnfold, 4> Stack;
-    for (SelectInstToUnfold SIToUnfold : SelectInsts)
-      Stack.push_back(SIToUnfold);
+    SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
       SelectInstToUnfold SIToUnfold = Stack.pop_back_val();
 
       std::vector<SelectInstToUnfold> NewSIsToUnfold;
       std::vector<BasicBlock *> NewBBs;
-      unfold(&DTU, SIToUnfold, &NewSIsToUnfold, &NewBBs);
+      unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
       for (const SelectInstToUnfold &NewSIToUnfold : NewSIsToUnfold)
@@ -161,6 +166,7 @@ private:
 
   AssumptionCache *AC;
   DominatorTree *DT;
+  LoopInfo *LI;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
 };
@@ -194,7 +200,7 @@ void createBasicBlockAndSinkSelectInst(
 /// created basic blocks into \p NewBBs.
 ///
 /// TODO: merge it with CodeGenPrepare::optimizeSelectInst() if possible.
-void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
+void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<SelectInstToUnfold> *NewSIsToUnfold,
             std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
@@ -249,16 +255,20 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
     FT = FalseBlock;
 
     // Update the phi node of SI.
-    SIUse->removeIncomingValue(StartBlock, /* DeletePHIIfEmpty = */ false);
     SIUse->addIncoming(SI->getTrueValue(), TrueBlock);
     SIUse->addIncoming(SI->getFalseValue(), FalseBlock);
 
     // Update any other PHI nodes in EndBlock.
     for (PHINode &Phi : EndBlock->phis()) {
       if (&Phi != SIUse) {
-        Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), TrueBlock);
-        Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), FalseBlock);
+        Value *OrigValue = Phi.getIncomingValueForBlock(StartBlock);
+        Phi.addIncoming(OrigValue, TrueBlock);
+        Phi.addIncoming(OrigValue, FalseBlock);
       }
+
+      // Remove incoming place of original StartBlock, which comes in a indirect
+      // way (through TrueBlock and FalseBlock) now.
+      Phi.removeIncomingValue(StartBlock, /* DeletePHIIfEmpty = */ false);
     }
   } else {
     BasicBlock *NewBlock = nullptr;
@@ -296,13 +306,20 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
   DTU->applyUpdates({{DominatorTree::Insert, StartBlock, TT},
                      {DominatorTree::Insert, StartBlock, FT}});
 
+  // Preserve loop info
+  if (Loop *L = LI->getLoopFor(SI->getParent())) {
+    for (BasicBlock *NewBB : *NewBBs)
+      L->addBasicBlockToLoop(NewBB, *LI);
+  }
+
   // The select is now dead.
+  assert(SI->use_empty() && "Select must be dead now");
   SI->eraseFromParent();
 }
 
 struct ClonedBlock {
   BasicBlock *BB;
-  uint64_t State; ///< \p State corresponds to the next value of a switch stmnt.
+  APInt State; ///< \p State corresponds to the next value of a switch stmnt.
 };
 
 typedef std::deque<BasicBlock *> PathType;
@@ -339,9 +356,9 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
 /// exit state, and the block that determines the next state.
 struct ThreadingPath {
   /// Exit value is DFA's exit state for the given path.
-  uint64_t getExitValue() const { return ExitVal; }
+  APInt getExitValue() const { return ExitVal; }
   void setExitValue(const ConstantInt *V) {
-    ExitVal = V->getZExtValue();
+    ExitVal = V->getValue();
     IsExitValSet = true;
   }
   bool isExitValueSet() const { return IsExitValSet; }
@@ -360,7 +377,7 @@ struct ThreadingPath {
 
 private:
   PathType Path;
-  uint64_t ExitVal;
+  APInt ExitVal;
   const BasicBlock *DBB = nullptr;
   bool IsExitValSet = false;
 };
@@ -373,7 +390,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ThreadingPath &TPath) {
 #endif
 
 struct MainSwitch {
-  MainSwitch(SwitchInst *SI, OptimizationRemarkEmitter *ORE) {
+  MainSwitch(SwitchInst *SI, LoopInfo *LI, OptimizationRemarkEmitter *ORE)
+      : LI(LI) {
     if (isCandidate(SI)) {
       Instr = SI;
     } else {
@@ -397,7 +415,7 @@ private:
   ///
   /// Also, collect select instructions to unfold.
   bool isCandidate(const SwitchInst *SI) {
-    std::deque<Value *> Q;
+    std::deque<std::pair<Value *, BasicBlock *>> Q;
     SmallSet<Value *, 16> SeenValues;
     SelectInsts.clear();
 
@@ -406,22 +424,29 @@ private:
     if (!isa<PHINode>(SICond))
       return false;
 
-    addToQueue(SICond, Q, SeenValues);
+    // The switch must be in a loop.
+    const Loop *L = LI->getLoopFor(SI->getParent());
+    if (!L)
+      return false;
+
+    addToQueue(SICond, nullptr, Q, SeenValues);
 
     while (!Q.empty()) {
-      Value *Current = Q.front();
+      Value *Current = Q.front().first;
+      BasicBlock *CurrentIncomingBB = Q.front().second;
       Q.pop_front();
 
       if (auto *Phi = dyn_cast<PHINode>(Current)) {
-        for (Value *Incoming : Phi->incoming_values()) {
-          addToQueue(Incoming, Q, SeenValues);
+        for (BasicBlock *IncomingBB : Phi->blocks()) {
+          Value *Incoming = Phi->getIncomingValueForBlock(IncomingBB);
+          addToQueue(Incoming, IncomingBB, Q, SeenValues);
         }
         LLVM_DEBUG(dbgs() << "\tphi: " << *Phi << "\n");
       } else if (SelectInst *SelI = dyn_cast<SelectInst>(Current)) {
         if (!isValidSelectInst(SelI))
           return false;
-        addToQueue(SelI->getTrueValue(), Q, SeenValues);
-        addToQueue(SelI->getFalseValue(), Q, SeenValues);
+        addToQueue(SelI->getTrueValue(), CurrentIncomingBB, Q, SeenValues);
+        addToQueue(SelI->getFalseValue(), CurrentIncomingBB, Q, SeenValues);
         LLVM_DEBUG(dbgs() << "\tselect: " << *SelI << "\n");
         if (auto *SelIUse = dyn_cast<PHINode>(SelI->user_back()))
           SelectInsts.push_back(SelectInstToUnfold(SelI, SelIUse));
@@ -434,6 +459,18 @@ private:
         // initial switch values that can be ignored (they will hit the
         // unthreaded switch) but this assumption will get checked later after
         // paths have been enumerated (in function getStateDefMap).
+
+        // If the unpredictable value comes from the same inner loop it is
+        // likely that it will also be on the enumerated paths, causing us to
+        // exit after we have enumerated all the paths. This heuristic save
+        // compile time because a search for all the paths can become expensive.
+        if (EarlyExitHeuristic &&
+            L->contains(LI->getLoopFor(CurrentIncomingBB))) {
+          LLVM_DEBUG(dbgs()
+                     << "\tExiting early due to unpredictability heuristic.\n");
+          return false;
+        }
+
         continue;
       }
     }
@@ -441,11 +478,12 @@ private:
     return true;
   }
 
-  void addToQueue(Value *Val, std::deque<Value *> &Q,
+  void addToQueue(Value *Val, BasicBlock *BB,
+                  std::deque<std::pair<Value *, BasicBlock *>> &Q,
                   SmallSet<Value *, 16> &SeenValues) {
     if (SeenValues.contains(Val))
       return;
-    Q.push_back(Val);
+    Q.push_back({Val, BB});
     SeenValues.insert(Val);
   }
 
@@ -466,8 +504,9 @@ private:
     if (!SITerm || !SITerm->isUnconditional())
       return false;
 
-    if (isa<PHINode>(SIUse) &&
-        SIBB->getSingleSuccessor() != cast<Instruction>(SIUse)->getParent())
+    // Only fold the select coming from directly where it is defined.
+    PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
+    if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;
 
     // If select will not be sunk during unfolding, and it is in the same basic
@@ -482,14 +521,16 @@ private:
     return true;
   }
 
+  LoopInfo *LI;
   SwitchInst *Instr = nullptr;
   SmallVector<SelectInstToUnfold, 4> SelectInsts;
 };
 
 struct AllSwitchPaths {
-  AllSwitchPaths(const MainSwitch *MSwitch, OptimizationRemarkEmitter *ORE)
-      : Switch(MSwitch->getInstr()), SwitchBlock(Switch->getParent()),
-        ORE(ORE) {}
+  AllSwitchPaths(const MainSwitch *MSwitch, OptimizationRemarkEmitter *ORE,
+                 LoopInfo *LI)
+      : Switch(MSwitch->getInstr()), SwitchBlock(Switch->getParent()), ORE(ORE),
+        LI(LI) {}
 
   std::vector<ThreadingPath> &getThreadingPaths() { return TPaths; }
   unsigned getNumThreadingPaths() { return TPaths.size(); }
@@ -510,12 +551,12 @@ struct AllSwitchPaths {
       return;
     }
 
-    for (PathType Path : LoopPaths) {
+    for (const PathType &Path : LoopPaths) {
       ThreadingPath TPath;
 
       const BasicBlock *PrevBB = Path.back();
       for (const BasicBlock *BB : Path) {
-        if (StateDef.count(BB) != 0) {
+        if (StateDef.contains(BB)) {
           const PHINode *Phi = dyn_cast<PHINode>(StateDef[BB]);
           assert(Phi && "Expected a state-defining instr to be a phi node.");
 
@@ -560,6 +601,12 @@ private:
     }
 
     Visited.insert(BB);
+
+    // Stop if we have reached the BB out of loop, since its successors have no
+    // impact on the DFA.
+    // TODO: Do we need to stop exploring if BB is the outer loop of the switch?
+    if (!LI->getLoopFor(BB))
+      return Res;
 
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
@@ -702,6 +749,7 @@ private:
   BasicBlock *SwitchBlock;
   OptimizationRemarkEmitter *ORE;
   std::vector<ThreadingPath> TPaths;
+  LoopInfo *LI;
 };
 
 struct TransformDFA {
@@ -728,13 +776,17 @@ private:
     CodeMetrics Metrics;
     SwitchInst *Switch = SwitchPaths->getSwitchInst();
 
+    // Don't thread switch without multiple successors.
+    if (Switch->getNumSuccessors() <= 1)
+      return false;
+
     // Note that DuplicateBlockMap is not being used as intended here. It is
     // just being used to ensure (BB, State) pairs are only counted once.
     DuplicateBlockMap DuplicateMap;
 
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       PathType PathBBs = TPath.getPath();
-      uint64_t NextState = TPath.getExitValue();
+      APInt NextState = TPath.getExitValue();
       const BasicBlock *Determinator = TPath.getDeterminatorBB();
 
       // Update Metrics for the Switch block, this is always cloned
@@ -773,7 +825,8 @@ private:
         return false;
       }
 
-      if (Metrics.convergent) {
+      // FIXME: Allow jump threading with controlled convergence.
+      if (Metrics.Convergence != ConvergenceKind::None) {
         LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, contains "
                           << "convergent instructions.\n");
         ORE->emit([&]() {
@@ -805,6 +858,8 @@ private:
       // using binary search, hence the LogBase2().
       unsigned CondBranches =
           APInt(32, Switch->getNumSuccessors()).ceilLogBase2();
+      assert(CondBranches > 0 &&
+             "The threaded switch must have multiple branches");
       DuplicationCost = Metrics.NumInsts / CondBranches;
     } else {
       // Compared with jump tables, the DFA optimizer removes an indirect branch
@@ -889,7 +944,7 @@ private:
                       DuplicateBlockMap &DuplicateMap,
                       SmallSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
-    uint64_t NextState = Path.getExitValue();
+    APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();
     PathType PathBBs = Path.getPath();
 
@@ -898,8 +953,9 @@ private:
       PathBBs.pop_front();
 
     auto DetIt = llvm::find(PathBBs, Determinator);
-    auto Prev = std::prev(DetIt);
-    BasicBlock *PrevBB = *Prev;
+    // When there is only one BB in PathBBs, the determinator takes itself as a
+    // direct predecessor.
+    BasicBlock *PrevBB = PathBBs.size() == 1 ? *DetIt : *std::prev(DetIt);
     for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
       BasicBlock *BB = *BBIt;
       BlocksToClean.insert(BB);
@@ -981,13 +1037,14 @@ private:
   /// This function also includes updating phi nodes in the successors of the
   /// BB, and remapping uses that were defined locally in the cloned BB.
   BasicBlock *cloneBlockAndUpdatePredecessor(BasicBlock *BB, BasicBlock *PrevBB,
-                                             uint64_t NextState,
+                                             const APInt &NextState,
                                              DuplicateBlockMap &DuplicateMap,
                                              DefMap &NewDefs,
                                              DomTreeUpdater *DTU) {
     ValueToValueMapTy VMap;
     BasicBlock *NewBB = CloneBasicBlock(
-        BB, VMap, ".jt" + std::to_string(NextState), BB->getParent());
+        BB, VMap, ".jt" + std::to_string(NextState.getLimitedValue()),
+        BB->getParent());
     NewBB->moveAfter(BB);
     NumCloned++;
 
@@ -1022,7 +1079,7 @@ private:
   /// This means creating a new incoming value from NewBB with the new
   /// instruction wherever there is an incoming value from BB.
   void updateSuccessorPhis(BasicBlock *BB, BasicBlock *ClonedBB,
-                           uint64_t NextState, ValueToValueMapTy &VMap,
+                           const APInt &NextState, ValueToValueMapTy &VMap,
                            DuplicateBlockMap &DuplicateMap) {
     std::vector<BasicBlock *> BlocksToUpdate;
 
@@ -1132,7 +1189,7 @@ private:
   void updateLastSuccessor(ThreadingPath &TPath,
                            DuplicateBlockMap &DuplicateMap,
                            DomTreeUpdater *DTU) {
-    uint64_t NextState = TPath.getExitValue();
+    APInt NextState = TPath.getExitValue();
     BasicBlock *BB = TPath.getPath().back();
     BasicBlock *LastBlock = getClonedBB(BB, NextState, DuplicateMap);
 
@@ -1186,7 +1243,7 @@ private:
 
   /// Checks if BB was already cloned for a particular next state value. If it
   /// was then it returns this cloned block, and otherwise null.
-  BasicBlock *getClonedBB(BasicBlock *BB, uint64_t NextState,
+  BasicBlock *getClonedBB(BasicBlock *BB, const APInt &NextState,
                           DuplicateBlockMap &DuplicateMap) {
     CloneList ClonedBBs = DuplicateMap[BB];
 
@@ -1200,10 +1257,10 @@ private:
 
   /// Helper to get the successor corresponding to a particular case value for
   /// a switch statement.
-  BasicBlock *getNextCaseSuccessor(SwitchInst *Switch, uint64_t NextState) {
+  BasicBlock *getNextCaseSuccessor(SwitchInst *Switch, const APInt &NextState) {
     BasicBlock *NextCase = nullptr;
     for (auto Case : Switch->cases()) {
-      if (Case.getCaseValue()->getZExtValue() == NextState) {
+      if (Case.getCaseValue()->getValue() == NextState) {
         NextCase = Case.getCaseSuccessor();
         break;
       }
@@ -1240,6 +1297,7 @@ bool DFAJumpThreading::run(Function &F) {
 
   SmallVector<AllSwitchPaths, 2> ThreadableLoops;
   bool MadeChanges = false;
+  LoopInfoBroken = false;
 
   for (BasicBlock &BB : F) {
     auto *SI = dyn_cast<SwitchInst>(BB.getTerminator());
@@ -1248,7 +1306,7 @@ bool DFAJumpThreading::run(Function &F) {
 
     LLVM_DEBUG(dbgs() << "\nCheck if SwitchInst in BB " << BB.getName()
                       << " is a candidate\n");
-    MainSwitch Switch(SI, ORE);
+    MainSwitch Switch(SI, LI, ORE);
 
     if (!Switch.getInstr())
       continue;
@@ -1261,7 +1319,7 @@ bool DFAJumpThreading::run(Function &F) {
     if (!Switch.getSelectInsts().empty())
       MadeChanges = true;
 
-    AllSwitchPaths SwitchPaths(&Switch, ORE);
+    AllSwitchPaths SwitchPaths(&Switch, ORE, LI);
     SwitchPaths.run();
 
     if (SwitchPaths.getNumThreadingPaths() > 0) {
@@ -1272,9 +1330,14 @@ bool DFAJumpThreading::run(Function &F) {
       // strict requirement but it can cause buggy behavior if there is an
       // overlap of blocks in different opportunities. There is a lot of room to
       // experiment with catching more opportunities here.
+      // NOTE: To release this contraint, we must handle LoopInfo invalidation
       break;
     }
   }
+
+#ifdef NDEBUG
+  LI->verify(*DT);
+#endif
 
   SmallPtrSet<const Value *, 32> EphValues;
   if (ThreadableLoops.size() > 0)
@@ -1284,6 +1347,7 @@ bool DFAJumpThreading::run(Function &F) {
     TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
     Transform.run();
     MadeChanges = true;
+    LoopInfoBroken = true;
   }
 
 #ifdef EXPENSIVE_CHECKS
@@ -1301,13 +1365,16 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   OptimizationRemarkEmitter ORE(&F);
-
-  if (!DFAJumpThreading(&AC, &DT, &TTI, &ORE).run(F))
+  DFAJumpThreading ThreadImpl(&AC, &DT, &LI, &TTI, &ORE);
+  if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  if (!ThreadImpl.LoopInfoBroken)
+    PA.preserve<LoopAnalysis>();
   return PA;
 }

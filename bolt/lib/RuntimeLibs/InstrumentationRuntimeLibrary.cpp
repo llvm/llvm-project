@@ -26,7 +26,7 @@ namespace opts {
 
 cl::opt<std::string> RuntimeInstrumentationLib(
     "runtime-instrumentation-lib",
-    cl::desc("specify file name of the runtime instrumentation library"),
+    cl::desc("specify path of the runtime instrumentation library"),
     cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
 
 extern cl::opt<bool> InstrumentationFileAppendPID;
@@ -57,10 +57,21 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
               "the input binary\n";
     exit(1);
   }
-  if (!BC.FiniFunctionAddress && !BC.IsStaticExecutable) {
-    errs() << "BOLT-ERROR: input binary lacks DT_FINI entry in the dynamic "
-              "section but instrumentation currently relies on patching "
-              "DT_FINI to write the profile\n";
+
+  if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
+    errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
+              "support profile output on binary finalization, so it "
+              "requires -instrumentation-sleep-time=N (N>0) usage\n";
+    exit(1);
+  }
+
+  if ((opts::InstrumentationWaitForks || opts::InstrumentationSleepTime) &&
+      opts::InstrumentationFileAppendPID) {
+    errs()
+        << "BOLT-ERROR: instrumentation-file-append-pid is not compatible with "
+           "instrumentation-sleep-time and instrumentation-wait-forks. If you "
+           "want a separate profile for each fork, it can only be dumped in "
+           "the end of process when instrumentation-file-append-pid is used.\n";
     exit(1);
   }
 }
@@ -78,13 +89,6 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
                            : static_cast<MCSection *>(BC.Ctx->getMachOSection(
                                  "__BOLT", "__counters", MachO::S_REGULAR,
                                  SectionKind::getData()));
-
-  if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
-    errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
-              "support profile output on binary finalization, so it "
-              "requires -instrumentation-sleep-time=N (N>0) usage\n";
-    exit(1);
-  }
 
   Section->setAlignment(llvm::Align(BC.RegularPageSize));
   Streamer.switchSection(Section);

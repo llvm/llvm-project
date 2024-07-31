@@ -19,7 +19,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(10) [[TMP5]], i64 0, i32 1
 ; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i64, ptr addrspace(10) [[DOTELT1]], align 8, !tbaa [[TBAA8]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 28
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 60
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])
@@ -44,20 +44,8 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT7]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT9]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT11]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT13]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT15]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT17:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT18:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT17]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT19]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT7]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -70,17 +58,17 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD4]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD5]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT]], <4 x ptr addrspace(13)> [[TMP18]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT8]], <4 x ptr addrspace(13)> [[TMP19]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT10]], <4 x ptr addrspace(13)> [[TMP20]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT12]], <4 x ptr addrspace(13)> [[TMP21]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT]], <4 x ptr addrspace(13)> [[TMP19]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT]], <4 x ptr addrspace(13)> [[TMP20]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4p10.v4p13(<4 x ptr addrspace(10)> [[BROADCAST_SPLAT]], <4 x ptr addrspace(13)> [[TMP21]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[VEC_IND]], i32 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD]], i32 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD4]], i32 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD5]], i32 1
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT14]], <4 x ptr addrspace(13)> [[TMP22]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT16]], <4 x ptr addrspace(13)> [[TMP23]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT18]], <4 x ptr addrspace(13)> [[TMP24]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT20]], <4 x ptr addrspace(13)> [[TMP25]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT8]], <4 x ptr addrspace(13)> [[TMP22]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT8]], <4 x ptr addrspace(13)> [[TMP23]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT8]], <4 x ptr addrspace(13)> [[TMP24]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p13(<4 x i64> [[BROADCAST_SPLAT8]], <4 x ptr addrspace(13)> [[TMP25]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !tbaa [[TBAA10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD5]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -130,7 +118,7 @@ L44:                                              ; preds = %L26
   ret ptr addrspace(10) null
 }
 
-attributes #0 = { "target-cpu"="skylake-avx512" "target-features"="+xsaves,+xsavec,+prfchw,+lzcnt,+sahf,+pku,+avx512vl,+avx512bw,+avx512cd,+clwb,+clflushopt,+adx,+avx512dq,+avx512f,+bmi2,+avx2,+bmi,+fsgsbase,+f16c,+avx,+xsave,+aes,+popcnt,+movbe,+sse4.2,+sse4.1,+cx16,+fma,+ssse3,+pclmul,+sse3,-rdrnd,-rtm,-rdseed,-avx512ifma,-avx512pf,-avx512er,-sha,-prefetchwt1,-avx512vbmi,-waitpkg,-avx512vbmi2,-shstk,-gfni,-vaes,-vpclmulqdq,-avx512vnni,-avx512bitalg,-avx512vpopcntdq,-rdpid,-cldemote,-movdiri,-movdir64b,-enqcmd,-avx512vp2intersect,-serialize,-tsxldtrk,-pconfig,-amx-bf16,-amx-tile,-amx-int8,-sse4a,-xop,-lwp,-fma4,-tbm,-mwaitx,-xsaveopt,-clzero,-wbnoinvd,-avx512bf16,-ptwrite,+sse2,+mmx,+fxsr,+64bit,+cx8" }
+attributes #0 = { "target-cpu"="skylake-avx512" "target-features"="+xsaves,+xsavec,+prfchw,+lzcnt,+sahf,+pku,+avx512vl,+avx512bw,+avx512cd,+clwb,+clflushopt,+adx,+avx512dq,+avx512f,+bmi2,+avx2,+bmi,+fsgsbase,+f16c,+avx,+xsave,+aes,+popcnt,+movbe,+sse4.2,+sse4.1,+cx16,+fma,+ssse3,+pclmul,+sse3,-rdrnd,-rtm,-rdseed,-avx512ifma,-avx512pf,-sha,-avx512vbmi,-waitpkg,-avx512vbmi2,-shstk,-gfni,-vaes,-vpclmulqdq,-avx512vnni,-avx512bitalg,-avx512vpopcntdq,-rdpid,-cldemote,-movdiri,-movdir64b,-enqcmd,-avx512vp2intersect,-serialize,-tsxldtrk,-pconfig,-amx-bf16,-amx-tile,-amx-int8,-sse4a,-xop,-lwp,-fma4,-tbm,-mwaitx,-xsaveopt,-clzero,-wbnoinvd,-avx512bf16,-ptwrite,+sse2,+mmx,+fxsr,+64bit,+cx8" }
 attributes #1 = { inaccessiblemem_or_argmemonly }
 attributes #2 = { allocsize(1) }
 

@@ -13,16 +13,19 @@
 #define LLVM_TRANSFORMS_IPO_HOTCOLDSPLITTING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/BranchProbability.h"
 
 namespace llvm {
 
 class Module;
 class ProfileSummaryInfo;
+class BasicBlock;
 class BlockFrequencyInfo;
 class TargetTransformInfo;
 class OptimizationRemarkEmitter;
 class AssumptionCache;
 class DominatorTree;
+class CodeExtractor;
 class CodeExtractorAnalysisCache;
 
 /// A sequence of basic blocks.
@@ -42,14 +45,17 @@ public:
 
 private:
   bool isFunctionCold(const Function &F) const;
+  bool isBasicBlockCold(BasicBlock *BB, BranchProbability ColdProbThresh,
+                        SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks,
+                        BlockFrequencyInfo *BFI) const;
   bool shouldOutlineFrom(const Function &F) const;
   bool outlineColdRegions(Function &F, bool HasProfileSummary);
-  Function *extractColdRegion(const BlockSequence &Region,
+  bool isSplittingBeneficial(CodeExtractor &CE, const BlockSequence &Region,
+                             TargetTransformInfo &TTI);
+  Function *extractColdRegion(BasicBlock &EntryPoint, CodeExtractor &CE,
                               const CodeExtractorAnalysisCache &CEAC,
-                              DominatorTree &DT, BlockFrequencyInfo *BFI,
-                              TargetTransformInfo &TTI,
-                              OptimizationRemarkEmitter &ORE,
-                              AssumptionCache *AC, unsigned Count);
+                              BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
+                              OptimizationRemarkEmitter &ORE);
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
   function_ref<TargetTransformInfo &(Function &)> GetTTI;

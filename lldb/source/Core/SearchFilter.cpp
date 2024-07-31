@@ -471,13 +471,13 @@ SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
     return nullptr;
   }
 
-  llvm::StringRef module;
-  success = modules_array->GetItemAtIndexAsString(0, module);
-  if (!success) {
+  std::optional<llvm::StringRef> maybe_module =
+      modules_array->GetItemAtIndexAsString(0);
+  if (!maybe_module) {
     error.SetErrorString("SFBM::CFSD: filter module item not a string.");
     return nullptr;
   }
-  FileSpec module_spec(module);
+  FileSpec module_spec(*maybe_module);
 
   return std::make_shared<SearchFilterByModule>(target_sp, module_spec);
 }
@@ -596,14 +596,14 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
   FileSpecList modules;
   size_t num_modules = modules_array->GetSize();
   for (size_t i = 0; i < num_modules; i++) {
-    llvm::StringRef module;
-    success = modules_array->GetItemAtIndexAsString(i, module);
-    if (!success) {
+    std::optional<llvm::StringRef> maybe_module =
+        modules_array->GetItemAtIndexAsString(i);
+    if (!maybe_module) {
       error.SetErrorStringWithFormat(
           "SFBM::CFSD: filter module item %zu not a string.", i);
       return nullptr;
     }
-    modules.EmplaceBack(module);
+    modules.EmplaceBack(*maybe_module);
   }
   return std::make_shared<SearchFilterByModuleList>(target_sp, modules);
 }
@@ -644,14 +644,14 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   if (success) {
     size_t num_modules = modules_array->GetSize();
     for (size_t i = 0; i < num_modules; i++) {
-      llvm::StringRef module;
-      success = modules_array->GetItemAtIndexAsString(i, module);
-      if (!success) {
+      std::optional<llvm::StringRef> maybe_module =
+          modules_array->GetItemAtIndexAsString(i);
+      if (!maybe_module) {
         error.SetErrorStringWithFormat(
             "SFBM::CFSD: filter module item %zu not a string.", i);
         return result_sp;
       }
-      modules.EmplaceBack(module);
+      modules.EmplaceBack(*maybe_module);
     }
   }
 
@@ -666,14 +666,14 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   size_t num_cus = cus_array->GetSize();
   FileSpecList cus;
   for (size_t i = 0; i < num_cus; i++) {
-    llvm::StringRef cu;
-    success = cus_array->GetItemAtIndexAsString(i, cu);
-    if (!success) {
+    std::optional<llvm::StringRef> maybe_cu =
+        cus_array->GetItemAtIndexAsString(i);
+    if (!maybe_cu) {
       error.SetErrorStringWithFormat(
           "SFBM::CFSD: filter CU item %zu not a string.", i);
       return nullptr;
     }
-    cus.EmplaceBack(cu);
+    cus.EmplaceBack(*maybe_cu);
   }
 
   return std::make_shared<SearchFilterByModuleListAndCU>(

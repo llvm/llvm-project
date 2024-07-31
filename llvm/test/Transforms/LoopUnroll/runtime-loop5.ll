@@ -81,22 +81,19 @@ define i3 @test(ptr %a, i3 %n) {
 ; UNROLL-4-NEXT:    [[TMP2:%.*]] = load i3, ptr [[ARRAYIDX]], align 1
 ; UNROLL-4-NEXT:    [[ADD:%.*]] = add nsw i3 [[TMP2]], [[SUM_02]]
 ; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; UNROLL-4-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i3 [[NITER]], 1
 ; UNROLL-4-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i3, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
 ; UNROLL-4-NEXT:    [[TMP3:%.*]] = load i3, ptr [[ARRAYIDX_1]], align 1
 ; UNROLL-4-NEXT:    [[ADD_1:%.*]] = add nsw i3 [[TMP3]], [[ADD]]
-; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT]], 1
-; UNROLL-4-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i3 [[NITER_NEXT]], 1
+; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; UNROLL-4-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i3, ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
 ; UNROLL-4-NEXT:    [[TMP4:%.*]] = load i3, ptr [[ARRAYIDX_2]], align 1
 ; UNROLL-4-NEXT:    [[ADD_2:%.*]] = add nsw i3 [[TMP4]], [[ADD_1]]
-; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_1]], 1
-; UNROLL-4-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i3 [[NITER_NEXT_1]], 1
+; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; UNROLL-4-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i3, ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
 ; UNROLL-4-NEXT:    [[TMP5:%.*]] = load i3, ptr [[ARRAYIDX_3]], align 1
 ; UNROLL-4-NEXT:    [[ADD_3]] = add nsw i3 [[TMP5]], [[ADD_2]]
-; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
-; UNROLL-4-NEXT:    [[NITER_NEXT_3]] = add i3 [[NITER_NEXT_2]], 1
+; UNROLL-4-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
+; UNROLL-4-NEXT:    [[NITER_NEXT_3]] = add i3 [[NITER]], -4
 ; UNROLL-4-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i3 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; UNROLL-4-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; UNROLL-4:       for.end.loopexit.unr-lcssa.loopexit:
@@ -105,7 +102,7 @@ define i3 @test(ptr %a, i3 %n) {
 ; UNROLL-4-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i3 [ [[ADD_3]], [[FOR_BODY]] ]
 ; UNROLL-4-NEXT:    br label [[FOR_END_LOOPEXIT_UNR_LCSSA]]
 ; UNROLL-4:       for.end.loopexit.unr-lcssa:
-; UNROLL-4-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i3 [ undef, [[FOR_BODY_PREHEADER]] ], [ [[ADD_LCSSA_PH_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; UNROLL-4-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i3 [ poison, [[FOR_BODY_PREHEADER]] ], [ [[ADD_LCSSA_PH_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; UNROLL-4-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_UNR_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; UNROLL-4-NEXT:    [[SUM_02_UNR:%.*]] = phi i3 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[SUM_02_UNR_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; UNROLL-4-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i3 [[XTRAITER]], 0

@@ -1,11 +1,11 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=VI,VI9
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefixes=GFX9,VI9
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=VI,VI9
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefixes=GFX9,VI9
 
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefixes=NOSICI,NOCI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefixes=NOSICI,NOCI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Check dpp_ctrl values
@@ -648,8 +648,8 @@ v_mov_b32 v0, s1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 v_and_b32 v0, s42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: not a valid operand.
-// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 v_add_f32 v0, v1, s45 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 //===----------------------------------------------------------------------===//

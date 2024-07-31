@@ -1,4 +1,4 @@
-; RUN: opt -S %s -atomic-expand -mtriple=i686-linux-gnu | FileCheck %s
+; RUN: opt -S %s -passes=atomic-expand -mtriple=i686-linux-gnu | FileCheck %s
 
 ; This file tests the function `llvm::expandAtomicRMWToCmpXchg`.
 ; It isn't technically target specific, but is exposed through a pass that is.

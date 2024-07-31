@@ -15,6 +15,8 @@
 
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
@@ -215,7 +217,7 @@ void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 bool promoteLoopAccessesToScalars(
     const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
-    SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
+    SmallVectorImpl<BasicBlock::iterator> &, SmallVectorImpl<MemoryAccess *> &,
     PredIteratorCache &, LoopInfo *, DominatorTree *, AssumptionCache *AC,
     const TargetLibraryInfo *, TargetTransformInfo *, Loop *,
     MemorySSAUpdater &, ICFLoopSafetyInfo *, OptimizationRemarkEmitter *,
@@ -357,20 +359,24 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         SinkAndHoistLICMFlags &LICMFlags,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
+/// kind.
+constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
+
+/// Returns the arithmetic instruction opcode used when expanding a reduction.
+unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);
+
+/// Returns the min/max intrinsic used when expanding a min/max reduction.
+Intrinsic::ID getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID);
+
 /// Returns the min/max intrinsic used when expanding a min/max reduction.
 Intrinsic::ID getMinMaxReductionIntrinsicOp(RecurKind RK);
 
+/// Returns the recurence kind used when expanding a min/max reduction.
+RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
+
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
-
-/// See RecurrenceDescriptor::isSelectCmpPattern for a description of the
-/// pattern we are trying to match. In this pattern we are only ever selecting
-/// between two values: 1) an initial PHI start value, and 2) a loop invariant
-/// value. This function uses \p LoopExitInst to determine 2), which we then use
-/// to select between \p Left and \p Right. Any lane value in \p Left that
-/// matches 2) will be merged into \p Right.
-Value *createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
-                         Value *Left, Value *Right);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
@@ -384,6 +390,7 @@ Value *getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
+                           TargetTransformInfo::ReductionShuffle RS,
                            RecurKind MinMaxKind = RecurKind::None);
 
 /// Create a target reduction of the given vector. The reduction operation
@@ -392,30 +399,35 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI, Value *Src,
+Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind);
+/// Overloaded function to generate vector-predication intrinsics for target
+/// reduction.
+Value *createSimpleTargetReduction(VectorBuilder &VB, Value *Src,
+                                   const RecurrenceDescriptor &Desc);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::SelectICmp or RecurKind::SelectFCmp. The reduction operation
-/// is described by \p Desc.
-Value *createSelectCmpTargetReduction(IRBuilderBase &B,
-                                      const TargetTransformInfo *TTI,
-                                      Value *Src,
-                                      const RecurrenceDescriptor &Desc,
-                                      PHINode *OrigPhi);
+/// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
+/// described by \p Desc.
+Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
+                                  const RecurrenceDescriptor &Desc,
+                                  PHINode *OrigPhi);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi = nullptr);
+Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
+                             Value *Src, PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
 Value *createOrderedReduction(IRBuilderBase &B,
+                              const RecurrenceDescriptor &Desc, Value *Src,
+                              Value *Start);
+/// Overloaded function to generate vector-predication intrinsics for ordered
+/// reduction.
+Value *createOrderedReduction(VectorBuilder &VB,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start);
 
@@ -524,7 +536,7 @@ Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
 Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
-                 SCEVExpander &Expander);
+                 SCEVExpander &Expander, bool HoistRuntimeChecks = false);
 
 Value *addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,

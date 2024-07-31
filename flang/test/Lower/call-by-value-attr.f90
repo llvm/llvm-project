@@ -1,5 +1,5 @@
 ! Test for PassBy::BaseAddressValueAttribute
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 program call_by_value_attr
   interface
      subroutine subri(val)
@@ -137,8 +137,7 @@ subroutine test_litteral_copies_2
   ! CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<i8>
   ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_7]], %[[VAL_8]], %[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: %[[VAL_10:.*]] = fir.emboxchar %[[VAL_9]], %[[VAL_1]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[VAL_10:.*]] = fir.emboxchar %[[VAL_2]], %[[VAL_1]] : (!fir.ref<!fir.char<1,71>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPtakes_char_value(%[[VAL_10]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call takes_char_value("a character string litteral that could be locally modfied by the callee")
 end subroutine

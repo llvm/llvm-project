@@ -8,14 +8,15 @@
 
 #include "src/stdio/sprintf.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/string_writer.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sprintf,
                    (char *__restrict buffer, const char *__restrict format,
@@ -26,15 +27,13 @@ LLVM_LIBC_FUNCTION(int, sprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  printf_core::StringWriter str_writer(buffer);
-  printf_core::Writer writer(reinterpret_cast<void *>(&str_writer),
-                             printf_core::StringWriter::write_str,
-                             printf_core::StringWriter::write_chars,
-                             printf_core::StringWriter::write_char);
+
+  printf_core::WriteBuffer wb(buffer, cpp::numeric_limits<size_t>::max());
+  printf_core::Writer writer(&wb);
 
   int ret_val = printf_core::printf_main(&writer, format, args);
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
   return ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

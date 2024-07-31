@@ -10,7 +10,7 @@ entry:
 ; CHECK-LABEL: %for.body
 ; CHECK: fmls.2d {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 ; CHECK: fmls.2d {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}[0]
-; CHECK: fmls.d {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}[0]
+; CHECK: fmsub {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %indvars.iv.next = sub nuw nsw i64 %indvars.iv, 1
@@ -52,7 +52,7 @@ entry:
 ; CHECK-LABEL: %for.body
 ; CHECK: fmls.2s {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 ; CHECK: fmls.2s {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}[0]
-; CHECK: fmls.s {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}[0]
+; CHECK: fmsub {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1

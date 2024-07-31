@@ -15,4 +15,15 @@ define %ty @test(%ty %arg) {
   ret %ty %copy
 }
 
+define %ty @test_not_real_intrinsic() {
+; CHECK-LABEL: @test_not_real_intrinsic(
+; CHECK-NEXT:    [[RET:%.*]] = call [[TY:%.*]] @llvm.dummy()
+; CHECK-NEXT:    ret [[TY]] [[RET]]
+;
+  %ret = call %ty @llvm.dummy()
+  ret %ty %ret
+}
+
+declare %ty @llvm.dummy()
+
 declare %ty @llvm.ssa.copy.s_tys(%ty)

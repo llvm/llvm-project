@@ -29,7 +29,12 @@
 #include <semaphore.h>
 #endif // KMP_OS_LINUX
 #include <sys/resource.h>
+#if KMP_OS_AIX
+#include <sys/ldr.h>
+#include <libperfstat.h>
+#else
 #include <sys/syscall.h>
+#endif
 #include <sys/time.h>
 #include <sys/times.h>
 #include <unistd.h>
@@ -57,9 +62,20 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <pthread_np.h>
+#if KMP_OS_DRAGONFLY
+#include <kvm.h>
+#endif
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#if KMP_OS_NETBSD
+#include <sched.h>
+#endif
+#elif KMP_OS_SOLARIS
+#include <libproc.h>
+#include <procfs.h>
+#include <thread.h>
+#include <sys/loadavg.h>
 #endif
 
 #include <ctype.h>
@@ -69,6 +85,15 @@
 struct kmp_sys_timer {
   struct timespec start;
 };
+
+#ifndef TIMEVAL_TO_TIMESPEC
+// Convert timeval to timespec.
+#define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
+  do {                                                                         \
+    (ts)->tv_sec = (tv)->tv_sec;                                               \
+    (ts)->tv_nsec = (tv)->tv_usec * 1000;                                      \
+  } while (0)
+#endif
 
 // Convert timespec to nanoseconds.
 #define TS2NS(timespec)                                                        \
@@ -93,6 +118,7 @@ static kmp_cond_align_t __kmp_wait_cv;
 static kmp_mutex_align_t __kmp_wait_mx;
 
 kmp_uint64 __kmp_ticks_per_msec = 1000000;
+kmp_uint64 __kmp_ticks_per_usec = 1000;
 
 #ifdef DEBUG_SUSPEND
 static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
@@ -102,7 +128,9 @@ static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
 }
 #endif
 
-#if ((KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED)
+#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||   \
+      KMP_OS_AIX) &&                                                           \
+     KMP_AFFINITY_SUPPORTED)
 
 /* Affinity support */
 
@@ -118,6 +146,29 @@ void __kmp_affinity_bind_thread(int which) {
   KMP_CPU_FREE_FROM_STACK(mask);
 }
 
+#if KMP_OS_AIX
+void __kmp_affinity_determine_capable(const char *env_var) {
+  // All versions of AIX support bindprocessor().
+
+  size_t mask_size = __kmp_xproc / CHAR_BIT;
+  // Round up to byte boundary.
+  if (__kmp_xproc % CHAR_BIT)
+    ++mask_size;
+
+  // Round up to the mask_size_type boundary.
+  if (mask_size % sizeof(__kmp_affin_mask_size))
+    mask_size += sizeof(__kmp_affin_mask_size) -
+                 mask_size % sizeof(__kmp_affin_mask_size);
+  KMP_AFFINITY_ENABLE(mask_size);
+  KA_TRACE(10,
+           ("__kmp_affinity_determine_capable: "
+            "AIX OS affinity interface bindprocessor functional (mask size = "
+            "%" KMP_SIZE_T_SPEC ").\n",
+            __kmp_affin_mask_size));
+}
+
+#else // !KMP_OS_AIX
+
 /* Determine if we can access affinity functionality on this version of
  * Linux* OS by checking __NR_sched_{get,set}affinity system calls, and set
  * __kmp_affin_mask_size to the appropriate value (0 means not capable). */
@@ -127,8 +178,10 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 #if KMP_OS_LINUX
 #define KMP_CPU_SET_SIZE_LIMIT (1024 * 1024)
 #define KMP_CPU_SET_TRY_SIZE CACHE_LINE
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_DRAGONFLY
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
+#elif KMP_OS_NETBSD
+#define KMP_CPU_SET_SIZE_LIMIT (256)
 #endif
 
   int verbose = __kmp_affinity.flags.verbose;
@@ -216,7 +269,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_INTERNAL_FREE(buf);
     return;
   }
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
@@ -245,8 +298,9 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_WARNING(AffCantGetMaskSize, env_var);
   }
 }
-
-#endif // KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#endif // KMP_OS_AIX
+#endif // (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD ||                  \
+           KMP_OS_DRAGONFLY || KMP_OS_AIX) && KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_FUTEX
 
@@ -265,7 +319,7 @@ int __kmp_futex_determine_capable() {
 
 #endif // KMP_USE_FUTEX
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64) && (!KMP_ASM_INTRINS)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM) && (!KMP_ASM_INTRINS)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -325,7 +379,7 @@ kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
   return old_value;
 }
 
-#if KMP_ARCH_X86
+#if KMP_ARCH_X86 || KMP_ARCH_WASM
 kmp_int8 __kmp_test_then_add8(volatile kmp_int8 *p, kmp_int8 d) {
   kmp_int8 old_value, new_value;
 
@@ -401,15 +455,14 @@ void __kmp_terminate_thread(int gtid) {
   KMP_YIELD(TRUE);
 } //
 
-/* Set thread stack info according to values returned by pthread_getattr_np().
+/* Set thread stack info.
    If values are unreasonable, assume call failed and use incremental stack
    refinement method instead. Returns TRUE if the stack parameters could be
    determined exactly, FALSE if incremental refinement is necessary. */
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD
-  pthread_attr_t attr;
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   int status;
   size_t size = 0;
   void *addr = 0;
@@ -419,6 +472,19 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
      pthread_attr_getstack may cause thread gtid aliasing */
   if (!KMP_UBER_GTID(gtid)) {
 
+#if KMP_OS_SOLARIS
+    stack_t s;
+    if ((status = thr_stksegment(&s)) < 0) {
+      KMP_CHECK_SYSFAIL("thr_stksegment", status);
+    }
+
+    addr = s.ss_sp;
+    size = s.ss_size;
+    KA_TRACE(60, ("__kmp_set_stack_info: T#%d thr_stksegment returned size:"
+                  " %lu, low addr: %p\n",
+                  gtid, size, addr));
+#else
+    pthread_attr_t attr;
     /* Fetch the real thread attributes */
     status = pthread_attr_init(&attr);
     KMP_CHECK_SYSFAIL("pthread_attr_init", status);
@@ -437,6 +503,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
               gtid, size, addr));
     status = pthread_attr_destroy(&attr);
     KMP_CHECK_SYSFAIL("pthread_attr_destroy", status);
+#endif
   }
 
   if (size != 0 && addr != 0) { // was stack parameter determination successful?
@@ -447,7 +514,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
     return TRUE;
   }
 #endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD  \
-          || KMP_OS_HURD */
+          || KMP_OS_HURD || KMP_OS_SOLARIS */
   /* Use incremental refinement starting from initial conservative estimate */
   TCW_PTR(th->th.th_info.ds.ds_stacksize, 0);
   TCW_PTR(th->th.th_info.ds.ds_stackbase, &stack_data);
@@ -462,7 +529,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -485,7 +552,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* USE_ITT_BUILD */
 
 #if KMP_AFFINITY_SUPPORTED
-  __kmp_affinity_set_init_mask(gtid, FALSE);
+  __kmp_affinity_bind_init_mask(gtid);
 #endif
 
 #ifdef KMP_CANCEL_THREADS
@@ -511,7 +578,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -973,7 +1040,11 @@ retry:
 #endif // KMP_USE_MONITOR
 
 void __kmp_exit_thread(int exit_status) {
+#if KMP_OS_WASI
+// TODO: the wasm32-wasi-threads target does not yet support pthread_exit.
+#else
   pthread_exit((void *)(intptr_t)exit_status);
+#endif
 } // __kmp_exit_thread
 
 #if KMP_USE_MONITOR
@@ -1024,9 +1095,7 @@ extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
 #else
 // Empty symbol to export (see exports_so.txt) when
 // monitor thread feature is disabled
-extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
-  (void)th;
-}
+extern "C" void __kmp_reap_monitor(kmp_info_t *th) { (void)th; }
 #endif // KMP_USE_MONITOR
 
 void __kmp_reap_worker(kmp_info_t *th) {
@@ -1227,7 +1296,8 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
@@ -1242,6 +1312,7 @@ static void __kmp_atfork_child(void) {
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   __kmp_affin_fullMask = nullptr;
   __kmp_affin_origMask = nullptr;
+  __kmp_topology = nullptr;
 #endif // KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_MONITOR
@@ -1317,9 +1388,11 @@ static void __kmp_atfork_child(void) {
 
 void __kmp_register_atfork(void) {
   if (__kmp_need_register_atfork) {
+#if !KMP_OS_WASI
     int status = pthread_atfork(__kmp_atfork_prepare, __kmp_atfork_parent,
                                 __kmp_atfork_child);
     KMP_CHECK_SYSFAIL("pthread_atfork", status);
+#endif
     __kmp_need_register_atfork = FALSE;
   }
 }
@@ -1761,6 +1834,7 @@ int __kmp_read_system_info(struct kmp_sys_info *info) {
   status = getrusage(RUSAGE_SELF, &r_usage);
   KMP_CHECK_SYSFAIL_ERRNO("getrusage", status);
 
+#if !KMP_OS_WASI
   // The maximum resident set size utilized (in kilobytes)
   info->maxrss = r_usage.ru_maxrss;
   // The number of page faults serviced without any I/O
@@ -1777,6 +1851,7 @@ int __kmp_read_system_info(struct kmp_sys_info *info) {
   info->nvcsw = r_usage.ru_nvcsw;
   // The number of times a context switch was forced
   info->nivcsw = r_usage.ru_nivcsw;
+#endif
 
   return (status != 0);
 }
@@ -1811,27 +1886,14 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
 #elif KMP_OS_DARWIN
 
-  // Bug C77011 High "OpenMP Threads and number of active cores".
-
-  // Find the number of available CPUs.
-  kern_return_t rc;
-  host_basic_info_data_t info;
-  mach_msg_type_number_t num = HOST_BASIC_INFO_COUNT;
-  rc = host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)&info, &num);
-  if (rc == 0 && num == HOST_BASIC_INFO_COUNT) {
-    // Cannot use KA_TRACE() here because this code works before trace support
-    // is initialized.
-    r = info.avail_cpus;
-  } else {
-    KMP_WARNING(CantGetNumAvailCPU);
-    KMP_INFORM(AssumedNumCPU);
-  }
+  size_t len = sizeof(r);
+  sysctlbyname("hw.logicalcpu", &r, &len, NULL, 0);
 
 #else
 
@@ -1849,10 +1911,13 @@ int __kmp_read_from_file(char const *path, char const *format, ...) {
 
   va_start(args, format);
   FILE *f = fopen(path, "rb");
-  if (f == NULL)
+  if (f == NULL) {
+    va_end(args);
     return 0;
+  }
   result = vfscanf(f, format, args);
   fclose(f);
+  va_end(args);
 
   return result;
 }
@@ -1889,6 +1954,13 @@ void __kmp_runtime_initialize(void) {
 
     /* Query the maximum number of threads */
     __kmp_type_convert(sysconf(_SC_THREAD_THREADS_MAX), &(__kmp_sys_max_nth));
+#ifdef __ve__
+    if (__kmp_sys_max_nth == -1) {
+      // VE's pthread supports only up to 64 threads per a VE process.
+      // So we use that KMP_MAX_NTH (predefined as 64) here.
+      __kmp_sys_max_nth = KMP_MAX_NTH;
+    }
+#else
     if (__kmp_sys_max_nth == -1) {
       /* Unlimited threads for NPTL */
       __kmp_sys_max_nth = INT_MAX;
@@ -1896,6 +1968,7 @@ void __kmp_runtime_initialize(void) {
       /* Can't tell, just use PTHREAD_THREADS_MAX */
       __kmp_sys_max_nth = KMP_MAX_NTH;
     }
+#endif
 
     /* Query the minimum stack size */
     __kmp_sys_min_stksize = sysconf(_SC_THREAD_STACK_MIN);
@@ -1998,7 +2071,7 @@ kmp_uint64 __kmp_now_nsec() {
 /* Measure clock ticks per millisecond */
 void __kmp_initialize_system_tick() {
   kmp_uint64 now, nsec2, diff;
-  kmp_uint64 delay = 100000; // 50~100 usec on most machines.
+  kmp_uint64 delay = 1000000; // ~450 usec on most machines.
   kmp_uint64 nsec = __kmp_now_nsec();
   kmp_uint64 goal = __kmp_hardware_timestamp() + delay;
   while ((now = __kmp_hardware_timestamp()) < goal)
@@ -2006,9 +2079,11 @@ void __kmp_initialize_system_tick() {
   nsec2 = __kmp_now_nsec();
   diff = nsec2 - nsec;
   if (diff > 0) {
-    kmp_uint64 tpms = ((kmp_uint64)1e6 * (delay + (now - goal)) / diff);
-    if (tpms > 0)
-      __kmp_ticks_per_msec = tpms;
+    double tpus = 1000.0 * (double)(delay + (now - goal)) / (double)diff;
+    if (tpus > 0.0) {
+      __kmp_ticks_per_msec = (kmp_uint64)(tpus * 1000.0);
+      __kmp_ticks_per_usec = (kmp_uint64)tpus;
+    }
   }
 }
 #endif
@@ -2069,10 +2144,10 @@ int __kmp_is_address_mapped(void *addr) {
   // We pass from number of vm entry's semantic
   // to size of whole entry map list.
   lstsz = lstsz * 4 / 3;
-  buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
+  buf = reinterpret_cast<char *>(KMP_INTERNAL_MALLOC(lstsz));
   rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
   if (rc < 0) {
-    kmpc_free(buf);
+    KMP_INTERNAL_FREE(buf);
     return 0;
   }
 
@@ -2096,8 +2171,96 @@ int __kmp_is_address_mapped(void *addr) {
     }
     lw += cursz;
   }
-  kmpc_free(buf);
+  KMP_INTERNAL_FREE(buf);
+#elif KMP_OS_DRAGONFLY
+  char err[_POSIX2_LINE_MAX];
+  kinfo_proc *proc;
+  vmspace sp;
+  vm_map *cur;
+  vm_map_entry entry, *c;
+  struct proc p;
+  kvm_t *fd;
+  uintptr_t uaddr;
+  int num;
 
+  fd = kvm_openfiles(nullptr, nullptr, nullptr, O_RDONLY, err);
+  if (!fd) {
+    return 0;
+  }
+
+  proc = kvm_getprocs(fd, KERN_PROC_PID, getpid(), &num);
+
+  if (kvm_read(fd, static_cast<uintptr_t>(proc->kp_paddr), &p, sizeof(p)) !=
+          sizeof(p) ||
+      kvm_read(fd, reinterpret_cast<uintptr_t>(p.p_vmspace), &sp, sizeof(sp)) !=
+          sizeof(sp)) {
+    kvm_close(fd);
+    return 0;
+  }
+
+  (void)rc;
+  cur = &sp.vm_map;
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+  for (c = kvm_vm_map_entry_first(fd, cur, &entry); c;
+       c = kvm_vm_map_entry_next(fd, c, &entry)) {
+    if ((uaddr >= entry.ba.start) && (uaddr <= entry.ba.end)) {
+      if ((entry.protection & VM_PROT_READ) != 0 &&
+          (entry.protection & VM_PROT_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  kvm_close(fd);
+#elif KMP_OS_SOLARIS
+  prmap_t *cur, *map;
+  void *buf;
+  uintptr_t uaddr;
+  ssize_t rd;
+  int err;
+  int file;
+
+  pid_t pid = getpid();
+  struct ps_prochandle *fd = Pgrab(pid, PGRAB_RDONLY, &err);
+  ;
+
+  if (!fd) {
+    return 0;
+  }
+
+  char *name = __kmp_str_format("/proc/%d/map", pid);
+  size_t sz = (1 << 20);
+  file = open(name, O_RDONLY);
+  if (file == -1) {
+    KMP_INTERNAL_FREE(name);
+    return 0;
+  }
+
+  buf = KMP_INTERNAL_MALLOC(sz);
+
+  while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
+    void *newbuf;
+    sz <<= 1;
+    newbuf = KMP_INTERNAL_REALLOC(buf, sz);
+    buf = newbuf;
+  }
+
+  map = reinterpret_cast<prmap_t *>(buf);
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+
+  for (cur = map; rd > 0; cur++, rd = -sizeof(*map)) {
+    if ((uaddr >= cur->pr_vaddr) && (uaddr < cur->pr_vaddr)) {
+      if ((cur->pr_mflags & MA_READ) != 0 && (cur->pr_mflags & MA_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  KMP_INTERNAL_FREE(map);
+  close(file);
+  KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN
 
   /* On OS X*, /proc pseudo filesystem is not available. Try to read memory
@@ -2174,10 +2337,52 @@ int __kmp_is_address_mapped(void *addr) {
     }
     kiv.kve_start += 1;
   }
-#elif KMP_OS_DRAGONFLY
+#elif KMP_OS_WASI
+  found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
+#elif KMP_OS_AIX
 
-  // FIXME(DragonFly): Implement this
-  found = 1;
+  uint32_t loadQueryBufSize = 4096u; // Default loadquery buffer size.
+  char *loadQueryBuf;
+
+  for (;;) {
+    loadQueryBuf = (char *)KMP_INTERNAL_MALLOC(loadQueryBufSize);
+    if (loadQueryBuf == NULL) {
+      return 0;
+    }
+
+    rc = loadquery(L_GETXINFO | L_IGNOREUNLOAD, loadQueryBuf, loadQueryBufSize);
+    if (rc < 0) {
+      KMP_INTERNAL_FREE(loadQueryBuf);
+      if (errno != ENOMEM) {
+        return 0;
+      }
+      // errno == ENOMEM; double the size.
+      loadQueryBufSize <<= 1;
+      continue;
+    }
+    // Obtained the load info successfully.
+    break;
+  }
+
+  struct ld_xinfo *curLdInfo = (struct ld_xinfo *)loadQueryBuf;
+
+  // Loop through the load info to find if there is a match.
+  for (;;) {
+    uintptr_t curDataStart = (uintptr_t)curLdInfo->ldinfo_dataorg;
+    uintptr_t curDataEnd = curDataStart + curLdInfo->ldinfo_datasize;
+
+    // The data segment is readable and writable.
+    if (curDataStart <= (uintptr_t)addr && (uintptr_t)addr < curDataEnd) {
+      found = 1;
+      break;
+    }
+    if (curLdInfo->ldinfo_next == 0u) {
+      // Reached the end of load info.
+      break;
+    }
+    curLdInfo = (struct ld_xinfo *)((char *)curLdInfo + curLdInfo->ldinfo_next);
+  }
+  KMP_INTERNAL_FREE(loadQueryBuf);
 
 #else
 
@@ -2191,7 +2396,8 @@ int __kmp_is_address_mapped(void *addr) {
 
 #ifdef USE_LOAD_BALANCE
 
-#if KMP_OS_DARWIN || KMP_OS_NETBSD
+#if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
+    KMP_OS_OPENBSD || KMP_OS_SOLARIS
 
 // The function returns the rounded value of the system load average
 // during given time interval which depends on the value of
@@ -2220,6 +2426,79 @@ int __kmp_get_load_balance(int max) {
   }
 
   return ret_avg;
+}
+
+#elif KMP_OS_AIX
+
+// The function returns number of running (not sleeping) threads, or -1 in case
+// of error.
+int __kmp_get_load_balance(int max) {
+
+  static int glb_running_threads = 0; // Saved count of the running threads for
+                                      // the thread balance algorithm.
+  static double glb_call_time = 0; // Thread balance algorithm call time.
+  int running_threads = 0; // Number of running threads in the system.
+
+  double call_time = 0.0;
+
+  __kmp_elapsed(&call_time);
+
+  if (glb_call_time &&
+      (call_time - glb_call_time < __kmp_load_balance_interval))
+    return glb_running_threads;
+
+  glb_call_time = call_time;
+
+  if (max <= 0) {
+    max = INT_MAX;
+  }
+
+  // Check how many perfstat_cpu_t structures are available.
+  int logical_cpus = perfstat_cpu(NULL, NULL, sizeof(perfstat_cpu_t), 0);
+  if (logical_cpus <= 0) {
+    glb_call_time = -1;
+    return -1;
+  }
+
+  perfstat_cpu_t *cpu_stat = (perfstat_cpu_t *)KMP_INTERNAL_MALLOC(
+      logical_cpus * sizeof(perfstat_cpu_t));
+  if (cpu_stat == NULL) {
+    glb_call_time = -1;
+    return -1;
+  }
+
+  // Set first CPU as the name of the first logical CPU for which the info is
+  // desired.
+  perfstat_id_t first_cpu_name;
+  strcpy(first_cpu_name.name, FIRST_CPU);
+
+  // Get the stat info of logical CPUs.
+  int rc = perfstat_cpu(&first_cpu_name, cpu_stat, sizeof(perfstat_cpu_t),
+                        logical_cpus);
+  KMP_DEBUG_ASSERT(rc == logical_cpus);
+  if (rc <= 0) {
+    KMP_INTERNAL_FREE(cpu_stat);
+    glb_call_time = -1;
+    return -1;
+  }
+  for (int i = 0; i < logical_cpus; ++i) {
+    running_threads += cpu_stat[i].runque;
+    if (running_threads >= max)
+      break;
+  }
+
+  // There _might_ be a timing hole where the thread executing this
+  // code gets skipped in the load balance, and running_threads is 0.
+  // Assert in the debug builds only!!!
+  KMP_DEBUG_ASSERT(running_threads > 0);
+  if (running_threads <= 0)
+    running_threads = 1;
+
+  KMP_INTERNAL_FREE(cpu_stat);
+
+  glb_running_threads = running_threads;
+
+  return running_threads;
 }
 
 #else // Linux* OS
@@ -2280,7 +2559,7 @@ int __kmp_get_load_balance(int max) {
   // Open "/proc/" directory.
   proc_dir = opendir("/proc");
   if (proc_dir == NULL) {
-    // Cannot open "/prroc/". Probably the kernel does not support it. Return an
+    // Cannot open "/proc/". Probably the kernel does not support it. Return an
     // error now and in subsequent calls.
     running_threads = -1;
     permanent_error = 1;
@@ -2449,7 +2728,45 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF ||   \
+      KMP_ARCH_AARCH64_32)
+
+// Because WebAssembly will use `call_indirect` to invoke the microtask and
+// WebAssembly indirect calls check that the called signature is a precise
+// match, we need to cast each microtask function pointer back from `void *` to
+// its original type.
+typedef void (*microtask_t0)(int *, int *);
+typedef void (*microtask_t1)(int *, int *, void *);
+typedef void (*microtask_t2)(int *, int *, void *, void *);
+typedef void (*microtask_t3)(int *, int *, void *, void *, void *);
+typedef void (*microtask_t4)(int *, int *, void *, void *, void *, void *);
+typedef void (*microtask_t5)(int *, int *, void *, void *, void *, void *,
+                             void *);
+typedef void (*microtask_t6)(int *, int *, void *, void *, void *, void *,
+                             void *, void *);
+typedef void (*microtask_t7)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *);
+typedef void (*microtask_t8)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *, void *);
+typedef void (*microtask_t9)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *, void *, void *);
+typedef void (*microtask_t10)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *);
+typedef void (*microtask_t11)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *);
+typedef void (*microtask_t12)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *);
+typedef void (*microtask_t13)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *);
+typedef void (*microtask_t14)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *);
+typedef void (*microtask_t15)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *);
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
@@ -2470,66 +2787,76 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
     fflush(stderr);
     exit(-1);
   case 0:
-    (*pkfn)(&gtid, &tid);
+    (*(microtask_t0)pkfn)(&gtid, &tid);
     break;
   case 1:
-    (*pkfn)(&gtid, &tid, p_argv[0]);
+    (*(microtask_t1)pkfn)(&gtid, &tid, p_argv[0]);
     break;
   case 2:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
+    (*(microtask_t2)pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
     break;
   case 3:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
+    (*(microtask_t3)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
     break;
   case 4:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3]);
+    (*(microtask_t4)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3]);
     break;
   case 5:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4]);
+    (*(microtask_t5)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4]);
     break;
   case 6:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5]);
+    (*(microtask_t6)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5]);
     break;
   case 7:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6]);
+    (*(microtask_t7)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6]);
     break;
   case 8:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7]);
+    (*(microtask_t8)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                          p_argv[7]);
     break;
   case 9:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8]);
+    (*(microtask_t9)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6], p_argv[7],
+                          p_argv[8]);
     break;
   case 10:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9]);
+    (*(microtask_t10)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9]);
     break;
   case 11:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
+    (*(microtask_t11)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
     break;
   case 12:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11]);
+    (*(microtask_t12)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11]);
     break;
   case 13:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12]);
+    (*(microtask_t13)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12]);
     break;
   case 14:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12], p_argv[13]);
+    (*(microtask_t14)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12], p_argv[13]);
     break;
   case 15:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
+    (*(microtask_t15)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
     break;
   }
 
@@ -2736,5 +3063,29 @@ void __kmp_hidden_helper_threads_deinitz_release() {
   KMP_ASSERT(0 && "Hidden helper task is not supported on this OS");
 }
 #endif // KMP_OS_LINUX
+
+bool __kmp_detect_shm() {
+  DIR *dir = opendir("/dev/shm");
+  if (dir) { // /dev/shm exists
+    closedir(dir);
+    return true;
+  } else if (ENOENT == errno) { // /dev/shm does not exist
+    return false;
+  } else { // opendir() failed
+    return false;
+  }
+}
+
+bool __kmp_detect_tmp() {
+  DIR *dir = opendir("/tmp");
+  if (dir) { // /tmp exists
+    closedir(dir);
+    return true;
+  } else if (ENOENT == errno) { // /tmp does not exist
+    return false;
+  } else { // opendir() failed
+    return false;
+  }
+}
 
 // end of file //

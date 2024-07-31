@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++11 %s
 // RUN: %clang_cc1 -verify -std=c++11 -fdelayed-template-parsing %s
+// RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
 
 template<typename T>
 void f0() {
@@ -453,8 +454,8 @@ namespace PR21332 {
   template void f7<int>();
 }
 
-// rdar://23721638: Ensure that we correctly perform implicit
-// conversions when instantiating the default arguments of local functions.
+// Ensure that we correctly perform implicit conversions when instantiating the
+// default arguments of local functions.
 namespace rdar23721638 {
   struct A {
     A(const char *) = delete;  // expected-note 2 {{explicitly marked deleted here}}
@@ -473,8 +474,7 @@ namespace rdar23721638 {
   template <typename T> void bar() {
     auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}} \
                                    // expected-note  {{in instantiation of default function argument expression for 'operator()<rdar23721638::A>' required here}} \
-                                   // expected-note  {{passing argument to parameter 'a' here}} \
-                                   // expected-note {{while substituting into a lambda}}
+                                   // expected-note  {{passing argument to parameter 'a' here}}
     lambda();
   }
   template void bar<A>(); // expected-note {{in instantiation}}
@@ -497,7 +497,6 @@ namespace PR45000 {
   // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'std::nullptr_t'}}
   // expected-note@-2  {{in instantiation of default function argument expression for 'operator()<int>' required here}}
   // expected-note@-3  {{passing argument to parameter 'x' here}}
-  // expected-note@-4  {{while substituting into a lambda}}
 
   void g() { f<int>(); }
   // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}
@@ -511,3 +510,28 @@ namespace LambdaInDefaultMemberInitializer {
   }
   template void f<int>();
 }
+
+#if __cplusplus >= 201703L
+
+// Reduced from https://github.com/llvm/llvm-project/issues/98526
+// This relies on the deferral instantiation of the local lambda, otherwise we would fail in DeduceReturnType().
+namespace local_recursive_lambda {
+
+template <typename F> struct recursive_lambda {
+  template <typename... Args> auto operator()(Args &&...args) const {
+    return fn(*this, args...);
+  }
+  F fn;
+};
+
+template <typename F> recursive_lambda(F) -> recursive_lambda<F>;
+
+void foo() {
+  recursive_lambda{[&](auto &self_fn, int) -> int {
+    return self_fn(0);
+  }}(0);
+}
+
+} // namespace local_recursive_lambda
+
+#endif

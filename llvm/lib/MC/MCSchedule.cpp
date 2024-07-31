@@ -20,8 +20,8 @@
 
 using namespace llvm;
 
-static_assert(std::is_pod<MCSchedModel>::value,
-              "We shouldn't have a static constructor here");
+static_assert(std::is_trivial_v<MCSchedModel>,
+              "MCSchedModel is required to be a trivial type");
 const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             DefaultMicroOpBufferSize,
                                             DefaultLoopMicroOpBufferSize,
@@ -30,7 +30,7 @@ const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             DefaultMispredictPenalty,
                                             false,
                                             true,
-                                            false /*EnableIntervals*/,
+                                            /*EnableIntervals=*/false,
                                             0,
                                             nullptr,
                                             nullptr,
@@ -94,10 +94,10 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
   const MCWriteProcResEntry *E = STI.getWriteProcResEnd(&SCDesc);
   for (; I != E; ++I) {
-    if (!I->Cycles)
+    if (!I->ReleaseAtCycle)
       continue;
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
-    double Temp = NumUnits * 1.0 / I->Cycles;
+    double Temp = NumUnits * 1.0 / I->ReleaseAtCycle;
     Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
   }
   if (Throughput)

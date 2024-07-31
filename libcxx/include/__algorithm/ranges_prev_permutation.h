@@ -28,6 +28,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -40,9 +43,7 @@ using prev_permutation_result = in_found_result<_InIter>;
 namespace __prev_permutation {
 
 struct __fn {
-
-  template <bidirectional_iterator _Iter, sentinel_for<_Iter> _Sent,
-            class _Comp = ranges::less, class _Proj = identity>
+  template <bidirectional_iterator _Iter, sentinel_for<_Iter> _Sent, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<_Iter, _Comp, _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr prev_permutation_result<_Iter>
   operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
@@ -51,8 +52,7 @@ struct __fn {
     return {std::move(__result.first), std::move(__result.second)};
   }
 
-  template <bidirectional_range _Range,
-            class _Comp = ranges::less, class _Proj = identity>
+  template <bidirectional_range _Range, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<iterator_t<_Range>, _Comp, _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr prev_permutation_result<borrowed_iterator_t<_Range>>
   operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
@@ -60,7 +60,6 @@ struct __fn {
         ranges::begin(__range), ranges::end(__range), std::__make_projected(__comp, __proj));
     return {std::move(__result.first), std::move(__result.second)};
   }
-
 };
 
 } // namespace __prev_permutation
@@ -73,5 +72,7 @@ constexpr inline auto prev_permutation = __prev_permutation::__fn{};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PREV_PERMUTATION_H

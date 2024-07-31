@@ -8,8 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // constexpr const E& error() const & noexcept;
 // constexpr E& error() & noexcept;

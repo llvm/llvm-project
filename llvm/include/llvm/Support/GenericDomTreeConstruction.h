@@ -40,7 +40,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -66,14 +65,14 @@ struct SemiNCAInfo {
     unsigned DFSNum = 0;
     unsigned Parent = 0;
     unsigned Semi = 0;
-    NodePtr Label = nullptr;
+    unsigned Label = 0;
     NodePtr IDom = nullptr;
-    SmallVector<NodePtr, 2> ReverseChildren;
+    SmallVector<unsigned, 4> ReverseChildren;
   };
 
   // Number to node mapping is 1-based. Initialize the mapping to start with
   // a dummy element.
-  std::vector<NodePtr> NumToNode = {nullptr};
+  SmallVector<NodePtr, 64> NumToNode = {nullptr};
   DenseMap<NodePtr, InfoRec> NodeToInfo;
 
   using UpdateT = typename DomTreeT::UpdateType;
@@ -120,7 +119,7 @@ struct SemiNCAInfo {
     SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
 
     // Remove nullptr children for clang.
-    llvm::erase_value(Res, nullptr);
+    llvm::erase(Res, nullptr);
     return Res;
   }
 
@@ -138,12 +137,12 @@ struct SemiNCAInfo {
     // immediate dominator.
     NodePtr IDom = getIDom(BB);
 
-    assert(IDom || DT.DomTreeNodes[nullptr]);
+    assert(IDom || DT.getNode(nullptr));
     TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return DT.createChild(BB, IDomNode);
+    return DT.createNode(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -181,17 +180,18 @@ struct SemiNCAInfo {
                   unsigned AttachToNum,
                   const NodeOrderMap *SuccOrder = nullptr) {
     assert(V);
-    SmallVector<NodePtr, 64> WorkList = {V};
-    if (NodeToInfo.count(V) != 0) NodeToInfo[V].Parent = AttachToNum;
+    SmallVector<std::pair<NodePtr, unsigned>, 64> WorkList = {{V, AttachToNum}};
+    NodeToInfo[V].Parent = AttachToNum;
 
     while (!WorkList.empty()) {
-      const NodePtr BB = WorkList.pop_back_val();
+      const auto [BB, ParentNum] = WorkList.pop_back_val();
       auto &BBInfo = NodeToInfo[BB];
+      BBInfo.ReverseChildren.push_back(ParentNum);
 
       // Visited nodes always have positive DFS numbers.
       if (BBInfo.DFSNum != 0) continue;
-      BBInfo.DFSNum = BBInfo.Semi = ++LastNum;
-      BBInfo.Label = BB;
+      BBInfo.Parent = ParentNum;
+      BBInfo.DFSNum = BBInfo.Semi = BBInfo.Label = ++LastNum;
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom;  // XOR.
@@ -203,22 +203,9 @@ struct SemiNCAInfo {
             });
 
       for (const NodePtr Succ : Successors) {
-        const auto SIT = NodeToInfo.find(Succ);
-        // Don't visit nodes more than once but remember to collect
-        // ReverseChildren.
-        if (SIT != NodeToInfo.end() && SIT->second.DFSNum != 0) {
-          if (Succ != BB) SIT->second.ReverseChildren.push_back(BB);
-          continue;
-        }
-
         if (!Condition(BB, Succ)) continue;
 
-        // It's fine to add Succ to the map, because we know that it will be
-        // visited later.
-        auto &SuccInfo = NodeToInfo[Succ];
-        WorkList.push_back(Succ);
-        SuccInfo.Parent = LastNum;
-        SuccInfo.ReverseChildren.push_back(BB);
+        WorkList.push_back({Succ, LastNum});
       }
     }
 
@@ -238,9 +225,10 @@ struct SemiNCAInfo {
   //
   // For each vertex V, its Label points to the vertex with the minimal sdom(U)
   // (Semi) in its path from V (included) to NodeToInfo[V].Parent (excluded).
-  NodePtr eval(NodePtr V, unsigned LastLinked,
-               SmallVectorImpl<InfoRec *> &Stack) {
-    InfoRec *VInfo = &NodeToInfo[V];
+  unsigned eval(unsigned V, unsigned LastLinked,
+                SmallVectorImpl<InfoRec *> &Stack,
+                ArrayRef<InfoRec *> NumToInfo) {
+    InfoRec *VInfo = NumToInfo[V];
     if (VInfo->Parent < LastLinked)
       return VInfo->Label;
 
@@ -248,17 +236,17 @@ struct SemiNCAInfo {
     assert(Stack.empty());
     do {
       Stack.push_back(VInfo);
-      VInfo = &NodeToInfo[NumToNode[VInfo->Parent]];
+      VInfo = NumToInfo[VInfo->Parent];
     } while (VInfo->Parent >= LastLinked);
 
     // Path compression. Point each vertex's Parent to the root and update its
     // Label if any of its ancestors (PInfo->Label) has a smaller Semi.
     const InfoRec *PInfo = VInfo;
-    const InfoRec *PLabelInfo = &NodeToInfo[PInfo->Label];
+    const InfoRec *PLabelInfo = NumToInfo[PInfo->Label];
     do {
       VInfo = Stack.pop_back_val();
       VInfo->Parent = PInfo->Parent;
-      const InfoRec *VLabelInfo = &NodeToInfo[VInfo->Label];
+      const InfoRec *VLabelInfo = NumToInfo[VInfo->Label];
       if (PLabelInfo->Semi < VLabelInfo->Semi)
         VInfo->Label = PInfo->Label;
       else
@@ -269,33 +257,27 @@ struct SemiNCAInfo {
   }
 
   // This function requires DFS to be run before calling it.
-  void runSemiNCA(DomTreeT &DT, const unsigned MinLevel = 0) {
+  void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
+    SmallVector<InfoRec *, 8> NumToInfo = {nullptr};
+    NumToInfo.reserve(NextDFSNum);
     // Initialize IDoms to spanning tree parents.
     for (unsigned i = 1; i < NextDFSNum; ++i) {
       const NodePtr V = NumToNode[i];
       auto &VInfo = NodeToInfo[V];
       VInfo.IDom = NumToNode[VInfo.Parent];
+      NumToInfo.push_back(&VInfo);
     }
 
     // Step #1: Calculate the semidominators of all vertices.
     SmallVector<InfoRec *, 32> EvalStack;
     for (unsigned i = NextDFSNum - 1; i >= 2; --i) {
-      NodePtr W = NumToNode[i];
-      auto &WInfo = NodeToInfo[W];
+      auto &WInfo = *NumToInfo[i];
 
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
-      for (const auto &N : WInfo.ReverseChildren) {
-        if (NodeToInfo.count(N) == 0)  // Skip unreachable predecessors.
-          continue;
-
-        const TreeNodePtr TN = DT.getNode(N);
-        // Skip predecessors whose level is above the subtree we are processing.
-        if (TN && TN->getLevel() < MinLevel)
-          continue;
-
-        unsigned SemiU = NodeToInfo[eval(N, i + 1, EvalStack)].Semi;
+      for (unsigned N : WInfo.ReverseChildren) {
+        unsigned SemiU = NumToInfo[eval(N, i + 1, EvalStack, NumToInfo)]->Semi;
         if (SemiU < WInfo.Semi) WInfo.Semi = SemiU;
       }
     }
@@ -305,12 +287,16 @@ struct SemiNCAInfo {
     // Note that the parents were stored in IDoms and later got invalidated
     // during path compression in Eval.
     for (unsigned i = 2; i < NextDFSNum; ++i) {
-      const NodePtr W = NumToNode[i];
-      auto &WInfo = NodeToInfo[W];
-      const unsigned SDomNum = NodeToInfo[NumToNode[WInfo.Semi]].DFSNum;
+      auto &WInfo = *NumToInfo[i];
+      assert(WInfo.Semi != 0);
+      const unsigned SDomNum = NumToInfo[WInfo.Semi]->DFSNum;
       NodePtr WIDomCandidate = WInfo.IDom;
-      while (NodeToInfo[WIDomCandidate].DFSNum > SDomNum)
-        WIDomCandidate = NodeToInfo[WIDomCandidate].IDom;
+      while (true) {
+        auto &WIDomCandidateInfo = NodeToInfo.find(WIDomCandidate)->second;
+        if (WIDomCandidateInfo.DFSNum <= SDomNum)
+          break;
+        WIDomCandidate = WIDomCandidateInfo.IDom;
+      }
 
       WInfo.IDom = WIDomCandidate;
     }
@@ -326,8 +312,7 @@ struct SemiNCAInfo {
     assert(NumToNode.size() == 1 && "SNCAInfo must be freshly constructed");
 
     auto &BBInfo = NodeToInfo[nullptr];
-    BBInfo.DFSNum = BBInfo.Semi = 1;
-    BBInfo.Label = nullptr;
+    BBInfo.DFSNum = BBInfo.Semi = BBInfo.Label = 1;
 
     NumToNode.push_back(nullptr);  // NumToNode[1] = nullptr;
   }
@@ -553,7 +538,7 @@ struct SemiNCAInfo {
 
     addVirtualRoot();
     unsigned Num = 1;
-    for (const NodePtr Root : DT.Roots) Num = runDFS(Root, Num, DC, 0);
+    for (const NodePtr Root : DT.Roots) Num = runDFS(Root, Num, DC, 1);
   }
 
   static void CalculateFromScratch(DomTreeT &DT, BatchUpdatePtr BUI) {
@@ -577,7 +562,7 @@ struct SemiNCAInfo {
     DT.Roots = FindRoots(DT, PostViewBUI);
     SNCA.doFullDFSWalk(DT, AlwaysDescend);
 
-    SNCA.runSemiNCA(DT);
+    SNCA.runSemiNCA();
     if (BUI) {
       BUI->IsRecalculated = true;
       LLVM_DEBUG(
@@ -599,11 +584,9 @@ struct SemiNCAInfo {
     // Attach the first unreachable block to AttachTo.
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
     // Loop over all of the discovered blocks in the function...
-    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
-      NodePtr W = NumToNode[i];
-
-      // Don't replace this with 'count', the insertion side effect is important
-      if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
+    for (NodePtr W : llvm::drop_begin(NumToNode)) {
+      if (DT.getNode(W))
+        continue; // Already calculated the node before
 
       NodePtr ImmDom = getIDom(W);
 
@@ -612,14 +595,13 @@ struct SemiNCAInfo {
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      DT.createChild(W, IDomNode);
+      DT.createNode(W, IDomNode);
     }
   }
 
   void reattachExistingSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
-    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
-      const NodePtr N = NumToNode[i];
+    for (const NodePtr N : llvm::drop_begin(NumToNode)) {
       const TreeNodePtr TN = DT.getNode(N);
       assert(TN);
       const TreeNodePtr NewIDom = DT.getNode(NodeToInfo[N].IDom);
@@ -662,7 +644,7 @@ struct SemiNCAInfo {
 
       // The unreachable node becomes a new root -- a tree node for it.
       TreeNodePtr VirtualRoot = DT.getNode(nullptr);
-      FromTN = DT.createChild(From, VirtualRoot);
+      FromTN = DT.createNode(From, VirtualRoot);
       DT.Roots.push_back(From);
     }
 
@@ -905,7 +887,7 @@ struct SemiNCAInfo {
 
     SemiNCAInfo SNCA(BUI);
     SNCA.runDFS(Root, 0, UnreachableDescender, 0);
-    SNCA.runSemiNCA(DT);
+    SNCA.runSemiNCA();
     SNCA.attachNewSubtree(DT, Incoming);
 
     LLVM_DEBUG(dbgs() << "After adding unreachable nodes\n");
@@ -999,7 +981,7 @@ struct SemiNCAInfo {
     SemiNCAInfo SNCA(BUI);
     SNCA.runDFS(ToIDom, 0, DescendBelow, 0);
     LLVM_DEBUG(dbgs() << "\tRunning Semi-NCA\n");
-    SNCA.runSemiNCA(DT, Level);
+    SNCA.runSemiNCA();
     SNCA.reattachExistingSubtree(DT, PrevIDomSubTree);
   }
 
@@ -1096,10 +1078,9 @@ struct SemiNCAInfo {
     // before deleting their parent.
     for (unsigned i = LastDFSNum; i > 0; --i) {
       const NodePtr N = SNCA.NumToNode[i];
-      const TreeNodePtr TN = DT.getNode(N);
-      LLVM_DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(TN) << "\n");
-
-      EraseNode(DT, TN);
+      LLVM_DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(DT.getNode(N))
+                        << "\n");
+      DT.eraseNode(N);
     }
 
     // The affected subtree start at the To node -- there's no extra work to do.
@@ -1123,24 +1104,8 @@ struct SemiNCAInfo {
                       << BlockNamePrinter(PrevIDom) << "\nRunning Semi-NCA\n");
 
     // Rebuild the remaining part of affected subtree.
-    SNCA.runSemiNCA(DT, MinLevel);
+    SNCA.runSemiNCA();
     SNCA.reattachExistingSubtree(DT, PrevIDom);
-  }
-
-  // Removes leaf tree nodes from the dominator tree.
-  static void EraseNode(DomTreeT &DT, const TreeNodePtr TN) {
-    assert(TN);
-    assert(TN->getNumChildren() == 0 && "Not a tree leaf");
-
-    const TreeNodePtr IDom = TN->getIDom();
-    assert(IDom);
-
-    auto ChIt = llvm::find(IDom->Children, TN);
-    assert(ChIt != IDom->Children.end());
-    std::swap(*ChIt, IDom->Children.back());
-    IDom->Children.pop_back();
-
-    DT.DomTreeNodes.erase(TN->getBlock());
   }
 
   //~~

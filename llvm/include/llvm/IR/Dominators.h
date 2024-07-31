@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Hashing.h"
@@ -24,7 +23,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/PassManager.h"
@@ -33,10 +31,8 @@
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/GenericDomTree.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include <algorithm>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -193,9 +189,13 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   ///    like unreachable code or trivial phi cycles).
   ///  * Invoke Defs only dominate uses in their default destination.
   bool dominates(const Value *Def, const Use &U) const;
+
   /// Return true if value Def dominates all possible uses inside instruction
   /// User. Same comments as for the Use-based API apply.
   bool dominates(const Value *Def, const Instruction *User) const;
+  bool dominates(const Value *Def, BasicBlock::iterator User) const {
+    return dominates(Def, &*User);
+  }
 
   /// Returns true if Def would dominate a use in any instruction in BB.
   /// If Def is an instruction in BB, then Def does not dominate BB.
@@ -297,11 +297,14 @@ public:
   explicit DominatorTreePrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c DominatorTree.
 struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Enables verification of dominator trees.

@@ -6,4 +6,6 @@ add_mlir_dialect_library(MLIRMemRefUtils
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRAffineDialect
+  MLIRArithUtils
 )

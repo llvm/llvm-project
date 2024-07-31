@@ -31,6 +31,11 @@ public:
     initializeSIFixVGPRCopiesPass(*PassRegistry::getPassRegistry());
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override { return "SI Fix VGPR copies"; }

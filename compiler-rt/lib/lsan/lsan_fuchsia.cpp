@@ -80,6 +80,7 @@ void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
 // On Fuchsia, leak detection is done by a special hook after atexit hooks.
 // So this doesn't install any atexit hook like on other platforms.
 void InstallAtExitCheckLeaks() {}
+void InstallAtForkHandler() {}
 
 // ASan defines this to check its `halt_on_error` flag.
 bool UseExitcodeOnLeak() { return true; }

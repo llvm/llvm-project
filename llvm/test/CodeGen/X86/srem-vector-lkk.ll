@@ -118,18 +118,18 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) {
 ; SSE-NEXT:    psrlw $15, %xmm2
 ; SSE-NEXT:    psraw $6, %xmm1
 ; SSE-NEXT:    paddw %xmm2, %xmm1
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,95,95,95,95,95,95,95]
 ; SSE-NEXT:    psubw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fold_srem_vec_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,44151,44151,44151,44151]
 ; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vpsrlw $15, %xmm1, %xmm2
 ; AVX-NEXT:    vpsraw $6, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [95,95,95,95,95,95,95,95]
 ; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = srem <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>
@@ -148,7 +148,7 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) {
 ; SSE-NEXT:    psrlw $15, %xmm2
 ; SSE-NEXT:    psraw $6, %xmm1
 ; SSE-NEXT:    paddw %xmm2, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [95,95,95,95,95,95,95,95]
+; SSE-NEXT:    pmovsxbw {{.*#+}} xmm2 = [95,95,95,95,95,95,95,95]
 ; SSE-NEXT:    pmullw %xmm1, %xmm2
 ; SSE-NEXT:    psubw %xmm2, %xmm0
 ; SSE-NEXT:    paddw %xmm1, %xmm0
@@ -156,12 +156,12 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) {
 ;
 ; AVX-LABEL: combine_srem_sdiv:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,44151,44151,44151,44151]
 ; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vpsrlw $15, %xmm1, %xmm2
 ; AVX-NEXT:    vpsraw $6, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2 # [95,95,95,95,95,95,95,95]
 ; AVX-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -175,6 +175,7 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) {
 define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; SSE-LABEL: dont_fold_srem_power_of_two:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    pextrw $1, %xmm0, %eax
 ; SSE-NEXT:    leal 31(%rax), %ecx
 ; SSE-NEXT:    testw %ax, %ax
@@ -187,16 +188,16 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; SSE-NEXT:    cmovnsl %ecx, %edx
 ; SSE-NEXT:    andl $-64, %edx
 ; SSE-NEXT:    subl %edx, %ecx
-; SSE-NEXT:    movd %ecx, %xmm1
-; SSE-NEXT:    pinsrw $1, %eax, %xmm1
-; SSE-NEXT:    pextrw $2, %xmm0, %eax
+; SSE-NEXT:    movd %ecx, %xmm0
+; SSE-NEXT:    pinsrw $1, %eax, %xmm0
+; SSE-NEXT:    pextrw $2, %xmm1, %eax
 ; SSE-NEXT:    leal 7(%rax), %ecx
 ; SSE-NEXT:    testw %ax, %ax
 ; SSE-NEXT:    cmovnsl %eax, %ecx
 ; SSE-NEXT:    andl $-8, %ecx
 ; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    pinsrw $2, %eax, %xmm1
-; SSE-NEXT:    pextrw $3, %xmm0, %eax
+; SSE-NEXT:    pinsrw $2, %eax, %xmm0
+; SSE-NEXT:    pextrw $3, %xmm1, %eax
 ; SSE-NEXT:    movswl %ax, %ecx
 ; SSE-NEXT:    imull $-21385, %ecx, %ecx # imm = 0xAC77
 ; SSE-NEXT:    shrl $16, %ecx
@@ -208,8 +209,7 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; SSE-NEXT:    addl %ecx, %edx
 ; SSE-NEXT:    imull $95, %edx, %ecx
 ; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    pinsrw $3, %eax, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pinsrw $3, %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: dont_fold_srem_power_of_two:
@@ -257,32 +257,32 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; SSE-LABEL: dont_fold_srem_one:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pextrw $2, %xmm0, %eax
-; SSE-NEXT:    movswl %ax, %ecx
-; SSE-NEXT:    imull $-19945, %ecx, %ecx # imm = 0xB217
-; SSE-NEXT:    shrl $16, %ecx
-; SSE-NEXT:    addl %eax, %ecx
-; SSE-NEXT:    movzwl %cx, %ecx
+; SSE-NEXT:    pextrw $2, %xmm0, %ecx
+; SSE-NEXT:    movswl %cx, %eax
+; SSE-NEXT:    imull $-19945, %eax, %eax # imm = 0xB217
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    addl %ecx, %eax
+; SSE-NEXT:    movzwl %ax, %edx
+; SSE-NEXT:    movswl %dx, %eax
+; SSE-NEXT:    shrl $15, %edx
+; SSE-NEXT:    sarl $4, %eax
+; SSE-NEXT:    addl %edx, %eax
+; SSE-NEXT:    leal (%rax,%rax,2), %edx
+; SSE-NEXT:    shll $3, %edx
+; SSE-NEXT:    subl %edx, %eax
+; SSE-NEXT:    addl %ecx, %eax
+; SSE-NEXT:    pextrw $1, %xmm0, %ecx
 ; SSE-NEXT:    movswl %cx, %edx
-; SSE-NEXT:    shrl $15, %ecx
-; SSE-NEXT:    sarl $4, %edx
-; SSE-NEXT:    addl %ecx, %edx
-; SSE-NEXT:    leal (%rdx,%rdx,2), %ecx
-; SSE-NEXT:    shll $3, %ecx
-; SSE-NEXT:    subl %ecx, %edx
-; SSE-NEXT:    addl %eax, %edx
-; SSE-NEXT:    pextrw $1, %xmm0, %eax
-; SSE-NEXT:    movswl %ax, %ecx
-; SSE-NEXT:    imull $12827, %ecx, %ecx # imm = 0x321B
-; SSE-NEXT:    movl %ecx, %esi
+; SSE-NEXT:    imull $12827, %edx, %edx # imm = 0x321B
+; SSE-NEXT:    movl %edx, %esi
 ; SSE-NEXT:    shrl $31, %esi
-; SSE-NEXT:    sarl $23, %ecx
-; SSE-NEXT:    addl %esi, %ecx
-; SSE-NEXT:    imull $654, %ecx, %ecx # imm = 0x28E
-; SSE-NEXT:    subl %ecx, %eax
+; SSE-NEXT:    sarl $23, %edx
+; SSE-NEXT:    addl %esi, %edx
+; SSE-NEXT:    imull $654, %edx, %edx # imm = 0x28E
+; SSE-NEXT:    subl %edx, %ecx
 ; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pinsrw $1, %eax, %xmm1
-; SSE-NEXT:    pinsrw $2, %edx, %xmm1
+; SSE-NEXT:    pinsrw $1, %ecx, %xmm1
+; SSE-NEXT:    pinsrw $2, %eax, %xmm1
 ; SSE-NEXT:    pextrw $3, %xmm0, %eax
 ; SSE-NEXT:    movswl %ax, %ecx
 ; SSE-NEXT:    imull $12375, %ecx, %ecx # imm = 0x3057

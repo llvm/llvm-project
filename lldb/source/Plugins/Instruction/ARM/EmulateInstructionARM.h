@@ -132,7 +132,7 @@ public:
 
   InstructionCondition GetInstructionCondition() override;
 
-  bool TestEmulation(Stream *out_stream, ArchSpec &arch,
+  bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
 
   std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,

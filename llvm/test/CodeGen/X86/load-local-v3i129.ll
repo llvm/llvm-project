@@ -12,7 +12,7 @@ define void @_start() nounwind {
 ; FAST-SHLD-NEXT:    shrq $2, %rcx
 ; FAST-SHLD-NEXT:    shldq $2, %rdx, %rcx
 ; FAST-SHLD-NEXT:    andq $-4, %rax
-; FAST-SHLD-NEXT:    orq $1, %rax
+; FAST-SHLD-NEXT:    incq %rax
 ; FAST-SHLD-NEXT:    movq %rax, -40(%rsp)
 ; FAST-SHLD-NEXT:    movq %rcx, -32(%rsp)
 ; FAST-SHLD-NEXT:    orq $-2, -56(%rsp)
@@ -23,7 +23,7 @@ define void @_start() nounwind {
 ; SLOW-SHLD:       # %bb.0: # %Entry
 ; SLOW-SHLD-NEXT:    movq -40(%rsp), %rax
 ; SLOW-SHLD-NEXT:    andq $-4, %rax
-; SLOW-SHLD-NEXT:    orq $1, %rax
+; SLOW-SHLD-NEXT:    incq %rax
 ; SLOW-SHLD-NEXT:    movq %rax, -40(%rsp)
 ; SLOW-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; SLOW-SHLD-NEXT:    movq $-1, -48(%rsp)

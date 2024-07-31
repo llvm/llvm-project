@@ -3,6 +3,14 @@ STRING_EXTENSION_OUTSIDE(SBInstruction)
 %extend lldb::SBInstruction {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __hex__(self):
+            """ Returns the address of the instruction. """
+            return self.GetAddress()
+
+        def __len__(self):
+            """ Returns the size of the instruction. """
+            return self.GetByteSize()
+
         def __mnemonic_property__ (self):
             return self.GetMnemonic (target)
         def __operands_property__ (self):

@@ -39,6 +39,15 @@ define i32 @asm_sgpr(i32 %divergent) {
   ret i32 %sgpr
 }
 
+; SGPR asm outputs are uniform regardless of the input operands.
+; Argument not divergent if marked inreg.
+; CHECK-LABEL: for function 'asm_sgpr_inreg_arg':
+; CHECK-NOT: DIVERGENT
+define i32 @asm_sgpr_inreg_arg(i32 inreg %divergent) {
+  %sgpr = call i32 asm "; def $0, $1","=s,v"(i32 %divergent)
+  ret i32 %sgpr
+}
+
 ; CHECK-LABEL: for function 'asm_mixed_sgpr_vgpr':
 ; CHECK: DIVERGENT: %asm = call { i32, i32 } asm "; def $0, $1, $2", "=s,=v,v"(i32 %divergent)
 ; CHECK-NEXT: {{^[ \t]+}}%sgpr = extractvalue { i32, i32 } %asm, 0
@@ -52,6 +61,24 @@ define void @asm_mixed_sgpr_vgpr(i32 %divergent) {
   ret void
 }
 
+; CHECK-LABEL: for function 'single_lane_func_arguments':
+; CHECK-NOT: DIVERGENT
+define void @single_lane_func_arguments(i32 %i32, i1 %i1) #2 {
+ ret void
+}
+
+; CHECK-LABEL: for function 'divergent_args':
+; CHECK: DIVERGENT ARGUMENTS
+define void @divergent_args(i32 %i32, i1 %i1) {
+ ret void
+}
+
+; CHECK-LABEL: for function 'no_divergent_args_if_inreg':
+; CHECK-NOT: DIVERGENT
+define void @no_divergent_args_if_inreg(i32 inreg %i32, i1 inreg %i1) {
+ ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
@@ -60,3 +87,4 @@ declare i64 @llvm.amdgcn.ballot.i32(i1) #1
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }

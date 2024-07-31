@@ -14,7 +14,7 @@ define i256 @foo(<8 x i32> %a) {
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    movq %rdi, %rax
 ; SLOW-NEXT:    vextractf128 $1, %ymm0, 16(%rdi)
-; SLOW-NEXT:    vmovups %xmm0, (%rdi)
+; SLOW-NEXT:    vmovaps %xmm0, (%rdi)
 ; SLOW-NEXT:    vzeroupper
 ; SLOW-NEXT:    retq
   %r = bitcast <8 x i32> %a to i256

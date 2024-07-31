@@ -20,6 +20,8 @@ public:
     typedef bool result_type;
 
     unary_counting_predicate(Predicate p) : p_(p), count_(0) {}
+    unary_counting_predicate(const unary_counting_predicate&) = default;
+    unary_counting_predicate& operator=(const unary_counting_predicate&) = default;
     ~unary_counting_predicate() {}
 
     bool operator () (const Arg &a) const { ++count_; return p_(a); }

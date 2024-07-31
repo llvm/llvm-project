@@ -101,9 +101,9 @@ for.end:
 }
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
-; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
-; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
@@ -127,10 +127,10 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
-; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
-; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:40: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:40: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_no_mapping_ite(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping_ite
 ; CHECK-NOT: <vscale x
@@ -163,9 +163,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
-; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
-; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_fixed_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
@@ -191,7 +191,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; Even though there are no function mappings attached to the call
 ; in the loop below we can still vectorize the loop because SVE has
 ; hardware support in the form of the 'fqsrt' instruction.
-define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) #0 {
+define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sqrt_no_mapping
 ; CHECK: call fast <vscale x 2 x float> @llvm.sqrt.nxv2f32
 entry:
@@ -224,9 +224,9 @@ declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr>)
 declare <vscale x 2 x double> @sin_vec_nxv2f64(<vscale x 2 x double>)
 declare <2 x double> @sin_vec_v2f64(<2 x double>)
 
-attributes #0 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_foo(foo_vec)" }
-attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_bar(bar_vec)" }
-attributes #2 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_llvm.sin.f64(sin_vec_nxv2f64)" }
+attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
+attributes #1 = { "vector-function-abi-variant"="_ZGVsNxv_bar(bar_vec)" }
+attributes #2 = { "vector-function-abi-variant"="_ZGVsNxv_llvm.sin.f64(sin_vec_nxv2f64)" }
 attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_vec_v2f64)" }
 
 !1 = distinct !{!1, !2, !3}

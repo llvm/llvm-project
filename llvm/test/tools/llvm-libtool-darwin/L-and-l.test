@@ -44,6 +44,17 @@
 # RUN: llvm-nm --print-armap %t.lib | \
 # RUN:   FileCheck %s --check-prefix=OTHER-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
+## Check it is possible to pass arguments to -l and -L separated from the option
+## and the options specified multiple times:
+# RUN: rm -rf %t/otherDirname && mkdir -p %t/otherDirname
+# RUN: llvm-ar cr %t/otherDirname/libinput1.a %t-input1.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib -l input2 -l input1 -L %t/dirname -L %t/otherDirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OTHER-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OTHER-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
 # OTHER-NAMES:      [[PREFIX]]-input2.o
 # OTHER-NAMES-NEXT: [[PREFIX]]-input1.o
 

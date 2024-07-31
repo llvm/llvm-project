@@ -26,7 +26,7 @@ getAllNamedFields(const CXXRecordDecl *Record) {
   std::set<const FieldDecl *> Result;
   for (const auto *Field : Record->fields()) {
     // Static data members are not in this range.
-    if (Field->isUnnamedBitfield())
+    if (Field->isUnnamedBitField())
       continue;
     Result.insert(Field);
   }
@@ -310,7 +310,7 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
                   bodyEmpty(Result.Context, Body);
 
   std::vector<FixItHint> RemoveInitializers;
-  unsigned MemberType;
+  unsigned MemberType = 0;
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(SpecialFunctionDecl)) {
     if (Ctor->getNumParams() == 0) {
       MemberType = 0;

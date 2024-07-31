@@ -19,14 +19,13 @@ void func_with_ref_arg(A &a);
 void func_with_ref_arg(B &b);
 
 // CHECK-LABEL: @_Z22func_with_indirect_arg1A(
-// CHECK-SAME:  ptr addrspace(5) noundef [[ARG:%.*]])
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[INDIRECT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[A_INDIRECT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[INDIRECT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[INDIRECT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_INDIRECT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_INDIRECT_ADDR]] to ptr
 // CHECK-NEXT:    [[P_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
-// CHECK-NEXT:    store ptr addrspace(5) [[ARG]], ptr [[INDIRECT_ADDR_ASCAST]]
-// CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A:%.*]] to ptr
+// CHECK-NEXT:    store ptr addrspace(5) [[A:%.*]], ptr [[A_INDIRECT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // CHECK-NEXT:    store ptr [[A_ASCAST]], ptr [[P_ASCAST]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -73,10 +72,12 @@ void test_indirect_arg_global() {
 
 // CHECK-LABEL: @_Z19func_with_byval_arg1B(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[COERCE:%.*]] = alloca [[CLASS_B:%.*]], align 4, addrspace(5)
 // CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[COERCE]] to ptr
 // CHECK-NEXT:    [[P_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
-// CHECK-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B:%.*]] to ptr
-// CHECK-NEXT:    store ptr [[B_ASCAST]], ptr [[P_ASCAST]], align 8
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p5.i64(ptr align 4 [[B]], ptr addrspace(5) align 4 [[TMP0:%.*]], i64 400, i1 false)
+// CHECK-NEXT:    store ptr [[B]], ptr [[P_ASCAST]], align 8
 // CHECK-NEXT:    ret void
 //
 void func_with_byval_arg(B b) {
@@ -91,7 +92,7 @@ void func_with_byval_arg(B b) {
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_TMP]] to ptr
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 [[B_ASCAST]], i64 400, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byval([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
+// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byref([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
 // CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(ptr noundef nonnull align 4 dereferenceable(400) [[B_ASCAST]])
 // CHECK-NEXT:    ret void
 //
@@ -107,7 +108,7 @@ void test_byval_arg_auto() {
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_TMP]] to ptr
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 addrspacecast (ptr addrspace(1) @g_b to ptr), i64 400, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byval([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
+// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byref([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]])
 // CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(ptr noundef nonnull align 4 dereferenceable(400) addrspacecast (ptr addrspace(1) @g_b to ptr))
 // CHECK-NEXT:    ret void
 //

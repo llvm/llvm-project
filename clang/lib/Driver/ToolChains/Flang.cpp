@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "Flang.h"
+#include "Arch/RISCV.h"
 #include "CommonArgs.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 
 #include <cassert>
 
@@ -30,11 +36,9 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, {options::OPT_ffixed_form,
+  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
                             options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenmp,
-                            options::OPT_fopenmp_version_EQ,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
@@ -50,12 +54,13 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fdefault_integer_8,
                             options::OPT_fdefault_double_8,
                             options::OPT_flarge_sizes,
-                            options::OPT_fno_automatic});
+                            options::OPT_fno_automatic,
+                            options::OPT_fhermetic_module_files});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_P, options::OPT_D, options::OPT_U,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
@@ -110,7 +115,7 @@ static bool shouldLoopVersion(const ArgList &Args) {
 }
 
 void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
@@ -122,7 +127,7 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
   } else if (Args.hasArg(options::OPT_g_Flag)) {
-    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+    DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
@@ -138,10 +143,14 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
-    CmdArgs.push_back("-flang-experimental-hlfir");
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
+
+  Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+                            options::OPT_flang_deprecated_no_hlfir,
+                            options::OPT_flang_experimental_integer_overflow,
+                            options::OPT_fno_ppc_native_vec_elem_order,
+                            options::OPT_fppc_native_vec_elem_order});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -165,6 +174,179 @@ void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   }
 }
 
+void Flang::AddAArch64TargetArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  // Handle -msve_vector_bits=<bits>
+  if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
+    StringRef Val = A->getValue();
+    const Driver &D = getToolChain().getDriver();
+    if (Val == "128" || Val == "256" || Val == "512" || Val == "1024" ||
+        Val == "2048" || Val == "128+" || Val == "256+" || Val == "512+" ||
+        Val == "1024+" || Val == "2048+") {
+      unsigned Bits = 0;
+      if (!Val.consume_back("+")) {
+        [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
+        assert(!Invalid && "Failed to parse value");
+        CmdArgs.push_back(
+            Args.MakeArgString("-mvscale-max=" + llvm::Twine(Bits / 128)));
+      }
+
+      [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
+      assert(!Invalid && "Failed to parse value");
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
+      // Silently drop requests for vector-length agnostic code as it's implied.
+    } else if (Val != "scalable")
+      // Handle the unsupported values passed to msve-vector-bits.
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Val;
+  }
+}
+
+void Flang::AddRISCVTargetArgs(const ArgList &Args,
+                               ArgStringList &CmdArgs) const {
+  const llvm::Triple &Triple = getToolChain().getTriple();
+  // Handle -mrvv-vector-bits=<bits>
+  if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
+    StringRef Val = A->getValue();
+    const Driver &D = getToolChain().getDriver();
+
+    // Get minimum VLen from march.
+    unsigned MinVLen = 0;
+    std::string Arch = riscv::getRISCVArch(Args, Triple);
+    auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+        Arch, /*EnableExperimentalExtensions*/ true);
+    // Ignore parsing error.
+    if (!errorToBool(ISAInfo.takeError()))
+      MinVLen = (*ISAInfo)->getMinVLen();
+
+    // If the value is "zvl", use MinVLen from march. Otherwise, try to parse
+    // as integer as long as we have a MinVLen.
+    unsigned Bits = 0;
+    if (Val == "zvl" && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
+      Bits = MinVLen;
+    } else if (!Val.getAsInteger(10, Bits)) {
+      // Only accept power of 2 values beteen RVVBitsPerBlock and 65536 that
+      // at least MinVLen.
+      if (Bits < MinVLen || Bits < llvm::RISCV::RVVBitsPerBlock ||
+          Bits > 65536 || !llvm::isPowerOf2_32(Bits))
+        Bits = 0;
+    }
+
+    // If we got a valid value try to use it.
+    if (Bits != 0) {
+      unsigned VScaleMin = Bits / llvm::RISCV::RVVBitsPerBlock;
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-max=" + llvm::Twine(VScaleMin)));
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-min=" + llvm::Twine(VScaleMin)));
+    } else if (Val != "scalable") {
+      // Handle the unsupported values passed to mrvv-vector-bits.
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Val;
+    }
+  }
+}
+
+void Flang::AddX86_64TargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_masm_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value == "intel" || Value == "att") {
+      CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+      CmdArgs.push_back(Args.MakeArgString("-x86-asm-syntax=" + Value));
+    } else {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
+    }
+  }
+}
+
+static void addVSDefines(const ToolChain &TC, const ArgList &Args,
+                         ArgStringList &CmdArgs) {
+
+  unsigned ver = 0;
+  const VersionTuple vt = TC.computeMSVCVersion(nullptr, Args);
+  ver = vt.getMajor() * 10000000 + vt.getMinor().value_or(0) * 100000 +
+        vt.getSubminor().value_or(0);
+  CmdArgs.push_back(Args.MakeArgString("-D_MSC_VER=" + Twine(ver / 100000)));
+  CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
+  CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
+
+  const llvm::Triple &triple = TC.getTriple();
+  if (triple.isAArch64()) {
+    CmdArgs.push_back("-D_M_ARM64=1");
+  } else if (triple.isX86() && triple.isArch32Bit()) {
+    CmdArgs.push_back("-D_M_IX86=600");
+  } else if (triple.isX86() && triple.isArch64Bit()) {
+    CmdArgs.push_back("-D_M_X64=100");
+  } else {
+    llvm_unreachable(
+        "Flang on Windows only supports X86_32, X86_64 and AArch64");
+  }
+}
+
+static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
+         "can only add VS runtime library on Windows!");
+  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+  }
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("--dependent-lib=libcmt");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("--dependent-lib=libcmtd");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrt");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrtd");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
+    break;
+  }
+}
+
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+  }
+
+  const ToolChain &TC = getToolChain();
+  TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -177,20 +359,77 @@ void Flang::addTargetOptions(const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
+  addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
+
   // Add the target features.
   switch (TC.getArch()) {
   default:
     break;
+  case llvm::Triple::aarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAArch64TargetArgs(Args, CmdArgs);
+    break;
+
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-  case llvm::Triple::aarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAMDGPUTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::riscv64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddRISCVTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddX86_64TargetArgs(Args, CmdArgs);
     break;
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef Name = A->getValue();
+    if (Name == "SVML") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "LIBMVEC-X86") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "SLEEF" || Name == "ArmPL") {
+      if (Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    }
+
+    if (Triple.isOSDarwin()) {
+      // flang doesn't currently suport nostdlib, nodefaultlibs. Adding these
+      // here incase they are added someday
+      if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+        if (A->getValue() == StringRef{"Accelerate"}) {
+          CmdArgs.push_back("-framework");
+          CmdArgs.push_back("Accelerate");
+        }
+      }
+    }
+    A->render(Args, CmdArgs);
+  }
+
+  if (Triple.isKnownWindowsMSVCEnvironment()) {
+    processVSRuntimeLibrary(TC, Args, CmdArgs);
+    addVSDefines(TC, Args, CmdArgs);
+  }
+
   // TODO: Add target specific flags, ABI, mtune option etc.
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    CmdArgs.push_back("-tune-cpu");
+    if (A->getValue() == StringRef{"native"})
+      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
+    else
+      CmdArgs.push_back(A->getValue());
+  }
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -229,10 +468,9 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   }
 
   if (IsOpenMPDevice) {
-    // -fopenmp-is-device is passed along to tell the frontend that it is
-    // generating code for a device, so that only the relevant code is
-    // emitted.
-    CmdArgs.push_back("-fopenmp-is-device");
+    // -fopenmp-is-target-device is passed along to tell the frontend that it is
+    // generating code for a device, so that only the relevant code is emitted.
+    CmdArgs.push_back("-fopenmp-is-target-device");
 
     // When in OpenMP offloading mode, enable debugging on the device.
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
@@ -254,6 +492,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+    if (Args.hasArg(options::OPT_nogpulib))
+      CmdArgs.push_back("-nogpulib");
   }
 }
 
@@ -359,7 +599,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
-      (FPContract == "fast" || FPContract == "")) {
+      (FPContract == "fast" || FPContract.empty())) {
     CmdArgs.push_back("-ffast-math");
     return;
   }
@@ -386,6 +626,50 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-freciprocal-math");
 }
 
+static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                 const InputInfo &Input) {
+  StringRef Format = "yaml";
+  if (const Arg *A = Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+    Format = A->getValue();
+
+  CmdArgs.push_back("-opt-record-file");
+
+  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (A) {
+    CmdArgs.push_back(A->getValue());
+  } else {
+    SmallString<128> F;
+
+    if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
+      if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
+        F = FinalOutput->getValue();
+    }
+
+    if (F.empty()) {
+      // Use the input filename.
+      F = llvm::sys::path::stem(Input.getBaseInput());
+    }
+
+    SmallString<32> Extension;
+    Extension += "opt.";
+    Extension += Format;
+
+    llvm::sys::path::replace_extension(F, Extension);
+    CmdArgs.push_back(Args.MakeArgString(F));
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+    CmdArgs.push_back("-opt-record-passes");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (!Format.empty()) {
+    CmdArgs.push_back("-opt-record-format");
+    CmdArgs.push_back(Format.data());
+  }
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -405,7 +689,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-      CmdArgs.push_back("-E");
+    CmdArgs.push_back("-E");
+    if (Args.getLastArg(options::OPT_dM)) {
+      CmdArgs.push_back("-dM");
+    }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
@@ -467,17 +754,90 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  llvm::Reloc::Model RelocationModel =
+      std::get<0>(ParsePICArgs(getToolChain(), Args));
+  // Add MCModel information
+  addMCModel(D, Args, Triple, RelocationModel, CmdArgs);
+
   // Add Codegen options
   addCodegenOptions(Args, CmdArgs);
 
+  // Add R Group options
+  Args.AddAllArgs(CmdArgs, options::OPT_R_Group);
+
+  // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
+  if (willEmitRemarks(Args))
+    renderRemarksOptions(Args, CmdArgs, Input);
+
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
+
+  // Disable all warnings
+  // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
+  Args.AddLastArg(CmdArgs, options::OPT_w);
+
+  // Forward flags for OpenMP. We don't do this if the current action is an
+  // device offloading action other than OpenMP.
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false) &&
+      (JA.isDeviceOffloading(Action::OFK_None) ||
+       JA.isDeviceOffloading(Action::OFK_OpenMP))) {
+    switch (D.getOpenMPRuntime(Args)) {
+    case Driver::OMPRT_OMP:
+    case Driver::OMPRT_IOMP5:
+      // Clang can generate useful OpenMP code for these two runtime libraries.
+      CmdArgs.push_back("-fopenmp");
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
+
+      // FIXME: Clang supports a whole bunch more flags here.
+      break;
+    default:
+      // By default, if Clang doesn't know how to generate useful OpenMP code
+      // for a specific runtime library, we just don't pass the '-fopenmp' flag
+      // down to the actual compilation.
+      // FIXME: It would be better to have a mode which *only* omits IR
+      // generation based on the OpenMP support so that we get consistent
+      // semantic analysis, etc.
+      const Arg *A = Args.getLastArg(options::OPT_fopenmp_EQ);
+      D.Diag(diag::warn_drv_unsupported_openmp_library)
+          << A->getSpelling() << A->getValue();
+      break;
+    }
+  }
+
+  // Pass the path to compiler resource files.
+  CmdArgs.push_back("-resource-dir");
+  CmdArgs.push_back(D.ResourceDir.c_str());
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
+
+  CodeGenOptions::FramePointerKind FPKeepKind =
+      getFramePointerKind(Args, Triple);
+
+  const char *FPKeepKindStr = nullptr;
+  switch (FPKeepKind) {
+  case CodeGenOptions::FramePointerKind::None:
+    FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    FPKeepKindStr = "-mframe-pointer=reserved";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    FPKeepKindStr = "-mframe-pointer=non-leaf";
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    FPKeepKindStr = "-mframe-pointer=all";
+    break;
+  }
+  assert(FPKeepKindStr && "unknown FramePointerKind");
+  CmdArgs.push_back(FPKeepKindStr);
 
   // Forward -mllvm options to the LLVM option parser. In practice, this means
   // forwarding to `-fc1` as that's where the LLVM parser is run.
@@ -510,11 +870,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   assert(Input.isFilename() && "Invalid input.");

@@ -12,6 +12,7 @@
 
 #include "SparcSubtarget.h"
 #include "Sparc.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -25,15 +26,18 @@ using namespace llvm;
 
 void SparcSubtarget::anchor() { }
 
-SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
-                                                                StringRef FS) {
+SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
+    StringRef CPU, StringRef TuneCPU, StringRef FS) {
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())
     CPUName = (Is64Bit) ? "v9" : "v8";
 
+  if (TuneCPU.empty())
+    TuneCPU = CPUName;
+
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  ParseSubtargetFeatures(CPUName, TuneCPU, FS);
 
   // Popc is a v9-only instruction.
   if (!IsV9)
@@ -42,11 +46,13 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-SparcSubtarget::SparcSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS, const TargetMachine &TM,
+SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
+                               const StringRef &FS, const TargetMachine &TM,
                                bool is64Bit)
-    : SparcGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
-      Is64Bit(is64Bit), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+    : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
+      ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
+      TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
+      InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {}
 
 int SparcSubtarget::getAdjustedFrameSize(int frameSize) const {

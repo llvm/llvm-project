@@ -9,7 +9,6 @@
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "Lexer.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Constraint.h"
@@ -31,8 +30,8 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Parser.h"
-#include <string>
 #include <optional>
+#include <string>
 
 using namespace mlir;
 using namespace mlir::pdll;
@@ -315,12 +314,14 @@ private:
 
   /// Identifier expressions.
   FailureOr<ast::Expr *> parseAttributeExpr();
-  FailureOr<ast::Expr *> parseCallExpr(ast::Expr *parentExpr);
+  FailureOr<ast::Expr *> parseCallExpr(ast::Expr *parentExpr,
+                                       bool isNegated = false);
   FailureOr<ast::Expr *> parseDeclRefExpr(StringRef name, SMRange loc);
   FailureOr<ast::Expr *> parseIdentifierExpr();
   FailureOr<ast::Expr *> parseInlineConstraintLambdaExpr();
   FailureOr<ast::Expr *> parseInlineRewriteLambdaExpr();
   FailureOr<ast::Expr *> parseMemberAccessExpr(ast::Expr *parentExpr);
+  FailureOr<ast::Expr *> parseNegatedExpr();
   FailureOr<ast::OpNameDecl *> parseOperationName(bool allowEmptyName = false);
   FailureOr<ast::OpNameDecl *> parseWrappedOperationName(bool allowEmptyName);
   FailureOr<ast::Expr *>
@@ -405,7 +406,8 @@ private:
 
   FailureOr<ast::CallExpr *>
   createCallExpr(SMRange loc, ast::Expr *parentExpr,
-                 MutableArrayRef<ast::Expr *> arguments);
+                 MutableArrayRef<ast::Expr *> arguments,
+                 bool isNegated = false);
   FailureOr<ast::DeclRefExpr *> createDeclRefExpr(SMRange loc, ast::Decl *decl);
   FailureOr<ast::DeclRefExpr *>
   createInlineVariableExpr(ast::Type type, StringRef name, SMRange loc,
@@ -620,7 +622,7 @@ LogicalResult Parser::convertExpressionTo(
     return diag;
   };
 
-  if (auto exprOpType = exprType.dyn_cast<ast::OperationType>())
+  if (auto exprOpType = dyn_cast<ast::OperationType>(exprType))
     return convertOpExpressionTo(expr, exprOpType, type, emitConvertError);
 
   // FIXME: Decide how to allow/support converting a single result to multiple,
@@ -635,7 +637,7 @@ LogicalResult Parser::convertExpressionTo(
     return success();
 
   // Handle tuple types.
-  if (auto exprTupleType = exprType.dyn_cast<ast::TupleType>())
+  if (auto exprTupleType = dyn_cast<ast::TupleType>(exprType))
     return convertTupleExpressionTo(expr, exprTupleType, type, emitConvertError,
                                     noteAttachFn);
 
@@ -647,7 +649,7 @@ LogicalResult Parser::convertOpExpressionTo(
     function_ref<ast::InFlightDiagnostic()> emitErrorFn) {
   // Two operation types are compatible if they have the same name, or if the
   // expected type is more general.
-  if (auto opType = type.dyn_cast<ast::OperationType>()) {
+  if (auto opType = dyn_cast<ast::OperationType>(type)) {
     if (opType.getName())
       return emitErrorFn();
     return success();
@@ -699,7 +701,7 @@ LogicalResult Parser::convertTupleExpressionTo(
     function_ref<ast::InFlightDiagnostic()> emitErrorFn,
     function_ref<void(ast::Diagnostic &diag)> noteAttachFn) {
   // Handle conversions between tuples.
-  if (auto tupleType = type.dyn_cast<ast::TupleType>()) {
+  if (auto tupleType = dyn_cast<ast::TupleType>(type)) {
     if (tupleType.size() != exprType.size())
       return emitErrorFn();
 
@@ -789,7 +791,7 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
 
   // Check the type of include. If ending with `.pdll`, this is another pdl file
   // to be parsed along with the current module.
-  if (filename.endswith(".pdll")) {
+  if (filename.ends_with(".pdll")) {
     if (failed(lexer.pushInclude(filename, fileLoc)))
       return emitError(fileLoc,
                        "unable to open include file `" + filename + "`");
@@ -804,7 +806,7 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
   }
 
   // Otherwise, this must be a `.td` include.
-  if (filename.endswith(".td"))
+  if (filename.ends_with(".td"))
     return parseTdInclude(filename, fileLoc, decls);
 
   return emitError(fileLoc,
@@ -1359,12 +1361,6 @@ FailureOr<T *> Parser::parseUserNativeConstraintOrRewriteDecl(
   if (failed(parseToken(Token::semicolon,
                         "expected `;` after native declaration")))
     return failure();
-  // TODO: PDL should be able to support constraint results in certain
-  // situations, we should revise this.
-  if (std::is_same<ast::UserConstraintDecl, T>::value && !results.empty()) {
-    return emitError(
-        "native Constraints currently do not support returning results");
-  }
   return T::createNative(ctx, name, arguments, results, optCodeStr, resultType);
 }
 
@@ -1805,6 +1801,9 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
   case Token::kw_Constraint:
     lhsExpr = parseInlineConstraintLambdaExpr();
     break;
+  case Token::kw_not:
+    lhsExpr = parseNegatedExpr();
+    break;
   case Token::identifier:
     lhsExpr = parseIdentifierExpr();
     break;
@@ -1866,7 +1865,8 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
   return ast::AttributeExpr::create(ctx, loc, attrExpr);
 }
 
-FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
+FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr,
+                                             bool isNegated) {
   consumeToken(Token::l_paren);
 
   // Parse the arguments of the call.
@@ -1890,7 +1890,7 @@ FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
   if (failed(parseToken(Token::r_paren, "expected `)` after argument list")))
     return failure();
 
-  return createCallExpr(loc, parentExpr, arguments);
+  return createCallExpr(loc, parentExpr, arguments, isNegated);
 }
 
 FailureOr<ast::Expr *> Parser::parseDeclRefExpr(StringRef name, SMRange loc) {
@@ -1957,6 +1957,19 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
   consumeToken();
 
   return createMemberAccessExpr(parentExpr, memberName, loc);
+}
+
+FailureOr<ast::Expr *> Parser::parseNegatedExpr() {
+  consumeToken(Token::kw_not);
+  // Only native constraints are supported after negation
+  if (!curToken.is(Token::identifier))
+    return emitError("expected native constraint");
+  FailureOr<ast::Expr *> identifierExpr = parseIdentifierExpr();
+  if (failed(identifierExpr))
+    return failure();
+  if (!curToken.is(Token::l_paren))
+    return emitError("expected `(` after function name");
+  return parseCallExpr(*identifierExpr, /*isNegated = */ true);
 }
 
 FailureOr<ast::OpNameDecl *> Parser::parseOperationName(bool allowEmptyName) {
@@ -2342,7 +2355,7 @@ FailureOr<ast::LetStmt *> Parser::parseLetStmt() {
           TypeSwitch<const ast::Node *, LogicalResult>(constraint.constraint)
               .Case<ast::AttrConstraintDecl, ast::ValueConstraintDecl,
                     ast::ValueRangeConstraintDecl>([&](const auto *cst) {
-                if (auto *typeConstraintExpr = cst->getTypeExpr()) {
+                if (cst->getTypeExpr()) {
                   return this->emitError(
                       constraint.referenceLoc,
                       "type constraints are not permitted on variables with "
@@ -2554,7 +2567,7 @@ Parser::createVariableDecl(StringRef name, SMRange loc, ast::Expr *initializer,
   }
 
   // Constraint types cannot be used when defining variables.
-  if (type.isa<ast::ConstraintType, ast::RewriteType>()) {
+  if (isa<ast::ConstraintType, ast::RewriteType>(type)) {
     return emitError(
         loc, llvm::formatv("unable to define variable of `{0}` type", type));
   }
@@ -2672,7 +2685,7 @@ Parser::validateTypeRangeConstraintExpr(const ast::Expr *typeExpr) {
 
 FailureOr<ast::CallExpr *>
 Parser::createCallExpr(SMRange loc, ast::Expr *parentExpr,
-                       MutableArrayRef<ast::Expr *> arguments) {
+                       MutableArrayRef<ast::Expr *> arguments, bool isNegated) {
   ast::Type parentType = parentExpr->getType();
 
   ast::CallableDecl *callableDecl = tryExtractCallableDecl(parentExpr);
@@ -2686,8 +2699,14 @@ Parser::createCallExpr(SMRange loc, ast::Expr *parentExpr,
     if (isa<ast::UserConstraintDecl>(callableDecl))
       return emitError(
           loc, "unable to invoke `Constraint` within a rewrite section");
-  } else if (isa<ast::UserRewriteDecl>(callableDecl)) {
-    return emitError(loc, "unable to invoke `Rewrite` within a match section");
+    if (isNegated)
+      return emitError(loc, "unable to negate a Rewrite");
+  } else {
+    if (isa<ast::UserRewriteDecl>(callableDecl))
+      return emitError(loc,
+                       "unable to invoke `Rewrite` within a match section");
+    if (isNegated && cast<ast::UserConstraintDecl>(callableDecl)->getBody())
+      return emitError(loc, "unable to negate non native constraints");
   }
 
   // Verify the arguments of the call.
@@ -2718,7 +2737,7 @@ Parser::createCallExpr(SMRange loc, ast::Expr *parentExpr,
   }
 
   return ast::CallExpr::create(ctx, loc, parentExpr, arguments,
-                               callableDecl->getResultType());
+                               callableDecl->getResultType(), isNegated);
 }
 
 FailureOr<ast::DeclRefExpr *> Parser::createDeclRefExpr(SMRange loc,
@@ -2762,7 +2781,7 @@ Parser::createMemberAccessExpr(ast::Expr *parentExpr, StringRef name,
 FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
                                                   StringRef name, SMRange loc) {
   ast::Type parentType = parentExpr->getType();
-  if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>()) {
+  if (ast::OperationType opType = dyn_cast<ast::OperationType>(parentType)) {
     if (name == ast::AllResultsMemberAccessExpr::getMemberName())
       return valueRangeTy;
 
@@ -2788,7 +2807,7 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       // operations. It returns a single value.
       return valueTy;
     }
-  } else if (auto tupleType = parentType.dyn_cast<ast::TupleType>()) {
+  } else if (auto tupleType = dyn_cast<ast::TupleType>(parentType)) {
     // Handle indexed results.
     unsigned index = 0;
     if (llvm::isDigit(name[0]) && !name.getAsInteger(/*Radix=*/10, index) &&
@@ -2825,7 +2844,7 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
   for (ast::NamedAttributeDecl *attr : attributes) {
     // Check for an attribute type, or a type awaiting resolution.
     ast::Type attrType = attr->getValue()->getType();
-    if (!attrType.isa<ast::AttributeType>()) {
+    if (!isa<ast::AttributeType>(attrType)) {
       return emitError(
           attr->getValue()->getLoc(),
           llvm::formatv("expected `Attr` expression, but got `{0}`", attrType));
@@ -3004,7 +3023,7 @@ LogicalResult Parser::validateOperationOperandsOrResults(
     // ValueRange. This situations arises quite often with nested operation
     // expressions: `op<my_dialect.foo>(op<my_dialect.bar>)`
     if (singleTy == valueTy) {
-      if (valueExprType.isa<ast::OperationType>()) {
+      if (isa<ast::OperationType>(valueExprType)) {
         valueExpr = convertOpToValue(valueExpr);
         continue;
       }
@@ -3028,7 +3047,7 @@ Parser::createTupleExpr(SMRange loc, ArrayRef<ast::Expr *> elements,
                         ArrayRef<StringRef> elementNames) {
   for (const ast::Expr *element : elements) {
     ast::Type eleTy = element->getType();
-    if (eleTy.isa<ast::ConstraintType, ast::RewriteType, ast::TupleType>()) {
+    if (isa<ast::ConstraintType, ast::RewriteType, ast::TupleType>(eleTy)) {
       return emitError(
           element->getLoc(),
           llvm::formatv("unable to build a tuple with `{0}` element", eleTy));
@@ -3044,7 +3063,7 @@ FailureOr<ast::EraseStmt *> Parser::createEraseStmt(SMRange loc,
                                                     ast::Expr *rootOp) {
   // Check that root is an Operation.
   ast::Type rootType = rootOp->getType();
-  if (!rootType.isa<ast::OperationType>())
+  if (!isa<ast::OperationType>(rootType))
     return emitError(rootOp->getLoc(), "expected `Op` expression");
 
   return ast::EraseStmt::create(ctx, loc, rootOp);
@@ -3055,7 +3074,7 @@ Parser::createReplaceStmt(SMRange loc, ast::Expr *rootOp,
                           MutableArrayRef<ast::Expr *> replValues) {
   // Check that root is an Operation.
   ast::Type rootType = rootOp->getType();
-  if (!rootType.isa<ast::OperationType>()) {
+  if (!isa<ast::OperationType>(rootType)) {
     return emitError(
         rootOp->getLoc(),
         llvm::formatv("expected `Op` expression, but got `{0}`", rootType));
@@ -3068,7 +3087,7 @@ Parser::createReplaceStmt(SMRange loc, ast::Expr *rootOp,
     ast::Type replType = replExpr->getType();
 
     // Check that replExpr is an Operation, Value, or ValueRange.
-    if (replType.isa<ast::OperationType>()) {
+    if (isa<ast::OperationType>(replType)) {
       if (shouldConvertOpToValues)
         replExpr = convertOpToValue(replExpr);
       continue;
@@ -3090,7 +3109,7 @@ Parser::createRewriteStmt(SMRange loc, ast::Expr *rootOp,
                           ast::CompoundStmt *rewriteBody) {
   // Check that root is an Operation.
   ast::Type rootType = rootOp->getType();
-  if (!rootType.isa<ast::OperationType>()) {
+  if (!isa<ast::OperationType>(rootType)) {
     return emitError(
         rootOp->getLoc(),
         llvm::formatv("expected `Op` expression, but got `{0}`", rootType));
@@ -3105,9 +3124,9 @@ Parser::createRewriteStmt(SMRange loc, ast::Expr *rootOp,
 
 LogicalResult Parser::codeCompleteMemberAccess(ast::Expr *parentExpr) {
   ast::Type parentType = parentExpr->getType();
-  if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>())
+  if (ast::OperationType opType = dyn_cast<ast::OperationType>(parentType))
     codeCompleteContext->codeCompleteOperationMemberAccess(opType);
-  else if (ast::TupleType tupleType = parentType.dyn_cast<ast::TupleType>())
+  else if (ast::TupleType tupleType = dyn_cast<ast::TupleType>(parentType))
     codeCompleteContext->codeCompleteTupleMemberAccess(tupleType);
   return failure();
 }

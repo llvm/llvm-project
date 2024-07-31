@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -start-before=amdgpu-unify-divergent-exit-nodes -mattr=+flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=hawaii -start-before=amdgpu-unify-divergent-exit-nodes -mattr=+flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -mtriple=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -mtriple=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -2608,10 +2608,9 @@ bb:
 }
 
 ; This expects denormal flushing, so can't turn this fmul into fneg
-; TODO: Keeping this as fmul saves encoding size
 ; GCN-LABEL: {{^}}nnan_fmul_neg1_to_fneg:
-; GCN: v_sub_f32_e32 [[TMP:v[0-9]+]], 0x80000000, v0
-; GCN-NEXT: v_mul_f32_e32 v0, [[TMP]], v1
+; GCN: s_waitcnt
+; GCN-NEXT: v_mul_f32_e64 v0, -v0, v1
 define float @nnan_fmul_neg1_to_fneg(float %x, float %y) #0 {
   %mul = fmul float %x, -1.0
   %add = fmul nnan float %mul, %y
@@ -2631,8 +2630,9 @@ define float @denormal_fmul_neg1_to_fneg(float %x, float %y) {
 
 ; know the source can't be an snan
 ; GCN-LABEL: {{^}}denorm_snan_fmul_neg1_to_fneg:
-; GCN: v_mul_f32_e64 [[TMP:v[0-9]+]], v0, -v0
-; GCN: v_mul_f32_e32 v0, [[TMP]], v1
+; GCN: s_waitcnt
+; GCN-NEXT: v_mul_f32_e64 [[TMP:v[0-9]+]], v0, -v0
+; GCN-NEXT: v_mul_f32_e32 v0, [[TMP]], v1
 ; GCN-NEXT: s_setpc_b64
 define float @denorm_snan_fmul_neg1_to_fneg(float %x, float %y) {
   %canonical = fmul float %x, %x
@@ -2642,9 +2642,9 @@ define float @denorm_snan_fmul_neg1_to_fneg(float %x, float %y) {
 }
 
 ; GCN-LABEL: {{^}}flush_snan_fmul_neg1_to_fneg:
-; GCN: v_mul_f32_e32 [[TMP0:v[0-9]+]], 1.0, v0
-; GCN: v_sub_f32_e32 [[TMP1:v[0-9]+]], 0x80000000, [[TMP0]]
-; GCN-NEXT: v_mul_f32_e32 v0, [[TMP1]], v1
+; GCN: s_waitcnt
+; GCN-NEXT: v_mul_f32_e32 [[TMP:v[0-9]+]], 1.0, v0
+; GCN-NEXT: v_mul_f32_e64 v0, -[[TMP]], v1
 define float @flush_snan_fmul_neg1_to_fneg(float %x, float %y) #0 {
   %quiet = call float @llvm.canonicalize.f32(float %x)
   %mul = fmul float %quiet, -1.0

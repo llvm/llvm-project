@@ -12,25 +12,24 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mfocrf 12, 32
-; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 31, -8(1)
 ; CHECK-NEXT:    stw 12, 8(1)
+; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stdu 1, -784(1)
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-NEXT:    cmpwi 2, 3, 2
+; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    std 0, 800(1)
 ; CHECK-NEXT:    mr 31, 1
-; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blt 2, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    addi 3, 31, 112
 ; CHECK-NEXT:    bl _setjmp
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    crmove 20, 10
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    crorc 20, 10, 2
-; CHECK-NEXT:    crmove 21, 2
 ; CHECK-NEXT:    bc 4, 20, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %if.end5
 ; CHECK-NEXT:    addis 3, 2, .L.str@toc@ha
@@ -44,8 +43,8 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    lwz 12, 8(1)
 ; CHECK-NEXT:    ld 31, -8(1)
-; CHECK-NEXT:    mtocrf 32, 12
 ; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    mtocrf 32, 12
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_4: # %if.then3
 ; CHECK-NEXT:    ld 4, 0(1)
@@ -75,11 +74,9 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; BE-NEXT:    addi 3, 31, 128
 ; BE-NEXT:    bl _setjmp
 ; BE-NEXT:    nop
-; BE-NEXT:    crmove 20, 10
 ; BE-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; BE-NEXT:    cmpwi 3, 0
 ; BE-NEXT:    crorc 20, 10, 2
-; BE-NEXT:    crmove 21, 2
 ; BE-NEXT:    bc 4, 20, .LBB0_4
 ; BE-NEXT:  # %bb.2: # %if.end5
 ; BE-NEXT:    addis 3, 2, .L.str@toc@ha

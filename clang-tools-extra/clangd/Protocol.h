@@ -592,7 +592,7 @@ bool fromJSON(const llvm::json::Value &, ConfigurationSettings &,
 /// Clangd extension: parameters configurable at `initialize` time.
 /// LSP defines this type as `any`.
 struct InitializationOptions {
-  // What we can change throught the didChangeConfiguration request, we can
+  // What we can change through the didChangeConfiguration request, we can
   // also set through the initialize request (initializationOptions field).
   ConfigurationSettings ConfigSettings;
 
@@ -962,16 +962,6 @@ struct Diagnostic {
 };
 llvm::json::Value toJSON(const Diagnostic &);
 
-/// A LSP-specific comparator used to find diagnostic in a container like
-/// std:map.
-/// We only use the required fields of Diagnostic to do the comparison to avoid
-/// any regression issues from LSP clients (e.g. VScode), see
-/// https://git.io/vbr29
-struct LSPDiagnosticCompare {
-  bool operator()(const Diagnostic &LHS, const Diagnostic &RHS) const {
-    return std::tie(LHS.range, LHS.message) < std::tie(RHS.range, RHS.message);
-  }
-};
 bool fromJSON(const llvm::json::Value &, Diagnostic &, llvm::json::Path);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Diagnostic &);
 
@@ -1445,6 +1435,15 @@ struct RenameParams {
   std::string newName;
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
+llvm::json::Value toJSON(const RenameParams &);
+
+struct PrepareRenameResult {
+  /// Range of the string to rename.
+  Range range;
+  /// Placeholder text to use in the editor if non-empty.
+  std::string placeholder;
+};
+llvm::json::Value toJSON(const PrepareRenameResult &PRR);
 
 enum class DocumentHighlightKind { Text = 1, Read = 2, Write = 3 };
 
@@ -1672,6 +1671,16 @@ enum class InlayHintKind {
   /// This is a clangd extension.
   Designator = 3,
 
+  /// A hint after function, type or namespace definition, indicating the
+  /// defined symbol name of the definition.
+  ///
+  /// An example of a decl name hint in this position:
+  ///    void func() {
+  ///    } ^
+  /// Uses comment-like syntax like "// func".
+  /// This is a clangd extension.
+  BlockEnd = 4,
+
   /// Other ideas for hints that are not currently implemented:
   ///
   /// * Chaining hints, showing the types of intermediate expressions
@@ -1679,6 +1688,48 @@ enum class InlayHintKind {
   /// * Hints indicating implicit conversions or implicit constructor calls.
 };
 llvm::json::Value toJSON(const InlayHintKind &);
+
+/// An inlay hint label part allows for interactive and composite labels
+/// of inlay hints.
+struct InlayHintLabelPart {
+
+  InlayHintLabelPart() = default;
+
+  InlayHintLabelPart(std::string value,
+                     std::optional<Location> location = std::nullopt)
+      : value(std::move(value)), location(std::move(location)) {}
+
+  /// The value of this label part.
+  std::string value;
+
+  /// The tooltip text when you hover over this label part. Depending on
+  /// the client capability `inlayHint.resolveSupport`, clients might resolve
+  /// this property late using the resolve request.
+  std::optional<MarkupContent> tooltip;
+
+  /// An optional source code location that represents this
+  /// label part.
+  ///
+  /// The editor will use this location for the hover and for code navigation
+  /// features: This part will become a clickable link that resolves to the
+  /// definition of the symbol at the given location (not necessarily the
+  /// location itself), it shows the hover that shows at the given location,
+  /// and it shows a context menu with further code navigation commands.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
+  std::optional<Location> location;
+
+  /// An optional command for this label part.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
+  std::optional<Command> command;
+};
+llvm::json::Value toJSON(const InlayHintLabelPart &);
+bool operator==(const InlayHintLabelPart &, const InlayHintLabelPart &);
+bool operator<(const InlayHintLabelPart &, const InlayHintLabelPart &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const InlayHintLabelPart &);
 
 /// Inlay hint information.
 struct InlayHint {
@@ -1689,7 +1740,7 @@ struct InlayHint {
   /// InlayHintLabelPart label parts.
   ///
   /// *Note* that neither the string nor the label part can be empty.
-  std::string label;
+  std::vector<InlayHintLabelPart> label;
 
   /// The kind of this hint. Can be omitted in which case the client should fall
   /// back to a reasonable default.
@@ -1715,6 +1766,9 @@ struct InlayHint {
   /// The range allows clients more flexibility of when/how to display the hint.
   /// This is an (unserialized) clangd extension.
   Range range;
+
+  /// Join the label[].value together.
+  std::string joinLabels() const;
 };
 llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &, const InlayHint &);
@@ -1969,6 +2023,28 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ASTNode &);
 } // namespace clang
 
 namespace llvm {
+
+template <> struct DenseMapInfo<clang::clangd::Range> {
+  using Range = clang::clangd::Range;
+  static inline Range getEmptyKey() {
+    static clang::clangd::Position Tomb{-1, -1};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static inline Range getTombstoneKey() {
+    static clang::clangd::Position Tomb{-2, -2};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static unsigned getHashValue(const Range &Val) {
+    return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
+                              Val.end.character);
+  }
+  static bool isEqual(const Range &LHS, const Range &RHS) {
+    return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);
+  }
+};
+
 template <> struct format_provider<clang::clangd::Position> {
   static void format(const clang::clangd::Position &Pos, raw_ostream &OS,
                      StringRef Style) {

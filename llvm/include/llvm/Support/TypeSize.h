@@ -15,13 +15,10 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -101,14 +98,22 @@ protected:
       : Quantity(Quantity), Scalable(Scalable) {}
 
   friend constexpr LeafTy &operator+=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity += RHS.Quantity;
+    if (!RHS.isZero())
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
   friend constexpr LeafTy &operator-=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity -= RHS.Quantity;
+    if (!RHS.isZero())
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
@@ -165,6 +170,9 @@ public:
   /// Returns whether the quantity is scaled by a runtime quantity (vscale).
   constexpr bool isScalable() const { return Scalable; }
 
+  /// Returns true if the quantity is not scaled by vscale.
+  constexpr bool isFixed() const { return !Scalable; }
+
   /// A return value of true indicates we know at compile time that the number
   /// of elements (vscale * Min) is definitely even. However, returning false
   /// does not guarantee that the total number of elements is odd.
@@ -176,11 +184,23 @@ public:
     return getKnownMinValue() % RHS == 0;
   }
 
+  /// Returns whether or not the callee is known to be a multiple of RHS.
+  constexpr bool isKnownMultipleOf(const FixedOrScalableQuantity &RHS) const {
+    // x % y == 0 => x % y == 0
+    // x % y == 0 => (vscale * x) % y == 0
+    // x % y == 0 => (vscale * x) % (vscale * y) == 0
+    // but
+    // x % y == 0 !=> x % (vscale * y) == 0
+    if (!isScalable() && RHS.isScalable())
+      return false;
+    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
+  }
+
   // Return the minimum value with the assumption that the count is exact.
   // Use in places where a scalable count doesn't make sense (e.g. non-vector
   // types, or vectors in backends which don't support scalable vectors).
   constexpr ScalarTy getFixedValue() const {
-    assert(!isScalable() &&
+    assert((!isScalable() || isZero()) &&
            "Request for a fixed element count on a scalable object");
     return getKnownMinValue();
   }
@@ -319,27 +339,16 @@ public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
+  static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
+    return TypeSize(Quantity, Scalable);
+  }
   static constexpr TypeSize getFixed(ScalarTy ExactSize) {
     return TypeSize(ExactSize, false);
   }
   static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
-  static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
-    return TypeSize(Quantity, Scalable);
-  }
-  static constexpr TypeSize Fixed(ScalarTy ExactSize) {
-    return TypeSize(ExactSize, false);
-  }
-  static constexpr TypeSize Scalable(ScalarTy MinimumSize) {
-    return TypeSize(MinimumSize, true);
-  }
-
-  LLVM_DEPRECATED("Use getFixedValue() instead", "getFixedValue")
-  constexpr ScalarTy getFixedSize() const { return getFixedValue(); }
-  
-  LLVM_DEPRECATED("Use getKnownMinValue() instead", "getKnownMinValue")
-  constexpr ScalarTy getKnownMinSize() const { return getKnownMinValue(); }
+  static constexpr TypeSize getZero() { return TypeSize(0, false); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

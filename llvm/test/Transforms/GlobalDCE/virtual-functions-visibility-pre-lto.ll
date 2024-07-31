@@ -2,7 +2,7 @@
 
 ; structs A, B and C have vcall_visibility of public, linkage-unit and
 ; translation-unit respectively. This test is run before LTO linking occurs
-; (the LTOPostLink metadata is not present), so only C can be VFE'd.
+; so only C can be VFE'd.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -12,7 +12,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define internal void @_ZN1AC2Ev(ptr %this) {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
@@ -36,7 +36,7 @@ entry:
 
 define internal void @_ZN1BC2Ev(ptr %this) {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1B, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1B, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
@@ -60,7 +60,7 @@ entry:
 
 define internal void @_ZN1CC2Ev(ptr %this) {
 entry:
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1C, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1C, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 

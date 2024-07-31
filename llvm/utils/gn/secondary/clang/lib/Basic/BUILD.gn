@@ -23,8 +23,11 @@ static_library("Basic") {
     # public_dep because public header Version.h includes generated Version.inc.
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
-    "//clang/include/clang/Basic:AttrTokenKinds",
+    "//clang/include/clang/Basic:Builtins",
+    "//clang/include/clang/Basic:BuiltinsBPF",
+    "//clang/include/clang/Basic:BuiltinsRISCV",
     "//clang/include/clang/Basic:DiagnosticGroups",
+    "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",
     "//clang/include/clang/Basic:arm_mve_builtins",
     "//clang/include/clang/Basic:arm_sme_builtins",
@@ -52,11 +55,13 @@ static_library("Basic") {
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "." ]
   sources = [
+    "ASTSourceDescriptor.cpp",
     "Attributes.cpp",
     "Builtins.cpp",
     "CLWarnings.cpp",
@@ -88,6 +93,7 @@ static_library("Basic") {
     "Sarif.cpp",
     "SourceLocation.cpp",
     "SourceManager.cpp",
+    "SourceMgrAdapter.cpp",
     "Stack.cpp",
     "TargetID.cpp",
     "TargetInfo.cpp",

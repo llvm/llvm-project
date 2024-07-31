@@ -19,13 +19,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/TargetParser/Triple.h"
@@ -34,7 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "printfToRuntime"
-#define DWORD_ALIGN 4
+enum { DWORD_ALIGN = 4 };
 
 namespace {
 class AMDGPUPrintfRuntimeBinding final : public ModulePass {
@@ -46,19 +46,11 @@ public:
 
 private:
   bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
 };
 
 class AMDGPUPrintfRuntimeBindingImpl {
 public:
-  AMDGPUPrintfRuntimeBindingImpl(
-      function_ref<const DominatorTree &(Function &)> GetDT,
-      function_ref<const TargetLibraryInfo &(Function &)> GetTLI)
-      : GetDT(GetDT), GetTLI(GetTLI) {}
+  AMDGPUPrintfRuntimeBindingImpl() = default;
   bool run(Module &M);
 
 private:
@@ -67,14 +59,7 @@ private:
 
   bool lowerPrintfForGpu(Module &M);
 
-  Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
-                  const DominatorTree *DT) {
-    return simplifyInstruction(I, {*TD, TLI, DT});
-  }
-
   const DataLayout *TD;
-  function_ref<const DominatorTree &(Function &)> GetDT;
-  function_ref<const TargetLibraryInfo &(Function &)> GetTLI;
   SmallVector<CallInst *, 32> Printfs;
 };
 } // namespace
@@ -118,7 +103,7 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
     bool ArgDump = false;
     StringRef CurFmt = Fmt.substr(PrevFmtSpecifierIdx,
                                   CurFmtSpecifierIdx - PrevFmtSpecifierIdx);
-    size_t pTag = CurFmt.find_last_of("%");
+    size_t pTag = CurFmt.find_last_of('%');
     if (pTag != StringRef::npos) {
       ArgDump = true;
       while (pTag && CurFmt[--pTag] == '%') {
@@ -174,23 +159,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
     SmallString<16> OpConvSpecifiers;
     Value *Op = CI->getArgOperand(0);
-
-    if (auto LI = dyn_cast<LoadInst>(Op)) {
-      Op = LI->getPointerOperand();
-      for (auto *Use : Op->users()) {
-        if (auto SI = dyn_cast<StoreInst>(Use)) {
-          Op = SI->getValueOperand();
-          break;
-        }
-      }
-    }
-
-    if (auto I = dyn_cast<Instruction>(Op)) {
-      Value *Op_simplified =
-          simplify(I, &GetTLI(*I->getFunction()), &GetDT(*I->getFunction()));
-      if (Op_simplified)
-        Op = Op_simplified;
-    }
 
     StringRef FormatStr;
     if (!getConstantStringInfo(Op, FormatStr)) {
@@ -323,8 +291,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     Value *sumC = ConstantInt::get(SizetTy, Sum, false);
     SmallVector<Value *, 1> alloc_args;
     alloc_args.push_back(sumC);
-    CallInst *pcall =
-        CallInst::Create(PrintfAllocFn, alloc_args, "printf_alloc_fn", CI);
+    CallInst *pcall = CallInst::Create(PrintfAllocFn, alloc_args,
+                                       "printf_alloc_fn", CI->getIterator());
 
     //
     // Insert code to split basicblock with a
@@ -342,25 +310,27 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     SplitBlock(CI->getParent(), cmp);
     Instruction *Brnch =
         SplitBlockAndInsertIfThen(cmp, cmp->getNextNode(), false);
+    BasicBlock::iterator BrnchPoint = Brnch->getIterator();
 
     Builder.SetInsertPoint(Brnch);
 
     // store unique printf id in the buffer
     //
     GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
-        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID", Brnch);
+        I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID",
+        BrnchPoint);
 
     Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
     Value *id_gep_cast =
-        new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", Brnch);
+        new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", BrnchPoint);
 
-    new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, Brnch);
+    new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, BrnchPoint);
 
     // 1st 4 bytes hold the printf_id
     // the following GEP is the buffer pointer
     BufferIdx = GetElementPtrInst::Create(I8Ty, pcall,
                                           ConstantInt::get(Ctx, APInt(32, 4)),
-                                          "PrintBuffGep", Brnch);
+                                          "PrintBuffGep", BrnchPoint);
 
     Type *Int32Ty = Type::getInt32Ty(Ctx);
     for (unsigned ArgCount = 1;
@@ -438,7 +408,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
         unsigned ArgSize = TD->getTypeAllocSize(TheBtCast->getType());
-        StoreInst *StBuff = new StoreInst(TheBtCast, BufferIdx, Brnch);
+        StoreInst *StBuff = new StoreInst(TheBtCast, BufferIdx, BrnchPoint);
         LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                           << *StBuff << '\n');
         (void)StBuff;
@@ -446,7 +416,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           break;
         BufferIdx = GetElementPtrInst::Create(
             I8Ty, BufferIdx, {ConstantInt::get(I32Ty, ArgSize)},
-            "PrintBuffNextPtr", Brnch);
+            "PrintBuffNextPtr", BrnchPoint);
         LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
                           << *BufferIdx << '\n');
       }
@@ -467,12 +437,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
     return false;
 
   auto PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction || !PrintfFunction->isDeclaration())
+  if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
+      M.getModuleFlag("openmp"))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {
     if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
-      if (CI->isCallee(&U))
+      if (CI->isCallee(&U) && !CI->isNoBuiltin())
         Printfs.push_back(CI);
     }
   }
@@ -486,26 +457,11 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
 }
 
 bool AMDGPUPrintfRuntimeBinding::runOnModule(Module &M) {
-  auto GetDT = [this](Function &F) -> DominatorTree & {
-    return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-  };
-  auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  };
-
-  return AMDGPUPrintfRuntimeBindingImpl(GetDT, GetTLI).run(M);
+  return AMDGPUPrintfRuntimeBindingImpl().run(M);
 }
 
 PreservedAnalyses
 AMDGPUPrintfRuntimeBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto GetDT = [&FAM](Function &F) -> DominatorTree & {
-    return FAM.getResult<DominatorTreeAnalysis>(F);
-  };
-  auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-  bool Changed = AMDGPUPrintfRuntimeBindingImpl(GetDT, GetTLI).run(M);
+  bool Changed = AMDGPUPrintfRuntimeBindingImpl().run(M);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

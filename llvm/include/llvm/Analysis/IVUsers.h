@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
@@ -131,7 +132,8 @@ public:
   /// value of the OperandValToReplace of the given IVStrideUse.
   const SCEV *getReplacementExpr(const IVStrideUse &IU) const;
 
-  /// getExpr - Return the expression for the use.
+  /// getExpr - Return the expression for the use. Returns nullptr if the result
+  /// is not invertible.
   const SCEV *getExpr(const IVStrideUse &IU) const;
 
   const SCEV *getStride(const IVStrideUse &IU, const Loop *L) const;

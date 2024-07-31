@@ -61,7 +61,7 @@ public:
 
   void Clear() { m_bytes.clear(); }
 
-  void Dump(Stream *s) const;
+  void Dump(Stream &s) const;
 
   llvm::ArrayRef<uint8_t> GetBytes() const { return m_bytes; }
 

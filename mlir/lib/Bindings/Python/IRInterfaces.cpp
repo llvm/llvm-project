@@ -6,13 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
 #include <optional>
+#include <pybind11/cast.h>
+#include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
+#include "mlir-c/Support.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace py = pybind11;
 
@@ -271,8 +281,9 @@ public:
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands = wrapOperands(operandList);
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(regions);
+    llvm::SmallVector<MlirValue> mlirOperands =
+        wrapOperands(std::move(operandList));
+    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyType> inferredTypes;
     PyMlirContext &pyContext = context.resolve();
@@ -309,13 +320,13 @@ class PyShapedTypeComponents {
 public:
   PyShapedTypeComponents(MlirType elementType) : elementType(elementType) {}
   PyShapedTypeComponents(py::list shape, MlirType elementType)
-      : shape(shape), elementType(elementType), ranked(true) {}
+      : shape(std::move(shape)), elementType(elementType), ranked(true) {}
   PyShapedTypeComponents(py::list shape, MlirType elementType,
                          MlirAttribute attribute)
-      : shape(shape), elementType(elementType), attribute(attribute),
+      : shape(std::move(shape)), elementType(elementType), attribute(attribute),
         ranked(true) {}
   PyShapedTypeComponents(PyShapedTypeComponents &) = delete;
-  PyShapedTypeComponents(PyShapedTypeComponents &&other)
+  PyShapedTypeComponents(PyShapedTypeComponents &&other) noexcept
       : shape(other.shape), elementType(other.elementType),
         attribute(other.attribute), ranked(other.ranked) {}
 
@@ -337,14 +348,15 @@ public:
         .def_static(
             "get",
             [](py::list shape, PyType &elementType) {
-              return PyShapedTypeComponents(shape, elementType);
+              return PyShapedTypeComponents(std::move(shape), elementType);
             },
             py::arg("shape"), py::arg("element_type"),
             "Create a ranked shaped type components object.")
         .def_static(
             "get",
             [](py::list shape, PyType &elementType, PyAttribute &attribute) {
-              return PyShapedTypeComponents(shape, elementType, attribute);
+              return PyShapedTypeComponents(std::move(shape), elementType,
+                                            attribute);
             },
             py::arg("shape"), py::arg("element_type"), py::arg("attribute"),
             "Create a ranked shaped type components object with attribute.")
@@ -428,8 +440,9 @@ public:
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands = wrapOperands(operandList);
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(regions);
+    llvm::SmallVector<MlirValue> mlirOperands =
+        wrapOperands(std::move(operandList));
+    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyShapedTypeComponents> inferredShapedTypeComponents;
     PyMlirContext &pyContext = context.resolve();

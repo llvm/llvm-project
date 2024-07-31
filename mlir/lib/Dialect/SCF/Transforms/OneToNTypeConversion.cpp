@@ -50,8 +50,7 @@ public:
     rewriter.inlineRegionBefore(op.getElseRegion(), newOp.getElseRegion(),
                                 newOp.getElseRegion().end());
 
-    rewriter.replaceOp(op, SmallVector<Value>(newOp->getResults()),
-                       resultMapping);
+    rewriter.replaceOp(op, newOp->getResults(), resultMapping);
     return success();
   }
 };
@@ -95,8 +94,7 @@ public:
       rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
     }
 
-    rewriter.replaceOp(op, SmallVector<Value>(newOp->getResults()),
-                       resultMapping);
+    rewriter.replaceOp(op, newOp->getResults(), resultMapping);
     return success();
   }
 };
@@ -113,7 +111,7 @@ public:
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();
@@ -133,8 +131,65 @@ public:
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { op->setOperands(adaptor.getFlatOperands()); });
+
+    return success();
+  }
+};
+
+class ConvertTypesInSCFForOp final : public OneToNOpConversionPattern<ForOp> {
+public:
+  using OneToNOpConversionPattern<ForOp>::OneToNOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ForOp forOp, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
+    const OneToNTypeMapping &operandMapping = adaptor.getOperandMapping();
+    const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
+
+    // Nothing to do if there is no non-identity conversion.
+    if (!operandMapping.hasNonIdentityConversion() &&
+        !resultMapping.hasNonIdentityConversion())
+      return failure();
+
+    // If the lower-bound, upper-bound, or step were expanded, abort the
+    // conversion. This conversion does not know what to do in such cases.
+    ValueRange lbs = adaptor.getLowerBound();
+    ValueRange ubs = adaptor.getUpperBound();
+    ValueRange steps = adaptor.getStep();
+    if (lbs.size() != 1 || ubs.size() != 1 || steps.size() != 1)
+      return rewriter.notifyMatchFailure(
+          forOp, "index operands converted to multiple values");
+
+    Location loc = forOp.getLoc();
+
+    Region *region = &forOp.getRegion();
+    Block *block = &region->front();
+
+    // Construct the new for-op with an empty body.
+    ValueRange newInits = adaptor.getFlatOperands().drop_front(3);
+    auto newOp =
+        rewriter.create<ForOp>(loc, lbs[0], ubs[0], steps[0], newInits);
+    newOp->setAttrs(forOp->getAttrs());
+
+    // We do not need the empty blocks created by rewriter.
+    rewriter.eraseBlock(newOp.getBody());
+
+    // Convert the signature of the body region.
+    OneToNTypeMapping bodyTypeMapping(block->getArgumentTypes());
+    if (failed(typeConverter->convertSignatureArgs(block->getArgumentTypes(),
+                                                   bodyTypeMapping)))
+      return failure();
+
+    // Perform signature conversion on the body block.
+    rewriter.applySignatureConversion(block, bodyTypeMapping);
+
+    // Splice the old body region into the new for-op.
+    Region &dstRegion = newOp.getBodyRegion();
+    rewriter.inlineRegionBefore(forOp.getRegion(), dstRegion, dstRegion.end());
+
+    rewriter.replaceOp(forOp, newOp.getResults(), resultMapping);
 
     return success();
   }
@@ -148,6 +203,7 @@ void populateSCFStructuralOneToNTypeConversions(TypeConverter &typeConverter,
   patterns.add<
       // clang-format off
       ConvertTypesInSCFConditionOp,
+      ConvertTypesInSCFForOp,
       ConvertTypesInSCFIfOp,
       ConvertTypesInSCFWhileOp,
       ConvertTypesInSCFYieldOp

@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "NoexceptMoveConstructorCheck.h"
-#include "../utils/LexerUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
+
+// FixItHint - comment added to fix list.rst generation in add_new_check.py.
+// Do not remove. Fixes are generated in base class.
 
 namespace clang::tidy::performance {
 
@@ -22,48 +21,24 @@ void NoexceptMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(unless(isDeleted()),
                     anyOf(cxxConstructorDecl(isMoveConstructor()),
                           isMoveAssignmentOperator()))
-          .bind("decl"),
+          .bind(BindFuncDeclName),
       this);
 }
 
-void NoexceptMoveConstructorCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *FuncDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("decl");
-  assert(FuncDecl);
+DiagnosticBuilder NoexceptMoveConstructorCheck::reportMissingNoexcept(
+    const FunctionDecl *FuncDecl) {
+  return diag(FuncDecl->getLocation(),
+              "move %select{assignment operator|constructor}0s should "
+              "be marked noexcept")
+         << CXXConstructorDecl::classof(FuncDecl);
+}
 
-  if (SpecAnalyzer.analyze(FuncDecl) !=
-      utils::ExceptionSpecAnalyzer::State::Throwing)
-    return;
-
-  const bool IsConstructor = CXXConstructorDecl::classof(FuncDecl);
-
-  // Don't complain about nothrow(false), but complain on nothrow(expr)
-  // where expr evaluates to false.
-  const auto *ProtoType = FuncDecl->getType()->castAs<FunctionProtoType>();
-  const Expr *NoexceptExpr = ProtoType->getNoexceptExpr();
-  if (NoexceptExpr) {
-    NoexceptExpr = NoexceptExpr->IgnoreImplicit();
-    if (!isa<CXXBoolLiteralExpr>(NoexceptExpr)) {
-      diag(NoexceptExpr->getExprLoc(),
-           "noexcept specifier on the move %select{assignment "
-           "operator|constructor}0 evaluates to 'false'")
-          << IsConstructor;
-    }
-    return;
-  }
-
-  auto Diag = diag(FuncDecl->getLocation(),
-                   "move %select{assignment operator|constructor}0s should "
-                   "be marked noexcept")
-              << IsConstructor;
-  // Add FixIt hints.
-
-  const SourceManager &SM = *Result.SourceManager;
-
-  const SourceLocation NoexceptLoc =
-      utils::lexer::getLocationForNoexceptSpecifier(FuncDecl, SM);
-  if (NoexceptLoc.isValid())
-    Diag << FixItHint::CreateInsertion(NoexceptLoc, " noexcept ");
+void NoexceptMoveConstructorCheck::reportNoexceptEvaluatedToFalse(
+    const FunctionDecl *FuncDecl, const Expr *NoexceptExpr) {
+  diag(NoexceptExpr->getExprLoc(),
+       "noexcept specifier on the move %select{assignment "
+       "operator|constructor}0 evaluates to 'false'")
+      << CXXConstructorDecl::classof(FuncDecl);
 }
 
 } // namespace clang::tidy::performance

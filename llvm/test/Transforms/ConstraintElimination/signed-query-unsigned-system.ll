@@ -8,7 +8,6 @@ define i1 @sge_0_unsigned_a_ne_0(i8 %a) {
 ; CHECK-NEXT:    [[A_NE_0:%.*]] = icmp ne i8 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NE_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sge i16 [[EXT]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.ne.0 = icmp ne i8 %a, 0
@@ -23,7 +22,6 @@ define i1 @sgt_0_unsigned_a_ne_0(i8 %a) {
 ; CHECK-NEXT:    [[A_NE_0:%.*]] = icmp ne i8 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NE_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.ne.0 = icmp ne i8 %a, 0
@@ -38,7 +36,6 @@ define i1 @sgt_0_unsigned_a_sgt_0(i8 %a) {
 ; CHECK-NEXT:    [[A_SGT_0:%.*]] = icmp sgt i8 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGT_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.sgt.0 = icmp sgt i8 %a, 0
@@ -53,7 +50,6 @@ define i1 @sge_0_unsigned_a_sge_0(i8 %a) {
 ; CHECK-NEXT:    [[A_SGE_0:%.*]] = icmp sge i8 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sge i16 [[EXT]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.sge.0 = icmp sge i8 %a, 0
@@ -68,7 +64,6 @@ define i1 @sgt_0_unsigned_a_ugt_0(i8 %a) {
 ; CHECK-NEXT:    [[A_UGT_0:%.*]] = icmp ugt i8 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.ugt.0 = icmp ugt i8 %a, 0
@@ -98,7 +93,6 @@ define i1 @sgt_1_unsigned_a_ugt_1(i8 %a) {
 ; CHECK-NEXT:    [[A_UGT_1:%.*]] = icmp ugt i8 [[A:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_1]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 1
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.ugt.1 = icmp ugt i8 %a, 1
@@ -115,8 +109,7 @@ define i1 @sge_no_const_unsigned_uge(i8 %a, i16 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGE_B]])
 ; CHECK-NEXT:    [[B_POS:%.*]] = icmp sge i16 [[B]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B_POS]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[EXT]], [[B]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ext = zext i8 %a to i16
   %a.uge.b = icmp uge i16 %ext, %b
@@ -133,7 +126,6 @@ define i1 @sgt_0_unsigned_a_ugt_neg_10(i8 %a) {
 ; CHECK-NEXT:    [[A_UGT_0:%.*]] = icmp ugt i8 [[A:%.*]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[EXT]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
   %a.ugt.0 = icmp ugt i8 %a, 10
@@ -148,7 +140,6 @@ define i1 @sge_neg_1_sge_0_known(i8 %a) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[A_NE_0:%.*]] = icmp sge i16 [[EXT]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NE_0]])
-; CHECK-NEXT:    [[T:%.*]] = icmp sge i16 [[EXT]], -1
 ; CHECK-NEXT:    ret i1 true
 ;
   %ext = zext i8 %a to i16

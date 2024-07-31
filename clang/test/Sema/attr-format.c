@@ -29,7 +29,6 @@ struct _mystruct {
 
 typedef int (*f3_ptr)(char*,...) __attribute__((format(printf,1,0))); // no-error
 
-// <rdar://problem/6623513>
 int rdar6623513(void *, const char*, const char*, ...)
   __attribute__ ((format (printf, 3, 0)));
 
@@ -94,13 +93,16 @@ void call_nonvariadic(void) {
   d3("%s", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
 }
 
-__attribute__((format(printf, 1, 2))) void forward_fixed(const char *fmt, int i) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
-  forward_fixed(fmt, i);
-  a(fmt, i);
+__attribute__((format(printf, 1, 2)))
+void forward_fixed(const char *fmt, _Bool b, char i, short j, int k, float l, double m) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
+  forward_fixed(fmt, b, i, j, k, l, m);
+  a(fmt, b, i, j, k, l, m);
 }
 
-__attribute__((format(printf, 1, 2))) void forward_fixed_2(const char *fmt, int i, int j) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
-  forward_fixed_2(fmt, i, j);
-  a(fmt, i);
-}
-
+// OpenBSD
+// same as format(printf(...))...
+void a2(const char *a, ...) __attribute__((format(syslog, 1, 2)));    // no-error
+void b2(const char *a, ...) __attribute__((format(syslog, 1, 1)));    // expected-error {{'format' attribute parameter 3 is out of bounds}}
+void c2(const char *a, ...) __attribute__((format(syslog, 0, 2)));    // expected-error {{'format' attribute parameter 2 is out of bounds}}
+void d2(const char *a, int c) __attribute__((format(syslog, 1, 2)));  // expected-warning {{GCC requires a function with the 'format' attribute to be variadic}}
+void e2(char *str, int c, ...) __attribute__((format(syslog, 2, 3))); // expected-error {{format argument not a string type}}

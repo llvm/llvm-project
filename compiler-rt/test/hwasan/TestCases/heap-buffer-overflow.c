@@ -9,8 +9,6 @@
 // RUN: not %run %t 31 2>&1 | FileCheck %s --check-prefix=CHECK31
 // RUN: not %run %t 30 20 2>&1 | FileCheck %s --check-prefix=CHECK20
 
-// REQUIRES: stable-runtime
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
@@ -38,36 +36,36 @@ int main(int argc, char **argv) {
   }
 #endif
 
-// CHECK40: allocated heap chunk; size: 32 offset: 8
-// CHECK40: Cause: heap-buffer-overflow
-// CHECK40: is located 10 bytes after a 30-byte region
-//
-// CHECK80: allocated heap chunk; size: 32 offset: 16
-// CHECK80: Cause: heap-buffer-overflow
-// CHECK80: is located 50 bytes after a 30-byte region
-//
-// CHECKm30: Cause: heap-buffer-overflow
-// CHECKm30: is located 30 bytes before a 30-byte region
-//
-// CHECKMm30: is a large allocated heap chunk; size: 1003520 offset: -30
-// CHECKMm30: Cause: heap-buffer-overflow
-// CHECKMm30: is located 30 bytes before a 1000000-byte region
-//
-// CHECKM: is a large allocated heap chunk; size: 1003520 offset: 1000000
-// CHECKM: Cause: heap-buffer-overflow
-// CHECKM: is located 0 bytes after a 1000000-byte region
-//
-// CHECK31: tags: [[TAG:..]]/0e([[TAG]]) (ptr/mem)
-// CHECK31-NOT: Invalid access starting at offset
-// CHECK31: Cause: heap-buffer-overflow
-// CHECK31: is located 1 bytes after a 30-byte region
-// CHECK31: Memory tags around the buggy address
-// CHECK31: [0e]
-// CHECK31: Tags for short granules around the buggy address
-// CHECK31: {{\[}}[[TAG]]]
-//
-// CHECK20-NOT: Invalid access starting at offset
-// CHECK20: Cause: heap-buffer-overflow
-// CHECK20: is located 10 bytes after a 20-byte region [0x{{.*}}0,0x{{.*}}4)
+  // CHECK40: allocated heap chunk; size: 32 offset: 8
+  // CHECK40: Cause: heap-buffer-overflow
+  // CHECK40: is located 10 bytes after a 30-byte region
+  //
+  // CHECK80: allocated heap chunk; size: 32 offset: 16
+  // CHECK80: Cause: heap-buffer-overflow
+  // CHECK80: is located 50 bytes after a 30-byte region
+  //
+  // CHECKm30: Cause: heap-buffer-overflow
+  // CHECKm30: is located 30 bytes before a 30-byte region
+  //
+  // CHECKMm30: is a large allocated heap chunk; size: 1003520 offset: -30
+  // CHECKMm30: Cause: heap-buffer-overflow
+  // CHECKMm30: is located 30 bytes before a 1000000-byte region
+  //
+  // CHECKM: is a large allocated heap chunk; size: 1003520 offset: 1000000
+  // CHECKM: Cause: heap-buffer-overflow
+  // CHECKM: is located 0 bytes after a 1000000-byte region
+  //
+  // CHECK31: tags: [[TAG:..]]/0e([[TAG]]) (ptr/mem)
+  // CHECK31-NOT: Invalid access starting at offset
+  // CHECK31: Cause: heap-buffer-overflow
+  // CHECK31: is located 1 bytes after a 30-byte region
+  // CHECK31: Memory tags around the buggy address
+  // CHECK31: [0e]
+  // CHECK31: Tags for short granules around the buggy address
+  // CHECK31: {{\[}}[[TAG]]]
+  //
+  // CHECK20-NOT: Invalid access starting at offset
+  // CHECK20: Cause: heap-buffer-overflow
+  // CHECK20: is located 10 bytes after a 20-byte region [0x{{.*}}0,0x{{.*}}4)
   free(x);
 }

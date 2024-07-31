@@ -8,7 +8,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XtensaMCExpr.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
+#include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 
@@ -35,10 +38,13 @@ class XtensaAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
-  // Override MCTargetAsmParser.
-  bool ParseDirective(AsmToken DirectiveID) override;
-  bool parseRegister(MCRegister &RegNo,
-                     SMLoc &StartLoc, SMLoc &EndLoc) override;
+  XtensaTargetStreamer &getTargetStreamer() {
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<XtensaTargetStreamer &>(TS);
+  }
+
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -48,23 +54,27 @@ class XtensaAsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
+  bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                          const MCSubtargetInfo *STI);
+
 // Auto-generated instruction matching functions
 #define GET_ASSEMBLER_HEADER
 #include "XtensaGenAsmMatcher.inc"
 
-  OperandMatchResultTy parseImmediate(OperandVector &Operands);
-  OperandMatchResultTy parseRegister(OperandVector &Operands,
-                                     bool AllowParens = false, bool SR = false);
-  OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
+  ParseStatus parseImmediate(OperandVector &Operands);
+  ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false,
+                            bool SR = false);
+  ParseStatus parseOperandWithModifier(OperandVector &Operands);
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic,
                     bool SR = false);
   bool ParseInstructionWithSR(ParseInstructionInfo &Info, StringRef Name,
                               SMLoc NameLoc, OperandVector &Operands);
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override {
-    return MatchOperand_NoMatch;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override {
+    return ParseStatus::NoMatch;
   }
-  OperandMatchResultTy parsePCRelTarget(OperandVector &Operands);
+  ParseStatus parsePCRelTarget(OperandVector &Operands);
+  bool parseLiteralDirective(SMLoc L);
 
 public:
   enum XtensaMatchResultTy {
@@ -151,7 +161,8 @@ public:
 
   bool isImm12() const { return isImm(-2048, 2047); }
 
-  bool isImm12m() const { return isImm(-2048, 2047); }
+  // Convert MOVI to literal load, when immediate is not in range (-2048, 2047)
+  bool isImm12m() const { return Kind == Immediate; }
 
   bool isOffset4m32() const {
     return isImm(0, 60) &&
@@ -247,7 +258,7 @@ public:
   /// getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == Register && "Invalid type access!");
     return Reg.RegNum;
   }
@@ -351,6 +362,69 @@ static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
   return Loc;
 }
 
+bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
+                                         MCStreamer &Out,
+                                         const MCSubtargetInfo *STI) {
+  Inst.setLoc(IDLoc);
+  const unsigned Opcode = Inst.getOpcode();
+  switch (Opcode) {
+  case Xtensa::L32R: {
+    const MCSymbolRefExpr *OpExpr =
+        static_cast<const MCSymbolRefExpr *>(Inst.getOperand(1).getExpr());
+    XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
+    const MCExpr *NewOpExpr = XtensaMCExpr::create(OpExpr, Kind, getContext());
+    Inst.getOperand(1).setExpr(NewOpExpr);
+    break;
+  }
+  case Xtensa::MOVI: {
+    XtensaTargetStreamer &TS = this->getTargetStreamer();
+
+    // Expand MOVI operand
+    if (!Inst.getOperand(1).isExpr()) {
+      uint64_t ImmOp64 = Inst.getOperand(1).getImm();
+      int32_t Imm = ImmOp64;
+      if (!isInt<12>(Imm)) {
+        XtensaTargetStreamer &TS = this->getTargetStreamer();
+        MCInst TmpInst;
+        TmpInst.setLoc(IDLoc);
+        TmpInst.setOpcode(Xtensa::L32R);
+        const MCExpr *Value = MCConstantExpr::create(ImmOp64, getContext());
+        MCSymbol *Sym = getContext().createTempSymbol();
+        const MCExpr *Expr = MCSymbolRefExpr::create(
+            Sym, MCSymbolRefExpr::VK_None, getContext());
+        const MCExpr *OpExpr = XtensaMCExpr::create(
+            Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+        TmpInst.addOperand(Inst.getOperand(0));
+        MCOperand Op1 = MCOperand::createExpr(OpExpr);
+        TmpInst.addOperand(Op1);
+        TS.emitLiteral(Sym, Value, true, IDLoc);
+        Inst = TmpInst;
+      }
+    } else {
+      MCInst TmpInst;
+      TmpInst.setLoc(IDLoc);
+      TmpInst.setOpcode(Xtensa::L32R);
+      const MCExpr *Value = Inst.getOperand(1).getExpr();
+      MCSymbol *Sym = getContext().createTempSymbol();
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+      const MCExpr *OpExpr = XtensaMCExpr::create(
+          Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+      TmpInst.addOperand(Inst.getOperand(0));
+      MCOperand Op1 = MCOperand::createExpr(OpExpr);
+      TmpInst.addOperand(Op1);
+      Inst = TmpInst;
+      TS.emitLiteral(Sym, Value, true, IDLoc);
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return true;
+}
+
 bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -364,6 +438,7 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   default:
     break;
   case Match_Success:
+    processInstruction(Inst, IDLoc, Out, STI);
     Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
@@ -434,8 +509,7 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   report_fatal_error("Unknown match type detected!");
 }
 
-OperandMatchResultTy
-XtensaAsmParser::parsePCRelTarget(OperandVector &Operands) {
+ParseStatus XtensaAsmParser::parsePCRelTarget(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   LLVM_DEBUG(dbgs() << "parsePCRelTarget\n");
 
@@ -445,25 +519,23 @@ XtensaAsmParser::parsePCRelTarget(OperandVector &Operands) {
   const MCExpr *Expr = nullptr;
   if (Parser.parseExpression(Expr)) {
     // We have no way of knowing if a symbol was consumed so we must ParseFail
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
   }
 
   // Currently not support constants
-  if (Expr->getKind() == MCExpr::ExprKind::Constant) {
-    Error(getLoc(), "unknown operand");
-    return MatchOperand_ParseFail;
-  }
+  if (Expr->getKind() == MCExpr::ExprKind::Constant)
+    return Error(getLoc(), "unknown operand");
 
   Operands.push_back(XtensaOperand::createImm(Expr, S, getLexer().getLoc()));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-bool XtensaAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool XtensaAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                     SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = 0;
+  Reg = Xtensa::NoRegister;
   StringRef Name = getLexer().getTok().getIdentifier();
 
   if (!MatchRegisterName(Name) && !MatchRegisterAltName(Name)) {
@@ -474,8 +546,8 @@ bool XtensaAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
   return Error(StartLoc, "invalid register name");
 }
 
-OperandMatchResultTy XtensaAsmParser::parseRegister(OperandVector &Operands,
-                                                    bool AllowParens, bool SR) {
+ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
+                                           bool AllowParens, bool SR) {
   SMLoc FirstS = getLoc();
   bool HadParens = false;
   AsmToken Buf[2];
@@ -486,7 +558,7 @@ OperandMatchResultTy XtensaAsmParser::parseRegister(OperandVector &Operands,
     size_t ReadCount = getLexer().peekTokens(Buf);
     if (ReadCount == 2 && Buf[1].getKind() == AsmToken::RParen) {
       if ((Buf[0].getKind() == AsmToken::Integer) && (!SR))
-        return MatchOperand_NoMatch;
+        return ParseStatus::NoMatch;
       HadParens = true;
       getParser().Lex(); // Eat '('
     }
@@ -496,11 +568,11 @@ OperandMatchResultTy XtensaAsmParser::parseRegister(OperandVector &Operands,
 
   switch (getLexer().getKind()) {
   default:
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   case AsmToken::Integer:
     if (!SR)
-      return MatchOperand_NoMatch;
-    RegName = StringRef(std::to_string(getLexer().getTok().getIntVal()));
+      return ParseStatus::NoMatch;
+    RegName = getLexer().getTok().getString();
     RegNo = MatchRegisterName(RegName);
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
@@ -516,7 +588,7 @@ OperandMatchResultTy XtensaAsmParser::parseRegister(OperandVector &Operands,
   if (RegNo == 0) {
     if (HadParens)
       getLexer().UnLex(Buf[0]);
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   }
   if (HadParens)
     Operands.push_back(XtensaOperand::createToken("(", FirstS));
@@ -530,17 +602,17 @@ OperandMatchResultTy XtensaAsmParser::parseRegister(OperandVector &Operands,
     Operands.push_back(XtensaOperand::createToken(")", getLoc()));
   }
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy XtensaAsmParser::parseImmediate(OperandVector &Operands) {
+ParseStatus XtensaAsmParser::parseImmediate(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
   const MCExpr *Res;
 
   switch (getLexer().getKind()) {
   default:
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   case AsmToken::LParen:
   case AsmToken::Minus:
   case AsmToken::Plus:
@@ -548,12 +620,12 @@ OperandMatchResultTy XtensaAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::Integer:
   case AsmToken::String:
     if (getParser().parseExpression(Res))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
     break;
   case AsmToken::Identifier: {
     StringRef Identifier;
     if (getParser().parseIdentifier(Identifier))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
     Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
@@ -565,12 +637,11 @@ OperandMatchResultTy XtensaAsmParser::parseImmediate(OperandVector &Operands) {
 
   E = SMLoc::getFromPointer(S.getPointer() - 1);
   Operands.push_back(XtensaOperand::createImm(Res, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-XtensaAsmParser::parseOperandWithModifier(OperandVector &Operands) {
-  return MatchOperand_ParseFail;
+ParseStatus XtensaAsmParser::parseOperandWithModifier(OperandVector &Operands) {
+  return ParseStatus::Failure;
 }
 
 /// Looks at a token type and creates the relevant operand
@@ -580,35 +651,33 @@ bool XtensaAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
                                    bool SR) {
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  OperandMatchResultTy ResTy = MatchOperandParserImpl(Operands, Mnemonic);
-  if (ResTy == MatchOperand_Success)
+  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
+  if (Res.isSuccess())
     return false;
 
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
   // there was a match, but an error occurred, in which case, just return that
   // the operand parsing failed.
-  if (ResTy == MatchOperand_ParseFail)
+  if (Res.isFailure())
     return true;
 
   // Attempt to parse token as register
-  if (parseRegister(Operands, true, SR) == MatchOperand_Success)
+  if (parseRegister(Operands, true, SR).isSuccess())
     return false;
 
   // Attempt to parse token as an immediate
-  if (parseImmediate(Operands) == MatchOperand_Success) {
+  if (parseImmediate(Operands).isSuccess())
     return false;
-  }
 
   // Finally we have exhausted all options and must declare defeat.
-  Error(getLoc(), "unknown operand");
-  return true;
+  return Error(getLoc(), "unknown operand");
 }
 
 bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
                                              StringRef Name, SMLoc NameLoc,
                                              OperandVector &Operands) {
-  if ((Name.startswith("wsr.") || Name.startswith("rsr.") ||
-       Name.startswith("xsr.")) &&
+  if ((Name.starts_with("wsr.") || Name.starts_with("rsr.") ||
+       Name.starts_with("xsr.")) &&
       (Name.size() > 4)) {
     // Parse case when instruction name is concatenated with SR register
     // name, like "wsr.sar a1"
@@ -622,10 +691,8 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (RegNo == 0) {
-      Error(NameLoc, "invalid register name");
-      return true;
-    }
+    if (RegNo == 0)
+      return Error(NameLoc, "invalid register name");
 
     // Parse operand
     if (parseOperand(Operands, Name))
@@ -666,8 +733,8 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
 bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
-  if (Name.startswith("wsr") || Name.startswith("rsr") ||
-      Name.startswith("xsr")) {
+  if (Name.starts_with("wsr") || Name.starts_with("rsr") ||
+      Name.starts_with("xsr")) {
     return ParseInstructionWithSR(Info, Name, NameLoc, Operands);
   }
 
@@ -697,7 +764,56 @@ bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-bool XtensaAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
+bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  const MCExpr *Value;
+  SMLoc LiteralLoc = getLexer().getLoc();
+  XtensaTargetStreamer &TS = this->getTargetStreamer();
+
+  if (Parser.parseExpression(Value))
+    return true;
+
+  const MCSymbolRefExpr *SE = dyn_cast<MCSymbolRefExpr>(Value);
+
+  if (!SE)
+    return Error(LiteralLoc, "literal label must be a symbol");
+
+  if (Parser.parseComma())
+    return true;
+
+  SMLoc OpcodeLoc = getLexer().getLoc();
+  if (parseOptionalToken(AsmToken::EndOfStatement))
+    return Error(OpcodeLoc, "expected value");
+
+  if (Parser.parseExpression(Value))
+    return true;
+
+  if (parseEOL())
+    return true;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(SE->getSymbol().getName());
+
+  TS.emitLiteral(Sym, Value, true, LiteralLoc);
+
+  return false;
+}
+
+ParseStatus XtensaAsmParser::parseDirective(AsmToken DirectiveID) {
+  StringRef IDVal = DirectiveID.getString();
+  SMLoc Loc = getLexer().getLoc();
+
+  if (IDVal == ".literal_position") {
+    XtensaTargetStreamer &TS = this->getTargetStreamer();
+    TS.emitLiteralPosition();
+    return parseEOL();
+  }
+
+  if (IDVal == ".literal") {
+    return parseLiteralDirective(Loc);
+  }
+
+  return ParseStatus::NoMatch;
+}
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaAsmParser() {

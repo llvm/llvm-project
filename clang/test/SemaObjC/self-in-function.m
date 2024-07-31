@@ -1,6 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -fblocks -verify %s
 // expected-no-diagnostics
-// rdar://9181463
 
 typedef struct objc_class *Class;
 

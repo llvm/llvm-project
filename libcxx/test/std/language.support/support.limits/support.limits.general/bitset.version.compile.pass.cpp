@@ -16,6 +16,7 @@
 // Test the feature test macros defined by <bitset>
 
 /*  Constant                      Value
+    __cpp_lib_bitset              202306L [C++26]
     __cpp_lib_constexpr_bitset    202207L [C++23]
 */
 
@@ -24,11 +25,19 @@
 
 #if TEST_STD_VER < 14
 
+# ifdef __cpp_lib_bitset
+#   error "__cpp_lib_bitset should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 14
+
+# ifdef __cpp_lib_bitset
+#   error "__cpp_lib_bitset should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++23"
@@ -36,17 +45,29 @@
 
 #elif TEST_STD_VER == 17
 
+# ifdef __cpp_lib_bitset
+#   error "__cpp_lib_bitset should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_bitset
+#   error "__cpp_lib_bitset should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 23
+
+# ifdef __cpp_lib_bitset
+#   error "__cpp_lib_bitset should not be defined before c++26"
+# endif
 
 # ifndef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should be defined in c++23"
@@ -56,6 +77,13 @@
 # endif
 
 #elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_bitset
+#   error "__cpp_lib_bitset should be defined in c++26"
+# endif
+# if __cpp_lib_bitset != 202306L
+#   error "__cpp_lib_bitset should have the value 202306L in c++26"
+# endif
 
 # ifndef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should be defined in c++26"

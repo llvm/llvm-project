@@ -1,9 +1,7 @@
 ## Test invalid instructions on both loongarch32 and loongarch64 target.
 
-# RUN: not llvm-mc --triple=loongarch32 --mattr=-f %s 2>&1 \
-# RUN:         | FileCheck %s --check-prefixes=CHECK,CHECK64
-# RUN: not llvm-mc --triple=loongarch64 --mattr=-f %s 2>&1 --defsym=LA64=1 \
-# RUN:         | FileCheck %s
+# RUN: not llvm-mc --triple=loongarch32 %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
+# RUN: not llvm-mc --triple=loongarch64 %s 2>&1 --defsym=LA64=1 | FileCheck %s
 
 ## Out of range immediates
 ## uimm2
@@ -101,10 +99,12 @@ jirl $a0, $a0, 0x20000
 # CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 
 ## simm20
-pcaddi $a0, -0x80001
-# CHECK: :[[#@LINE-1]]:13: error: immediate must be an integer in the range [-524288, 524287]
 pcaddu12i $a0, 0x80000
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+
+## simm20_pcaddi
+pcaddi $a0, -0x80001
+# CHECK: :[[#@LINE-1]]:13: error: operand must be a symbol with modifier (e.g. %pcrel_20) or an integer in the range [-524288, 524287]
 
 ## simm20_lu12iw
 lu12i.w $a0, -0x80001
@@ -180,12 +180,6 @@ andi $a0, $a0
 
 ## Instructions outside the base integer ISA
 ## TODO: Test instructions in LSX/LASX/LBT/LVZ after their introduction.
-
-## Floating-Point mnemonics
-fadd.s $fa0, $fa0, $fa0
-# CHECK:   :[[#@LINE-1]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
-fadd.d $fa0, $fa0, $fa0
-# CHECK:   :[[#@LINE-1]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point)
 
 ## Using floating point registers when integer registers are expected
 sll.w $a0, $a0, $fa0

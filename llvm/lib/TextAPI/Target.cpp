@@ -21,20 +21,14 @@ Expected<Target> Target::create(StringRef TargetValue) {
   auto PlatformStr = Result.second;
   PlatformType Platform;
   Platform = StringSwitch<PlatformType>(PlatformStr)
-                 .Case("macos", PLATFORM_MACOS)
-                 .Case("ios", PLATFORM_IOS)
-                 .Case("tvos", PLATFORM_TVOS)
-                 .Case("watchos", PLATFORM_WATCHOS)
-                 .Case("bridgeos", PLATFORM_BRIDGEOS)
-                 .Case("maccatalyst", PLATFORM_MACCATALYST)
-                 .Case("ios-simulator", PLATFORM_IOSSIMULATOR)
-                 .Case("tvos-simulator", PLATFORM_TVOSSIMULATOR)
-                 .Case("watchos-simulator", PLATFORM_WATCHOSSIMULATOR)
-                 .Case("driverkit", PLATFORM_DRIVERKIT)
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  .Case(#tapi_target, PLATFORM_##platform)
+#include "llvm/BinaryFormat/MachO.def"
                  .Default(PLATFORM_UNKNOWN);
 
   if (Platform == PLATFORM_UNKNOWN) {
-    if (PlatformStr.startswith("<") && PlatformStr.endswith(">")) {
+    if (PlatformStr.starts_with("<") && PlatformStr.ends_with(">")) {
       PlatformStr = PlatformStr.drop_front().drop_back();
       unsigned long long RawValue;
       if (!PlatformStr.getAsInteger(10, RawValue))

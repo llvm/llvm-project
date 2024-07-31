@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -27,16 +28,18 @@
 // size_t hash_value(path const&) noexcept;
 // template<> struct hash<filesystem::path>;
 
-#include "filesystem_include.h"
+#include <filesystem>
+#include <cassert>
+#include <string>
 #include <type_traits>
 #include <vector>
-#include <cassert>
 
-#include "test_macros.h"
+#include "assert_macros.h"
+#include "count_new.h"
 #include "test_comparisons.h"
 #include "test_iterators.h"
-#include "count_new.h"
-#include "filesystem_test_helper.h"
+#include "test_macros.h"
+namespace fs = std::filesystem;
 
 struct PathCompareTest {
   const char* LHS;

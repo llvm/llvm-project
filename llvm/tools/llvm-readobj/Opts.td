@@ -19,12 +19,15 @@ def all : FF<"all", "Equivalent to setting: --file-header, --program-headers, --
              "--section-groups and --histogram">;
 def arch_specific : FF<"arch-specific", "Display architecture-specific information">;
 def bb_addr_map : FF<"bb-addr-map", "Display the BB address map section">;
+def pretty_pgo_analysis_map : FF<"pretty-pgo-analysis-map", "Display PGO analysis values with formatting rather than raw numbers">;
 def cg_profile : FF<"cg-profile", "Display call graph profile section">;
+def decompress : FF<"decompress", "Dump decompressed section content when used with -x or -p">;
 defm demangle : BB<"demangle", "Demangle symbol names", "Do not demangle symbol names (default)">;
 def dependent_libraries : FF<"dependent-libraries", "Display the dependent libraries section">;
 def dyn_relocations : FF<"dyn-relocations", "Display the dynamic relocation entries in the file">;
 def dyn_syms : FF<"dyn-syms", "Display the dynamic symbol table">;
 def expand_relocs : FF<"expand-relocs", "Expand each shown relocation to multiple lines">;
+def extra_sym_info : FF<"extra-sym-info", "Display extra information when showing symbols">;
 def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
@@ -59,7 +62,6 @@ def memtag : FF<"memtag", "Display memory tagging metadata (modes, Android notes
 def needed_libs : FF<"needed-libs", "Display the needed libraries">, Group<grp_elf>;
 def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;
-def raw_relr : FF<"raw-relr", "Do not decode relocations in SHT_RELR section, display raw contents">, Group<grp_elf>;
 def version_info : FF<"version-info", "Display version sections">, Group<grp_elf>;
 
 // Mach-O specific options.
@@ -135,5 +137,7 @@ def : F<"S", "Alias for --section-headers">, Alias<section_headers>;
 def : F<"s", "Alias for --symbols">, Alias<symbols>;
 def : F<"t", "Alias for --section-details">, Alias<section_details>;
 def : F<"u", "Alias for --unwind">, Alias<unwind>;
+def : F<"X", "Alias for --extra-sym-info">, Alias<extra_sym_info>, Group<grp_elf>;
 def : F<"V", "Alias for --version-info">, Alias<version_info>, Group<grp_elf>;
 def : JoinedOrSeparate<["-"], "x">, Alias<hex_dump_EQ>, HelpText<"Alias for --hex-dump">, MetaVarName<"<name or index>">;
+def : F<"z", "Alias for --decompress">, Alias<decompress>;

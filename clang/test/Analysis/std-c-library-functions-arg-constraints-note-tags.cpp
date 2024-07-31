@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux \
@@ -52,6 +52,7 @@ void test_buffer_size_note(char *buf, int y) {
 int __test_case_note();
 
 int test_case_note_1(int y) {
+  int x0 = __test_case_note();
   int x = __test_case_note(); // expected-note{{Function returns 0}} \
                               // expected-note{{'x' initialized here}}
   return y / x; // expected-warning{{Division by zero}} \
@@ -59,7 +60,7 @@ int test_case_note_1(int y) {
 }
 
 int test_case_note_2(int y) {
-  int x = __test_case_note(); // expected-note{{Function returns 1}}
+  int x = __test_case_note();
   return y / (x - 1); // expected-warning{{Division by zero}} \
                       // expected-note{{Division by zero}}
 }

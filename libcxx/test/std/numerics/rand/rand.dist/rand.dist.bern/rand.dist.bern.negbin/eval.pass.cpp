@@ -8,6 +8,14 @@
 //
 // REQUIRES: long_tests
 
+// This test is super slow, in particular with msan or tsan. In order to avoid timeouts and to
+// spend less time waiting for this particular test to complete we compile with optimizations.
+// ADDITIONAL_COMPILE_FLAGS(msan): -O1
+// ADDITIONAL_COMPILE_FLAGS(tsan): -O1
+
+// FIXME: This and other tests fail under GCC with optimizations enabled.
+// More investigation is needed, but it appears that  GCC is performing more constant folding.
+
 // <random>
 
 // template<class IntType = int>
@@ -66,7 +74,7 @@ void test1() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
 template <class T>
@@ -107,8 +115,8 @@ void test2() {
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.1);
 }
 
 template <class T>
@@ -149,8 +157,8 @@ void test3() {
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
 }
 
 template <class T>
@@ -235,8 +243,8 @@ void test5() {
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.04);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.05);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.3);
 }
 
 template <class T>

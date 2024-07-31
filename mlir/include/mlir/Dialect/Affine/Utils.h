@@ -13,14 +13,17 @@
 #ifndef MLIR_DIALECT_AFFINE_UTILS_H
 #define MLIR_DIALECT_AFFINE_UTILS_H
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/IR/OpDefinition.h"
 #include <optional>
 
 namespace mlir {
 class DominanceInfo;
 class Operation;
 class PostDominanceInfo;
+class ImplicitLocOpBuilder;
 
 namespace func {
 class FuncOp;
@@ -29,8 +32,6 @@ class FuncOp;
 namespace memref {
 class AllocOp;
 } // namespace memref
-
-struct LogicalResult;
 
 namespace affine {
 class AffineForOp;
@@ -104,7 +105,8 @@ struct VectorizationStrategy {
 /// loads and eliminate invariant affine loads; consequently, eliminate dead
 /// allocs.
 void affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
-                         PostDominanceInfo &postDomInfo);
+                         PostDominanceInfo &postDomInfo,
+                         AliasAnalysis &analysis);
 
 /// Vectorizes affine loops in 'loops' using the n-D vectorization factors in
 /// 'vectorSizes'. By default, each vectorization factor is applied
@@ -249,8 +251,7 @@ LogicalResult normalizeMemRef(memref::AllocOp *op);
 /// transformed to an identity map with a new shape being computed for the
 /// normalized memref type and returns it. The old memref type is simplify
 /// returned if the normalization failed.
-MemRefType normalizeMemRefType(MemRefType memrefType,
-                               unsigned numSymbolicOperands);
+MemRefType normalizeMemRefType(MemRefType memrefType);
 
 /// Given an operation, inserts one or more single result affine apply
 /// operations, results of which are exclusively used by this operation.
@@ -310,6 +311,11 @@ DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
                                                ArrayRef<Value> basis);
+// Generate IR that extracts the linear index from a multi-index according to
+// a basis/shape.
+OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
+                            ArrayRef<OpFoldResult> basis,
+                            ImplicitLocOpBuilder &builder);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
@@ -319,7 +325,8 @@ FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
 /// will check if there is no write to the memory between `start` and `memOp`
 /// that would change the read within `memOp`.
 template <typename EffectType, typename T>
-bool hasNoInterveningEffect(Operation *start, T memOp);
+bool hasNoInterveningEffect(Operation *start, T memOp,
+                            llvm::function_ref<bool(Value, Value)> mayAlias);
 
 struct AffineValueExpr {
   explicit AffineValueExpr(AffineExpr e) : e(e) {}

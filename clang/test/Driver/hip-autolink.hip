@@ -1,9 +1,6 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-//
-// RUN: %clang --target=i386-pc-windows-msvc --cuda-gpu-arch=gfx906 -nogpulib \
+// RUN: %clang --target=i386-pc-windows-msvc --cuda-gpu-arch=gfx906 -nogpulib -nogpuinc \
 // RUN:   --cuda-device-only %s -### 2>&1 | FileCheck --check-prefix=DEV %s
-// RUN: %clang --target=i386-pc-windows-msvc --cuda-gpu-arch=gfx906 -nogpulib \
+// RUN: %clang --target=i386-pc-windows-msvc --cuda-gpu-arch=gfx906 -nogpulib -nogpuinc \
 // RUN:   --cuda-host-only %s -### 2>&1 | FileCheck --check-prefix=HOST %s
 
 // DEV: "-cc1" "-triple" "amdgcn-amd-amdhsa"

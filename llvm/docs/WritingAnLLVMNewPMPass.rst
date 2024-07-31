@@ -10,6 +10,11 @@ Writing an LLVM Pass
 Introduction --- What is a pass?
 ================================
 
+.. warning::
+  This document deals with the new pass manager. LLVM uses the legacy pass
+  manager for the codegen pipeline. For more details, see
+  :doc:`WritingAnLLVMPass` and :doc:`NewPassManager`.
+
 The LLVM pass framework is an important part of the LLVM system, because LLVM
 passes are where most of the interesting parts of the compiler exist. Passes
 perform the transformations and optimizations that make up the compiler, they
@@ -28,11 +33,6 @@ along with an analysis manager. For example, a function pass would have a
 We start by showing you how to construct a pass, from setting up the build,
 creating the pass, to executing and testing it. Looking at existing passes is
 always a great way to learn details.
-
-.. warning::
-  This document deals with the new pass manager. LLVM uses the legacy pass
-  manager for the codegen pipeline. For more details, see
-  :doc:`WritingAnLLVMPass` and :doc:`NewPassManager`.
 
 Quick Start --- Writing hello world
 ===================================

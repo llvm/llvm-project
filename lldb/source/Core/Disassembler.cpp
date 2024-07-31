@@ -201,8 +201,8 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
   uint32_t func_decl_line;
   sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
 
-  if (func_decl_file != prologue_end_line.file &&
-      func_decl_file != prologue_end_line.original_file)
+  if (func_decl_file != prologue_end_line.GetFile() &&
+      func_decl_file != prologue_end_line.original_file_sp->GetSpecOnly())
     return {};
 
   SourceLine decl_line;
@@ -354,7 +354,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
             }
             if (sc.line_entry.IsValid()) {
               SourceLine this_line;
-              this_line.file = sc.line_entry.file;
+              this_line.file = sc.line_entry.GetFile();
               this_line.line = sc.line_entry.line;
               this_line.column = sc.line_entry.column;
               if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line))
@@ -406,8 +406,9 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                   uint32_t func_decl_line;
                   sc.function->GetStartLineSourceInfo(func_decl_file,
                                                       func_decl_line);
-                  if (func_decl_file == prologue_end_line.file ||
-                      func_decl_file == prologue_end_line.original_file) {
+                  if (func_decl_file == prologue_end_line.GetFile() ||
+                      func_decl_file ==
+                          prologue_end_line.original_file_sp->GetSpecOnly()) {
                     // Add all the lines between the function declaration and
                     // the first non-prologue source line to the list of lines
                     // to print.
@@ -438,7 +439,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
               if (sc != prev_sc && sc.comp_unit && sc.line_entry.IsValid()) {
                 SourceLine this_line;
-                this_line.file = sc.line_entry.file;
+                this_line.file = sc.line_entry.GetFile();
                 this_line.line = sc.line_entry.line;
 
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
@@ -645,18 +646,29 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                            instruction_control_flow_kind));
   }
 
+  bool show_color = false;
+  if (exe_ctx) {
+    if (TargetSP target_sp = exe_ctx->GetTargetSP()) {
+      show_color = target_sp->GetDebugger().GetUseColor();
+    }
+  }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
+  const std::string &opcode_name =
+      show_color ? m_markup_opcode_name : m_opcode_name;
+  const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
-  // consistent column spacing in these cases, unfortunately.
+  // consistent column spacing in these cases, unfortunately. Also note that we
+  // need to directly use m_opcode_name here (instead of opcode_name) so we
+  // don't include color codes as characters.
   if (m_opcode_name.length() >= opcode_column_width) {
     opcode_column_width = m_opcode_name.length() + 1;
   }
 
-  ss.PutCString(m_opcode_name);
+  ss.PutCString(opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
-  ss.PutCString(m_mnemonics);
+  ss.PutCString(mnemonics);
 
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(
@@ -687,7 +699,7 @@ bool Instruction::HasDelaySlot() {
   return false;
 }
 
-OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
+OptionValueSP Instruction::ReadArray(FILE *in_file, Stream &out_stream,
                                      OptionValue::Type data_type) {
   bool done = false;
   char buffer[1024];
@@ -697,7 +709,7 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
   int idx = 0;
   while (!done) {
     if (!fgets(buffer, 1023, in_file)) {
-      out_stream->Printf(
+      out_stream.Printf(
           "Instruction::ReadArray:  Error reading file (fgets).\n");
       option_value_sp.reset();
       return option_value_sp;
@@ -746,7 +758,7 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
   return option_value_sp;
 }
 
-OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
+OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream &out_stream) {
   bool done = false;
   char buffer[1024];
 
@@ -757,7 +769,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   while (!done) {
     // Read the next line in the file
     if (!fgets(buffer, 1023, in_file)) {
-      out_stream->Printf(
+      out_stream.Printf(
           "Instruction::ReadDictionary: Error reading file (fgets).\n");
       option_value_sp.reset();
       return option_value_sp;
@@ -792,8 +804,8 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         key = matches[1].str();
         value = matches[2].str();
       } else {
-        out_stream->Printf("Instruction::ReadDictionary: Failure executing "
-                           "regular expression.\n");
+        out_stream.Printf("Instruction::ReadDictionary: Failure executing "
+                          "regular expression.\n");
         option_value_sp.reset();
         return option_value_sp;
       }
@@ -848,32 +860,29 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   return option_value_sp;
 }
 
-bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
-  if (!out_stream)
-    return false;
-
+bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
   if (!file_name) {
-    out_stream->Printf("Instruction::TestEmulation:  Missing file_name.");
+    out_stream.Printf("Instruction::TestEmulation:  Missing file_name.");
     return false;
   }
   FILE *test_file = FileSystem::Instance().Fopen(file_name, "r");
   if (!test_file) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation: Attempt to open test file failed.");
     return false;
   }
 
   char buffer[256];
   if (!fgets(buffer, 255, test_file)) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation: Error reading first line of test file.\n");
     fclose(test_file);
     return false;
   }
 
   if (strncmp(buffer, "InstructionEmulationState={", 27) != 0) {
-    out_stream->Printf("Instructin::TestEmulation: Test file does not contain "
-                       "emulation state dictionary\n");
+    out_stream.Printf("Instructin::TestEmulation: Test file does not contain "
+                      "emulation state dictionary\n");
     fclose(test_file);
     return false;
   }
@@ -883,7 +892,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
 
   OptionValueSP data_dictionary_sp(ReadDictionary(test_file, out_stream));
   if (!data_dictionary_sp) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation:  Error reading Dictionary Object.\n");
     fclose(test_file);
     return false;
@@ -899,8 +908,8 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
   OptionValueSP value_sp = data_dictionary->GetValueForKey(description_key);
 
   if (!value_sp) {
-    out_stream->Printf("Instruction::TestEmulation:  Test file does not "
-                       "contain description string.\n");
+    out_stream.Printf("Instruction::TestEmulation:  Test file does not "
+                      "contain description string.\n");
     return false;
   }
 
@@ -908,7 +917,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
 
   value_sp = data_dictionary->GetValueForKey(triple_key);
   if (!value_sp) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation: Test file does not contain triple.\n");
     return false;
   }
@@ -925,9 +934,9 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
         insn_emulator_up->TestEmulation(out_stream, arch, data_dictionary);
 
   if (success)
-    out_stream->Printf("Emulation test succeeded.");
+    out_stream.Printf("Emulation test succeeded.");
   else
-    out_stream->Printf("Emulation test failed.");
+    out_stream.Printf("Emulation test failed.");
 
   return success;
 }
@@ -1108,8 +1117,7 @@ size_t Disassembler::ParseInstructions(Target &target, Address start,
 
 // Disassembler copy constructor
 Disassembler::Disassembler(const ArchSpec &arch, const char *flavor)
-    : m_arch(arch), m_instruction_list(), m_base_addr(LLDB_INVALID_ADDRESS),
-      m_flavor() {
+    : m_arch(arch), m_instruction_list(), m_flavor() {
   if (flavor == nullptr)
     m_flavor.assign("default");
   else

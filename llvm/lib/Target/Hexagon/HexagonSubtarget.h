@@ -70,7 +70,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
 public:
   Hexagon::ArchEnum HexagonArchVersion;
   Hexagon::ArchEnum HexagonHVXVersion = Hexagon::ArchEnum::NoArch;
-  CodeGenOpt::Level OptLevel;
+  CodeGenOptLevel OptLevel;
   /// True if the target should use Back-Skip-Back scheduling. This is the
   /// default for V60.
   bool UseBSBScheduling;
@@ -308,7 +308,8 @@ public:
   /// Perform target specific adjustments to the latency of a schedule
   /// dependency.
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
-                             SDep &Dep) const override;
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   unsigned getVectorLength() const {
     assert(useHVXOps());

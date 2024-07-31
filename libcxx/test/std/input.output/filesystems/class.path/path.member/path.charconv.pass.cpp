@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <filesystem>
@@ -31,13 +32,16 @@
 // system APIs consumes in the functions that take narrow strings as path
 // names.
 
-
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "filesystem_test_helper.h"
+
+#ifdef _WIN32
+#  include <windows.h> // SetFileApisToANSI & friends
+#endif
+namespace fs = std::filesystem;
 
 // Test conversion with strings that fit within the latin1 charset, that fit
 // within one code point in UTF-16, and that can be expressible in certain

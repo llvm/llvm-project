@@ -10,6 +10,7 @@
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
+#include "allocator_config_wrapper.h"
 #include "secondary.h"
 
 #include <algorithm>
@@ -22,7 +23,8 @@
 #include <vector>
 
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  if (!Config::MaySupportMemoryTagging || !scudo::archSupportsMemoryTagging() ||
+  if (!Config::getMaySupportMemoryTagging() ||
+      !scudo::archSupportsMemoryTagging() ||
       !scudo::systemSupportsMemoryTagging())
     return {};
   scudo::AtomicOptions AO;
@@ -31,8 +33,9 @@ template <typename Config> static scudo::Options getOptionsForConfig() {
 }
 
 template <typename Config> static void testSecondaryBasic(void) {
-  using SecondaryT = scudo::MapAllocator<Config>;
-  scudo::Options Options = getOptionsForConfig<Config>();
+  using SecondaryT = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
+  scudo::Options Options =
+      getOptionsForConfig<scudo::SecondaryConfig<Config>>();
 
   scudo::GlobalStats S;
   S.init();
@@ -84,6 +87,10 @@ template <typename Config> static void testSecondaryBasic(void) {
 
 struct NoCacheConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+
   struct Secondary {
     template <typename Config>
     using CacheT = scudo::MapAllocatorNoCache<Config>;
@@ -92,6 +99,10 @@ struct NoCacheConfig {
 
 struct TestConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
   struct Secondary {
     struct Cache {
       static const scudo::u32 EntriesArraySize = 128U;
@@ -114,7 +125,7 @@ TEST(ScudoSecondaryTest, SecondaryBasic) {
 
 struct MapAllocatorTest : public Test {
   using Config = scudo::DefaultConfig;
-  using LargeAllocator = scudo::MapAllocator<Config>;
+  using LargeAllocator = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
 
   void SetUp() override { Allocator->init(nullptr); }
 
@@ -122,7 +133,8 @@ struct MapAllocatorTest : public Test {
 
   std::unique_ptr<LargeAllocator> Allocator =
       std::make_unique<LargeAllocator>();
-  scudo::Options Options = getOptionsForConfig<Config>();
+  scudo::Options Options =
+      getOptionsForConfig<scudo::SecondaryConfig<Config>>();
 };
 
 // This exercises a variety of combinations of size and alignment for the
@@ -136,10 +148,10 @@ TEST_F(MapAllocatorTest, SecondaryCombinations) {
          AlignLog++) {
       const scudo::uptr Align = 1U << AlignLog;
       for (scudo::sptr Delta = -128; Delta <= 128; Delta += 8) {
-        if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
+        if ((1LL << SizeLog) + Delta <= 0)
           continue;
-        const scudo::uptr UserSize =
-            scudo::roundUp((1U << SizeLog) + Delta, MinAlign);
+        const scudo::uptr UserSize = scudo::roundUp(
+            static_cast<scudo::uptr>((1LL << SizeLog) + Delta), MinAlign);
         const scudo::uptr Size =
             HeaderSize + UserSize + (Align > MinAlign ? Align - HeaderSize : 0);
         void *P = Allocator->allocate(Options, Size, Align);
@@ -160,7 +172,8 @@ TEST_F(MapAllocatorTest, SecondaryIterate) {
   std::vector<void *> V;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(Allocator->allocate(Options, (std::rand() % 16) * PageSize));
+    V.push_back(Allocator->allocate(
+        Options, (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize));
   auto Lambda = [&V](scudo::uptr Block) {
     EXPECT_NE(std::find(V.begin(), V.end(), reinterpret_cast<void *>(Block)),
               V.end());
@@ -177,29 +190,31 @@ TEST_F(MapAllocatorTest, SecondaryIterate) {
   Str.output();
 }
 
-TEST_F(MapAllocatorTest, SecondaryOptions) {
+TEST_F(MapAllocatorTest, SecondaryCacheOptions) {
+  if (!Allocator->canCache(0U))
+    TEST_SKIP("Secondary Cache disabled");
+
   // Attempt to set a maximum number of entries higher than the array size.
-  EXPECT_FALSE(
-      Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
-  // A negative number will be cast to a scudo::u32, and fail.
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
+
+  // Attempt to set an invalid (negative) number of entries
   EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
-  if (Allocator->canCache(0U)) {
-    // Various valid combinations.
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
-    EXPECT_TRUE(Allocator->canCache(1UL << 18));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
-    EXPECT_FALSE(Allocator->canCache(1UL << 18));
-    EXPECT_TRUE(Allocator->canCache(1UL << 16));
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
-    EXPECT_FALSE(Allocator->canCache(1UL << 16));
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
-    EXPECT_TRUE(Allocator->canCache(1UL << 16));
-  }
+
+  // Various valid combinations.
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+  EXPECT_TRUE(
+      Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Allocator->canCache(1UL << 18));
+  EXPECT_TRUE(
+      Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
+  EXPECT_FALSE(Allocator->canCache(1UL << 18));
+  EXPECT_TRUE(Allocator->canCache(1UL << 16));
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
+  EXPECT_FALSE(Allocator->canCache(1UL << 16));
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+  EXPECT_TRUE(
+      Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Allocator->canCache(1UL << 16));
 }
 
 struct MapAllocatorWithReleaseTest : public MapAllocatorTest {
@@ -215,8 +230,9 @@ struct MapAllocatorWithReleaseTest : public MapAllocatorTest {
     }
     for (scudo::uptr I = 0; I < 128U; I++) {
       // Deallocate 75% of the blocks.
-      const bool Deallocate = (rand() & 3) != 0;
-      void *P = Allocator->allocate(Options, (std::rand() % 16) * PageSize);
+      const bool Deallocate = (std::rand() & 3) != 0;
+      void *P = Allocator->allocate(
+          Options, (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize);
       if (Deallocate)
         Allocator->deallocate(Options, P);
       else

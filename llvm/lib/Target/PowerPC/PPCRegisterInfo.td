@@ -15,7 +15,9 @@ def sub_gt : SubRegIndex<1, 1>;
 def sub_eq : SubRegIndex<1, 2>;
 def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
+def sub_32_hi_phony : SubRegIndex<32,32>;
 def sub_64 : SubRegIndex<64>;
+def sub_64_hi_phony : SubRegIndex<64,64>;
 def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_gp8_x0 : SubRegIndex<64>;
@@ -43,13 +45,12 @@ class GP8<GPR SubReg, string n> : PPCReg<n> {
   let SubRegIndices = [sub_32];
 }
 
-// SPE - One of the 32 64-bit general-purpose registers (SPE)
-class SPE<GPR SubReg, string n> : PPCReg<n> {
-  let HWEncoding = SubReg.HWEncoding;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_32];
+class SPE<string n, bits<5> Enc, list<Register> subregs = []> : PPCReg<n> {
+  let HWEncoding{4-0} = Enc;
+  let SubRegs = subregs;
+  let SubRegIndices = [sub_32, sub_32_hi_phony];
+  let CoveredBySubRegs = 1;
 }
-
 // SPR - One of the 32-bit special-purpose registers
 class SPR<bits<10> num, string n> : PPCReg<n> {
   let HWEncoding{9-0} = num;
@@ -77,19 +78,19 @@ class VF<bits<5> num, string n> : PPCReg<n> {
 }
 
 // VR - One of the 32 128-bit vector registers
-class VR<VF SubReg, string n> : PPCReg<n> {
+class VR<VF SubReg, VF SubRegH, string n> : PPCReg<n> {
   let HWEncoding{4-0} = SubReg.HWEncoding{4-0};
   let HWEncoding{5} = 0;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
+  let SubRegs = [SubReg, SubRegH];
+  let SubRegIndices = [sub_64, sub_64_hi_phony];
 }
 
 // VSRL - One of the 32 128-bit VSX registers that overlap with the scalar
 // floating-point registers.
-class VSRL<FPR SubReg, string n> : PPCReg<n> {
+class VSRL<FPR SubReg, FPR SubRegH, string n> : PPCReg<n> {
   let HWEncoding = SubReg.HWEncoding;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
+  let SubRegs = [SubReg, SubRegH];
+  let SubRegIndices = [sub_64, sub_64_hi_phony];
 }
 
 // VSXReg - One of the VSX registers in the range vs32-vs63 with numbering
@@ -129,6 +130,12 @@ foreach Index = 0-31 in {
   def R#Index : GPR<Index, "r"#Index>, DwarfRegNum<[-2, Index]>;
 }
 
+let isArtificial = 1 in {
+  foreach Index = 0-31 in {
+    def H#Index : GPR<-1,"">;
+  }
+}
+
 // 64-bit General-purpose registers
 foreach Index = 0-31 in {
   def X#Index : GP8<!cast<GPR>("R"#Index), "r"#Index>,
@@ -137,14 +144,32 @@ foreach Index = 0-31 in {
 
 // SPE registers
 foreach Index = 0-31 in {
-  def S#Index : SPE<!cast<GPR>("R"#Index), "r"#Index>,
+  def S#Index : SPE<"r"#Index, Index, [!cast<GPR>("R"#Index), !cast<GPR>("H"#Index)]>,
                     DwarfRegNum<[!add(Index, 1200), !add(Index, 1200)]>;
+
 }
+
 
 // Floating-point registers
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
+}
+
+// The FH and VFH registers have been marked as Artifical because there are no
+// instructions on PowerPC that use those register classes. They only exist
+// in order to ensure that the super registers (V and VSL) are covered by their
+// subregisters and have correct subregister lane masks.
+let isArtificial = 1 in {
+  foreach Index = 0-31 in {
+    def FH#Index : FPR<-1, "">;
+    def VFH#Index : VF<-1, "">;
+  }
+}
+
+let isAllocatable = 0, CopyCost = -1 in {
+  def VFHRC : RegisterClass<"PPC", [f64], 64, (sequence "VFH%u", 0, 31)>;
+  def FHRC : RegisterClass<"PPC", [f64], 64, (sequence "FH%u", 0, 31)>;
 }
 
 // Floating-point pair registers
@@ -160,16 +185,18 @@ foreach Index = 0-31 in {
                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
 }
 
+let CoveredBySubRegs = 1 in {
 // Vector registers
 foreach Index = 0-31 in {
-  def V#Index : VR<!cast<VF>("VF"#Index), "v"#Index>,
+  def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
                 DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
 }
 
 // VSX registers
 foreach Index = 0-31 in {
-  def VSL#Index : VSRL<!cast<FPR>("F"#Index), "vs"#Index>,
+  def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
                   DwarfRegAlias<!cast<FPR>("F"#Index)>;
+}
 }
 
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
@@ -191,7 +218,7 @@ let SubRegIndices = [sub_vsx0, sub_vsx1] in {
     def VSRp#!add(!srl(Index, 1), 16) :
       VSRPair<!add(!srl(Index, 1), 16), "vsp"#!add(Index, 32),
               [!cast<VR>("V"#Index), !cast<VR>("V"#!add(Index, 1))]>,
-      DwarfRegNum<[-1, -1]>;
+              DwarfRegAlias<!cast<VR>("V"#Index)>;
   }
 }
 
@@ -262,12 +289,15 @@ def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 
 // Link register
 def LR  : SPR<8, "lr">, DwarfRegNum<[-2, 65]>;
-//let Aliases = [LR] in
-def LR8 : SPR<8, "lr">, DwarfRegNum<[65, -2]>;
+def LR8 : SPR<8, "lr">, DwarfRegNum<[65, -2]> {
+  let Aliases = [LR];
+}
 
 // Count register
 def CTR  : SPR<9, "ctr">, DwarfRegNum<[-2, 66]>;
-def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]>;
+def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]> {
+  let Aliases = [CTR];
+}
 
 // VRsave register
 def VRSAVE: SPR<256, "vrsave">, DwarfRegNum<[109]>;
@@ -292,6 +322,11 @@ def CARRY: SPR<1, "xer">, DwarfRegNum<[76]> {
 // return and call instructions are described as Uses of RM, so instructions
 // that do nothing but change RM will not get deleted.
 def RM: PPCReg<"**ROUNDING MODE**">;
+
+let isAllocatable = 0 in
+def GPRC32 : RegisterClass<"PPC", [i32,f32], 32, (add (sequence "H%u", 2, 12),
+                                                      (sequence "H%u", 30, 13),
+                                                      H31, H0, H1)>;
 
 /// Register classes
 // Allocate volatiles first
@@ -785,6 +820,7 @@ def directbrtarget : Operand<OtherVT> {
 def absdirectbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
+  let DecoderMethod = "decodeDirectBrTarget";
   let ParserMatchClass = PPCDirectBrAsmOperand;
 }
 def PPCCondBrAsmOperand : AsmOperandClass {
@@ -801,6 +837,7 @@ def condbrtarget : Operand<OtherVT> {
 def abscondbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsCondBrEncoding";
+  let DecoderMethod = "decodeCondBrTarget";
   let ParserMatchClass = PPCCondBrAsmOperand;
 }
 def calltarget : Operand<iPTR> {
@@ -813,6 +850,7 @@ def calltarget : Operand<iPTR> {
 def abscalltarget : Operand<iPTR> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
+  let DecoderMethod = "decodeDirectBrTarget";
   let ParserMatchClass = PPCDirectBrAsmOperand;
 }
 def PPCCRBitMaskOperand : AsmOperandClass {

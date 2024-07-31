@@ -96,8 +96,8 @@ def testOdsBuildDefaultNonVariadic():
             # CHECK: %[[V0:.+]] = "custom.value"
             # CHECK: %[[V1:.+]] = "custom.value"
             # CHECK: "custom.test_op"(%[[V0]], %[[V1]])
-            # CHECK-NOT: operand_segment_sizes
-            # CHECK-NOT: result_segment_sizes
+            # CHECK-NOT: operandSegmentSizes
+            # CHECK-NOT: resultSegmentSizes
             # CHECK-SAME: : (i32, i32) -> (i8, i16)
             print(m)
 
@@ -128,8 +128,8 @@ def testOdsBuildDefaultSizedVariadic():
             # CHECK: %[[V2:.+]] = "custom.value"
             # CHECK: %[[V3:.+]] = "custom.value"
             # CHECK: "custom.test_op"(%[[V0]], %[[V1]], %[[V2]], %[[V3]])
-            # CHECK-SAME: operand_segment_sizes = array<i32: 1, 2, 1>
-            # CHECK-SAME: result_segment_sizes = array<i32: 2, 1, 1>
+            # CHECK-SAME: operandSegmentSizes = array<i32: 1, 2, 1>
+            # CHECK-SAME: resultSegmentSizes = array<i32: 2, 1, 1>
             # CHECK-SAME: : (i32, i32, i32, i32) -> (i8, i16, i32, i64)
             op = TestOp.build_generic(
                 results=[[t0, t1], t2, t3], operands=[v0, [v1, v2], v3]
@@ -137,8 +137,8 @@ def testOdsBuildDefaultSizedVariadic():
 
             # Now test with optional omitted.
             # CHECK: "custom.test_op"(%[[V0]])
-            # CHECK-SAME: operand_segment_sizes = array<i32: 1, 0, 0>
-            # CHECK-SAME: result_segment_sizes = array<i32: 0, 0, 1>
+            # CHECK-SAME: operandSegmentSizes = array<i32: 1, 0, 0>
+            # CHECK-SAME: resultSegmentSizes = array<i32: 0, 0, 1>
             # CHECK-SAME: (i32) -> i64
             op = TestOp.build_generic(
                 results=[None, None, t3], operands=[v0, None, None]

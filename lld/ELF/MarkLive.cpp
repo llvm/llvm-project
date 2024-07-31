@@ -89,9 +89,8 @@ template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
                                   bool fromFDE) {
-  Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
-
   // If a symbol is referenced in a live section, it is used.
+  Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
@@ -212,7 +211,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // Add GC root symbols.
 
   // Preserve externally-visible symbols if the symbols defined by this
-  // file can interrupt other ELF file's symbols at runtime.
+  // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : symtab.getSymbols())
     if (sym->includeInDynsym() && sym->partition == partition)
       markSymbol(sym);
@@ -230,6 +229,10 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     markSymbol(symtab.find(s));
   for (StringRef s : script->referencedSymbols)
     markSymbol(symtab.find(s));
+  for (auto [symName, _] : symtab.cmseSymMap) {
+    markSymbol(symtab.cmseSymMap[symName].sym);
+    markSymbol(symtab.cmseSymMap[symName].acleSeSym);
+  }
 
   // Mark .eh_frame sections as live because there are usually no relocations
   // that point to .eh_frames. Otherwise, the garbage collector would drop
@@ -273,8 +276,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     //   collection.
     // - Groups members are retained or discarded as a unit.
     if (!(sec->flags & SHF_ALLOC)) {
-      bool isRel = sec->type == SHT_REL || sec->type == SHT_RELA;
-      if (!isRel && !sec->nextInSectionGroup) {
+      if (!isStaticRelSecType(sec->type) && !sec->nextInSectionGroup) {
         sec->markLive();
         for (InputSection *isec : sec->dependentSections)
           isec->markLive();

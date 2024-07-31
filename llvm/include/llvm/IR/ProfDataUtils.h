@@ -55,6 +55,19 @@ MDNode *getBranchWeightMDNode(const Instruction &I);
 /// Nullptr otherwise.
 MDNode *getValidBranchWeightMDNode(const Instruction &I);
 
+/// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
+/// intrinsic
+bool hasBranchWeightOrigin(const Instruction &I);
+
+/// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
+/// intrinsic
+bool hasBranchWeightOrigin(const MDNode *ProfileData);
+
+/// Return the offset to the first branch weight data
+unsigned getBranchWeightOffset(const MDNode *ProfileData);
+
+unsigned getNumBranchWeights(const MDNode &ProfileData);
+
 /// Extract branch weights from MD_prof metadata
 ///
 /// \param ProfileData A pointer to an MDNode.
@@ -63,6 +76,16 @@ MDNode *getValidBranchWeightMDNode(const Instruction &I);
 /// will be cleared.
 bool extractBranchWeights(const MDNode *ProfileData,
                           SmallVectorImpl<uint32_t> &Weights);
+
+/// Faster version of extractBranchWeights() that skips checks and must only
+/// be called with "branch_weights" metadata nodes. Supports uint32_t.
+void extractFromBranchWeightMD32(const MDNode *ProfileData,
+                                 SmallVectorImpl<uint32_t> &Weights);
+
+/// Faster version of extractBranchWeights() that skips checks and must only
+/// be called with "branch_weights" metadata nodes. Supports uint64_t.
+void extractFromBranchWeightMD64(const MDNode *ProfileData,
+                                 SmallVectorImpl<uint64_t> &Weights);
 
 /// Extract branch weights attatched to an Instruction
 ///
@@ -98,6 +121,17 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalWeights);
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
 bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
+
+/// Create a new `branch_weights` metadata node and add or overwrite
+/// a `prof` metadata reference to instruction `I`.
+/// \param I the Instruction to set branch weights on.
+/// \param Weights an array of weights to set on instruction I.
+/// \param IsExpected were these weights added from an llvm.expect* intrinsic.
+void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
+                      bool IsExpected);
+
+/// Scaling the profile data attached to 'I' using the ratio of S/T.
+void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
 
 } // namespace llvm
 #endif

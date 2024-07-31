@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -ast-print %s | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 // RUN: %clang_cc1 -verify -fopenmp -DOMP51 -ast-print %s | FileCheck %s --check-prefix CHECK --check-prefix OMP51
 // RUN: %clang_cc1 -fopenmp -DOMP51 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -DOMP51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP51
+// RUN: %clang_cc1 -fopenmp -DOMP51 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP51
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -ast-print %s | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 // RUN: %clang_cc1 -verify -fopenmp-simd -DOMP51 -ast-print %s | FileCheck %s --check-prefix CHECK --check-prefix OMP51
 // RUN: %clang_cc1 -fopenmp-simd -DOMP51 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -DOMP51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP51
+// RUN: %clang_cc1 -fopenmp-simd -DOMP51 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s --check-prefix CHECK --check-prefix OMP51
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 #pragma omp taskgroup task_reduction(+: d)
 #pragma omp parallel master taskloop simd if(parallel: a) default(none) shared(a, b, argc) final(b) priority(5) num_tasks(argc) reduction(*: g) aligned(argv: 8) linear(c:b)
   // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
-  // CHECK-NEXT: #pragma omp parallel master taskloop simd if(parallel: a) default(none) shared(a,b,argc) final(b) priority(5) num_tasks(argc) reduction(*: g) aligned(argv: 8) linear(c: b)
+  // CHECK-NEXT: #pragma omp parallel master taskloop simd if(parallel: a) default(none) shared(a,b,argc) final(b) priority(5) num_tasks(argc) reduction(*: g) aligned(argv: 8) linear(c: step(b))
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

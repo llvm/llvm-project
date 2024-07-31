@@ -16,6 +16,7 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
+    "common/Alarm.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -41,11 +42,13 @@ static_library("Host") {
     "common/PseudoTerminal.cpp",
     "common/Socket.cpp",
     "common/SocketAddress.cpp",
+    "common/StreamFile.cpp",
     "common/TCPSocket.cpp",
     "common/Terminal.cpp",
     "common/ThreadLauncher.cpp",
     "common/UDPSocket.cpp",
     "common/XML.cpp",
+    "common/ZipFileResolver.cpp",
   ]
 
   if (lldb_enable_libedit) {

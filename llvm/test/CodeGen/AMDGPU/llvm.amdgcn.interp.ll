@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=kabini -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
-; RUN: llc -march=amdgcn -mcpu=stoney -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=kabini -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
+; RUN: llc -mtriple=amdgcn -mcpu=stoney -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,16BANK %s
 
 ; GCN-LABEL: {{^}}v_interp:
 ; GCN-NOT: s_wqm

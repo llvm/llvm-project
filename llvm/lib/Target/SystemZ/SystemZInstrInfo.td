@@ -13,9 +13,9 @@ def IsTargetELF           : Predicate<"Subtarget->isTargetELF()">;
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
-// The callseq_start node requires the hasSideEffects flag, even though these
-// instructions are noops on SystemZ.
-let hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
+// These pseudos carry values needed to compute the MaxcallFrameSize of the
+// function.  The callseq_start node requires the hasSideEffects flag.
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
   def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
                                 [(callseq_start timm:$amt1, timm:$amt2)]>;
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
@@ -111,11 +111,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 // NOPs.  These are again variants of the conditional branches, with the
 // condition mask set to "never".  NOP_bare can't be an InstAlias since it
 // would need R0D hard coded which is not part of ADDR64BitRegClass.
-def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
-let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, XBD2 = 0 in
+def NOP : NeverCondBranchRX<"nop", 0x47>;
+let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
-def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
+def NOPR : NeverCondBranchRR<"nopr", 0x07>;
+def NOPR_bare : InstAlias<"nopr", (NOPR R0D), 0>;
 
 // An alias of BRC 0, label
 def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
@@ -281,6 +281,9 @@ let isCall = 1, Defs = [CC] in {
   def BASR  : CallRR <"basr", 0x0D>;
 }
 
+// A symbol in the ADA (z/OS only).
+def adasym : Operand<i64>;
+
 // z/OS XPLINK
 let Predicates = [IsTargetXPLINK64] in {
   let isCall = 1, Defs = [R7D, CC], Uses = [FPC] in {
@@ -293,6 +296,19 @@ let Predicates = [IsTargetXPLINK64] in {
   let isCall = 1, Defs = [R3D, CC], Uses = [FPC] in {
     def CallBASR_STACKEXT  : Alias<4, (outs), (ins ADDR64:$R2), []>;
   }
+
+  let hasNoSchedulingInfo = 1, Defs = [CC] in {
+    def ADA_ENTRY : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+                              ADDR64:$ADA, imm64:$Offset),
+                            [(set i64:$Reg, (z_ada_entry i64:$addr,
+                              i64:$ADA, i64:$Offset))]>;
+  }
+  let mayLoad = 1, AddedComplexity = 20, hasNoSchedulingInfo = 1, Defs = [CC] in {
+    def ADA_ENTRY_VALUE : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+                              ADDR64:$ADA, imm64:$Offset),
+                            [(set i64:$Reg, (z_load (z_ada_entry
+                              iPTR:$addr, iPTR:$ADA, i64:$Offset)))]>;
+ }
 }
 
 // Regular calls.
@@ -448,16 +464,18 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def LLILF : UnaryRIL<"llilf", 0xC0F, bitconvert, GR64, imm64lf32>;
   def LLIHF : UnaryRIL<"llihf", 0xC0E, bitconvert, GR64, imm64hf32>;
 }
+def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
+def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
   // Expands to L, LY or LFH, depending on the choice of register.
-  def LMux : UnaryRXYPseudo<"l", load, GRX32, 4>,
+  def LMux : UnaryRXYPseudo<"l", z_load, GRX32, 4>,
              Requires<[FeatureHighWord]>;
-  defm L : UnaryRXPair<"l", 0x58, 0xE358, load, GR32, 4>;
-  def LFH : UnaryRXY<"lfh", 0xE3CA, load, GRH32, 4>,
+  defm L : UnaryRXPair<"l", 0x58, 0xE358, z_load, GR32, 4>;
+  def LFH : UnaryRXY<"lfh", 0xE3CA, z_load, GRH32, 4>,
             Requires<[FeatureHighWord]>;
-  def LG : UnaryRXY<"lg", 0xE304, load, GR64, 8>;
+  def LG : UnaryRXY<"lg", 0xE304, z_load, GR64, 8>;
 
   // These instructions are split after register allocation, so we don't
   // want a custom inserter.
@@ -467,22 +485,22 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
   }
 }
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
-  def LT  : UnaryRXY<"lt",  0xE312, load, GR32, 4>;
-  def LTG : UnaryRXY<"ltg", 0xE302, load, GR64, 8>;
+  def LT  : UnaryRXY<"lt",  0xE312, z_load, GR32, 4>;
+  def LTG : UnaryRXY<"ltg", 0xE302, z_load, GR64, 8>;
 }
 
 let canFoldAsLoad = 1 in {
-  def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_load, GR32>;
-  def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_load, GR64>;
+  def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_z_load, GR32>;
+  def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_z_load, GR64>;
 }
 
 // Load and zero rightmost byte.
 let Predicates = [FeatureLoadAndZeroRightmostByte] in {
   def LZRF : UnaryRXY<"lzrf", 0xE33B, null_frag, GR32, 4>;
   def LZRG : UnaryRXY<"lzrg", 0xE32A, null_frag, GR64, 8>;
-  def : Pat<(and (i32 (load bdxaddr20only:$src)), 0xffffff00),
+  def : Pat<(and (i32 (z_load bdxaddr20only:$src)), 0xffffff00),
             (LZRF bdxaddr20only:$src)>;
-  def : Pat<(and (i64 (load bdxaddr20only:$src)), 0xffffffffffffff00),
+  def : Pat<(and (i64 (z_load bdxaddr20only:$src)), 0xffffffffffffff00),
             (LZRG bdxaddr20only:$src)>;
 }
 
@@ -673,29 +691,29 @@ def : Pat<(sext_inreg GR64:$src, i32),
 
 // 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
 // depending on the choice of register.
-def LBMux : UnaryRXYPseudo<"lb", asextloadi8, GRX32, 1>,
+def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
             Requires<[FeatureHighWord]>;
-def LB  : UnaryRXY<"lb", 0xE376, asextloadi8, GR32, 1>;
-def LBH : UnaryRXY<"lbh", 0xE3C0, asextloadi8, GRH32, 1>,
+def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
+def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
           Requires<[FeatureHighWord]>;
 
 // 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
 // depending on the choice of register.
-def LHMux : UnaryRXYPseudo<"lh", asextloadi16, GRX32, 2>,
+def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
             Requires<[FeatureHighWord]>;
-defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, asextloadi16, GR32, 2>;
-def  LHH  : UnaryRXY<"lhh", 0xE3C4, asextloadi16, GRH32, 2>,
+defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
+def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
             Requires<[FeatureHighWord]>;
-def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_asextloadi16, GR32>;
+def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
 
 // 64-bit extensions from memory.
-def LGB   : UnaryRXY<"lgb", 0xE377, asextloadi8,  GR64, 1>;
-def LGH   : UnaryRXY<"lgh", 0xE315, asextloadi16, GR64, 2>;
-def LGF   : UnaryRXY<"lgf", 0xE314, asextloadi32, GR64, 4>;
-def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_asextloadi16, GR64>;
-def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_asextloadi32, GR64>;
+def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
+def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
+def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
+def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
+def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
-  def LTGF : UnaryRXY<"ltgf", 0xE332, asextloadi32, GR64, 4>;
+  def LTGF : UnaryRXY<"ltgf", 0xE332, z_asextloadi32, GR64, 4>;
 
 //===----------------------------------------------------------------------===//
 // Zero extensions
@@ -724,40 +742,40 @@ def : Pat<(and GR64:$src, 0xffffffff),
 
 // 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
 // depending on the choice of register.
-def LLCMux : UnaryRXYPseudo<"llc", azextloadi8, GRX32, 1>,
+def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
              Requires<[FeatureHighWord]>;
-def LLC  : UnaryRXY<"llc", 0xE394, azextloadi8, GR32, 1>;
-def LLCH : UnaryRXY<"llch", 0xE3C2, azextloadi8, GRH32, 1>,
+def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
+def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
            Requires<[FeatureHighWord]>;
 
 // 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
 // depending on the choice of register.
-def LLHMux : UnaryRXYPseudo<"llh", azextloadi16, GRX32, 2>,
+def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
              Requires<[FeatureHighWord]>;
-def LLH   : UnaryRXY<"llh", 0xE395, azextloadi16, GR32, 2>;
-def LLHH  : UnaryRXY<"llhh", 0xE3C6, azextloadi16, GRH32, 2>,
+def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
+def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
             Requires<[FeatureHighWord]>;
-def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_azextloadi16, GR32>;
+def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
 
 // 64-bit extensions from memory.
-def LLGC   : UnaryRXY<"llgc", 0xE390, azextloadi8,  GR64, 1>;
-def LLGH   : UnaryRXY<"llgh", 0xE391, azextloadi16, GR64, 2>;
-def LLGF   : UnaryRXY<"llgf", 0xE316, azextloadi32, GR64, 4>;
-def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_azextloadi16, GR64>;
-def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_azextloadi32, GR64>;
+def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
+def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
+def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
+def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
+def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
 
 // 31-to-64-bit zero extensions.
 def LLGTR : UnaryRRE<"llgtr", 0xB917, null_frag, GR64, GR64>;
 def LLGT  : UnaryRXY<"llgt",  0xE317, null_frag, GR64, 4>;
 def : Pat<(and GR64:$src, 0x7fffffff),
           (LLGTR GR64:$src)>;
-def : Pat<(and (i64 (azextloadi32 bdxaddr20only:$src)), 0x7fffffff),
+def : Pat<(and (i64 (z_azextloadi32 bdxaddr20only:$src)), 0x7fffffff),
           (LLGT bdxaddr20only:$src)>;
 
 // Load and zero rightmost byte.
 let Predicates = [FeatureLoadAndZeroRightmostByte] in {
   def LLZRGF : UnaryRXY<"llzrgf", 0xE33A, null_frag, GR64, 4>;
-  def : Pat<(and (i64 (azextloadi32 bdxaddr20only:$src)), 0xffffff00),
+  def : Pat<(and (i64 (z_azextloadi32 bdxaddr20only:$src)), 0xffffff00),
             (LLZRGF bdxaddr20only:$src)>;
 }
 
@@ -914,14 +932,14 @@ defm : SXU<ineg, LCGFR>;
 //===----------------------------------------------------------------------===//
 
 let isCodeGenOnly = 1 in
-  defm IC32 : BinaryRXPair<"ic", 0x43, 0xE373, inserti8, GR32, azextloadi8, 1>;
-defm IC : BinaryRXPair<"ic", 0x43, 0xE373, inserti8, GR64, azextloadi8, 1>;
+  defm IC32 : BinaryRXPair<"ic", 0x43, 0xE373, inserti8, GR32, z_azextloadi8, 1>;
+defm IC : BinaryRXPair<"ic", 0x43, 0xE373, inserti8, GR64, z_azextloadi8, 1>;
 
-defm : InsertMem<"inserti8", IC32,  GR32, azextloadi8, bdxaddr12pair>;
-defm : InsertMem<"inserti8", IC32Y, GR32, azextloadi8, bdxaddr20pair>;
+defm : InsertMem<"inserti8", IC32,  GR32, z_azextloadi8, bdxaddr12pair>;
+defm : InsertMem<"inserti8", IC32Y, GR32, z_azextloadi8, bdxaddr20pair>;
 
-defm : InsertMem<"inserti8", IC,  GR64, azextloadi8, bdxaddr12pair>;
-defm : InsertMem<"inserti8", ICY, GR64, azextloadi8, bdxaddr20pair>;
+defm : InsertMem<"inserti8", IC,  GR64, z_azextloadi8, bdxaddr12pair>;
+defm : InsertMem<"inserti8", ICY, GR64, z_azextloadi8, bdxaddr20pair>;
 
 // Insert characters under mask -- not (yet) used for codegen.
 let Defs = [CC] in {
@@ -957,6 +975,7 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def IILF : UnaryRIL<"iilf", 0xC09, bitconvert, GR32, uimm32>;
   def IIHF : UnaryRIL<"iihf", 0xC08, bitconvert, GRH32, uimm32>;
 }
+def LFI : InstAlias<"lfi\t$R1, $RI1", (IILF GR32:$R1, uimm32:$RI1)>;
 def IILF64 : BinaryAliasRIL<insertlf, GR64, imm64lf32>;
 def IIHF64 : BinaryAliasRIL<inserthf, GR64, imm64hf32>;
 
@@ -999,12 +1018,12 @@ let Defs = [CC], CCValues = 0xF, CCIfNoSignedWrap = 1 in {
   def AGFI : BinaryRIL<"agfi", 0xC28, z_sadd, GR64, imm64sx32>;
 
   // Addition of memory.
-  defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_sadd, GR32, asextloadi16, 2>;
-  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, load, 4>;
-  def  AGH : BinaryRXY<"agh", 0xE338, z_sadd, GR64, asextloadi16, 2>,
+  defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_sadd, GR32, z_asextloadi16, 2>;
+  defm A   : BinaryRXPairAndPseudo<"a",  0x5A, 0xE35A, z_sadd, GR32, z_load, 4>;
+  def  AGH : BinaryRXY<"agh", 0xE338, z_sadd, GR64, z_asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
-  def  AGF : BinaryRXY<"agf", 0xE318, z_sadd, GR64, asextloadi32, 4>;
-  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, load, 8>;
+  def  AGF : BinaryRXY<"agf", 0xE318, z_sadd, GR64, z_asextloadi32, 4>;
+  defm AG  : BinaryRXYAndPseudo<"ag",  0xE308, z_sadd, GR64, z_load, 8>;
 
   // Addition to memory.
   def ASI  : BinarySIY<"asi",  0xEB6A, add, imm32sx8>;
@@ -1042,9 +1061,9 @@ let Defs = [CC], CCValues = 0xF, IsLogical = 1 in {
               Requires<[FeatureHighWord]>;
 
   // Addition of memory.
-  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, load, 4>;
-  def  ALGF : BinaryRXY<"algf", 0xE31A, z_uadd, GR64, azextloadi32, 4>;
-  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, load, 8>;
+  defm AL   : BinaryRXPairAndPseudo<"al", 0x5E, 0xE35E, z_uadd, GR32, z_load, 4>;
+  def  ALGF : BinaryRXY<"algf", 0xE31A, z_uadd, GR64, z_azextloadi32, 4>;
+  defm ALG  : BinaryRXYAndPseudo<"alg",  0xE30A, z_uadd, GR64, z_load, 8>;
 
   // Addition to memory.
   def ALSI  : BinarySIY<"alsi",  0xEB6E, null_frag, imm32sx8>;
@@ -1059,8 +1078,8 @@ let Defs = [CC], Uses = [CC], CCValues = 0xF, IsLogical = 1 in {
   def ALCGR : BinaryRRE<"alcgr", 0xB988, z_addcarry, GR64, GR64>;
 
   // Addition of memory.
-  def ALC  : BinaryRXY<"alc",  0xE398, z_addcarry, GR32, load, 4>;
-  def ALCG : BinaryRXY<"alcg", 0xE388, z_addcarry, GR64, load, 8>;
+  def ALC  : BinaryRXY<"alc",  0xE398, z_addcarry, GR32, z_load, 4>;
+  def ALCG : BinaryRXY<"alcg", 0xE388, z_addcarry, GR64, z_load, 8>;
 }
 
 // Addition that does not modify the condition code.
@@ -1087,12 +1106,12 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8,
               Requires<[FeatureHighWord]>;
 
   // Subtraction of memory.
-  defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssub, GR32, asextloadi16, 2>;
-  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, load, 4>;
-  def  SGH : BinaryRXY<"sgh", 0xE339, z_ssub, GR64, asextloadi16, 2>,
+  defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssub, GR32, z_asextloadi16, 2>;
+  defm S   : BinaryRXPairAndPseudo<"s", 0x5B, 0xE35B, z_ssub, GR32, z_load, 4>;
+  def  SGH : BinaryRXY<"sgh", 0xE339, z_ssub, GR64, z_asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
-  def  SGF : BinaryRXY<"sgf", 0xE319, z_ssub, GR64, asextloadi32, 4>;
-  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, load, 8>;
+  def  SGF : BinaryRXY<"sgf", 0xE319, z_ssub, GR64, z_asextloadi32, 4>;
+  defm SG  : BinaryRXYAndPseudo<"sg",  0xE309, z_ssub, GR64, z_load, 8>;
 }
 defm : SXB<z_ssub, GR64, SGFR>;
 
@@ -1140,9 +1159,9 @@ let Defs = [CC], CCValues = 0x7, IsLogical = 1 in {
   def SLGFI : BinaryRIL<"slgfi", 0xC24, z_usub, GR64, imm64zx32>;
 
   // Subtraction of memory.
-  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, load, 4>;
-  def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usub, GR64, azextloadi32, 4>;
-  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, load, 8>;
+  defm SL   : BinaryRXPairAndPseudo<"sl", 0x5F, 0xE35F, z_usub, GR32, z_load, 4>;
+  def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usub, GR64, z_azextloadi32, 4>;
+  defm SLG  : BinaryRXYAndPseudo<"slg",  0xE30B, z_usub, GR64, z_load, 8>;
 }
 defm : ZXB<z_usub, GR64, SLGFR>;
 
@@ -1167,8 +1186,8 @@ let Defs = [CC], Uses = [CC], CCValues = 0xF, IsLogical = 1 in {
   def SLBGR : BinaryRRE<"slbgr", 0xB989, z_subcarry, GR64, GR64>;
 
   // Subtraction of memory.
-  def SLB  : BinaryRXY<"slb",  0xE399, z_subcarry, GR32, load, 4>;
-  def SLBG : BinaryRXY<"slbg", 0xE389, z_subcarry, GR64, load, 8>;
+  def SLB  : BinaryRXY<"slb",  0xE399, z_subcarry, GR32, z_load, 4>;
+  def SLBG : BinaryRXY<"slbg", 0xE389, z_subcarry, GR64, z_load, 8>;
 }
 
 
@@ -1217,8 +1236,8 @@ let Defs = [CC] in {
 
   // ANDs of memory.
   let CCValues = 0xC, CompareZeroCCMask = 0x8 in {
-    defm N  : BinaryRXPairAndPseudo<"n", 0x54, 0xE354, and, GR32, load, 4>;
-    defm NG : BinaryRXYAndPseudo<"ng", 0xE380, and, GR64, load, 8>;
+    defm N  : BinaryRXPairAndPseudo<"n", 0x54, 0xE354, and, GR32, z_load, 4>;
+    defm NG : BinaryRXYAndPseudo<"ng", 0xE380, and, GR64, z_load, 8>;
   }
 
   // AND to memory
@@ -1274,8 +1293,8 @@ let Defs = [CC] in {
 
   // ORs of memory.
   let CCValues = 0xC, CompareZeroCCMask = 0x8 in {
-    defm O  : BinaryRXPairAndPseudo<"o", 0x56, 0xE356, or, GR32, load, 4>;
-    defm OG : BinaryRXYAndPseudo<"og", 0xE381, or, GR64, load, 8>;
+    defm O  : BinaryRXPairAndPseudo<"o", 0x56, 0xE356, or, GR32, z_load, 4>;
+    defm OG : BinaryRXYAndPseudo<"og", 0xE381, or, GR64, z_load, 8>;
   }
 
   // OR to memory
@@ -1314,8 +1333,8 @@ let Defs = [CC] in {
 
   // XORs of memory.
   let CCValues = 0xC, CompareZeroCCMask = 0x8 in {
-    defm X  : BinaryRXPairAndPseudo<"x",0x57, 0xE357, xor, GR32, load, 4>;
-    defm XG : BinaryRXYAndPseudo<"xg", 0xE382, xor, GR64, load, 8>;
+    defm X  : BinaryRXPairAndPseudo<"x",0x57, 0xE357, xor, GR32, z_load, 4>;
+    defm XG : BinaryRXYAndPseudo<"xg", 0xE382, xor, GR64, z_load, 8>;
   }
 
   // XOR to memory
@@ -1356,6 +1375,10 @@ let Predicates = [FeatureMiscellaneousExtensions3],
   let isCommutable = 1, CCValues = 0xC, CompareZeroCCMask = 0x8 in {
     def NORK : BinaryRRFa<"nork", 0xB976, nor, GR32, GR32, GR32>;
     def NOGRK : BinaryRRFa<"nogrk", 0xB966, nor, GR64, GR64, GR64>;
+    let isAsmParserOnly = 1 in {
+      def NOTR : UnaryRRFa<"notr", 0xB976, nor, GR32, GR32>;
+      def NOTGR : UnaryRRFa<"notgr", 0xB966, nor, GR64, GR64>;
+    }
   }
 
   // NXOR.
@@ -1395,17 +1418,17 @@ def MSFI  : BinaryRIL<"msfi",  0xC21, mul, GR32, simm32>;
 def MSGFI : BinaryRIL<"msgfi", 0xC20, mul, GR64, imm64sx32>;
 
 // Multiplication of memory.
-defm MH   : BinaryRXPair<"mh", 0x4C, 0xE37C, mul, GR32, asextloadi16, 2>;
-defm MS   : BinaryRXPair<"ms", 0x71, 0xE351, mul, GR32, load, 4>;
-def  MGH  : BinaryRXY<"mgh", 0xE33C, mul, GR64, asextloadi16, 2>,
+defm MH   : BinaryRXPair<"mh", 0x4C, 0xE37C, mul, GR32, z_asextloadi16, 2>;
+defm MS   : BinaryRXPair<"ms", 0x71, 0xE351, mul, GR32, z_load, 4>;
+def  MGH  : BinaryRXY<"mgh", 0xE33C, mul, GR64, z_asextloadi16, 2>,
             Requires<[FeatureMiscellaneousExtensions2]>;
-def  MSGF : BinaryRXY<"msgf", 0xE31C, mul, GR64, asextloadi32, 4>;
-def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, load, 8>;
+def  MSGF : BinaryRXY<"msgf", 0xE31C, mul, GR64, z_asextloadi32, 4>;
+def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, z_load, 8>;
 
 // Multiplication of memory, setting the condition code.
 let Predicates = [FeatureMiscellaneousExtensions2], Defs = [CC] in {
-  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, load, 4>;
-  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, load, 8>;
+  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, z_load, 4>;
+  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, z_load, 8>;
 }
 
 // Multiplication of a register, producing two results.
@@ -1421,16 +1444,16 @@ def : Pat<(z_umul_lohi GR64:$src1, GR64:$src2),
           (MLGR (AEXT128 GR64:$src1), GR64:$src2)>;
 
 // Multiplication of memory, producing two results.
-def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, load, 4>;
-def MFY : BinaryRXY<"mfy", 0xE35C, null_frag, GR128, load, 4>;
-def MG  : BinaryRXY<"mg",  0xE384, null_frag, GR128, load, 8>,
+def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, z_load, 4>;
+def MFY : BinaryRXY<"mfy", 0xE35C, null_frag, GR128, z_load, 4>;
+def MG  : BinaryRXY<"mg",  0xE384, null_frag, GR128, z_load, 8>,
           Requires<[FeatureMiscellaneousExtensions2]>;
-def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, load, 4>;
-def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, load, 8>;
+def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, z_load, 4>;
+def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, z_load, 8>;
 
-def : Pat<(z_smul_lohi GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+def : Pat<(z_smul_lohi GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
           (MG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
-def : Pat<(z_umul_lohi GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+def : Pat<(z_umul_lohi GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
           (MLG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
 
 //===----------------------------------------------------------------------===//
@@ -1446,30 +1469,30 @@ let hasSideEffects = 1 in {  // Do not speculatively execute.
   def DLGR  : BinaryRRE<"dlgr",  0xB987, null_frag, GR128, GR64>;
 
   // Division and remainder, from memory.
-  def D    : BinaryRX <"d",    0x5D,   null_frag, GR128, load, 4>;
-  def DSGF : BinaryRXY<"dsgf", 0xE31D, null_frag, GR128, load, 4>;
-  def DSG  : BinaryRXY<"dsg",  0xE30D, null_frag, GR128, load, 8>;
-  def DL   : BinaryRXY<"dl",   0xE397, null_frag, GR128, load, 4>;
-  def DLG  : BinaryRXY<"dlg",  0xE387, null_frag, GR128, load, 8>;
+  def D    : BinaryRX <"d",    0x5D,   null_frag, GR128, z_load, 4>;
+  def DSGF : BinaryRXY<"dsgf", 0xE31D, null_frag, GR128, z_load, 4>;
+  def DSG  : BinaryRXY<"dsg",  0xE30D, null_frag, GR128, z_load, 8>;
+  def DL   : BinaryRXY<"dl",   0xE397, null_frag, GR128, z_load, 4>;
+  def DLG  : BinaryRXY<"dlg",  0xE387, null_frag, GR128, z_load, 8>;
 }
 def : Pat<(z_sdivrem GR64:$src1, GR32:$src2),
           (DSGFR (AEXT128 GR64:$src1), GR32:$src2)>;
-def : Pat<(z_sdivrem GR64:$src1, (i32 (load bdxaddr20only:$src2))),
+def : Pat<(z_sdivrem GR64:$src1, (i32 (z_load bdxaddr20only:$src2))),
           (DSGF (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
 def : Pat<(z_sdivrem GR64:$src1, GR64:$src2),
           (DSGR (AEXT128 GR64:$src1), GR64:$src2)>;
-def : Pat<(z_sdivrem GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+def : Pat<(z_sdivrem GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
           (DSG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
 
 def : Pat<(z_udivrem GR32:$src1, GR32:$src2),
           (DLR (ZEXT128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
                                        subreg_l32)), GR32:$src2)>;
-def : Pat<(z_udivrem GR32:$src1, (i32 (load bdxaddr20only:$src2))),
+def : Pat<(z_udivrem GR32:$src1, (i32 (z_load bdxaddr20only:$src2))),
           (DL (ZEXT128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
                                       subreg_l32)), bdxaddr20only:$src2)>;
 def : Pat<(z_udivrem GR64:$src1, GR64:$src2),
           (DLGR (ZEXT128 GR64:$src1), GR64:$src2)>;
-def : Pat<(z_udivrem GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+def : Pat<(z_udivrem GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
           (DLG (ZEXT128 GR64:$src1), bdxaddr20only:$src2)>;
 
 //===----------------------------------------------------------------------===//
@@ -1510,13 +1533,17 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
     def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
-  let CCValues = 0xE, CompareZeroCCMask = 0xE in
+  let CCValues = 0xE, CompareZeroCCMask = 0xE in {
     def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+  }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
-let Predicates = [FeatureMiscellaneousExtensions] in
+let Predicates = [FeatureMiscellaneousExtensions] in {
   def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+}
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
@@ -1575,25 +1602,25 @@ let Defs = [CC], CCValues = 0xE in {
   def CGFI : CompareRIL<"cgfi", 0xC2C, z_scmp, GR64, imm64sx32>;
 
   // Comparison with memory.
-  defm CH    : CompareRXPair<"ch", 0x49, 0xE379, z_scmp, GR32, asextloadi16, 2>;
-  def  CMux  : CompareRXYPseudo<z_scmp, GRX32, load, 4>,
+  defm CH    : CompareRXPair<"ch", 0x49, 0xE379, z_scmp, GR32, z_asextloadi16, 2>;
+  def  CMux  : CompareRXYPseudo<z_scmp, GRX32, z_load, 4>,
                Requires<[FeatureHighWord]>;
-  defm C     : CompareRXPair<"c",  0x59, 0xE359, z_scmp, GR32, load, 4>;
-  def  CHF   : CompareRXY<"chf", 0xE3CD, z_scmp, GRH32, load, 4>,
+  defm C     : CompareRXPair<"c",  0x59, 0xE359, z_scmp, GR32, z_load, 4>;
+  def  CHF   : CompareRXY<"chf", 0xE3CD, z_scmp, GRH32, z_load, 4>,
                Requires<[FeatureHighWord]>;
-  def  CGH   : CompareRXY<"cgh", 0xE334, z_scmp, GR64, asextloadi16, 2>;
-  def  CGF   : CompareRXY<"cgf", 0xE330, z_scmp, GR64, asextloadi32, 4>;
-  def  CG    : CompareRXY<"cg",  0xE320, z_scmp, GR64, load, 8>;
-  def  CHRL  : CompareRILPC<"chrl",  0xC65, z_scmp, GR32, aligned_asextloadi16>;
-  def  CRL   : CompareRILPC<"crl",   0xC6D, z_scmp, GR32, aligned_load>;
-  def  CGHRL : CompareRILPC<"cghrl", 0xC64, z_scmp, GR64, aligned_asextloadi16>;
-  def  CGFRL : CompareRILPC<"cgfrl", 0xC6C, z_scmp, GR64, aligned_asextloadi32>;
-  def  CGRL  : CompareRILPC<"cgrl",  0xC68, z_scmp, GR64, aligned_load>;
+  def  CGH   : CompareRXY<"cgh", 0xE334, z_scmp, GR64, z_asextloadi16, 2>;
+  def  CGF   : CompareRXY<"cgf", 0xE330, z_scmp, GR64, z_asextloadi32, 4>;
+  def  CG    : CompareRXY<"cg",  0xE320, z_scmp, GR64, z_load, 8>;
+  def  CHRL  : CompareRILPC<"chrl",  0xC65, z_scmp, GR32, aligned_z_asextloadi16>;
+  def  CRL   : CompareRILPC<"crl",   0xC6D, z_scmp, GR32, aligned_z_load>;
+  def  CGHRL : CompareRILPC<"cghrl", 0xC64, z_scmp, GR64, aligned_z_asextloadi16>;
+  def  CGFRL : CompareRILPC<"cgfrl", 0xC6C, z_scmp, GR64, aligned_z_asextloadi32>;
+  def  CGRL  : CompareRILPC<"cgrl",  0xC68, z_scmp, GR64, aligned_z_load>;
 
   // Comparison between memory and a signed 16-bit immediate.
-  def CHHSI : CompareSIL<"chhsi", 0xE554, z_scmp, asextloadi16, imm32sx16>;
-  def CHSI  : CompareSIL<"chsi",  0xE55C, z_scmp, load, imm32sx16>;
-  def CGHSI : CompareSIL<"cghsi", 0xE558, z_scmp, load, imm64sx16>;
+  def CHHSI : CompareSIL<"chhsi", 0xE554, z_scmp, z_asextloadi16, imm32sx16>;
+  def CHSI  : CompareSIL<"chsi",  0xE55C, z_scmp, z_load, imm32sx16>;
+  def CGHSI : CompareSIL<"cghsi", 0xE558, z_scmp, z_load, imm64sx16>;
 }
 defm : SXB<z_scmp, GR64, CGFR>;
 
@@ -1620,31 +1647,31 @@ let Defs = [CC], CCValues = 0xE, IsLogical = 1 in {
   def CLGFI : CompareRIL<"clgfi", 0xC2E, z_ucmp, GR64, imm64zx32>;
 
   // Comparison with memory.
-  def  CLMux  : CompareRXYPseudo<z_ucmp, GRX32, load, 4>,
+  def  CLMux  : CompareRXYPseudo<z_ucmp, GRX32, z_load, 4>,
                 Requires<[FeatureHighWord]>;
-  defm CL     : CompareRXPair<"cl", 0x55, 0xE355, z_ucmp, GR32, load, 4>;
-  def  CLHF   : CompareRXY<"clhf", 0xE3CF, z_ucmp, GRH32, load, 4>,
+  defm CL     : CompareRXPair<"cl", 0x55, 0xE355, z_ucmp, GR32, z_load, 4>;
+  def  CLHF   : CompareRXY<"clhf", 0xE3CF, z_ucmp, GRH32, z_load, 4>,
                 Requires<[FeatureHighWord]>;
-  def  CLGF   : CompareRXY<"clgf", 0xE331, z_ucmp, GR64, azextloadi32, 4>;
-  def  CLG    : CompareRXY<"clg",  0xE321, z_ucmp, GR64, load, 8>;
+  def  CLGF   : CompareRXY<"clgf", 0xE331, z_ucmp, GR64, z_azextloadi32, 4>;
+  def  CLG    : CompareRXY<"clg",  0xE321, z_ucmp, GR64, z_load, 8>;
   def  CLHRL  : CompareRILPC<"clhrl",  0xC67, z_ucmp, GR32,
-                             aligned_azextloadi16>;
+                             aligned_z_azextloadi16>;
   def  CLRL   : CompareRILPC<"clrl",   0xC6F, z_ucmp, GR32,
-                             aligned_load>;
+                             aligned_z_load>;
   def  CLGHRL : CompareRILPC<"clghrl", 0xC66, z_ucmp, GR64,
-                             aligned_azextloadi16>;
+                             aligned_z_azextloadi16>;
   def  CLGFRL : CompareRILPC<"clgfrl", 0xC6E, z_ucmp, GR64,
-                             aligned_azextloadi32>;
+                             aligned_z_azextloadi32>;
   def  CLGRL  : CompareRILPC<"clgrl",  0xC6A, z_ucmp, GR64,
-                             aligned_load>;
+                             aligned_z_load>;
 
   // Comparison between memory and an unsigned 8-bit immediate.
-  defm CLI : CompareSIPair<"cli", 0x95, 0xEB55, z_ucmp, azextloadi8, imm32zx8>;
+  defm CLI : CompareSIPair<"cli", 0x95, 0xEB55, z_ucmp, z_azextloadi8, imm32zx8>;
 
   // Comparison between memory and an unsigned 16-bit immediate.
-  def CLHHSI : CompareSIL<"clhhsi", 0xE555, z_ucmp, azextloadi16, imm32zx16>;
-  def CLFHSI : CompareSIL<"clfhsi", 0xE55D, z_ucmp, load, imm32zx16>;
-  def CLGHSI : CompareSIL<"clghsi", 0xE559, z_ucmp, load, imm64zx16>;
+  def CLHHSI : CompareSIL<"clhhsi", 0xE555, z_ucmp, z_azextloadi16, imm32zx16>;
+  def CLFHSI : CompareSIL<"clfhsi", 0xE55D, z_ucmp, z_load, imm32zx16>;
+  def CLGHSI : CompareSIL<"clghsi", 0xE559, z_ucmp, z_load, imm64zx16>;
 }
 defm : ZXB<z_ucmp, GR64, CLGFR>;
 
@@ -1677,7 +1704,7 @@ let Defs = [CC] in {
   def TMHL64 : CompareAliasRI<z_tm_reg, GR64, imm64hl16>;
   def TMHH64 : CompareAliasRI<z_tm_reg, GR64, imm64hh16>;
 
-  defm TM : CompareSIPair<"tm", 0x91, 0xEB51, z_tm_mem, anyextloadi8, imm32zx8>;
+  defm TM : CompareSIPair<"tm", 0x91, 0xEB51, z_tm_mem, z_anyextloadi8, imm32zx8>;
 }
 
 def TML : InstAlias<"tml\t$R, $I", (TMLL GR32:$R, imm32ll16:$I), 0>;
@@ -1717,125 +1744,42 @@ let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), []>;
 
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
-  def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_32, GR32>;
-  def LAAG  : LoadAndOpRSY<"laag",  0xEBE8, atomic_load_add_64, GR64>;
+  def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_i32, GR32>;
+  def LAAG  : LoadAndOpRSY<"laag",  0xEBE8, atomic_load_add_i64, GR64>;
   def LAAL  : LoadAndOpRSY<"laal",  0xEBFA, null_frag, GR32>;
   def LAALG : LoadAndOpRSY<"laalg", 0xEBEA, null_frag, GR64>;
-  def LAN   : LoadAndOpRSY<"lan",   0xEBF4, atomic_load_and_32, GR32>;
-  def LANG  : LoadAndOpRSY<"lang",  0xEBE4, atomic_load_and_64, GR64>;
-  def LAO   : LoadAndOpRSY<"lao",   0xEBF6, atomic_load_or_32, GR32>;
-  def LAOG  : LoadAndOpRSY<"laog",  0xEBE6, atomic_load_or_64, GR64>;
-  def LAX   : LoadAndOpRSY<"lax",   0xEBF7, atomic_load_xor_32, GR32>;
-  def LAXG  : LoadAndOpRSY<"laxg",  0xEBE7, atomic_load_xor_64, GR64>;
+  def LAN   : LoadAndOpRSY<"lan",   0xEBF4, atomic_load_and_i32, GR32>;
+  def LANG  : LoadAndOpRSY<"lang",  0xEBE4, atomic_load_and_i64, GR64>;
+  def LAO   : LoadAndOpRSY<"lao",   0xEBF6, atomic_load_or_i32, GR32>;
+  def LAOG  : LoadAndOpRSY<"laog",  0xEBE6, atomic_load_or_i64, GR64>;
+  def LAX   : LoadAndOpRSY<"lax",   0xEBF7, atomic_load_xor_i32, GR32>;
+  def LAXG  : LoadAndOpRSY<"laxg",  0xEBE7, atomic_load_xor_i64, GR64>;
 }
 
 def ATOMIC_SWAPW   : AtomicLoadWBinaryReg<z_atomic_swapw>;
-def ATOMIC_SWAP_32 : AtomicLoadBinaryReg32<atomic_swap_32>;
-def ATOMIC_SWAP_64 : AtomicLoadBinaryReg64<atomic_swap_64>;
 
 def ATOMIC_LOADW_AR  : AtomicLoadWBinaryReg<z_atomic_loadw_add>;
 def ATOMIC_LOADW_AFI : AtomicLoadWBinaryImm<z_atomic_loadw_add, simm32>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_AR   : AtomicLoadBinaryReg32<atomic_load_add_32>;
-  def ATOMIC_LOAD_AHI  : AtomicLoadBinaryImm32<atomic_load_add_32, imm32sx16>;
-  def ATOMIC_LOAD_AFI  : AtomicLoadBinaryImm32<atomic_load_add_32, simm32>;
-  def ATOMIC_LOAD_AGR  : AtomicLoadBinaryReg64<atomic_load_add_64>;
-  def ATOMIC_LOAD_AGHI : AtomicLoadBinaryImm64<atomic_load_add_64, imm64sx16>;
-  def ATOMIC_LOAD_AGFI : AtomicLoadBinaryImm64<atomic_load_add_64, imm64sx32>;
-}
 
 def ATOMIC_LOADW_SR : AtomicLoadWBinaryReg<z_atomic_loadw_sub>;
-def ATOMIC_LOAD_SR  : AtomicLoadBinaryReg32<atomic_load_sub_32>;
-def ATOMIC_LOAD_SGR : AtomicLoadBinaryReg64<atomic_load_sub_64>;
 
 def ATOMIC_LOADW_NR   : AtomicLoadWBinaryReg<z_atomic_loadw_and>;
 def ATOMIC_LOADW_NILH : AtomicLoadWBinaryImm<z_atomic_loadw_and, imm32lh16c>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_NR     : AtomicLoadBinaryReg32<atomic_load_and_32>;
-  def ATOMIC_LOAD_NILL   : AtomicLoadBinaryImm32<atomic_load_and_32,
-                                                 imm32ll16c>;
-  def ATOMIC_LOAD_NILH   : AtomicLoadBinaryImm32<atomic_load_and_32,
-                                                 imm32lh16c>;
-  def ATOMIC_LOAD_NILF   : AtomicLoadBinaryImm32<atomic_load_and_32, uimm32>;
-  def ATOMIC_LOAD_NGR    : AtomicLoadBinaryReg64<atomic_load_and_64>;
-  def ATOMIC_LOAD_NILL64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64ll16c>;
-  def ATOMIC_LOAD_NILH64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64lh16c>;
-  def ATOMIC_LOAD_NIHL64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64hl16c>;
-  def ATOMIC_LOAD_NIHH64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64hh16c>;
-  def ATOMIC_LOAD_NILF64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64lf32c>;
-  def ATOMIC_LOAD_NIHF64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64hf32c>;
-}
 
 def ATOMIC_LOADW_OR     : AtomicLoadWBinaryReg<z_atomic_loadw_or>;
 def ATOMIC_LOADW_OILH   : AtomicLoadWBinaryImm<z_atomic_loadw_or, imm32lh16>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_OR     : AtomicLoadBinaryReg32<atomic_load_or_32>;
-  def ATOMIC_LOAD_OILL   : AtomicLoadBinaryImm32<atomic_load_or_32, imm32ll16>;
-  def ATOMIC_LOAD_OILH   : AtomicLoadBinaryImm32<atomic_load_or_32, imm32lh16>;
-  def ATOMIC_LOAD_OILF   : AtomicLoadBinaryImm32<atomic_load_or_32, uimm32>;
-  def ATOMIC_LOAD_OGR    : AtomicLoadBinaryReg64<atomic_load_or_64>;
-  def ATOMIC_LOAD_OILL64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64ll16>;
-  def ATOMIC_LOAD_OILH64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64lh16>;
-  def ATOMIC_LOAD_OIHL64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64hl16>;
-  def ATOMIC_LOAD_OIHH64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64hh16>;
-  def ATOMIC_LOAD_OILF64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64lf32>;
-  def ATOMIC_LOAD_OIHF64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64hf32>;
-}
 
 def ATOMIC_LOADW_XR     : AtomicLoadWBinaryReg<z_atomic_loadw_xor>;
 def ATOMIC_LOADW_XILF   : AtomicLoadWBinaryImm<z_atomic_loadw_xor, uimm32>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_XR     : AtomicLoadBinaryReg32<atomic_load_xor_32>;
-  def ATOMIC_LOAD_XILF   : AtomicLoadBinaryImm32<atomic_load_xor_32, uimm32>;
-  def ATOMIC_LOAD_XGR    : AtomicLoadBinaryReg64<atomic_load_xor_64>;
-  def ATOMIC_LOAD_XILF64 : AtomicLoadBinaryImm64<atomic_load_xor_64, imm64lf32>;
-  def ATOMIC_LOAD_XIHF64 : AtomicLoadBinaryImm64<atomic_load_xor_64, imm64hf32>;
-}
 
 def ATOMIC_LOADW_NRi    : AtomicLoadWBinaryReg<z_atomic_loadw_nand>;
 def ATOMIC_LOADW_NILHi  : AtomicLoadWBinaryImm<z_atomic_loadw_nand,
                                                imm32lh16c>;
-def ATOMIC_LOAD_NRi     : AtomicLoadBinaryReg32<atomic_load_nand_32>;
-def ATOMIC_LOAD_NILLi   : AtomicLoadBinaryImm32<atomic_load_nand_32,
-                                                imm32ll16c>;
-def ATOMIC_LOAD_NILHi   : AtomicLoadBinaryImm32<atomic_load_nand_32,
-                                                imm32lh16c>;
-def ATOMIC_LOAD_NILFi   : AtomicLoadBinaryImm32<atomic_load_nand_32, uimm32>;
-def ATOMIC_LOAD_NGRi    : AtomicLoadBinaryReg64<atomic_load_nand_64>;
-def ATOMIC_LOAD_NILL64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64ll16c>;
-def ATOMIC_LOAD_NILH64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64lh16c>;
-def ATOMIC_LOAD_NIHL64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64hl16c>;
-def ATOMIC_LOAD_NIHH64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64hh16c>;
-def ATOMIC_LOAD_NILF64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64lf32c>;
-def ATOMIC_LOAD_NIHF64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64hf32c>;
 
 def ATOMIC_LOADW_MIN    : AtomicLoadWBinaryReg<z_atomic_loadw_min>;
-def ATOMIC_LOAD_MIN_32  : AtomicLoadBinaryReg32<atomic_load_min_32>;
-def ATOMIC_LOAD_MIN_64  : AtomicLoadBinaryReg64<atomic_load_min_64>;
-
 def ATOMIC_LOADW_MAX    : AtomicLoadWBinaryReg<z_atomic_loadw_max>;
-def ATOMIC_LOAD_MAX_32  : AtomicLoadBinaryReg32<atomic_load_max_32>;
-def ATOMIC_LOAD_MAX_64  : AtomicLoadBinaryReg64<atomic_load_max_64>;
-
 def ATOMIC_LOADW_UMIN   : AtomicLoadWBinaryReg<z_atomic_loadw_umin>;
-def ATOMIC_LOAD_UMIN_32 : AtomicLoadBinaryReg32<atomic_load_umin_32>;
-def ATOMIC_LOAD_UMIN_64 : AtomicLoadBinaryReg64<atomic_load_umin_64>;
-
 def ATOMIC_LOADW_UMAX   : AtomicLoadWBinaryReg<z_atomic_loadw_umax>;
-def ATOMIC_LOAD_UMAX_32 : AtomicLoadBinaryReg32<atomic_load_umax_32>;
-def ATOMIC_LOAD_UMAX_64 : AtomicLoadBinaryReg64<atomic_load_umax_64>;
 
 def ATOMIC_CMP_SWAPW
   : Pseudo<(outs GR32:$dst), (ins bdaddr20only:$addr, GR32:$cmp, GR32:$swap,
@@ -1981,8 +1925,8 @@ let Predicates = [FeatureGuardedStorage], hasSideEffects = 1 in {
 // Decimal arithmetic
 //===----------------------------------------------------------------------===//
 
-defm CVB  : BinaryRXPair<"cvb",0x4F, 0xE306, null_frag, GR32, load, 4>;
-def  CVBG : BinaryRXY<"cvbg", 0xE30E, null_frag, GR64, load, 8>;
+defm CVB  : BinaryRXPair<"cvb",0x4F, 0xE306, null_frag, GR32, z_load, 4>;
+def  CVBG : BinaryRXY<"cvbg", 0xE30E, null_frag, GR64, z_load, 8>;
 
 defm CVD  : StoreRXPair<"cvd", 0x4E, 0xE326, null_frag, GR32, 4>;
 def  CVDG : StoreRXY<"cvdg", 0xE32E, null_frag, GR64, 8>;
@@ -2221,7 +2165,7 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnRIS : DirectiveInsnRIS<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
                                       imm32sx8:$I2, imm32zx4:$M3,
-                                      bdaddr12only:$BD4),
+                                      (bdaddr12only $B4, $D4):$BD4),
                                  ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
   def InsnRR : DirectiveInsnRR<(outs),
                                (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
@@ -2236,15 +2180,15 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnRRS : DirectiveInsnRRS<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
                                       AnyReg:$R2, imm32zx4:$M3,
-                                      bdaddr12only:$BD4),
+                                      (bdaddr12only $B4, $D4):$BD4),
                                  ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
   def InsnRS  : DirectiveInsnRS<(outs),
                                 (ins imm64zx32:$enc, AnyReg:$R1,
-                                     AnyReg:$R3, bdaddr12only:$BD2),
+                                     AnyReg:$R3, (bdaddr12only $B2, $D2):$BD2),
                                 ".insn rs,$enc,$R1,$R3,$BD2", []>;
   def InsnRSE : DirectiveInsnRSE<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, bdaddr12only:$BD2),
+                                      AnyReg:$R3, (bdaddr12only $B2, $D2):$BD2),
                                  ".insn rse,$enc,$R1,$R3,$BD2", []>;
   def InsnRSI : DirectiveInsnRSI<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
@@ -2252,47 +2196,47 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
                                  ".insn rsi,$enc,$R1,$R3,$RI2", []>;
   def InsnRSY : DirectiveInsnRSY<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, bdaddr20only:$BD2),
+                                      AnyReg:$R3, (bdaddr20only $B2, $D2):$BD2),
                                  ".insn rsy,$enc,$R1,$R3,$BD2", []>;
   def InsnRX  : DirectiveInsnRX<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
-                                             bdxaddr12only:$XBD2),
+                                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
                                 ".insn rx,$enc,$R1,$XBD2", []>;
   def InsnRXE : DirectiveInsnRXE<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              bdxaddr12only:$XBD2),
+                                              (bdxaddr12only $B2, $D2, $X2):$XBD2),
                                  ".insn rxe,$enc,$R1,$XBD2", []>;
   def InsnRXF : DirectiveInsnRXF<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, bdxaddr12only:$XBD2),
+                                      AnyReg:$R3, (bdxaddr12only $B2, $D2, $X2):$XBD2),
                                  ".insn rxf,$enc,$R1,$R3,$XBD2", []>;
   def InsnRXY : DirectiveInsnRXY<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              bdxaddr20only:$XBD2),
+                                              (bdxaddr20only $B2, $D2, $X2):$XBD2),
                                  ".insn rxy,$enc,$R1,$XBD2", []>;
   def InsnS : DirectiveInsnS<(outs),
-                             (ins imm64zx32:$enc, bdaddr12only:$BD2),
+                             (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
                              ".insn s,$enc,$BD2", []>;
   def InsnSI : DirectiveInsnSI<(outs),
-                               (ins imm64zx32:$enc, bdaddr12only:$BD1,
+                               (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1,
                                     imm32sx8:$I2),
                                ".insn si,$enc,$BD1,$I2", []>;
   def InsnSIY : DirectiveInsnSIY<(outs),
                                  (ins imm64zx48:$enc,
-                                      bdaddr20only:$BD1, imm32zx8:$I2),
+                                      (bdaddr20only $B1, $D1):$BD1, imm32zx8:$I2),
                                  ".insn siy,$enc,$BD1,$I2", []>;
   def InsnSIL : DirectiveInsnSIL<(outs),
-                                 (ins imm64zx48:$enc, bdaddr12only:$BD1,
+                                 (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
                                       imm32zx16:$I2),
                                  ".insn sil,$enc,$BD1,$I2", []>;
   def InsnSS : DirectiveInsnSS<(outs),
-                               (ins imm64zx48:$enc, bdraddr12only:$RBD1,
-                                    bdaddr12only:$BD2, AnyReg:$R3),
+                               (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
+                                    (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
                                ".insn ss,$enc,$RBD1,$BD2,$R3", []>;
   def InsnSSE : DirectiveInsnSSE<(outs),
                                  (ins imm64zx48:$enc,
-                                      bdaddr12only:$BD1,bdaddr12only:$BD2),
+                                      (bdaddr12only $B1, $D1):$BD1,(bdaddr12only $B2, $D2):$BD2),
                                  ".insn sse,$enc,$BD1,$BD2", []>;
   def InsnSSF : DirectiveInsnSSF<(outs),
-                                 (ins imm64zx48:$enc, bdaddr12only:$BD1,
-                                      bdaddr12only:$BD2, AnyReg:$R3),
+                                 (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                                      (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
                                  ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
   def InsnVRI : DirectiveInsnVRI<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
@@ -2305,19 +2249,19 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
                                   ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
   def InsnVRS : DirectiveInsnVRS<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
-                                  bdaddr12only:$BD2, imm32zx4:$M4),
+                                  (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
                                  ".insn vrs,$enc,$BD2,$M4", []>;
   def InsnVRV : DirectiveInsnVRV<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1,
-                                      bdvaddr12only:$VBD2, imm32zx4:$M3),
+                                      (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
                                  ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
   def InsnVRX : DirectiveInsnVRX<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1,
-                                  bdxaddr12only:$XBD2, imm32zx4:$M3),
+                                  (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
                                  ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
   def InsnVSI : DirectiveInsnVSI<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1,
-                                  bdaddr12only:$BD2, imm32zx8:$I3),
+                                  (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
                                   ".insn vsi,$enc,$V1,$BD2,$I3", []>;
 }
 
@@ -2329,6 +2273,10 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
 // equivalent to (and (xor x, -1), y)
 def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
                           (XGR GR64:$y, (NGR GR64:$y, GR64:$x))>;
+
+// Use LCGR/AGHI for i64 xor with -1.
+def : Pat<(xor GR64:$x, (i64 -1)),
+          (AGHI (LCGR GR64:$x), (i64 -1))>;
 
 // Shift/rotate instructions only use the last 6 bits of the second operand
 // register, so we can safely use NILL (16 fewer bits than NILF) to only AND the
@@ -2393,6 +2341,8 @@ defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 def JCT   : MnemonicAlias<"jct", "brct">;
 def JCTG  : MnemonicAlias<"jctg", "brctg">;
+def JC    : MnemonicAlias<"jc", "brc">;
+def JCTH  : MnemonicAlias<"jcth", "brcth">;
 def JAS   : MnemonicAlias<"jas", "bras">;
 def JASL  : MnemonicAlias<"jasl", "brasl">;
 def JXH   : MnemonicAlias<"jxh", "brxh">;

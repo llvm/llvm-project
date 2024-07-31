@@ -11,27 +11,23 @@
 // Compare iterators from different containers with <.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <string>
 
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    typedef std::string S;
-    S s1;
-    S s2;
-    TEST_LIBCPP_ASSERT_FAILURE(s1.begin() < s2.begin(), "Attempted to compare incomparable iterators");
-  }
+template <class S>
+void test() {
+  S s1;
+  S s2;
+  TEST_LIBCPP_ASSERT_FAILURE(s1.begin() < s2.begin(), "Attempted to compare incomparable iterators");
+}
 
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-    S s1;
-    S s2;
-    TEST_LIBCPP_ASSERT_FAILURE(s1.begin() < s2.begin(), "Attempted to compare incomparable iterators");
-  }
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 
   return 0;
 }

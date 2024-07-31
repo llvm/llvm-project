@@ -4,9 +4,6 @@ Some of the test suite takes advantage of the utility functions defined here.
 They can also be useful for general purpose lldb scripting.
 """
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 # System modules
 import errno
 import io
@@ -699,24 +696,24 @@ def check_breakpoint(
     test.assertTrue(bkpt.IsValid(), "Breakpoint is not valid.")
 
     if expected_locations is not None:
-        test.assertEquals(expected_locations, bkpt.GetNumLocations())
+        test.assertEqual(expected_locations, bkpt.GetNumLocations())
 
     if expected_resolved_count is not None:
-        test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+        test.assertEqual(expected_resolved_count, bkpt.GetNumResolvedLocations())
     else:
         expected_resolved_count = bkpt.GetNumLocations()
         if location_id is None:
-            test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+            test.assertEqual(expected_resolved_count, bkpt.GetNumResolvedLocations())
 
     if expected_hit_count is not None:
-        test.assertEquals(expected_hit_count, bkpt.GetHitCount())
+        test.assertEqual(expected_hit_count, bkpt.GetHitCount())
 
     if location_id is not None:
         loc_bkpt = bkpt.FindLocationByID(location_id)
         test.assertTrue(loc_bkpt.IsValid(), "Breakpoint location is not valid.")
-        test.assertEquals(loc_bkpt.IsResolved(), expected_location_resolved)
+        test.assertEqual(loc_bkpt.IsResolved(), expected_location_resolved)
         if expected_location_hit_count is not None:
-            test.assertEquals(expected_location_hit_count, loc_bkpt.GetHitCount())
+            test.assertEqual(expected_location_hit_count, loc_bkpt.GetHitCount())
 
 
 # ==================================================
@@ -812,7 +809,7 @@ def is_thread_crashed(test, thread):
             thread.GetStopReason() == lldb.eStopReasonException
             and "EXC_BAD_ACCESS" in thread.GetStopDescription(100)
         )
-    elif test.getPlatform() == "linux":
+    elif test.getPlatform() in ["linux", "freebsd"]:
         return (
             thread.GetStopReason() == lldb.eStopReasonSignal
             and thread.GetStopReasonDataAtIndex(0)
@@ -1597,11 +1594,11 @@ def set_actions_for_signal(
 ):
     return_obj = lldb.SBCommandReturnObject()
     command = "process handle {0}".format(signal_name)
-    if pass_action != None:
+    if pass_action is not None:
         command += " -p {0}".format(pass_action)
-    if stop_action != None:
+    if stop_action is not None:
         command += " -s {0}".format(stop_action)
-    if notify_action != None:
+    if notify_action is not None:
         command += " -n {0}".format(notify_action)
 
     testcase.dbg.GetCommandInterpreter().HandleCommand(command, return_obj)
@@ -1655,6 +1652,22 @@ def skip_if_library_missing(test, target, library):
         find_library_callable,
         "could not find library matching '%s' in target %s" % (library, target),
     )
+
+
+def install_to_target(test, path):
+    if lldb.remote_platform:
+        filename = os.path.basename(path)
+        remote_path = append_to_process_working_directory(test, filename)
+        err = lldb.remote_platform.Install(
+            lldb.SBFileSpec(path, True), lldb.SBFileSpec(remote_path, False)
+        )
+        if err.Fail():
+            raise Exception(
+                "remote_platform.Install('%s', '%s') failed: %s"
+                % (path, remote_path, err)
+            )
+        path = remote_path
+    return path
 
 
 def read_file_on_target(test, remote):

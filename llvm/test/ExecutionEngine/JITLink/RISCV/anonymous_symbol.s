@@ -7,8 +7,8 @@
 # the section start and section end. So that by relocating these symbol, the section length
 # can be calculated.
 #
-# CHECK: Creating defined graph symbol for ELF symbol ""
-# CHECK: Creating defined graph symbol for ELF symbol ""
+# CHECK: Creating defined graph symbol for ELF symbol ".L0 "
+# CHECK: Creating defined graph symbol for ELF symbol "main"
         .text
         .globl main
         .p2align 2

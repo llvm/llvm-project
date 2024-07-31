@@ -562,7 +562,6 @@ namespace test16 {
   // expected-error{{exception object of type 'A' has private destructor}}
 }
 
-// rdar://problem/8146294
 namespace test17 {
   class A {
     template <typename T> class Inner { }; // expected-note {{declared private here}}
@@ -612,6 +611,7 @@ namespace test21 {
   template <class T> class A<T>::Inner {};
   class B {
     template <class T> class A<T>::Inner; // expected-error{{non-friend class member 'Inner' cannot have a qualified name}}
+                                          // expected-error@-1{{forward declaration of class cannot have a nested name specifier}}
   };
 
   void test() {

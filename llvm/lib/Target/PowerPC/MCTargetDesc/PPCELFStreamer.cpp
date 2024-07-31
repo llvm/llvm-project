@@ -17,11 +17,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "PPCELFStreamer.h"
 #include "PPCFixupKinds.h"
-#include "PPCInstrInfo.h"
 #include "PPCMCCodeEmitter.h"
+#include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -77,7 +76,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
     // label to the top of the fragment containing the aligned instruction that
     // was just added.
     if (InstLine == LabelLine) {
-      assignFragment(LastLabel, InstructionFragment);
+      LastLabel->setFragment(InstructionFragment);
       LastLabel->setOffset(0);
     }
   }

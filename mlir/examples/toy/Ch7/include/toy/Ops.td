@@ -13,7 +13,7 @@
 #ifndef TOY_OPS
 #define TOY_OPS
 
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
@@ -165,8 +165,7 @@ def CastOp : Toy_Op<"cast", [
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Toy_Op<"func", [
-    DeclareOpInterfaceMethods<CallableOpInterface>, FunctionOpInterface,
-    IsolatedFromAbove
+    FunctionOpInterface, IsolatedFromAbove
   ]> {
   let summary = "user defined function operation";
   let description = [{
@@ -207,6 +206,8 @@ def FuncOp : Toy_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    Region *getCallableRegion() { return &getBody(); }
   }];
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;

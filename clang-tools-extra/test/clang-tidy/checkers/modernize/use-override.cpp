@@ -27,6 +27,7 @@ struct Base {
   virtual void f() = 0;
   virtual void f2() const = 0;
   virtual void g() = 0;
+  virtual void g2() = 0;
 
   virtual void j() const;
   virtual MustUseResultObject k();
@@ -126,6 +127,10 @@ public:
   virtual void t() throw();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
   // CHECK-FIXES: {{^}}  void t() throw() override;
+
+  virtual       /*      */ void g2();
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual'
+  // CHECK-FIXES: {{^}}  /*      */ void g2() override;
 };
 
 // CHECK-MESSAGES-NOT: warning:

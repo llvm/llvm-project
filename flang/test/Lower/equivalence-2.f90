@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! Check more advanced equivalence cases
 
@@ -111,7 +111,7 @@ subroutine eq_and_comm_same_offset
   equivalence(arr3,arr4)
 
   ! CHECK: %[[arr4Store:.*]] = fir.alloca !fir.array<70756xi8> {uniq_name = "_QFeq_and_comm_same_offsetEarr3"}
-  ! CHECK: %[[mcbAddr:.*]] = fir.address_of(@_QCmy_common_block) : !fir.ref<!fir.array<1064xi8>>
+  ! CHECK: %[[mcbAddr:.*]] = fir.address_of(@my_common_block_) : !fir.ref<!fir.array<1064xi8>>
   ! CHECK: %[[mcbCast:.*]] = fir.convert %[[mcbAddr]] : (!fir.ref<!fir.array<1064xi8>>) -> !fir.ref<!fir.array<?xi8>>
   ! CHECK: %[[c0:.*]] = arith.constant 0 : index
   ! CHECK: %[[mcbCoor:.*]] = fir.coordinate_of %[[mcbCast]], %[[c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

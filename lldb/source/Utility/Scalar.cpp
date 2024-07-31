@@ -16,6 +16,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <cinttypes>
 #include <cstdio>
@@ -133,9 +134,9 @@ size_t Scalar::GetByteSize() const {
   case e_void:
     break;
   case e_int:
-    return (m_integer.getBitWidth() / 8);
+    return (m_integer.getBitWidth() + 7) / 8;
   case e_float:
-    return m_float.bitcastToAPInt().getBitWidth() / 8;
+    return (m_float.bitcastToAPInt().getBitWidth() + 7) / 8;
   }
   return 0;
 }
@@ -152,20 +153,20 @@ bool Scalar::IsZero() const {
   return false;
 }
 
-void Scalar::GetValue(Stream *s, bool show_type) const {
+void Scalar::GetValue(Stream &s, bool show_type) const {
   if (show_type)
-    s->Printf("(%s) ", GetTypeAsCString());
+    s.Printf("(%s) ", GetTypeAsCString());
 
   switch (m_type) {
   case e_void:
     break;
   case e_int:
-    s->PutCString(llvm::toString(m_integer, 10));
+    s.PutCString(llvm::toString(m_integer, 10));
     break;
   case e_float:
     llvm::SmallString<24> string;
     m_float.toString(string);
-    s->PutCString(string);
+    s.PutCString(string);
     break;
   }
 }
@@ -752,9 +753,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
       return false;
 
     case Scalar::e_int:
-      if (max_bit_pos == sign_bit_pos)
-        return true;
-      else if (sign_bit_pos < (max_bit_pos - 1)) {
+      if (sign_bit_pos < (max_bit_pos - 1)) {
         llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
         llvm::APInt bitwize_and = m_integer & sign_bit;
         if (bitwize_and.getBoolValue()) {
@@ -810,6 +809,48 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
     return true;
   }
   return false;
+}
+
+llvm::APFloat Scalar::CreateAPFloatFromAPSInt(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeFloat:
+    return llvm::APFloat(
+        m_integer.isSigned()
+            ? llvm::APIntOps::RoundSignedAPIntToFloat(m_integer)
+            : llvm::APIntOps::RoundAPIntToFloat(m_integer));
+  case lldb::eBasicTypeDouble:
+    // No way to get more precision at the moment.
+  case lldb::eBasicTypeLongDouble:
+    return llvm::APFloat(
+        m_integer.isSigned()
+            ? llvm::APIntOps::RoundSignedAPIntToDouble(m_integer)
+            : llvm::APIntOps::RoundAPIntToDouble(m_integer));
+  default:
+    const llvm::fltSemantics &sem = APFloat::IEEEsingle();
+    return llvm::APFloat::getNaN(sem);
+  }
+}
+
+llvm::APFloat Scalar::CreateAPFloatFromAPFloat(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeFloat: {
+    bool loses_info;
+    m_float.convert(llvm::APFloat::IEEEsingle(),
+                    llvm::APFloat::rmNearestTiesToEven, &loses_info);
+    return m_float;
+  }
+  case lldb::eBasicTypeDouble:
+    // No way to get more precision at the moment.
+  case lldb::eBasicTypeLongDouble: {
+    bool loses_info;
+    m_float.convert(llvm::APFloat::IEEEdouble(),
+                    llvm::APFloat::rmNearestTiesToEven, &loses_info);
+    return m_float;
+  }
+  default:
+    const llvm::fltSemantics &sem = APFloat::IEEEsingle();
+    return llvm::APFloat::getNaN(sem);
+  }
 }
 
 bool lldb_private::operator==(Scalar lhs, Scalar rhs) {
@@ -893,6 +934,6 @@ bool Scalar::SetBit(uint32_t bit) {
 
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os, const Scalar &scalar) {
   StreamString s;
-  scalar.GetValue(&s, /*show_type*/ true);
+  scalar.GetValue(s, /*show_type*/ true);
   return os << s.GetString();
 }

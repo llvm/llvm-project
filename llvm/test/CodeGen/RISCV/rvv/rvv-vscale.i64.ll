@@ -3,11 +3,11 @@
 ; RUN:    | FileCheck %s -check-prefixes=RV64,RV64-VLENUNK
 ; RUN: llc -mtriple riscv32 -mattr=+m,+v < %s \
 ; RUN:    | FileCheck %s -check-prefix=RV32
-; RUN: llc -mtriple riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=256 < %s \
+; RUN: llc -mtriple riscv64 -mattr=+m,+v,+zvl256b < %s \
 ; RUN:    | FileCheck %s -check-prefixes=RV64,RV64-VLEN256MIN
 ; RUN: llc -mtriple riscv64 -mattr=+m,+v -riscv-v-vector-bits-max=256 < %s \
 ; RUN:    | FileCheck %s -check-prefixes=RV64,RV64-VLEN256MAX
-; RUN: llc -mtriple riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=256 -riscv-v-vector-bits-max=256 < %s \
+; RUN: llc -mtriple riscv64 -mattr=+m,+v,+zvl256b -riscv-v-vector-bits-max=256 < %s \
 ; RUN:    | FileCheck %s -check-prefixes=RV64-VLEN256EXACT
 
 

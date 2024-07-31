@@ -188,9 +188,13 @@ public:
   /// SelectionDAGISel::PrepareEHLandingPad().
   unsigned ExceptionPointerVirtReg, ExceptionSelectorVirtReg;
 
+  /// The current call site index being processed, if any. 0 if none.
+  unsigned CurCallSite = 0;
+
   /// Collection of dbg.declare instructions handled after argument
   /// lowering and before ISel proper.
   SmallPtrSet<const DbgDeclareInst *, 8> PreprocessedDbgDeclares;
+  SmallPtrSet<const DbgVariableRecord *, 8> PreprocessedDVRDeclares;
 
   /// set - Initialize this FunctionLoweringInfo with the given Function
   /// and its associated MachineFunction.
@@ -214,15 +218,7 @@ public:
 
   Register CreateRegs(Type *Ty, bool isDivergent = false);
 
-  Register InitializeRegForValue(const Value *V) {
-    // Tokens never live in vregs.
-    if (V->getType()->isTokenTy())
-      return 0;
-    Register &R = ValueMap[V];
-    assert(R == 0 && "Already initialized this value register!");
-    assert(VirtReg2Value.empty());
-    return R = CreateRegs(V);
-  }
+  Register InitializeRegForValue(const Value *V);
 
   /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
   /// register is a PHI destination and the PHI's LiveOutInfo is not valid.
@@ -287,6 +283,12 @@ public:
 
   Register getCatchPadExceptionPointerVReg(const Value *CPI,
                                            const TargetRegisterClass *RC);
+
+  /// Set the call site currently being processed.
+  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
+
+  /// Get the call site currently being processed, if any. Return zero if none.
+  unsigned getCurrentCallSite() { return CurCallSite; }
 
 private:
   /// LiveOutRegInfo - Information about live out vregs.

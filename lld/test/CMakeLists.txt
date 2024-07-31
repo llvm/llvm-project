@@ -7,6 +7,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_ENABLE_PLUGINS
   LLVM_BYE_LINK_INTO_TOOLS
+  LLVM_TOOL_LLVM_DRIVER_BUILD
   )
 
 configure_lit_site_cfg(
@@ -14,9 +15,30 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "SHLIBDIR"
+  "LLVM_LIT_TOOLS_DIR"
+  "LLD_BINARY_DIR"
+  "CURRENT_LIBS_DIR"
+  "CURRENT_TOOLS_DIR"
+  "LLD_SOURCE_DIR"
   )
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "SHLIBDIR"
+  "LLD_BINARY_DIR"
+  "LLD_SOURCE_DIR"
+)
 
-set(LLD_TEST_DEPS lld)
+set(LLD_TEST_DEPS lld LLDUnitTests)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
     FileCheck
@@ -29,6 +51,7 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-config
     llvm-cvtres
     llvm-dis
+    llvm-dlltool
     llvm-dwarfdump
     llvm-lib
     llvm-lipo
@@ -62,15 +85,13 @@ add_lit_testsuite(check-lld "Running lld test suite"
   )
 
 add_custom_target(lld-test-depends DEPENDS ${LLD_TEST_DEPS})
-set_target_properties(lld-test-depends PROPERTIES FOLDER "lld tests")
+set_target_properties(lld-test-depends PROPERTIES FOLDER "LLD/Tests")
 
 add_lit_testsuites(LLD ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${LLD_TEST_DEPS}
   )
 
-set_target_properties(check-lld PROPERTIES FOLDER "lld tests")
-
 # Add a legacy target spelling: lld-test
 add_custom_target(lld-test)
 add_dependencies(lld-test check-lld)
-set_target_properties(lld-test PROPERTIES FOLDER "lld tests")
+set_target_properties(lld-test PROPERTIES FOLDER "LLD/Tests")

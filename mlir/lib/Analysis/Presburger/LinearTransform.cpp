@@ -8,15 +8,17 @@
 
 #include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
+#include <utility>
 
 using namespace mlir;
 using namespace presburger;
 
-LinearTransform::LinearTransform(Matrix &&oMatrix) : matrix(oMatrix) {}
-LinearTransform::LinearTransform(const Matrix &oMatrix) : matrix(oMatrix) {}
+LinearTransform::LinearTransform(IntMatrix &&oMatrix) : matrix(oMatrix) {}
+LinearTransform::LinearTransform(const IntMatrix &oMatrix) : matrix(oMatrix) {}
 
 std::pair<unsigned, LinearTransform>
-LinearTransform::makeTransformToColumnEchelon(const Matrix &m) {
+LinearTransform::makeTransformToColumnEchelon(const IntMatrix &m) {
   // Compute the hermite normal form of m. This, is by definition, is in column
   // echelon form.
   auto [h, u] = m.computeHermiteNormalForm();
@@ -44,22 +46,22 @@ IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
   IntegerRelation result(rel.getSpace());
 
   for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i) {
-    ArrayRef<MPInt> eq = rel.getEquality(i);
+    ArrayRef<DynamicAPInt> eq = rel.getEquality(i);
 
-    const MPInt &c = eq.back();
+    const DynamicAPInt &c = eq.back();
 
-    SmallVector<MPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
-    newEq.push_back(c);
+    SmallVector<DynamicAPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
+    newEq.emplace_back(c);
     result.addEquality(newEq);
   }
 
   for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i) {
-    ArrayRef<MPInt> ineq = rel.getInequality(i);
+    ArrayRef<DynamicAPInt> ineq = rel.getInequality(i);
 
-    const MPInt &c = ineq.back();
+    const DynamicAPInt &c = ineq.back();
 
-    SmallVector<MPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
-    newIneq.push_back(c);
+    SmallVector<DynamicAPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
+    newIneq.emplace_back(c);
     result.addInequality(newIneq);
   }
 

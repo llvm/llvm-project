@@ -120,24 +120,67 @@ func.func @succeededAnyConstraint() {
 // -----
 
 //===----------------------------------------------------------------------===//
-// Dynamic base constraint
+// Base constraints
 //===----------------------------------------------------------------------===//
 
 func.func @succeededDynBaseConstraint() {
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i32>
-  "testd.dynbase"() : () -> !testd.parametric<i32>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<i64>
-  "testd.dynbase"() : () -> !testd.parametric<i64>
-  // CHECK: "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
-  "testd.dynbase"() : () -> !testd.parametric<!testd.parametric<i64>>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<i32>
+  "testd.dyn_type_base"() : () -> !testd.parametric<i32>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<i64>
+  "testd.dyn_type_base"() : () -> !testd.parametric<i64>
+  // CHECK: "testd.dyn_type_base"() : () -> !testd.parametric<!testd.parametric<i64>>
+  "testd.dyn_type_base"() : () -> !testd.parametric<!testd.parametric<i64>>
+  // CHECK: "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i32>} : () -> ()
+  "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i32>} : () -> ()
+  // CHECK: "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i64>} : () -> ()
+  "testd.dyn_attr_base"() {attr1 = #testd.parametric_attr<i64>} : () -> ()
   return
 }
 
 // -----
 
-func.func @failedDynBaseConstraint() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got 'i32'}}
-  "testd.dynbase"() : () -> i32
+func.func @failedDynTypeBaseConstraint() {
+  // expected-error@+1 {{expected base type 'testd.parametric' but got 'builtin.integer'}}
+  "testd.dyn_type_base"() : () -> i32
+  return
+}
+
+// -----
+
+func.func @failedDynAttrBaseConstraintNotType() {
+  // expected-error@+1 {{expected base attribute 'testd.parametric_attr' but got 'builtin.type'}}
+  "testd.dyn_attr_base"() {attr1 = i32}: () -> ()
+  return
+}
+
+// -----
+
+
+func.func @succeededNamedBaseConstraint() {
+  // CHECK: "testd.named_type_base"() : () -> i32
+  "testd.named_type_base"() : () -> i32
+  // CHECK: "testd.named_type_base"() : () -> i64
+  "testd.named_type_base"() : () -> i64
+  // CHECK: "testd.named_attr_base"() {attr1 = 0 : i32} : () -> ()
+  "testd.named_attr_base"() {attr1 = 0 : i32} : () -> ()
+  // CHECK: "testd.named_attr_base"() {attr1 = 0 : i64} : () -> ()
+  "testd.named_attr_base"() {attr1 = 0 : i64} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedNamedTypeBaseConstraint() {
+  // expected-error@+1 {{expected base type 'builtin.integer' but got 'builtin.vector'}}
+  "testd.named_type_base"() : () -> vector<i32>
+  return
+}
+
+// -----
+
+func.func @failedDynAttrBaseConstraintNotType() {
+  // expected-error@+1 {{expected base attribute 'builtin.integer' but got 'builtin.type'}}
+  "testd.named_attr_base"() {attr1 = i32}: () -> ()
   return
 }
 
@@ -196,5 +239,401 @@ func.func @succeededConstraintVars2() {
 func.func @failedConstraintVars() {
   // expected-error@+1 {{expected 'i64' but got 'i32'}}
   "testd.constraint_vars"() : () -> (i64, i32)
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Constraint attributes
+//===----------------------------------------------------------------------===//
+
+func.func @succeededAttrs() {
+  // CHECK: "testd.attrs"() {attr1 = i32, attr2 = i64} : () -> ()
+  "testd.attrs"() {attr1 = i32, attr2 = i64} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAttrsMissingAttr() {
+  // expected-error@+1 {{attribute "attr2" is expected but not provided}}
+  "testd.attrs"() {attr1 = i32} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAttrsConstraint() {
+  // expected-error@+1 {{expected 'i32' but got 'i64'}}
+  "testd.attrs"() {attr1 = i64, attr2 = i64} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAttrsConstraint2() {
+  // expected-error@+1 {{expected 'i64' but got 'i32'}}
+  "testd.attrs"() {attr1 = i32, attr2 = i32} : () -> ()
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Regions
+//===----------------------------------------------------------------------===//
+
+// CHECK: func.func @succeededRegions
+func.func @succeededRegions() {
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+// -----
+
+// CHECK: func.func @succeededRegionWithNoConstraints
+func.func @succeededRegionWithNoConstraints() {
+  "testd.regions"() (
+  {
+    ^bb1(%arg0: i32, %arg1: i64, %arg2 : f64):
+      llvm.unreachable
+    ^bb2(%arg3: i32, %arg4: i64, %arg5 : f64):
+      llvm.unreachable
+    ^bb3(%arg6: i32, %arg7: i64, %arg8 : f64):
+      llvm.unreachable
+    ^bb4(%arg9: i32, %arg10: i64, %arg11 : f64):
+      llvm.unreachable
+    ^bb5(%arg12: i32, %arg13: i64, %arg14 : f64):
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionArgsLessThanNeeded() {
+  // expected-note@+1 {{see the operation}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    // expected-error@+1 {{expected region 1 to have 2 arguments but got 1}}
+    ^bb1(%arg0: i32):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionArgsMoreThanNeeded() {
+  // expected-note@+1 {{see the operation}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    // expected-error@+1 {{expected region 1 to have 2 arguments but got 3}}
+    ^bb1(%arg0: i32, %arg1: i64, %arg2 : f64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionArgsEmptyButRequired() {
+  // expected-error@+1 {{expected region 1 to have 2 arguments but got 0}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1():
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @faIledRegionArgsConstraint() {
+  // expected-note@+1 {{see the operation}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    // expected-error@+1 {{expected 'i64' but got 'f64'}}
+    ^bb1(%arg0: i32, %arg1: f64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionBlocksCountLessThanNeeded() {
+  // expected-error@+1 {{expected region 2 to have 3 block(s) but got 2}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionBlocksCountMoreThanNeeded() {
+  // expected-error@+1 {{expected region 2 to have 3 block(s) but got 4}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb4:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionWithEmptyArgs() {
+  // expected-note@+1 {{see the operation}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    // expected-error@+1 {{expected region 3 to have 0 arguments but got 2}}
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionWithLessBlocksThanNeeded() {
+  // expected-error@+1 {{'testd.regions' op unexpected number of regions: expected 4 but got 3}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedRegionWithMoreBlocksThanNeeded() {
+  // expected-error@+1 {{'testd.regions' op unexpected number of regions: expected 4 but got 5}}
+  "testd.regions"() (
+  {
+    ^bb1:
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1:
+      cf.br ^bb3
+    ^bb2:
+      cf.br ^bb3
+    ^bb3:
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  },
+  {
+    ^bb1(%arg0: i32, %arg1: i64):
+      llvm.unreachable
+  }) : () -> ()
+
+  return
+}
+
+// -----
+
+func.func @successReuseConstraintBetweenRegionAndOperand() {
+  %0 = arith.constant 42 : i32
+  "testd.region_and_operand"(%0) ({
+    ^bb(%1: i32):
+      llvm.unreachable
+  }) : (i32) -> ()
+
+  return
+}
+
+// -----
+
+func.func @failedReuseConstraintBetweenRegionAndOperand() {
+  %0 = arith.constant 42 : i32
+  // expected-note@+1 {{see the operation}}
+  "testd.region_and_operand"(%0) ({
+    // expected-error@+1 {{expected 'i32' but got 'i64'}}
+    ^bb(%1: i64):
+      llvm.unreachable
+  }) : (i32) -> ()
+
   return
 }

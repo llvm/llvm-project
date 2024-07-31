@@ -25,17 +25,17 @@ namespace test {
 
 #define DEBUG_TYPE "format-test-base"
 
-class FormatTestBase : public ::testing::Test {
+class FormatTestBase : public testing::Test {
 protected:
   enum StatusCheck { SC_ExpectComplete, SC_ExpectIncomplete, SC_DoNotCheck };
 
   virtual FormatStyle getDefaultStyle() const { return getLLVMStyle(); }
 
-  virtual std::string messUp(llvm::StringRef Code) const {
+  virtual std::string messUp(StringRef Code) const {
     return test::messUp(Code);
   }
 
-  std::string format(llvm::StringRef Code,
+  std::string format(StringRef Code,
                      const std::optional<FormatStyle> &Style = {},
                      StatusCheck CheckComplete = SC_ExpectComplete,
                      const std::vector<tooling::Range> &Ranges = {}) {
@@ -80,15 +80,22 @@ protected:
     return Style;
   }
 
-  void _verifyFormat(const char *File, int Line, llvm::StringRef Expected,
-                     llvm::StringRef Code,
+  bool _verifyFormat(const char *File, int Line, StringRef Expected,
+                     StringRef Code,
                      const std::optional<FormatStyle> &Style = {},
                      const std::vector<tooling::Range> &Ranges = {}) {
-    testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Expected.str(),
-              format(Expected, Style, SC_ExpectComplete, Ranges))
-        << "Expected code is not stable";
-    EXPECT_EQ(Expected.str(), format(Code, Style, SC_ExpectComplete, Ranges));
+    testing::ScopedTrace t(File, Line, testing::Message() << Code.str());
+    const auto ExpectedCode{Expected.str()};
+    auto FormattedCode{format(Code, Style, SC_ExpectComplete, Ranges)};
+    EXPECT_EQ(ExpectedCode, FormattedCode);
+    if (ExpectedCode != FormattedCode)
+      return false;
+    if (Expected != Code) {
+      FormattedCode = format(Expected, Style, SC_ExpectComplete, Ranges);
+      EXPECT_EQ(ExpectedCode, FormattedCode) << "Expected code is not stable";
+      if (ExpectedCode != FormattedCode)
+        return false;
+    }
     auto UsedStyle = Style ? Style.value() : getDefaultStyle();
     if (UsedStyle.Language == FormatStyle::LK_Cpp) {
       // Objective-C++ is a superset of C++, so everything checked for C++
@@ -96,32 +103,42 @@ protected:
       FormatStyle ObjCStyle = UsedStyle;
       ObjCStyle.Language = FormatStyle::LK_ObjC;
       // FIXME: Additional messUp is superfluous.
-      EXPECT_EQ(Expected.str(),
-                format(Code, ObjCStyle, SC_ExpectComplete, Ranges));
+      FormattedCode = format(Code, ObjCStyle, SC_ExpectComplete, Ranges);
+      EXPECT_EQ(ExpectedCode, FormattedCode);
+      if (ExpectedCode != FormattedCode)
+        return false;
     }
+    return true;
   }
 
-  void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+  void _verifyFormat(const char *File, int Line, StringRef Code,
                      const std::optional<FormatStyle> &Style = {}) {
-    _verifyFormat(File, Line, Code, test::messUp(Code), Style);
+    if (!_verifyFormat(File, Line, Code, Code, Style))
+      return;
+    if (const auto MessedUpCode{messUp(Code)}; MessedUpCode != Code)
+      _verifyFormat(File, Line, Code, MessedUpCode, Style);
   }
 
-  void _verifyIncompleteFormat(const char *File, int Line, llvm::StringRef Code,
+  void _verifyIncompleteFormat(const char *File, int Line, StringRef Code,
                                const std::optional<FormatStyle> &Style = {}) {
-    testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
+    testing::ScopedTrace t(File, Line, testing::Message() << Code.str());
     EXPECT_EQ(Code.str(), format(messUp(Code), Style, SC_ExpectIncomplete));
   }
 
   void
-  _verifyIndependentOfContext(const char *File, int Line, llvm::StringRef Text,
+  _verifyIndependentOfContext(const char *File, int Line, StringRef Text,
                               const std::optional<FormatStyle> &Style = {}) {
     _verifyFormat(File, Line, Text, Style);
-    _verifyFormat(File, Line, llvm::Twine("void f() { " + Text + " }").str(),
-                  Style);
+    _verifyFormat(File, Line, Twine("void f() { " + Text + " }").str(), Style);
+  }
+
+  void _verifyNoChange(const char *File, int Line, StringRef Code,
+                       const std::optional<FormatStyle> &Style = {}) {
+    _verifyFormat(File, Line, Code, Code, Style);
   }
 
   /// \brief Verify that clang-format does not crash on the given input.
-  void verifyNoCrash(llvm::StringRef Code,
+  void verifyNoCrash(StringRef Code,
                      const std::optional<FormatStyle> &Style = {}) {
     format(Code, Style, SC_DoNotCheck);
   }
@@ -135,6 +152,7 @@ protected:
   _verifyIndependentOfContext(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyIncompleteFormat(...)                                            \
   _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
+#define verifyNoChange(...) _verifyNoChange(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyGoogleFormat(Code) verifyFormat(Code, getGoogleStyle())
 

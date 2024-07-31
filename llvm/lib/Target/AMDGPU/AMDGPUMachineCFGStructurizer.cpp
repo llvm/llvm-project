@@ -568,16 +568,14 @@ public:
   bool contains(MachineBasicBlock *MBB) {
     for (auto *CI : Children) {
       if (CI->isMBB()) {
-        if (MBB == CI->getMBBMRT()->getMBB()) {
+        if (MBB == CI->getMBBMRT()->getMBB())
           return true;
-        }
       } else {
-        if (CI->getRegionMRT()->contains(MBB)) {
+        if (CI->getRegionMRT()->contains(MBB))
           return true;
-        } else if (CI->getRegionMRT()->getLinearizedRegion() != nullptr &&
-                   CI->getRegionMRT()->getLinearizedRegion()->contains(MBB)) {
+        if (CI->getRegionMRT()->getLinearizedRegion() != nullptr &&
+            CI->getRegionMRT()->getLinearizedRegion()->contains(MBB))
           return true;
-        }
       }
     }
     return false;
@@ -1721,7 +1719,7 @@ void AMDGPUMachineCFGStructurizer::insertMergePHI(MachineBasicBlock *IfBB,
                                             unsigned CodeSourceRegister,
                                             bool IsUndefIfSource) {
   // If this is the function exit block, we don't need a phi.
-  if (MergeBB->succ_begin() == MergeBB->succ_end()) {
+  if (MergeBB->succ_empty()) {
     return;
   }
   LLVM_DEBUG(dbgs() << "Merge PHI (" << printMBBReference(*MergeBB)
@@ -2259,63 +2257,60 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfRegion(
     CodeBB->addSuccessor(MergeBB);
     CurrentRegion->addMBB(CodeBB);
     return nullptr;
-  } else {
-    // Handle internal block.
-    const TargetRegisterClass *RegClass = MRI->getRegClass(BBSelectRegIn);
-    Register CodeBBSelectReg = MRI->createVirtualRegister(RegClass);
-    rewriteCodeBBTerminator(CodeBB, MergeBB, CodeBBSelectReg);
-    bool IsRegionEntryBB = CurrentRegion->getEntry() == CodeBB;
-    MachineBasicBlock *IfBB = createIfBlock(MergeBB, CodeBB, CodeBB, CodeBB,
-                                            BBSelectRegIn, IsRegionEntryBB);
-    CurrentRegion->addMBB(IfBB);
-    // If this is the entry block we need to make the If block the new
-    // linearized region entry.
-    if (IsRegionEntryBB) {
-      CurrentRegion->setEntry(IfBB);
-
-      if (CurrentRegion->getHasLoop()) {
-        MachineBasicBlock *RegionExit = CurrentRegion->getExit();
-        MachineBasicBlock *ETrueBB = nullptr;
-        MachineBasicBlock *EFalseBB = nullptr;
-        SmallVector<MachineOperand, 1> ECond;
-
-        const DebugLoc &DL = DebugLoc();
-        TII->analyzeBranch(*RegionExit, ETrueBB, EFalseBB, ECond);
-        TII->removeBranch(*RegionExit);
-
-        // We need to create a backedge if there is a loop
-        Register Reg = TII->insertNE(
-            RegionExit, RegionExit->instr_end(), DL,
-            CurrentRegion->getRegionMRT()->getInnerOutputRegister(),
-            CurrentRegion->getRegionMRT()->getEntry()->getNumber());
-        MachineOperand RegOp =
-            MachineOperand::CreateReg(Reg, false, false, true);
-        ArrayRef<MachineOperand> Cond(RegOp);
-        LLVM_DEBUG(dbgs() << "RegionExitReg: ");
-        LLVM_DEBUG(Cond[0].print(dbgs(), TRI));
-        LLVM_DEBUG(dbgs() << "\n");
-        TII->insertBranch(*RegionExit, CurrentRegion->getEntry(), RegionExit,
-                          Cond, DebugLoc());
-        RegionExit->addSuccessor(CurrentRegion->getEntry());
-      }
-    }
-    CurrentRegion->addMBB(CodeBB);
-    LinearizedRegion InnerRegion(CodeBB, MRI, TRI, PHIInfo);
-
-    InnerRegion.setParent(CurrentRegion);
-    LLVM_DEBUG(dbgs() << "Insert BB Select PHI (BB)\n");
-    insertMergePHI(IfBB, CodeBB, MergeBB, BBSelectRegOut, BBSelectRegIn,
-                   CodeBBSelectReg);
-    InnerRegion.addMBB(MergeBB);
-
-    LLVM_DEBUG(InnerRegion.print(dbgs(), TRI));
-    rewriteLiveOutRegs(IfBB, CodeBB, MergeBB, &InnerRegion, CurrentRegion);
-    extractKilledPHIs(CodeBB);
-    if (IsRegionEntryBB) {
-      createEntryPHIs(CurrentRegion);
-    }
-    return IfBB;
   }
+  // Handle internal block.
+  const TargetRegisterClass *RegClass = MRI->getRegClass(BBSelectRegIn);
+  Register CodeBBSelectReg = MRI->createVirtualRegister(RegClass);
+  rewriteCodeBBTerminator(CodeBB, MergeBB, CodeBBSelectReg);
+  bool IsRegionEntryBB = CurrentRegion->getEntry() == CodeBB;
+  MachineBasicBlock *IfBB = createIfBlock(MergeBB, CodeBB, CodeBB, CodeBB,
+                                          BBSelectRegIn, IsRegionEntryBB);
+  CurrentRegion->addMBB(IfBB);
+  // If this is the entry block we need to make the If block the new
+  // linearized region entry.
+  if (IsRegionEntryBB) {
+    CurrentRegion->setEntry(IfBB);
+
+    if (CurrentRegion->getHasLoop()) {
+      MachineBasicBlock *RegionExit = CurrentRegion->getExit();
+      MachineBasicBlock *ETrueBB = nullptr;
+      MachineBasicBlock *EFalseBB = nullptr;
+      SmallVector<MachineOperand, 1> ECond;
+
+      const DebugLoc &DL = DebugLoc();
+      TII->analyzeBranch(*RegionExit, ETrueBB, EFalseBB, ECond);
+      TII->removeBranch(*RegionExit);
+
+      // We need to create a backedge if there is a loop
+      Register Reg =
+          TII->insertNE(RegionExit, RegionExit->instr_end(), DL,
+                        CurrentRegion->getRegionMRT()->getInnerOutputRegister(),
+                        CurrentRegion->getRegionMRT()->getEntry()->getNumber());
+      MachineOperand RegOp = MachineOperand::CreateReg(Reg, false, false, true);
+      ArrayRef<MachineOperand> Cond(RegOp);
+      LLVM_DEBUG(dbgs() << "RegionExitReg: ");
+      LLVM_DEBUG(RegOp.print(dbgs(), TRI));
+      LLVM_DEBUG(dbgs() << "\n");
+      TII->insertBranch(*RegionExit, CurrentRegion->getEntry(), RegionExit,
+                        Cond, DebugLoc());
+      RegionExit->addSuccessor(CurrentRegion->getEntry());
+    }
+  }
+  CurrentRegion->addMBB(CodeBB);
+  LinearizedRegion InnerRegion(CodeBB, MRI, TRI, PHIInfo);
+
+  InnerRegion.setParent(CurrentRegion);
+  LLVM_DEBUG(dbgs() << "Insert BB Select PHI (BB)\n");
+  insertMergePHI(IfBB, CodeBB, MergeBB, BBSelectRegOut, BBSelectRegIn,
+                 CodeBBSelectReg);
+  InnerRegion.addMBB(MergeBB);
+
+  LLVM_DEBUG(InnerRegion.print(dbgs(), TRI));
+  rewriteLiveOutRegs(IfBB, CodeBB, MergeBB, &InnerRegion, CurrentRegion);
+  extractKilledPHIs(CodeBB);
+  if (IsRegionEntryBB)
+    createEntryPHIs(CurrentRegion);
+  return IfBB;
 }
 
 MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfRegion(
@@ -2596,14 +2591,9 @@ bool AMDGPUMachineCFGStructurizer::structurizeComplexRegion(RegionMRT *Region) {
 
   unsigned BBSelectRegIn;
   unsigned BBSelectRegOut;
-  for (auto CI = Children->begin(), CE = Children->end(); CI != CE; ++CI) {
+  for (MRT *Child : *Children) {
     LLVM_DEBUG(dbgs() << "CurrentRegion: \n");
     LLVM_DEBUG(LRegion->print(dbgs(), TRI));
-
-    auto CNI = CI;
-    ++CNI;
-
-    MRT *Child = (*CI);
 
     if (Child->isRegion()) {
 
@@ -2717,12 +2707,11 @@ bool AMDGPUMachineCFGStructurizer::structurizeRegion(RegionMRT *Region) {
   if (false && regionIsSimpleIf(Region)) {
     transformSimpleIfRegion(Region);
     return true;
-  } else if (regionIsSequence(Region)) {
-    fixupRegionExits(Region);
-    return false;
-  } else {
-    structurizeComplexRegion(Region);
   }
+  if (regionIsSequence(Region))
+    fixupRegionExits(Region);
+  else
+    structurizeComplexRegion(Region);
   return false;
 }
 
@@ -2789,20 +2778,16 @@ AMDGPUMachineCFGStructurizer::initializeSelectRegisters(MRT *MRT, unsigned Selec
       InnerSelectOut = initializeSelectRegisters(CI, InnerSelectOut, MRI, TII);
     MRT->setBBSelectRegIn(InnerSelectOut);
     return InnerSelectOut;
-  } else {
-    MRT->setBBSelectRegOut(SelectOut);
-    unsigned NewSelectIn = createBBSelectReg(TII, MRI);
-    MRT->setBBSelectRegIn(NewSelectIn);
-    return NewSelectIn;
   }
+  MRT->setBBSelectRegOut(SelectOut);
+  unsigned NewSelectIn = createBBSelectReg(TII, MRI);
+  MRT->setBBSelectRegIn(NewSelectIn);
+  return NewSelectIn;
 }
 
 static void checkRegOnlyPHIInputs(MachineFunction &MF) {
   for (auto &MBBI : MF) {
-    for (MachineBasicBlock::instr_iterator I = MBBI.instr_begin(),
-                                           E = MBBI.instr_end();
-         I != E; ++I) {
-      MachineInstr &Instr = *I;
+    for (MachineInstr &Instr : MBBI.instrs()) {
       if (Instr.isPHI()) {
         int numPreds = getPHINumInputs(Instr);
         for (int i = 0; i < numPreds; ++i) {

@@ -34,9 +34,12 @@ namespace exegesis {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  explicit BenchmarkRunner(const LLVMState &State,
-                           Benchmark::ModeE Mode,
-                           BenchmarkPhaseSelectorE BenchmarkPhaseSelector);
+  enum ExecutionModeE { InProcess, SubProcess };
+
+  explicit BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
+                           BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+                           ExecutionModeE ExecutionMode,
+                           ArrayRef<ValidationEvent> ValCounters);
 
   virtual ~BenchmarkRunner();
 
@@ -54,16 +57,16 @@ public:
   private:
     RunnableConfiguration() = default;
 
-    Benchmark InstrBenchmark;
+    Benchmark BenchmarkResult;
     object::OwningBinary<object::ObjectFile> ObjectFile;
   };
 
   Expected<RunnableConfiguration>
   getRunnableConfiguration(const BenchmarkCode &Configuration,
-                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           unsigned MinInstructions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
-  Expected<Benchmark>
+  std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
                    const std::optional<StringRef> &DumpFile) const;
 
@@ -90,35 +93,49 @@ public:
   public:
     virtual ~FunctionExecutor();
 
-    Expected<llvm::SmallVector<int64_t, 4>>
-    runAndSample(const char *Counters) const;
+    Expected<SmallVector<int64_t, 4>>
+    runAndSample(const char *Counters,
+                 ArrayRef<const char *> ValidationCounters,
+                 SmallVectorImpl<int64_t> &ValidationCounterValues) const;
 
   protected:
     static void
-    accumulateCounterValues(const llvm::SmallVectorImpl<int64_t> &NewValues,
-                            llvm::SmallVectorImpl<int64_t> *Result);
-    virtual Expected<llvm::SmallVector<int64_t, 4>>
-    runWithCounter(StringRef CounterName) const = 0;
+    accumulateCounterValues(const SmallVectorImpl<int64_t> &NewValues,
+                            SmallVectorImpl<int64_t> *Result);
+    virtual Expected<SmallVector<int64_t, 4>>
+    runWithCounter(StringRef CounterName,
+                   ArrayRef<const char *> ValidationCounters,
+                   SmallVectorImpl<int64_t> &ValidationCounterValues) const = 0;
   };
 
 protected:
   const LLVMState &State;
   const Benchmark::ModeE Mode;
   const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
+  const ExecutionModeE ExecutionMode;
+
+  SmallVector<ValidationEvent> ValidationCounters;
+
+  Error
+  getValidationCountersToRun(SmallVector<const char *> &ValCountersToRun) const;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
-  Expected<SmallString<0>> assembleSnippet(const BenchmarkCode &BC,
-                                           const SnippetRepetitor &Repetitor,
-                                           unsigned MinInstructions,
-                                           unsigned LoopBodySize) const;
+  Expected<SmallString<0>>
+  assembleSnippet(const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
+                  unsigned MinInstructions, unsigned LoopBodySize,
+                  bool GenerateMemoryInstructions) const;
 
   Expected<std::string> writeObjectFile(StringRef Buffer,
                                         StringRef FileName) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
+
+  Expected<std::unique_ptr<FunctionExecutor>>
+  createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
+                         const BenchmarkKey &Key) const;
 };
 
 } // namespace exegesis

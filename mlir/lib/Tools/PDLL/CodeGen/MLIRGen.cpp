@@ -103,12 +103,14 @@ private:
   Value genExprImpl(const ast::TypeExpr *expr);
 
   SmallVector<Value> genConstraintCall(const ast::UserConstraintDecl *decl,
-                                       Location loc, ValueRange inputs);
+                                       Location loc, ValueRange inputs,
+                                       bool isNegated = false);
   SmallVector<Value> genRewriteCall(const ast::UserRewriteDecl *decl,
                                     Location loc, ValueRange inputs);
   template <typename PDLOpT, typename T>
   SmallVector<Value> genConstraintOrRewriteCall(const T *decl, Location loc,
-                                                ValueRange inputs);
+                                                ValueRange inputs,
+                                                bool isNegated = false);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -335,13 +337,13 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
   // Generate a value based on the type of the variable.
   ast::Type type = varDecl->getType();
   Type mlirType = genType(type);
-  if (type.isa<ast::ValueType>())
+  if (isa<ast::ValueType>(type))
     return builder.create<pdl::OperandOp>(loc, mlirType, getTypeConstraint());
-  if (type.isa<ast::TypeType>())
+  if (isa<ast::TypeType>(type))
     return builder.create<pdl::TypeOp>(loc, mlirType, /*type=*/TypeAttr());
-  if (type.isa<ast::AttributeType>())
+  if (isa<ast::AttributeType>(type))
     return builder.create<pdl::AttributeOp>(loc, getTypeConstraint());
-  if (ast::OperationType opType = type.dyn_cast<ast::OperationType>()) {
+  if (ast::OperationType opType = dyn_cast<ast::OperationType>(type)) {
     Value operands = builder.create<pdl::OperandsOp>(
         loc, pdl::RangeType::get(builder.getType<pdl::ValueType>()),
         /*type=*/Value());
@@ -352,12 +354,12 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
         loc, opType.getName(), operands, std::nullopt, ValueRange(), results);
   }
 
-  if (ast::RangeType rangeTy = type.dyn_cast<ast::RangeType>()) {
+  if (ast::RangeType rangeTy = dyn_cast<ast::RangeType>(type)) {
     ast::Type eleTy = rangeTy.getElementType();
-    if (eleTy.isa<ast::ValueType>())
+    if (isa<ast::ValueType>(eleTy))
       return builder.create<pdl::OperandsOp>(loc, mlirType,
                                              getTypeConstraint());
-    if (eleTy.isa<ast::TypeType>())
+    if (isa<ast::TypeType>(eleTy))
       return builder.create<pdl::TypesOp>(loc, mlirType, /*types=*/ArrayAttr());
   }
 
@@ -419,7 +421,7 @@ SmallVector<Value> CodeGen::genExprImpl(const ast::CallExpr *expr) {
   // Generate the PDL based on the type of callable.
   const ast::Decl *callable = callableExpr->getDecl();
   if (const auto *decl = dyn_cast<ast::UserConstraintDecl>(callable))
-    return genConstraintCall(decl, loc, arguments);
+    return genConstraintCall(decl, loc, arguments, expr->getIsNegated());
   if (const auto *decl = dyn_cast<ast::UserRewriteDecl>(callable))
     return genRewriteCall(decl, loc, arguments);
   llvm_unreachable("unhandled CallExpr callable");
@@ -438,7 +440,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
   ast::Type parentType = expr->getParentExpr()->getType();
 
   // Handle operation based member access.
-  if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>()) {
+  if (ast::OperationType opType = dyn_cast<ast::OperationType>(parentType)) {
     if (isa<ast::AllResultsMemberAccessExpr>(expr)) {
       Type mlirType = genType(expr->getType());
       if (isa<pdl::ValueType>(mlirType))
@@ -478,7 +480,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
   }
 
   // Handle tuple based member access.
-  if (auto tupleType = parentType.dyn_cast<ast::TupleType>()) {
+  if (auto tupleType = dyn_cast<ast::TupleType>(parentType)) {
     auto elementNames = tupleType.getElementNames();
 
     // The index is either a numeric index, or a name.
@@ -547,15 +549,15 @@ Value CodeGen::genExprImpl(const ast::TypeExpr *expr) {
 
 SmallVector<Value>
 CodeGen::genConstraintCall(const ast::UserConstraintDecl *decl, Location loc,
-                           ValueRange inputs) {
+                           ValueRange inputs, bool isNegated) {
   // Apply any constraints defined on the arguments to the input values.
   for (auto it : llvm::zip(decl->getInputs(), inputs))
     applyVarConstraints(std::get<0>(it), std::get<1>(it));
 
   // Generate the constraint call.
   SmallVector<Value> results =
-      genConstraintOrRewriteCall<pdl::ApplyNativeConstraintOp>(decl, loc,
-                                                               inputs);
+      genConstraintOrRewriteCall<pdl::ApplyNativeConstraintOp>(
+          decl, loc, inputs, isNegated);
 
   // Apply any constraints defined on the results of the constraint.
   for (auto it : llvm::zip(decl->getResults(), results))
@@ -570,23 +572,25 @@ SmallVector<Value> CodeGen::genRewriteCall(const ast::UserRewriteDecl *decl,
 }
 
 template <typename PDLOpT, typename T>
-SmallVector<Value> CodeGen::genConstraintOrRewriteCall(const T *decl,
-                                                       Location loc,
-                                                       ValueRange inputs) {
+SmallVector<Value>
+CodeGen::genConstraintOrRewriteCall(const T *decl, Location loc,
+                                    ValueRange inputs, bool isNegated) {
   const ast::CompoundStmt *cstBody = decl->getBody();
 
   // If the decl doesn't have a statement body, it is a native decl.
   if (!cstBody) {
     ast::Type declResultType = decl->getResultType();
     SmallVector<Type> resultTypes;
-    if (ast::TupleType tupleType = declResultType.dyn_cast<ast::TupleType>()) {
+    if (ast::TupleType tupleType = dyn_cast<ast::TupleType>(declResultType)) {
       for (ast::Type type : tupleType.getElementTypes())
         resultTypes.push_back(genType(type));
     } else {
       resultTypes.push_back(genType(declResultType));
     }
-    Operation *pdlOp = builder.create<PDLOpT>(
-        loc, resultTypes, decl->getName().getName(), inputs);
+    PDLOpT pdlOp = builder.create<PDLOpT>(loc, resultTypes,
+                                          decl->getName().getName(), inputs);
+    if (isNegated && std::is_same_v<PDLOpT, pdl::ApplyNativeConstraintOp>)
+      cast<pdl::ApplyNativeConstraintOp>(pdlOp).setIsNegated(true);
     return pdlOp->getResults();
   }
 

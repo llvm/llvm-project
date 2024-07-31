@@ -335,8 +335,7 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
 
   bool create = force;
   if (!create && arch && arch->IsValid()) {
-    if (std::count(supported_arch.begin(), supported_arch.end(),
-                   arch->GetMachine())) {
+    if (llvm::is_contained(supported_arch, arch->GetMachine())) {
       const llvm::Triple &triple = arch->GetTriple();
       switch (triple.getVendor()) {
       case llvm::Triple::Apple:
@@ -382,81 +381,6 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
             __FUNCTION__);
 
   return PlatformSP();
-}
-
-Status PlatformAppleSimulator::ResolveExecutable(
-    const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
-    const FileSpecList *module_search_paths_ptr) {
-  Status error;
-  // Nothing special to do here, just use the actual file and architecture
-
-  ModuleSpec resolved_module_spec(module_spec);
-
-  // If we have "ls" as the exe_file, resolve the executable loation based on
-  // the current path variables
-  // TODO: resolve bare executables in the Platform SDK
-  //    if (!resolved_exe_file.Exists())
-  //        resolved_exe_file.ResolveExecutableLocation ();
-
-  // Resolve any executable within a bundle on MacOSX
-  // TODO: verify that this handles shallow bundles, if not then implement one
-  // ourselves
-  Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
-
-  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
-    if (resolved_module_spec.GetArchitecture().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          NULL, NULL, NULL);
-
-      if (exe_module_sp && exe_module_sp->GetObjectFile())
-        return error;
-      exe_module_sp.reset();
-    }
-    // No valid architecture was specified or the exact ARM slice wasn't found
-    // so ask the platform for the architectures that we should be using (in
-    // the correct order) and see if we can find a match that way
-    StreamString arch_names;
-    llvm::ListSeparator LS;
-    ArchSpec platform_arch;
-    for (const ArchSpec &arch : GetSupportedArchitectures({})) {
-      resolved_module_spec.GetArchitecture() = arch;
-
-      // Only match x86 with x86 and x86_64 with x86_64...
-      if (!module_spec.GetArchitecture().IsValid() ||
-          module_spec.GetArchitecture().GetCore() ==
-              resolved_module_spec.GetArchitecture().GetCore()) {
-        error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                            NULL, NULL, NULL);
-        // Did we find an executable using one of the
-        if (error.Success()) {
-          if (exe_module_sp && exe_module_sp->GetObjectFile())
-            break;
-          else
-            error.SetErrorToGenericError();
-        }
-
-        arch_names << LS << platform_arch.GetArchitectureName();
-      }
-    }
-
-    if (error.Fail() || !exe_module_sp) {
-      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormatv(
-            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
-            resolved_module_spec.GetFileSpec(), GetPluginName(),
-            arch_names.GetString());
-      } else {
-        error.SetErrorStringWithFormat(
-            "'%s' is not readable",
-            resolved_module_spec.GetFileSpec().GetPath().c_str());
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormat("'%s' does not exist",
-                                   module_spec.GetFileSpec().GetPath().c_str());
-  }
-
-  return error;
 }
 
 Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
@@ -545,7 +469,7 @@ static bool shouldSkipSimulatorPlatform(bool force, const ArchSpec *arch) {
   // If the arch is known not to specify a simulator environment, skip creating
   // the simulator platform (we can create it later if there's a matching arch).
   // This avoids very slow xcrun queries for non-simulator archs (the slowness
-  // is due to xcrun not caching negative queries (rdar://74882205)).
+  // is due to xcrun not caching negative queries.
   return !force && arch && arch->IsValid() &&
          !arch->TripleEnvironmentWasSpecified();
 }
@@ -676,6 +600,41 @@ struct PlatformAppleWatchSimulator {
   }
 };
 
+static const char *g_xros_plugin_name = "xros-simulator";
+static const char *g_xros_description = "XROS simulator platform plug-in.";
+
+/// XRSimulator Plugin.
+struct PlatformXRSimulator {
+  static void Initialize() {
+    PluginManager::RegisterPlugin(g_xros_plugin_name, g_xros_description,
+                                  PlatformXRSimulator::CreateInstance);
+  }
+
+  static void Terminate() {
+    PluginManager::UnregisterPlugin(PlatformXRSimulator::CreateInstance);
+  }
+
+  static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
+    return PlatformAppleSimulator::CreateInstance(
+        "PlatformXRSimulator", g_xros_description,
+        ConstString(g_xros_plugin_name),
+        {llvm::Triple::aarch64, llvm::Triple::x86_64, llvm::Triple::x86},
+        llvm::Triple::XROS, {llvm::Triple::XROS},
+        {
+#ifdef __APPLE__
+#if __arm64__
+          "arm64e-apple-xros-simulator", "arm64-apple-xros-simulator",
+#else
+          "x86_64-apple-xros-simulator", "x86_64h-apple-xros-simulator",
+#endif
+#endif
+        },
+        "XRSimulator.Internal.sdk", "XRSimulator.sdk",
+        XcodeSDK::Type::XRSimulator,
+        CoreSimulatorSupport::DeviceType::ProductFamilyID::appleXR, force,
+        arch);
+  }
+};
 
 static unsigned g_initialize_count = 0;
 
@@ -686,12 +645,14 @@ void PlatformAppleSimulator::Initialize() {
     PlatformiOSSimulator::Initialize();
     PlatformAppleTVSimulator::Initialize();
     PlatformAppleWatchSimulator::Initialize();
+    PlatformXRSimulator::Initialize();
   }
 }
 
 void PlatformAppleSimulator::Terminate() {
   if (g_initialize_count > 0)
     if (--g_initialize_count == 0) {
+      PlatformXRSimulator::Terminate();
       PlatformAppleWatchSimulator::Terminate();
       PlatformAppleTVSimulator::Terminate();
       PlatformiOSSimulator::Terminate();

@@ -45,6 +45,7 @@ static_library("Core") {
   sources = [
     "Address.cpp",
     "AddressRange.cpp",
+    "AddressRangeListImpl.cpp",
     "AddressResolver.cpp",
     "AddressResolverFileLine.cpp",
     "Communication.cpp",
@@ -54,6 +55,7 @@ static_library("Core") {
     "Declaration.cpp",
     "Disassembler.cpp",
     "DumpDataExtractor.cpp",
+    "DumpRegisterInfo.cpp",
     "DumpRegisterValue.cpp",
     "DynamicLoader.cpp",
     "EmulateInstruction.cpp",
@@ -75,7 +77,6 @@ static_library("Core") {
     "SourceLocationSpec.cpp",
     "SourceManager.cpp",
     "StreamAsynchronousIO.cpp",
-    "StreamFile.cpp",
     "ThreadedCommunication.cpp",
     "UserSettingsController.cpp",
     "Value.cpp",
@@ -92,6 +93,7 @@ static_library("Core") {
     "ValueObjectRegister.cpp",
     "ValueObjectSyntheticFilter.cpp",
     "ValueObjectUpdater.cpp",
+    "ValueObjectVTable.cpp",
     "ValueObjectVariable.cpp",
   ]
 }

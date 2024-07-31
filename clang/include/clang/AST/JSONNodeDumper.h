@@ -197,16 +197,27 @@ public:
   void Visit(const Type *T);
   void Visit(QualType T);
   void Visit(const Decl *D);
+  void Visit(TypeLoc TL);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
   void Visit(const TemplateArgument &TA, SourceRange R = {},
              const Decl *From = nullptr, StringRef Label = {});
   void Visit(const CXXCtorInitializer *Init);
+  void Visit(const OpenACCClause *C);
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
   void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
+  void Visit(const ConceptReference *);
+
+  void VisitAliasAttr(const AliasAttr *AA);
+  void VisitCleanupAttr(const CleanupAttr *CA);
+  void VisitDeprecatedAttr(const DeprecatedAttr *DA);
+  void VisitUnavailableAttr(const UnavailableAttr *UA);
+  void VisitSectionAttr(const SectionAttr *SA);
+  void VisitVisibilityAttr(const VisibilityAttr *VA);
+  void VisitTLSModelAttr(const TLSModelAttr *TA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
@@ -277,6 +288,7 @@ public:
   void VisitBinaryOperator(const BinaryOperator *BO);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *CAO);
   void VisitMemberExpr(const MemberExpr *ME);
+  void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
   void VisitCXXThisExpr(const CXXThisExpr *TE);
@@ -298,6 +310,8 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *ME);
   void VisitRequiresExpr(const RequiresExpr *RE);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
 
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
   void VisitObjCMessageExpr(const ObjCMessageExpr *OME);

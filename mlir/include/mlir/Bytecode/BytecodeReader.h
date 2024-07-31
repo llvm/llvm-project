@@ -15,7 +15,6 @@
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include <functional>
 #include <memory>
 
@@ -25,7 +24,6 @@ class SourceMgr;
 } // namespace llvm
 
 namespace mlir {
-
 /// The BytecodeReader allows to load MLIR bytecode files, while keeping the
 /// state explicitly available in order to support lazy loading.
 /// The `finalize` method must be called before destruction.

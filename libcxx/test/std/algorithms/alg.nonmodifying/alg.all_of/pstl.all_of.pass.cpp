@@ -62,22 +62,12 @@ struct Test {
     // check that a large number of elements works
     std::vector<int> vec(100);
     std::fill(vec.begin(), vec.end(), 3);
-    assert(std::all_of(Iter(vec.data()), Iter(vec.data() + vec.size()), [](int i) { return i == 3; }));
+    assert(std::all_of(policy, Iter(vec.data()), Iter(vec.data() + vec.size()), [](int i) { return i == 3; }));
   }
 };
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  std::set_terminate(terminate_successful);
-  int a[] = {1, 2};
-  try {
-    (void)std::all_of(std::execution::par, std::begin(a), std::end(a), [](int i) -> bool { throw i; });
-  } catch (int) {
-    assert(false);
-  }
-#endif
 
   return 0;
 }

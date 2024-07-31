@@ -1,4 +1,4 @@
-// RUN: %clang_builtins %s %librt -fnested-functions -o %t && %run %t
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_trampoline_setup
 
 #include <stdio.h>
@@ -7,7 +7,7 @@
 
 /*
  * Tests nested functions
- * The ppc compiler generates a call to __trampoline_setup
+ * The ppc and aarch64 compilers generates a call to __trampoline_setup
  * The i386 and x86_64 compilers generate a call to ___enable_execute_stack
  */
 

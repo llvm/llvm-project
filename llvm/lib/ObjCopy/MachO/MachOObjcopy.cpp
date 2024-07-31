@@ -94,6 +94,14 @@ static void updateAndRemoveSymbols(const CommonConfig &Config,
                                    const MachOConfig &MachOConfig,
                                    Object &Obj) {
   for (SymbolEntry &Sym : Obj.SymTable) {
+    // Weaken symbols first to match ELFObjcopy behavior.
+    bool IsExportedAndDefined =
+        (Sym.n_type & llvm::MachO::N_EXT) &&
+        (Sym.n_type & llvm::MachO::N_TYPE) != llvm::MachO::N_UNDF;
+    if (IsExportedAndDefined &&
+        (Config.Weaken || Config.SymbolsToWeaken.matches(Sym.Name)))
+      Sym.n_desc |= llvm::MachO::N_WEAK_DEF;
+
     auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
@@ -490,10 +498,12 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
       if (Kind == object::Archive::K_BSD)
         Kind = object::Archive::K_DARWIN;
       Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
-          writeArchiveToBuffer(*NewArchiveMembersOrErr,
-                               (*ArOrErr)->hasSymbolTable(), Kind,
-                               Config.getCommonConfig().DeterministicArchives,
-                               (*ArOrErr)->isThin());
+          writeArchiveToBuffer(
+              *NewArchiveMembersOrErr,
+              (*ArOrErr)->hasSymbolTable() ? SymtabWritingMode::NormalSymtab
+                                           : SymtabWritingMode::NoSymtab,
+              Kind, Config.getCommonConfig().DeterministicArchives,
+              (*ArOrErr)->isThin());
       if (!OutputBufferOrErr)
         return OutputBufferOrErr.takeError();
       Expected<std::unique_ptr<Binary>> BinaryOrErr =

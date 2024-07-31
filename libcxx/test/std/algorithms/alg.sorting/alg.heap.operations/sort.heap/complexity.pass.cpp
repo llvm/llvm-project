@@ -61,6 +61,7 @@ int main(int, char**) {
     const int debug_elements = std::min(100, n);
     // Multiplier 2 because of comp(a,b) comp(b, a) checks.
     const int debug_comparisons = 2 * (debug_elements + 1) * debug_elements;
+    (void)debug_comparisons;
     std::shuffle(first, last, g);
     std::make_heap(first, last);
     // The exact stats of our current implementation are recorded here.
@@ -68,11 +69,12 @@ int main(int, char**) {
     std::sort_heap(first, last);
     LIBCPP_ASSERT(stats.copied == 0);
     LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
-#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+#if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
     LIBCPP_ASSERT(stats.compared <= n * logn);
+#else
+    LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
 #endif
     LIBCPP_ASSERT(std::is_sorted(first, last));
-    LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
   }
   return 0;
 }

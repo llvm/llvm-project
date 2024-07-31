@@ -9,17 +9,20 @@
 // Implements the required interoperability API from ISO_Fortran_binding.h
 // as specified in section 18.5.5 of Fortran 2018.
 
-#include "flang/ISO_Fortran_binding.h"
 #include "ISO_Fortran_util.h"
 #include "terminator.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/pointer.h"
 #include "flang/Runtime/type-code.h"
 #include <cstdlib>
 
 namespace Fortran::ISO {
 extern "C" {
 
-void *CFI_address(
+RT_EXT_API_GROUP_BEGIN
+
+RT_API_ATTRS void *CFI_address(
     const CFI_cdesc_t *descriptor, const CFI_index_t subscripts[]) {
   char *p{static_cast<char *>(descriptor->base_addr)};
   const CFI_rank_t rank{descriptor->rank};
@@ -30,8 +33,9 @@ void *CFI_address(
   return p;
 }
 
-int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
-    const CFI_index_t upper_bounds[], std::size_t elem_len) {
+RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *descriptor,
+    const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
+    std::size_t elem_len) {
   if (!descriptor) {
     return CFI_INVALID_DESCRIPTOR;
   }
@@ -72,7 +76,7 @@ int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
     dim->sm = byteSize;
     byteSize *= extent;
   }
-  void *p{std::malloc(byteSize)};
+  void *p{runtime::AllocateValidatedPointerPayload(byteSize)};
   if (!p && byteSize) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
@@ -81,15 +85,18 @@ int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
   return CFI_SUCCESS;
 }
 
-int CFI_deallocate(CFI_cdesc_t *descriptor) {
+RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *descriptor) {
   if (!descriptor) {
     return CFI_INVALID_DESCRIPTOR;
   }
   if (descriptor->version != CFI_VERSION) {
     return CFI_INVALID_DESCRIPTOR;
   }
-  if (descriptor->attribute != CFI_attribute_allocatable &&
-      descriptor->attribute != CFI_attribute_pointer) {
+  if (descriptor->attribute == CFI_attribute_pointer) {
+    if (!runtime::ValidatePointerPayload(*descriptor)) {
+      return CFI_INVALID_DESCRIPTOR;
+    }
+  } else if (descriptor->attribute != CFI_attribute_allocatable) {
     // Non-interoperable object
     return CFI_INVALID_DESCRIPTOR;
   }
@@ -101,7 +108,7 @@ int CFI_deallocate(CFI_cdesc_t *descriptor) {
   return CFI_SUCCESS;
 }
 
-int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
+RT_API_ATTRS int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
     CFI_attribute_t attribute, CFI_type_t type, std::size_t elem_len,
     CFI_rank_t rank, const CFI_index_t extents[]) {
   int cfiStatus{VerifyEstablishParameters(descriptor, base_addr, attribute,
@@ -121,18 +128,22 @@ int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
   return CFI_SUCCESS;
 }
 
-int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+  // See Descriptor::IsContiguous for the rationale.
+  bool stridesAreContiguous{true};
   CFI_index_t bytes = descriptor->elem_len;
   for (int j{0}; j < descriptor->rank; ++j) {
-    if (bytes != descriptor->dim[j].sm) {
-      return 0;
-    }
+    stridesAreContiguous &=
+        (bytes == descriptor->dim[j].sm) || (descriptor->dim[j].extent == 1);
     bytes *= descriptor->dim[j].extent;
   }
-  return 1;
+  if (stridesAreContiguous || bytes == 0) {
+    return 1;
+  }
+  return 0;
 }
 
-int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
     const CFI_index_t strides[]) {
   CFI_index_t extent[CFI_MAX_RANK];
@@ -148,9 +159,11 @@ int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   if (IsAssumedSize(source) && !upper_bounds) {
     return CFI_INVALID_DESCRIPTOR;
   }
-  if ((result->type != source->type) ||
-      (result->elem_len != source->elem_len)) {
-    return CFI_INVALID_DESCRIPTOR;
+  if (runtime::TypeCode{result->type} != runtime::TypeCode{source->type}) {
+    return CFI_INVALID_TYPE;
+  }
+  if (source->elem_len != result->elem_len) {
+    return CFI_INVALID_ELEM_LEN;
   }
   if (result->attribute == CFI_attribute_allocatable) {
     return CFI_INVALID_ATTRIBUTE;
@@ -206,7 +219,7 @@ int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   return CFI_SUCCESS;
 }
 
-int CFI_select_part(CFI_cdesc_t *result, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_select_part(CFI_cdesc_t *result, const CFI_cdesc_t *source,
     std::size_t displacement, std::size_t elem_len) {
   if (!result || !source) {
     return CFI_INVALID_DESCRIPTOR;
@@ -241,7 +254,7 @@ int CFI_select_part(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   return CFI_SUCCESS;
 }
 
-int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[]) {
   if (!result) {
     return CFI_INVALID_DESCRIPTOR;
@@ -256,7 +269,7 @@ int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   if (source->rank != result->rank) {
     return CFI_INVALID_RANK;
   }
-  if (source->type != result->type) {
+  if (runtime::TypeCode{source->type} != runtime::TypeCode{result->type}) {
     return CFI_INVALID_TYPE;
   }
   if (source->elem_len != result->elem_len) {
@@ -283,5 +296,7 @@ int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   }
   return CFI_SUCCESS;
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::ISO

@@ -32,7 +32,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -84,8 +83,7 @@ public:
     //   %x = [%b,%b,%b,%b] : n-D
     if (srcRank < dstRank) {
       // Duplication.
-      VectorType resType =
-          VectorType::get(dstType.getShape().drop_front(), eltType);
+      VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
           rewriter.create<vector::BroadcastOp>(loc, resType, op.getSource());
       Value result = rewriter.create<arith::ConstantOp>(

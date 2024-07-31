@@ -524,11 +524,11 @@ define void @le_i64_to_i16_order(i64 %x, ptr %p0) {
 define void @be_i64_to_i16(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i16:
 ; LE:       // %bb.0:
-; LE-NEXT:    lsr x8, x0, #32
-; LE-NEXT:    ror w9, w0, #16
+; LE-NEXT:    ror w8, w0, #16
+; LE-NEXT:    lsr x9, x0, #32
 ; LE-NEXT:    lsr x10, x0, #48
-; LE-NEXT:    strh w8, [x1, #2]
-; LE-NEXT:    str w9, [x1, #4]
+; LE-NEXT:    str w8, [x1, #4]
+; LE-NEXT:    strh w9, [x1, #2]
 ; LE-NEXT:    strh w10, [x1]
 ; LE-NEXT:    ret
 ;
@@ -749,16 +749,16 @@ define void @i64_to_i8_incomplete(i64 %x, ptr %p0) {
 ; CHECK-NEXT:    lsr x8, x0, #56
 ; CHECK-NEXT:    lsr x9, x0, #48
 ; CHECK-NEXT:    lsr x10, x0, #40
-; CHECK-NEXT:    lsr x11, x0, #32
 ; CHECK-NEXT:    strb w0, [x1, #7]
 ; CHECK-NEXT:    strb w8, [x1]
-; CHECK-NEXT:    lsr x8, x0, #16
+; CHECK-NEXT:    lsr x8, x0, #32
 ; CHECK-NEXT:    strb w9, [x1, #1]
-; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    lsr x9, x0, #16
 ; CHECK-NEXT:    strb w10, [x1, #2]
-; CHECK-NEXT:    strb w11, [x1, #3]
-; CHECK-NEXT:    strb w8, [x1, #5]
-; CHECK-NEXT:    strb w9, [x1, #6]
+; CHECK-NEXT:    lsr x10, x0, #8
+; CHECK-NEXT:    strb w8, [x1, #3]
+; CHECK-NEXT:    strb w9, [x1, #5]
+; CHECK-NEXT:    strb w10, [x1, #6]
 ; CHECK-NEXT:    ret
   %sh1 = lshr i64 %x, 8
   %sh2 = lshr i64 %x, 16

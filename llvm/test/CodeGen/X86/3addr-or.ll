@@ -20,12 +20,11 @@ define i32 @test1(i32 %x) nounwind ssp {
 define i64 @test2(i8 %A, i8 %B) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    andl $48, %edi
 ; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    shrq $4, %rax
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    retq
   %C = zext i8 %A to i64
   %D = shl i64 %C, 4

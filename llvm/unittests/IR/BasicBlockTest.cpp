@@ -101,7 +101,7 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   LLVMContext Ctx;
 
   Module *M = new Module("MyModule", Ctx);
-  Type *ArgTy1[] = {Type::getInt32PtrTy(Ctx)};
+  Type *ArgTy1[] = {PointerType::getUnqual(Ctx)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), ArgTy1, false);
   Argument *V = new Argument(Type::getInt32Ty(Ctx));
   Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);

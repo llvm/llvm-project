@@ -45,7 +45,7 @@ program openacc_parallel_loop_validity
   end do
 
   !ERROR: SELF clause on the PARALLEL LOOP directive only accepts optional scalar logical expression
-  !$acc parallel loop self(bb, cc(:))
+  !$acc parallel loop self(bb, cc(:,:))
   do i = 1, N
     a(i) = 3.14
   end do
@@ -134,6 +134,11 @@ program openacc_parallel_loop_validity
   !$acc parallel loop reduction(.neqv.: reduction_l)
   do i = 1, N
     reduction_l = d(i) .neqv. e(i)
+  end do
+
+  !$acc parallel loop
+  do i = 1, N
+    if(i == 10) cycle
   end do
 
 end program openacc_parallel_loop_validity

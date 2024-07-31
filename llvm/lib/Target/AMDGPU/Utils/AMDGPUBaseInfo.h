@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
+#include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
@@ -31,42 +32,45 @@ class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class StringRef;
-class TargetRegisterClass;
 class Triple;
 class raw_ostream;
 
-namespace amdhsa {
-struct kernel_descriptor_t;
-}
-
 namespace AMDGPU {
 
+struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
 
-enum {
-  AMDHSA_COV2 = 2,
-  AMDHSA_COV3 = 3,
-  AMDHSA_COV4 = 4,
-  AMDHSA_COV5 = 5
-};
+/// Generic target versions emitted by this version of LLVM.
+///
+/// These numbers are incremented every time a codegen breaking change occurs
+/// within a generic family.
+namespace GenericVersion {
+static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX10_1 = 1;
+static constexpr unsigned GFX10_3 = 1;
+static constexpr unsigned GFX11 = 1;
+static constexpr unsigned GFX12 = 1;
+} // namespace GenericVersion
 
-/// \returns HSA OS ABI Version identification.
-std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 2,
-/// false otherwise.
-bool isHsaAbiVersion2(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 3,
-/// false otherwise.
-bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 4,
-/// false otherwise.
-bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 5,
-/// false otherwise.
-bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 3 and above,
-/// false otherwise.
-bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI);
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
+
+/// \returns True if \p STI is AMDHSA.
+bool isHsaAbi(const MCSubtargetInfo &STI);
+
+/// \returns Code object version from the IR module flag.
+unsigned getAMDHSACodeObjectVersion(const Module &M);
+
+/// \returns Code object version from ELF's e_ident[EI_ABIVERSION].
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
+
+/// \returns The default HSA code object version. This should only be used when
+/// we lack a more accurate CodeObjectVersion value (e.g. from the IR module
+/// flag or a .amdhsa_code_object_version directive)
+unsigned getDefaultAMDHSACodeObjectVersion();
+
+/// \returns ABIVersion suitable for use in ELF's e_ident[EI_ABIVERSION]. \param
+/// CodeObjectVersion is a value returned by getAMDHSACodeObjectVersion().
+uint8_t getELFABIVersion(const Triple &OS, unsigned CodeObjectVersion);
 
 /// \returns The offset of the multigrid_sync_arg argument from implicitarg_ptr
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned COV);
@@ -76,12 +80,6 @@ unsigned getHostcallImplicitArgPosition(unsigned COV);
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned COV);
 unsigned getCompletionActionImplicitArgPosition(unsigned COV);
-
-/// \returns Code object version.
-unsigned getAmdhsaCodeObjectVersion();
-
-/// \returns Code object version.
-unsigned getCodeObjectVersion(const Module &M);
 
 struct GcnBufferFormatInfo {
   unsigned Format;
@@ -127,7 +125,6 @@ private:
   const MCSubtargetInfo &STI;
   TargetIDSetting XnackSetting;
   TargetIDSetting SramEccSetting;
-  unsigned CodeObjectVersion;
 
 public:
   explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
@@ -155,10 +152,6 @@ public:
   /// "Unsupported", "Any", "Off", and "On".
   TargetIDSetting getXnackSetting() const {
     return XnackSetting;
-  }
-
-  void setCodeObjectVersion(unsigned COV) {
-    CodeObjectVersion = COV;
   }
 
   /// Sets xnack setting to \p NewXnackSetting.
@@ -301,6 +294,10 @@ unsigned getVGPREncodingGranule(
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
+/// \returns Addressable number of architectural VGPRs for a given subtarget \p
+/// STI.
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
+
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
 
@@ -317,16 +314,67 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs);
 
+/// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
+/// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
+unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
+                                      unsigned MaxWaves,
+                                      unsigned TotalNumVGPRs);
+
+/// \returns Occupancy for a given \p SGPRs usage, \p MaxWaves possible, and \p
+/// Gen.
+unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
+                                  AMDGPUSubtarget::Generation Gen);
+
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
-/// \p NumVGPRs are used.
+/// \p NumVGPRs are used. We actually return the number of blocks -1, since
+/// that's what we encode.
 ///
 /// For subtargets which support it, \p EnableWavefrontSize32 should match the
 /// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned
-getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
-                 std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+unsigned getEncodedNumVGPRBlocks(
+    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
+
+/// \returns Number of VGPR blocks that need to be allocated for the given
+/// subtarget \p STI when \p NumVGPRs are used.
+unsigned getAllocatedNumVGPRBlocks(
+    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
+
+// Represents a field in an encoded value.
+template <unsigned HighBit, unsigned LowBit, unsigned D = 0>
+struct EncodingField {
+  static_assert(HighBit >= LowBit, "Invalid bit range!");
+  static constexpr unsigned Offset = LowBit;
+  static constexpr unsigned Width = HighBit - LowBit + 1;
+
+  using ValueType = unsigned;
+  static constexpr ValueType Default = D;
+
+  ValueType Value;
+  constexpr EncodingField(ValueType Value) : Value(Value) {}
+
+  constexpr uint64_t encode() const { return Value; }
+  static ValueType decode(uint64_t Encoded) { return Encoded; }
+};
+
+// Represents a single bit in an encoded value.
+template <unsigned Bit, unsigned D = 0>
+using EncodingBit = EncodingField<Bit, Bit, D>;
+
+// A helper for encoding and decoding multiple fields.
+template <typename... Fields> struct EncodingFields {
+  static constexpr uint64_t encode(Fields... Values) {
+    return ((Values.encode() << Values.Offset) | ...);
+  }
+
+  static std::tuple<typename Fields::ValueType...> decode(uint64_t Encoded) {
+    return {Fields::decode((Encoded >> Fields::Offset) &
+                           maxUIntN(Fields::Width))...};
+  }
+};
 
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
@@ -355,6 +403,8 @@ struct MIMGBaseOpcodeInfo {
   bool HasD16;
   bool MSAA;
   bool BVH;
+  bool A16;
+  bool NoReturn;
 };
 
 LLVM_READONLY
@@ -491,6 +541,9 @@ LLVM_READONLY
 bool getMUBUFIsBufferInv(unsigned Opc);
 
 LLVM_READONLY
+bool getMUBUFTfe(unsigned Opc);
+
+LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY
@@ -505,6 +558,9 @@ bool getVOP3IsSingle(unsigned Opc);
 LLVM_READONLY
 bool isVOPC64DPP(unsigned Opc);
 
+LLVM_READONLY
+bool isVOPCAsmOnly(unsigned Opc);
+
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
@@ -516,6 +572,10 @@ struct CanBeVOPD {
   bool X;
   bool Y;
 };
+
+/// \returns SIEncodingFamily used for VOPD encoding on a \p ST.
+LLVM_READONLY
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
 
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
@@ -536,7 +596,7 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -546,6 +606,12 @@ bool isMAC(unsigned Opc);
 
 LLVM_READNONE
 bool isPermlane16(unsigned Opc);
+
+LLVM_READNONE
+bool isGenericAtomic(unsigned Opc);
+
+LLVM_READNONE
+bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc);
 
 namespace VOPD {
 
@@ -572,7 +638,7 @@ constexpr unsigned COMPONENTS_NUM = 2;
 class ComponentProps {
 private:
   unsigned SrcOperandsNum = 0;
-  std::optional<unsigned> MandatoryLiteralIdx;
+  unsigned MandatoryLiteralIdx = ~0u;
   bool HasSrc2Acc = false;
 
 public:
@@ -588,13 +654,13 @@ public:
   }
 
   // Return true iif this component has a mandatory literal.
-  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
+  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx != ~0u; }
 
   // If this component has a mandatory literal, return component operand
   // index of this literal (i.e. either Component::SRC1 or Component::SRC2).
   unsigned getMandatoryLiteralCompOperandIndex() const {
     assert(hasMandatoryLiteral());
-    return *MandatoryLiteralIdx;
+    return MandatoryLiteralIdx;
   }
 
   // Return true iif this component has operand
@@ -610,8 +676,7 @@ public:
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
-    return hasMandatoryLiteral() &&
-           *MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
+    return MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
   }
 };
 
@@ -757,15 +822,20 @@ public:
   // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
   // for the specified component and MC operand. The callback must return 0
   // if the operand is not a register or not a VGPR.
-  bool hasInvalidOperand(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-    return getInvalidCompOperandIndex(GetRegIdx).has_value();
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
+  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         bool SkipSrc = false) const {
+    return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      bool SkipSrc = false) const;
 
 private:
   RegIndices
@@ -792,16 +862,19 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isInvalidSingleUseConsumerInst(unsigned Opc);
+
+LLVM_READONLY
+bool isInvalidSingleUseProducerInst(unsigned Opc);
+
+LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
 LLVM_READONLY
 unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo *STI);
-
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
@@ -828,53 +901,68 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 /// \returns \p Default and emits error if one of the requested values cannot be
 /// converted to integer, or \p OnlyFirstRequired is false and "second" value is
 /// not present.
-std::pair<int, int> getIntegerPairAttribute(const Function &F,
-                                            StringRef Name,
-                                            std::pair<int, int> Default,
-                                            bool OnlyFirstRequired = false);
+std::pair<unsigned, unsigned>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired = false);
+
+/// \returns Generate a vector of integer values requested using \p F's \p Name
+/// attribute.
+///
+/// \returns true if exactly Size (>2) number of integers are found in the
+/// attribute.
+///
+/// \returns false if any error occurs.
+SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
+                                             unsigned Size);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
 /// represent "don't care" waits.
 struct Waitcnt {
-  unsigned VmCnt = ~0u;
+  unsigned LoadCnt = ~0u; // Corresponds to Vmcnt prior to gfx12.
   unsigned ExpCnt = ~0u;
-  unsigned LgkmCnt = ~0u;
-  unsigned VsCnt = ~0u;
+  unsigned DsCnt = ~0u;     // Corresponds to LGKMcnt prior to gfx12.
+  unsigned StoreCnt = ~0u;  // Corresponds to VScnt on gfx10/gfx11.
+  unsigned SampleCnt = ~0u; // gfx12+ only.
+  unsigned BvhCnt = ~0u;    // gfx12+ only.
+  unsigned KmCnt = ~0u;     // gfx12+ only.
 
   Waitcnt() = default;
+  // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
-      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt), VsCnt(VsCnt) {}
+      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt),
+        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u) {}
 
-  static Waitcnt allZero(bool HasVscnt) {
-    return Waitcnt(0, 0, 0, HasVscnt ? 0 : ~0u);
-  }
-  static Waitcnt allZeroExceptVsCnt() { return Waitcnt(0, 0, 0, ~0u); }
+  // gfx12+ constructor.
+  Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
+      : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
 
-  bool hasWait() const {
-    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u || VsCnt != ~0u;
-  }
+  bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
-  bool hasWaitExceptVsCnt() const {
-    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u;
-  }
-
-  bool hasWaitVsCnt() const {
-    return VsCnt != ~0u;
+  bool hasWaitExceptStoreCnt() const {
+    return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u;
   }
 
-  bool dominates(const Waitcnt &Other) const {
-    return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
-           LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;
-  }
+  bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
 
   Waitcnt combined(const Waitcnt &Other) const {
-    return Waitcnt(std::min(VmCnt, Other.VmCnt), std::min(ExpCnt, Other.ExpCnt),
-                   std::min(LgkmCnt, Other.LgkmCnt),
-                   std::min(VsCnt, Other.VsCnt));
+    // Does the right thing provided self and Other are either both pre-gfx12
+    // or both gfx12+.
+    return Waitcnt(
+        std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
+        std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
+        std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
+        std::min(KmCnt, Other.KmCnt));
   }
 };
+
+// The following methods are only meaningful on targets that support
+// S_WAITCNT.
 
 /// \returns Vmcnt bit mask for given isa \p Version.
 unsigned getVmcntBitMask(const IsaVersion &Version);
@@ -899,17 +987,19 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 
 /// Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
 /// \p Version, and writes decoded values into \p Vmcnt, \p Expcnt and
-/// \p Lgkmcnt respectively.
+/// \p Lgkmcnt respectively. Should not be used on gfx12+, the instruction
+/// which needs it is deprecated
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are decoded as follows:
 ///     \p Vmcnt = \p Waitcnt[3:0]        (pre-gfx9)
 ///     \p Vmcnt = \p Waitcnt[15:14,3:0]  (gfx9,10)
-///     \p Vmcnt = \p Waitcnt[15:10]      (gfx11+)
+///     \p Vmcnt = \p Waitcnt[15:10]      (gfx11)
 ///     \p Expcnt = \p Waitcnt[6:4]       (pre-gfx11)
-///     \p Expcnt = \p Waitcnt[2:0]       (gfx11+)
+///     \p Expcnt = \p Waitcnt[2:0]       (gfx11)
 ///     \p Lgkmcnt = \p Waitcnt[11:8]     (pre-gfx10)
 ///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
-///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11+)
+///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11)
+///
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
                    unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
 
@@ -928,47 +1018,90 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt);
 
 /// Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
-/// \p Version.
+/// \p Version. Should not be used on gfx12+, the instruction which needs
+/// it is deprecated
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are encoded as follows:
 ///     Waitcnt[2:0]   = \p Expcnt      (gfx11+)
 ///     Waitcnt[3:0]   = \p Vmcnt       (pre-gfx9)
 ///     Waitcnt[3:0]   = \p Vmcnt[3:0]  (gfx9,10)
 ///     Waitcnt[6:4]   = \p Expcnt      (pre-gfx11)
-///     Waitcnt[9:4]   = \p Lgkmcnt     (gfx11+)
+///     Waitcnt[9:4]   = \p Lgkmcnt     (gfx11)
 ///     Waitcnt[11:8]  = \p Lgkmcnt     (pre-gfx10)
 ///     Waitcnt[13:8]  = \p Lgkmcnt     (gfx10)
-///     Waitcnt[15:10] = \p Vmcnt       (gfx11+)
+///     Waitcnt[15:10] = \p Vmcnt       (gfx11)
 ///     Waitcnt[15:14] = \p Vmcnt[5:4]  (gfx9,10)
 ///
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
 /// isa \p Version.
+///
 unsigned encodeWaitcnt(const IsaVersion &Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
 
 unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
+// The following methods are only meaningful on targets that support
+// S_WAIT_*CNT, introduced with gfx12.
+
+/// \returns Loadcnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support LOADcnt
+unsigned getLoadcntBitMask(const IsaVersion &Version);
+
+/// \returns Samplecnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support SAMPLEcnt
+unsigned getSamplecntBitMask(const IsaVersion &Version);
+
+/// \returns Bvhcnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support BVHcnt
+unsigned getBvhcntBitMask(const IsaVersion &Version);
+
+/// \returns Dscnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support DScnt
+unsigned getDscntBitMask(const IsaVersion &Version);
+
+/// \returns Dscnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support KMcnt
+unsigned getKmcntBitMask(const IsaVersion &Version);
+
+/// \return STOREcnt or VScnt bit mask for given isa \p Version.
+/// returns 0 for versions that do not support STOREcnt or VScnt.
+/// STOREcnt and VScnt are the same counter, the name used
+/// depends on the ISA version.
+unsigned getStorecntBitMask(const IsaVersion &Version);
+
+// The following are only meaningful on targets that support
+// S_WAIT_LOADCNT_DSCNT and S_WAIT_STORECNT_DSCNT.
+
+/// \returns Decoded Waitcnt structure from given \p LoadcntDscnt for given
+/// isa \p Version.
+Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt);
+
+/// \returns Decoded Waitcnt structure from given \p StorecntDscnt for given
+/// isa \p Version.
+Waitcnt decodeStorecntDscnt(const IsaVersion &Version, unsigned StorecntDscnt);
+
+/// \returns \p Loadcnt and \p Dscnt components of \p Decoded  encoded as an
+/// immediate that can be used with S_WAIT_LOADCNT_DSCNT for given isa
+/// \p Version.
+unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
+
+/// \returns \p Storecnt and \p Dscnt components of \p Decoded  encoded as an
+/// immediate that can be used with S_WAIT_STORECNT_DSCNT for given isa
+/// \p Version.
+unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
+
 namespace Hwreg {
 
-LLVM_READONLY
-int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
+using HwregId = EncodingField<5, 0>;
+using HwregOffset = EncodingField<10, 6>;
 
-LLVM_READNONE
-bool isValidHwreg(int64_t Id);
+struct HwregSize : EncodingField<15, 11, 32> {
+  using EncodingField::EncodingField;
+  constexpr uint64_t encode() const { return Value - 1; }
+  static ValueType decode(uint64_t Encoded) { return Encoded + 1; }
+};
 
-LLVM_READNONE
-bool isValidHwregOffset(int64_t Offset);
-
-LLVM_READNONE
-bool isValidHwregWidth(int64_t Width);
-
-LLVM_READNONE
-uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width);
-
-LLVM_READNONE
-StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
-
-void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
+using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 
 } // namespace Hwreg
 
@@ -981,6 +1114,33 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI);
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
+
+/// \returns Decoded VaVdst from given immediate \p Encoded.
+unsigned decodeFieldVaVdst(unsigned Encoded);
+
+/// \returns Decoded VmVsrc from given immediate \p Encoded.
+unsigned decodeFieldVmVsrc(unsigned Encoded);
+
+/// \returns Decoded SaSdst from given immediate \p Encoded.
+unsigned decodeFieldSaSdst(unsigned Encoded);
+
+/// \returns \p VmVsrc as an encoded Depctr immediate.
+unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+
+/// \returns \p Encoded combined with encoded \p VmVsrc.
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
+
+/// \returns \p VaVdst as an encoded Depctr immediate.
+unsigned encodeFieldVaVdst(unsigned VaVdst);
+
+/// \returns \p Encoded combined with encoded \p VaVdst.
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
+
+/// \returns \p SaSdst as an encoded Depctr immediate.
+unsigned encodeFieldSaSdst(unsigned SaSdst);
+
+/// \returns \p Encoded combined with encoded \p SaSdst.
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 } // namespace DepCtr
 
@@ -1031,18 +1191,6 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI);
 } // namespace MTBUFFormat
 
 namespace SendMsg {
-
-LLVM_READONLY
-int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI);
-
-LLVM_READONLY
-int64_t getMsgOpId(int64_t MsgId, const StringRef Name);
-
-LLVM_READNONE
-StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI);
-
-LLVM_READNONE
-StringRef getMsgOpName(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI);
@@ -1099,6 +1247,9 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
 
+LLVM_READNONE
+bool isChainCC(CallingConv::ID CC);
+
 bool isKernelCC(const Function *Func);
 
 // FIXME: Remove this when calling conventions cleaned up
@@ -1119,36 +1270,52 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI);
 bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
-unsigned getNSAMaxSize(const MCSubtargetInfo &STI);
+bool hasGDS(const MCSubtargetInfo &STI);
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler = false);
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 bool isGFX9_GFX10(const MCSubtargetInfo &STI);
+bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI);
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI);
 bool isGFX8Plus(const MCSubtargetInfo &STI);
 bool isGFX9Plus(const MCSubtargetInfo &STI);
+bool isNotGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
+bool isGFX10_GFX11(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
+bool isGFX12(const MCSubtargetInfo &STI);
+bool isGFX12Plus(const MCSubtargetInfo &STI);
+bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
+bool isGFX10_3_GFX11(const MCSubtargetInfo &STI);
 bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
+bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
+unsigned hasKernargPreload(const MCSubtargetInfo &STI);
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
+
+/// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
+/// The bit indicating isHi is the LSB of the encoding.
+bool isHi(unsigned Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
@@ -1180,9 +1347,6 @@ unsigned getRegBitWidth(unsigned RCID);
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
 
-/// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const TargetRegisterClass &RC);
-
 /// Get size of register operand
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo);
@@ -1203,6 +1367,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16: // mandatory literal is always size 4
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return 4;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -1213,17 +1378,24 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
     return 8;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
     return 2;
 
@@ -1252,16 +1424,40 @@ LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableIntLiteralV216(int32_t Literal);
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);
+
+LLVM_READNONE
+std::optional<unsigned> getInlineEncodingV2BF16(uint32_t Literal);
+
+LLVM_READNONE
+std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
+
+LLVM_READNONE
+bool isInlinableLiteralV2I16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV2BF16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV2F16(uint32_t Literal);
+
+LLVM_READNONE
+bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 
@@ -1285,14 +1481,15 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
 /// S_LOAD instructions have a signed offset, on other subtargets it is
 /// unsigned. S_BUFFER has an unsigned offset for all subtargets.
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer);
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset = false);
 
 /// \return The encoding that can be used for a 32-bit literal offset in an SMRD
 /// instruction. This is only useful on CI.s
 std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                      int64_t ByteOffset);
 
-/// For FLAT segment the offset must be positive;
+/// For pre-GFX12 FLAT instructions the offset must be positive;
 /// MSB is ignored and forced to zero.
 ///
 /// \return The number of bits available for the signed offset field in flat
@@ -1306,15 +1503,26 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegal64BitDPPControl(unsigned DC) {
+inline bool isLegalDPALU_DPPControl(unsigned DC) {
   return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
 }
+
+/// \returns true if an instruction may have a 64-bit VGPR operand.
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+
+/// \returns true if an instruction is a DP ALU DPP.
+bool isDPALU_DPP(const MCInstrDesc &OpDesc);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns lds block size in terms of dwords. \p
+/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
+/// must be defined in terms of bytes.
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
 } // end namespace AMDGPU
 

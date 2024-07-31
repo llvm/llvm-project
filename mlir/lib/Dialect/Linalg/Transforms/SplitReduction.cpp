@@ -66,7 +66,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
 
   Operation *reductionOp = combinerOps[0];
-  std::optional<TypedAttr> identity = getNeutralElement(reductionOp);
+  std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
   if (!identity.has_value())
     return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
@@ -114,6 +114,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     Type newType = RankedTensorType::get(
         newShape,
         cast<RankedTensorType>(operand->get().getType()).getElementType());
+
     Value newInput = b.create<tensor::ExpandShapeOp>(
         loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
@@ -192,8 +193,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
 
   auto reduction = b.create<GenericOp>(
       loc, op->getResultTypes(), ValueRange({genericOp.getResult(0)}),
-      SmallVector<Value>{op.getDpsInitOperands()}, reductionMaps,
-      reductionIteratorTypes,
+      op.getDpsInits(), reductionMaps, reductionIteratorTypes,
       [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
         Operation *clonedReductionOp = b.clone(*reductionOp);
         clonedReductionOp->setOperand(0, inputs[0]);
@@ -274,7 +274,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
 
   SmallVector<TypedAttr> neutralElements;
   for (Operation *reductionOp : combinerOps) {
-    std::optional<TypedAttr> neutralElement = getNeutralElement(reductionOp);
+    std::optional<TypedAttr> neutralElement =
+        arith::getNeutralElement(reductionOp);
     if (!neutralElement.has_value())
       return b.notifyMatchFailure(op, "cannot find neutral element.");
     neutralElements.push_back(*neutralElement);
@@ -307,8 +308,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   SmallVector<Operation *> emptyOrAllocTensorOps;
   SmallVector<linalg::FillOp> fillOps;
   fillOps.reserve(op.getNumDpsInits());
-  for (auto it : llvm::zip(op.getDpsInitOperands(), neutralElements)) {
-    Value rankedTensor = std::get<0>(it)->get();
+  for (auto it : llvm::zip(op.getDpsInitsMutable(), neutralElements)) {
+    Value rankedTensor = std::get<0>(it).get();
     auto t = cast<RankedTensorType>(rankedTensor.getType());
     RankedTensorType newT = RankedTensorType::Builder(t).insertDim(
         reductionDimSize / splitFactor, insertSplitDimension);
@@ -344,13 +345,13 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // TODO: a subset of these may not reduce along reducePos and should be
   // reindexed: k -> k * splitFactor + k', when multi-reduction support is
   // available.
-  for (OpOperand *o : op.getDpsInitOperands())
-    newMaps.push_back(insertParallelDim(op, *o, reductionDimPos,
+  for (OpOperand &o : op.getDpsInitsMutable())
+    newMaps.push_back(insertParallelDim(op, o, reductionDimPos,
                                         reductionDimSize / splitFactor));
 
   // Step 3. Handle operands.
   // Compute the new input tensors.
-  SmallVector<Value> newInputs(op.getDpsInputOperands());
+  SmallVector<Value> newInputs = op.getDpsInputs();
   // Add a single shape-only tensor to carry the dimensions without resorting to
   // more complex inversions.
   newInputs.push_back(b.create<tensor::EmptyOp>(
@@ -379,10 +380,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // TODO: all results can be handled in a single GenericOp, when
   // multi-reduction support is available.
   SmallVector<LinalgOp> results;
-  for (auto it : llvm::zip(genericOp->getResults(), op.getDpsInitOperands(),
-                           combinerOps)) {
+  for (auto it :
+       llvm::zip(genericOp->getResults(), op.getDpsInits(), combinerOps)) {
     Value reindexedOutput = std::get<0>(it);
-    Value originalOutput = std::get<1>(it)->get();
+    Value originalOutput = std::get<1>(it);
     auto originalOutputType = cast<RankedTensorType>(originalOutput.getType());
     Operation *combinerOp = std::get<2>(it);
 

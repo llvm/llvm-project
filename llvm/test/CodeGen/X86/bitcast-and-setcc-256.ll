@@ -150,13 +150,13 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double>
 define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 ; SSE2-SSSE3-LABEL: v16i16:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtw %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    pcmpgtw %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtw %xmm6, %xmm4
-; SSE2-SSSE3-NEXT:    packsswb %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pcmpgtw %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm5
+; SSE2-SSSE3-NEXT:    packsswb %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -221,13 +221,13 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 define i8 @v8i32_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-SSSE3-LABEL: v8i32_and:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
-; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm5
+; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    packsswb %xmm4, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -290,13 +290,13 @@ define i8 @v8i32_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 define i8 @v8i32_or(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-SSSE3-LABEL: v8i32_or:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
-; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    por %xmm1, %xmm5
+; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    packsswb %xmm4, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -365,17 +365,17 @@ define i8 @v8i32_or_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, 
 ; SSE2-SSSE3-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE2-SSSE3-NEXT:    por %xmm1, %xmm7
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm6
 ; SSE2-SSSE3-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm9
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm9
 ; SSE2-SSSE3-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm8
-; SSE2-SSSE3-NEXT:    packssdw %xmm9, %xmm8
-; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm8
-; SSE2-SSSE3-NEXT:    packsswb %xmm8, %xmm8
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm8, %eax
+; SSE2-SSSE3-NEXT:    pand %xmm7, %xmm8
+; SSE2-SSSE3-NEXT:    packssdw %xmm8, %xmm9
+; SSE2-SSSE3-NEXT:    packsswb %xmm9, %xmm9
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm9, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -451,13 +451,13 @@ define i8 @v8i32_or_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, 
 define i8 @v8i32_or_vselect(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; SSE2-SSSE3-LABEL: v8i32_or_vselect:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    por %xmm5, %xmm1
+; SSE2-SSSE3-NEXT:    por %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
-; SSE2-SSSE3-NEXT:    por %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    packsswb %xmm4, %xmm4
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -514,10 +514,8 @@ define i8 @v8i32_or_vselect(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3, i1 %a4) {
 ; SSE2-SSSE3-LABEL: v8i32_or_select:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    testb $1, %dil
 ; SSE2-SSSE3-NEXT:    jne .LBB7_1
 ; SSE2-SSSE3-NEXT:  # %bb.2:
@@ -528,7 +526,9 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:  .LBB7_3:
+; SSE2-SSSE3-NEXT:    por %xmm3, %xmm7
 ; SSE2-SSSE3-NEXT:    por %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm6
 ; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
@@ -553,8 +553,8 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vorps %ymm2, %ymm3, %ymm1
-; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovmskps %ymm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
@@ -571,8 +571,8 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:  .LBB7_3:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm1
-; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm3, %ymm0
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovmskps %ymm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -630,13 +630,13 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 define i8 @v8f32_and(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
 ; SSE2-SSSE3-LABEL: v8f32_and:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    cmpltps %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    cmpltps %xmm5, %xmm7
+; SSE2-SSSE3-NEXT:    cmpltps %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm4, %xmm6
+; SSE2-SSSE3-NEXT:    andps %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    cmpltps %xmm5, %xmm7
+; SSE2-SSSE3-NEXT:    andps %xmm3, %xmm7
 ; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
-; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm6
 ; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -681,13 +681,13 @@ define i8 @v8f32_and(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 define i8 @v8f32_xor(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
 ; SSE2-SSSE3-LABEL: v8f32_xor:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    cmpltps %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    cmpltps %xmm5, %xmm7
+; SSE2-SSSE3-NEXT:    cmpltps %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm4, %xmm6
+; SSE2-SSSE3-NEXT:    xorps %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    cmpltps %xmm5, %xmm7
+; SSE2-SSSE3-NEXT:    xorps %xmm3, %xmm7
 ; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
-; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm6
 ; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -734,25 +734,25 @@ define i8 @v8f32_xor(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 define i8 @v8f32_xor_and(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d, <8 x float> %e, <8 x float> %f) {
 ; SSE2-SSSE3-LABEL: v8f32_xor_and:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm8
 ; SSE2-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm9
+; SSE2-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm8
 ; SSE2-SSSE3-NEXT:    cmpnleps %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpnleps %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movaps %xmm5, %xmm1
-; SSE2-SSSE3-NEXT:    cmpeqps %xmm7, %xmm1
+; SSE2-SSSE3-NEXT:    movaps %xmm5, %xmm2
+; SSE2-SSSE3-NEXT:    cmpeqps %xmm7, %xmm2
 ; SSE2-SSSE3-NEXT:    cmpunordps %xmm7, %xmm5
-; SSE2-SSSE3-NEXT:    orps %xmm1, %xmm5
+; SSE2-SSSE3-NEXT:    orps %xmm2, %xmm5
+; SSE2-SSSE3-NEXT:    xorps %xmm1, %xmm5
 ; SSE2-SSSE3-NEXT:    movaps %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpeqps %xmm6, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpunordps %xmm6, %xmm4
 ; SSE2-SSSE3-NEXT:    orps %xmm1, %xmm4
-; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
-; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    cmpltps {{[0-9]+}}(%rsp), %xmm9
+; SSE2-SSSE3-NEXT:    xorps %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    cmpltps {{[0-9]+}}(%rsp), %xmm8
+; SSE2-SSSE3-NEXT:    andps %xmm4, %xmm8
+; SSE2-SSSE3-NEXT:    cmpltps {{[0-9]+}}(%rsp), %xmm9
+; SSE2-SSSE3-NEXT:    andps %xmm5, %xmm9
 ; SSE2-SSSE3-NEXT:    packssdw %xmm9, %xmm8
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm8
 ; SSE2-SSSE3-NEXT:    packsswb %xmm8, %xmm8
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm8, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
@@ -950,7 +950,7 @@ define i8 @v4f64_concat_undef(<4 x double> %vec) {
 ; SSE2-SSSE3-NEXT:    xorpd %xmm3, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq

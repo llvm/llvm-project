@@ -154,8 +154,7 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBefore(TargetBB, TargetBB.end());
+  TargetBB.splice(TargetBB.end(), &SourceBB);
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -198,7 +197,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHI();
+  Instruction *FirstNonPHI = BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)
@@ -557,7 +556,7 @@ collectRegionsConstants(OutlinableRegion &Region,
 
     // Iterate over the operands in an instruction. If the global value number,
     // assigned by the IRSimilarityCandidate, has been seen before, we check if
-    // the the number has been found to be not the same value in each instance.
+    // the number has been found to be not the same value in each instance.
     for (Value *V : ID.OperVals) {
       std::optional<unsigned> GVNOpt = C.getGVN(V);
       assert(GVNOpt && "Expected a GVN for operand?");
@@ -679,7 +678,7 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), MangledNameStream.str(),
+        Unit /* Context */, F->getName(), Dummy,
         Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(
@@ -722,6 +721,12 @@ static void moveFunctionData(Function &Old, Function &New,
     std::vector<Instruction *> DebugInsts;
 
     for (Instruction &Val : CurrBB) {
+      // Since debug-info originates from many different locations in the
+      // program, it will cause incorrect reporting from a debugger if we keep
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
+      Val.dropDbgRecords();
+
       // We must handle the scoping of called functions differently than
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
@@ -745,10 +750,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // From this point we are only handling call instructions.
       CallInst *CI = cast<CallInst>(&Val);
 
-      // We add any debug statements here, to be removed after.  Since the
-      // instructions originate from many different locations in the program,
-      // it will cause incorrect reporting from a debugger if we keep the
-      // same debug instructions.
+      // Collect debug intrinsics for later removal.
       if (isa<DbgInfoIntrinsic>(CI)) {
         DebugInsts.push_back(&Val);
         continue;
@@ -766,7 +768,7 @@ static void moveFunctionData(Function &Old, Function &New,
   }
 }
 
-/// Find the the constants that will need to be lifted into arguments
+/// Find the constants that will need to be lifted into arguments
 /// as they are not the same in each instance of the region.
 ///
 /// \param [in] C - The IRSimilarityCandidate containing the region we are
@@ -1346,7 +1348,7 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
     // the output, so we add a pointer type to the argument types of the overall
     // function to handle this output and create a mapping to it.
     if (!TypeFound) {
-      Group.ArgumentTypes.push_back(Output->getType()->getPointerTo(
+      Group.ArgumentTypes.push_back(PointerType::get(Output->getContext(),
           M.getDataLayout().getAllocaAddrSpace()));
       // Mark the new pointer type as the last value in the aggregate argument
       // list.
@@ -1499,7 +1501,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                     << *AggFunc << " with new set of arguments\n");
   // Create the new call instruction and erase the old one.
   Call = CallInst::Create(AggFunc->getFunctionType(), AggFunc, NewCallArgs, "",
-                          Call);
+                          Call->getIterator());
 
   // It is possible that the call to the outlined function is either the first
   // instruction is in the new block, the last instruction, or both.  If either

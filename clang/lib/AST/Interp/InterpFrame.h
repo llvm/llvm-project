@@ -15,8 +15,6 @@
 
 #include "Frame.h"
 #include "Program.h"
-#include <cstdint>
-#include <vector>
 
 namespace clang {
 namespace interp {
@@ -32,13 +30,14 @@ public:
 
   /// Creates a new frame for a method call.
   InterpFrame(InterpState &S, const Function *Func, InterpFrame *Caller,
-              CodePtr RetPC);
+              CodePtr RetPC, unsigned ArgSize);
 
   /// Creates a new frame with the values that make sense.
   /// I.e., the caller is the current frame of S,
   /// the This() pointer is the current Pointer on the top of S's stack,
   /// and the RVO pointer is before that.
-  InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC);
+  InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
+              unsigned VarArgSize = 0);
 
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();
@@ -50,13 +49,13 @@ public:
   void popArgs();
 
   /// Describes the frame with arguments for diagnostic purposes.
-  void describe(llvm::raw_ostream &OS) override;
+  void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
   Frame *getCaller() const override;
 
   /// Returns the location of the call to the frame.
-  SourceLocation getCallLocation() const override;
+  SourceRange getCallRange() const override;
 
   /// Returns the caller.
   const FunctionDecl *getCallee() const override;
@@ -84,11 +83,9 @@ public:
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Offset) const {
     auto Pt = Params.find(Offset);
-    if (Pt == Params.end()) {
+    if (Pt == Params.end())
       return stackRef<T>(Offset);
-    } else {
-      return Pointer(reinterpret_cast<Block *>(Pt->second.get())).deref<T>();
-    }
+    return Pointer(reinterpret_cast<Block *>(Pt->second.get())).deref<T>();
   }
 
   /// Mutates a local copy of a parameter.
@@ -118,8 +115,12 @@ public:
   virtual SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
 
   unsigned getDepth() const { return Depth; }
+
+  void dump() const { dump(llvm::errs(), 0); }
+  void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
 
 private:
   /// Returns an original argument from the stack.
@@ -138,7 +139,7 @@ private:
     return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
   }
 
-  // Returns the inline descriptor of the local.
+  /// Returns the inline descriptor of the local.
   InlineDescriptor *localInlineDesc(unsigned Offset) const {
     return reinterpret_cast<InlineDescriptor *>(Locals.get() + Offset);
   }

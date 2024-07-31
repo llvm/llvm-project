@@ -24,8 +24,6 @@ namespace llvm {
 ///
 class NVPTXTargetMachine : public LLVMTargetMachine {
   bool is64bit;
-  // Use 32-bit pointers for accessing const/local/short AS.
-  bool UseShortPointers;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   NVPTX::DrvInterface drvInterface;
   NVPTXSubtarget Subtarget;
@@ -38,7 +36,7 @@ public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
                      std::optional<Reloc::Model> RM,
-                     std::optional<CodeModel::Model> CM, CodeGenOpt::Level OP,
+                     std::optional<CodeModel::Model> CM, CodeGenOptLevel OP,
                      bool is64bit);
   ~NVPTXTargetMachine() override;
   const NVPTXSubtarget *getSubtargetImpl(const Function &) const override {
@@ -46,7 +44,6 @@ public:
   }
   const NVPTXSubtarget *getSubtargetImpl() const { return &Subtarget; }
   bool is64Bit() const { return is64bit; }
-  bool useShortPointers() const { return UseShortPointers; }
   NVPTX::DrvInterface getDrvInterface() const { return drvInterface; }
   UniqueStringSaver &getStrPool() const {
     return const_cast<UniqueStringSaver &>(StrPool);
@@ -88,7 +85,7 @@ public:
   NVPTXTargetMachine32(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
 };
 
@@ -99,7 +96,7 @@ public:
   NVPTXTargetMachine64(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
 };
 

@@ -47,4 +47,6 @@ int main(int, char**) {
 #if TEST_STD_VER >= 20
   use(std::execution::unseq);
 #endif
+
+  return 0;
 }

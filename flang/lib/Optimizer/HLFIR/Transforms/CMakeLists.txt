@@ -8,18 +8,22 @@ add_flang_library(HLFIRTransforms
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
   SimplifyHLFIRIntrinsics.cpp
+  OptimizedBufferization.cpp
 
   DEPENDS
+  CUFAttrsIncGen
   FIRDialect
   HLFIROpsIncGen
   ${dialect_libs}
 
   LINK_LIBS
+  CUFAttrs
   FIRAnalysis
   FIRDialect
   FIRBuilder
   FIRDialectSupport
   FIRSupport
+  FIRTransforms
   HLFIRDialect
   MLIRIR
   ${dialect_libs}

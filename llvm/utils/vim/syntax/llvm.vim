@@ -36,6 +36,9 @@ syn keyword llvmStatement sle slt srem store sub switch trunc udiv ueq uge ugt
 syn keyword llvmStatement uitofp ule ult umax umin une uno unreachable unwind
 syn keyword llvmStatement urem va_arg xchg xor zext
 
+" Debug records.
+syn match llvmStatement /\v#dbg_(assign|declare|label|value)/
+
 " Keywords.
 syn keyword llvmKeyword
       \ acq_rel
@@ -142,6 +145,7 @@ syn keyword llvmKeyword
       \ nosanitize_bounds
       \ nosanitize_coverage
       \ null_pointer_is_valid
+      \ optdebug
       \ optforfuzzing
       \ optnone
       \ optsize
@@ -149,6 +153,7 @@ syn keyword llvmKeyword
       \ preallocated
       \ private
       \ protected
+      \ ptrauth
       \ ptx_device
       \ ptx_kernel
       \ readnone
@@ -172,6 +177,7 @@ syn keyword llvmKeyword
       \ speculative_load_hardening
       \ spir_func
       \ spir_kernel
+      \ splat
       \ sret
       \ ssp
       \ sspreq
@@ -213,7 +219,7 @@ syn keyword llvmError  getresult begin end
 syn match   llvmNoName /[%@!]\d\+\>/
 syn match   llvmNumber /-\?\<\d\+\>/
 syn match   llvmFloat  /-\?\<\d\+\.\d*\(e[+-]\d\+\)\?\>/
-syn match   llvmFloat  /\<0x\x\+\>/
+syn match   llvmFloat  /\<0x[KLMHR]\?\x\+\>/
 syn keyword llvmBoolean true false
 syn keyword llvmConstant zeroinitializer undef null none poison vscale
 syn match   llvmComment /;.*$/

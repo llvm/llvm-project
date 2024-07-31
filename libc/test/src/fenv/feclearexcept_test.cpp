@@ -9,33 +9,36 @@
 #include "src/fenv/feclearexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include <stdint.h>
 
-TEST(LlvmLibcFEnvTest, ClearTest) {
-  uint16_t excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
-                        FE_UNDERFLOW};
-  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
-  __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
+#include "excepts.h"
 
-  for (uint16_t e : excepts)
-    ASSERT_EQ(__llvm_libc::fputil::test_except(e), 0);
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
-  __llvm_libc::fputil::raise_except(FE_ALL_EXCEPT);
+TEST_F(LlvmLibcFEnvTest, ClearTest) {
+  LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
-  for (uint16_t e1 : excepts) {
-    for (uint16_t e2 : excepts) {
-      for (uint16_t e3 : excepts) {
-        for (uint16_t e4 : excepts) {
-          for (uint16_t e5 : excepts) {
+  for (int e : EXCEPTS)
+    ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(e), 0);
+
+  LIBC_NAMESPACE::fputil::raise_except(FE_ALL_EXCEPT);
+
+  for (int e1 : EXCEPTS) {
+    for (int e2 : EXCEPTS) {
+      for (int e3 : EXCEPTS) {
+        for (int e4 : EXCEPTS) {
+          for (int e5 : EXCEPTS) {
             // We clear one exception and test to verify that it was cleared.
-            __llvm_libc::feclearexcept(e1 | e2 | e3 | e4 | e5);
-            ASSERT_EQ(__llvm_libc::fputil::test_except(e1 | e2 | e3 | e4 | e5),
-                      0);
+            LIBC_NAMESPACE::feclearexcept(e1 | e2 | e3 | e4 | e5);
+            ASSERT_EQ(
+                LIBC_NAMESPACE::fputil::test_except(e1 | e2 | e3 | e4 | e5), 0);
             // After clearing, we raise the exception again.
-            __llvm_libc::fputil::raise_except(e1 | e2 | e3 | e4 | e5);
+            LIBC_NAMESPACE::fputil::raise_except(e1 | e2 | e3 | e4 | e5);
           }
         }
       }

@@ -27,12 +27,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ScriptInterpreter::ScriptInterpreter(
-    Debugger &debugger, lldb::ScriptLanguage script_lang,
-    lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up)
-    : m_debugger(debugger), m_script_lang(script_lang),
-      m_scripted_platform_interface_up(
-          std::move(scripted_platform_interface_up)) {}
+ScriptInterpreter::ScriptInterpreter(Debugger &debugger,
+                                     lldb::ScriptLanguage script_lang)
+    : m_debugger(debugger), m_script_lang(script_lang) {}
 
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
@@ -102,6 +99,22 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
     return *error.m_opaque_up;
 
   return Status();
+}
+
+Event *
+ScriptInterpreter::GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const {
+  return event.m_opaque_ptr;
+}
+
+lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
+    const lldb::SBStream &stream) const {
+  if (stream.m_opaque_up) {
+    lldb::StreamSP s = std::make_shared<lldb_private::StreamString>();
+    *s << reinterpret_cast<StreamString *>(stream.m_opaque_up.get())->m_packet;
+    return s;
+  }
+
+  return nullptr;
 }
 
 std::optional<MemoryRegionInfo>

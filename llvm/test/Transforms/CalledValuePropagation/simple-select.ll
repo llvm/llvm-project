@@ -1,6 +1,6 @@
 ; RUN: opt -passes=called-value-propagation -S < %s | FileCheck %s
 
-target triple = "aarch64-unknown-linux-gnueabi"
+target triple = "aarch64"
 
 @global_function = internal unnamed_addr global ptr null, align 8
 @global_scalar = internal unnamed_addr global i64 zeroinitializer

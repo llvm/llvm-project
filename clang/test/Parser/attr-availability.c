@@ -18,19 +18,20 @@ void f5(void) __attribute__((availability(macosx,introduced=10.5), availability(
 
 void f6(void) __attribute__((availability(macosx,unavailable,introduced=10.5))); // expected-warning{{'unavailable' availability overrides all other availability information}}
 
-void f7(void) __attribute__((availability(macosx,message=L"wide"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f7(void) __attribute__((availability(macosx,message=L"wide"))); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}}
 
-void f8(void) __attribute__((availability(macosx,message="a" L"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f8(void) __attribute__((availability(macosx,message="a" L"b"))); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}}
 
-void f9(void) __attribute__((availability(macosx,message=u8"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f9(void) __attribute__((availability(macosx,message=u8"b"))); // expected-warning {{encoding prefix 'u8' on an unevaluated string literal has no effect}}
 
-void f10(void) __attribute__((availability(macosx,message="a" u8"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f10(void) __attribute__((availability(macosx,message="a" u8"b"))); // expected-warning {{encoding prefix 'u8' on an unevaluated string literal has no effect}}
 
-void f11(void) __attribute__((availability(macosx,message=u"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f11(void) __attribute__((availability(macosx,message=u"b"))); // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect}}
 
-void f12(void) __attribute__((availability(macosx,message="a" u"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f12(void) __attribute__((availability(macosx,message="a" u"b"))); // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect}}
 
-// rdar://10095131
+void f13(void) __attribute__((availability(shadermodel, introduced = 6.0, environment=pixel))); // expected-error {{unexpected parameter 'environment' in availability attribute, not permitted in C/C++}}
+
 enum E{
     gorf __attribute__((availability(macosx,introduced=8.5, message = 10.0))), // expected-error {{expected string literal for optional message in 'availability' attribute}}
     garf __attribute__((availability(macosx,introduced=8.5, message))), // expected-error {{expected '=' after 'message'}}

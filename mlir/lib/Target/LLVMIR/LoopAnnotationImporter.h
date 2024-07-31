@@ -22,8 +22,7 @@ namespace LLVM {
 namespace detail {
 
 /// A helper class that converts llvm.loop metadata nodes into corresponding
-/// LoopAnnotationAttrs and llvm.access.group nodes into
-/// AccessGroupMetadataOps.
+/// LoopAnnotationAttrs and llvm.access.group nodes into AccessGroupAttrs.
 class LoopAnnotationImporter {
 public:
   LoopAnnotationImporter(ModuleImport &moduleImport, OpBuilder &builder)
@@ -32,17 +31,15 @@ public:
                                              Location loc);
 
   /// Converts all LLVM access groups starting from node to MLIR access group
-  /// operations mested in the region of metadataOp. It stores a mapping from
-  /// every nested access group nod to the symbol pointing to the translated
-  /// operation. Returns success if all conversions succeed and failure
-  /// otherwise.
-  LogicalResult translateAccessGroup(const llvm::MDNode *node, Location loc,
-                                     MetadataOp metadataOp);
+  /// attributes. It stores a mapping from every nested access group node to the
+  /// translated attribute. Returns success if all conversions succeed and
+  /// failure otherwise.
+  LogicalResult translateAccessGroup(const llvm::MDNode *node, Location loc);
 
-  /// Returns the symbol references pointing to the access group operations that
-  /// map to the access group nodes starting from the access group metadata
-  /// node. Returns failure, if any of the symbol references cannot be found.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Returns the access group attribute that map to the access group nodes
+  /// starting from the access group metadata node. Returns failure, if any of
+  /// the attributes cannot be found.
+  FailureOr<SmallVector<AccessGroupAttr>>
   lookupAccessGroupAttrs(const llvm::MDNode *node) const;
 
   /// The ModuleImport owning this instance.
@@ -63,9 +60,9 @@ private:
 
   OpBuilder &builder;
   DenseMap<const llvm::MDNode *, LoopAnnotationAttr> loopMetadataMapping;
-  /// Mapping between original LLVM access group metadata nodes and the symbol
-  /// references pointing to the imported MLIR access group operations.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> accessGroupMapping;
+  /// Mapping between original LLVM access group metadata nodes and the imported
+  /// MLIR access group attributes.
+  DenseMap<const llvm::MDNode *, AccessGroupAttr> accessGroupMapping;
 };
 
 } // namespace detail

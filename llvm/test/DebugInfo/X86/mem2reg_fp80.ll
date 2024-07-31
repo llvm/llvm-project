@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes=mem2reg -S | FileCheck %s
+; RUN: opt < %s -passes=mem2reg -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -12,7 +13,7 @@ entry:
 if.then:                                          ; preds = %entry
 ; CHECK-LABEL: if.then:
 ; CHECK: %mul = fmul x86_fp80
-; CHECK: call void @llvm.dbg.value(metadata x86_fp80 %mul, metadata {{.*}}, metadata !DIExpression())
+; CHECK: #dbg_value(x86_fp80 %mul, {{.*}}, !DIExpression(),
   %mul = fmul x86_fp80 undef, undef, !dbg !18
   store x86_fp80 %mul, ptr %r, align 16, !dbg !18
   br label %if.end, !dbg !20
@@ -20,7 +21,7 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %if.then, %entry
 ; CHECK-LABEL: if.end:
 ; CHECK: %r.0 = phi x86_fp80
-; CHECK: call void @llvm.dbg.value(metadata x86_fp80 %r.0, metadata {{.*}}, metadata !DIExpression())
+; CHECK: #dbg_value(x86_fp80 %r.0, {{.*}}, !DIExpression(),
   %out = load x86_fp80, ptr %r, align 16, !dbg !21
   ret x86_fp80 %out, !dbg !22
 }

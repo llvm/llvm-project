@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes='mem2reg' -S | FileCheck %s
+; RUN: opt < %s -passes='mem2reg' -S --try-experimental-debuginfo-iterators | FileCheck %s
 target datalayout = "e-p:64:64"
 
 ; An intrinsic without any expressions should always be converted.
@@ -8,7 +9,7 @@ define i64 @foo0(i64 %arg) {
   call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !26, metadata !DIExpression()), !dbg !40
   ; CHECK-LABEL: @foo0
   ; CHECK-SAME:    (i64 [[arg:%.*]])
-  ; CHECK-NEXT:    dbg.value(metadata i64 [[arg]], {{.*}}, metadata !DIExpression())
+  ; CHECK-NEXT:    #dbg_value(i64 [[arg]], {{.*}}, !DIExpression(),
   %val = load i64, ptr %arg.addr
   ret i64 %val
 }
@@ -20,7 +21,7 @@ define i32 @foo1(ptr %arg) {
   call void @llvm.dbg.declare(metadata ptr %arg.indirect_addr, metadata !25, metadata !DIExpression(DW_OP_deref)), !dbg !40
   ; CHECK-LABEL: @foo1
   ; CHECK-SAME:    (ptr [[arg:%.*]])
-  ; CHECK-NEXT:    dbg.value(metadata ptr [[arg]], {{.*}}, metadata !DIExpression(DW_OP_deref))
+  ; CHECK-NEXT:    #dbg_value(ptr [[arg]], {{.*}}, !DIExpression(DW_OP_deref),
   %val = load i32, ptr %arg
   ret i32 %val
 }
@@ -32,7 +33,7 @@ define i32 @foo2(ptr %arg) {
   store ptr %arg, ptr %arg.indirect_addr
   call void @llvm.dbg.declare(metadata ptr %arg.indirect_addr, metadata !25, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2)), !dbg !40
   ; CHECK-LABEL: @foo2
-  ; CHECK-NEXT:     dbg.value(metadata ptr undef, {{.*}}, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2))
+  ; CHECK-NEXT:     #dbg_value(ptr undef, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2),
   %val = load i32, ptr %arg
   ret i32 %val
 }

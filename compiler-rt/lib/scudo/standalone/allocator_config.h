@@ -11,6 +11,7 @@
 
 #include "combined.h"
 #include "common.h"
+#include "condition_variable.h"
 #include "flags.h"
 #include "primary32.h"
 #include "primary64.h"
@@ -37,72 +38,10 @@
 
 namespace scudo {
 
-// The combined allocator uses a structure as a template argument that
-// specifies the configuration options for the various subcomponents of the
-// allocator.
-//
-// struct ExampleConfig {
-//   // Indicates possible support for Memory Tagging.
-//   static const bool MaySupportMemoryTagging = false;
-//
-//   // Thread-Specific Data Registry used, shared or exclusive.
-//   template <class A> using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>;
-//
-//   struct Primary {
-//     // SizeClassMap to use with the Primary.
-//     using SizeClassMap = DefaultSizeClassMap;
-//
-//     // Log2 of the size of a size class region, as used by the Primary.
-//     static const uptr RegionSizeLog = 30U;
-//
-//     // Log2 of the size of block group, as used by the Primary. Each group
-//     // contains a range of memory addresses, blocks in the range will belong
-//     // to the same group. In general, single region may have 1 or 2MB group
-//     // size. Multiple regions will have the group size equal to the region
-//     // size because the region size is usually smaller than 1 MB.
-//     // Smaller value gives fine-grained control of memory usage but the
-//     // trade-off is that it may take longer time of deallocation.
-//     static const uptr GroupSizeLog = 20U;
-//
-//     // Defines the type and scale of a compact pointer. A compact pointer can
-//     // be understood as the offset of a pointer within the region it belongs
-//     // to, in increments of a power-of-2 scale.
-//     // eg: Ptr = Base + (CompactPtr << Scale).
-//     typedef u32 CompactPtrT;
-//     static const uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
-//
-//     // Indicates support for offsetting the start of a region by
-//     // a random number of pages. Only used with primary64.
-//     static const bool EnableRandomOffset = true;
-//
-//     // Call map for user memory with at least this size. Only used with
-//     // primary64.
-//     static const uptr MapSizeIncrement = 1UL << 18;
-//
-//     // Defines the minimal & maximal release interval that can be set.
-//     static const s32 MinReleaseToOsIntervalMs = INT32_MIN;
-//     static const s32 MaxReleaseToOsIntervalMs = INT32_MAX;
-//   };
-//   // Defines the type of Primary allocator to use.
-//   template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
-//
-//   // Defines the type of cache used by the Secondary. Some additional
-//   // configuration entries can be necessary depending on the Cache.
-//   struct Secondary {
-//     struct Cache {
-//       static const u32 EntriesArraySize = 32U;
-//       static const u32 QuarantineSize = 0U;
-//       static const u32 DefaultMaxEntriesCount = 32U;
-//       static const uptr DefaultMaxEntrySize = 1UL << 19;
-//       static const s32 MinReleaseToOsIntervalMs = INT32_MIN;
-//       static const s32 MaxReleaseToOsIntervalMs = INT32_MAX;
-//     };
-//     // Defines the type of Secondary Cache to use.
-//     template <typename Config> using CacheT = MapAllocatorCache<Config>;
-//   };
-//   // Defines the type of Secondary allocator to use.
-//   template <typename Config> using SecondaryT = MapAllocator<Config>;
-// };
+// Scudo uses a structure as a template argument that specifies the
+// configuration options for the various subcomponents of the allocator. See the
+// following configs as examples and check `allocator_config.def` for all the
+// available options.
 
 #ifndef SCUDO_USE_CUSTOM_CONFIG
 
@@ -195,50 +134,6 @@ struct AndroidConfig {
   template <typename Config> using SecondaryT = MapAllocator<Config>;
 };
 
-struct AndroidSvelteConfig {
-  static const bool MaySupportMemoryTagging = false;
-  template <class A>
-  using TSDRegistryT = TSDRegistrySharedT<A, 2U, 1U>; // Shared, max 2 TSDs.
-
-  struct Primary {
-    using SizeClassMap = SvelteSizeClassMap;
-#if SCUDO_CAN_USE_PRIMARY64
-    static const uptr RegionSizeLog = 27U;
-    typedef u32 CompactPtrT;
-    static const uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
-    static const uptr GroupSizeLog = 18U;
-    static const bool EnableRandomOffset = true;
-    static const uptr MapSizeIncrement = 1UL << 18;
-#else
-    static const uptr RegionSizeLog = 16U;
-    static const uptr GroupSizeLog = 16U;
-    typedef uptr CompactPtrT;
-#endif
-    static const s32 MinReleaseToOsIntervalMs = 1000;
-    static const s32 MaxReleaseToOsIntervalMs = 1000;
-  };
-
-#if SCUDO_CAN_USE_PRIMARY64
-  template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
-#else
-  template <typename Config> using PrimaryT = SizeClassAllocator32<Config>;
-#endif
-
-  struct Secondary {
-    struct Cache {
-      static const u32 EntriesArraySize = 16U;
-      static const u32 QuarantineSize = 32U;
-      static const u32 DefaultMaxEntriesCount = 4U;
-      static const uptr DefaultMaxEntrySize = 1UL << 18;
-      static const s32 MinReleaseToOsIntervalMs = 0;
-      static const s32 MaxReleaseToOsIntervalMs = 0;
-    };
-    template <typename Config> using CacheT = MapAllocatorCache<Config>;
-  };
-
-  template <typename Config> using SecondaryT = MapAllocator<Config>;
-};
-
 #if SCUDO_CAN_USE_PRIMARY64
 struct FuchsiaConfig {
   static const bool MaySupportMemoryTagging = false;
@@ -251,6 +146,7 @@ struct FuchsiaConfig {
     // Support 39-bit VMA for riscv-64
     static const uptr RegionSizeLog = 28U;
     static const uptr GroupSizeLog = 19U;
+    static const bool EnableContiguousRegions = false;
 #else
     static const uptr RegionSizeLog = 30U;
     static const uptr GroupSizeLog = 21U;

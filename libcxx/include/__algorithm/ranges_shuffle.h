@@ -31,6 +31,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -39,33 +42,31 @@ namespace ranges {
 namespace __shuffle {
 
 struct __fn {
-
   template <random_access_iterator _Iter, sentinel_for<_Iter> _Sent, class _Gen>
-  requires permutable<_Iter> && uniform_random_bit_generator<remove_reference_t<_Gen>>
-  _LIBCPP_HIDE_FROM_ABI
-  _Iter operator()(_Iter __first, _Sent __last, _Gen&& __gen) const {
+    requires permutable<_Iter> && uniform_random_bit_generator<remove_reference_t<_Gen>>
+  _LIBCPP_HIDE_FROM_ABI _Iter operator()(_Iter __first, _Sent __last, _Gen&& __gen) const {
     _ClassicGenAdaptor<_Gen> __adapted_gen(__gen);
     return std::__shuffle<_RangeAlgPolicy>(std::move(__first), std::move(__last), __adapted_gen);
   }
 
-  template<random_access_range _Range, class _Gen>
-  requires permutable<iterator_t<_Range>> && uniform_random_bit_generator<remove_reference_t<_Gen>>
-  _LIBCPP_HIDE_FROM_ABI
-  borrowed_iterator_t<_Range> operator()(_Range&& __range, _Gen&& __gen) const {
+  template <random_access_range _Range, class _Gen>
+    requires permutable<iterator_t<_Range>> && uniform_random_bit_generator<remove_reference_t<_Gen>>
+  _LIBCPP_HIDE_FROM_ABI borrowed_iterator_t<_Range> operator()(_Range&& __range, _Gen&& __gen) const {
     return (*this)(ranges::begin(__range), ranges::end(__range), std::forward<_Gen>(__gen));
   }
-
 };
 
 } // namespace __shuffle
 
 inline namespace __cpo {
-  inline constexpr auto shuffle = __shuffle::__fn{};
+inline constexpr auto shuffle = __shuffle::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_SHUFFLE_H

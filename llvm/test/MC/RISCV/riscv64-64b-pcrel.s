@@ -1,7 +1,6 @@
-# RUN: llvm-mc -triple riscv64-unknown-linux-gnu -filetype obj -o - %s \
-# RUN:   | llvm-readobj -r - | FileCheck %s
-# RUN: not llvm-mc -triple riscv64-unknown-linux-gnu -filetype obj --defsym ERR=1 -o /dev/null %s 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=ERROR
+# RUN: llvm-mc -triple riscv64-unknown-linux-gnu -filetype obj %s -o %t
+# RUN: llvm-readobj -r %t | FileCheck %s
+# RUN: llvm-objdump -s %t | FileCheck %s --check-prefix=CONTENT
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.note {
@@ -19,8 +18,6 @@
 # CHECK-NEXT:     0x8 R_RISCV_SUB64 extern 0x0
 # CHECK-NEXT:     0x10 R_RISCV_ADD32 x 0x0
 # CHECK-NEXT:     0x10 R_RISCV_SUB32 w 0x0
-# CHECK-NEXT:     0x14 R_RISCV_ADD32 w1 0x0
-# CHECK-NEXT:     0x14 R_RISCV_SUB32 w 0x0
 # CHECK-NEXT:     0x18 R_RISCV_ADD32 .L.str 0x0
 # CHECK-NEXT:     0x18 R_RISCV_SUB32 w 0x0
 # CHECK-NEXT:   }
@@ -35,6 +32,8 @@
 # CHECK-NEXT:   Section ({{.*}}) .rela.nonalloc_w {
 # CHECK-NEXT:     0x0 R_RISCV_ADD64 extern 0x0
 # CHECK-NEXT:     0x0 R_RISCV_SUB64 nw 0x0
+# CHECK-NEXT:     0x8 R_RISCV_ADD64 nw 0x0
+# CHECK-NEXT:     0x8 R_RISCV_SUB64 extern 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section ({{.*}}) .rela.nonalloc_x {
 # CHECK-NEXT:     0x0 R_RISCV_ADD64 ny 0x0
@@ -45,6 +44,10 @@
 # CHECK-NEXT:     0x0 R_RISCV_SUB64 ny 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
+
+# CONTENT:      Contents of section .alloc_w:
+# CONTENT-NEXT:  0000 00000000 00000000 00000000 00000000
+# CONTENT-NEXT:  0010 00000000 1c000000 00000000
 
 .section .note,"a",@note; note:
 .quad extern-note
@@ -66,10 +69,7 @@ w1:
 
 .section .nonalloc_w; nw:
 .quad extern-nw
-.ifdef ERR
-# ERROR: :[[#@LINE+1]]:7: error: symbol 'extern' can not be undefined in a subtraction expression
 .quad nw-extern
-.endif
 .section .nonalloc_x; nx:
 .quad ny-nx
 .section .nonalloc_y; ny:

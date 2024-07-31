@@ -19,31 +19,30 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// TODO: Clang incorrectly reports that __is_array is true for T[0].
-//       Re-enable the branch once https://llvm.org/PR54705 is fixed.
-#if __has_builtin(__is_array) && 0
+#if __has_builtin(__is_array) &&                                                                                       \
+    (!defined(_LIBCPP_COMPILER_CLANG_BASED) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1900))
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_array : _BoolConstant<__is_array(_Tp)> { };
+struct _LIBCPP_TEMPLATE_VIS is_array : _BoolConstant<__is_array(_Tp)> {};
 
-#if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_array_v = __is_array(_Tp);
-#endif
+#  endif
 
 #else
 
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_array
-    : public false_type {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_array<_Tp[]>
-    : public true_type {};
-template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS is_array<_Tp[_Np]>
-    : public true_type {};
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_array : public false_type {};
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_array<_Tp[]> : public true_type {};
+template <class _Tp, size_t _Np>
+struct _LIBCPP_TEMPLATE_VIS is_array<_Tp[_Np]> : public true_type {};
 
-#if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_array_v = is_array<_Tp>::value;
-#endif
+#  endif
 
 #endif // __has_builtin(__is_array)
 

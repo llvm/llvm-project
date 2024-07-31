@@ -52,12 +52,11 @@ private:
                  SourceLocation EndLocHint = SourceLocation());
   template <typename IfOrWhileStmt>
   SourceLocation findRParenLoc(const IfOrWhileStmt *S, const SourceManager &SM,
-                               const ASTContext *Context);
+                               const LangOptions &LangOpts);
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-private:
   std::set<const Stmt *> ForceBracesStmts;
   const unsigned ShortStatementLines;
 };

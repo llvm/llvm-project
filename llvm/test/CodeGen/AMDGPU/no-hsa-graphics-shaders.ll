@@ -1,4 +1,4 @@
-; RUN: not llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-unknown-amdhsa < %s 2>&1 | FileCheck %s
 
 ; CHECK: in function pixel_s{{.*}}: unsupported non-compute shaders with HSA
 define amdgpu_ps void @pixel_shader() #0 {
@@ -16,4 +16,4 @@ define amdgpu_gs void @geometry_shader() #0 {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

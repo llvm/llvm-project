@@ -36,6 +36,7 @@
 // function at the end of the file.
 
 #include "automemcpy/CodeGen.h"
+#include "src/__support/macros/config.h"
 #include <cassert>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringSet.h>
@@ -62,7 +63,7 @@ namespace functions {
 // static void memcpy_0xB20D4702493C397E(char *__restrict dst,
 //                                       const char *__restrict src,
 //                                       size_t size) {
-//   using namespace __llvm_libc::x86;
+//   using namespace LIBC_NAMESPACE::x86;
 //   if(size == 0) return;
 //   if(size == 1) return copy<_1>(dst, src);
 //   if(size < 4) return copy<HeadTail<_2>>(dst, src, size);
@@ -249,7 +250,7 @@ static raw_ostream &operator<<(raw_ostream &Stream,
   const auto &Ctx = FI.Ctx;
   Stream << "static " << Ctx.FunctionReturnType << ' ' << FI.Name
          << Ctx.FunctionArgs << " {\n";
-  Stream << kIndent << "using namespace __llvm_libc::" << FI.ElementClass
+  Stream << kIndent << "using namespace LIBC_NAMESPACE::" << FI.ElementClass
          << ";\n";
   for (const auto &I : FI.Individuals)
     if (I.Element.Size == 0)
@@ -428,7 +429,7 @@ namespace configurations {
 // ------------------------------------------------------------
 // e.g.
 // llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
-//   using namespace __llvm_libc;
+//   using namespace LIBC_NAMESPACE;
 //   static constexpr MemcpyConfiguration kConfigurations[] = {
 //     {Wrap<memcpy_0xE00E29EE73994E2B>, "memcpy_0xE00E29EE73994E2B"},
 //     {Wrap<memcpy_0x8661D80472487AB5>, "memcpy_0x8661D80472487AB5"},
@@ -504,7 +505,7 @@ static raw_ostream &operator<<(raw_ostream &Stream, const Configuration &C) {
   if (C.Descriptors.empty())
     Stream << kIndent << "return {};\n";
   else {
-    Stream << kIndent << "using namespace __llvm_libc;\n";
+    Stream << kIndent << "using namespace LIBC_NAMESPACE;\n";
     Stream << kIndent << "static constexpr " << C.Type
            << " kConfigurations[] = {\n";
     Stream << C.Descriptors;
@@ -542,11 +543,11 @@ static void Serialize(raw_ostream &Stream,
   Stream << "using llvm::libc_benchmarks::MemmoveConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemsetConfiguration;\n";
   Stream << "\n";
-  Stream << "namespace __llvm_libc {\n";
+  Stream << "namespace LIBC_NAMESPACE_DECL {\n";
   Stream << "\n";
   codegen::functions::Serialize(Stream, Descriptors);
   Stream << "\n";
-  Stream << "} // namespace __llvm_libc\n";
+  Stream << "} // namespace LIBC_NAMESPACE_DECL\n";
   Stream << "\n";
   Stream << "namespace llvm {\n";
   Stream << "namespace automemcpy {\n";

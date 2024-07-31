@@ -1,6 +1,6 @@
-# This reproduces issue 20 from our github repo
-#  "BOLT crashes when removing unreachable BBs that are a target
-#   in a JT"
+## This reproduces issue 20 from our github repo
+## "BOLT crashes when removing unreachable BBs that are a target
+##   in a JT"
 
 # REQUIRES: system-linux
 
@@ -10,10 +10,9 @@
 # RUN: llvm-bolt %t.exe --relocs=0 --jump-tables=move --print-finalized \
 # RUN:    -o %t.out | FileCheck %s
 
-# CHECK: BOLT-INFO: UCE removed 0 blocks and 0 bytes of code.
+# CHECK-NOT: BOLT-INFO: UCE removed {{.*}} blocks and {{.*}} bytes of code
 # CHECK: Binary Function "main"
 # CHECK:      .LFT{{.*}} (2 instructions, align : 1)
-# CHECK-NEXT:   CFI State : 0
 # CHECK-NEXT:     00000004:   andq
 # CHECK-NEXT:     00000008:   jmpq
 # CHECK-NEXT:   Successors: .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}

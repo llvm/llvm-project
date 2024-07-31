@@ -37,7 +37,6 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -596,6 +595,8 @@ static llvm::StringRef GetKindGenericOrEmpty(const RegisterInfo &reg_info) {
     return "arg7";
   case LLDB_REGNUM_GENERIC_ARG8:
     return "arg8";
+  case LLDB_REGNUM_GENERIC_TP:
+    return "tp";
   default:
     return "";
   }
@@ -632,7 +633,7 @@ static void WriteRegisterValueInHexFixedWidth(
   } else {
     // Zero-out any unreadable values.
     if (reg_info.byte_size > 0) {
-      std::basic_string<uint8_t> zeros(reg_info.byte_size, '\0');
+      std::vector<uint8_t> zeros(reg_info.byte_size, '\0');
       AppendHexValue(response, zeros.data(), zeros.size(), false);
     }
   }
@@ -2086,7 +2087,7 @@ void GDBRemoteCommunicationServerLLGS::AddProcessThreads(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
     StringExtractorGDBRemote &packet) {
-  assert(m_debugged_processes.size() == 1 ||
+  assert(m_debugged_processes.size() <= 1 ||
          bool(m_extensions_supported &
               NativeProcessProtocol::Extension::multiprocess));
 
@@ -2266,8 +2267,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
         packet, "P packet missing '=' char after register number");
 
   // Parse out the value.
-  uint8_t reg_bytes[RegisterValue::kMaxRegisterByteSize];
-  size_t reg_size = packet.GetHexBytesAvail(reg_bytes);
+  size_t reg_size = packet.GetHexBytesAvail(m_reg_bytes);
 
   // Get the thread to use.
   NativeThreadProtocol *thread = GetThreadFromSuffix(packet);
@@ -2306,7 +2306,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   // Build the reginfos response.
   StreamGDBRemote response;
 
-  RegisterValue reg_value(ArrayRef(reg_bytes, reg_size),
+  RegisterValue reg_value(ArrayRef<uint8_t>(m_reg_bytes, reg_size),
                           m_current_process->GetArchitecture().GetByteOrder());
   Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
@@ -3083,6 +3083,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   if (registers_count)
     response.IndentMore();
 
+  llvm::StringSet<> field_enums_seen;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3092,6 +3093,13 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
                 "%s failed to get register info for register index %" PRIu32,
                 "target.xml", reg_index);
       continue;
+    }
+
+    if (reg_info->flags_type) {
+      response.IndentMore();
+      reg_info->flags_type->EnumsToXML(response, field_enums_seen);
+      reg_info->flags_type->ToXML(response);
+      response.IndentLess();
     }
 
     response.Indent();
@@ -3112,6 +3120,9 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
     if (!format.empty())
       response << "format=\"" << format << "\" ";
+
+    if (reg_info->flags_type)
+      response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
@@ -3912,7 +3923,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   std::string path_hint;
 
   StringRef packet_str{packet.GetStringRef()};
-  assert(packet_str.startswith("qSaveCore"));
+  assert(packet_str.starts_with("qSaveCore"));
   if (packet_str.consume_front("qSaveCore;")) {
     for (auto x : llvm::split(packet_str, ';')) {
       if (x.consume_front("path-hint:"))
@@ -3938,7 +3949,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
   Log *log = GetLog(LLDBLog::Process);
 
   StringRef packet_str{packet.GetStringRef()};
-  assert(packet_str.startswith("QNonStop:"));
+  assert(packet_str.starts_with("QNonStop:"));
   packet_str.consume_front("QNonStop:");
   if (packet_str == "0") {
     if (m_non_stop)
@@ -4297,7 +4308,7 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   std::string host_port = url_arg.str();
   // If host_and_port starts with ':', default the host to be "localhost" and
   // expect the remainder to be the port.
-  if (url_arg.startswith(":"))
+  if (url_arg.starts_with(":"))
     host_port.insert(0, "localhost");
 
   // Try parsing the (preprocessed) argument as host:port pair.

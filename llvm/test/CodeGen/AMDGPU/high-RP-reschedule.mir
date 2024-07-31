@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
 
 --- |
   define amdgpu_kernel void @high-RP-reschedule() { ret void }

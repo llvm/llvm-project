@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/endian.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 struct LlvmLibcEndian : testing::Test {
   template <typename T> void check(const T original, const T swapped) {
@@ -52,4 +53,4 @@ TEST_F(LlvmLibcEndian, uint64_t) {
   check(original, swapped);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

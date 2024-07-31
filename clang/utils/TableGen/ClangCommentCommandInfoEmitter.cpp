@@ -20,9 +20,10 @@
 
 using namespace llvm;
 
-void clang::EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("A list of commands useable in documentation "
-                       "comments", OS);
+void clang::EmitClangCommentCommandInfo(RecordKeeper &Records,
+                                        raw_ostream &OS) {
+  emitSourceFileHeader("A list of commands useable in documentation comments",
+                       OS, Records);
 
   OS << "namespace {\n"
         "const CommandInfo Commands[] = {\n";
@@ -31,8 +32,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) 
     Record &Tag = *Tags[i];
     OS << "  { "
        << "\"" << Tag.getValueAsString("Name") << "\", "
-       << "\"" << Tag.getValueAsString("EndCommandName") << "\", "
-       << i << ", "
+       << "\"" << Tag.getValueAsString("EndCommandName") << "\", " << i << ", "
        << Tag.getValueAsInt("NumArgs") << ", "
        << Tag.getValueAsBit("IsInlineCommand") << ", "
        << Tag.getValueAsBit("IsBlockCommand") << ", "
@@ -43,6 +43,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) 
        << Tag.getValueAsBit("IsThrowsCommand") << ", "
        << Tag.getValueAsBit("IsDeprecatedCommand") << ", "
        << Tag.getValueAsBit("IsHeaderfileCommand") << ", "
+       << Tag.getValueAsBit("IsParCommand") << ", "
        << Tag.getValueAsBit("IsEmptyParagraphAllowed") << ", "
        << Tag.getValueAsBit("IsVerbatimBlockCommand") << ", "
        << Tag.getValueAsBit("IsVerbatimBlockEndCommand") << ", "
@@ -51,8 +52,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) 
        << Tag.getValueAsBit("IsFunctionDeclarationCommand") << ", "
        << Tag.getValueAsBit("IsRecordLikeDetailCommand") << ", "
        << Tag.getValueAsBit("IsRecordLikeDeclarationCommand") << ", "
-       << /* IsUnknownCommand = */ "0"
-       << " }";
+       << /* IsUnknownCommand = */ "0" << " }";
     if (i + 1 != e)
       OS << ",";
     OS << "\n";
@@ -112,9 +112,10 @@ static std::string MangleName(StringRef Str) {
   return Mangled;
 }
 
-void clang::EmitClangCommentCommandList(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("A list of commands useable in documentation "
-                       "comments", OS);
+void clang::EmitClangCommentCommandList(RecordKeeper &Records,
+                                        raw_ostream &OS) {
+  emitSourceFileHeader("A list of commands useable in documentation comments",
+                       OS, Records);
 
   OS << "#ifndef COMMENT_COMMAND\n"
      << "#  define COMMENT_COMMAND(NAME)\n"

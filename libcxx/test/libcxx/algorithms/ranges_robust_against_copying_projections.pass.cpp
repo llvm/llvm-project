@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
 #include "test_macros.h"
 
@@ -80,14 +81,25 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::binary_search(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::binary_search(a, value, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::clamp(T(), T(), T(), Less(), Proj(&copies)); assert(copies == 0);
+#if TEST_STD_VER >= 23
+    (void)std::ranges::contains(first, last, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::contains(a, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::contains_subrange(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::contains_subrange(a, b, Equal(), Proj(&copies), Proj(&copies));
+    assert(copies == 0);
+#endif
     (void)std::ranges::count(first, last, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count(a, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::copy_if(first, last, first2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::copy_if(a, first2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-#if TEST_STD_VER > 20
-    //(void)std::ranges::ends_with(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+#if TEST_STD_VER >= 23
+    (void)std::ranges::ends_with(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::ends_with(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
 #endif
     (void)std::ranges::equal(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::equal(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
@@ -103,6 +115,20 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+#if TEST_STD_VER >= 23
+    (void)std::ranges::find_last(first, last, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last(a, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if(first, last, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if(a, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if_not(first, last, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if_not(a, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+#endif
     (void)std::ranges::for_each(first, last, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::for_each(a, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::for_each_n(first, count, UnaryVoid(), Proj(&copies)); assert(copies == 0);
@@ -223,10 +249,19 @@ constexpr bool all_the_algorithms()
     return true;
 }
 
-int main(int, char**)
-{
-    all_the_algorithms();
-    static_assert(all_the_algorithms());
+void test_deque() {
+  std::deque<T> d;
+  int copies  = 0;
+  void* value = nullptr;
 
-    return 0;
+  (void)std::ranges::find(d, value, Proj(&copies));
+  assert(copies == 0);
+}
+
+int main(int, char**) {
+  test_deque();
+  all_the_algorithms();
+  static_assert(all_the_algorithms());
+
+  return 0;
 }

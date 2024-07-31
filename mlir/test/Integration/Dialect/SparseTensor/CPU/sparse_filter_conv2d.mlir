@@ -1,32 +1,36 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = enable-runtime-library=false
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
-
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 // An example of a 2D convolution with a sparse filter.
 module {
@@ -42,14 +46,14 @@ module {
 
   func.func @conv2d_sparse_out(%input:  tensor<8x8xi32>,
                %filter: tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR> {
-    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>
+    %s = tensor.empty() : tensor<6x6xi32, #DCSR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32, #DCSR>)
       outs (%s: tensor<6x6xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
     return %0 : tensor<6x6xi32, #DCSR>
   }
 
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant 0 : i32
 
@@ -96,23 +100,28 @@ module {
     vector.print %v : vector<6x6xi32>
 
     //
-    // Should be the same as dense output
-    // CHECK:    ( ( 0, 0, -1, -6, -1, 6 ),
-    // CHECK-SAME: ( -1, 0, 1, 0, 1, 0 ),
-    // CHECK-SAME: ( 0, -1, 1, 0, 0, 0 ),
-    // CHECK-SAME: ( -1, 0, 0, 0, 0, 0 ),
-    // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
-    // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
+    // Should be the same as dense output.
     //
-    %sparse_ret = sparse_tensor.convert %1
-      : tensor<6x6xi32, #DCSR> to tensor<6x6xi32>
-    %v1 = vector.transfer_read %sparse_ret[%c0, %c0], %i0
-      : tensor<6x6xi32>, vector<6x6xi32>
-    vector.print %v1 : vector<6x6xi32>
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 36
+    // CHECK-NEXT: dim = ( 6, 6 )
+    // CHECK-NEXT: lvl = ( 6, 6 )
+    // CHECK-NEXT: pos[0] : ( 0, 6 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5 )
+    // CHECK-NEXT: pos[1] : ( 0, 6, 12, 18, 24, 30, 36 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4,
+    // CHECK-SAME:            5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5 )
+    // CHECK-NEXT: values : ( 0, 0, -1, -6, -1, 6, -1, 0, 1, 0, 1, 0, 0, -1, 1,
+    // CHECK-SAME:            0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 3, 6, -3, -6, 2, -1, 3, 0, -3, 0 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %1 : tensor<6x6xi32, #DCSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %sparse_filter : tensor<3x3xi32, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<6x6xi32>
     bufferization.dealloc_tensor %1 : tensor<6x6xi32, #DCSR>
+
     return
   }
 }

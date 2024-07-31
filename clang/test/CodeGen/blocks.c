@@ -1,11 +1,17 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck --check-prefix=CHECK --check-prefix=SIG_STR %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks -fdisable-block-signature-string | FileCheck --check-prefix=CHECK --check-prefix=NO_SIG_STR %s
 
-// CHECK: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
+// SIG_STR: @[[STR:.*]] = private unnamed_addr constant [6 x i8] c"v4@?0\00", align 1
+// SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
+// NO_SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 268435456, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
+
+// SIG_STR: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @[[STR]], ptr null }, align 4
+// SIG_STR: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @[[STR]], ptr null }, align 4
+// NO_SIG_STR: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr null, ptr null }, align 4
+// NO_SIG_STR: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr null, ptr null }, align 4
 
 void (^f)(void) = ^{};
 
-// rdar://6768379
 int f0(int (^a0)()) {
   return a0(1, 2, 3);
 }
@@ -16,12 +22,12 @@ struct s0 {
   int a[64];
 };
 
-// CHECK: define internal void @__f2_block_invoke(ptr noalias sret(%struct.s0) align 4 {{%.*}}, ptr noundef {{%.*}}, ptr noundef byval(%struct.s0) align 4 {{.*}})
+// CHECK: define internal void @__f2_block_invoke(ptr dead_on_unwind noalias writable sret(%struct.s0) align 4 {{%.*}}, ptr noundef {{%.*}}, ptr noundef byval(%struct.s0) align 4 {{.*}})
 struct s0 f2(struct s0 a0) {
   return ^(struct s0 a1){ return a1; }(a0);
 }
 
-// This should not crash: rdar://6808051
+// This should not crash.
 void *P = ^{
   void *Q = __func__;
 };
@@ -60,14 +66,12 @@ ftype ^test2 = ^ftype {
   return 0;
 };
 
-// rdar://problem/8605032
 void f3_helper(void (^)(void));
 void f3(void) {
   _Bool b = 0;
   f3_helper(^{ if (b) {} });
 }
 
-// rdar://problem/11322251
 // The bool can fill in between the header and the long long.
 // Add the appropriate amount of padding between them.
 void f4_helper(long long (^)(void));
@@ -79,7 +83,6 @@ void f4(void) {
   f4_helper(^{ if (b) return ll; return 0LL; });
 }
 
-// rdar://problem/11354538
 // The alignment after rounding up to the align of F5 is actually
 // greater than the required alignment.  Don't assert.
 struct F5 {
@@ -93,7 +96,6 @@ void f5(void) {
   f5_helper(^(struct F5 *slot) { *slot = value; });
 }
 
-// rdar://14085217
 void (^b)() = ^{};
 int main(void) {
    (b?: ^{})();

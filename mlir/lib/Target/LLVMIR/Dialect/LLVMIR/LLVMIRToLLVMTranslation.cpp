@@ -93,7 +93,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     return failure();
 
   // Handle function entry count metadata.
-  if (name->getString().equals("function_entry_count")) {
+  if (name->getString() == "function_entry_count") {
 
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
@@ -111,7 +111,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (!name->getString().equals("branch_weights"))
+  if (name->getString() != "branch_weights")
     return failure();
 
   // Handle branch weights metadata.
@@ -125,21 +125,19 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
-        branchWeightOp.setBranchWeightsAttr(
-            builder.getI32VectorAttr(branchWeights));
-        return success();
-      })
-      .Default([](auto) { return failure(); });
+  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
+    iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
+    return success();
+  }
+  return failure();
 }
 
-/// Searches the symbol reference pointing to the metadata operation that
-/// maps to the given TBAA metadata `node` and attaches it to the imported
-/// operation if the lookup succeeds. Returns failure otherwise.
+/// Searches for the attribute that maps to the given TBAA metadata `node` and
+/// attaches it to the imported operation if the lookup succeeds. Returns
+/// failure otherwise.
 static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
                                  LLVM::ModuleImport &moduleImport) {
-  SymbolRefAttr tbaaTagSym = moduleImport.lookupTBAAAttr(node);
+  Attribute tbaaTagSym = moduleImport.lookupTBAAAttr(node);
   if (!tbaaTagSym)
     return failure();
 
@@ -151,14 +149,13 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
-/// Looks up all the symbol references pointing to the access group operations
-/// that map to the access group nodes starting from the access group metadata
-/// `node`, and attaches all of them to the imported operation if the lookups
-/// succeed. Returns failure otherwise.
+/// Looks up all the access group attributes that map to the access group nodes
+/// starting from the access group metadata `node`, and attaches all of them to
+/// the imported operation if the lookups succeed. Returns failure otherwise.
 static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
                                          Operation *op,
                                          LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
+  FailureOr<SmallVector<AccessGroupAttr>> accessGroups =
       moduleImport.lookupAccessGroupAttrs(node);
   if (failed(accessGroups))
     return failure();
@@ -168,8 +165,7 @@ static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
     return failure();
 
   iface.setAccessGroups(ArrayAttr::get(
-      iface.getContext(),
-      SmallVector<Attribute>{accessGroups->begin(), accessGroups->end()}));
+      iface.getContext(), llvm::to_vector_of<Attribute>(*accessGroups)));
   return success();
 }
 
@@ -191,13 +187,12 @@ static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
       .Default([](auto) { return failure(); });
 }
 
-/// Looks up all the symbol references pointing to the alias scope operations
-/// that map to the alias scope nodes starting from the alias scope metadata
-/// `node`, and attaches all of them to the imported operation if the lookups
-/// succeed. Returns failure otherwise.
+/// Looks up all the alias scope attributes that map to the alias scope nodes
+/// starting from the alias scope metadata `node`, and attaches all of them to
+/// the imported operation if the lookups succeed. Returns failure otherwise.
 static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
                                         LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> aliasScopes =
+  FailureOr<SmallVector<AliasScopeAttr>> aliasScopes =
       moduleImport.lookupAliasScopeAttrs(node);
   if (failed(aliasScopes))
     return failure();
@@ -207,19 +202,17 @@ static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
     return failure();
 
   iface.setAliasScopes(ArrayAttr::get(
-      iface.getContext(),
-      SmallVector<Attribute>{aliasScopes->begin(), aliasScopes->end()}));
+      iface.getContext(), llvm::to_vector_of<Attribute>(*aliasScopes)));
   return success();
 }
 
-/// Looks up all the symbol references pointing to the alias scope operations
-/// that map to the alias scope nodes starting from the noalias metadata `node`,
-/// and attaches all of them to the imported operation if the lookups succeed.
-/// Returns failure otherwise.
+/// Looks up all the alias scope attributes that map to the alias scope nodes
+/// starting from the noalias metadata `node`, and attaches all of them to the
+/// imported operation if the lookups succeed. Returns failure otherwise.
 static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
                                           Operation *op,
                                           LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> noAliasScopes =
+  FailureOr<SmallVector<AliasScopeAttr>> noAliasScopes =
       moduleImport.lookupAliasScopeAttrs(node);
   if (failed(noAliasScopes))
     return failure();
@@ -229,8 +222,7 @@ static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
     return failure();
 
   iface.setNoAliasScopes(ArrayAttr::get(
-      iface.getContext(),
-      SmallVector<Attribute>{noAliasScopes->begin(), noAliasScopes->end()}));
+      iface.getContext(), llvm::to_vector_of<Attribute>(*noAliasScopes)));
   return success();
 }
 

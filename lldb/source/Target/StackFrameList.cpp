@@ -11,7 +11,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -156,9 +156,10 @@ void StackFrameList::ResetCurrentInlinedDepth() {
         m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id));
     bool all_internal = true;
     if (bp_site_sp) {
-      uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
+      uint32_t num_owners = bp_site_sp->GetNumberOfConstituents();
       for (uint32_t i = 0; i < num_owners; i++) {
-        Breakpoint &bp_ref = bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
+        Breakpoint &bp_ref =
+            bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
         if (!bp_ref.IsInternal()) {
           all_internal = false;
         }
@@ -509,11 +510,11 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     } else {
       // Check for interruption when building the frames.
       // Do the check in idx > 0 so that we'll always create a 0th frame.
-      if (allow_interrupt && dbg.InterruptRequested()) {
-        Log *log = GetLog(LLDBLog::Host);
-        LLDB_LOG(log, "Interrupted %s", __FUNCTION__);
-        was_interrupted = true;
-        break;
+      if (allow_interrupt 
+          && INTERRUPT_REQUESTED(dbg, "Interrupted having fetched {0} frames",
+                                 m_frames.size())) {
+          was_interrupted = true;
+          break;
       }
 
       const bool success =
@@ -883,9 +884,9 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
         GetFrameAtIndex(GetSelectedFrameIndex(DoNoSelectMostRelevantFrame)));
     if (frame_sp) {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
-      if (sc.line_entry.file)
+      if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.file, sc.line_entry.line);
+            sc.line_entry.GetFile(), sc.line_entry.line);
     }
   }
 }
@@ -965,11 +966,11 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
-    if (dbg.InterruptRequested()) {
-      Log *log = GetLog(LLDBLog::Host);
-      LLDB_LOG(log, "Interrupted %s", __FUNCTION__);
+    if (INTERRUPT_REQUESTED(
+            dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
+            m_thread.GetID(), num_frames_displayed))
       break;
-    }
+
 
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),

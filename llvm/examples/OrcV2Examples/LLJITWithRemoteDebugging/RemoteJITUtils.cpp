@@ -8,6 +8,7 @@
 
 #include "RemoteJITUtils.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -25,22 +26,6 @@
 
 using namespace llvm;
 using namespace llvm::orc;
-
-Error addDebugSupport(ObjectLayer &ObjLayer) {
-  ExecutionSession &ES = ObjLayer.getExecutionSession();
-  auto Registrar = createJITLoaderGDBRegistrar(ES);
-  if (!Registrar)
-    return Registrar.takeError();
-
-  auto *ObjLinkingLayer = cast<ObjectLinkingLayer>(&ObjLayer);
-  if (!ObjLinkingLayer)
-    return createStringError(inconvertibleErrorCode(),
-                             "No debug support for given object layer type");
-
-  ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-      ES, std::move(*Registrar), true, true));
-  return Error::success();
-}
 
 Expected<std::unique_ptr<DefinitionGenerator>>
 loadDylib(ExecutionSession &ES, StringRef RemotePath) {
@@ -110,10 +95,14 @@ launchLocalExecutor(StringRef ExecutablePath) {
     close(FromExecutor[ReadEnd]);
 
     // Execute the child process.
-    std::unique_ptr<char[]> ExecPath, FDSpecifier;
+    std::unique_ptr<char[]> ExecPath, FDSpecifier, TestOutputFlag;
     {
       ExecPath = std::make_unique<char[]>(ExecutablePath.size() + 1);
       strcpy(ExecPath.get(), ExecutablePath.data());
+
+      const char *TestOutputFlagStr = "test-jitloadergdb";
+      TestOutputFlag = std::make_unique<char[]>(strlen(TestOutputFlagStr) + 1);
+      strcpy(TestOutputFlag.get(), TestOutputFlagStr);
 
       std::string FDSpecifierStr("filedescs=");
       FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
@@ -123,7 +112,8 @@ launchLocalExecutor(StringRef ExecutablePath) {
       strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
     }
 
-    char *const Args[] = {ExecPath.get(), FDSpecifier.get(), nullptr};
+    char *const Args[] = {ExecPath.get(), TestOutputFlag.get(),
+                          FDSpecifier.get(), nullptr};
     int RC = execvp(ExecPath.get(), Args);
     if (RC != 0)
       return make_error<StringError>(
@@ -139,7 +129,7 @@ launchLocalExecutor(StringRef ExecutablePath) {
   close(FromExecutor[WriteEnd]);
 
   auto EPC = SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       SimpleRemoteEPC::Setup(),
       FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPC)
@@ -211,7 +201,7 @@ connectTCPSocket(StringRef NetworkAddress) {
     return CreateErr(toString(SockFD.takeError()));
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       SimpleRemoteEPC::Setup(), *SockFD);
 }
 

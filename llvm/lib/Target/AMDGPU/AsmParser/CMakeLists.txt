@@ -14,5 +14,3 @@ add_llvm_component_library(LLVMAMDGPUAsmParser
   ADD_TO_COMPONENT
   AMDGPU
   )
-
-add_dependencies(LLVMAMDGPUAsmParser LLVMAMDGPUUtils)

@@ -1,4 +1,5 @@
-//===-- Unittests for feclearexcept, feraiseexcept and fetestexpect -------===//
+//===-- Unittests for feclearexcept, feraiseexcept, fetestexpect ----------===//
+//===-- and fesetexcept ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,112 +9,142 @@
 
 #include "src/fenv/feclearexcept.h"
 #include "src/fenv/feraiseexcept.h"
+#include "src/fenv/fesetexcept.h"
 #include "src/fenv/fetestexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
-TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
+#include "excepts.h"
+
+using LlvmLibcExceptionStatusTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
+
+TEST_F(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   // This test raises a set of exceptions and checks that the exception
   // status flags are updated. The intention is really not to invoke the
   // exception handler. Hence, we will disable all exceptions at the
   // beginning.
-  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
+  LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
 
-  int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
-                   FE_UNDERFLOW};
-
-  constexpr int ALL_EXCEPTS =
-      FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
-
-  for (int e : excepts) {
-    int r = __llvm_libc::feraiseexcept(e);
+  for (int e : EXCEPTS) {
+    int r = LIBC_NAMESPACE::feraiseexcept(e);
     ASSERT_EQ(r, 0);
-    int s = __llvm_libc::fetestexcept(e);
+    int s = LIBC_NAMESPACE::fetestexcept(e);
     ASSERT_EQ(s, e);
 
-    r = __llvm_libc::feclearexcept(e);
+    r = LIBC_NAMESPACE::feclearexcept(e);
     ASSERT_EQ(r, 0);
-    s = __llvm_libc::fetestexcept(e);
+    s = LIBC_NAMESPACE::fetestexcept(e);
     ASSERT_EQ(s, 0);
+
+    r = LIBC_NAMESPACE::fesetexcept(e);
+    ASSERT_EQ(r, 0);
+    s = LIBC_NAMESPACE::fetestexcept(e);
+    ASSERT_EQ(s, e);
   }
 
-  for (int e1 : excepts) {
-    for (int e2 : excepts) {
+  for (int e1 : EXCEPTS) {
+    for (int e2 : EXCEPTS) {
       int e = e1 | e2;
-      int r = __llvm_libc::feraiseexcept(e);
+      int r = LIBC_NAMESPACE::feraiseexcept(e);
       ASSERT_EQ(r, 0);
-      int s = __llvm_libc::fetestexcept(e);
+      int s = LIBC_NAMESPACE::fetestexcept(e);
       ASSERT_EQ(s, e);
 
-      r = __llvm_libc::feclearexcept(e);
+      r = LIBC_NAMESPACE::feclearexcept(e);
       ASSERT_EQ(r, 0);
-      s = __llvm_libc::fetestexcept(e);
+      s = LIBC_NAMESPACE::fetestexcept(e);
       ASSERT_EQ(s, 0);
+
+      r = LIBC_NAMESPACE::fesetexcept(e);
+      ASSERT_EQ(r, 0);
+      s = LIBC_NAMESPACE::fetestexcept(e);
+      ASSERT_EQ(s, e);
     }
   }
 
-  for (int e1 : excepts) {
-    for (int e2 : excepts) {
-      for (int e3 : excepts) {
+  for (int e1 : EXCEPTS) {
+    for (int e2 : EXCEPTS) {
+      for (int e3 : EXCEPTS) {
         int e = e1 | e2 | e3;
-        int r = __llvm_libc::feraiseexcept(e);
+        int r = LIBC_NAMESPACE::feraiseexcept(e);
         ASSERT_EQ(r, 0);
-        int s = __llvm_libc::fetestexcept(e);
+        int s = LIBC_NAMESPACE::fetestexcept(e);
         ASSERT_EQ(s, e);
 
-        r = __llvm_libc::feclearexcept(e);
+        r = LIBC_NAMESPACE::feclearexcept(e);
         ASSERT_EQ(r, 0);
-        s = __llvm_libc::fetestexcept(e);
+        s = LIBC_NAMESPACE::fetestexcept(e);
         ASSERT_EQ(s, 0);
+
+        r = LIBC_NAMESPACE::fesetexcept(e);
+        ASSERT_EQ(r, 0);
+        s = LIBC_NAMESPACE::fetestexcept(e);
+        ASSERT_EQ(s, e);
       }
     }
   }
 
-  for (int e1 : excepts) {
-    for (int e2 : excepts) {
-      for (int e3 : excepts) {
-        for (int e4 : excepts) {
+  for (int e1 : EXCEPTS) {
+    for (int e2 : EXCEPTS) {
+      for (int e3 : EXCEPTS) {
+        for (int e4 : EXCEPTS) {
           int e = e1 | e2 | e3 | e4;
-          int r = __llvm_libc::feraiseexcept(e);
+          int r = LIBC_NAMESPACE::feraiseexcept(e);
           ASSERT_EQ(r, 0);
-          int s = __llvm_libc::fetestexcept(e);
+          int s = LIBC_NAMESPACE::fetestexcept(e);
           ASSERT_EQ(s, e);
 
-          r = __llvm_libc::feclearexcept(e);
+          r = LIBC_NAMESPACE::feclearexcept(e);
           ASSERT_EQ(r, 0);
-          s = __llvm_libc::fetestexcept(e);
+          s = LIBC_NAMESPACE::fetestexcept(e);
           ASSERT_EQ(s, 0);
+
+          r = LIBC_NAMESPACE::fesetexcept(e);
+          ASSERT_EQ(r, 0);
+          s = LIBC_NAMESPACE::fetestexcept(e);
+          ASSERT_EQ(s, e);
         }
       }
     }
   }
 
-  for (int e1 : excepts) {
-    for (int e2 : excepts) {
-      for (int e3 : excepts) {
-        for (int e4 : excepts) {
-          for (int e5 : excepts) {
+  for (int e1 : EXCEPTS) {
+    for (int e2 : EXCEPTS) {
+      for (int e3 : EXCEPTS) {
+        for (int e4 : EXCEPTS) {
+          for (int e5 : EXCEPTS) {
             int e = e1 | e2 | e3 | e4 | e5;
-            int r = __llvm_libc::feraiseexcept(e);
+            int r = LIBC_NAMESPACE::feraiseexcept(e);
             ASSERT_EQ(r, 0);
-            int s = __llvm_libc::fetestexcept(e);
+            int s = LIBC_NAMESPACE::fetestexcept(e);
             ASSERT_EQ(s, e);
 
-            r = __llvm_libc::feclearexcept(e);
+            r = LIBC_NAMESPACE::feclearexcept(e);
             ASSERT_EQ(r, 0);
-            s = __llvm_libc::fetestexcept(e);
+            s = LIBC_NAMESPACE::fetestexcept(e);
             ASSERT_EQ(s, 0);
+
+            r = LIBC_NAMESPACE::fesetexcept(e);
+            ASSERT_EQ(r, 0);
+            s = LIBC_NAMESPACE::fetestexcept(e);
+            ASSERT_EQ(s, e);
           }
         }
       }
     }
   }
 
-  int r = __llvm_libc::feraiseexcept(ALL_EXCEPTS);
+  int r = LIBC_NAMESPACE::feraiseexcept(ALL_EXCEPTS);
   ASSERT_EQ(r, 0);
-  int s = __llvm_libc::fetestexcept(ALL_EXCEPTS);
+  int s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
+  ASSERT_EQ(s, ALL_EXCEPTS);
+
+  r = LIBC_NAMESPACE::fesetexcept(ALL_EXCEPTS);
+  ASSERT_EQ(r, 0);
+  s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
   ASSERT_EQ(s, ALL_EXCEPTS);
 }

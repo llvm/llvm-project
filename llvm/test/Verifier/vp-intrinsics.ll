@@ -24,6 +24,7 @@ define void @test_vp_fp(<8 x double> %f0, <8 x double> %f1, <8 x i1> %m, i32 %n)
   %r2 = call <8 x double> @llvm.vp.fmul.v8f64(<8 x double> %f0, <8 x double> %f1, <8 x i1> %m, i32 %n)
   %r3 = call <8 x double> @llvm.vp.fdiv.v8f64(<8 x double> %f0, <8 x double> %f1, <8 x i1> %m, i32 %n)
   %r4 = call <8 x double> @llvm.vp.frem.v8f64(<8 x double> %f0, <8 x double> %f1, <8 x i1> %m, i32 %n)
+  %r5 = call <8 x i1> @llvm.vp.is.fpclass.v8f64(<8 x double> %f0, i32 639, <8 x i1> %m, i32 %n)
   ret void
 }
 
@@ -42,8 +43,10 @@ define void @test_vp_reduction(i32 %x, <8 x i32> %vi, <8 x float> %vf, float %f,
   %r8 = call i32 @llvm.vp.reduce.umin.v8i32(i32 %x, <8 x i32> %vi, <8 x i1> %m, i32 %n)
   %r9 = call float @llvm.vp.reduce.fmin.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
   %rA = call float @llvm.vp.reduce.fmax.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
-  %rB = call float @llvm.vp.reduce.fadd.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
-  %rC = call float @llvm.vp.reduce.fmul.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
+  %rB = call float @llvm.vp.reduce.fminimum.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
+  %rC = call float @llvm.vp.reduce.fmaximum.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
+  %rD = call float @llvm.vp.reduce.fadd.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
+  %rE = call float @llvm.vp.reduce.fmul.v8f32(float %f, <8 x float> %vf, <8 x i1> %m, i32 %n)
   ret void
 }
 
@@ -99,6 +102,7 @@ declare <8 x double> @llvm.vp.fsub.v8f64(<8 x double>, <8 x double>, <8 x i1>, i
 declare <8 x double> @llvm.vp.fmul.v8f64(<8 x double>, <8 x double>, <8 x i1>, i32)
 declare <8 x double> @llvm.vp.fdiv.v8f64(<8 x double>, <8 x double>, <8 x i1>, i32)
 declare <8 x double> @llvm.vp.frem.v8f64(<8 x double>, <8 x double>, <8 x i1>, i32)
+declare <8 x i1> @llvm.vp.is.fpclass.v8f64(<8 x double>, i32, <8 x i1>, i32)
 ; reductions
 declare i32 @llvm.vp.reduce.add.v8i32(i32, <8 x i32>, <8 x i1>, i32)
 declare i32 @llvm.vp.reduce.mul.v8i32(i32, <8 x i32>, <8 x i1>, i32)
@@ -111,6 +115,8 @@ declare i32 @llvm.vp.reduce.umax.v8i32(i32, <8 x i32>, <8 x i1>, i32)
 declare i32 @llvm.vp.reduce.umin.v8i32(i32, <8 x i32>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32)
+declare float @llvm.vp.reduce.fminimum.v8f32(float, <8 x float>, <8 x i1>, i32)
+declare float @llvm.vp.reduce.fmaximum.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fadd.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32)
 ; casts

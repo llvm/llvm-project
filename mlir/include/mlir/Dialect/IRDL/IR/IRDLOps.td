@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_IRDL_IR_IRDLOPS
 
 include "IRDL.td"
+include "IRDLAttributes.td"
 include "IRDLTypes.td"
 include "IRDLInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -161,7 +162,8 @@ def IRDL_ParametersOp : IRDL_Op<"parameters",
 
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-    AtMostOneChildOf<"OperandsOp, ResultsOp">, Symbol]> {
+    AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp, RegionsOp">,
+    Symbol]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines a new operation belonging to the `irdl.dialect`
@@ -223,10 +225,25 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
 
     The `mul` operation will expect two operands of type `cmath.complex`, that
     have the same type, and return a result of the same type.
+
+    The operands can also be marked as variadic or optional:
+    ```mlir
+    irdl.operands(%0, single %1, optional %2, variadic %3)
+    ```
+    
+    Here, %0 and %1 are required single operands, %2 is an optional operand,
+    and %3 is a variadic operand.
+
+    When more than one operand is marked as optional or variadic, the operation
+    will expect a 'operandSegmentSizes' attribute that defines the number of
+    operands in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args);
-  let assemblyFormat = " `(` $args `)` attr-dict ";
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+                        VariadicityArrayAttr:$variadicity);
+  let assemblyFormat =
+    "`` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
+  let hasVerifier = true;
 }
 
 def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
@@ -254,9 +271,147 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 
     The operation will expect one operand of the `cmath.complex` type, and two
     results that have the underlying type of the `cmath.complex`.
+
+    The results can also be marked as variadic or optional:
+    ```mlir
+    irdl.results(%0, single %1, optional %2, variadic %3)
+    ```
+    
+    Here, %0 and %1 are required single results, %2 is an optional result,
+    and %3 is a variadic result.
+
+    When more than one result is marked as optional or variadic, the operation
+    will expect a 'resultSegmentSizes' attribute that defines the number of
+    results in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args);
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+                        VariadicityArrayAttr:$variadicity);
+  let assemblyFormat =
+    " `` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
+  let hasVerifier = true;
+}
+
+def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
+  let summary = "Define the attributes of an operation";
+
+  let description = [{
+    `irdl.attributes` defines the attributes of the `irdl.operation` parent 
+    operation definition.
+
+    In the following example, `irdl.attributes` defines the attributes of the
+    `attr_op` operation:
+
+    ```mlir
+    irdl.dialect @example {
+
+      irdl.operation @attr_op {
+        %0 = irdl.any
+        %1 = irdl.is i64
+        irdl.attibutes {
+          "attr1" = %0,
+          "attr2" = %1
+        }
+      }
+    }
+    ```
+
+    The operation will expect an arbitrary attribute "attr1" and an
+    attribute "attr2" with value `i64`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues, 
+                        StrArrayAttr:$attributeValueNames);
+  let assemblyFormat = [{
+    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict 
+  }];
+
+  let hasVerifier = true;
+}
+
+def IRDL_RegionOp : IRDL_Op<"region",
+    [HasParent<"OperationOp">, VerifyRegionInterface,
+    DeclareOpInterfaceMethods<VerifyRegionInterface>]> {
+  let summary = "Define a region of an operation";
+  let description = [{
+    The irdl.region construct defines a set of characteristics
+    that a region of an operation should satify.
+
+    These characteristics include constraints for the entry block arguments
+    of the region and the total number of blocks it contains.
+    The number of blocks must be a non-zero and non-negative integer,
+    and it is optional by default.
+    The set of constraints for the entry block arguments may be optional or
+    empty. If no parentheses are provided, the set is assumed to be optional,
+    and the arguments are not constrained in any way. If parentheses are
+    provided with no arguments, it means that the region must have
+    no entry block arguments
+
+
+    Example:
+
+    ```mlir
+    irdl.dialect @example {
+      irdl.operation @op_with_regions {
+          %r0 = irdl.region
+          %r1 = irdl.region()
+          %v0 = irdl.is i32
+          %v1 = irdl.is i64
+          %r2 = irdl.region(%v0, %v1)
+          %r3 = irdl.region with size 3
+
+          irdl.regions(%r0, %r1, %r2, %r3)
+      }
+    }
+    ```
+
+    The above snippet demonstrates an operation named `@op_with_regions`,
+    which is constrained to have four regions.
+
+    * Region `%r0` doesn't have any constraints on the arguments
+      or the number of blocks.
+    * Region `%r1` should have an empty set of arguments.
+    * Region `%r2` should have two arguments of types `i32` and `i64`.
+    * Region `%r3` should contain exactly three blocks.
+  }];
+  let arguments = (ins Variadic<IRDL_AttributeType>:$entryBlockArgs,
+                    OptionalAttr<I32Attr>:$numberOfBlocks,
+                    UnitAttr:$constrainedArguments);
+  let results = (outs IRDL_RegionType:$output);
+
+  let assemblyFormat = [{
+    ``(`(` $entryBlockArgs $constrainedArguments^ `)`)?
+    ``(` ` `with` `size` $numberOfBlocks^)? attr-dict
+  }];
+
+  let hasVerifier = true;
+}
+
+def IRDL_RegionsOp : IRDL_Op<"regions", [HasParent<"OperationOp">]> {
+  let summary = "Define the regions of an operation";
+  let description = [{
+    `irdl.regions` defines the regions of an operation by accepting
+    values produced by `irdl.region` operation as arguments.
+
+    Example:
+
+    ```mlir
+    irdl.dialect @example {
+      irdl.operation @op_with_regions {
+        %r1 = irdl.region with size 3
+        %0 = irdl.any
+        %r2 = irdl.region(%0)
+        irdl.regions(%r1, %r2)
+      }
+    }
+    ```
+
+    In the snippet above the operation is constrained to have two regions.
+    The first region should contain three blocks.
+    The second region should have one region with one argument.
+  }];
+
+  let arguments = (ins Variadic<IRDL_RegionType>:$args);
   let assemblyFormat = " `(` $args `)` attr-dict ";
 }
 
@@ -296,8 +451,60 @@ def IRDL_IsOp : IRDL_ConstraintOp<"is",
   let assemblyFormat = " $expected ` ` attr-dict ";
 }
 
+def IRDL_BaseOp : IRDL_ConstraintOp<"base",
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Constraints an attribute/type base";
+  let description = [{
+    `irdl.base` defines a constraint that only accepts a single type
+    or attribute base, e.g. an `IntegerType`. The attribute base is defined
+    either by a symbolic reference to the corresponding IRDL definition,
+    or by the name of the base. Named bases are prefixed with `!` or `#`
+    respectively for types and attributes.
+
+    Example:
+
+    ```mlir
+    irdl.dialect @cmath {
+      irdl.type @complex {
+        %0 = irdl.base "!builtin.integer"
+        irdl.parameters(%0)
+      }
+
+      irdl.type @complex_wrapper {
+        %0 = irdl.base @complex
+        irdl.parameters(%0)
+      }
+    }
+    ```
+
+    The above program defines a `cmath.complex` type that expects a single
+    parameter, which is a type with base name `builtin.integer`, which is the
+    name of an `IntegerType` type.
+    It also defines a `cmath.complex_wrapper` type that expects a single
+    parameter, which is a type of base type `cmath.complex`.
+  }];
+
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$base_ref,
+                       OptionalAttr<StrAttr>:$base_name);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = " ($base_ref^)? ($base_name^)? ` ` attr-dict";
+  
+  let builders = [
+    OpBuilder<(ins "SymbolRefAttr":$base_ref), [{
+      build($_builder, $_state, base_ref, {});
+    }]>,
+    OpBuilder<(ins "StringAttr":$base_name), [{
+      build($_builder, $_state, {}, base_name);
+    }]>,
+  ];
+
+  let hasVerifier = 1;
+}
+
 def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
-    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
+    [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>, Pure]> {
   let summary = "Constraints an attribute/type base and its parameters";
   let description = [{
     `irdl.parametric` defines a constraint that accepts only a single type

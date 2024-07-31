@@ -15,8 +15,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+} // namespace
+
 static unsigned getNameSpecifierNestingLevel(const QualType &QType) {
-  if (const ElaboratedType *ElType = QType->getAs<ElaboratedType>()) {
+  if (const auto *ElType = QType->getAs<ElaboratedType>()) {
     if (const NestedNameSpecifier *NestedSpecifiers = ElType->getQualifier()) {
       unsigned NameSpecifierNestingLevel = 1;
       do {
@@ -38,7 +42,7 @@ void StaticAccessedThroughInstanceCheck::storeOptions(
 
 void StaticAccessedThroughInstanceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStaticStorageClass()),
+      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStatic()),
                                       varDecl(hasStaticStorageDuration()),
                                       enumConstantDecl())))
           .bind("memberExpression"),
@@ -54,10 +58,6 @@ void StaticAccessedThroughInstanceCheck::check(
     return;
 
   const Expr *BaseExpr = MemberExpression->getBase();
-
-  // Do not warn for overloaded -> operators.
-  if (isa<CXXOperatorCallExpr>(BaseExpr))
-    return;
 
   const QualType BaseType =
       BaseExpr->getType()->isPointerType()
@@ -81,21 +81,34 @@ void StaticAccessedThroughInstanceCheck::check(
     return;
 
   // Do not warn for CUDA built-in variables.
-  if (StringRef(BaseTypeName).startswith("__cuda_builtin_"))
+  if (StringRef(BaseTypeName).starts_with("__cuda_builtin_"))
     return;
 
   SourceLocation MemberExprStartLoc = MemberExpression->getBeginLoc();
-  auto Diag =
-      diag(MemberExprStartLoc, "static member accessed through instance");
+  auto CreateFix = [&] {
+    return FixItHint::CreateReplacement(
+        CharSourceRange::getCharRange(MemberExprStartLoc,
+                                      MemberExpression->getMemberLoc()),
+        BaseTypeName + "::");
+  };
 
-  if (BaseExpr->HasSideEffects(*AstContext) ||
-      getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)
-    return;
+  {
+    auto Diag =
+        diag(MemberExprStartLoc, "static member accessed through instance");
 
-  Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getCharRange(MemberExprStartLoc,
-                                    MemberExpression->getMemberLoc()),
-      BaseTypeName + "::");
+    if (getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)
+      return;
+
+    if (!BaseExpr->HasSideEffects(*AstContext,
+                                  /* IncludePossibleEffects =*/true)) {
+      Diag << CreateFix();
+      return;
+    }
+  }
+
+  diag(MemberExprStartLoc, "member base expression may carry some side effects",
+       DiagnosticIDs::Level::Note)
+      << BaseExpr->getSourceRange() << CreateFix();
 }
 
 } // namespace clang::tidy::readability

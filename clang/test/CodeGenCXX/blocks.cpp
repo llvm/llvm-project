@@ -89,7 +89,6 @@ namespace test2 {
   // CHECK: call void @_ZN5test21BD1Ev(
 }
 
-// rdar://problem/9334739
 // Make sure we mark destructors for parameters captured in blocks.
 namespace test3 {
   struct A {
@@ -106,7 +105,6 @@ namespace test3 {
   }
 }
 
-// rdar://problem/9971485
 namespace test4 {
   struct A {
     A();
@@ -151,8 +149,8 @@ namespace test5 {
   // CHECK-NEXT: [[X:%.*]] = alloca [[A:%.*]], align 4
   // CHECK-NEXT: [[B:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align 8
-  // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca ptr, align 8
+  // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[T0:%.*]] = zext i1
   // CHECK-NEXT: store i8 [[T0]], ptr [[COND]], align 1
   // CHECK-NEXT: call void @_ZN5test51AC1Ev(ptr {{[^,]*}} [[X]])
@@ -164,8 +162,8 @@ namespace test5 {
   // CHECK-NOT:  br
   // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_(ptr {{[^,]*}} [[CAPTURE]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
-  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: store ptr [[CAPTURE]], ptr [[COND_CLEANUP_SAVE]], align 8
+  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br label
   // CHECK:      br label
   // CHECK:      phi
@@ -215,8 +213,7 @@ namespace test7 {
 }
 
 namespace test8 {
-  // <rdar://problem/10832617>: failure to capture this after skipping rebuild
-  // of the 'this' pointer.
+  // failure to capture this after skipping rebuild of the 'this' pointer.
   struct X {
     int x;
 
@@ -229,7 +226,6 @@ namespace test8 {
   template int X::foo<int>();
 }
 
-// rdar://13459289
 namespace test9 {
   struct B {
     void *p;

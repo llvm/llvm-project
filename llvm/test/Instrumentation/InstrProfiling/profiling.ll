@@ -1,7 +1,6 @@
 ;; Test runtime symbols and various linkages.
 
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefixes=MACHO
-; RUN: opt < %s -mtriple=x86_64 -passes=instrprof -S | FileCheck %s --check-prefix=ELF_GENERIC
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=ELF,ELFRT
 ; RUN: opt < %s -mtriple=x86_64-unknown-fuchsia -passes=instrprof -S | FileCheck %s --check-prefixes=ELF,ELFRT
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -passes=instrprof -S | FileCheck %s --check-prefixes=ELF,PS
@@ -9,12 +8,13 @@
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefixes=COFF
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -S | FileCheck %s --check-prefixes=XCOFF
 ; RUN: opt < %s -mtriple=x86_64-pc-freebsd13 -passes=instrprof -S | FileCheck %s --check-prefixes=ELF
+; RUN: opt < %s -mtriple=wasm32-unknown-unknown -passes=instrprof -S | FileCheck %s --check-prefix=WASM
 
 ; MACHO: @__llvm_profile_runtime = external hidden global i32
-; ELF_GENERIC: @__llvm_profile_runtime = external hidden global i32
 ; ELF-NOT: @__llvm_profile_runtime = external global i32
 ; XCOFF-NOT: @__llvm_profile_runtime = external hidden global i32
 ; COFF: @__llvm_profile_runtime = external hidden global i32
+; WASM: @__llvm_profile_runtime = external hidden global i32
 
 ; ELF: $__profc_foo = comdat nodeduplicate
 ; ELF: $__profc_foo_weak = comdat nodeduplicate
@@ -98,10 +98,10 @@ define available_externally void @foo_extern() {
 declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 
 ; ELF:         @llvm.compiler.used = appending global {{.*}} [{{.*}}ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern{{.*}}]
-; ELF_GENERIC: @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern]
 ; MACHO:       @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, {{.*}}
 ; COFF:        @llvm.compiler.used = appending global [6 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern]
 ; XCOFF:       @llvm.used = appending global [6 x ptr] [ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__llvm_prf_nm]
+; WASM:        @llvm.used = appending global [7 x ptr] [ptr @__llvm_profile_runtime_user, ptr @__profd_foo, ptr @__profd_foo_weak, ptr @"__profd_linkage.ll:foo_internal", ptr @__profd_foo_inline, ptr @__profd_foo_extern, ptr @__llvm_prf_nm]
 
 ; MACHO: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; MACHO:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
@@ -114,12 +114,11 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; PS:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; XCOFF-NOT: define .* __llvm_profile_runtime_user
 
-; ELF_GENERIC:      define internal void @__llvm_profile_register_functions() unnamed_addr {
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(ptr @__llvm_profile_runtime)
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(ptr @__profd_foo)
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(ptr @__profd_foo_weak)
-; ELF_GENERIC:        call void @__llvm_profile_register_names_function(ptr @__llvm_prf_nm
-; ELF_GENERIC-NEXT:   ret void
-; ELF_GENERIC-NEXT: }
+; WASM:      define internal void @__llvm_profile_register_functions() unnamed_addr {
+; WASM-NEXT:   call void @__llvm_profile_register_function(ptr @__profd_foo)
+; WASM-NEXT:   call void @__llvm_profile_register_function(ptr @__profd_foo_weak)
+; WASM:        call void @__llvm_profile_register_names_function(ptr @__llvm_prf_nm
+; WASM-NEXT:   ret void
+; WASM-NEXT: }
 
 ; XCOFF-NOT:  internal void @__llvm_profile_register_functions() 

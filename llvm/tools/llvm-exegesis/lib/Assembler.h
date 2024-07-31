@@ -23,7 +23,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
@@ -50,7 +50,8 @@ public:
   void addInstruction(const MCInst &Inst, const DebugLoc &DL = DebugLoc());
   void addInstructions(ArrayRef<MCInst> Insts, const DebugLoc &DL = DebugLoc());
 
-  void addReturn(const DebugLoc &DL = DebugLoc());
+  void addReturn(const ExegesisTarget &ET, bool SubprocessCleanup,
+                 const DebugLoc &DL = DebugLoc());
 
   MachineFunction &MF;
   MachineBasicBlock *const MBB;
@@ -89,9 +90,9 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // AsmStream, the temporary function is eventually discarded.
 Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns,
-                       ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStream);
+                       ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
+                       raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
+                       bool GenerateMemoryInstructions);
 
 // Creates an ObjectFile in the format understood by the host.
 // Note: the resulting object keeps a copy of Buffer so it can be discarded once
@@ -103,10 +104,11 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename);
 
 // Consumes an ObjectFile containing a `void foo(char*)` function and make it
 // executable.
-struct ExecutableFunction {
-  explicit ExecutableFunction(
-      std::unique_ptr<LLVMTargetMachine> TM,
-      object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
+class ExecutableFunction {
+public:
+  static Expected<ExecutableFunction>
+  create(std::unique_ptr<LLVMTargetMachine> TM,
+         object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
 
   // Retrieves the function as an array of bytes.
   StringRef getFunctionBytes() const { return FunctionBytes; }
@@ -116,10 +118,19 @@ struct ExecutableFunction {
     ((void (*)(char *))(intptr_t)FunctionBytes.data())(Memory);
   }
 
-  std::unique_ptr<LLVMContext> Context;
-  std::unique_ptr<ExecutionEngine> ExecEngine;
   StringRef FunctionBytes;
+
+private:
+  ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
+                     std::unique_ptr<orc::LLJIT> EJIT, StringRef FunctionBytes);
+
+  std::unique_ptr<LLVMContext> Context;
+  std::unique_ptr<orc::LLJIT> ExecJIT;
 };
+
+// Copies benchmark function's bytes from benchmark object.
+Error getBenchmarkFunctionBytes(const StringRef InputData,
+                                std::vector<uint8_t> &Bytes);
 
 // Creates a void(int8*) MachineFunction.
 MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionID,

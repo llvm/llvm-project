@@ -58,6 +58,16 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
   list<ValueType> Objects = Ts;
 }
 
+// A class that implements a counterpart of PtrValueType, which is
+// dependent on a HW mode. This class inherits from PtrValueType itself,
+// which makes it possible to use objects of this class where PtrValueType
+// or ValueType could be used. This is specifically applicable to selection
+// patterns.
+class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
+    : HwModeSelect<scalar.Modes>, PtrValueType<ValueType<0, 0>, addrspace> {
+  list<ValueType> Objects = scalar.Objects;
+}
+
 // A class representing the register size, spill size and spill alignment
 // in bits of a register.
 class RegInfo<int RS, int SS, int SA> {
@@ -73,9 +83,26 @@ class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
   list<RegInfo> Objects = Ts;
 }
 
+class SubRegRange<int size, int offset = 0> {
+  int Size = size;      // Sub register size in bits.
+  int Offset = offset;  // Offset of the first bit of the sub-reg index.
+}
+
+class SubRegRangeByHwMode<list<HwMode> Ms = [], list<SubRegRange> Ts = []>
+    : HwModeSelect<Ms> {
+  // The length of this list must be the same as the length of Ms.
+  list<SubRegRange> Objects = Ts;
+}
+
 // SubRegIndex - Use instances of SubRegIndex to identify subregisters.
 class SubRegIndex<int size, int offset = 0> {
   string Namespace = "";
+
+  // The size/offset information, parameterized by a HW mode.
+  // If the HwModes provided for SubRegRanges does not include the DefaultMode,
+  // the/ Size and Offset fields below will be used for the default. Otherwise,
+  // the Size and Offset fields are ignored.
+  SubRegRangeByHwMode SubRegRanges;
 
   // Size - Size (in bits) of the sub-registers represented by this index.
   int Size = size;
@@ -195,6 +222,10 @@ class Register<string n, list<string> altNames = []> {
   // isConstant - This register always holds a constant value (e.g. the zero
   // register in architectures such as MIPS)
   bit isConstant = false;
+
+  /// PositionOrder - Indicate tablegen to place the newly added register at a later
+  /// position to avoid iterations on them on unsupported target.
+  int PositionOrder = 0;
 }
 
 // RegisterWithSubRegs - This can be used to define instances of Register which
@@ -315,7 +346,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   string DiagnosticType = "";
 
   // A diagnostic message to emit when an invalid value is provided for this
-  // register class when it is being used an an assembly operand. If this is
+  // register class when it is being used as an assembly operand. If this is
   // non-empty, an anonymous diagnostic type enum value will be generated, and
   // the assembly matcher will provide a function to map from diagnostic types
   // to message strings.
@@ -407,6 +438,10 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
 
   // List of asm names for the generated tuple registers.
   list<string> RegAsmNames = RegNames;
+
+  // PositionOrder - Indicate tablegen to place the newly added register at a later
+  // position to avoid iterations on them on unsupported target.
+  int PositionOrder = 0;
 }
 
 // RegisterCategory - This class is a list of RegisterClasses that belong to a
@@ -439,6 +474,52 @@ class DwarfRegNum<list<int> Numbers> {
 // from dwarf register number to llvm register.
 class DwarfRegAlias<Register reg> {
       Register DwarfAlias = reg;
+}
+
+//===----------------------------------------------------------------------===//
+// SubtargetFeature - A characteristic of the chip set.
+//
+class SubtargetFeature<string n, string f, string v, string d,
+                       list<SubtargetFeature> i = []> {
+  // Name - Feature name.  Used by command line (-mattr=) to determine the
+  // appropriate target chip.
+  //
+  string Name = n;
+
+  // FieldName - Field in XXXSubtarget to be set by feature.
+  //
+  string FieldName = f;
+
+  // Value - Value the XXXSubtarget field to be set to by feature.
+  //
+  // A value of "true" or "false" implies the field is a bool. Otherwise,
+  // it is assumed to be an integer. the integer value may be the name of an
+  // enum constant. If multiple features use the same integer field, the
+  // field will be set to the maximum value of all enabled features that
+  // share the field.
+  //
+  string Value = v;
+
+  // Desc - Feature description.  Used by command line (-mattr=) to display help
+  // information.
+  //
+  string Desc = d;
+
+  // Implies - Features that this feature implies are present. If one of those
+  // features isn't set, then this one shouldn't be set either.
+  //
+  list<SubtargetFeature> Implies = i;
+}
+
+/// Specifies a Subtarget feature that this instruction is deprecated on.
+class Deprecated<SubtargetFeature dep> {
+  SubtargetFeature DeprecatedFeatureMask = dep;
+}
+
+/// A custom predicate used to determine if an instruction is
+/// deprecated or not.
+class ComplexDeprecationPredicate<string dep> {
+  string ComplexDeprecationPredicate = dep;
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,7 +714,20 @@ class Instruction : InstructionEncoding {
   // Scheduling information from TargetSchedule.td.
   list<SchedReadWrite> SchedRW;
 
-  string Constraints = "";  // OperandConstraint, e.g. $src = $dst.
+  /// Support for operand constraints. There are currently two kinds:
+  /// "$src = $dst"
+  ///   Ensures that the operands are allocated to the same register.
+  ///
+  /// "@earlyclobber $rd"
+  ///   Ensures that LLVM will not use the same register for any inputs (other
+  ///   than an input tied to this output).
+  ///
+  /// See also:
+  /// - MC/MCInstrDesc.h:OperandConstraint::{TIED_TO, EARLY_CLOBBER}.
+  /// - CodeGen/MachineOperand.h:MachineOperand::{TiedTo, IsEarlyClobber}.
+  /// - The LLVM IR specification: Section `Output constraints` in the
+  ///   discussion of inline assembly constraint strings.
+  string Constraints = "";
 
   /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
   /// be encoded into the output machineinstr.
@@ -671,8 +765,8 @@ class Instruction : InstructionEncoding {
 
   /// Should generate helper functions that help you to map a logical operand's
   /// index to the underlying MIOperand's index.
-  /// In most architectures logical operand indicies are equal to
-  /// MIOperand indicies, but for some CISC architectures, a logical operand
+  /// In most architectures logical operand indices are equal to
+  /// MIOperand indices, but for some CISC architectures, a logical operand
   /// might be consist of multiple MIOperand (e.g. a logical operand that
   /// uses complex address mode).
   bit UseLogicalOperandMappings = false;
@@ -883,8 +977,6 @@ class AsmOperandClass {
   /// instruction if it hasn't matched all the operands yet.  However, this
   /// error will be suppressed if all of the remaining unmatched operands are
   /// marked as IsOptional.
-  ///
-  /// Optional arguments must be at the end of the operand list.
   bit IsOptional = false;
 
   /// The name of the method on the target specific asm parser that returns the
@@ -1410,6 +1502,33 @@ def MEMBARRIER : StandardPseudoInstruction {
   let Size = 0;
   let isMeta = true;
 }
+def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i64imm:$jti);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+  let isMeta = true;
+}
+
+let hasSideEffects = false, isMeta = true, isConvergent = true in {
+def CONVERGENCECTRL_ANCHOR : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+}
+def CONVERGENCECTRL_ENTRY : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+}
+def CONVERGENCECTRL_LOOP : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+}
+def CONVERGENCECTRL_GLUE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$src);
+}
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"
@@ -1473,6 +1592,20 @@ class AsmParser {
   // method shall be called for all operands as opposed to only those
   // that have their own specified custom parsers.
   bit CallCustomParserForAllOperands = false;
+
+  // PreferSmallerInstructions - Should the assembly matcher prefer the smaller
+  // instructions.
+  // 
+  // This is useful for the ARM instructions set where smaller encodings must
+  // be preferentially selected.
+  //
+  // The preference order is: 
+  //    Instrution size (if this option is enabled, smallest first)
+  //    Number of Operands (least first), 
+  //    Operand Classes (lexicographically by operand), 
+  //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details), 
+  //    Number of required features (least first)
+  bit PreferSmallerInstructions = false;
 }
 def DefaultAsmParser : AsmParser;
 
@@ -1655,46 +1788,6 @@ class Target {
 }
 
 //===----------------------------------------------------------------------===//
-// SubtargetFeature - A characteristic of the chip set.
-//
-class SubtargetFeature<string n, string a,  string v, string d,
-                       list<SubtargetFeature> i = []> {
-  // Name - Feature name.  Used by command line (-mattr=) to determine the
-  // appropriate target chip.
-  //
-  string Name = n;
-
-  // Attribute - Attribute to be set by feature.
-  //
-  string Attribute = a;
-
-  // Value - Value the attribute to be set to by feature.
-  //
-  string Value = v;
-
-  // Desc - Feature description.  Used by command line (-mattr=) to display help
-  // information.
-  //
-  string Desc = d;
-
-  // Implies - Features that this feature implies are present. If one of those
-  // features isn't set, then this one shouldn't be set either.
-  //
-  list<SubtargetFeature> Implies = i;
-}
-
-/// Specifies a Subtarget feature that this instruction is deprecated on.
-class Deprecated<SubtargetFeature dep> {
-  SubtargetFeature DeprecatedFeatureMask = dep;
-}
-
-/// A custom predicate used to determine if an instruction is
-/// deprecated or not.
-class ComplexDeprecationPredicate<string dep> {
-  string ComplexDeprecationPredicate = dep;
-}
-
-//===----------------------------------------------------------------------===//
 // Processor chip sets - These values represent each of the chip sets supported
 // by the scheduler.  Each Processor definition requires corresponding
 // instruction itineraries.
@@ -1814,3 +1907,8 @@ include "llvm/Target/GlobalISel/SelectionDAGCompat.td"
 // Pull in the common support for Pfm Counters generation.
 //
 include "llvm/Target/TargetPfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Pull in the common support for macro fusion.
+//
+include "llvm/Target/TargetMacroFusion.td"

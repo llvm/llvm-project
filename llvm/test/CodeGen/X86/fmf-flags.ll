@@ -51,7 +51,7 @@ define dso_local float @fast_fmuladd_opts(float %a , float %b , float %c) {
 define dso_local double @not_so_fast_mul_add(double %x) {
 ; X64-LABEL: not_so_fast_mul_add:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm1 = [4.2000000000000002E+0,0.0E+0]
 ; X64-NEXT:    mulsd %xmm0, %xmm1
 ; X64-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movsd %xmm1, mul1(%rip)

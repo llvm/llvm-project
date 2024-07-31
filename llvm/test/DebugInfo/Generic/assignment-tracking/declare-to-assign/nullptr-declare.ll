@@ -1,10 +1,11 @@
 ; RUN: opt %s -passes=declare-to-assign -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=declare-to-assign -S | FileCheck %s
 
 ;; Check AssignmentTrackingPass ignores a dbg.declare with an empty metadata
 ;; location operand.
 
-; CHECK:      call void @llvm.dbg.declare
-; CHECK-NOT:  call void @llvm.dbg.assign
+; CHECK:      #dbg_declare
+; CHECK-NOT:  #dbg_assign
 
 define dso_local void @_Z3funv() #0 !dbg !10 {
 entry:

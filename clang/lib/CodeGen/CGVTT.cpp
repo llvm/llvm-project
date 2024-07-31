@@ -42,8 +42,8 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
                                   llvm::GlobalVariable::LinkageTypes Linkage,
                                   const CXXRecordDecl *RD) {
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/true);
-  llvm::ArrayType *ArrayType =
-      llvm::ArrayType::get(CGM.Int8PtrTy, Builder.getVTTComponents().size());
+  llvm::ArrayType *ArrayType = llvm::ArrayType::get(
+      CGM.GlobalsInt8PtrTy, Builder.getVTTComponents().size());
 
   SmallVector<llvm::GlobalVariable *, 8> VTables;
   SmallVector<VTableAddressPointsMapTy, 8> VTableAddressPoints;
@@ -77,12 +77,23 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
        llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
      };
 
+     // Add inrange attribute to indicate that only the VTableIndex can be
+     // accessed.
+     unsigned ComponentSize =
+         CGM.getDataLayout().getTypeAllocSize(getVTableComponentType());
+     unsigned VTableSize = CGM.getDataLayout().getTypeAllocSize(
+         cast<llvm::StructType>(VTable->getValueType())
+             ->getElementType(AddressPoint.VTableIndex));
+     unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
+     llvm::ConstantRange InRange(llvm::APInt(32, -Offset, true),
+                                 llvm::APInt(32, VTableSize - Offset, true));
      llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
-         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true,
-         /*InRangeIndex=*/1);
+         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
 
-     Init = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(Init,
-                                                                 CGM.Int8PtrTy);
+     if (const auto &Schema =
+             CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers)
+       Init = CGM.getConstantSignedPointer(Init, Schema, nullptr, GlobalDecl(),
+                                           QualType());
 
      VTTComponents.push_back(Init);
   }
@@ -96,6 +107,11 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
 
   if (CGM.supportsCOMDAT() && VTT->isWeakForLinker())
     VTT->setComdat(CGM.getModule().getOrInsertComdat(VTT->getName()));
+
+  // Set the visibility. This will already have been set on the VTT declaration.
+  // Set it again, now that we have a definition, as the implicit visibility can
+  // apply differently to definitions.
+  CGM.setGVProperties(VTT, RD);
 }
 
 llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
@@ -112,9 +128,9 @@ llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
 
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/false);
 
-  llvm::ArrayType *ArrayType =
-    llvm::ArrayType::get(CGM.Int8PtrTy, Builder.getVTTComponents().size());
-  llvm::Align Align = CGM.getDataLayout().getABITypeAlign(CGM.Int8PtrTy);
+  llvm::ArrayType *ArrayType = llvm::ArrayType::get(
+      CGM.GlobalsInt8PtrTy, Builder.getVTTComponents().size());
+  llvm::Align Align = CGM.getDataLayout().getABITypeAlign(CGM.GlobalsInt8PtrTy);
 
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, ArrayType, llvm::GlobalValue::ExternalLinkage, Align);
@@ -127,23 +143,24 @@ uint64_t CodeGenVTables::getSubVTTIndex(const CXXRecordDecl *RD,
                                         BaseSubobject Base) {
   BaseSubobjectPairTy ClassSubobjectPair(RD, Base);
 
-  SubVTTIndiciesMapTy::iterator I = SubVTTIndicies.find(ClassSubobjectPair);
-  if (I != SubVTTIndicies.end())
+  SubVTTIndicesMapTy::iterator I = SubVTTIndices.find(ClassSubobjectPair);
+  if (I != SubVTTIndices.end())
     return I->second;
 
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/false);
 
-  for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator I =
-       Builder.getSubVTTIndicies().begin(),
-       E = Builder.getSubVTTIndicies().end(); I != E; ++I) {
+  for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator
+           I = Builder.getSubVTTIndices().begin(),
+           E = Builder.getSubVTTIndices().end();
+       I != E; ++I) {
     // Insert all indices.
     BaseSubobjectPairTy ClassSubobjectPair(RD, I->first);
 
-    SubVTTIndicies.insert(std::make_pair(ClassSubobjectPair, I->second));
+    SubVTTIndices.insert(std::make_pair(ClassSubobjectPair, I->second));
   }
 
-  I = SubVTTIndicies.find(ClassSubobjectPair);
-  assert(I != SubVTTIndicies.end() && "Did not find index!");
+  I = SubVTTIndices.find(ClassSubobjectPair);
+  assert(I != SubVTTIndices.end() && "Did not find index!");
 
   return I->second;
 }

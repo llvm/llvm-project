@@ -330,7 +330,7 @@ Register CSKYInstrInfo::movImm(MachineBasicBlock &MBB,
   return DstReg;
 }
 
-unsigned CSKYInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register CSKYInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -360,7 +360,7 @@ unsigned CSKYInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned CSKYInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register CSKYInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:

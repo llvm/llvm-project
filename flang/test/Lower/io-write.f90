@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test that IO item calls stackrestore in the right place 
 
@@ -18,7 +18,7 @@
 ! CHECK:  %[[Const_0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[Val_7:.*]] = arith.cmpi sgt, %[[Val_6]], %[[Const_0]] : index
 ! CHECK:  %[[Val_8:.*]] = arith.select %[[Val_7]], %[[Val_6]], %[[Const_0]] : index
-! CHECK:  %[[Val_9:.*]] = fir.call @llvm.stacksave() {{.*}}: () -> !fir.ref<i8>
+! CHECK:  %[[Val_9:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
 ! CHECK:  %[[Val_10:.*]] = fir.alloca !fir.char<1,?>(%[[Val_8]] : index) {bindc_name = ".result"}
 ! CHECK:  %[[Val_11:.*]] = fir.call @_QFPgetstring(%[[Val_10]], %[[Val_8]], %[[Val_0]]) {{.*}}: (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
 ! CHECK:  %[[Val_12:.*]] = fir.convert %[[Val_10]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -27,12 +27,12 @@
 ! CHECK:  %[[Const_0_i64:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[Val_15:.*]] = fir.convert %[[Const_0_i64]] : (i64) -> !fir.ref<!fir.llvm_ptr<i8>>
 ! CHECK:  %[[Const_0_i64_0:.*]] = arith.constant 0 : i64
-! CHECK:  %[[Val_16:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK:  %[[Val_16:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:  %[[Val_17:.*]] = fir.convert %[[Val_16]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:  %[[Val_18:.*]] = fir.call @_FortranAioBeginInternalFormattedOutput(%[[Val_2]], %[[Val_3]], %[[Val_12]], %[[Val_13]],
 ! %[[Val_14]], %[[Val_15]], %[[Const_0_i64_0]], %17, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.box<none>, !fir.ref<!fir.llvm_ptr<i8>>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:  %[[Val_19:.*]] = fir.call @_FortranAioEndIoStatement(%18) {{.*}}: (!fir.ref<i8>) -> i32
-! CHECK:  fir.call @llvm.stackrestore(%[[Val_9]]) {{.*}}: (!fir.ref<i8>) -> ()
+! CHECK:  fir.call @llvm.stackrestore.p0(%[[Val_9]]) {{.*}}: (!fir.ref<i8>) -> ()
   if (string/="hi") stop 'FAIL'
 contains
   function getstring(n) result(r)

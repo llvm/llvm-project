@@ -17,7 +17,7 @@
     ret <4 x i32> %result
 
   .Lunwind:                                         ; preds = %0
-    %lp = landingpad { i8*, i32 }
+    %lp = landingpad { ptr, i32 }
             cleanup
     ret <4 x i32> %v
   }
@@ -53,7 +53,6 @@ body:             |
   ; CHECK:   successors: %bb.1, %bb.2
   ; CHECK:   liveins: $q0, $q22, $q23, $q20, $q21, $q18, $q19, $q16, $q17, $q14, $q15, $q12, $q13, $q10, $q11, $q8, $q9, $lr, $fp
   ; CHECK:   $sp = frame-setup SUBXri $sp, 304, 0
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 304
   ; CHECK:   frame-setup STPQi killed $q23, killed $q22, $sp, 2 :: (store (s128) into %stack.19), (store (s128) into %stack.18)
   ; CHECK:   frame-setup STPQi killed $q21, killed $q20, $sp, 4 :: (store (s128) into %stack.17), (store (s128) into %stack.16)
   ; CHECK:   frame-setup STPQi killed $q19, killed $q18, $sp, 6 :: (store (s128) into %stack.15), (store (s128) into %stack.14)
@@ -63,6 +62,7 @@ body:             |
   ; CHECK:   frame-setup STPQi killed $q11, killed $q10, $sp, 14 :: (store (s128) into %stack.7), (store (s128) into %stack.6)
   ; CHECK:   frame-setup STPQi killed $q9, killed $q8, $sp, 16 :: (store (s128) into %stack.5), (store (s128) into %stack.4)
   ; CHECK:   frame-setup STPXi killed $fp, killed $lr, $sp, 36 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 304
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $w30, -8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $w29, -16
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $b8, -32

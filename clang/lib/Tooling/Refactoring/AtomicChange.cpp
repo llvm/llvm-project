@@ -1,4 +1,4 @@
-//===--- AtomicChange.cpp - AtomicChange implementation -----------------*- C++ -*-===//
+//===--- AtomicChange.cpp - AtomicChange implementation ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -150,7 +150,7 @@ createReplacementsForHeaders(llvm::StringRef FilePath, llvm::StringRef Code,
   for (const auto &Change : Changes) {
     for (llvm::StringRef Header : Change.getInsertedHeaders()) {
       std::string EscapedHeader =
-          Header.startswith("<") || Header.startswith("\"")
+          Header.starts_with("<") || Header.starts_with("\"")
               ? Header.str()
               : ("\"" + Header + "\"").str();
       std::string ReplacementText = "#include " + EscapedHeader;
@@ -198,7 +198,7 @@ AtomicChange::AtomicChange(const SourceManager &SM,
   const FullSourceLoc FullKeyPosition(KeyPosition, SM);
   std::pair<FileID, unsigned> FileIDAndOffset =
       FullKeyPosition.getSpellingLoc().getDecomposedLoc();
-  const FileEntry *FE = SM.getFileEntryForID(FileIDAndOffset.first);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(FileIDAndOffset.first);
   assert(FE && "Cannot create AtomicChange with invalid location.");
   FilePath = std::string(FE->getName());
   Key = FilePath + ":" + std::to_string(FileIDAndOffset.second);

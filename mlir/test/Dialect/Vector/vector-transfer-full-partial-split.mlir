@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 
 // CHECK-DAG: #[[$map_p4:.*]] = affine_map<()[s0] -> (s0 + 4)>
@@ -101,11 +101,45 @@ func.func @split_vector_transfer_read_strided_2d(
   return %1 : vector<4x8xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.any_op
+func.func @split_vector_transfer_read_mem_space(%A: memref<?x8xf32, 3>, %i: index, %j: index) -> vector<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  //      CHECK: scf.if {{.*}} -> (memref<?x8xf32, strided<[8, 1]>>, index, index) {
+  //               inBounds with a different memory space
+  //      CHECK:   %[[space_cast:.*]] = memref.memory_space_cast %{{.*}} :
+  // CHECK-SAME:     memref<?x8xf32, 3> to memref<?x8xf32>
+  //      CHECK:   %[[cast:.*]] = memref.cast %[[space_cast]] :
+  // CHECK-SAME:     memref<?x8xf32> to memref<?x8xf32, strided<[8, 1]>>
+  //      CHECK:   scf.yield %[[cast]], {{.*}} : memref<?x8xf32, strided<[8, 1]>>, index, index
+  //      CHECK: } else {
+  //               slow path, fill tmp alloc and yield a memref_casted version of it
+  //      CHECK:   %[[slow:.*]] = vector.transfer_read %[[A]][%[[i]], %[[j]]], %cst :
+  // CHECK-SAME:     memref<?x8xf32, 3>, vector<4x8xf32>
+  //      CHECK:   %[[cast_alloc:.*]] = vector.type_cast %[[alloc]] :
+  // CHECK-SAME:     memref<4x8xf32> to memref<vector<4x8xf32>>
+  //      CHECK:   store %[[slow]], %[[cast_alloc]][] : memref<vector<4x8xf32>>
+  //      CHECK:   %[[yielded:.*]] = memref.cast %[[alloc]] :
+  // CHECK-SAME:     memref<4x8xf32> to memref<?x8xf32, strided<[8, 1]>>
+  //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
+  // CHECK-SAME:     memref<?x8xf32, strided<[8, 1]>>, index, index
+  //      CHECK: }
+  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
+  // CHECK-SAME:   {in_bounds = [true, true]} : memref<?x8xf32, strided<[8, 1]>>, vector<4x8xf32>
+
+  %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32, 3>, vector<4x8xf32>
+
+  return %1: vector<4x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -159,11 +193,14 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK:         }
 
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -221,12 +258,52 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK:           return
 // CHECK:         }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
+
+// -----
+
+func.func @split_vector_transfer_write_mem_space(%V: vector<4x8xf32>, %A: memref<?x8xf32, 3>, %i: index, %j: index) {
+  vector.transfer_write %V, %A[%i, %j] :
+    vector<4x8xf32>, memref<?x8xf32, 3>
+  return
+}
+
+// CHECK:     func @split_vector_transfer_write_mem_space(
+// CHECK:           scf.if {{.*}} -> (memref<?x8xf32, strided<[8, 1]>>, index, index) {
+// CHECK:             %[[space_cast:.*]] = memref.memory_space_cast %{{.*}} :
+// CHECK-SAME:          memref<?x8xf32, 3> to memref<?x8xf32>
+// CHECK:             %[[cast:.*]] = memref.cast %[[space_cast]] :
+// CHECK-SAME:          memref<?x8xf32> to memref<?x8xf32, strided<[8, 1]>>
+// CHECK:             scf.yield %[[cast]], {{.*}} : memref<?x8xf32, strided<[8, 1]>>, index, index
+// CHECK:           } else {
+// CHECK:             %[[VAL_15:.*]] = memref.cast %[[TEMP]]
+// CHECK-SAME:            : memref<4x8xf32> to memref<?x8xf32, strided<[8, 1]>>
+// CHECK:             scf.yield %[[VAL_15]], %[[C0]], %[[C0]]
+// CHECK-SAME:            : memref<?x8xf32, strided<[8, 1]>>, index, index
+// CHECK:           }
+// CHECK:           vector.transfer_write %[[VEC]],
+// CHECK-SAME:           %[[IN_BOUND_DEST:.*]]#0[%[[IN_BOUND_DEST]]#1, %[[IN_BOUND_DEST]]#2]
+// CHECK-SAME:           {in_bounds = [true, true]} : vector<4x8xf32>, memref<?x8xf32, strided<[8, 1]>>
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
+
 
 // -----
 
@@ -263,9 +340,12 @@ func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub :
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

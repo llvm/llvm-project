@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis -opaque-pointers | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder < %s
 ; PR12696
 
@@ -511,6 +511,41 @@ define void @f87() fn_ret_thunk_extern { ret void }
 ; CHECK: define void @f88() [[SKIPPROFILE:#[0-9]+]]
 define void @f88() skipprofile { ret void }
 
+; CHECK: define void @f89() [[OPTDEBUG:#[0-9]+]]
+define void @f89() optdebug {
+        ret void;
+}
+
+; CHECK: define void @f90(ptr writable %p)
+define void @f90(ptr writable %p) {
+  ret void
+}
+
+; CHECK: define void @f91(ptr dead_on_unwind %p)
+define void @f91(ptr dead_on_unwind %p) {
+  ret void
+}
+
+; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
+define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
+  ret i32 0
+}
+
+; CHECK: define range(i32 0, 42) i32 @range_attribute_same_range_other_bitwidth(i8 range(i8 0, 42) %a)
+define range(i32 0, 42) i32 @range_attribute_same_range_other_bitwidth(i8 range(i8 0, 42) %a) {
+  ret i32 0
+}
+
+; CHECK: define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a)
+define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a) {
+  ret void
+}
+
+; CHECK: define void @initializes(ptr initializes((-4, 0), (4, 8)) %a)
+define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
@@ -566,4 +601,5 @@ define void @f88() skipprofile { ret void }
 ; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
+; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

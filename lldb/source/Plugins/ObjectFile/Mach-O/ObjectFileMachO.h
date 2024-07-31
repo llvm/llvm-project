@@ -62,8 +62,7 @@ public:
                                         lldb_private::ModuleSpecList &specs);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
-                       const lldb_private::FileSpec &outfile,
-                       lldb::SaveCoreStyle &core_style,
+                       const lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
@@ -120,13 +119,18 @@ public:
 
   uint32_t GetNumThreadContexts() override;
 
+  std::vector<std::tuple<lldb::offset_t, lldb::offset_t>>
+  FindLC_NOTEByName(std::string name);
+
   std::string GetIdentifierString() override;
 
-  lldb::addr_t GetAddressMask() override;
+  lldb_private::AddressableBits GetAddressableBits() override;
 
   bool GetCorefileMainBinaryInfo(lldb::addr_t &value, bool &value_is_offset,
                                  lldb_private::UUID &uuid,
                                  ObjectFile::BinaryType &type) override;
+
+  bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) override;
 
   bool LoadCoreFileImages(lldb_private::Process &process) override;
 
@@ -266,6 +270,7 @@ protected:
   static lldb_private::ConstString GetSegmentNameOBJC();
   static lldb_private::ConstString GetSegmentNameLINKEDIT();
   static lldb_private::ConstString GetSegmentNameDWARF();
+  static lldb_private::ConstString GetSegmentNameLLVM_COV();
   static lldb_private::ConstString GetSectionNameEHFrame();
 
   llvm::MachO::dysymtab_command m_dysymtab;

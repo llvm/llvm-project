@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_DIVISIONANDREMAINDEROPERATIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DIVISIONANDREMAINDEROPERATIONS_H
 
 #include "FPBits.h"
 #include "ManipulationFunctions.h"
@@ -15,8 +15,9 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 static constexpr int QUOTIENT_LSB_BITS = 3;
@@ -31,11 +32,11 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
   if (ybits.is_nan())
     return y;
   if (xbits.is_inf() || ybits.is_zero())
-    return FPBits<T>::build_quiet_nan(1);
+    return FPBits<T>::quiet_nan().get_val();
 
   if (xbits.is_zero()) {
     q = 0;
-    return __llvm_libc::fputil::copysign(T(0.0), x);
+    return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
   }
 
   if (ybits.is_inf()) {
@@ -43,23 +44,24 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     return x;
   }
 
-  bool result_sign = (xbits.get_sign() == ybits.get_sign() ? false : true);
+  const Sign result_sign =
+      (xbits.sign() == ybits.sign() ? Sign::POS : Sign::NEG);
 
   // Once we know the sign of the result, we can just operate on the absolute
   // values. The correct sign can be applied to the result after the result
   // is evaluated.
-  xbits.set_sign(0);
-  ybits.set_sign(0);
+  xbits.set_sign(Sign::POS);
+  ybits.set_sign(Sign::POS);
 
   NormalFloat<T> normalx(xbits), normaly(ybits);
   int exp = normalx.exponent - normaly.exponent;
-  typename NormalFloat<T>::UIntType mx = normalx.mantissa,
-                                    my = normaly.mantissa;
+  typename NormalFloat<T>::StorageType mx = normalx.mantissa,
+                                       my = normaly.mantissa;
 
   q = 0;
   while (exp >= 0) {
     unsigned shift_count = 0;
-    typename NormalFloat<T>::UIntType n = mx;
+    typename NormalFloat<T>::StorageType n = mx;
     for (shift_count = 0; n < my; n <<= 1, ++shift_count)
       ;
 
@@ -72,12 +74,12 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 
     mx = n - my;
     if (mx == 0) {
-      q = result_sign ? -q : q;
-      return __llvm_libc::fputil::copysign(T(0.0), x);
+      q = result_sign.is_neg() ? -q : q;
+      return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
     }
   }
 
-  NormalFloat<T> remainder(exp + normaly.exponent, mx, 0);
+  NormalFloat<T> remainder(Sign::POS, exp + normaly.exponent, mx);
 
   // Since NormalFloat to native type conversion is a truncation operation
   // currently, the remainder value in the native type is correct as is.
@@ -85,7 +87,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
   // then the conversion to native remainder value should be updated
   // appropriately and some directed tests added.
   T native_remainder(remainder);
-  T absy = T(ybits);
+  T absy = ybits.get_val();
   int cmp = remainder.mul2(1).cmp(normaly);
   if (cmp > 0) {
     q = q + 1;
@@ -107,13 +109,13 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
       native_remainder = -native_remainder;
   }
 
-  q = result_sign ? -q : q;
+  q = result_sign.is_neg() ? -q : q;
   if (native_remainder == T(0.0))
-    return __llvm_libc::fputil::copysign(T(0.0), x);
+    return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
   return native_remainder;
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DIVISIONANDREMAINDEROPERATIONS_H

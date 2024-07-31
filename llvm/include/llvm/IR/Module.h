@@ -213,6 +213,45 @@ private:
 /// @name Constructors
 /// @{
 public:
+  /// Is this Module using intrinsics to record the position of debugging
+  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
+  /// \ref BasicBlock.
+  bool IsNewDbgInfoFormat;
+
+  /// Used when printing this module in the new debug info format; removes all
+  /// declarations of debug intrinsics that are replaced by non-intrinsic
+  /// records in the new format.
+  void removeDebugIntrinsicDeclarations();
+
+  /// \see BasicBlock::convertToNewDbgValues.
+  void convertToNewDbgValues() {
+    for (auto &F : *this) {
+      F.convertToNewDbgValues();
+    }
+    IsNewDbgInfoFormat = true;
+  }
+
+  /// \see BasicBlock::convertFromNewDbgValues.
+  void convertFromNewDbgValues() {
+    for (auto &F : *this) {
+      F.convertFromNewDbgValues();
+    }
+    IsNewDbgInfoFormat = false;
+  }
+
+  void setIsNewDbgInfoFormat(bool UseNewFormat) {
+    if (UseNewFormat && !IsNewDbgInfoFormat)
+      convertToNewDbgValues();
+    else if (!UseNewFormat && IsNewDbgInfoFormat)
+      convertFromNewDbgValues();
+  }
+  void setNewDbgInfoFormatFlag(bool NewFlag) {
+    for (auto &F : *this) {
+      F.setNewDbgInfoFormatFlag(NewFlag);
+    }
+    IsNewDbgInfoFormat = NewFlag;
+  }
+
   /// The Module constructor. Note that there is no default constructor. You
   /// must provide a name for the module upon construction.
   explicit Module(StringRef ModuleID, LLVMContext& C);
@@ -251,7 +290,7 @@ public:
   }
 
   /// Get the data layout for the module's target platform.
-  const DataLayout &getDataLayout() const;
+  const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
   /// @returns a string containing the target triple.
@@ -352,17 +391,14 @@ public:
 /// @name Function Accessors
 /// @{
 
-  /// Look up the specified function in the module symbol table. Four
-  /// possibilities:
-  ///   1. If it does not exist, add a prototype for the function and return it.
-  ///   2. Otherwise, if the existing function has the correct prototype, return
-  ///      the existing function.
-  ///   3. Finally, the function exists but has the wrong prototype: return the
-  ///      function with a constantexpr cast to the right prototype.
+  /// Look up the specified function in the module symbol table. If it does not
+  /// exist, add a prototype for the function and return it. Otherwise, return
+  /// the existing function.
   ///
   /// In all cases, the returned value is a FunctionCallee wrapper around the
-  /// 'FunctionType *T' passed in, as well as a 'Value*' either of the Function or
-  /// the bitcast to the function.
+  /// 'FunctionType *T' passed in, as well as the 'Value*' of the Function. The
+  /// function type of the function may differ from the function type stored in
+  /// FunctionCallee if it was previously created with a different type.
   ///
   /// Note: For library calls getOrInsertLibFunc() should be used instead.
   FunctionCallee getOrInsertFunction(StringRef Name, FunctionType *T,
@@ -370,12 +406,8 @@ public:
 
   FunctionCallee getOrInsertFunction(StringRef Name, FunctionType *T);
 
-  /// Look up the specified function in the module symbol table. If it does not
-  /// exist, add a prototype for the function and return it. This function
-  /// guarantees to return a constant of pointer to the specified function type
-  /// or a ConstantExpr BitCast of that type if the named function has a
-  /// different type. This version of the method takes a list of
-  /// function arguments, which makes it easier for clients to use.
+  /// Same as above, but takes a list of function arguments, which makes it
+  /// easier for clients to use.
   template <typename... ArgsTy>
   FunctionCallee getOrInsertFunction(StringRef Name,
                                      AttributeList AttributeList, Type *RetTy,
@@ -516,6 +548,8 @@ public:
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
 
   /// @}
   /// @name Materialization
@@ -920,6 +954,17 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the large data threshold
+  /// @{
+
+  /// Returns the code model (tiny, small, kernel, medium or large model)
+  std::optional<uint64_t> getLargeDataThreshold() const;
+
+  /// Set the code model (tiny, small, kernel, medium or large)
+  void setLargeDataThreshold(uint64_t Threshold);
   /// @}
 
   /// @name Utility functions for querying and setting PGO summary

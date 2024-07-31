@@ -6,10 +6,10 @@
 define arm_aapcs_vfpcc <2 x i32> @ptr_v2i32(ptr %offptr) {
 ; CHECK-LABEL: ptr_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-NEXT:    ldr r1, [r1]
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x ptr>, ptr %offptr, align 4
@@ -112,9 +112,9 @@ entry:
 define arm_aapcs_vfpcc <2 x float> @ptr_v2f32(ptr %offptr) {
 ; CHECK-LABEL: ptr_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    vldr s1, [r0]
-; CHECK-NEXT:    vldr s0, [r1]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
+; CHECK-NEXT:    vldr s1, [r1]
+; CHECK-NEXT:    vldr s0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x ptr>, ptr %offptr, align 4
@@ -199,13 +199,13 @@ entry:
 define arm_aapcs_vfpcc <2 x i32> @ptr_v2i16_sext(ptr %offptr) {
 ; CHECK-LABEL: ptr_v2i16_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    ldrsh.w r0, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-NEXT:    ldrsh.w r1, [r1]
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    ldrsh.w r0, [r0]
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
 ; CHECK-NEXT:    asrs r1, r1, #31
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x ptr>, ptr %offptr, align 4
@@ -217,11 +217,11 @@ entry:
 define arm_aapcs_vfpcc <2 x i32> @ptr_v2i16_zext(ptr %offptr) {
 ; CHECK-LABEL: ptr_v2i16_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-NEXT:    vmov.i64 q0, #0xffff
-; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    vmov q1[2], q1[0], r1, r0
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov q1[2], q1[0], r0, r1
 ; CHECK-NEXT:    vand q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:

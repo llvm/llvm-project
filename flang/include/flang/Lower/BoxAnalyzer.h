@@ -97,7 +97,7 @@ struct ScalarDynamicDerived : ScalarSym {
       : ScalarSym{sym}, lens{std::move(lens)} {}
 
 private:
-  llvm::SmallVector<Fortran::lower::SomeExpr> lens;
+  llvm::SmallVector<Fortran::lower::SomeExpr, 1> lens;
 };
 
 struct LBoundsAndShape {
@@ -382,6 +382,8 @@ public:
 
   /// Run the analysis on `sym`.
   void analyze(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::semantics::IsProcedurePointer(sym))
+      return;
     if (symIsArray(sym)) {
       bool isConstant = !isAssumedSize(sym);
       llvm::SmallVector<int64_t> lbounds;

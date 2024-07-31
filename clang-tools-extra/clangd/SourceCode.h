@@ -171,9 +171,13 @@ std::optional<std::string> getCanonicalPath(const FileEntryRef F,
 /// FIXME: should we be caching the .clang-format file search?
 /// This uses format::DefaultFormatStyle and format::DefaultFallbackStyle,
 /// though the latter may have been overridden in main()!
+/// \p FormatFile indicates whether the returned FormatStyle is used
+/// to format the entire main file (or a range selected by the user
+/// which can be arbitrarily long).
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          const ThreadsafeFS &TFS);
+                                          const ThreadsafeFS &TFS,
+                                          bool FormatFile);
 
 /// Cleanup and format the given replacements.
 llvm::Expected<tooling::Replacements>
@@ -337,6 +341,10 @@ inline bool isReservedName(llvm::StringRef Name) {
 /// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
 SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
                                               const SourceManager &SM);
+
+/// Returns the range starting at offset and spanning the whole line. Escaped
+/// newlines are not handled.
+clangd::Range rangeTillEOL(llvm::StringRef Code, unsigned HashOffset);
 } // namespace clangd
 } // namespace clang
 #endif

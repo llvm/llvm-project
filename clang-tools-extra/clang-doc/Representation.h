@@ -350,7 +350,7 @@ struct RecordInfo : public SymbolInfo {
   void merge(RecordInfo &&I);
 
   // Type of this record (struct, class, union, interface).
-  TagTypeKind TagType = TagTypeKind::TTK_Struct;
+  TagTypeKind TagType = TagTypeKind::Struct;
 
   // Full qualified name of this record, including namespaces and template
   // specializations.
@@ -482,8 +482,7 @@ struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl,
-                  std::vector<std::string> UserStylesheets,
-                  std::vector<std::string> JsScripts);
+                  std::vector<std::string> UserStylesheets);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.
@@ -498,8 +497,6 @@ struct ClangDocContext {
   std::vector<std::string> UserStylesheets;
   // JavaScript files that will be imported in allHTML file.
   std::vector<std::string> JsScripts;
-  // Other files that should be copied to OutDirectory, besides UserStylesheets.
-  std::vector<std::string> FilesToCopy;
   Index Idx;
 };
 

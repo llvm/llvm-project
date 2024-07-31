@@ -1,9 +1,12 @@
 add_mlir_dialect_library(MLIRMemRefTransforms
-  BufferizableOpInterfaceImpl.cpp
+  AllocationOpInterfaceImpl.cpp
+  BufferViewFlowOpInterfaceImpl.cpp
   ComposeSubView.cpp
   ExpandOps.cpp
+  ExpandRealloc.cpp
   ExpandStridedMetadata.cpp
   EmulateWideInt.cpp
+  EmulateNarrowType.cpp
   ExtractAddressComputations.cpp
   FoldMemRefAliasOps.cpp
   IndependenceTransforms.cpp
@@ -25,6 +28,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRArithDialect
   MLIRArithTransforms
   MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRFuncDialect
   MLIRGPUDialect

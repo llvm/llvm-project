@@ -303,26 +303,17 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
           if (v0_info) {
             if (byte_size <= 16) {
-              if (byte_size <= RegisterValue::GetMaxByteSize()) {
-                RegisterValue reg_value;
-                error = reg_value.SetValueFromData(*v0_info, data, 0, true);
-                if (error.Success()) {
-                  if (!reg_ctx->WriteRegister(v0_info, reg_value))
-                    error.SetErrorString("failed to write register v0");
-                }
-              } else {
-                error.SetErrorStringWithFormat(
-                    "returning float values with a byte size of %" PRIu64
-                    " are not supported",
-                    byte_size);
-              }
+              RegisterValue reg_value;
+              error = reg_value.SetValueFromData(*v0_info, data, 0, true);
+              if (error.Success())
+                if (!reg_ctx->WriteRegister(v0_info, reg_value))
+                  error.SetErrorString("failed to write register v0");
             } else {
               error.SetErrorString("returning float values longer than 128 "
                                    "bits are not supported");
             }
-          } else {
+          } else
             error.SetErrorString("v0 register is not available on this target");
-          }
         }
       }
     } else if (type_flags & eTypeIsVector) {
@@ -823,11 +814,11 @@ addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
     mask = process_sp->GetCodeAddressMask();
     if (pc & pac_sign_extension) {
       addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
-      if (highmem_mask)
+      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
         mask = highmem_mask;
     }
   }
-  if (mask == 0)
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
@@ -842,11 +833,11 @@ addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
     mask = process_sp->GetDataAddressMask();
     if (pc & pac_sign_extension) {
       addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-      if (highmem_mask)
+      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
         mask = highmem_mask;
     }
   }
-  if (mask == 0)
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);

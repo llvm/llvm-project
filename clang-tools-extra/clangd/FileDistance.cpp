@@ -34,6 +34,7 @@
 #include "URI.h"
 #include "support/Logger.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include <queue>
 
@@ -200,7 +201,7 @@ createScopeFileDistance(llvm::ArrayRef<std::string> QueryScopes) {
     // place of enclosing namespaces (e.g. in implementation files).
     if (S == Preferred)
       Param.Cost = S == "" ? 4 : 0;
-    else if (Preferred.startswith(S) && !S.empty())
+    else if (Preferred.starts_with(S) && !S.empty())
       continue; // just rely on up-traversals.
     else
       Param.Cost = S == "" ? 6 : 2;

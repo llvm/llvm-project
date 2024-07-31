@@ -50,27 +50,16 @@ define i64 @rotl_i64_const_shift(i64 %x) {
 ; When first 2 operands match, it's a rotate (by variable amount).
 
 define i16 @rotl_i16(i16 %x, i16 %z) {
-; CHECK32-LABEL: rotl_i16:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    clrlwi 6, 4, 28
-; CHECK32-NEXT:    neg 4, 4
-; CHECK32-NEXT:    clrlwi 5, 3, 16
-; CHECK32-NEXT:    clrlwi 4, 4, 28
-; CHECK32-NEXT:    slw 3, 3, 6
-; CHECK32-NEXT:    srw 4, 5, 4
-; CHECK32-NEXT:    or 3, 3, 4
-; CHECK32-NEXT:    blr
-;
-; CHECK64-LABEL: rotl_i16:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    neg 5, 4
-; CHECK64-NEXT:    clrlwi 6, 3, 16
-; CHECK64-NEXT:    clrlwi 4, 4, 28
-; CHECK64-NEXT:    clrlwi 5, 5, 28
-; CHECK64-NEXT:    slw 3, 3, 4
-; CHECK64-NEXT:    srw 4, 6, 5
-; CHECK64-NEXT:    or 3, 3, 4
-; CHECK64-NEXT:    blr
+; CHECK-LABEL: rotl_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrlwi 6, 4, 28
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    clrlwi 5, 3, 16
+; CHECK-NEXT:    clrlwi 4, 4, 28
+; CHECK-NEXT:    slw 3, 3, 6
+; CHECK-NEXT:    srw 4, 5, 4
+; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    blr
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }
@@ -85,47 +74,27 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
 }
 
 define i64 @rotl_i64(i64 %x, i64 %z) {
-; CHECK32_32-LABEL: rotl_i64:
-; CHECK32_32:       # %bb.0:
-; CHECK32_32-NEXT:    andi. 5, 6, 32
-; CHECK32_32-NEXT:    clrlwi 5, 6, 27
-; CHECK32_32-NEXT:    subfic 6, 5, 32
-; CHECK32_32-NEXT:    bc 12, 2, .LBB4_2
-; CHECK32_32-NEXT:  # %bb.1:
-; CHECK32_32-NEXT:    ori 7, 3, 0
-; CHECK32_32-NEXT:    ori 3, 4, 0
-; CHECK32_32-NEXT:    b .LBB4_3
-; CHECK32_32-NEXT:  .LBB4_2:
-; CHECK32_32-NEXT:    addi 7, 4, 0
-; CHECK32_32-NEXT:  .LBB4_3:
-; CHECK32_32-NEXT:    srw 4, 7, 6
-; CHECK32_32-NEXT:    slw 8, 3, 5
-; CHECK32_32-NEXT:    srw 6, 3, 6
-; CHECK32_32-NEXT:    slw 5, 7, 5
-; CHECK32_32-NEXT:    or 3, 8, 4
-; CHECK32_32-NEXT:    or 4, 5, 6
-; CHECK32_32-NEXT:    blr
-;
-; CHECK32_64-LABEL: rotl_i64:
-; CHECK32_64:       # %bb.0:
-; CHECK32_64-NEXT:    andi. 5, 6, 32
-; CHECK32_64-NEXT:    clrlwi 5, 6, 27
-; CHECK32_64-NEXT:    bc 12, 2, .LBB4_2
-; CHECK32_64-NEXT:  # %bb.1:
-; CHECK32_64-NEXT:    ori 7, 3, 0
-; CHECK32_64-NEXT:    ori 3, 4, 0
-; CHECK32_64-NEXT:    b .LBB4_3
-; CHECK32_64-NEXT:  .LBB4_2:
-; CHECK32_64-NEXT:    addi 7, 4, 0
-; CHECK32_64-NEXT:  .LBB4_3:
-; CHECK32_64-NEXT:    subfic 6, 5, 32
-; CHECK32_64-NEXT:    srw 4, 7, 6
-; CHECK32_64-NEXT:    slw 8, 3, 5
-; CHECK32_64-NEXT:    srw 6, 3, 6
-; CHECK32_64-NEXT:    slw 5, 7, 5
-; CHECK32_64-NEXT:    or 3, 8, 4
-; CHECK32_64-NEXT:    or 4, 5, 6
-; CHECK32_64-NEXT:    blr
+; CHECK32-LABEL: rotl_i64:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    andi. 5, 6, 32
+; CHECK32-NEXT:    mr 5, 3
+; CHECK32-NEXT:    bne 0, .LBB4_2
+; CHECK32-NEXT:  # %bb.1:
+; CHECK32-NEXT:    mr 5, 4
+; CHECK32-NEXT:  .LBB4_2:
+; CHECK32-NEXT:    clrlwi 6, 6, 27
+; CHECK32-NEXT:    subfic 8, 6, 32
+; CHECK32-NEXT:    srw 7, 5, 8
+; CHECK32-NEXT:    bne 0, .LBB4_4
+; CHECK32-NEXT:  # %bb.3:
+; CHECK32-NEXT:    mr 4, 3
+; CHECK32-NEXT:  .LBB4_4:
+; CHECK32-NEXT:    slw 3, 4, 6
+; CHECK32-NEXT:    srw 4, 4, 8
+; CHECK32-NEXT:    slw 5, 5, 6
+; CHECK32-NEXT:    or 3, 3, 7
+; CHECK32-NEXT:    or 4, 5, 4
+; CHECK32-NEXT:    blr
 ;
 ; CHECK64-LABEL: rotl_i64:
 ; CHECK64:       # %bb.0:
@@ -210,27 +179,16 @@ define i32 @rotr_i32_const_shift(i32 %x) {
 ; When first 2 operands match, it's a rotate (by variable amount).
 
 define i16 @rotr_i16(i16 %x, i16 %z) {
-; CHECK32-LABEL: rotr_i16:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    clrlwi 6, 4, 28
-; CHECK32-NEXT:    neg 4, 4
-; CHECK32-NEXT:    clrlwi 5, 3, 16
-; CHECK32-NEXT:    clrlwi 4, 4, 28
-; CHECK32-NEXT:    srw 5, 5, 6
-; CHECK32-NEXT:    slw 3, 3, 4
-; CHECK32-NEXT:    or 3, 5, 3
-; CHECK32-NEXT:    blr
-;
-; CHECK64-LABEL: rotr_i16:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    neg 5, 4
-; CHECK64-NEXT:    clrlwi 6, 3, 16
-; CHECK64-NEXT:    clrlwi 4, 4, 28
-; CHECK64-NEXT:    clrlwi 5, 5, 28
-; CHECK64-NEXT:    srw 4, 6, 4
-; CHECK64-NEXT:    slw 3, 3, 5
-; CHECK64-NEXT:    or 3, 4, 3
-; CHECK64-NEXT:    blr
+; CHECK-LABEL: rotr_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrlwi 6, 4, 28
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    clrlwi 5, 3, 16
+; CHECK-NEXT:    clrlwi 4, 4, 28
+; CHECK-NEXT:    srw 5, 5, 6
+; CHECK-NEXT:    slw 3, 3, 4
+; CHECK-NEXT:    or 3, 5, 3
+; CHECK-NEXT:    blr
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }
@@ -246,47 +204,27 @@ define i32 @rotr_i32(i32 %x, i32 %z) {
 }
 
 define i64 @rotr_i64(i64 %x, i64 %z) {
-; CHECK32_32-LABEL: rotr_i64:
-; CHECK32_32:       # %bb.0:
-; CHECK32_32-NEXT:    andi. 5, 6, 32
-; CHECK32_32-NEXT:    clrlwi 5, 6, 27
-; CHECK32_32-NEXT:    subfic 6, 5, 32
-; CHECK32_32-NEXT:    bc 12, 2, .LBB11_2
-; CHECK32_32-NEXT:  # %bb.1:
-; CHECK32_32-NEXT:    ori 7, 4, 0
-; CHECK32_32-NEXT:    b .LBB11_3
-; CHECK32_32-NEXT:  .LBB11_2:
-; CHECK32_32-NEXT:    addi 7, 3, 0
-; CHECK32_32-NEXT:    addi 3, 4, 0
-; CHECK32_32-NEXT:  .LBB11_3:
-; CHECK32_32-NEXT:    srw 4, 7, 5
-; CHECK32_32-NEXT:    slw 8, 3, 6
-; CHECK32_32-NEXT:    srw 5, 3, 5
-; CHECK32_32-NEXT:    slw 6, 7, 6
-; CHECK32_32-NEXT:    or 3, 8, 4
-; CHECK32_32-NEXT:    or 4, 6, 5
-; CHECK32_32-NEXT:    blr
-;
-; CHECK32_64-LABEL: rotr_i64:
-; CHECK32_64:       # %bb.0:
-; CHECK32_64-NEXT:    andi. 5, 6, 32
-; CHECK32_64-NEXT:    clrlwi 5, 6, 27
-; CHECK32_64-NEXT:    bc 12, 2, .LBB11_2
-; CHECK32_64-NEXT:  # %bb.1:
-; CHECK32_64-NEXT:    ori 7, 4, 0
-; CHECK32_64-NEXT:    b .LBB11_3
-; CHECK32_64-NEXT:  .LBB11_2:
-; CHECK32_64-NEXT:    addi 7, 3, 0
-; CHECK32_64-NEXT:    addi 3, 4, 0
-; CHECK32_64-NEXT:  .LBB11_3:
-; CHECK32_64-NEXT:    subfic 6, 5, 32
-; CHECK32_64-NEXT:    srw 4, 7, 5
-; CHECK32_64-NEXT:    slw 8, 3, 6
-; CHECK32_64-NEXT:    srw 5, 3, 5
-; CHECK32_64-NEXT:    slw 6, 7, 6
-; CHECK32_64-NEXT:    or 3, 8, 4
-; CHECK32_64-NEXT:    or 4, 6, 5
-; CHECK32_64-NEXT:    blr
+; CHECK32-LABEL: rotr_i64:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    andi. 5, 6, 32
+; CHECK32-NEXT:    mr 5, 3
+; CHECK32-NEXT:    beq 0, .LBB11_2
+; CHECK32-NEXT:  # %bb.1:
+; CHECK32-NEXT:    mr 5, 4
+; CHECK32-NEXT:  .LBB11_2:
+; CHECK32-NEXT:    clrlwi 7, 6, 27
+; CHECK32-NEXT:    srw 6, 5, 7
+; CHECK32-NEXT:    beq 0, .LBB11_4
+; CHECK32-NEXT:  # %bb.3:
+; CHECK32-NEXT:    mr 4, 3
+; CHECK32-NEXT:  .LBB11_4:
+; CHECK32-NEXT:    subfic 3, 7, 32
+; CHECK32-NEXT:    srw 7, 4, 7
+; CHECK32-NEXT:    slw 4, 4, 3
+; CHECK32-NEXT:    slw 5, 5, 3
+; CHECK32-NEXT:    or 3, 4, 6
+; CHECK32-NEXT:    or 4, 5, 7
+; CHECK32-NEXT:    blr
 ;
 ; CHECK64-LABEL: rotr_i64:
 ; CHECK64:       # %bb.0:

@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -350,13 +351,22 @@ SmallString<0> MCDwarfLineStr::getFinalizedData() {
   return Data;
 }
 
+size_t MCDwarfLineStr::addString(StringRef Path) {
+  return LineStrings.add(Path);
+}
+
 void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   int RefSize =
       dwarf::getDwarfOffsetByteSize(MCOS->getContext().getDwarfFormat());
-  size_t Offset = LineStrings.add(Path);
+  size_t Offset = addString(Path);
   if (UseRelocs) {
     MCContext &Ctx = MCOS->getContext();
-    MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset), RefSize);
+    if (Ctx.getAsmInfo()->needsDwarfSectionOffsetDirective()) {
+      MCOS->emitCOFFSecRel32(LineStrLabel, Offset);
+    } else {
+      MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset),
+                      RefSize);
+    }
   } else
     MCOS->emitIntValue(Offset, RefSize);
 }
@@ -382,7 +392,7 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
 }
 
 static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
-                               bool EmitMD5, bool HasSource,
+                               bool EmitMD5, bool HasAnySource,
                                std::optional<MCDwarfLineStr> &LineStr) {
   assert(!DwarfFile.Name.empty());
   if (LineStr)
@@ -397,7 +407,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
     MCOS->emitBinaryData(
         StringRef(reinterpret_cast<const char *>(Cksum.data()), Cksum.size()));
   }
-  if (HasSource) {
+  if (HasAnySource) {
     if (LineStr)
       LineStr->emitRef(MCOS, DwarfFile.Source.value_or(StringRef()));
     else {
@@ -448,7 +458,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   uint64_t Entries = 2;
   if (HasAllMD5)
     Entries += 1;
-  if (HasSource)
+  if (HasAnySource)
     Entries += 1;
   MCOS->emitInt8(Entries);
   MCOS->emitULEB128IntValue(dwarf::DW_LNCT_path);
@@ -460,7 +470,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
     MCOS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
     MCOS->emitULEB128IntValue(dwarf::DW_FORM_data16);
   }
-  if (HasSource) {
+  if (HasAnySource) {
     MCOS->emitULEB128IntValue(dwarf::DW_LNCT_LLVM_source);
     MCOS->emitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
                                       : dwarf::DW_FORM_string);
@@ -475,9 +485,9 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   assert((!RootFile.Name.empty() || MCDwarfFiles.size() >= 1) &&
          "No root file and no .file directives");
   emitOneV5FileEntry(MCOS, RootFile.Name.empty() ? MCDwarfFiles[1] : RootFile,
-                     HasAllMD5, HasSource, LineStr);
+                     HasAllMD5, HasAnySource, LineStr);
   for (unsigned i = 1; i < MCDwarfFiles.size(); ++i)
-    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasAllMD5, HasSource, LineStr);
+    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasAllMD5, HasAnySource, LineStr);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -594,7 +604,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
     trackMD5Usage(Checksum.has_value());
-    HasSource = (Source != std::nullopt);
+    HasAnySource |= Source.has_value();
   }
   if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
     return 0;
@@ -619,11 +629,6 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   // It is an error to see the same number more than once.
   if (!File.Name.empty())
     return make_error<StringError>("file number already allocated",
-                                   inconvertibleErrorCode());
-
-  // If any files have embedded source, they all must.
-  if (HasSource != (Source != std::nullopt))
-    return make_error<StringError>("inconsistent use of embedded source",
                                    inconvertibleErrorCode());
 
   if (Directory.empty()) {
@@ -658,8 +663,8 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   File.Checksum = Checksum;
   trackMD5Usage(Checksum.has_value());
   File.Source = Source;
-  if (Source)
-    HasSource = true;
+  if (Source.has_value())
+    HasAnySource = true;
 
   // return the allocated FileNumber.
   return FileNumber;
@@ -1212,7 +1217,7 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
   // The dwarf label's name does not have the symbol name's leading
   // underbar if any.
   StringRef Name = Symbol->getName();
-  if (Name.startswith("_"))
+  if (Name.starts_with("_"))
     Name = Name.substr(1, Name.size()-1);
 
   // Get the dwarf file number to be used for the dwarf label.
@@ -1294,8 +1299,8 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
 namespace {
 
 class FrameEmitterImpl {
-  int CFAOffset = 0;
-  int InitialCFAOffset = 0;
+  int64_t CFAOffset = 0;
+  int64_t InitialCFAOffset = 0;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1409,7 +1414,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     if (IsRelative)
       Offset -= CFAOffset;
     Offset = Offset / dataAlignmentFactor;
@@ -1460,6 +1465,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
     return;
+  case MCCFIInstruction::OpLabel:
+    Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
+    return;
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -1476,7 +1484,7 @@ void FrameEmitterImpl::emitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
     if (BaseLabel && Label) {
       MCSymbol *ThisSym = Label;
       if (ThisSym != BaseLabel) {
-        Streamer.emitDwarfAdvanceFrameAddr(BaseLabel, ThisSym);
+        Streamer.emitDwarfAdvanceFrameAddr(BaseLabel, ThisSym, Instr.getLoc());
         BaseLabel = ThisSym;
       }
     }
@@ -1772,23 +1780,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 namespace {
 
 struct CIEKey {
-  static const CIEKey getEmptyKey() {
-    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
-                  false, false);
-  }
-
-  static const CIEKey getTombstoneKey() {
-    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
-                  false, false);
-  }
-
-  CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
-         unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg, bool IsBKeyFrame, bool IsMTETaggedFrame)
-      : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
-        LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame),
-        IsMTETaggedFrame(IsMTETaggedFrame) {}
+  CIEKey() = default;
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
@@ -1814,43 +1806,27 @@ struct CIEKey {
                            Other.IsMTETaggedFrame);
   }
 
-  const MCSymbol *Personality;
-  unsigned PersonalityEncoding;
-  unsigned LsdaEncoding;
-  bool IsSignalFrame;
-  bool IsSimple;
-  unsigned RAReg;
-  bool IsBKeyFrame;
-  bool IsMTETaggedFrame;
+  bool operator==(const CIEKey &Other) const {
+    return Personality == Other.Personality &&
+           PersonalityEncoding == Other.PersonalityEncoding &&
+           LsdaEncoding == Other.LsdaEncoding &&
+           IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
+           RAReg == Other.RAReg && IsBKeyFrame == Other.IsBKeyFrame &&
+           IsMTETaggedFrame == Other.IsMTETaggedFrame;
+  }
+  bool operator!=(const CIEKey &Other) const { return !(*this == Other); }
+
+  const MCSymbol *Personality = nullptr;
+  unsigned PersonalityEncoding = 0;
+  unsigned LsdaEncoding = -1;
+  bool IsSignalFrame = false;
+  bool IsSimple = false;
+  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  bool IsBKeyFrame = false;
+  bool IsMTETaggedFrame = false;
 };
 
 } // end anonymous namespace
-
-namespace llvm {
-
-template <> struct DenseMapInfo<CIEKey> {
-  static CIEKey getEmptyKey() { return CIEKey::getEmptyKey(); }
-  static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
-
-  static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(
-        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg,
-                     Key.IsBKeyFrame, Key.IsMTETaggedFrame));
-  }
-
-  static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
-    return LHS.Personality == RHS.Personality &&
-           LHS.PersonalityEncoding == RHS.PersonalityEncoding &&
-           LHS.LsdaEncoding == RHS.LsdaEncoding &&
-           LHS.IsSignalFrame == RHS.IsSignalFrame &&
-           LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
-           LHS.IsBKeyFrame == RHS.IsBKeyFrame &&
-           LHS.IsMTETaggedFrame == RHS.IsMTETaggedFrame;
-  }
-};
-
-} // end namespace llvm
 
 void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                                bool IsEH) {
@@ -1893,9 +1869,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   MCSymbol *SectionStart = Context.createTempSymbol();
   Streamer.emitLabel(SectionStart);
 
-  DenseMap<CIEKey, const MCSymbol *> CIEStarts;
-
-  const MCSymbol *DummyDebugKey = nullptr;
   bool CanOmitDwarf = MOFI->getOmitDwarfIfHaveCompactUnwind();
   // Sort the FDEs by their corresponding CIE before we emit them.
   // This isn't technically necessary according to the DWARF standard,
@@ -1906,6 +1879,8 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                     [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
                       return CIEKey(X) < CIEKey(Y);
                     });
+  CIEKey LastKey;
+  const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
@@ -1920,11 +1895,12 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       continue;
 
     CIEKey Key(Frame);
-    const MCSymbol *&CIEStart = IsEH ? CIEStarts[Key] : DummyDebugKey;
-    if (!CIEStart)
-      CIEStart = &Emitter.EmitCIE(Frame);
+    if (!LastCIEStart || (IsEH && Key != LastKey)) {
+      LastKey = Key;
+      LastCIEStart = &Emitter.EmitCIE(Frame);
+    }
 
-    Emitter.EmitFDE(*CIEStart, Frame, I == E, *SectionStart);
+    Emitter.EmitFDE(*LastCIEStart, Frame, I == E, *SectionStart);
   }
 }
 
@@ -1936,8 +1912,9 @@ void MCDwarfFrameEmitter::encodeAdvanceLoc(MCContext &Context,
   if (AddrDelta == 0)
     return;
 
-  support::endianness E =
-      Context.getAsmInfo()->isLittleEndian() ? support::little : support::big;
+  llvm::endianness E = Context.getAsmInfo()->isLittleEndian()
+                           ? llvm::endianness::little
+                           : llvm::endianness::big;
 
   if (isUIntN(6, AddrDelta)) {
     uint8_t Opcode = dwarf::DW_CFA_advance_loc | AddrDelta;

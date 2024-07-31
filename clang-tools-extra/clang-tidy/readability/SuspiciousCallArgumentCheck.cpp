@@ -138,11 +138,11 @@ static bool applyAbbreviationHeuristic(
     const llvm::StringMap<std::string> &AbbreviationDictionary, StringRef Arg,
     StringRef Param) {
   if (AbbreviationDictionary.contains(Arg) &&
-      Param.equals(AbbreviationDictionary.lookup(Arg)))
+      Param == AbbreviationDictionary.lookup(Arg))
     return true;
 
   if (AbbreviationDictionary.contains(Param) &&
-      Arg.equals(AbbreviationDictionary.lookup(Param)))
+      Arg == AbbreviationDictionary.lookup(Param))
     return true;
 
   return false;
@@ -239,7 +239,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   std::ptrdiff_t L = 0;
   for (std::ptrdiff_t I = 0; I < ParamLen; ++I) {
     if (ParamFlags[I] == 1) {
-      std::ptrdiff_t J;
+      std::ptrdiff_t J = 0;
       for (J = L; J < ArgLen; ++J)
         if (ArgFlags[J] == 1) {
           L = J + 1;

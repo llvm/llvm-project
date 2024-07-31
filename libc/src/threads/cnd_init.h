@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_THREADS_CND_INIT_H
 #define LLVM_LIBC_SRC_THREADS_CND_INIT_H
 
-#include "include/threads.h"
+#include "src/__support/macros/config.h"
+#include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int cnd_init(cnd_t *cond);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_CND_INIT_H

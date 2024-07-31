@@ -19,35 +19,12 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 using namespace clang;
 using namespace ento;
 
 namespace {
-
-// for ( int a = ...) ... true
-// for ( int a : ...) ... true
-// if ( int* a = ) ... true
-// anything else ... false
-bool isDeclaredInForOrIf(const VarDecl *Var) {
-  assert(Var);
-  auto &ASTCtx = Var->getASTContext();
-  auto parent = ASTCtx.getParents(*Var);
-
-  if (parent.size() == 1) {
-    if (auto *DS = parent.begin()->get<DeclStmt>()) {
-      DynTypedNodeList grandParent = ASTCtx.getParents(*DS);
-      if (grandParent.size() == 1) {
-        return grandParent.begin()->get<ForStmt>() ||
-               grandParent.begin()->get<IfStmt>() ||
-               grandParent.begin()->get<CXXForRangeStmt>();
-      }
-    }
-  }
-  return false;
-}
 
 // FIXME: should be defined by anotations in the future
 bool isRefcountedStringsHack(const VarDecl *V) {
@@ -144,6 +121,11 @@ public:
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
       const UncountedLocalVarsChecker *Checker;
+
+      TrivialFunctionAnalysis TFA;
+
+      using Base = RecursiveASTVisitor<LocalVisitor>;
+
       explicit LocalVisitor(const UncountedLocalVarsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
@@ -153,7 +135,49 @@ public:
       bool shouldVisitImplicitCode() const { return false; }
 
       bool VisitVarDecl(VarDecl *V) {
-        Checker->visitVarDecl(V);
+        auto *Init = V->getInit();
+        if (Init && V->isLocalVarDecl())
+          Checker->visitVarDecl(V, Init);
+        return true;
+      }
+
+      bool VisitBinaryOperator(const BinaryOperator *BO) {
+        if (BO->isAssignmentOp()) {
+          if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+            if (auto *V = dyn_cast<VarDecl>(VarRef->getDecl()))
+              Checker->visitVarDecl(V, BO->getRHS());
+          }
+        }
+        return true;
+      }
+
+      bool TraverseIfStmt(IfStmt *IS) {
+        if (!TFA.isTrivial(IS))
+          return Base::TraverseIfStmt(IS);
+        return true;
+      }
+
+      bool TraverseForStmt(ForStmt *FS) {
+        if (!TFA.isTrivial(FS))
+          return Base::TraverseForStmt(FS);
+        return true;
+      }
+
+      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) {
+        if (!TFA.isTrivial(FRS))
+          return Base::TraverseCXXForRangeStmt(FRS);
+        return true;
+      }
+
+      bool TraverseWhileStmt(WhileStmt *WS) {
+        if (!TFA.isTrivial(WS))
+          return Base::TraverseWhileStmt(WS);
+        return true;
+      }
+
+      bool TraverseCompoundStmt(CompoundStmt *CS) {
+        if (!TFA.isTrivial(CS))
+          return Base::TraverseCompoundStmt(CS);
         return true;
       }
     };
@@ -162,7 +186,7 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitVarDecl(const VarDecl *V) const {
+  void visitVarDecl(const VarDecl *V, const Expr *Value) const {
     if (shouldSkipVarDecl(V))
       return;
 
@@ -172,73 +196,90 @@ public:
 
     std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
     if (IsUncountedPtr && *IsUncountedPtr) {
-      const Expr *const InitExpr = V->getInit();
-      if (!InitExpr)
-        return; // FIXME: later on we might warn on uninitialized vars too
+      if (tryToFindPtrOrigin(
+              Value, /*StopAtFirstRefCountedObj=*/false,
+              [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
+                if (!InitArgOrigin)
+                  return true;
 
-      const clang::Expr *const InitArgOrigin =
-          tryToFindPtrOrigin(InitExpr, /*StopAtFirstRefCountedObj=*/false)
-              .first;
-      if (!InitArgOrigin)
+                if (isa<CXXThisExpr>(InitArgOrigin))
+                  return true;
+
+                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                  return true;
+
+                if (isa<IntegerLiteral>(InitArgOrigin))
+                  return true;
+
+                if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
+                  if (auto *MaybeGuardian =
+                          dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+                    const auto *MaybeGuardianArgType =
+                        MaybeGuardian->getType().getTypePtr();
+                    if (MaybeGuardianArgType) {
+                      const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
+                          MaybeGuardianArgType->getAsCXXRecordDecl();
+                      if (MaybeGuardianArgCXXRecord) {
+                        if (MaybeGuardian->isLocalVarDecl() &&
+                            (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                             isRefcountedStringsHack(MaybeGuardian)) &&
+                            isGuardedScopeEmbeddedInGuardianScope(
+                                V, MaybeGuardian))
+                          return true;
+                      }
+                    }
+
+                    // Parameters are guaranteed to be safe for the duration of
+                    // the call by another checker.
+                    if (isa<ParmVarDecl>(MaybeGuardian))
+                      return true;
+                  }
+                }
+
+                return false;
+              }))
         return;
 
-      if (isa<CXXThisExpr>(InitArgOrigin))
-        return;
-
-      if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
-        if (auto *MaybeGuardian =
-                dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-          const auto *MaybeGuardianArgType =
-              MaybeGuardian->getType().getTypePtr();
-          if (!MaybeGuardianArgType)
-            return;
-          const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-              MaybeGuardianArgType->getAsCXXRecordDecl();
-          if (!MaybeGuardianArgCXXRecord)
-            return;
-
-          if (MaybeGuardian->isLocalVarDecl() &&
-              (isRefCounted(MaybeGuardianArgCXXRecord) ||
-               isRefcountedStringsHack(MaybeGuardian)) &&
-              isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian)) {
-            return;
-          }
-
-          // Parameters are guaranteed to be safe for the duration of the call
-          // by another checker.
-          if (isa<ParmVarDecl>(MaybeGuardian))
-            return;
-        }
-      }
-
-      reportBug(V);
+      reportBug(V, Value);
     }
   }
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
-    if (!V->isLocalVarDecl())
-      return true;
-
-    if (isDeclaredInForOrIf(V))
-      return true;
-
-    return false;
+    return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
-  void reportBug(const VarDecl *V) const {
+  void reportBug(const VarDecl *V, const Expr *Value) const {
     assert(V);
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "Local variable ";
-    printQuotedQualifiedName(Os, V);
-    Os << " is uncounted and unsafe.";
+    if (dyn_cast<ParmVarDecl>(V)) {
+      Os << "Assignment to an uncounted parameter ";
+      printQuotedQualifiedName(Os, V);
+      Os << " is unsafe.";
 
-    PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
-    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(V->getSourceRange());
-    BR->emitReport(std::move(Report));
+      PathDiagnosticLocation BSLoc(Value->getExprLoc(), BR->getSourceManager());
+      auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+      Report->addRange(Value->getSourceRange());
+      BR->emitReport(std::move(Report));
+    } else {
+      if (V->hasLocalStorage())
+        Os << "Local variable ";
+      else if (V->isStaticLocal())
+        Os << "Static local variable ";
+      else if (V->hasGlobalStorage())
+        Os << "Global variable ";
+      else
+        Os << "Variable ";
+      printQuotedQualifiedName(Os, V);
+      Os << " is uncounted and unsafe.";
+
+      PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
+      auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+      Report->addRange(V->getSourceRange());
+      BR->emitReport(std::move(Report));
+    }
   }
 };
 } // namespace

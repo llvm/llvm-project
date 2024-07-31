@@ -32,8 +32,6 @@
 #include "llvm/TargetParser/Host.h"
 #include <stdlib.h>
 
-using llvm::StringRef;
-
 // main frontend method. Lives inside fc1_main.cpp
 extern int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0);
 
@@ -55,7 +53,7 @@ createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
   unsigned missingArgIndex, missingArgCount;
   llvm::opt::InputArgList args = clang::driver::getDriverOptTable().ParseArgs(
       argv.slice(1), missingArgIndex, missingArgCount,
-      /*FlagsToInclude=*/clang::driver::options::FlangOption);
+      llvm::opt::Visibility(clang::driver::options::FlangOption));
 
   (void)Fortran::frontend::parseDiagnosticArgs(*diagOpts, args);
 
@@ -101,13 +99,13 @@ int main(int argc, const char **argv) {
   auto firstArg = std::find_if(args.begin() + 1, args.end(),
                                [](const char *a) { return a != nullptr; });
   if (firstArg != args.end()) {
-    if (llvm::StringRef(args[1]).startswith("-cc1")) {
+    if (llvm::StringRef(args[1]).starts_with("-cc1")) {
       llvm::errs() << "error: unknown integrated tool '" << args[1] << "'. "
                    << "Valid tools include '-fc1'.\n";
       return 1;
     }
     // Call flang-new frontend
-    if (llvm::StringRef(args[1]).startswith("-fc1")) {
+    if (llvm::StringRef(args[1]).starts_with("-fc1")) {
       return executeFC1Tool(args);
     }
   }
@@ -132,6 +130,9 @@ int main(int argc, const char **argv) {
                                   llvm::sys::getDefaultTargetTriple(), diags,
                                   "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
+#ifdef FLANG_RUNTIME_F128_MATH_LIB
+  theDriver.setFlangF128MathLibrary(FLANG_RUNTIME_F128_MATH_LIB);
+#endif
   std::unique_ptr<clang::driver::Compilation> c(
       theDriver.BuildCompilation(args));
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>

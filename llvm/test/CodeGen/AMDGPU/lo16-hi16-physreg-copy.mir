@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx802 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}lo_to_lo:
 # GCN: v_mov_b32_sdwa v1, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
@@ -48,7 +48,6 @@ body:             |
 
 # GCN-LABEL: {{^}}lo_to_lo_samereg:
 # GCN:        s_waitcnt
-# GFX10-NEXT: s_waitcnt_vscnt
 # GCN-NEXT:   s_endpgm
 name: lo_to_lo_samereg
 tracksRegLiveness: true
@@ -83,7 +82,6 @@ body:             |
 
 # GCN-LABEL: {{^}}hi_to_hi_samereg:
 # GCN:      s_waitcnt
-# GFX10-NEXT: s_waitcnt_vscnt
 # GCN-NEXT: s_endpgm
 name: hi_to_hi_samereg
 tracksRegLiveness: true
@@ -182,7 +180,6 @@ body:             |
 # NB: copy of undef just killed instead of expansion
 # GCN-LABEL: {{^}}lo_to_lo_undef:
 # GCN:        s_waitcnt
-# GFX10-NEXT: s_waitcnt_vscnt
 # GCN-NEXT:   v_mov_b32_e32 v2, v1
 # GCN-NEXT:   s_endpgm
 name: lo_to_lo_undef

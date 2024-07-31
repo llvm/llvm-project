@@ -17,24 +17,9 @@ def run(f):
 
 
 @run
-def getParentLoop():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
-    )
-    with InsertionPoint(sequence.body):
-        loop.GetParentForOp(
-            transform.OperationType.get("scf.for"), sequence.bodyTarget, num_loops=2
-        )
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: getParentLoop
-    # CHECK: = transform.loop.get_parent_for %
-    # CHECK: num_loops = 2
-
-
-@run
 def loopOutline():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("scf.for"),
     )
@@ -54,21 +39,39 @@ def loopOutline():
 @run
 def loopPeel():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("scf.for"),
     )
     with InsertionPoint(sequence.body):
-        loop.LoopPeelOp(pdl.OperationType.get(), sequence.bodyTarget)
+        loop.LoopPeelOp(transform.AnyOpType.get(), transform.AnyOpType.get(), sequence.bodyTarget)
         transform.YieldOp()
     # CHECK-LABEL: TEST: loopPeel
     # CHECK: = transform.loop.peel %
+
+@run
+def loopPeel_peel_front():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("scf.for"),
+    )
+    with InsertionPoint(sequence.body):
+        loop.LoopPeelOp(
+            transform.AnyOpType.get(),
+            transform.AnyOpType.get(),
+            sequence.bodyTarget,
+            peel_front=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: loopPeel_peel_front
+    # CHECK: = transform.loop.peel %[[ARG0:.*]] {peel_front = true}
 
 
 @run
 def loopPipeline():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("scf.for"),
     )
@@ -86,7 +89,7 @@ def loopPipeline():
 @run
 def loopUnroll():
     sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.PROPAGATE,
+        transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("scf.for"),
     )

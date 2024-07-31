@@ -2,7 +2,8 @@
 // MCPU_PPC64: "-target-cpu" "ppc64"
 
 /// We cannot check much for -mcpu=native, but it should be replaced by a CPU name.
-// RUN: %clang -### -c --target=powerpc64 %s -mcpu=native 2>&1 | FileCheck --check-prefix=MCPU_NATIVE %s
+// RUN: %clang -### -c --target=powerpc64 %s -mcpu=native 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=MCPU_NATIVE %s
 // MCPU_NATIVE-NOT: "-target-cpu" "native"
 
 /// Check that we are passing unknown mcpu options to the backend so an error
@@ -40,5 +41,5 @@
 //
 // GENERIC: "-target-cpu" "ppc64"
 
-// RUN: %clang -### -c --target=powerpc64 %s -march=generic 2>&1 | FileCheck --check-prefix=MARCH %s
+// RUN: not %clang -### -c --target=powerpc64 %s -march=generic 2>&1 | FileCheck --check-prefix=MARCH %s
 // MARCH: error: unsupported option '-march=' for target 'powerpc64'

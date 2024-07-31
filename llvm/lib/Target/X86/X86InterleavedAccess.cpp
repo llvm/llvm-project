@@ -18,7 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -112,7 +112,7 @@ public:
                                      const X86Subtarget &STarget,
                                      IRBuilder<> &B)
       : Inst(I), Shuffles(Shuffs), Indices(Ind), Factor(F), Subtarget(STarget),
-        DL(Inst->getModule()->getDataLayout()), Builder(B) {}
+        DL(Inst->getDataLayout()), Builder(B) {}
 
   /// Returns true if this interleaved access group can be lowered into
   /// x86-specific instructions/intrinsics, false otherwise.
@@ -193,22 +193,18 @@ void X86InterleavedAccessGroup::decompose(
 
   // Decompose the load instruction.
   LoadInst *LI = cast<LoadInst>(VecInst);
-  Type *VecBaseTy, *VecBasePtrTy;
-  Value *VecBasePtr;
+  Type *VecBaseTy;
   unsigned int NumLoads = NumSubVectors;
   // In the case of stride 3 with a vector of 32 elements load the information
   // in the following way:
   // [0,1...,VF/2-1,VF/2+VF,VF/2+VF+1,...,2VF-1]
   unsigned VecLength = DL.getTypeSizeInBits(VecWidth);
+  Value *VecBasePtr = LI->getPointerOperand();
   if (VecLength == 768 || VecLength == 1536) {
     VecBaseTy = FixedVectorType::get(Type::getInt8Ty(LI->getContext()), 16);
-    VecBasePtrTy = VecBaseTy->getPointerTo(LI->getPointerAddressSpace());
-    VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
     NumLoads = NumSubVectors * (VecLength / 384);
   } else {
     VecBaseTy = SubVecTy;
-    VecBasePtrTy = VecBaseTy->getPointerTo(LI->getPointerAddressSpace());
-    VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
   }
   // Generate N loads of T type.
   assert(VecBaseTy->getPrimitiveSizeInBits().isKnownMultipleOf(8) &&

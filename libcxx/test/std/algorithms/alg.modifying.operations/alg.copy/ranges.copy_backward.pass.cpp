@@ -9,8 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// TODO: make `join_view` non-experimental once D2770 is implemented.
-// UNSUPPORTED: !c++experimental
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
@@ -247,9 +245,9 @@ constexpr bool test() {
   { // check that an iterator is returned with a borrowing range
     std::array in {1, 2, 3, 4};
     std::array<int, 4> out;
-    std::same_as<std::ranges::in_out_result<int*, int*>> auto ret =
+    std::same_as<std::ranges::in_out_result<std::array<int, 4>::iterator, int*>> auto ret =
         std::ranges::copy_backward(std::views::all(in), out.data() + out.size());
-    assert(ret.in == in.data() + in.size());
+    assert(ret.in == in.end());
     assert(ret.out == out.data());
     assert(in == out);
   }

@@ -28,7 +28,7 @@ void testva (int n, ...) {
   // CHECK: [[AP:%[a-z0-9]+]] = alloca ptr, align 4
   // CHECK: [[V5:%[a-z0-9]+]] = alloca %struct.x, align 4
   // CHECK: [[TMP:%[a-z0-9]+]] = alloca [4 x i32], align 4
-  // CHECK: call void @llvm.va_start(ptr [[AP]])
+  // CHECK: call void @llvm.va_start.p0(ptr [[AP]])
 
   char* v1 = va_arg (ap, char*);
   f(v1);

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood -r600-ir-structurize=0 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood -r600-ir-structurize=0 | FileCheck %s
 ; Test case for a crash in the AMDILCFGStructurizer from a CFG like this:
 ;
 ;                            entry

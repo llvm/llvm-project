@@ -10,13 +10,14 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, getppid, ()) {
-  return __llvm_libc::syscall_impl(SYS_getppid);
+  return LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_getppid);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

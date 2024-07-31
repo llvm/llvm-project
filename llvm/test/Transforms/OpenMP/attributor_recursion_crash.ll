@@ -19,7 +19,7 @@ define weak amdgpu_kernel void @k() {
 ; CHECK-NEXT:    [[PRE1:%.*]] = phi ptr [ [[DOTPRE158_I]], [[BB3]] ], [ null, [[BB2]] ]
 ; CHECK-NEXT:    br i1 false, label [[BB6]], label [[BB5:%.*]]
 ; CHECK:       BB5:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TS:%.*]], ptr [[DOTPRE158_I]], i64 0, i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_TS:%.*]], ptr [[PRE1]], i64 0, i32 1
 ; CHECK-NEXT:    [[Q3:%.*]] = load ptr, ptr [[GEP]], align 8
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       BB6:

@@ -71,6 +71,9 @@ FormatTokenLexer::FormatTokenLexer(
     auto Identifier = &IdentTable.get(StatementAttributeLikeMacro);
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
+
+  for (const auto &TypeName : Style.TypeNames)
+    TypeNames.insert(&IdentTable.get(TypeName));
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -89,6 +92,10 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // This needs to come after tokens have been merged so that C#
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
+    }
+    if (Style.isTableGen()) {
+      handleTableGenMultilineString();
+      handleTableGenNumericLikeIdentifier();
     }
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
@@ -250,7 +257,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                           TT_BinaryOperator)) {
       return;
     }
-    // Module paths in specify blocks and implications in properties.
+    // Module paths in specify blocks and the implication and boolean equality
+    // operators.
     if (tryMergeTokensAny({{tok::plusequal, tok::greater},
                            {tok::plus, tok::star, tok::greater},
                            {tok::minusequal, tok::greater},
@@ -262,8 +270,48 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::pipe, tok::arrow},
                            {tok::hash, tok::minus, tok::hash},
                            {tok::hash, tok::equal, tok::hash}},
-                          TT_BinaryOperator)) {
+                          TT_BinaryOperator) ||
+        Tokens.back()->is(tok::arrow)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+  }
+  if (Style.isTableGen()) {
+    // TableGen's Multi line string starts with [{
+    if (tryMergeTokens({tok::l_square, tok::l_brace},
+                       TT_TableGenMultiLineString)) {
+      // Set again with finalizing. This must never be annotated as other types.
+      Tokens.back()->setFinalizedType(TT_TableGenMultiLineString);
+      Tokens.back()->Tok.setKind(tok::string_literal);
+      return;
+    }
+    // TableGen's bang operator is the form !<name>.
+    // !cond is a special case with specific syntax.
+    if (tryMergeTokens({tok::exclaim, tok::identifier},
+                       TT_TableGenBangOperator)) {
+      Tokens.back()->Tok.setKind(tok::identifier);
+      Tokens.back()->Tok.setIdentifierInfo(nullptr);
+      if (Tokens.back()->TokenText == "!cond")
+        Tokens.back()->setFinalizedType(TT_TableGenCondOperator);
+      else
+        Tokens.back()->setFinalizedType(TT_TableGenBangOperator);
+      return;
+    }
+    if (tryMergeTokens({tok::exclaim, tok::kw_if}, TT_TableGenBangOperator)) {
+      // Here, "! if" becomes "!if".  That is, ! captures if even when the space
+      // exists. That is only one possibility in TableGen's syntax.
+      Tokens.back()->Tok.setKind(tok::identifier);
+      Tokens.back()->Tok.setIdentifierInfo(nullptr);
+      Tokens.back()->setFinalizedType(TT_TableGenBangOperator);
+      return;
+    }
+    // +, - with numbers are literals. Not unary operators.
+    if (tryMergeTokens({tok::plus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
+      return;
+    }
+    if (tryMergeTokens({tok::minus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
       return;
     }
   }
@@ -274,7 +322,7 @@ bool FormatTokenLexer::tryMergeNSStringLiteral() {
     return false;
   auto &At = *(Tokens.end() - 2);
   auto &String = *(Tokens.end() - 1);
-  if (!At->is(tok::at) || !String->is(tok::string_literal))
+  if (At->isNot(tok::at) || String->isNot(tok::string_literal))
     return false;
   At->Tok.setKind(tok::string_literal);
   At->TokenText = StringRef(At->TokenText.begin(),
@@ -292,7 +340,7 @@ bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
     return false;
   auto &Hash = *(Tokens.end() - 2);
   auto &Identifier = *(Tokens.end() - 1);
-  if (!Hash->is(tok::hash) || !Identifier->is(tok::identifier))
+  if (Hash->isNot(tok::hash) || Identifier->isNot(tok::identifier))
     return false;
   Hash->Tok.setKind(tok::identifier);
   Hash->TokenText =
@@ -356,8 +404,8 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
     return false;
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
-  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
-      !Equal->is(tok::equal)) {
+  if (NullishCoalescing->isNot(TT_NullCoalescingOperator) ||
+      Equal->isNot(tok::equal)) {
     return false;
   }
   NullishCoalescing->Tok.setKind(tok::equal); // no '??=' in clang tokens.
@@ -396,7 +444,7 @@ bool FormatTokenLexer::tryTransformCSharpForEach() {
   if (Tokens.size() < 1)
     return false;
   auto &Identifier = *(Tokens.end() - 1);
-  if (!Identifier->is(tok::identifier))
+  if (Identifier->isNot(tok::identifier))
     return false;
   if (Identifier->TokenText != "foreach")
     return false;
@@ -411,9 +459,9 @@ bool FormatTokenLexer::tryMergeForEach() {
     return false;
   auto &For = *(Tokens.end() - 2);
   auto &Each = *(Tokens.end() - 1);
-  if (!For->is(tok::kw_for))
+  if (For->isNot(tok::kw_for))
     return false;
-  if (!Each->is(tok::identifier))
+  if (Each->isNot(tok::identifier))
     return false;
   if (Each->TokenText != "each")
     return false;
@@ -432,7 +480,7 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
   if (Tokens.size() < 2)
     return false;
   auto &Try = *(Tokens.end() - 2);
-  if (!Try->is(tok::kw_try))
+  if (Try->isNot(tok::kw_try))
     return false;
   auto &Next = *(Tokens.end() - 1);
   if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
@@ -508,7 +556,7 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   SmallVectorImpl<FormatToken *>::const_iterator First =
       Tokens.end() - Kinds.size();
   for (unsigned i = 0; i < Kinds.size(); ++i)
-    if (!First[i]->is(Kinds[i]))
+    if (First[i]->isNot(Kinds[i]))
       return false;
 
   return tryMergeTokens(Kinds.size(), NewType);
@@ -706,12 +754,12 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   bool Verbatim = false;
   bool Interpolated = false;
-  if (TokenText.startswith(R"($@")") || TokenText.startswith(R"(@$")")) {
+  if (TokenText.starts_with(R"($@")") || TokenText.starts_with(R"(@$")")) {
     Verbatim = true;
     Interpolated = true;
-  } else if (TokenText.startswith(R"(@")")) {
+  } else if (TokenText.starts_with(R"(@")")) {
     Verbatim = true;
-  } else if (TokenText.startswith(R"($")")) {
+  } else if (TokenText.starts_with(R"($")")) {
     Interpolated = true;
   }
 
@@ -756,6 +804,75 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   assert(Offset < End);
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
+}
+
+void FormatTokenLexer::handleTableGenMultilineString() {
+  FormatToken *MultiLineString = Tokens.back();
+  if (MultiLineString->isNot(TT_TableGenMultiLineString))
+    return;
+
+  auto OpenOffset = Lex->getCurrentBufferOffset() - 2 /* "[{" */;
+  // "}]" is the end of multi line string.
+  auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
+  if (CloseOffset == StringRef::npos)
+    return;
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
+  MultiLineString->TokenText = Text;
+  resetLexer(SourceMgr.getFileOffset(
+      Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
+  auto FirstLineText = Text;
+  auto FirstBreak = Text.find('\n');
+  // Set ColumnWidth and LastLineColumnWidth when it has multiple lines.
+  if (FirstBreak != StringRef::npos) {
+    MultiLineString->IsMultiline = true;
+    FirstLineText = Text.substr(0, FirstBreak + 1);
+    // LastLineColumnWidth holds the width of the last line.
+    auto LastBreak = Text.rfind('\n');
+    MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+        Text.substr(LastBreak + 1), MultiLineString->OriginalColumn,
+        Style.TabWidth, Encoding);
+  }
+  // ColumnWidth holds only the width of the first line.
+  MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
+      FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+}
+
+void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
+  FormatToken *Tok = Tokens.back();
+  // TableGen identifiers can begin with digits. Such tokens are lexed as
+  // numeric_constant now.
+  if (Tok->isNot(tok::numeric_constant))
+    return;
+  StringRef Text = Tok->TokenText;
+  // The following check is based on llvm::TGLexer::LexToken.
+  // That lexes the token as a number if any of the following holds:
+  // 1. It starts with '+', '-'.
+  // 2. All the characters are digits.
+  // 3. The first non-digit character is 'b', and the next is '0' or '1'.
+  // 4. The first non-digit character is 'x', and the next is a hex digit.
+  // Note that in the case 3 and 4, if the next character does not exists in
+  // this token, the token is an identifier.
+  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+    return;
+  const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
+  // All the characters are digits
+  if (NonDigitPos == StringRef::npos)
+    return;
+  char FirstNonDigit = Text[NonDigitPos];
+  if (NonDigitPos < Text.size() - 1) {
+    char TheNext = Text[NonDigitPos + 1];
+    // Regarded as a binary number.
+    if (FirstNonDigit == 'b' && (TheNext == '0' || TheNext == '1'))
+      return;
+    // Regarded as hex number.
+    if (FirstNonDigit == 'x' && isxdigit(TheNext))
+      return;
+  }
+  if (isalpha(FirstNonDigit) || FirstNonDigit == '_') {
+    // This is actually an identifier in TableGen.
+    Tok->Tok.setKind(tok::identifier);
+    Tok->Tok.setIdentifierInfo(nullptr);
+  }
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
@@ -849,14 +966,14 @@ bool FormatTokenLexer::tryMerge_TMacro() {
   if (Tokens.size() < 4)
     return false;
   FormatToken *Last = Tokens.back();
-  if (!Last->is(tok::r_paren))
+  if (Last->isNot(tok::r_paren))
     return false;
 
   FormatToken *String = Tokens[Tokens.size() - 2];
-  if (!String->is(tok::string_literal) || String->IsMultiline)
+  if (String->isNot(tok::string_literal) || String->IsMultiline)
     return false;
 
-  if (!Tokens[Tokens.size() - 3]->is(tok::l_paren))
+  if (Tokens[Tokens.size() - 3]->isNot(tok::l_paren))
     return false;
 
   FormatToken *Macro = Tokens[Tokens.size() - 4];
@@ -1105,7 +1222,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
   if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
-      FormatTok->is(tok::comment) && FormatTok->TokenText.startswith("//")) {
+      FormatTok->is(tok::comment) && FormatTok->TokenText.starts_with("//")) {
     size_t BackslashPos = FormatTok->TokenText.find('\\');
     while (BackslashPos != StringRef::npos) {
       if (BackslashPos + 1 < FormatTok->TokenText.size() &&
@@ -1177,6 +1294,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
                                   tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
       FormatTok->Tok.setIdentifierInfo(nullptr);
+    } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
+      FormatTok->Tok.setKind(tok::identifier);
+      FormatTok->Tok.setIdentifierInfo(nullptr);
     }
   } else if (FormatTok->is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);
@@ -1222,7 +1342,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   }
 
   if (Style.isCpp()) {
-    auto it = Macros.find(FormatTok->Tok.getIdentifierInfo());
+    auto *Identifier = FormatTok->Tok.getIdentifierInfo();
+    auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&
@@ -1240,6 +1361,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (TypeNames.contains(Identifier))
+        FormatTok->setFinalizedType(TT_TypeName);
     }
   }
 
@@ -1297,7 +1420,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
   // For formatting, treat unterminated string literals like normal string
   // literals.
   if (Tok.is(tok::unknown)) {
-    if (!Tok.TokenText.empty() && Tok.TokenText[0] == '"') {
+    if (Tok.TokenText.starts_with("\"")) {
       Tok.Tok.setKind(tok::string_literal);
       Tok.IsUnterminatedLiteral = true;
     } else if (Style.isJavaScript() && Tok.TokenText == "''") {
@@ -1305,11 +1428,8 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     }
   }
 
-  if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Proto ||
-       Style.Language == FormatStyle::LK_TextProto) &&
-      Tok.is(tok::char_constant)) {
+  if ((Style.isJavaScript() || Style.isProto()) && Tok.is(tok::char_constant))
     Tok.Tok.setKind(tok::string_literal);
-  }
 
   if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
     FormattingDisabled = false;
@@ -1322,7 +1442,6 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  LangOpts = getFormattingLangOpts(Style);
   Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
                       Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
   Lex->SetKeepWhitespaceMode(true);

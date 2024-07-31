@@ -56,12 +56,11 @@ THREADLOCAL u64 __msan_retval_tls[kMsanRetvalTlsSize / sizeof(u64)];
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_retval_origin_tls;
 
-SANITIZER_INTERFACE_ATTRIBUTE
-ALIGNED(16) THREADLOCAL u64 __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
+    __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
 
-SANITIZER_INTERFACE_ATTRIBUTE
-ALIGNED(16)
-THREADLOCAL u32 __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
+    __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
 
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
@@ -100,7 +99,17 @@ int msan_report_count = 0;
 
 // Array of stack origins.
 // FIXME: make it resizable.
-static const uptr kNumStackOriginDescrs = 1024 * 1024;
+// Although BSS memory doesn't cost anything until used, it is limited to 2GB
+// in some configurations (e.g., "relocation R_X86_64_PC32 out of range:
+// ... is not in [-2147483648, 2147483647]; references section '.bss'").
+// We use kNumStackOriginDescrs * (sizeof(char*) + sizeof(uptr)) == 64MB.
+#if SANITIZER_PPC
+// soft_rss_limit test (release_origin.c) fails on PPC if kNumStackOriginDescrs
+// is too high
+static const uptr kNumStackOriginDescrs = 1 * 1024 * 1024;
+#else
+static const uptr kNumStackOriginDescrs = 4 * 1024 * 1024;
+#endif  // SANITIZER_PPC
 static const char *StackOriginDescr[kNumStackOriginDescrs];
 static uptr StackOriginPC[kNumStackOriginDescrs];
 static atomic_uint32_t NumStackOriginDescrs;
@@ -138,8 +147,8 @@ static void RegisterMsanFlags(FlagParser *parser, Flags *f) {
 #include "msan_flags.inc"
 #undef MSAN_FLAG
 
-  FlagHandlerKeepGoing *fh_keep_going =
-      new (FlagParser::Alloc) FlagHandlerKeepGoing(&f->halt_on_error);
+  FlagHandlerKeepGoing *fh_keep_going = new (GetGlobalLowLevelAllocator())
+      FlagHandlerKeepGoing(&f->halt_on_error);
   parser->RegisterHandler("keep_going", fh_keep_going,
                           "deprecated, use halt_on_error");
 }
@@ -449,6 +458,7 @@ void __msan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializeInterceptors();
+  InstallAtForkHandler();
   CheckASLR();
   InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
@@ -466,7 +476,7 @@ void __msan_init() {
   __msan_clear_on_return();
   if (__msan_get_track_origins())
     VPrintf(1, "msan_track_origins\n");
-  if (!InitShadow(__msan_get_track_origins())) {
+  if (!InitShadowWithReExec(__msan_get_track_origins())) {
     Printf("FATAL: MemorySanitizer can not mmap the shadow memory.\n");
     Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
     Printf("FATAL: Disabling ASLR is known to cause this error.\n");

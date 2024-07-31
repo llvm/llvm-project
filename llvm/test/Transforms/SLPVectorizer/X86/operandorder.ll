@@ -35,7 +35,7 @@ define void @shuffle_operands1(ptr noalias %from, ptr noalias %to, double %v1, d
   ret void
 }
 
-define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -46,7 +46,7 @@ define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -60,7 +60,7 @@ define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP0]], [[TMP2]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -77,13 +77,13 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -94,7 +94,7 @@ define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -108,7 +108,7 @@ define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -125,13 +125,13 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
@@ -142,7 +142,7 @@ define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -156,7 +156,7 @@ define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -173,24 +173,28 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @shuffle_nodes_match1(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @shuffle_nodes_match1(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @shuffle_nodes_match1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr i8, ptr [[FROM:%.*]], i32 8
+; CHECK-NEXT:    [[V0_1:%.*]] = load double, ptr [[FROM]], align 4
+; CHECK-NEXT:    [[V0_2:%.*]] = load double, ptr [[FROM_1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -204,7 +208,7 @@ define void @shuffle_nodes_match1(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP1]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -221,28 +225,24 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
-define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @vecload_vs_broadcast4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, ptr [[FROM:%.*]], i32 1
-; CHECK-NEXT:    [[V0_1:%.*]] = load double, ptr [[FROM]], align 4
-; CHECK-NEXT:    [[V0_2:%.*]] = load double, ptr [[FROM_1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -256,7 +256,7 @@ define void @vecload_vs_broadcast4(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP1]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -273,20 +273,20 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void
 }
 
 
-define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1, double %v2) {
+define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1, double %v2, i1 %c) {
 ; CHECK-LABEL: @shuffle_nodes_match2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr double, ptr [[FROM:%.*]], i32 1
+; CHECK-NEXT:    [[FROM_1:%.*]] = getelementptr i8, ptr [[FROM:%.*]], i32 8
 ; CHECK-NEXT:    [[V0_1:%.*]] = load double, ptr [[FROM]], align 4
 ; CHECK-NEXT:    [[V0_2:%.*]] = load double, ptr [[FROM_1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i64 0
@@ -295,7 +295,7 @@ define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[P]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TO:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
 ;
@@ -309,7 +309,7 @@ define void @shuffle_nodes_match2(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i64 1
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
-; SSE2-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
+; SSE2-NEXT:    br i1 [[C:%.*]], label [[LP]], label [[EXT:%.*]]
 ; SSE2:       ext:
 ; SSE2-NEXT:    ret void
 ;
@@ -326,7 +326,7 @@ lp:
   %to_2 = getelementptr double, ptr %to, i64 1
   store double %v1_1, ptr %to
   store double %v1_2, ptr %to_2
-br i1 undef, label %lp, label %ext
+  br i1 %c, label %lp, label %ext
 
 ext:
   ret void

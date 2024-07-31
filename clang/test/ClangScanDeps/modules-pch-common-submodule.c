@@ -31,6 +31,7 @@
 // CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_sub.h",
 // CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
+// CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon"
 // CHECK-PCH-NEXT:     }
 // CHECK-PCH-NEXT:   ],
@@ -78,6 +79,7 @@
 // CHECK-TU-NEXT:         "[[PREFIX]]/mod_tu.h",
 // CHECK-TU-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-TU-NEXT:       ],
+// CHECK-TU-NEXT:       "link-libraries": [],
 // CHECK-TU-NEXT:       "name": "ModTU"
 // CHECK-TU-NEXT:     }
 // CHECK-TU-NEXT:   ],
@@ -94,7 +96,7 @@
 // CHECK-TU:            ],
 // CHECK-TU:            "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
-// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
+// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }

@@ -14,7 +14,6 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Errc.h"
 
@@ -93,8 +92,8 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         // Work on the assumption that jump table blocks don't
         // have a conditional successor.
         Valid = false;
-        errs() << "BOLT-WARNING: Jump table successor " << Succ->getName()
-               << " not contained in the jump table.\n";
+        BC.errs() << "BOLT-WARNING: Jump table successor " << Succ->getName()
+                  << " not contained in the jump table.\n";
       }
     }
     // If there are any leftover entries in the jump table, they
@@ -104,8 +103,8 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         Valid &= (Sym == Function->getFunctionEndLabel() ||
                   Sym == Function->getFunctionEndLabel(getFragmentNum()));
         if (!Valid) {
-          errs() << "BOLT-WARNING: Jump table contains illegal entry: "
-                 << Sym->getName() << "\n";
+          BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
+                    << Sym->getName() << "\n";
         }
       }
     }
@@ -132,21 +131,20 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         break;
       }
       case 2:
-        Valid = (CondBranch &&
-                 (TBB == getConditionalSuccessor(true)->getLabel() &&
-                  ((!UncondBranch && !FBB) ||
-                   (UncondBranch &&
-                    FBB == getConditionalSuccessor(false)->getLabel()))));
+        Valid =
+            CondBranch && TBB == getConditionalSuccessor(true)->getLabel() &&
+            (UncondBranch ? FBB == getConditionalSuccessor(false)->getLabel()
+                          : !FBB);
         break;
       }
     }
   }
   if (!Valid) {
-    errs() << "BOLT-WARNING: CFG invalid in " << *getFunction() << " @ "
-           << getName() << "\n";
+    BC.errs() << "BOLT-WARNING: CFG invalid in " << *getFunction() << " @ "
+              << getName() << "\n";
     if (JT) {
-      errs() << "Jump Table instruction addr = 0x"
-             << Twine::utohexstr(BC.MIB->getJumpTable(*Inst)) << "\n";
+      BC.errs() << "Jump Table instruction addr = 0x"
+                << Twine::utohexstr(BC.MIB->getJumpTable(*Inst)) << "\n";
       JT->print(errs());
     }
     getFunction()->dump();
@@ -406,45 +404,6 @@ bool BinaryBasicBlock::analyzeBranch(const MCSymbol *&TBB, const MCSymbol *&FBB,
                             CondBranch, UncondBranch);
 }
 
-bool BinaryBasicBlock::isMacroOpFusionPair(const_iterator I) const {
-  auto &MIB = Function->getBinaryContext().MIB;
-  ArrayRef<MCInst> Insts = Instructions;
-  return MIB->isMacroOpFusionPair(Insts.slice(I - begin()));
-}
-
-BinaryBasicBlock::const_iterator
-BinaryBasicBlock::getMacroOpFusionPair() const {
-  if (!Function->getBinaryContext().isX86())
-    return end();
-
-  if (getNumNonPseudos() < 2 || succ_size() != 2)
-    return end();
-
-  auto RI = getLastNonPseudo();
-  assert(RI != rend() && "cannot have an empty block with 2 successors");
-
-  BinaryContext &BC = Function->getBinaryContext();
-
-  // Skip instruction if it's an unconditional branch following
-  // a conditional one.
-  if (BC.MIB->isUnconditionalBranch(*RI))
-    ++RI;
-
-  if (!BC.MIB->isConditionalBranch(*RI))
-    return end();
-
-  // Start checking with instruction preceding the conditional branch.
-  ++RI;
-  if (RI == rend())
-    return end();
-
-  auto II = std::prev(RI.base()); // convert to a forward iterator
-  if (isMacroOpFusionPair(II))
-    return II;
-
-  return end();
-}
-
 MCInst *BinaryBasicBlock::getTerminatorBefore(MCInst *Pos) {
   BinaryContext &BC = Function->getBinaryContext();
   auto Itr = rbegin();
@@ -521,9 +480,9 @@ uint32_t BinaryBasicBlock::getNumPseudos() const {
       ++N;
 
   if (N != NumPseudos) {
-    errs() << "BOLT-ERROR: instructions for basic block " << getName()
-           << " in function " << *Function << ": calculated pseudos " << N
-           << ", set pseudos " << NumPseudos << ", size " << size() << '\n';
+    BC.errs() << "BOLT-ERROR: instructions for basic block " << getName()
+              << " in function " << *Function << ": calculated pseudos " << N
+              << ", set pseudos " << NumPseudos << ", size " << size() << '\n';
     llvm_unreachable("pseudos mismatch");
   }
 #endif
@@ -560,18 +519,18 @@ BinaryBasicBlock::getBranchStats(const BinaryBasicBlock *Succ) const {
 void BinaryBasicBlock::dump() const {
   BinaryContext &BC = Function->getBinaryContext();
   if (Label)
-    outs() << Label->getName() << ":\n";
-  BC.printInstructions(outs(), Instructions.begin(), Instructions.end(),
+    BC.outs() << Label->getName() << ":\n";
+  BC.printInstructions(BC.outs(), Instructions.begin(), Instructions.end(),
                        getOffset(), Function);
-  outs() << "preds:";
+  BC.outs() << "preds:";
   for (auto itr = pred_begin(); itr != pred_end(); ++itr) {
-    outs() << " " << (*itr)->getName();
+    BC.outs() << " " << (*itr)->getName();
   }
-  outs() << "\nsuccs:";
+  BC.outs() << "\nsuccs:";
   for (auto itr = succ_begin(); itr != succ_end(); ++itr) {
-    outs() << " " << (*itr)->getName();
+    BC.outs() << " " << (*itr)->getName();
   }
-  outs() << "\n";
+  BC.outs() << "\n";
 }
 
 uint64_t BinaryBasicBlock::estimateSize(const MCCodeEmitter *Emitter) const {
@@ -611,28 +570,6 @@ BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   Instructions.erase(II, end());
 
   return NewBlock;
-}
-
-void BinaryBasicBlock::updateOutputValues(const MCAsmLayout &Layout) {
-  if (!LocSyms)
-    return;
-
-  const uint64_t BBAddress = getOutputAddressRange().first;
-  const uint64_t BBOffset = Layout.getSymbolOffset(*getLabel());
-  for (const auto &LocSymKV : *LocSyms) {
-    const uint32_t InputFunctionOffset = LocSymKV.first;
-    const uint32_t OutputOffset = static_cast<uint32_t>(
-        Layout.getSymbolOffset(*LocSymKV.second) - BBOffset);
-    getOffsetTranslationTable().emplace_back(
-        std::make_pair(OutputOffset, InputFunctionOffset));
-
-    // Update reverse (relative to BAT) address lookup table for function.
-    if (getFunction()->requiresAddressTranslation()) {
-      getFunction()->getInputOffsetToAddressMap().emplace(
-          std::make_pair(InputFunctionOffset, OutputOffset + BBAddress));
-    }
-  }
-  LocSyms.reset(nullptr);
 }
 
 } // namespace bolt

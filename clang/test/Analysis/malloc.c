@@ -3,7 +3,9 @@
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix \
-// RUN:   -analyzer-checker=debug.ExprInspection
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 #include "Inputs/system-header-simulator.h"
 
@@ -47,6 +49,45 @@ void *_alloca(size_t size);
 void myfoo(int *p);
 void myfooint(int p);
 char *fooRetPtr(void);
+
+void t1(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  int *p = malloc(size); // expected-warning{{malloc is called with a tainted (potentially attacker controlled) value}}
+  free(p);
+}
+
+void t2(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  int *p = calloc(size,2); // expected-warning{{calloc is called with a tainted (potentially attacker controlled) value}}
+  free(p);
+}
+
+void t3(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  if (1024 < size)
+    return;
+  int *p = malloc(size); // No warning expected as the the user input is bound
+  free(p);
+}
+
+void t4(void) {
+  size_t size = 0;
+  int *p = malloc(sizeof(int));
+  scanf("%zu", &size);
+  p = (int*) realloc((void*) p, size); // expected-warning{{realloc is called with a tainted (potentially attacker controlled) value}}
+  free(p);
+}
+
+void t5(void) {
+  size_t size = 0;
+  int *p = alloca(sizeof(int));
+  scanf("%zu", &size);
+  p = (int*) alloca(size); // expected-warning{{alloca is called with a tainted (potentially attacker controlled) value}}
+}
+
 
 void f1(void) {
   int *p = malloc(12);
@@ -266,13 +307,21 @@ void CheckUseZeroAllocated1(void) {
 }
 
 char CheckUseZeroAllocated2(void) {
+  // NOTE: The `AllocaRegion` that models the return value of `alloca()`
+  // doesn't have an associated symbol, so the current implementation of
+  // `MallocChecker::checkUseZeroAllocated()` cannot provide warnings for it.
+  // However, other checkers like core.uninitialized.UndefReturn (that
+  // activates in these TCs) or the array bound checkers provide more generic,
+  // but still sufficient warnings in these cases, so I think it isn't
+  // important to cover this in MallocChecker.
   char *p = alloca(0);
-  return *p; // expected-warning {{Use of memory allocated with size zero}}
+  return *p; // expected-warning {{Undefined or garbage value returned to caller}}
 }
 
 char CheckUseZeroWinAllocated2(void) {
+  // Note: Same situation as `CheckUseZeroAllocated2()`.
   char *p = _alloca(0);
-  return *p; // expected-warning {{Use of memory allocated with size zero}}
+  return *p; // expected-warning {{Undefined or garbage value returned to caller}}
 }
 
 void UseZeroAllocated(int *p) {
@@ -683,7 +732,7 @@ void mallocCastToFP(void) {
   free(p);
 }
 
-// This tests that malloc() buffers are undefined by default
+// This tests that 'malloc()' buffers are undefined by default
 char mallocGarbage (void) {
 	char *buf = malloc(2);
 	char result = buf[1]; // expected-warning{{undefined}}
@@ -726,6 +775,22 @@ void paramFree(int *p) {
   free(p); // no warning
   myfoo(p); // expected-warning {{Use of memory after it is freed}}
 }
+
+void allocaFree(void) {
+  int *p = alloca(sizeof(int));
+  free(p); // expected-warning {{Memory allocated by 'alloca()' should not be deallocated}}
+}
+
+void allocaFreeBuiltin(void) {
+  int *p = __builtin_alloca(sizeof(int));
+  free(p); // expected-warning {{Memory allocated by 'alloca()' should not be deallocated}}
+}
+
+void allocaFreeBuiltinAlign(void) {
+  int *p = __builtin_alloca_with_align(sizeof(int), 64);
+  free(p); // expected-warning {{Memory allocated by 'alloca()' should not be deallocated}}
+}
+
 
 int* mallocEscapeRet(void) {
   int *p = malloc(12);
@@ -1230,7 +1295,6 @@ int my_main_warn(FILE *f) {
     return 0;// expected-warning {{leak}}
 }
 
-// <rdar://problem/10978247>.
 // some people use stack allocated memory as an optimization to avoid
 // a heap allocation for small work sizes.  This tests the analyzer's
 // understanding that the malloc'ed memory is not the same as stackBuffer.
@@ -1263,9 +1327,9 @@ void radar10978247_positive(int myValueSize) {
   else
     return; // expected-warning {{leak}}
 }
-// <rdar://problem/11269741> Previously this triggered a false positive
-// because malloc() is known to return uninitialized memory and the binding
-// of 'o' to 'p->n' was not getting propertly handled.  Now we report a leak.
+// Previously this triggered a false positive because 'malloc()' is known to
+// return uninitialized memory and the binding of 'o' to 'p->n' was not getting
+// propertly handled. Now we report a leak.
 struct rdar11269741_a_t {
   struct rdar11269741_b_t {
     int m;
@@ -1303,7 +1367,7 @@ void radar_11358224_test_double_assign_ints_positive_2(void)
 
 // Assume that functions which take a function pointer can free memory even if
 // they are defined in system headers and take the const pointer to the
-// allocated memory. (radar://11160612)
+// allocated memory.
 int const_ptr_and_callback(int, const char*, int n, void(*)(void*));
 void r11160612_1(void) {
   char *x = malloc(12);
@@ -1460,7 +1524,7 @@ void testCGContextLeak(void)
   // object doesn't escape and it hasn't been freed in this function.
 }
 
-// Allow xpc context to escape. radar://11635258
+// Allow xpc context to escape.
 // TODO: Would be great if we checked that the finalize_connection_context actually releases it.
 static void finalize_connection_context(void *ctx) {
   int *context = ctx;
@@ -1592,26 +1656,26 @@ void testOffsetDeallocate(int *memoryBlock) {
 void testOffsetOfRegionFreed(void) {
   __int64_t * array = malloc(sizeof(__int64_t)*2);
   array += 1;
-  free(&array[0]); // expected-warning{{Argument to free() is offset by 8 bytes from the start of memory allocated by malloc()}}
+  free(&array[0]); // expected-warning{{Argument to 'free()' is offset by 8 bytes from the start of memory allocated by 'malloc()'}}
 }
 
 void testOffsetOfRegionFreed2(void) {
   __int64_t *p = malloc(sizeof(__int64_t)*2);
   p += 1;
-  free(p); // expected-warning{{Argument to free() is offset by 8 bytes from the start of memory allocated by malloc()}}
+  free(p); // expected-warning{{Argument to 'free()' is offset by 8 bytes from the start of memory allocated by 'malloc()'}}
 }
 
 void testOffsetOfRegionFreed3(void) {
   char *r = malloc(sizeof(char));
   r = r - 10;
-  free(r); // expected-warning {{Argument to free() is offset by -10 bytes from the start of memory allocated by malloc()}}
+  free(r); // expected-warning {{Argument to 'free()' is offset by -10 bytes from the start of memory allocated by 'malloc()'}}
 }
 
 void testOffsetOfRegionFreedAfterFunctionCall(void) {
   int *p = malloc(sizeof(int)*2);
   p += 1;
   myfoo(p);
-  free(p); // expected-warning{{Argument to free() is offset by 4 bytes from the start of memory allocated by malloc()}}
+  free(p); // expected-warning{{Argument to 'free()' is offset by 4 bytes from the start of memory allocated by 'malloc()'}}
 }
 
 void testFixManipulatedPointerBeforeFree(void) {
@@ -1631,7 +1695,7 @@ void freeOffsetPointerPassedToFunction(void) {
   p[1] = 0;
   p += 1;
   myfooint(*p); // not passing the pointer, only a value pointed by pointer
-  free(p); // expected-warning {{Argument to free() is offset by 8 bytes from the start of memory allocated by malloc()}}
+  free(p); // expected-warning {{Argument to 'free()' is offset by 8 bytes from the start of memory allocated by 'malloc()'}}
 }
 
 int arbitraryInt(void);
@@ -1645,13 +1709,13 @@ void testFreeNonMallocPointerWithNoOffset(void) {
   char c;
   char *r = &c;
   r = r + 10;
-  free(r-10); // expected-warning {{Argument to free() is the address of the local variable 'c', which is not memory allocated by malloc()}}
+  free(r-10); // expected-warning {{Argument to 'free()' is the address of the local variable 'c', which is not memory allocated by 'malloc()'}}
 }
 
 void testFreeNonMallocPointerWithOffset(void) {
   char c;
   char *r = &c;
-  free(r+1); // expected-warning {{Argument to free() is the address of the local variable 'c', which is not memory allocated by malloc()}}
+  free(r+1); // expected-warning {{Argument to 'free()' is the address of the local variable 'c', which is not memory allocated by 'malloc()'}}
 }
 
 void testOffsetZeroDoubleFree(void) {
@@ -1671,14 +1735,14 @@ void testOffsetPassedToStrlenThenFree(void) {
   char * string = malloc(sizeof(char)*10);
   string += 1;
   int length = strlen(string);
-  free(string); // expected-warning {{Argument to free() is offset by 1 byte from the start of memory allocated by malloc()}}
+  free(string); // expected-warning {{Argument to 'free()' is offset by 1 byte from the start of memory allocated by 'malloc()'}}
 }
 
 void testOffsetPassedAsConst(void) {
   char * string = malloc(sizeof(char)*10);
   string += 1;
   passConstPtr(string);
-  free(string); // expected-warning {{Argument to free() is offset by 1 byte from the start of memory allocated by malloc()}}
+  free(string); // expected-warning {{Argument to 'free()' is offset by 1 byte from the start of memory allocated by 'malloc()'}}
 }
 
 char **_vectorSegments;
@@ -1778,12 +1842,12 @@ int testNoCheckerDataPropogationFromLogicalOpOperandToOpResult(void) {
 void (*fnptr)(int);
 void freeIndirectFunctionPtr(void) {
   void *p = (void *)fnptr;
-  free(p); // expected-warning {{Argument to free() is a function pointer}}
+  free(p); // expected-warning {{Argument to 'free()' is a function pointer}}
 }
 
 void freeFunctionPtr(void) {
   free((void *)fnptr);
-  // expected-warning@-1{{Argument to free() is a function pointer}}
+  // expected-warning@-1{{Argument to 'free()' is a function pointer}}
   // expected-warning@-2{{attempt to call free on non-heap object '(void *)fnptr'}}
 }
 
@@ -1841,8 +1905,8 @@ enum { BUFSIZE = 256 };
 void MEM34_C(void) {
   char buf[BUFSIZE];
   char *p = (char *)realloc(buf, 2 * BUFSIZE);
-  // expected-warning@-1{{Argument to realloc() is the address of the local \
-variable 'buf', which is not memory allocated by malloc() [unix.Malloc]}}
+  // expected-warning@-1{{Argument to 'realloc()' is the address of the local \
+variable 'buf', which is not memory allocated by 'malloc()' [unix.Malloc]}}
   if (p == NULL) {
     /* Handle error */
   }

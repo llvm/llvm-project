@@ -39,12 +39,12 @@ namespace lldb_private {
 /// Debugger maintains a list of BroadcastEventSpec's and when it is made
 class BroadcastEventSpec {
 public:
-  BroadcastEventSpec(const ConstString &broadcaster_class, uint32_t event_bits)
+  BroadcastEventSpec(llvm::StringRef broadcaster_class, uint32_t event_bits)
       : m_broadcaster_class(broadcaster_class), m_event_bits(event_bits) {}
 
   ~BroadcastEventSpec() = default;
 
-  ConstString GetBroadcasterClass() const { return m_broadcaster_class; }
+  const std::string &GetBroadcasterClass() const { return m_broadcaster_class; }
 
   uint32_t GetEventBits() const { return m_event_bits; }
 
@@ -67,7 +67,7 @@ public:
   bool operator<(const BroadcastEventSpec &rhs) const;
 
 private:
-  ConstString m_broadcaster_class;
+  std::string m_broadcaster_class;
   uint32_t m_event_bits;
 };
 
@@ -87,12 +87,6 @@ public:
 
   ~BroadcasterManager() = default;
 
-  uint32_t RegisterListenerForEvents(const lldb::ListenerSP &listener_sp,
-                                     const BroadcastEventSpec &event_spec);
-
-  bool UnregisterListenerForEvents(const lldb::ListenerSP &listener_sp,
-                                   const BroadcastEventSpec &event_spec);
-
   lldb::ListenerSP
   GetListenerForEventSpec(const BroadcastEventSpec &event_spec) const;
 
@@ -105,13 +99,20 @@ public:
   void Clear();
 
 private:
+  uint32_t
+  RegisterListenerForEventsNoLock(const lldb::ListenerSP &listener_sp,
+                                  const BroadcastEventSpec &event_spec);
+
+  bool UnregisterListenerForEventsNoLock(const lldb::ListenerSP &listener_sp,
+                                         const BroadcastEventSpec &event_spec);
+
   typedef std::pair<BroadcastEventSpec, lldb::ListenerSP> event_listener_key;
   typedef std::map<BroadcastEventSpec, lldb::ListenerSP> collection;
   typedef std::set<lldb::ListenerSP> listener_collection;
   collection m_event_map;
   listener_collection m_listeners;
 
-  mutable std::recursive_mutex m_manager_mutex;
+  mutable std::mutex m_manager_mutex;
 };
 
 /// \class Broadcaster Broadcaster.h "lldb/Utility/Broadcaster.h" An event
@@ -177,13 +178,12 @@ public:
     m_broadcaster_sp->BroadcastEvent(event_type, event_data_sp);
   }
 
-  void BroadcastEvent(uint32_t event_type, EventData *event_data = nullptr) {
-    m_broadcaster_sp->BroadcastEvent(event_type, event_data);
+  void BroadcastEvent(uint32_t event_type) {
+    m_broadcaster_sp->BroadcastEvent(event_type);
   }
 
-  void BroadcastEventIfUnique(uint32_t event_type,
-                              EventData *event_data = nullptr) {
-    m_broadcaster_sp->BroadcastEventIfUnique(event_type, event_data);
+  void BroadcastEventIfUnique(uint32_t event_type) {
+    m_broadcaster_sp->BroadcastEventIfUnique(event_type);
   }
 
   void Clear() { m_broadcaster_sp->Clear(); }
@@ -308,12 +308,16 @@ public:
   /// FIXME: Probably should make a ManagedBroadcaster subclass with all the
   /// bits needed to work with the BroadcasterManager, so that it is clearer
   /// how to add one.
-  virtual ConstString &GetBroadcasterClass() const;
+  virtual llvm::StringRef GetBroadcasterClass() const;
 
   lldb::BroadcasterManagerSP GetManager();
 
-  virtual void SetShadowListener(lldb::ListenerSP listener_sp) {
-    m_broadcaster_sp->m_shadow_listener = listener_sp;
+  void SetPrimaryListener(lldb::ListenerSP listener_sp) {
+    m_broadcaster_sp->SetPrimaryListener(listener_sp);
+  }
+
+  lldb::ListenerSP GetPrimaryListener() {
+    return m_broadcaster_sp->m_primary_listener_sp;
   }
 
 protected:
@@ -342,13 +346,12 @@ protected:
 
     void BroadcastEventIfUnique(lldb::EventSP &event_sp);
 
-    void BroadcastEvent(uint32_t event_type, EventData *event_data = nullptr);
+    void BroadcastEvent(uint32_t event_type);
 
     void BroadcastEvent(uint32_t event_type,
                         const lldb::EventDataSP &event_data_sp);
 
-    void BroadcastEventIfUnique(uint32_t event_type,
-                                EventData *event_data = nullptr);
+    void BroadcastEventIfUnique(uint32_t event_type);
 
     void Clear();
 
@@ -377,6 +380,8 @@ protected:
 
     bool EventTypeHasListeners(uint32_t event_type);
 
+    void SetPrimaryListener(lldb::ListenerSP listener_sp);
+
     bool RemoveListener(lldb_private::Listener *listener,
                         uint32_t event_mask = UINT32_MAX);
 
@@ -400,7 +405,9 @@ protected:
     typedef std::map<uint32_t, std::string> event_names_map;
 
     llvm::SmallVector<std::pair<lldb::ListenerSP, uint32_t &>, 4>
-    GetListeners();
+    GetListeners(uint32_t event_mask = UINT32_MAX, bool include_primary = true);
+
+    bool HasListeners(uint32_t event_mask);
 
     /// The broadcaster that this implements.
     Broadcaster &m_broadcaster;
@@ -409,12 +416,38 @@ protected:
     /// event bit.
     event_names_map m_event_names;
 
+    /// A Broadcaster can have zero, one or many listeners.  A Broadcaster with
+    /// zero listeners is a no-op, with one Listener is trivial.
+    /// In most cases of multiple Listeners,the Broadcaster treats all its
+    /// Listeners as equal, sending each event to all of the Listeners in no
+    /// guaranteed order.
+    /// However, some Broadcasters - in particular the Process broadcaster, can
+    /// designate one Listener to be the "Primary Listener".  In the case of
+    /// the Process Broadcaster, the Listener passed to the Process constructor
+    /// will be the Primary Listener.
+    /// If the broadcaster has a Primary Listener, then the event gets
+    /// sent first to the Primary Listener, and then when the Primary Listener
+    /// pulls the event and the the event's DoOnRemoval finishes running,
+    /// the event is forwarded to all the other Listeners.
+    /// The other wrinkle is that a Broadcaster may be serving a Hijack
+    /// Listener.  If the Hijack Listener is present, events are only sent to
+    /// the Hijack Listener.  We use that, for instance, to absorb all the
+    /// events generated by running an expression so that they don't show up to
+    /// the driver or UI as starts and stops.
+    /// If a Broadcaster has both a Primary and a Hijack Listener, the top-most
+    /// Hijack Listener is treated as the current Primary Listener.
+
     /// A list of Listener / event_mask pairs that are listening to this
     /// broadcaster.
     collection m_listeners;
 
     /// A mutex that protects \a m_listeners.
-    std::recursive_mutex m_listeners_mutex;
+    std::mutex m_listeners_mutex;
+
+    /// See the discussion of Broadcasters and Listeners above.
+    lldb::ListenerSP m_primary_listener_sp;
+    // The primary listener listens to all bits:
+    uint32_t m_primary_listener_mask = UINT32_MAX;
 
     /// A simple mechanism to intercept events from a broadcaster
     std::vector<lldb::ListenerSP> m_hijacking_listeners;
@@ -422,10 +455,6 @@ protected:
     /// At some point we may want to have a stack or Listener collections, but
     /// for now this is just for private hijacking.
     std::vector<uint32_t> m_hijacking_masks;
-
-    /// A optional listener that all private events get also broadcasted to,
-    /// on top the hijacked / default listeners.
-    lldb::ListenerSP m_shadow_listener = nullptr;
 
   private:
     BroadcasterImpl(const BroadcasterImpl &) = delete;

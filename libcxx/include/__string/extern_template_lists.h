@@ -15,6 +15,8 @@
 #  pragma GCC system_header
 #endif
 
+// clang-format off
+
 // We maintain 2 ABI lists:
 // - _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST
 // - _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST
@@ -104,7 +106,6 @@
   _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::__init(size_type, value_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::size_type basic_string<_CharType>::find_last_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::__grow_by(size_type, size_type, size_type, size_type, size_type, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::__grow_by_and_replace(size_type, size_type, size_type, size_type, size_type, size_type, value_type const*)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::__assign_no_alias<false>(value_type const*, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::__assign_no_alias<true>(value_type const*, size_type)) \
@@ -127,5 +128,6 @@
   _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::resize(size_type, value_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::insert(size_type, basic_string const&, size_type, size_type))
 
+// clang-format on
 
 #endif // _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H

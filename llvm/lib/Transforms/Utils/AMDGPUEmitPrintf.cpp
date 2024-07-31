@@ -16,7 +16,9 @@
 
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -152,19 +154,16 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
                                 Value *Length, bool isLast) {
   auto Int64Ty = Builder.getInt64Ty();
-  auto CharPtrTy = Builder.getInt8PtrTy();
-  auto Int32Ty = Builder.getInt32Ty();
+  auto IsLastInt32 = Builder.getInt32(isLast);
   auto M = Builder.GetInsertBlock()->getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_string_n", Int64Ty,
-                                   Int64Ty, CharPtrTy, Int64Ty, Int32Ty);
-  auto IsLastInt32 = Builder.getInt32(isLast);
+                                   Desc->getType(), Str->getType(),
+                                   Length->getType(), IsLastInt32->getType());
   return Builder.CreateCall(Fn, {Desc, Str, Length, IsLastInt32});
 }
 
 static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                            bool IsLast) {
-  Arg = Builder.CreateBitCast(
-      Arg, Builder.getInt8PtrTy(Arg->getType()->getPointerAddressSpace()));
   auto Length = getStrlenWithNull(Builder, Arg);
   return callAppendStringN(Builder, Desc, Arg, Length, IsLast);
 }
@@ -298,9 +297,9 @@ static Value *callBufferedPrintfStart(
       Builder.getContext(), AttributeList::FunctionIndex, Attribute::NoUnwind);
 
   Type *Tys_alloc[1] = {Builder.getInt32Ty()};
-  Type *I8Ptr =
-      Builder.getInt8PtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace());
-  FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
+  Type *PtrTy =
+      Builder.getPtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace());
+  FunctionType *FTy_alloc = FunctionType::get(PtrTy, Tys_alloc, false);
   auto PrintfAllocFn =
       M->getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
 
@@ -352,7 +351,7 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
 }
 
 static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
   auto Ty = Arg->getType();
 
   if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
@@ -409,9 +408,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       WhatToStore.push_back(processNonStringArg(Args[i], Builder));
     }
 
-    for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
-      Value *toStore = WhatToStore[I];
-
+    for (Value *toStore : WhatToStore) {
       StoreInst *StBuff = Builder.CreateStore(toStore, PtrToStore);
       LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
                         << '\n');

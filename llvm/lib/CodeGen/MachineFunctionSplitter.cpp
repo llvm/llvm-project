@@ -24,6 +24,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
@@ -33,6 +35,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -94,16 +97,34 @@ static void setDescendantEHBlocksCold(MachineFunction &MF) {
   }
 }
 
+static void finishAdjustingBasicBlocksAndLandingPads(MachineFunction &MF) {
+  auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {
+    return X.getSectionID().Type < Y.getSectionID().Type;
+  };
+  llvm::sortBasicBlocksAndUpdateBranches(MF, Comparator);
+  llvm::avoidZeroOffsetLandingPad(MF);
+}
+
 static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
   std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
-  if (!Count)
-    return true;
-
-  if (PercentileCutoff > 0) {
-    return PSI->isColdCountNthPercentile(PercentileCutoff, *Count);
+  // For instrumentation profiles and sample profiles, we use different ways
+  // to judge whether a block is cold and should be split.
+  if (PSI->hasInstrumentationProfile() || PSI->hasCSInstrumentationProfile()) {
+    // If using instrument profile, which is deemed "accurate", no count means
+    // cold.
+    if (!Count)
+      return true;
+    if (PercentileCutoff > 0)
+      return PSI->isColdCountNthPercentile(PercentileCutoff, *Count);
+    // Fallthrough to end of function.
+  } else if (PSI->hasSampleProfile()) {
+    // For sample profile, no count means "do not judege coldness".
+    if (!Count)
+      return false;
   }
+
   return (*Count < ColdCountThreshold);
 }
 
@@ -115,21 +136,9 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   if (!UseProfileData && !SplitAllEHCode)
     return false;
 
-  // TODO: We don't split functions where a section attribute has been set
-  // since the split part may not be placed in a contiguous region. It may also
-  // be more beneficial to augment the linker to ensure contiguous layout of
-  // split functions within the same section as specified by the attribute.
-  if (MF.getFunction().hasSection() ||
-      MF.getFunction().hasFnAttribute("implicit-section-name"))
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  if (!TII.isFunctionSafeToSplit(MF))
     return false;
-
-  // We don't want to proceed further for cold functions
-  // or functions of unknown hotness. Lukewarm functions have no prefix.
-  std::optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
-  if (SectionPrefix &&
-      (*SectionPrefix == "unlikely" || *SectionPrefix == "unknown")) {
-    return false;
-  }
 
   // Renumbering blocks here preserves the order of the blocks as
   // sortBasicBlocksAndUpdateBranches uses the numeric identifier to sort
@@ -141,8 +150,19 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   if (UseProfileData) {
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    // If we don't have a good profile (sample profile is not deemed
+    // as a "good profile") and the function is not hot, then early
+    // return. (Because we can only trust hot functions when profile
+    // quality is not good.)
+    if (PSI->hasSampleProfile() && !PSI->isFunctionHotInCallGraph(&MF, *MBFI)) {
+      // Split all EH code and it's descendant statically by default.
+      if (SplitAllEHCode)
+        setDescendantEHBlocksCold(MF);
+      finishAdjustingBasicBlocksAndLandingPads(MF);
+      return true;
+    }
   }
 
   SmallVector<MachineBasicBlock *, 2> LandingPads;
@@ -152,7 +172,8 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
     if (MBB.isEHPad())
       LandingPads.push_back(&MBB);
-    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) && !SplitAllEHCode)
+    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) &&
+             TII.isMBBSafeToSplitToCold(MBB) && !SplitAllEHCode)
       MBB.setSectionID(MBBSectionID::ColdSectionID);
   }
 
@@ -161,9 +182,10 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
     setDescendantEHBlocksCold(MF);
   // We only split out eh pads if all of them are cold.
   else {
+    // Here we have UseProfileData == true.
     bool HasHotLandingPads = false;
     for (const MachineBasicBlock *LP : LandingPads) {
-      if (!isColdBlock(*LP, MBFI, PSI))
+      if (!isColdBlock(*LP, MBFI, PSI) || !TII.isMBBSafeToSplitToCold(*LP))
         HasHotLandingPads = true;
     }
     if (!HasHotLandingPads) {
@@ -171,17 +193,14 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
         LP->setSectionID(MBBSectionID::ColdSectionID);
     }
   }
-  auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {
-    return X.getSectionID().Type < Y.getSectionID().Type;
-  };
-  llvm::sortBasicBlocksAndUpdateBranches(MF, Comparator);
-  llvm::avoidZeroOffsetLandingPad(MF);
+
+  finishAdjustingBasicBlocksAndLandingPads(MF);
   return true;
 }
 
 void MachineFunctionSplitter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
-  AU.addRequired<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
 }
 

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp -fopenmp-version=50 -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,dev5 -fopenmp -fopenmp-version=50 -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -aux-triple x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,dev5 -fopenmp -fopenmp-version=50 -fopenmp-is-target-device -fopenmp-targets=x86_64-apple-macos10.7.0 -aux-triple x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-is-target-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -DTESTEND=1 -o - %s
@@ -182,11 +182,20 @@ struct S {
 #pragma omp end declare target
 };
 
+void foo3() {
+  return;
+}
+
+int *y;
+int **w = &y;
 int main (int argc, char **argv) {
+  int a = 2;
 #pragma omp declare target // expected-error {{unexpected OpenMP directive '#pragma omp declare target'}}
   int v;
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
   foo(v);
+#pragma omp declare target to(foo3) link(w) // omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
+#pragma omp declare target to(a) //omp45-error {{local variable 'a' should not be used in 'declare target' directive}} omp5-error {{local variable 'a' should not be used in 'declare target' directive}} omp51-error {{local variable 'a' should not be used in 'declare target' directive}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
   return (0);
 }
 

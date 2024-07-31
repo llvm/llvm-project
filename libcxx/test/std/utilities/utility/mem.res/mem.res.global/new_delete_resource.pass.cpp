@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: availability-pmr-missing
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
@@ -75,7 +76,7 @@ void test_allocate_deallocate() {
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkOutstandingNewEq(1));
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkLastNewSizeEq(50));
 
-  r1.deallocate(ret, 1);
+  r1.deallocate(ret, 50);
   assert(globalMemCounter.checkOutstandingNewEq(0));
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkDeleteCalledEq(1));
 }

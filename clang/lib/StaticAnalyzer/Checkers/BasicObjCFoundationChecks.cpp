@@ -30,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,7 +44,7 @@ namespace {
 class APIMisuse : public BugType {
 public:
   APIMisuse(const CheckerBase *checker, const char *name)
-      : BugType(checker, name, "API Misuse (Apple)") {}
+      : BugType(checker, name, categories::AppleAPIMisuse) {}
 };
 } // end anonymous namespace
 
@@ -351,9 +352,9 @@ void NilArgChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 namespace {
 class CFNumberChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<APIMisuse> BT;
-  mutable IdentifierInfo *ICreate, *IGetValue;
+  mutable IdentifierInfo *ICreate = nullptr, *IGetValue = nullptr;
 public:
-  CFNumberChecker() : ICreate(nullptr), IGetValue(nullptr) {}
+  CFNumberChecker() = default;
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 };
@@ -541,10 +542,10 @@ namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
   const CallDescriptionSet ModelledCalls = {
-      {{"CFRetain"}, 1},
-      {{"CFRelease"}, 1},
-      {{"CFMakeCollectable"}, 1},
-      {{"CFAutorelease"}, 1},
+      {CDM::CLibrary, {"CFRetain"}, 1},
+      {CDM::CLibrary, {"CFRelease"}, 1},
+      {CDM::CLibrary, {"CFMakeCollectable"}, 1},
+      {CDM::CLibrary, {"CFAutorelease"}, 1},
   };
 
 public:
@@ -554,10 +555,6 @@ public:
 
 void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
-  // TODO: Make this check part of CallDescription.
-  if (!Call.isGlobalCFunction())
-    return;
-
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
   if (!ModelledCalls.contains(Call))
     return;
@@ -818,13 +815,13 @@ class ObjCLoopChecker
                    check::PostObjCMessage,
                    check::DeadSymbols,
                    check::PointerEscape > {
-  mutable IdentifierInfo *CountSelectorII;
+  mutable IdentifierInfo *CountSelectorII = nullptr;
 
   bool isCollectionCountMethod(const ObjCMethodCall &M,
                                CheckerContext &C) const;
 
 public:
-  ObjCLoopChecker() : CountSelectorII(nullptr) {}
+  ObjCLoopChecker() = default;
   void checkPostStmt(const ObjCForCollectionStmt *FCS, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
@@ -973,9 +970,8 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
   }
 
   // Keep looking for a block edge.
-  for (ExplodedNode::const_pred_iterator I = N->pred_begin(),
-                                         E = N->pred_end(); I != E; ++I) {
-    if (alreadyExecutedAtLeastOneLoopIteration(*I, FCS))
+  for (const ExplodedNode *N : N->preds()) {
+    if (alreadyExecutedAtLeastOneLoopIteration(N, FCS))
       return true;
   }
 
@@ -1104,11 +1100,7 @@ ObjCLoopChecker::checkPointerEscape(ProgramStateRef State,
   SymbolRef ImmutableReceiver = getMethodReceiverIfKnownImmutable(Call);
 
   // Remove the invalidated symbols from the collection count map.
-  for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
-       E = Escaped.end();
-       I != E; ++I) {
-    SymbolRef Sym = *I;
-
+  for (SymbolRef Sym : Escaped) {
     // Don't invalidate this symbol's count if we know the method being called
     // is declared on an immutable class. This isn't completely correct if the
     // receiver is also passed as an argument, but in most uses of NSArray,
@@ -1130,9 +1122,7 @@ void ObjCLoopChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
   // Remove the dead symbols from the collection count map.
   ContainerCountMapTy Tracked = State->get<ContainerCountMap>();
-  for (ContainerCountMapTy::iterator I = Tracked.begin(),
-                                     E = Tracked.end(); I != E; ++I) {
-    SymbolRef Sym = I->first;
+  for (SymbolRef Sym : llvm::make_first_range(Tracked)) {
     if (SymReaper.isDead(Sym)) {
       State = State->remove<ContainerCountMap>(Sym);
       State = State->remove<ContainerNonEmptyMap>(Sym);
@@ -1151,13 +1141,13 @@ class ObjCNonNilReturnValueChecker
                    check::PostStmt<ObjCArrayLiteral>,
                    check::PostStmt<ObjCDictionaryLiteral>,
                    check::PostStmt<ObjCBoxedExpr> > {
-    mutable bool Initialized;
+    mutable bool Initialized = false;
     mutable Selector ObjectAtIndex;
     mutable Selector ObjectAtIndexedSubscript;
     mutable Selector NullSelector;
 
 public:
-  ObjCNonNilReturnValueChecker() : Initialized(false) {}
+  ObjCNonNilReturnValueChecker() = default;
 
   ProgramStateRef assumeExprIsNonNull(const Expr *NonNullExpr,
                                       ProgramStateRef State,

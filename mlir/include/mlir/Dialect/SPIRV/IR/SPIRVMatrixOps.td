@@ -31,13 +31,6 @@ def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [Pure]> {
     number of columns in Result Type. Its columns must have the same number
     of components as the number of columns in LeftMatrix.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    matrix-times-matrix-op ::= ssa-id `=` `spirv.MatrixTimesMatrix` ssa-use,
-    ssa-use `:` matrix-type `,` matrix-type `->` matrix-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -75,21 +68,12 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<
   let summary = "Scale a floating-point matrix.";
 
   let description = [{
-    Result Type must be an OpTypeMatrix whose Column Type is a vector of
-    floating-point type.
+    Result Type must be a matrix type with a float component type.
 
-     The type of Matrix must be the same as Result Type. Each component in
+    The type of Matrix must be the same as Result Type. Each component in
     each column in Matrix is multiplied by Scalar.
 
     Scalar must have the same type as the Component Type in Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    matrix-times-scalar-op ::= ssa-id `=` `spirv.MatrixTimesScalar` ssa-use,
-    ssa-use `:` matrix-type `,` float-type `->` matrix-type
-
-    ```
 
     #### Example:
 
@@ -143,20 +127,11 @@ def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [Pure]> {
 
     Matrix must have of type of OpTypeMatrix.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    transpose-op ::= ssa-id `=` `spirv.Transpose` ssa-use `:` matrix-type `->`
-    matrix-type
-    ```
-
-
     #### Example:
 
     ```mlir
     %0 = spirv.Transpose %matrix: !spirv.matrix<2 x vector<3xf32>> ->
     !spirv.matrix<3 x vector<2xf32>>
-
     ```
   }];
 

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine ac1(arr,n)
   integer :: arr(:), n
@@ -114,8 +114,8 @@ end subroutine ac1
 ! CHECK:         return
 ! CHECK:       }
 
-! CHECK-LABEL: func @_QFac1Pfunc(
-! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) -> i32 {
+! CHECK-LABEL: func private @_QFac1Pfunc(
+! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) -> i32 {{.*}} {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "func", uniq_name = "_QFac1FfuncEfunc"}
 ! CHECK:         %[[VAL_2:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i64
@@ -232,7 +232,7 @@ end subroutine ac2
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_80]], %[[C0]] : index
 ! CHECK:           %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_80]], %[[C0]] : index
-! CHECK:           %[[VAL_81:.*]] = fir.call @llvm.stacksave() {{.*}}: () -> !fir.ref<i8>
+! CHECK:           %[[VAL_81:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
 ! CHECK:           %[[VAL_82:.*]] = fir.shape %[[SELECT]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_83:.*]] = fir.convert %[[VAL_74]] : (!fir.box<!fir.array<1xi32>>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_84:.*]] = fir.call @_QFac2Pfunc(%[[VAL_83]]) {{.*}}: (!fir.box<!fir.array<?xi32>>) -> !fir.array<3xi32>
@@ -250,7 +250,7 @@ end subroutine ac2
 ! CHECK:             %[[VAL_97:.*]] = fir.array_update %[[VAL_92]], %[[VAL_93]], %[[VAL_96]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:             fir.result %[[VAL_97]] : !fir.array<?xi32>
 ! CHECK:           }
-! CHECK:           fir.call @llvm.stackrestore(%[[VAL_81]]) {{.*}}: (!fir.ref<i8>) -> ()
+! CHECK:           fir.call @llvm.stackrestore.p0(%[[VAL_81]]) {{.*}}: (!fir.ref<i8>) -> ()
 ! CHECK:           fir.freemem %[[VAL_61]] : !fir.heap<!fir.array<1xi32>>
 ! CHECK:           fir.freemem %[[VAL_57]] : !fir.heap<!fir.array<1xi32>>
 ! CHECK:           fir.result %[[VAL_98:.*]] : !fir.array<?xi32>
@@ -259,8 +259,8 @@ end subroutine ac2
 ! CHECK:         return
 ! CHECK:       }
 
-! CHECK-LABEL: func @_QFac2Pfunc(
-! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) -> !fir.array<3xi32> {
+! CHECK-LABEL: func private @_QFac2Pfunc(
+! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) -> !fir.array<3xi32> {{.*}} {
 ! CHECK:         %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "func", uniq_name = "_QFac2FfuncEfunc"}
 ! CHECK:         %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>

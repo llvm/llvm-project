@@ -35,9 +35,6 @@ public:
 
   lldb::ValueObjectSP Dereference(Status &error) override;
 
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index) override;
-
   virtual CompilerType GetCompilerType() {
     return ValueObjectCast::GetCompilerType();
   }
@@ -51,7 +48,7 @@ public:
   size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                         uint32_t item_count = 1) override;
 
-  lldb::ValueObjectSP Cast(const CompilerType &compiler_type) override;
+  lldb::ValueObjectSP DoCast(const CompilerType &compiler_type) override;
 
 protected:
   ValueObjectConstResultImpl m_impl;
@@ -60,6 +57,13 @@ private:
   friend class ValueObject;
   friend class ValueObjectConstResult;
   friend class ValueObjectConstResultImpl;
+
+  ValueObject *CreateChildAtIndex(size_t idx) override {
+    return m_impl.CreateChildAtIndex(idx);
+  }
+  ValueObject *CreateSyntheticArrayMember(size_t idx) override {
+    return m_impl.CreateSyntheticArrayMember(idx);
+  }
 
   ValueObjectConstResultCast(const ValueObjectConstResultCast &) = delete;
   const ValueObjectConstResultCast &

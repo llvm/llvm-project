@@ -5,12 +5,13 @@ add_llvm_component_library(LLVMAMDGPUDesc
   AMDGPUInstPrinter.cpp
   AMDGPUMCAsmInfo.cpp
   AMDGPUMCCodeEmitter.cpp
+  AMDGPUMCExpr.cpp
   AMDGPUMCTargetDesc.cpp
   AMDGPUTargetStreamer.cpp
+  AMDGPUMCKernelDescriptor.cpp
   R600InstPrinter.cpp
   R600MCCodeEmitter.cpp
   R600MCTargetDesc.cpp
-  SIMCCodeEmitter.cpp
 
   LINK_COMPONENTS
   AMDGPUInfo
@@ -25,5 +26,3 @@ add_llvm_component_library(LLVMAMDGPUDesc
   ADD_TO_COMPONENT
   AMDGPU
   )
-
-add_dependencies(LLVMAMDGPUDesc LLVMAMDGPUUtils)

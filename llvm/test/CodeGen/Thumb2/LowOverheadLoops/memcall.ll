@@ -60,30 +60,31 @@ define void @test_memset(ptr nocapture %x, i32 %n, i32 %m) {
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB1_1:
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:  .LBB1_1: @ %for.body.preheader
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    lsl.w r12, r2, #2
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_4 Depth 2
-; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB1_3
 ; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: @ %for.body
 ; CHECK-NEXT:    @ in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    add.w r0, r0, r2, lsl #2
+; CHECK-NEXT:    add r0, r12
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    beq .LBB1_5
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_4: @ Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vstrb.8 q0, [r12], #16
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
 ; CHECK-NEXT:    letp lr, .LBB1_4
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_5:
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r4, lr}
 ; CHECK-NEXT:    bx lr
 entry:
   %cmp5 = icmp sgt i32 %n, 0

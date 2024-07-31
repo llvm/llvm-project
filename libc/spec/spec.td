@@ -37,6 +37,7 @@ class RestrictedPtrType<Type type> : Type {
 
 // Builtin types.
 def VarArgType : NamedType<"...">;
+def VaListType : NamedType<"va_list">;
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
 def UnsignedIntType : NamedType<"unsigned int">;
@@ -48,6 +49,12 @@ def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
 def CharType : NamedType<"char">;
+def UnsignedCharType : NamedType<"unsigned char">;
+def UnsignedShortType : NamedType<"unsigned short">;
+def BoolType : NamedType<"bool">;
+
+def Float16Type : NamedType<"_Float16">;
+def Float128Type : NamedType<"float128">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;
@@ -59,6 +66,9 @@ def SizeTType : NamedType<"size_t">;
 def SizeTPtr : PtrType<SizeTType>;
 def RestrictedSizeTPtr : RestrictedPtrType<SizeTType>;
 
+def Char8TType : NamedType<"char8_t">;
+def Char16TType : NamedType<"char16_t">;
+def Char32TType : NamedType<"char32_t">;
 def WCharType : NamedType<"wchar_t">;
 def WIntType : NamedType<"wint_t">;
 
@@ -105,10 +115,19 @@ def IntPtr : PtrType<IntType>;
 def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
+def Float16Ptr : PtrType<Float16Type>;
+def Float128Ptr : PtrType<Float128Type>;
+def UnsignedCharPtr : PtrType<UnsignedCharType>;
 
 def SigHandlerT : NamedType<"__sighandler_t">;
 
 def TimeTType : NamedType<"time_t">;
+
+def StructTimeSpec : NamedType<"struct timespec">;
+def StructTimeSpecPtr : PtrType<StructTimeSpec>;
+def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
+def RestrictStructTimeSpecPtr : RestrictedPtrType<StructTimeSpec>;
+def ConstRestrictStructTimeSpecPtr : ConstType<RestrictStructTimeSpecPtr>;
 
 def BSearchCompareT : NamedType<"__bsearchcompare_t">;
 def QSortCompareT : NamedType<"__qsortcompare_t">;
@@ -136,6 +155,13 @@ def SuSecondsT : NamedType<"suseconds_t">;
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 
+def ActionType : NamedType<"ACTION">;
+def EntryType : NamedType<"ENTRY">;
+def EntryTypePtr : PtrType<EntryType>;
+def EntryTypePtrPtr : PtrType<EntryTypePtr>;
+
+def MBStateTType : NamedType<"mbstate_t">;
+
 class Macro<string name> {
   string Name = name;
 }
@@ -158,10 +184,42 @@ class ArgSpec<Type type, list<Annotation> annotations = [], string name = ""> {
   string Name = name;
 }
 
-class FunctionSpec<string name, RetValSpec return, list<ArgSpec> args> {
+// The following classes are used to describe function attributes.
+// In the future, we may consider supporting parameter attributes as well.
+// https://clang.llvm.org/docs/AttributeReference.html
+class FunctionAttr<string style, string attr> {
+  string Attr = attr;
+  // The style of the attribute, e.g. "gnu", "cxx11", "declspec".
+  // - "gnu" is for GNU-style attributes: __attribute__((...))
+  // - "cxx11" is for C++11-style attributes: [[...]]
+  // - "declspec" is for Microsoft-style attributes: __declspec(...)
+  string Style = style;
+
+  // For the time being, we are only interested in identifer-like attributes.
+  // We can extend this to support function-like attributes if needed.
+  // For example, in the future, we can #define __LIBC_ATTRIBUTE_NODISCARD(...) [[nodiscard(__VA_ARGS__)]]
+  // int FunctionLike = 0;
+}
+class GnuFunctionAttr<string attr> : FunctionAttr<"gnu", attr> {}
+class Cxx11FunctionAttr<string attr, string namespace> : FunctionAttr<"cxx11", attr> {
+  // The namespace of the attribute, e.g. "gnu" or "clang". Empty string means there is no namespace.
+  string Namespace = namespace;
+}
+class DeclspecFunctionAttr<string attr> : FunctionAttr<"declspec", attr> {}
+class FunctionAttrSpec<string macro, list<FunctionAttr> instances> {
+  list<FunctionAttr> Instances = instances;
+  string Macro = macro;
+}
+
+class FunctionSpec<string name, RetValSpec return, list<ArgSpec> args, list<FunctionAttrSpec> attrs = []> {
   string Name = name;
   RetValSpec Return = return;
   list<ArgSpec> Args = args;
+  list<FunctionAttrSpec> Attributes = attrs;
+}
+
+class GuardedFunctionSpec<string name, RetValSpec return, list<ArgSpec> args, string guard_macro> : FunctionSpec<name, return, args> {
+  string Guard = guard_macro;
 }
 
 class ObjectSpec<string name, string type> {

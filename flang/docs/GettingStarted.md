@@ -8,9 +8,10 @@
 
 # Getting Started
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Building flang
@@ -52,6 +53,7 @@ First, create the root directory and `cd` into it.
 ```bash
 mkdir root
 cd root
+```
 
 Now clone the source:
 ```bash
@@ -85,6 +87,10 @@ cmake \
 
 ninja
 ```
+
+On Darwin, to make flang able to link binaries with the default sysroot without
+having to specify additional flags, use the `DEFAULT_SYSROOT` CMake flag, e.g.
+`-DDEFAULT_SYSROOT="$(xcrun --show-sdk-path)"`.
 
 By default flang tests that do not specify an explicit `--target` flag use
 LLVM's default target triple. For these tests, if there is a need to test on a
@@ -140,8 +146,14 @@ code is in good shape.
 
 ### Building flang standalone
 To do the standalone build, start by building flang in tree as described above.
-This build is base build for subsequent standalone builds.  Start each
-standalone build the same way by cloning the source for llvm-project:
+This build can be used as the  base build for several subsequent standalone
+builds.  Set the environment variable **ROOT_DIR** to the directory that
+contains the subdirectory `build` that was created previously, for example:
+```bash
+export ROOTDIR=/home/user/root
+```
+Start each standalone build the same way by cloning the source for
+llvm-project:
 ```bash
 mkdir standalone
 cd standalone
@@ -174,11 +186,133 @@ cmake \
 ninja
 ```
 
-To run the flang tests on this build, execute the command in the "flang/build"
+To run the flang tests on this build, execute the command in the `flang/build`
 directory:
 ```bash
 ninja check-flang
 ```
+
+### Building flang runtime for accelerators
+Flang runtime can be built for accelerators in experimental mode, i.e.
+complete enabling is WIP.  CUDA and OpenMP target offload builds
+are currently supported.
+
+#### Building out-of-tree
+
+##### CUDA build
+Clang with NVPTX backend and NVCC compilers are supported.
+
+```bash
+cd llvm-project/flang
+rm -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=clang \
+  -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+  ../runtime/
+make -j FortranRuntime
+```
+
+Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
+CUDA toolkit version installed on the build machine.  If there are multiple
+CUDA toolkit installations, please use `-DCUDAToolkit_ROOT=/some/path`
+to specify the compatible version.
+
+```bash
+cd llvm-project/flang
+rm -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=nvcc \
+  -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+  ../runtime/
+
+make -j FortranRuntime
+```
+
+Note that `nvcc` might limit support to certain
+[versions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#host-compiler-support-policy) of `CMAKE_CUDA_HOST_COMPILER`,
+so please use compatible versions.
+
+The result of the build is a "fat" library with the host and device
+code.  Note that the packaging of the libraries is different
+between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
+compatible compiler drivers.
+
+#### Building in-tree
+One may build Flang runtime library along with building Flang itself
+by providing these additional CMake variables on top of the Flang in-tree
+build config:
+
+For example:
+```bash
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=clang \
+  -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+```
+
+Or:
+```bash
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
+  -DCMAKE_CUDA_COMPILER=nvcc \
+  -DCMAKE_CUDA_HOST_COMPILER=g++ \
+```
+
+Normal `make -j check-flang` will work with such CMake configuration.
+
+##### OpenMP target offload build
+Only Clang compiler is currently supported.
+
+```bash
+cd llvm-project/flang
+rm -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD="host_device" \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
+  ../runtime/
+
+make -j FortranRuntime
+```
+
+The result of the build is a "device-only" library, i.e. the host
+part of the library is just a container for the device code.
+The resulting library may be linked to user programs using
+Clang-like device linking pipeline.
+
+The same set of CMake variables works for Flang in-tree build.
+
+### Build options
+
+One may provide optional CMake variables to customize the build. Available options:
+
+* `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath`: enables build of
+  `FortranFloat128Math` library that provides `REAL(16)` math APIs
+  for intrinsics such as `SIN`, `COS`, etc. GCC `libquadmath`'s header file
+  `quadmath.h` must be available to the build compiler.
+  [More details](Real16MathSupport.md).
 
 ## Supported C++ compilers
 
@@ -221,6 +355,7 @@ and the GCC library and tools that were used to build clang++.
 
 CXX should include the full path to clang++
 or clang++ should be found on your PATH.
+
 ```bash
 export CXX=clang++
 ```
@@ -333,7 +468,8 @@ system to create HTML pages which would be hosted on the webpage of flang and
 updated periodically.
 
 If you would like to generate and view the HTML locally:
-- Install [Sphinx](http://sphinx-doc.org/), including the [sphinx-markdown-tables](https://pypi.org/project/sphinx-markdown-tables/) extension.
+- Install [Sphinx](http://sphinx-doc.org/), and the required extensions
+  using `pip install --user -r ~/llvm-projects/docs/requirements.txt`
 - Pass `-DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF` to the cmake command.
 
 ```bash

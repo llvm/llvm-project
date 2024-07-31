@@ -24,6 +24,8 @@ Other components include:
 the `libc++ C++ standard library <https://libcxx.llvm.org>`_,
 the `LLD linker <https://lld.llvm.org>`_, and more.
 
+.. _sources:
+
 Getting the Source Code and Building LLVM
 =========================================
 
@@ -39,6 +41,15 @@ Getting the Source Code and Building LLVM
      For example, to get the latest revision of the LLVM project, use
 
      ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
+
+   * You are likely not interested in the user branches in the repo (used for
+     stacked pull-requests and reverts), you can filter them from your
+     `git fetch` (or `git pull`) with this configuration:
+
+.. code-block:: console
+
+  git config --add remote.origin.fetch '^refs/heads/users/*'
+  git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 
@@ -83,17 +94,17 @@ Getting the Source Code and Building LLVM
        is installed on your system. This can dramatically speed up link times
        if the default linker is slow.
 
-     * ``-DLLVM_PARALLEL_{COMPILE,LINK}_JOBS=N`` --- Limit the number of
-       compile/link jobs running in parallel at the same time. This is
+     * ``-DLLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS=N`` --- Limit the number of
+       compile/link/tablegen jobs running in parallel at the same time. This is
        especially important for linking since linking can use lots of memory. If
        you run into memory issues building LLVM, try setting this to limit the
-       maximum number of compile/link jobs running at the same time.
+       maximum number of compile/link/tablegen jobs running at the same time.
 
-   * ``cmake --build . [--target <target>]`` or the build system specified
+   * ``cmake --build build [--target <target>]`` or the build system specified
      above directly.
 
-     * The default target (i.e. ``cmake --build .`` or ``make``) will build all of
-       LLVM.
+     * The default target (i.e. ``cmake --build build`` or ``make -C build``)
+       will build all of LLVM.
 
      * The ``check-all`` target (i.e. ``ninja check-all``) will run the
        regression tests to ensure everything is in working order.
@@ -280,23 +291,22 @@ uses the package and provides other details.
 =========================================================== ============ ==========================================
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
-`CMake <http://cmake.org/>`__                               >=3.20.0     Makefile/workspace generator
-`GCC <http://gcc.gnu.org/>`_                                >=7.1.0      C/C++ compiler\ :sup:`1`
-`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`2`
-`zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
-`GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`4`
+`CMake <http://cmake.org/>`_                                >=3.20.0     Makefile/workspace generator
+`python <http://www.python.org/>`_                          >=3.8        Automated test suite\ :sup:`1`
+`zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`2`
+`GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`3`
+`PyYAML <https://pypi.org/project/PyYAML/>`_                >=5.1        Header generator\ :sup:`4`
 =========================================================== ============ ==========================================
 
 .. note::
 
-   #. Only the C and C++ languages are needed so there's no need to build the
-      other languages for LLVM's purposes. See `below` for specific version
-      info.
    #. Only needed if you want to run the automated test suite in the
-      ``llvm/test`` directory.
+      ``llvm/test`` directory, or if you plan to utilize any Python libraries,
+      utilities, or bindings.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
+   #. Only needed when building libc with New Headergen. Mainly used by libc.
 
 Additionally, your compilation host is expected to have the usual plethora of
 Unix utilities. Specifically:
@@ -329,6 +339,8 @@ Unix utilities. Specifically:
 .. _below:
 .. _check here:
 
+.. _host_cpp_toolchain:
+
 Host C++ Toolchain, both Compiler and Standard Library
 ------------------------------------------------------
 
@@ -343,7 +355,7 @@ popular host toolchains for specific minimum versions in our build systems:
 
 * Clang 5.0
 * Apple Clang 10.0
-* GCC 7.1
+* GCC 7.4
 * Visual Studio 2019 16.7
 
 Anything older than these toolchains *may* work, but will require forcing the
@@ -409,11 +421,11 @@ GCC from source. It is also quite easy to do these days.
 .. _github gist:
   https://gist.github.com/application2000/73fd6f4bf1be6600a2cf9f56315a2d91
 
-Easy steps for installing GCC 7.1.0:
+Easy steps for installing a specific version of GCC:
 
 .. code-block:: console
 
-  % gcc_version=7.1.0
+  % gcc_version=7.4.0
   % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2
   % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2.sig
   % wget https://ftp.gnu.org/gnu/gnu-keyring.gpg
@@ -504,60 +516,6 @@ appropriate pathname on your local system.  All these paths are absolute:
   object files and compiled programs will be placed.  It can be the same as
   SRC_ROOT).
 
-Unpacking the LLVM Archives
----------------------------
-
-If you have the LLVM distribution, you will need to unpack it before you can
-begin to compile it.  LLVM is distributed as a number of different
-subprojects. Each one has its own download which is a TAR archive that is
-compressed with the gzip program.
-
-The files are as follows, with *x.y* marking the version number:
-
-``llvm-x.y.tar.gz``
-
-  Source release for the LLVM libraries and tools.
-
-``cfe-x.y.tar.gz``
-
-  Source release for the Clang frontend.
-
-.. _checkout:
-
-Checkout LLVM from Git
-----------------------
-
-You can also checkout the source code for LLVM from Git.
-
-.. note::
-
-  Passing ``--config core.autocrlf=false`` should not be required in
-  the future after we adjust the .gitattribute settings correctly, but
-  is required for Windows users at the time of this writing.
-
-Simply run:
-
-.. code-block:: console
-
-  % git clone https://github.com/llvm/llvm-project.git
-
-or on Windows,
-
-.. code-block:: console
-
-  % git clone --config core.autocrlf=false https://github.com/llvm/llvm-project.git
-
-This will create an '``llvm-project``' directory in the current directory and
-fully populate it with all of the source code, test directories, and local
-copies of documentation files for LLVM and all the related subprojects. Note
-that unlike the tarballs, which contain each subproject in a separate file, the
-git repository contains all of the projects together.
-
-If you want to get a specific release (as opposed to the most recent revision),
-you can check out a tag after cloning the repository. E.g., `git checkout
-llvmorg-6.0.1` inside the ``llvm-project`` directory created by the above
-command.  Use `git tag -l` to list all of them.
-
 Sending patches
 ^^^^^^^^^^^^^^^
 
@@ -589,75 +547,23 @@ Variables are passed to ``cmake`` on the command line using the format
 ``-D<variable name>=<value>``. The following variables are some common options
 used by people developing LLVM.
 
-+-------------------------+----------------------------------------------------+
-| Variable                | Purpose                                            |
-+=========================+====================================================+
-| CMAKE_C_COMPILER        | Tells ``cmake`` which C compiler to use. By        |
-|                         | default, this will be /usr/bin/cc.                 |
-+-------------------------+----------------------------------------------------+
-| CMAKE_CXX_COMPILER      | Tells ``cmake`` which C++ compiler to use. By      |
-|                         | default, this will be /usr/bin/c++.                |
-+-------------------------+----------------------------------------------------+
-| CMAKE_BUILD_TYPE        | Tells ``cmake`` what type of build you are trying  |
-|                         | to generate files for. Valid options are Debug,    |
-|                         | Release, RelWithDebInfo, and MinSizeRel. Default   |
-|                         | is Debug.                                          |
-+-------------------------+----------------------------------------------------+
-| CMAKE_INSTALL_PREFIX    | Specifies the install directory to target when     |
-|                         | running the install action of the build files.     |
-+-------------------------+----------------------------------------------------+
-| Python3_EXECUTABLE      | Forces CMake to use a specific Python version by   |
-|                         | passing a path to a Python interpreter. By default |
-|                         | the Python version of the interpreter in your PATH |
-|                         | is used.                                           |
-+-------------------------+----------------------------------------------------+
-| LLVM_TARGETS_TO_BUILD   | A semicolon delimited list controlling which       |
-|                         | targets will be built and linked into llvm.        |
-|                         | The default list is defined as                     |
-|                         | ``LLVM_ALL_TARGETS``, and can be set to include    |
-|                         | out-of-tree targets. The default value includes:   |
-|                         | ``AArch64, AMDGPU, ARM, AVR, BPF, Hexagon, Lanai,  |
-|                         | Mips, MSP430, NVPTX, PowerPC, RISCV, Sparc,        |
-|                         | SystemZ, WebAssembly, X86, XCore``. Setting this   |
-|                         | to ``"host"`` will only compile the host           |
-|                         | architecture (e.g. equivalent to specifying ``X86``|
-|                         | on an x86 host machine) can                        |
-|                         | significantly speed up compile and test times.     |
-+-------------------------+----------------------------------------------------+
-| LLVM_ENABLE_DOXYGEN     | Build doxygen-based documentation from the source  |
-|                         | code This is disabled by default because it is     |
-|                         | slow and generates a lot of output.                |
-+-------------------------+----------------------------------------------------+
-| LLVM_ENABLE_PROJECTS    | A semicolon-delimited list selecting which of the  |
-|                         | other LLVM subprojects to additionally build. (Only|
-|                         | effective when using a side-by-side project layout |
-|                         | e.g. via git). The default list is empty. Can      |
-|                         | include: clang, clang-tools-extra,                 |
-|                         | cross-project-tests, flang, libc, libclc, lld,     |
-|                         | lldb, mlir, openmp, polly, or pstl.                |
-+-------------------------+----------------------------------------------------+
-| LLVM_ENABLE_RUNTIMES    | A semicolon-delimited list selecting which of the  |
-|                         | runtimes to build. (Only effective when using the  |
-|                         | full monorepo layout). The default list is empty.  |
-|                         | Can include: compiler-rt, libc, libcxx, libcxxabi, |
-|                         | libunwind, or openmp.                              |
-+-------------------------+----------------------------------------------------+
-| LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
-|                         | code. This is disabled by default because it is    |
-|                         | slow and generates a lot of output. Sphinx version |
-|                         | 1.5 or later recommended.                          |
-+-------------------------+----------------------------------------------------+
-| LLVM_BUILD_LLVM_DYLIB   | Generate libLLVM.so. This library contains a       |
-|                         | default set of LLVM components that can be         |
-|                         | overridden with ``LLVM_DYLIB_COMPONENTS``. The     |
-|                         | default contains most of LLVM and is defined in    |
-|                         | ``tools/llvm-shlib/CMakelists.txt``. This option is|
-|                         | not available on Windows.                          |
-+-------------------------+----------------------------------------------------+
-| LLVM_OPTIMIZED_TABLEGEN | Builds a release tablegen that gets used during    |
-|                         | the LLVM build. This can dramatically speed up     |
-|                         | debug builds.                                      |
-+-------------------------+----------------------------------------------------+
+* ``CMAKE_C_COMPILER``
+* ``CMAKE_CXX_COMPILER``
+* ``CMAKE_BUILD_TYPE``
+* ``CMAKE_INSTALL_PREFIX``
+* ``Python3_EXECUTABLE``
+* ``LLVM_TARGETS_TO_BUILD``
+* ``LLVM_ENABLE_PROJECTS``
+* ``LLVM_ENABLE_RUNTIMES``
+* ``LLVM_ENABLE_DOXYGEN``
+* ``LLVM_ENABLE_SPHINX``
+* ``LLVM_BUILD_LLVM_DYLIB``
+* ``LLVM_LINK_LLVM_DYLIB``
+* ``LLVM_PARALLEL_LINK_JOBS``
+* ``LLVM_OPTIMIZED_TABLEGEN``
+
+See :ref:`the list of frequently-used CMake variables <cmake_frequently_used_variables>`
+for more information.
 
 To configure LLVM, follow these steps:
 

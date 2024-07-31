@@ -11,9 +11,6 @@ some of these things by going through an example, explaining how to use
 Python scripting to find a bug in a program that searches for text in a
 large binary tree.
 
-.. contents::
-   :local:
-
 The Test Program and Input
 --------------------------
 
@@ -78,13 +75,13 @@ later explanations:
    12:     if root_word == word:
    13:         return cur_path
    14:     elif word < root_word:
-   15:         if left_child_ptr.GetValue() == None:
+   15:         if left_child_ptr.GetValue() is None:
    16:             return ""
    17:         else:
    18:             cur_path = cur_path + "L"
    19:             return DFS (left_child_ptr, word, cur_path)
    20:     else:
-   21:         if right_child_ptr.GetValue() == None:
+   21:         if right_child_ptr.GetValue() is None:
    22:             return ""
    23:         else:
    24:             cur_path = cur_path + "R"

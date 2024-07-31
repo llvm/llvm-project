@@ -60,7 +60,7 @@ define <4 x i8> @h_undef(<4 x i8> %x, <4 x i8> %y) {
 
 define i8 @i(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @i(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> [[X:%.*]], <4 x i32> <i32 2, i32 1, i32 7, i32 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 3, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP2]])
 ; CHECK-NEXT:    ret i8 [[TMP3]]
@@ -110,12 +110,13 @@ define i8 @k(<4 x i8> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i8> [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 3, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP5]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i8 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret i8 [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i8> [[TMP4]], <2 x i8> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i8> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = sdiv i8 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    ret i8 [[TMP9]]
 ;
   %x0 = extractelement <4 x i8> %x, i32 0
   %x3 = extractelement <4 x i8> %x, i32 3
@@ -138,12 +139,13 @@ define i8 @k_bb(<4 x i8> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i8> [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 3, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP5]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i8 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret i8 [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i8> [[TMP4]], <2 x i8> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i8> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = sdiv i8 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    ret i8 [[TMP9]]
 ;
   %x0 = extractelement <4 x i8> %x, i32 0
   br label %bb1

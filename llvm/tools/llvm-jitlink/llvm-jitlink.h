@@ -19,22 +19,20 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <vector>
-
 namespace llvm {
-
-struct Session;
 
 struct Session {
 
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
+  orc::JITDylib *ProcessSymsJD = nullptr;
+  orc::JITDylib *PlatformJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
@@ -51,8 +49,20 @@ struct Session {
 
   struct FileInfo {
     StringMap<MemoryRegionInfo> SectionInfos;
-    StringMap<MemoryRegionInfo> StubInfos;
+    StringMap<SmallVector<MemoryRegionInfo, 1>> StubInfos;
     StringMap<MemoryRegionInfo> GOTEntryInfos;
+
+    using Symbol = jitlink::Symbol;
+    using LinkGraph = jitlink::LinkGraph;
+    using GetSymbolTargetFunction =
+        unique_function<Expected<Symbol &>(LinkGraph &G, jitlink::Block &)>;
+
+    Error registerGOTEntry(LinkGraph &G, Symbol &Sym,
+                           GetSymbolTargetFunction GetSymbolTarget);
+    Error registerStubEntry(LinkGraph &G, Symbol &Sym,
+                            GetSymbolTargetFunction GetSymbolTarget);
+    Error registerMultiStubEntry(LinkGraph &G, Symbol &Sym,
+                                 GetSymbolTargetFunction GetSymbolTarget);
   };
 
   using DynLibJDMap = std::map<std::string, orc::JITDylib *>;
@@ -66,7 +76,8 @@ struct Session {
   Expected<MemoryRegionInfo &> findSectionInfo(StringRef FileName,
                                                StringRef SectionName);
   Expected<MemoryRegionInfo &> findStubInfo(StringRef FileName,
-                                            StringRef TargetName);
+                                            StringRef TargetName,
+                                            StringRef KindNameFilter);
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 
@@ -78,8 +89,6 @@ struct Session {
 
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;
-  uint64_t SizeBeforePruning = 0;
-  uint64_t SizeAfterFixups = 0;
 
   StringSet<> HarnessFiles;
   StringSet<> HarnessExternals;
@@ -100,6 +109,9 @@ Error registerMachOGraphInfo(Session &S, jitlink::LinkGraph &G);
 
 /// Record symbols, GOT entries, stubs, and sections for COFF file.
 Error registerCOFFGraphInfo(Session &S, jitlink::LinkGraph &G);
+
+/// Adds a statistics gathering plugin if any stats options are used.
+void enableStatistics(Session &S, bool UsingOrcRuntime);
 
 } // end namespace llvm
 

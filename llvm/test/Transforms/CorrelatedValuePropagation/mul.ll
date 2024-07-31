@@ -179,8 +179,7 @@ define i1 @nuw_range1(i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[C]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %c = add nuw nsw i8 %b, 1
@@ -194,8 +193,7 @@ define i1 @nuw_range2(i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[B:%.*]], 3
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[C]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[MUL]], 2
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %c = add nuw nsw i8 %b, 3
@@ -225,4 +223,36 @@ define i1 @one_bit(i1 %a, i1 %b) {
 ;
   %mul = mul i1 %a, %b
   ret i1 %mul
+}
+
+define i1 @test_mul_nuw_nsw_nneg(i32 %x, i32 range(i32 3, 2147483648) %y) {
+; CHECK-LABEL: @test_mul_nuw_nsw_nneg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %mul = mul nuw nsw i32 %x, %y
+  %cmp = icmp sgt i32 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @test_mul_nuw_nsw_nneg_complex(i32 %x, i32 noundef %y, i32 %z) {
+; CHECK-LABEL: @test_mul_nuw_nsw_nneg_complex(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i32 3, i32 4
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP1]], i32 [[Y]], i32 [[SEL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X]], [[SEL2]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp1 = icmp sgt i32 %y, 2
+  %cmp2 = icmp eq i32 %x, 0
+  %sel1 = select i1 %cmp2, i32 3, i32 4
+  %sel2 = select i1 %cmp1, i32 %y, i32 %sel1
+  %mul = mul nuw nsw i32 %x, %sel2
+  %cmp3 = icmp sgt i32 %mul, -1
+  ret i1 %cmp3
 }

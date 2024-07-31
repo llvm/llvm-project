@@ -199,13 +199,12 @@ func.func @empty_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
 
 // -----
 
-func.func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
+func.func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>, %sz0: index) -> (index, index, index)
 {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
-  %0 = tensor.expand_shape %arg0 [[0, 1], [2], [3, 4, 5]]
-      : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2], [3, 4, 5]] output_shape [2, 3, 5, 4, %sz0, 7] : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
   %1 = tensor.dim %0, %c1 : tensor<2x3x5x4x?x7xf32>
   %2 = tensor.dim %0, %c3 : tensor<2x3x5x4x?x7xf32>
   %3 = tensor.dim %0, %c4 : tensor<2x3x5x4x?x7xf32>
@@ -262,8 +261,8 @@ func.func @dim_of_pad_op(%arg0 : tensor<2x?x?xf32>, %arg1 : index, %arg2 : index
    %3 = tensor.dim %0, %c2 : tensor<?x?x?xf32>
    return %1, %2, %3 : index, index, index
 }
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> (s1 + s0 + 5)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s1 + s0 + 4)>
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 5)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 4)>
 //      CHECK: func @dim_of_pad_op
 // CHECK-SAME:   %[[ARG0:[A-Za-z0-9_]+]]: tensor<2x?x?xf32>
 // CHECK-SAME:   %[[ARG1:[A-Za-z0-9_]+]]: index
@@ -276,3 +275,22 @@ func.func @dim_of_pad_op(%arg0 : tensor<2x?x?xf32>, %arg1 : index, %arg2 : index
 //      CHECK:   %[[IN_DIM2:.+]] = tensor.dim %[[ARG0]], %[[C2]]
 //      CHECK:   %[[OUT_DIM2:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[IN_DIM2]]]
 //      CHECK:   return %[[C12]], %[[OUT_DIM1]], %[[OUT_DIM2]]
+
+// -----
+
+func.func @dim_of_softmax_op(%arg0: tensor<?x16x?xf32>, %arg1: tensor<2x?x?xf32>) -> (index, index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %0 = linalg.softmax dimension(2) ins(%arg0 : tensor<?x16x?xf32>) outs(%arg1 : tensor<2x?x?xf32>) -> tensor<2x?x?xf32>
+  %dim = tensor.dim %0, %c0 : tensor<2x?x?xf32>
+  %dim_0 = tensor.dim %0, %c1 : tensor<2x?x?xf32>
+  %dim_1 = tensor.dim %0, %c2 : tensor<2x?x?xf32>
+  return %dim, %dim_0, %dim_1 : index, index, index
+}
+// CHECK-LABEL: @dim_of_softmax_op
+// CHECK-SAME:  (%[[INPUT:.*]]: tensor<?x16x?xf32>
+// CHECK-NEXT:      %[[C2:.*]] = arith.constant 2 : index
+// CHECK-NEXT:      %[[C16:.*]] = arith.constant 16 : index
+// CHECK-NEXT:      %[[IN_DIM2:.*]] = tensor.dim %[[INPUT]], %[[C2]] : tensor<?x16x?xf32>
+// CHECK-NEXT:      return %[[C2]], %[[C16]], %[[IN_DIM2]] : index, index, index

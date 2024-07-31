@@ -16,9 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "LiveDebugVariables.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
@@ -228,8 +228,8 @@ char &llvm::VirtRegRewriterID = VirtRegRewriter::ID;
 
 INITIALIZE_PASS_BEGIN(VirtRegRewriter, "virtregrewriter",
                       "Virtual Register Rewriter", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
@@ -238,10 +238,10 @@ INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
 
 void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
-  AU.addRequired<SlotIndexes>();
-  AU.addPreserved<SlotIndexes>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
@@ -258,10 +258,10 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
   MRI = &MF->getRegInfo();
-  Indexes = &getAnalysis<SlotIndexes>();
-  LIS = &getAnalysis<LiveIntervals>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   VRM = &getAnalysis<VirtRegMap>();
-  DebugVars = getAnalysisIfAvailable<LiveDebugVariables>();
+  DebugVars = &getAnalysis<LiveDebugVariables>();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
                     << "********** Function: " << MF->getName() << '\n');
   LLVM_DEBUG(VRM->dump());
@@ -275,7 +275,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   // Rewrite virtual registers.
   rewrite();
 
-  if (DebugVars && ClearVirtRegs) {
+  if (ClearVirtRegs) {
     // Write out new DBG_VALUE instructions.
 
     // We only do this if ClearVirtRegs is specified since this should be the
@@ -311,8 +311,8 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
   }
 
   // Check all mbb start positions between First and Last while
-  // simulatenously advancing an iterator for each subrange.
-  for (SlotIndexes::MBBIndexIterator MBBI = Indexes->findMBBIndex(First);
+  // simultaneously advancing an iterator for each subrange.
+  for (SlotIndexes::MBBIndexIterator MBBI = Indexes->getMBBLowerBound(First);
        MBBI != Indexes->MBBIndexEnd() && MBBI->first <= Last; ++MBBI) {
     SlotIndex MBBBegin = MBBI->first;
     // Advance all subrange iterators so that their end position is just
@@ -363,7 +363,7 @@ void VirtRegRewriter::addMBBLiveIns() {
       // sorted by slot indexes.
       SlotIndexes::MBBIndexIterator I = Indexes->MBBIndexBegin();
       for (const auto &Seg : LI) {
-        I = Indexes->advanceMBBIndex(I, Seg.start);
+        I = Indexes->getMBBLowerBound(I, Seg.start);
         for (; I != Indexes->MBBIndexEnd() && I->first < Seg.end; ++I) {
           MachineBasicBlock *MBB = I->second;
           MBB->addLiveIn(PhysReg);
@@ -514,8 +514,8 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
   SlotIndex MIIndex = LIS->getInstructionIndex(MI);
   SlotIndex BeforeMIUses = MIIndex.getBaseIndex();
   SlotIndex AfterMIDefs = MIIndex.getBoundaryIndex();
-  for (MCRegUnitIterator Unit(SuperPhysReg, TRI); Unit.isValid(); ++Unit) {
-    const LiveRange &UnitRange = LIS->getRegUnit(*Unit);
+  for (MCRegUnit Unit : TRI->regunits(SuperPhysReg)) {
+    const LiveRange &UnitRange = LIS->getRegUnit(Unit);
     // If the regunit is live both before and after MI,
     // we assume it is live through.
     // Generally speaking, this is not true, because something like
@@ -633,9 +633,8 @@ void VirtRegRewriter::rewrite() {
     // Don't bother maintaining accurate LiveIntervals for registers which were
     // already allocated.
     for (Register PhysReg : RewriteRegs) {
-      for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid();
-           ++Units) {
-        LIS->removeRegUnit(*Units);
+      for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+        LIS->removeRegUnit(Unit);
       }
     }
   }

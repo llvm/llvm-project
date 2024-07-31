@@ -1,4 +1,4 @@
-// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacosx-version-min=10.6 -fblocks -x objective-c %s
+// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacos-version-min=10.6 -fblocks -x objective-c %s
 // RUN: c-index-test -test-load-tu %t.ast all > %t 2>&1 && FileCheck --input-file=%t %s
 // REQUIRES: x86-registered-target
 @interface Foo 
@@ -71,7 +71,6 @@ struct X0;
 struct X0  {};
 
 @interface TestAttributes()
-// <rdar://problem/9561076>
 @property (retain) IBOutlet id anotherOutlet;
 @property (class) int cProp;
 @end
@@ -131,7 +130,7 @@ struct X0  {};
 // CHECK: c-index-api-loadTU-test.m:50:13: VarDecl=d:50:13 (Definition) Extent=[50:2 - 50:14]
 // CHECK: c-index-api-loadTU-test.m:50:2: TypeRef=id:0:0 Extent=[50:2 - 50:4]
 // CHECK: c-index-api-loadTU-test.m:50:6: ObjCProtocolRef=Proto:25:11 Extent=[50:6 - 50:11]
-// CHECK: c-index-api-loadTU-test.m:51:2: BinaryOperator= Extent=[51:2 - 51:7]
+// CHECK: c-index-api-loadTU-test.m:51:2: BinaryOperator== Extent=[51:2 - 51:7]
 // CHECK: c-index-api-loadTU-test.m:51:2: DeclRefExpr=d:50:13 Extent=[51:2 - 51:3]
 // CHECK: c-index-api-loadTU-test.m:51:6: UnexposedExpr=c:49:12 Extent=[51:6 - 51:7]
 // CHECK: c-index-api-loadTU-test.m:51:6: UnexposedExpr=c:49:12 Extent=[51:6 - 51:7]
@@ -168,15 +167,15 @@ struct X0  {};
 // CHECK: c-index-api-loadTU-test.m:69:16: TypeRef=struct X0:71:8 Extent=[69:16 - 69:18]
 // CHECK: c-index-api-loadTU-test.m:70:8: StructDecl=X0:70:8 Extent=[70:1 - 70:10]
 // CHECK: c-index-api-loadTU-test.m:71:8: StructDecl=X0:71:8 (Definition) Extent=[71:1 - 71:14]
-// CHECK: c-index-api-loadTU-test.m:73:12: ObjCCategoryDecl=:73:12 Extent=[73:1 - 77:5]
+// CHECK: c-index-api-loadTU-test.m:73:12: ObjCCategoryDecl=:73:12 Extent=[73:1 - 76:5]
 // CHECK: c-index-api-loadTU-test.m:73:12: ObjCClassRef=TestAttributes:62:12 Extent=[73:12 - 73:26]
-// CHECK: c-index-api-loadTU-test.m:75:32: ObjCPropertyDecl=anotherOutlet:75:32 [retain,] Extent=[75:1 - 75:45]
-// CHECK: c-index-api-loadTU-test.m:75:20: attribute(iboutlet)= Extent=[75:20 - 75:28]
-// CHECK: c-index-api-loadTU-test.m:75:29: TypeRef=id:0:0 Extent=[75:29 - 75:31]
-// CHECK: c-index-api-loadTU-test.m:75:32: ObjCInstanceMethodDecl=anotherOutlet:75:32 Extent=[75:32 - 75:45]
-// CHECK: c-index-api-loadTU-test.m:75:32: ObjCInstanceMethodDecl=setAnotherOutlet::75:32 Extent=[75:32 - 75:45]
-// CHECK: c-index-api-loadTU-test.m:75:32: ParmDecl=anotherOutlet:75:32 (Definition) Extent=[75:32 - 75:45]
-// CHECK: c-index-api-loadTU-test.m:76:23: ObjCPropertyDecl=cProp:76:23 [class,] Extent=[76:1 - 76:28]
-// CHECK: c-index-api-loadTU-test.m:76:23: ObjCClassMethodDecl=cProp:76:23 Extent=[76:23 - 76:28]
-// CHECK: c-index-api-loadTU-test.m:76:23: ObjCClassMethodDecl=setCProp::76:23 Extent=[76:23 - 76:28]
-// CHECK: c-index-api-loadTU-test.m:76:23: ParmDecl=cProp:76:23 (Definition) Extent=[76:23 - 76:28]
+// CHECK: c-index-api-loadTU-test.m:74:32: ObjCPropertyDecl=anotherOutlet:74:32 [retain,] Extent=[74:1 - 74:45]
+// CHECK: c-index-api-loadTU-test.m:74:20: attribute(iboutlet)= Extent=[74:20 - 74:28]
+// CHECK: c-index-api-loadTU-test.m:74:29: TypeRef=id:0:0 Extent=[74:29 - 74:31]
+// CHECK: c-index-api-loadTU-test.m:74:32: ObjCInstanceMethodDecl=anotherOutlet:74:32 Extent=[74:32 - 74:45]
+// CHECK: c-index-api-loadTU-test.m:74:32: ObjCInstanceMethodDecl=setAnotherOutlet::74:32 Extent=[74:32 - 74:45]
+// CHECK: c-index-api-loadTU-test.m:74:32: ParmDecl=anotherOutlet:74:32 (Definition) Extent=[74:32 - 74:45]
+// CHECK: c-index-api-loadTU-test.m:75:23: ObjCPropertyDecl=cProp:75:23 [class,] Extent=[75:1 - 75:28]
+// CHECK: c-index-api-loadTU-test.m:75:23: ObjCClassMethodDecl=cProp:75:23 Extent=[75:23 - 75:28]
+// CHECK: c-index-api-loadTU-test.m:75:23: ObjCClassMethodDecl=setCProp::75:23 Extent=[75:23 - 75:28]
+// CHECK: c-index-api-loadTU-test.m:75:23: ParmDecl=cProp:75:23 (Definition) Extent=[75:23 - 75:28]

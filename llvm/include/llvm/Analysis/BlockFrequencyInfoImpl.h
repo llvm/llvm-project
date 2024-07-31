@@ -527,19 +527,15 @@ public:
   getBlockProfileCount(const Function &F, const BlockNode &Node,
                        bool AllowSynthetic = false) const;
   std::optional<uint64_t>
-  getProfileCountFromFreq(const Function &F, uint64_t Freq,
+  getProfileCountFromFreq(const Function &F, BlockFrequency Freq,
                           bool AllowSynthetic = false) const;
   bool isIrrLoopHeader(const BlockNode &Node);
 
-  void setBlockFreq(const BlockNode &Node, uint64_t Freq);
+  void setBlockFreq(const BlockNode &Node, BlockFrequency Freq);
 
-  raw_ostream &printBlockFreq(raw_ostream &OS, const BlockNode &Node) const;
-  raw_ostream &printBlockFreq(raw_ostream &OS,
-                              const BlockFrequency &Freq) const;
-
-  uint64_t getEntryFreq() const {
+  BlockFrequency getEntryFreq() const {
     assert(!Freqs.empty());
-    return Freqs[0].Integer;
+    return BlockFrequency(Freqs[0].Integer);
   }
 };
 
@@ -1029,7 +1025,7 @@ public:
   }
 
   std::optional<uint64_t>
-  getProfileCountFromFreq(const Function &F, uint64_t Freq,
+  getProfileCountFromFreq(const Function &F, BlockFrequency Freq,
                           bool AllowSynthetic = false) const {
     return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq,
                                                                AllowSynthetic);
@@ -1039,7 +1035,7 @@ public:
     return BlockFrequencyInfoImplBase::isIrrLoopHeader(getNode(BB));
   }
 
-  void setBlockFreq(const BlockT *BB, uint64_t Freq);
+  void setBlockFreq(const BlockT *BB, BlockFrequency Freq);
 
   void forgetBlock(const BlockT *BB) {
     // We don't erase corresponding items from `Freqs`, `RPOT` and other to
@@ -1068,11 +1064,6 @@ public:
   raw_ostream &print(raw_ostream &OS) const override;
 
   using BlockFrequencyInfoImplBase::dump;
-  using BlockFrequencyInfoImplBase::printBlockFreq;
-
-  raw_ostream &printBlockFreq(raw_ostream &OS, const BlockT *BB) const {
-    return BlockFrequencyInfoImplBase::printBlockFreq(OS, getNode(BB));
-  }
 
   void verifyMatch(BlockFrequencyInfoImpl<BT> &Other) const;
 };
@@ -1145,12 +1136,13 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
     // blocks and unknown blocks.
     for (const BlockT &BB : F)
       if (!Nodes.count(&BB))
-        setBlockFreq(&BB, 0);
+        setBlockFreq(&BB, BlockFrequency());
   }
 }
 
 template <class BT>
-void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB, uint64_t Freq) {
+void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
+                                              BlockFrequency Freq) {
   if (Nodes.count(BB))
     BlockFrequencyInfoImplBase::setBlockFreq(getNode(BB), Freq);
   else {
@@ -1382,7 +1374,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
   if (ReachableBlocks.empty())
     return;
 
-  // The map is used to to index successors/predecessors of reachable blocks in
+  // The map is used to index successors/predecessors of reachable blocks in
   // the ReachableBlocks vector
   DenseMap<const BlockT *, size_t> BlockIndex;
   // Extract initial frequencies for the reachable blocks
@@ -1537,8 +1529,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   SmallPtrSet<const BlockT *, 8> InverseReachable;
   for (const BlockT &BB : *F) {
     // An exit block is a block without any successors
-    bool HasSucc = GraphTraits<const BlockT *>::child_begin(&BB) !=
-                   GraphTraits<const BlockT *>::child_end(&BB);
+    bool HasSucc = !llvm::children<const BlockT *>(&BB).empty();
     if (!HasSucc && Reachable.count(&BB)) {
       Queue.push(&BB);
       InverseReachable.insert(&BB);
@@ -1547,7 +1538,7 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
-    for (const BlockT *DstBB : children<Inverse<const BlockT *>>(SrcBB)) {
+    for (const BlockT *DstBB : inverse_children<const BlockT *>(SrcBB)) {
       auto EP = BPI->getEdgeProbability(DstBB, SrcBB);
       if (EP.isZero())
         continue;
@@ -1580,7 +1571,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (BlockIndex.find(SI) == BlockIndex.end())
+      if (!BlockIndex.contains(SI))
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
@@ -1862,7 +1853,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       OS << Node->getName() << " : ";
     switch (GType) {
     case GVDT_Fraction:
-      Graph->printBlockFreq(OS, Node);
+      OS << printBlockFreq(*Graph, *Node);
       break;
     case GVDT_Integer:
       OS << Graph->getBlockFreq(Node).getFrequency();

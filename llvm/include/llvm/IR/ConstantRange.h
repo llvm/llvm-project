@@ -176,6 +176,11 @@ public:
                                              const APInt &Other,
                                              unsigned NoWrapKind);
 
+  /// Initialize a range containing all values X that satisfy `(X & Mask)
+  /// != C`. Note that the range returned may contain values where `(X & Mask)
+  /// == C` holds, making it less precise, but still conservative.
+  static ConstantRange makeMaskNotEqualRange(const APInt &Mask, const APInt &C);
+
   /// Returns true if ConstantRange calculations are supported for intrinsic
   /// with \p IntrinsicID.
   static bool isIntrinsicSupported(Intrinsic::ID IntrinsicID);
@@ -271,6 +276,9 @@ public:
 
   /// Return true if all values in this range are non-negative.
   bool isAllNonNegative() const;
+
+  /// Return true if all values in this range are positive.
+  bool isAllPositive() const;
 
   /// Return the largest unsigned value contained in the ConstantRange.
   APInt getUnsignedMax() const;
@@ -419,6 +427,15 @@ public:
   /// treating both this and \p Other as unsigned ranges.
   ConstantRange multiply(const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting
+  /// from a multiplication with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange
+  multiplyWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                     PreferredRangeType RangeType = Smallest) const;
+
   /// Return range of possible values for a signed multiplication of this and
   /// \p Other. However, if overflow is possible always return a full range
   /// rather than trying to determine a more precise result.
@@ -529,6 +546,13 @@ public:
   /// Calculate ctlz range. If \p ZeroIsPoison is set, the range is computed
   /// ignoring a possible zero value contained in the input range.
   ConstantRange ctlz(bool ZeroIsPoison = false) const;
+
+  /// Calculate cttz range. If \p ZeroIsPoison is set, the range is computed
+  /// ignoring a possible zero value contained in the input range.
+  ConstantRange cttz(bool ZeroIsPoison = false) const;
+
+  /// Calculate ctpop range.
+  ConstantRange ctpop() const;
 
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.

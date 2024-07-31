@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -27,6 +28,11 @@
 
 using namespace llvm;
 
+STATISTIC(NumOneIteration, "Number of functions with one iteration");
+STATISTIC(NumTwoIterations, "Number of functions with two iterations");
+STATISTIC(NumThreeOrMoreIterations,
+          "Number of functions with three or more iterations");
+
 namespace llvm {
 cl::OptionCategory GICombinerOptionCategory(
     "GlobalISel Combiner",
@@ -39,7 +45,6 @@ cl::OptionCategory GICombinerOptionCategory(
 );
 } // end namespace llvm
 
-namespace {
 /// This class acts as the glue the joins the CombinerHelper to the overall
 /// Combine algorithm. The CombinerHelper is intended to report the
 /// modifications it makes to the MIR to the GISelChangeObserver and the
@@ -48,7 +53,7 @@ namespace {
 /// instruction creation will schedule that instruction for a future visit.
 /// Other Combiner implementations may require more complex behaviour from
 /// their GISelChangeObserver subclass.
-class WorkListMaintainer : public GISelChangeObserver {
+class Combiner::WorkListMaintainer : public GISelChangeObserver {
   using WorkListTy = GISelWorkList<512>;
   WorkListTy &WorkList;
   /// The instructions that have been created but we want to report once they
@@ -88,27 +93,46 @@ public:
     LLVM_DEBUG(CreatedInstrs.clear());
   }
 };
-}
 
-Combiner::Combiner(CombinerInfo &Info, const TargetPassConfig *TPC)
-    : CInfo(Info), TPC(TPC) {
+Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,
+                   const TargetPassConfig *TPC, GISelKnownBits *KB,
+                   GISelCSEInfo *CSEInfo)
+    : Builder(CSEInfo ? std::make_unique<CSEMIRBuilder>()
+                      : std::make_unique<MachineIRBuilder>()),
+      WLObserver(std::make_unique<WorkListMaintainer>(WorkList)),
+      ObserverWrapper(std::make_unique<GISelObserverWrapper>()), CInfo(CInfo),
+      Observer(*ObserverWrapper), B(*Builder), MF(MF), MRI(MF.getRegInfo()),
+      KB(KB), TPC(TPC), CSEInfo(CSEInfo) {
   (void)this->TPC; // FIXME: Remove when used.
+
+  // Setup builder.
+  B.setMF(MF);
+  if (CSEInfo)
+    B.setCSEInfo(CSEInfo);
+
+  // Setup observer.
+  ObserverWrapper->addObserver(WLObserver.get());
+  if (CSEInfo)
+    ObserverWrapper->addObserver(CSEInfo);
+
+  B.setChangeObserver(*ObserverWrapper);
 }
 
-bool Combiner::combineMachineInstrs(MachineFunction &MF,
-                                    GISelCSEInfo *CSEInfo) {
+Combiner::~Combiner() = default;
+
+bool Combiner::combineMachineInstrs() {
   // If the ISel pipeline failed, do not bother running this pass.
   // FIXME: Should this be here or in individual combiner passes.
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
-  Builder =
-      CSEInfo ? std::make_unique<CSEMIRBuilder>() : std::make_unique<MachineIRBuilder>();
-  MRI = &MF.getRegInfo();
-  Builder->setMF(MF);
-  if (CSEInfo)
-    Builder->setCSEInfo(CSEInfo);
+  // We can't call this in the constructor because the derived class is
+  // uninitialized at that time.
+  if (!HasSetupMF) {
+    HasSetupMF = true;
+    setupMF(MF, KB);
+  }
 
   LLVM_DEBUG(dbgs() << "Generic MI Combiner for: " << MF.getName() << '\n');
 
@@ -116,26 +140,27 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
 
   bool MFChanged = false;
   bool Changed;
-  MachineIRBuilder &B = *Builder;
 
-  do {
+  unsigned Iteration = 0;
+  while (true) {
+    ++Iteration;
+    LLVM_DEBUG(dbgs() << "\n\nCombiner iteration #" << Iteration << '\n');
+
+    WorkList.clear();
+
     // Collect all instructions. Do a post order traversal for basic blocks and
     // insert with list bottom up, so while we pop_back_val, we'll traverse top
     // down RPOT.
     Changed = false;
-    GISelWorkList<512> WorkList;
-    WorkListMaintainer Observer(WorkList);
-    GISelObserverWrapper WrapperObserver(&Observer);
-    if (CSEInfo)
-      WrapperObserver.addObserver(CSEInfo);
-    RAIIDelegateInstaller DelInstall(MF, &WrapperObserver);
+
+    RAIIDelegateInstaller DelInstall(MF, ObserverWrapper.get());
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       for (MachineInstr &CurMI :
            llvm::make_early_inc_range(llvm::reverse(*MBB))) {
         // Erase dead insts before even adding to the list.
-        if (isTriviallyDead(CurMI, *MRI)) {
+        if (isTriviallyDead(CurMI, MRI)) {
           LLVM_DEBUG(dbgs() << CurMI << "Is dead; erasing.\n");
-          llvm::salvageDebugInfo(*MRI, CurMI);
+          llvm::salvageDebugInfo(MRI, CurMI);
           CurMI.eraseFromParent();
           continue;
         }
@@ -147,11 +172,32 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();
       LLVM_DEBUG(dbgs() << "\nTry combining " << *CurrInst;);
-      Changed |= CInfo.combine(WrapperObserver, *CurrInst, B);
-      Observer.reportFullyCreatedInstrs();
+      Changed |= tryCombineAll(*CurrInst);
+      WLObserver->reportFullyCreatedInstrs();
     }
     MFChanged |= Changed;
-  } while (Changed);
+
+    if (!Changed) {
+      LLVM_DEBUG(dbgs() << "\nCombiner reached fixed-point after iteration #"
+                        << Iteration << '\n');
+      break;
+    }
+    // Iterate until a fixed-point is reached if MaxIterations == 0,
+    // otherwise limit the number of iterations.
+    if (CInfo.MaxIterations && Iteration >= CInfo.MaxIterations) {
+      LLVM_DEBUG(
+          dbgs() << "\nCombiner reached iteration limit after iteration #"
+                 << Iteration << '\n');
+      break;
+    }
+  }
+
+  if (Iteration == 1)
+    ++NumOneIteration;
+  else if (Iteration == 2)
+    ++NumTwoIterations;
+  else
+    ++NumThreeOrMoreIterations;
 
 #ifndef NDEBUG
   if (CSEInfo) {

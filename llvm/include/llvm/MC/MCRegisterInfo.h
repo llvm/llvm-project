@@ -27,6 +27,10 @@
 
 namespace llvm {
 
+class MCRegUnitIterator;
+class MCSubRegIterator;
+class MCSuperRegIterator;
+
 /// MCRegisterClass - Base class of TargetRegisterClass.
 class MCRegisterClass {
 public:
@@ -42,6 +46,7 @@ public:
   const uint16_t RegSizeInBits;
   const int8_t CopyCost;
   const bool Allocatable;
+  const bool BaseClass;
 
   /// getID() - Return the register class ID number.
   ///
@@ -93,6 +98,9 @@ public:
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
   bool isAllocatable() const { return Allocatable; }
+
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return BaseClass; }
 };
 
 /// MCRegisterDesc - This record contains information about a particular
@@ -118,6 +126,9 @@ struct MCRegisterDesc {
   /// Index into list with lane mask sequences. The sequence contains a lanemask
   /// for every register unit.
   uint16_t RegUnitLaneMasks;
+
+  // Is true for constant registers.
+  bool IsConstant;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -145,13 +156,6 @@ public:
     bool operator<(DwarfLLVMRegPair RHS) const { return FromReg < RHS.FromReg; }
   };
 
-  /// SubRegCoveredBits - Emitted by tablegen: bit range covered by a subreg
-  /// index, -1 in any being invalid.
-  struct SubRegCoveredBits {
-    uint16_t Offset;
-    uint16_t Size;
-  };
-
 private:
   const MCRegisterDesc *Desc;                 // Pointer to the descriptor array
   unsigned NumRegs;                           // Number of entries in the array
@@ -168,8 +172,6 @@ private:
   const char *RegClassStrings;                // Pointer to the class strings.
   const uint16_t *SubRegIndices;              // Pointer to the subreg lookup
                                               // array.
-  const SubRegCoveredBits *SubRegIdxRanges;   // Pointer to the subreg covered
-                                              // bit ranges array.
   unsigned NumSubRegIndices;                  // Number of subreg indices.
   const uint16_t *RegEncodingTable;           // Pointer to array of register
                                               // encodings.
@@ -185,20 +187,20 @@ private:
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
 
-public:
-  // Forward declaration to become a friend class of DiffListIterator.
-  template <class SubT> class mc_difflist_iterator;
+  mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
+  ArrayRef<MCPhysReg> getCachedAliasesOf(MCPhysReg R) const;
 
-  /// DiffListIterator - Base iterator class that can traverse the
-  /// differentially encoded register and regunit lists in DiffLists.
-  /// Don't use this class directly, use one of the specialized sub-classes
-  /// defined below.
-  class DiffListIterator {
+  /// Iterator class that can traverse the differentially encoded values in
+  /// DiffLists. Don't use this class directly, use one of the adaptors below.
+  class DiffListIterator
+      : public iterator_facade_base<DiffListIterator, std::forward_iterator_tag,
+                                    unsigned> {
     unsigned Val = 0;
     const int16_t *List = nullptr;
 
-  protected:
-    /// Create an invalid iterator. Call init() to point to something useful.
+  public:
+    /// Constructs an invalid iterator, which is also the end iterator.
+    /// Call init() to point to something useful.
     DiffListIterator() = default;
 
     /// Point the iterator to InitVal, decoding subsequent values from DiffList.
@@ -207,127 +209,54 @@ public:
       List = DiffList;
     }
 
-  public:
-    /// isValid - returns true if this iterator is not yet at the end.
+    /// Returns true if this iterator is not yet at the end.
     bool isValid() const { return List; }
 
     /// Dereference the iterator to get the value at the current position.
-    MCRegister operator*() const { return Val; }
+    const unsigned &operator*() const { return Val; }
 
+    using DiffListIterator::iterator_facade_base::operator++;
     /// Pre-increment to move to the next position.
-    void operator++() {
+    DiffListIterator &operator++() {
       assert(isValid() && "Cannot move off the end of the list.");
       int16_t D = *List++;
       Val += D;
       // The end of the list is encoded as a 0 differential.
       if (!D)
         List = nullptr;
+      return *this;
     }
 
-    template <class SubT> friend class MCRegisterInfo::mc_difflist_iterator;
-  };
-
-  /// Forward iterator using DiffListIterator.
-  template <class SubT>
-  class mc_difflist_iterator
-      : public iterator_facade_base<mc_difflist_iterator<SubT>,
-                                    std::forward_iterator_tag, MCPhysReg> {
-    MCRegisterInfo::DiffListIterator Iter;
-    /// Current value as MCPhysReg, so we can return a reference to it.
-    MCPhysReg Val = 0;
-
-  protected:
-    /// Point the iterator to InitVal, decoding subsequent values from DiffList.
-    void init(unsigned InitVal, const int16_t *DiffList) {
-      Iter.init(InitVal, DiffList);
-      Val = *Iter;
-    }
-
-  public:
-    // Allow default construction to build variables, but this doesn't build
-    // a useful iterator.
-    mc_difflist_iterator() = default;
-
-    /// Return an iterator past the last element.
-    static SubT end() {
-      SubT End;
-      End.Iter.List = nullptr;
-      return End;
-    }
-
-    bool operator==(const mc_difflist_iterator &Arg) const {
-      return Iter.List == Arg.Iter.List;
-    }
-
-    const MCPhysReg &operator*() const { return Val; }
-
-    using mc_difflist_iterator::iterator_facade_base::operator++;
-    void operator++() {
-      assert(Iter.List && "Cannot increment the end iterator!");
-      ++Iter;
-      Val = *Iter;
+    bool operator==(const DiffListIterator &Other) const {
+      return List == Other.List;
     }
   };
 
-  /// Forward iterator over all sub-registers.
-  /// TODO: Replace remaining uses of MCSubRegIterator.
-  class mc_subreg_iterator : public mc_difflist_iterator<mc_subreg_iterator> {
-  public:
-    mc_subreg_iterator() = default;
-
-    mc_subreg_iterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-      assert(MCRegister::isPhysicalRegister(Reg.id()));
-      init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
-    }
-  };
-
-  /// Forward iterator over all super-registers.
-  /// TODO: Replace remaining uses of MCSuperRegIterator.
-  class mc_superreg_iterator
-      : public mc_difflist_iterator<mc_superreg_iterator> {
-  public:
-    mc_superreg_iterator() = default;
-
-    mc_superreg_iterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-      assert(MCRegister::isPhysicalRegister(Reg.id()));
-      init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
-    }
-  };
-
+public:
   /// Return an iterator range over all sub-registers of \p Reg, excluding \p
   /// Reg.
-  iterator_range<mc_subreg_iterator> subregs(MCRegister Reg) const {
-    return make_range(std::next(mc_subreg_iterator(Reg, this)),
-                      mc_subreg_iterator::end());
-  }
+  iterator_range<MCSubRegIterator> subregs(MCRegister Reg) const;
 
   /// Return an iterator range over all sub-registers of \p Reg, including \p
   /// Reg.
-  iterator_range<mc_subreg_iterator> subregs_inclusive(MCRegister Reg) const {
-    return make_range({Reg, this}, mc_subreg_iterator::end());
-  }
+  iterator_range<MCSubRegIterator> subregs_inclusive(MCRegister Reg) const;
 
   /// Return an iterator range over all super-registers of \p Reg, excluding \p
   /// Reg.
-  iterator_range<mc_superreg_iterator> superregs(MCRegister Reg) const {
-    return make_range(std::next(mc_superreg_iterator(Reg, this)),
-                      mc_superreg_iterator::end());
-  }
+  iterator_range<MCSuperRegIterator> superregs(MCRegister Reg) const;
 
   /// Return an iterator range over all super-registers of \p Reg, including \p
   /// Reg.
-  iterator_range<mc_superreg_iterator>
-  superregs_inclusive(MCRegister Reg) const {
-    return make_range({Reg, this}, mc_superreg_iterator::end());
-  }
+  iterator_range<MCSuperRegIterator> superregs_inclusive(MCRegister Reg) const;
 
   /// Return an iterator range over all sub- and super-registers of \p Reg,
   /// including \p Reg.
-  detail::concat_range<const MCPhysReg, iterator_range<mc_subreg_iterator>,
-                       iterator_range<mc_superreg_iterator>>
-  sub_and_superregs_inclusive(MCRegister Reg) const {
-    return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
-  }
+  detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
+                       iterator_range<MCSuperRegIterator>>
+  sub_and_superregs_inclusive(MCRegister Reg) const;
+
+  /// Returns an iterator range over all regunits for \p Reg.
+  iterator_range<MCRegUnitIterator> regunits(MCRegister Reg) const;
 
   // These iterators are allowed to sub-class DiffListIterator and access
   // internal list pointers.
@@ -337,6 +266,7 @@ public:
   friend class MCRegUnitIterator;
   friend class MCRegUnitMaskIterator;
   friend class MCRegUnitRootIterator;
+  friend class MCRegAliasIterator;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -346,7 +276,6 @@ public:
                           const int16_t *DL, const LaneBitmask *RUMS,
                           const char *Strings, const char *ClassStrings,
                           const uint16_t *SubIndices, unsigned NumIndices,
-                          const SubRegCoveredBits *SubIdxRanges,
                           const uint16_t *RET) {
     Desc = D;
     NumRegs = NR;
@@ -362,7 +291,6 @@ public:
     NumRegUnits = NRU;
     SubRegIndices = SubIndices;
     NumSubRegIndices = NumIndices;
-    SubRegIdxRanges = SubIdxRanges;
     RegEncodingTable = RET;
 
     // Initialize DWARF register mapping variables
@@ -374,6 +302,8 @@ public:
     EHDwarf2LRegsSize = 0;
     Dwarf2LRegs = nullptr;
     Dwarf2LRegsSize = 0;
+
+    RegAliasesCache.resize(NumRegs);
   }
 
   /// Used to initialize LLVM register to Dwarf
@@ -455,21 +385,14 @@ public:
   /// otherwise.
   unsigned getSubRegIndex(MCRegister RegNo, MCRegister SubRegNo) const;
 
-  /// Get the size of the bit range covered by a sub-register index.
-  /// If the index isn't continuous, return the sum of the sizes of its parts.
-  /// If the index is used to access subregisters of different sizes, return -1.
-  unsigned getSubRegIdxSize(unsigned Idx) const;
-
-  /// Get the offset of the bit range covered by a sub-register index.
-  /// If an Offset doesn't make sense (the index isn't continuous, or is used to
-  /// access sub-registers at different offsets), return -1.
-  unsigned getSubRegIdxOffset(unsigned Idx) const;
-
   /// Return the human-readable symbolic target-specific name for the
   /// specified physical register.
   const char *getName(MCRegister RegNo) const {
     return RegStrings + get(RegNo).Name;
   }
+
+  /// Returns true if the given register is constant.
+  bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
 
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
@@ -579,16 +502,37 @@ public:
 
 /// MCSubRegIterator enumerates all sub-registers of Reg.
 /// If IncludeSelf is set, Reg itself is included in the list.
-class MCSubRegIterator : public MCRegisterInfo::DiffListIterator {
+class MCSubRegIterator
+    : public iterator_adaptor_base<MCSubRegIterator,
+                                   MCRegisterInfo::DiffListIterator,
+                                   std::forward_iterator_tag, const MCPhysReg> {
+  // Cache the current value, so that we can return a reference to it.
+  MCPhysReg Val;
+
 public:
+  /// Constructs an end iterator.
+  MCSubRegIterator() = default;
+
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
     assert(MCRegister::isPhysicalRegister(Reg.id()));
-    init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
+    I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
+    Val = MCPhysReg(*I);
     if (!IncludeSelf)
       ++*this;
   }
+
+  const MCPhysReg &operator*() const { return Val; }
+
+  using iterator_adaptor_base::operator++;
+  MCSubRegIterator &operator++() {
+    Val = MCPhysReg(*++I);
+    return *this;
+  }
+
+  /// Returns true if this iterator is not yet at the end.
+  bool isValid() const { return I.isValid(); }
 };
 
 /// Iterator that enumerates the sub-registers of a Reg and the associated
@@ -619,26 +563,46 @@ public:
   bool isValid() const { return SRIter.isValid(); }
 
   /// Moves to the next position.
-  void operator++() {
+  MCSubRegIndexIterator &operator++() {
     ++SRIter;
     ++SRIndex;
+    return *this;
   }
 };
 
 /// MCSuperRegIterator enumerates all super-registers of Reg.
 /// If IncludeSelf is set, Reg itself is included in the list.
-class MCSuperRegIterator : public MCRegisterInfo::DiffListIterator {
+class MCSuperRegIterator
+    : public iterator_adaptor_base<MCSuperRegIterator,
+                                   MCRegisterInfo::DiffListIterator,
+                                   std::forward_iterator_tag, const MCPhysReg> {
+  // Cache the current value, so that we can return a reference to it.
+  MCPhysReg Val;
+
 public:
+  /// Constructs an end iterator.
   MCSuperRegIterator() = default;
 
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
     assert(MCRegister::isPhysicalRegister(Reg.id()));
-    init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
+    I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
     // Initially, the iterator points to Reg itself.
+    Val = MCPhysReg(*I);
     if (!IncludeSelf)
       ++*this;
   }
+
+  const MCPhysReg &operator*() const { return Val; }
+
+  using iterator_adaptor_base::operator++;
+  MCSuperRegIterator &operator++() {
+    Val = MCPhysReg(*++I);
+    return *this;
+  }
+
+  /// Returns true if this iterator is not yet at the end.
+  bool isValid() const { return I.isValid(); }
 };
 
 // Definition for isSuperRegister. Put it down here since it needs the
@@ -651,23 +615,19 @@ inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) co
 //                               Register Units
 //===----------------------------------------------------------------------===//
 
-// Register units are used to compute register aliasing. Every register has at
-// least one register unit, but it can have more. Two registers overlap if and
-// only if they have a common register unit.
-//
-// A target with a complicated sub-register structure will typically have many
-// fewer register units than actual registers. MCRI::getNumRegUnits() returns
-// the number of register units in the target.
-
 // MCRegUnitIterator enumerates a list of register units for Reg. The list is
 // in ascending numerical order.
-class MCRegUnitIterator : public MCRegisterInfo::DiffListIterator {
+class MCRegUnitIterator
+    : public iterator_adaptor_base<MCRegUnitIterator,
+                                   MCRegisterInfo::DiffListIterator,
+                                   std::forward_iterator_tag, const MCRegUnit> {
   // The value must be kept in sync with RegisterInfoEmitter.cpp.
   static constexpr unsigned RegUnitBits = 12;
+  // Cache the current value, so that we can return a reference to it.
+  MCRegUnit Val;
 
 public:
-  /// MCRegUnitIterator - Create an iterator that traverses the register units
-  /// in Reg.
+  /// Constructs an end iterator.
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
@@ -677,13 +637,20 @@ public:
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);
     unsigned Offset = RU >> RegUnitBits;
-    init(FirstRU, MCRI->DiffLists + Offset);
+    I.init(FirstRU, MCRI->DiffLists + Offset);
+    Val = MCRegUnit(*I);
   }
 
+  const MCRegUnit &operator*() const { return Val; }
+
+  using iterator_adaptor_base::operator++;
   MCRegUnitIterator &operator++() {
-    MCRegisterInfo::DiffListIterator::operator++();
+    Val = MCRegUnit(*++I);
     return *this;
   }
+
+  /// Returns true if this iterator is not yet at the end.
+  bool isValid() const { return I.isValid(); }
 };
 
 /// MCRegUnitMaskIterator enumerates a list of register units and their
@@ -713,9 +680,10 @@ public:
   bool isValid() const { return RUIter.isValid(); }
 
   /// Moves to the next position.
-  void operator++() {
+  MCRegUnitMaskIterator &operator++() {
     ++MaskListIter;
     ++RUIter;
+    return *this;
   }
 };
 
@@ -753,72 +721,72 @@ public:
   }
 
   /// Preincrement to move to the next root register.
-  void operator++() {
+  MCRegUnitRootIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
     Reg0 = Reg1;
     Reg1 = 0;
+    return *this;
   }
 };
 
-/// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
-/// set, Reg itself is included in the list.  This iterator does not guarantee
-/// any ordering or that entries are unique.
+/// MCRegAliasIterator enumerates all registers aliasing Reg.
 class MCRegAliasIterator {
 private:
-  MCRegister Reg;
-  const MCRegisterInfo *MCRI;
-  bool IncludeSelf;
-
-  MCRegUnitIterator RI;
-  MCRegUnitRootIterator RRI;
-  MCSuperRegIterator SI;
+  const MCPhysReg *It = nullptr;
+  const MCPhysReg *End = nullptr;
 
 public:
   MCRegAliasIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
-                     bool IncludeSelf)
-    : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
-    // Initialize the iterators.
-    for (RI = MCRegUnitIterator(Reg, MCRI); RI.isValid(); ++RI) {
-      for (RRI = MCRegUnitRootIterator(*RI, MCRI); RRI.isValid(); ++RRI) {
-        for (SI = MCSuperRegIterator(*RRI, MCRI, true); SI.isValid(); ++SI) {
-          if (!(!IncludeSelf && Reg == *SI))
-            return;
-        }
-      }
-    }
+                     bool IncludeSelf) {
+    ArrayRef<MCPhysReg> Cache = MCRI->getCachedAliasesOf(Reg);
+    assert(Cache.back() == Reg);
+    It = Cache.begin();
+    End = Cache.end();
+    if (!IncludeSelf)
+      --End;
   }
 
-  bool isValid() const { return RI.isValid(); }
+  bool isValid() const { return It != End; }
 
-  MCRegister operator*() const {
-    assert(SI.isValid() && "Cannot dereference an invalid iterator.");
-    return *SI;
-  }
+  MCRegister operator*() const { return *It; }
 
-  void advance() {
-    // Assuming SI is valid.
-    ++SI;
-    if (SI.isValid()) return;
-
-    ++RRI;
-    if (RRI.isValid()) {
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-      return;
-    }
-
-    ++RI;
-    if (RI.isValid()) {
-      RRI = MCRegUnitRootIterator(*RI, MCRI);
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-    }
-  }
-
-  void operator++() {
+  MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
-    do advance();
-    while (!IncludeSelf && isValid() && *SI == Reg);
+    ++It;
+    return *this;
   }
 };
+
+inline iterator_range<MCSubRegIterator>
+MCRegisterInfo::subregs(MCRegister Reg) const {
+  return make_range({Reg, this, /*IncludeSelf=*/false}, MCSubRegIterator());
+}
+
+inline iterator_range<MCSubRegIterator>
+MCRegisterInfo::subregs_inclusive(MCRegister Reg) const {
+  return make_range({Reg, this, /*IncludeSelf=*/true}, MCSubRegIterator());
+}
+
+inline iterator_range<MCSuperRegIterator>
+MCRegisterInfo::superregs(MCRegister Reg) const {
+  return make_range({Reg, this, /*IncludeSelf=*/false}, MCSuperRegIterator());
+}
+
+inline iterator_range<MCSuperRegIterator>
+MCRegisterInfo::superregs_inclusive(MCRegister Reg) const {
+  return make_range({Reg, this, /*IncludeSelf=*/true}, MCSuperRegIterator());
+}
+
+inline detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
+                            iterator_range<MCSuperRegIterator>>
+MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
+  return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
+}
+
+inline iterator_range<MCRegUnitIterator>
+MCRegisterInfo::regunits(MCRegister Reg) const {
+  return make_range({Reg, this}, MCRegUnitIterator());
+}
 
 } // end namespace llvm
 

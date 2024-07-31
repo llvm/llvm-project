@@ -19,33 +19,29 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s, typename S::size_type pos, typename S::size_type n)
-{
-    if (pos <= s.size())
-    {
-        S str = s.substr(pos, n);
-        LIBCPP_ASSERT(str.__invariants());
-        assert(pos <= s.size());
-        typename S::size_type rlen = std::min(n, s.size() - pos);
-        assert(str.size() == rlen);
-        assert(S::traits_type::compare(s.data()+pos, str.data(), rlen) == 0);
-    }
+TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::size_type pos, typename S::size_type n) {
+  if (pos <= s.size()) {
+    S str = s.substr(pos, n);
+    LIBCPP_ASSERT(str.__invariants());
+    assert(pos <= s.size());
+    typename S::size_type rlen = std::min(n, s.size() - pos);
+    assert(str.size() == rlen);
+    assert(S::traits_type::compare(s.data() + pos, str.data(), rlen) == 0);
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+    LIBCPP_ASSERT(is_string_asan_correct(str));
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            S str = s.substr(pos, n);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > s.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      S str = s.substr(pos, n);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > s.size());
     }
+  }
 #endif
 }
 
@@ -109,12 +105,22 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("ktsrmnqagdecfhijpobl"), 19, 1);
   test(S("lsaijeqhtrbgcdmpfkno"), 20, 0);
   test(S("dplqartnfgejichmoskb"), 21, 0);
+  test(S("gbmetiprqdoasckjfhlnxx"), 0, 22);
+  test(S("gbmetiprqdoasckjfhlnxa"), 0, 8);
+  test(S("gbmetiprqdoasckjfhlnxb"), 1, 0);
+  test(S("LONGtiprqdoasckjfhlnxxo"), 0, 23);
+  test(S("LONGtiprqdoasckjfhlnxap"), 0, 8);
+  test(S("LONGtiprqdoasckjfhlnxbl"), 1, 0);
+  test(S("LONGtiprqdoasckjfhlnxxyy"), 0, 24);
+  test(S("LONGtiprqdoasckjfhlnxxyr"), 0, 8);
+  test(S("LONGtiprqdoasckjfhlnxxyz"), 1, 0);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
 
   return true;
@@ -127,14 +133,14 @@ TEST_CONSTEXPR_CXX20 bool test_alloc() {
     test_allocator_statistics stats;
     {
       string str = string(alloc(&stats));
-      stats = test_allocator_statistics();
+      stats      = test_allocator_statistics();
       (void)str.substr();
       assert(stats.moved == 0);
       assert(stats.copied == 0);
     }
     {
       string str = string(alloc(&stats));
-      stats = test_allocator_statistics();
+      stats      = test_allocator_statistics();
       (void)std::move(str).substr();
       assert(stats.moved == 0);
       assert(stats.copied == 0);
@@ -144,8 +150,7 @@ TEST_CONSTEXPR_CXX20 bool test_alloc() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
   test_alloc();
 #if TEST_STD_VER > 17

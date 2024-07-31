@@ -11,7 +11,7 @@
 @d = external global i32
 @e = external global i32
 
-define void @combine-sign-comparisons-by-cse(ptr %arg) {
+define i32 @combine-sign-comparisons-by-cse(ptr %arg) {
 ; CHECK: cmp
 ; CHECK: b.ge
 ; CHECK-NOT: cmp
@@ -45,7 +45,7 @@ if.end:
 return:
   %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
   store i32 %a, ptr %arg
-  ret void
+  ret i32 %retval.0
 }
 
 define void @combine_vector_zeros(ptr %p, ptr %q) {

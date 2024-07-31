@@ -9,9 +9,9 @@
 #include "src/__support/CPP/string.h"
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::string;
-using __llvm_libc::cpp::string_view;
-using __llvm_libc::cpp::to_string;
+using LIBC_NAMESPACE::cpp::string;
+using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::cpp::to_string;
 
 TEST(LlvmLibcStringTest, InitializeEmpty) {
   const string s;
@@ -55,6 +55,16 @@ TEST(LlvmLibcStringTest, ToStringView) {
 TEST(LlvmLibcStringTest, InitializeCStringWithSize) {
   const char *const str = "abc";
   const string s(str, 2);
+  ASSERT_EQ(s.size(), size_t(2));
+  ASSERT_EQ(s[0], 'a');
+  ASSERT_EQ(s[1], 'b');
+  ASSERT_EQ(s.front(), 'a');
+  ASSERT_EQ(s.back(), 'b');
+}
+
+TEST(LlvmLibcStringTest, InitializeStringView) {
+  const string_view str = "ab";
+  const string s(str);
   ASSERT_EQ(s.size(), size_t(2));
   ASSERT_EQ(s[0], 'a');
   ASSERT_EQ(s[1], 'b');
@@ -112,6 +122,17 @@ TEST(LlvmLibcStringTest, MoveAssign) {
   b = move(a);
   ASSERT_STREQ(b.c_str(), str);
   ASSERT_STREQ(a.c_str(), "");
+}
+
+TEST(LlvmLibcStringTest, StringViewAssign) {
+  const string_view str = "ab";
+  string s;
+  s = str;
+  ASSERT_EQ(s.size(), size_t(2));
+  ASSERT_EQ(s[0], 'a');
+  ASSERT_EQ(s[1], 'b');
+  ASSERT_EQ(s.front(), 'a');
+  ASSERT_EQ(s.back(), 'b');
 }
 
 TEST(LlvmLibcStringTest, Concat) {

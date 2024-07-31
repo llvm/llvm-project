@@ -1,7 +1,7 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
+  AllInterfaces.cpp
   BubbleUpExtractSlice.cpp
   BufferizableOpInterfaceImpl.cpp
-  Bufferize.cpp
   ConstantFold.cpp
   ConvertToDestinationStyle.cpp
   ConvertConv2DToImg2Col.cpp
@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
+  EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
   FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
@@ -20,16 +21,24 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
+  TransposeMatmul.cpp
+  MeshShardingInterfaceImpl.cpp
   NamedOpConversions.cpp
+  BlockPackMatmul.cpp
+  Padding.cpp
   Promotion.cpp
+  RuntimeOpVerification.cpp
+  Specialize.cpp
   Split.cpp
   SplitReduction.cpp
-  SubsetHoisting.cpp
+  SubsetInsertionOpInterfaceImpl.cpp
   SwapExtractSliceWithFillPatterns.cpp
   Tiling.cpp
   TilingInterfaceImpl.cpp
   Transforms.cpp
+  TransposeConv2D.cpp
   Vectorization.cpp
+  WinogradConv2D.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
@@ -53,16 +62,21 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRFuncTransforms
+  MLIRIndexDialect
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
+  MLIRMeshDialect
+  MLIRMeshTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRSCFUtils
   MLIRPass
+  MLIRShardingInterface
+  MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
   MLIRTensorTilingInterfaceImpl

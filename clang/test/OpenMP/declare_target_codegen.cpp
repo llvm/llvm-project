@@ -1,22 +1,22 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DLOAD
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DLOAD | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - -DLOAD | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DLOAD | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - -DLOAD | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -DOMP5 | FileCheck %s --check-prefix HOST5
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix DEV5
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix DEV5
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - -DOMP5 | FileCheck %s --check-prefix KMPC-ONLY
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -DOMP5 | FileCheck %s --check-prefix SIMD-ONLY
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix SIMD-ONLY
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix SIMD-ONLY
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -fopenmp-version=45
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-version=45 | FileCheck %s --check-prefix SIMD-ONLY
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t -fopenmp-version=45
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify -o - -fopenmp-version=45 | FileCheck %s --check-prefix SIMD-ONLY
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-version=45 | FileCheck %s --check-prefix SIMD-ONLY
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t -fopenmp-version=45
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify -o - -fopenmp-version=45 | FileCheck %s --check-prefix SIMD-ONLY
 
 // expected-no-diagnostics
 
@@ -27,11 +27,12 @@
 // CHECK-DAG: Bake
 // CHECK-NOT: @{{hhh|ggg|fff|eee}} =
 // CHECK-DAG: @flag = protected global i8 undef,
-// CHECK-DAG: @aaa = external global i32,
-// CHECK-DAG: @bbb ={{ protected | }}global i32 0,
+// CHECK-DAG: @dx = {{protected | }}global i32 0,
+// CHECK-DAG: @dy = {{protected | }}global i32 0,
+// CHECK-DAG: @bbb = {{protected | }}global i32 0,
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { ptr @bbb,
 // CHECK-DAG: @ccc = external global i32,
-// CHECK-DAG: @ddd ={{ protected | }}global i32 0,
+// CHECK-DAG: @ddd = {{protected | }}global i32 0,
 // CHECK-DAG: @hhh_decl_tgt_ref_ptr = weak global ptr null
 // CHECK-DAG: @ggg_decl_tgt_ref_ptr = weak global ptr null
 // CHECK-DAG: @fff_decl_tgt_ref_ptr = weak global ptr null
@@ -51,10 +52,20 @@
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
 // CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(ptr {{[^,]*}} %{{.*}})
 // CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(ptr {{[^,]*}} %{{.*}})
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}_globals_l[[@LINE+78]]_ctor()
 
 #ifndef HEADER
 #define HEADER
+
+int dx = 0;
+extern int dx;
+#pragma omp declare target to(dx)
+
+int dy = 0;
+#pragma omp begin declare target
+
+extern int dy;
+#pragma omp end declare target
+
 #pragma omp declare target
 bool flag [[clang::loader_uninitialized]];
 extern int bbb;
@@ -67,7 +78,7 @@ extern int bbb;
 extern int aaa;
 int bbb = 0;
 extern int ccc;
-int ddd = 0;
+int ddd = ccc;
 #pragma omp end declare target
 
 #pragma omp declare target
@@ -139,7 +150,7 @@ int bar() { return 1 + foo() + bar() + baz1() + baz2(); }
 int maini1() {
   int a;
   static long aa = 32 + bbb + ccc + fff + ggg;
-// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}}, i64 {{.*}}, i64 {{.*}})
+// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](ptr {{.*}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}}, i64 {{.*}}, i64 {{.*}})
 #pragma omp target map(tofrom \
                        : a, b)
   {
@@ -152,7 +163,7 @@ int maini1() {
 
 int baz3() { return 2 + baz2(); }
 int baz2() {
-// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz2{{.*}}_l[[@LINE+1]](i64 {{.*}})
+// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz2{{.*}}_l[[@LINE+1]](ptr {{.*}}, i64 {{.*}})
 #pragma omp target parallel
   ++c;
   return 2 + baz3();
@@ -164,7 +175,7 @@ static __typeof(create) __t_create __attribute__((__weakref__("__create")));
 
 int baz5() {
   bool a;
-// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz5{{.*}}_l[[@LINE+1]](i64 {{.*}})
+// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz5{{.*}}_l[[@LINE+1]](ptr {{.*}}, i64 {{.*}})
 #pragma omp target
   a = __extension__(void *) & __t_create != 0;
   return a;
@@ -230,8 +241,8 @@ int main() {
   return 0;
 }
 
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}virtual_foo{{.*}}_l[[@LINE-25]]()
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-11]]()
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}virtual_foo{{.*}}_l[[@LINE-25]](ptr {{.*}})
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-11]](ptr {{.*}})
 
 template <typename T>
 struct TTT {
@@ -241,14 +252,12 @@ struct TTT {
   }
 };
 
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-5]]()
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-5]](ptr {{.*}})
 
 // CHECK-DAG: declare extern_weak noundef signext i32 @__create()
 
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base|virtual_}}
 
-// CHECK-DAG: !{i32 1, !"aaa", i32 0, i32 {{[0-9]+}}}
-// CHECK-DAG: !{i32 1, !"ccc", i32 0, i32 {{[0-9]+}}}
 // CHECK-DAG: !{{{.+}}virtual_foo
 
 #ifdef OMP5

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm-only  -triple i386-apple-darwin9 %s
-// rdar://8823265
 
 #define ATTR __attribute__((__ms_struct__))
 

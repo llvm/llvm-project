@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-arm-none-eabi -run-pass=prologepilog \
-# RUN: -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs -run-pass=aarch64-ptrauth %s -o - | FileCheck %s
 
 # Check that we save LR to a callee-saved register when possible.
 # foo() should use a callee-saved register. However, bar() should not.
@@ -32,7 +32,6 @@
 # CHECK:            BL @[[OUTLINED_FUNCTION]]
 # CHECK:        bb.5:
 # CHECK:            frame-destroy AUTIBSP
-# CHECK-NEXT:       frame-destroy CFI_INSTRUCTION negate_ra_sign_state
 # CHECK-NEXT:       RET
 name:            foo
 tracksRegLiveness: true
@@ -83,7 +82,8 @@ body:             |
 # CHECK:          bb.0:
 # CHECK:            frame-setup EMITBKEY
 # CHECK-NEXT:       frame-setup PACIBSP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:       frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:            frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:       frame-setup CFI_INSTRUCTION
 # CHECK-NOT:        OUTLINED_FUNCTION_
 # CHECK:          bb.1:
 # CHECK-NOT:        OUTLINED_FUNCTION_
@@ -127,6 +127,6 @@ body:             |
 # CHECK:         body:
 # CHECK-NEXT:     bb.0:
 # CHECK-NOT:        frame-setup EMITBKEY
-# CHECK-NOT:        frame-setup PACI{{[A,B]]}}SP
+# CHECK-NOT:        frame-setup PACI{{[A,B]}}SP
 # CHECK-NOT:        frame-setup CFI_INSTRUCTION negate_ra_sign_state
-# CHECK-NOT:        frame-destroy AUTI{{[A,B]]}}SP
+# CHECK-NOT:        frame-destroy AUTI{{[A,B]}}SP

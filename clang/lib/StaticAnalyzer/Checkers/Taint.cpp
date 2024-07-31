@@ -216,21 +216,17 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
   std::vector<SymbolRef> TaintedSymbols;
   if (!Reg)
     return TaintedSymbols;
-  // Element region (array element) is tainted if either the base or the offset
-  // are tainted.
+
+  // Element region (array element) is tainted if the offset is tainted.
   if (const ElementRegion *ER = dyn_cast<ElementRegion>(Reg)) {
     std::vector<SymbolRef> TaintedIndex =
         getTaintedSymbolsImpl(State, ER->getIndex(), K, returnFirstOnly);
     llvm::append_range(TaintedSymbols, TaintedIndex);
     if (returnFirstOnly && !TaintedSymbols.empty())
       return TaintedSymbols; // return early if needed
-    std::vector<SymbolRef> TaintedSuperRegion =
-        getTaintedSymbolsImpl(State, ER->getSuperRegion(), K, returnFirstOnly);
-    llvm::append_range(TaintedSymbols, TaintedSuperRegion);
-    if (returnFirstOnly && !TaintedSymbols.empty())
-      return TaintedSymbols; // return early if needed
   }
 
+  // Symbolic region is tainted if the corresponding symbol is tainted.
   if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(Reg)) {
     std::vector<SymbolRef> TaintedRegions =
         getTaintedSymbolsImpl(State, SR->getSymbol(), K, returnFirstOnly);
@@ -239,6 +235,8 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
       return TaintedSymbols; // return early if needed
   }
 
+  // Any subregion (including Element and Symbolic regions) is tainted if its
+  // super-region is tainted.
   if (const SubRegion *ER = dyn_cast<SubRegion>(Reg)) {
     std::vector<SymbolRef> TaintedSubRegions =
         getTaintedSymbolsImpl(State, ER->getSuperRegion(), K, returnFirstOnly);
@@ -259,21 +257,19 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     return TaintedSymbols;
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
-  for (SymExpr::symbol_iterator SI = Sym->symbol_begin(),
-                                SE = Sym->symbol_end();
-       SI != SE; ++SI) {
-    if (!isa<SymbolData>(*SI))
+  for (SymbolRef SubSym : Sym->symbols()) {
+    if (!isa<SymbolData>(SubSym))
       continue;
 
-    if (const TaintTagType *Tag = State->get<TaintMap>(*SI)) {
+    if (const TaintTagType *Tag = State->get<TaintMap>(SubSym)) {
       if (*Tag == Kind) {
-        TaintedSymbols.push_back(*SI);
+        TaintedSymbols.push_back(SubSym);
         if (returnFirstOnly)
           return TaintedSymbols; // return early if needed
       }
     }
 
-    if (const auto *SD = dyn_cast<SymbolDerived>(*SI)) {
+    if (const auto *SD = dyn_cast<SymbolDerived>(SubSym)) {
       // If this is a SymbolDerived with a tainted parent, it's also tainted.
       std::vector<SymbolRef> TaintedParents = getTaintedSymbolsImpl(
           State, SD->getParentSymbol(), Kind, returnFirstOnly);
@@ -302,7 +298,7 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     }
 
     // If memory region is tainted, data is also tainted.
-    if (const auto *SRV = dyn_cast<SymbolRegionValue>(*SI)) {
+    if (const auto *SRV = dyn_cast<SymbolRegionValue>(SubSym)) {
       std::vector<SymbolRef> TaintedRegions =
           getTaintedSymbolsImpl(State, SRV->getRegion(), Kind, returnFirstOnly);
       llvm::append_range(TaintedSymbols, TaintedRegions);
@@ -311,7 +307,7 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     }
 
     // If this is a SymbolCast from a tainted value, it's also tainted.
-    if (const auto *SC = dyn_cast<SymbolCast>(*SI)) {
+    if (const auto *SC = dyn_cast<SymbolCast>(SubSym)) {
       std::vector<SymbolRef> TaintedCasts =
           getTaintedSymbolsImpl(State, SC->getOperand(), Kind, returnFirstOnly);
       llvm::append_range(TaintedSymbols, TaintedCasts);

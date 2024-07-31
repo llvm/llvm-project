@@ -19,6 +19,7 @@
 
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 #include "mlir/IR/OwningOpRef.h"
 
@@ -415,6 +416,32 @@ TEST(InterfaceAttachment, OperationDelayedContextAppend) {
   EXPECT_TRUE(isa<TestExternalOpInterface>(opJ.getOperation()));
   EXPECT_TRUE(isa<TestExternalOpInterface>(opH.getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));
+}
+
+TEST(InterfaceAttachmentTest, PromisedInterfaces) {
+  // Attribute interfaces use the exact same mechanism as types, so just check
+  // that the promise mechanism works for attributes.
+  MLIRContext context;
+  auto *testDialect = context.getOrLoadDialect<test::TestDialect>();
+  auto attr = test::SimpleAAttr::get(&context);
+
+  // `SimpleAAttr` doesn't implement nor promises the
+  // `TestExternalAttrInterface` interface.
+  EXPECT_FALSE(isa<TestExternalAttrInterface>(attr));
+  EXPECT_FALSE(
+      attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
+
+  // Add a promise `TestExternalAttrInterface`.
+  testDialect->declarePromisedInterface<TestExternalAttrInterface,
+                                        test::SimpleAAttr>();
+  EXPECT_TRUE(
+      attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
+
+  // Attach the interface.
+  test::SimpleAAttr::attachInterface<TestExternalAttrInterface>(context);
+  EXPECT_TRUE(isa<TestExternalAttrInterface>(attr));
+  EXPECT_TRUE(
+      attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 }
 
 } // namespace

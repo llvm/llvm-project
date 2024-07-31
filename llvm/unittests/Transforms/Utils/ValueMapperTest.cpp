@@ -66,7 +66,7 @@ TEST(ValueMapperTest, mapMDNodeCycle) {
 
 TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
   LLVMContext Context;
-  auto *PtrTy = Type::getInt8Ty(Context)->getPointerTo();
+  auto *PtrTy = PointerType::get(Context, 0);
   std::unique_ptr<GlobalVariable> G0 = std::make_unique<GlobalVariable>(
       PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "G0");
   std::unique_ptr<GlobalVariable> G1 = std::make_unique<GlobalVariable>(
@@ -423,7 +423,7 @@ TEST(ValueMapperTest, mapValuePoisonWithTypeRemap) {
 
 TEST(ValueMapperTest, mapValueConstantTargetNoneToLayoutTypeNullValue) {
   LLVMContext C;
-  auto *OldTy = TargetExtType::get(C, "spirv.Image");
+  auto *OldTy = TargetExtType::get(C, "spirv.Event");
   Type *NewTy = OldTy->getLayoutType();
 
   TestTypeRemapper TM(NewTy);

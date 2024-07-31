@@ -7,20 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/raise.h"
+
+#include "hdr/types/sigset_t.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/signal/linux/signal_utils.h"
 
-#include "src/__support/common.h"
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, raise, (int sig)) {
-  ::sigset_t sigset;
+  sigset_t sigset;
   block_all_signals(sigset);
-  long pid = __llvm_libc::syscall_impl(SYS_getpid);
-  long tid = __llvm_libc::syscall_impl(SYS_gettid);
-  int ret = __llvm_libc::syscall_impl(SYS_tgkill, pid, tid, sig);
+  long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_getpid);
+  long tid = LIBC_NAMESPACE::syscall_impl<long>(SYS_gettid);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_tgkill, pid, tid, sig);
   restore_signals(sigset);
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -5,7 +5,7 @@
 
 define <2 x ptr> @vectorindex1() {
 ; CHECK-LABEL: @vectorindex1(
-; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 2>, <2 x i64> zeroinitializer)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 1>, <2 x i64> <i64 8192, i64 8192>)
 ;
   %1 = getelementptr inbounds [64 x [8192 x i8]], ptr @block, i64 0, <2 x i64> <i64 0, i64 1>, i64 8192
   ret <2 x ptr> %1
@@ -13,7 +13,7 @@ define <2 x ptr> @vectorindex1() {
 
 define <2 x ptr> @vectorindex2() {
 ; CHECK-LABEL: @vectorindex2(
-; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 2>, <2 x i64> <i64 8191, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 1>, <2 x i64> <i64 8191, i64 8193>)
 ;
   %1 = getelementptr inbounds [64 x [8192 x i8]], ptr @block, i64 0, i64 1, <2 x i64> <i64 8191, i64 8193>
   ret <2 x ptr> %1
@@ -21,7 +21,7 @@ define <2 x ptr> @vectorindex2() {
 
 define <2 x ptr> @vectorindex3() {
 ; CHECK-LABEL: @vectorindex3(
-; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 2>, <2 x i64> <i64 8191, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 1>, <2 x i64> <i64 8191, i64 8193>)
 ;
   %1 = getelementptr inbounds [64 x [8192 x i8]], ptr @block, i64 0, <2 x i64> <i64 0, i64 1>, <2 x i64> <i64 8191, i64 8193>
   ret <2 x ptr> %1
@@ -127,7 +127,10 @@ define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_
 
 define ptr @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: @test_accumulate_constant_offset_vscale_nonzero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 1, i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[GEP_OFFS:%.*]] = or disjoint i64 [[TMP2]], 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[GEP_OFFS]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr <vscale x 16 x i8>, ptr %base, i64 1, i64 4
@@ -136,7 +139,7 @@ define ptr @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %p
 
 define ptr @test_accumulate_constant_offset_vscale_zero(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: @test_accumulate_constant_offset_vscale_zero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 0, i64 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr <vscale x 16 x i8>, ptr %base, i64 0, i64 4

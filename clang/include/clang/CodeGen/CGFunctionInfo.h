@@ -527,6 +527,11 @@ public:
     return NumRequired;
   }
 
+  /// Return true if the argument at a given index is required.
+  bool isRequiredArg(unsigned argIdx) const {
+    return argIdx == ~0U || argIdx < NumRequired;
+  }
+
   unsigned getOpaqueData() const { return NumRequired; }
   static RequiredArgs getFromOpaqueData(unsigned value) {
     if (value == ~0U) return All;
@@ -559,31 +564,45 @@ class CGFunctionInfo final
   unsigned EffectiveCallingConvention : 8;
 
   /// The clang::CallingConv that this was originally created with.
+  LLVM_PREFERRED_TYPE(CallingConv)
   unsigned ASTCallingConvention : 6;
 
   /// Whether this is an instance method.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InstanceMethod : 1;
 
   /// Whether this is a chain call.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ChainCall : 1;
 
+  /// Whether this function is called by forwarding arguments.
+  /// This doesn't support inalloca or varargs.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned DelegateCall : 1;
+
   /// Whether this function is a CMSE nonsecure call
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CmseNSCall : 1;
 
   /// Whether this function is noreturn.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoReturn : 1;
 
   /// Whether this function is returns-retained.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ReturnsRetained : 1;
 
   /// Whether this function saved caller registers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoCallerSavedRegs : 1;
 
   /// How many arguments to pass inreg.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRegParm : 1;
   unsigned RegParm : 3;
 
   /// Whether this function has nocf_check attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoCfCheck : 1;
 
   /// Log 2 of the maximum vector width.
@@ -595,6 +614,7 @@ class CGFunctionInfo final
   /// passing non-trivial types with inalloca.  Not part of the profile.
   llvm::StructType *ArgStruct;
   unsigned ArgStructAlign : 31;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasExtParameterInfos : 1;
 
   unsigned NumArgs;
@@ -616,14 +636,11 @@ class CGFunctionInfo final
   CGFunctionInfo() : Required(RequiredArgs::All) {}
 
 public:
-  static CGFunctionInfo *create(unsigned llvmCC,
-                                bool instanceMethod,
-                                bool chainCall,
-                                const FunctionType::ExtInfo &extInfo,
-                                ArrayRef<ExtParameterInfo> paramInfos,
-                                CanQualType resultType,
-                                ArrayRef<CanQualType> argTypes,
-                                RequiredArgs required);
+  static CGFunctionInfo *
+  create(unsigned llvmCC, bool instanceMethod, bool chainCall,
+         bool delegateCall, const FunctionType::ExtInfo &extInfo,
+         ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
+         ArrayRef<CanQualType> argTypes, RequiredArgs required);
   void operator delete(void *p) { ::operator delete(p); }
 
   // Friending class TrailingObjects is apparently not good enough for MSVC,
@@ -662,6 +679,8 @@ public:
   bool isInstanceMethod() const { return InstanceMethod; }
 
   bool isChainCall() const { return ChainCall; }
+
+  bool isDelegateCall() const { return DelegateCall; }
 
   bool isCmseNSCall() const { return CmseNSCall; }
 
@@ -749,6 +768,7 @@ public:
     ID.AddInteger(getASTCallingConvention());
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
+    ID.AddBoolean(DelegateCall);
     ID.AddBoolean(NoReturn);
     ID.AddBoolean(ReturnsRetained);
     ID.AddBoolean(NoCallerSavedRegs);
@@ -766,17 +786,16 @@ public:
     for (const auto &I : arguments())
       I.type.Profile(ID);
   }
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      bool InstanceMethod,
-                      bool ChainCall,
+  static void Profile(llvm::FoldingSetNodeID &ID, bool InstanceMethod,
+                      bool ChainCall, bool IsDelegateCall,
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
-                      RequiredArgs required,
-                      CanQualType resultType,
+                      RequiredArgs required, CanQualType resultType,
                       ArrayRef<CanQualType> argTypes) {
     ID.AddInteger(info.getCC());
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
+    ID.AddBoolean(IsDelegateCall);
     ID.AddBoolean(info.getNoReturn());
     ID.AddBoolean(info.getProducesResult());
     ID.AddBoolean(info.getNoCallerSavedRegs());

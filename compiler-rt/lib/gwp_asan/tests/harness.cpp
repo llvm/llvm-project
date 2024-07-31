@@ -10,15 +10,6 @@
 
 #include <string>
 
-namespace gwp_asan {
-namespace test {
-bool OnlyOnce() {
-  static int x = 0;
-  return !x++;
-}
-} // namespace test
-} // namespace gwp_asan
-
 // Optnone to ensure that the calls to these functions are not optimized away,
 // as we're looking for them in the backtraces.
 __attribute__((optnone)) char *
@@ -55,7 +46,9 @@ INSTANTIATE_TEST_SUITE_P(RecoverableAndNonRecoverableTests,
 #else
 INSTANTIATE_TEST_SUITE_P(RecoverableTests, BacktraceGuardedPoolAllocator,
                          /* Recoverable */ testing::Values(true));
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(BacktraceGuardedPoolAllocator);
 INSTANTIATE_TEST_SUITE_P(RecoverableAndNonRecoverableTests,
                          BacktraceGuardedPoolAllocatorDeathTest,
                          /* Recoverable */ testing::Bool());
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(BacktraceGuardedPoolAllocatorDeathTest);
 #endif

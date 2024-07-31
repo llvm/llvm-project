@@ -12,38 +12,39 @@
 
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 using namespace llvm;
 
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         Instruction *InsertBefore)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+InsertPosition::InsertPosition(Instruction *InsertBefore)
+    : InsertAt(InsertBefore ? InsertBefore->getIterator()
+                            : InstListType::iterator()) {}
+InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
+    : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
 
-  // If requested, insert this instruction into a basic block...
-  if (InsertBefore) {
-    BasicBlock *BB = InsertBefore->getParent();
+Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+                         InsertPosition InsertBefore)
+    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
+  // When called with an iterator, there must be a block to insert into.
+  if (InstListType::iterator InsertIt = InsertBefore; InsertIt.isValid()) {
+    BasicBlock *BB = InsertIt.getNodeParent();
     assert(BB && "Instruction to insert before is not in a basic block!");
-    insertInto(BB, InsertBefore->getIterator());
+    insertInto(BB, InsertBefore);
   }
 }
 
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         BasicBlock *InsertAtEnd)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
-
-  // append this instruction into the basic block
-  assert(InsertAtEnd && "Basic block to append to may not be NULL!");
-  insertInto(InsertAtEnd, InsertAtEnd->end());
-}
-
 Instruction::~Instruction() {
-  assert(!Parent && "Instruction still linked in the program!");
+  assert(!getParent() && "Instruction still linked in the program!");
 
   // Replace any extant metadata uses of this instruction with undef to
   // preserve debug info accuracy. Some alternatives include:
@@ -62,11 +63,6 @@ Instruction::~Instruction() {
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
-
-void Instruction::setParent(BasicBlock *P) {
-  Parent = P;
-}
-
 const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
@@ -75,24 +71,45 @@ const Function *Instruction::getFunction() const {
   return getParent()->getParent();
 }
 
+const DataLayout &Instruction::getDataLayout() const {
+  return getModule()->getDataLayout();
+}
+
 void Instruction::removeFromParent() {
+  // Perform any debug-info maintenence required.
+  handleMarkerRemoval();
+
   getParent()->getInstList().remove(getIterator());
 }
 
-iplist<Instruction>::iterator Instruction::eraseFromParent() {
+void Instruction::handleMarkerRemoval() {
+  if (!getParent()->IsNewDbgInfoFormat || !DebugMarker)
+    return;
+
+  DebugMarker->removeMarker();
+}
+
+BasicBlock::iterator Instruction::eraseFromParent() {
+  handleMarkerRemoval();
   return getParent()->getInstList().erase(getIterator());
+}
+
+void Instruction::insertBefore(Instruction *InsertPos) {
+  insertBefore(InsertPos->getIterator());
 }
 
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
-void Instruction::insertBefore(Instruction *InsertPos) {
-  insertInto(InsertPos->getParent(), InsertPos->getIterator());
+void Instruction::insertBefore(BasicBlock::iterator InsertPos) {
+  insertBefore(*InsertPos->getParent(), InsertPos);
 }
 
 /// Insert an unlinked instruction into a basic block immediately after the
 /// specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
-  insertInto(InsertPos->getParent(), std::next(InsertPos->getIterator()));
+  BasicBlock *DestParent = InsertPos->getParent();
+
+  DestParent->getInstList().insertAfter(InsertPos->getIterator(), this);
 }
 
 BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
@@ -100,35 +117,215 @@ BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
   assert(getParent() == nullptr && "Expected detached instruction");
   assert((It == ParentBB->end() || It->getParent() == ParentBB) &&
          "It not in ParentBB");
-  return ParentBB->getInstList().insert(It, this);
+  insertBefore(*ParentBB, It);
+  return getIterator();
+}
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
+void Instruction::insertBefore(BasicBlock &BB,
+                               InstListType::iterator InsertPos) {
+  assert(!DebugMarker);
+
+  BB.getInstList().insert(InsertPos, this);
+
+  if (!BB.IsNewDbgInfoFormat)
+    return;
+
+  // We've inserted "this": if InsertAtHead is set then it comes before any
+  // DbgVariableRecords attached to InsertPos. But if it's not set, then any
+  // DbgRecords should now come before "this".
+  bool InsertAtHead = InsertPos.getHeadBit();
+  if (!InsertAtHead) {
+    DbgMarker *SrcMarker = BB.getMarker(InsertPos);
+    if (SrcMarker && !SrcMarker->empty()) {
+      // If this assertion fires, the calling code is about to insert a PHI
+      // after debug-records, which would form a sequence like:
+      //     %0 = PHI
+      //     #dbg_value
+      //     %1 = PHI
+      // Which is de-normalised and undesired -- hence the assertion. To avoid
+      // this, you must insert at that position using an iterator, and it must
+      // be aquired by calling getFirstNonPHIIt / begin or similar methods on
+      // the block. This will signal to this behind-the-scenes debug-info
+      // maintenence code that you intend the PHI to be ahead of everything,
+      // including any debug-info.
+      assert(!isa<PHINode>(this) && "Inserting PHI after debug-records!");
+      adoptDbgRecords(&BB, InsertPos, false);
+    }
+  }
+
+  // If we're inserting a terminator, check if we need to flush out
+  // TrailingDbgRecords. Inserting instructions at the end of an incomplete
+  // block is handled by the code block above.
+  if (isTerminator())
+    getParent()->flushTerminatorDbgRecords();
 }
 
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
 void Instruction::moveBefore(Instruction *MovePos) {
-  moveBefore(*MovePos->getParent(), MovePos->getIterator());
+  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
+}
+
+void Instruction::moveBeforePreserving(Instruction *MovePos) {
+  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
 }
 
 void Instruction::moveAfter(Instruction *MovePos) {
-  moveBefore(*MovePos->getParent(), ++MovePos->getIterator());
+  auto NextIt = std::next(MovePos->getIterator());
+  // We want this instruction to be moved to before NextIt in the instruction
+  // list, but before NextIt's debug value range.
+  NextIt.setHeadBit(true);
+  moveBeforeImpl(*MovePos->getParent(), NextIt, false);
 }
 
-void Instruction::moveBefore(BasicBlock &BB,
-                             SymbolTableList<Instruction>::iterator I) {
+void Instruction::moveAfterPreserving(Instruction *MovePos) {
+  auto NextIt = std::next(MovePos->getIterator());
+  // We want this instruction and its debug range to be moved to before NextIt
+  // in the instruction list, but before NextIt's debug value range.
+  NextIt.setHeadBit(true);
+  moveBeforeImpl(*MovePos->getParent(), NextIt, true);
+}
+
+void Instruction::moveBefore(BasicBlock &BB, InstListType::iterator I) {
+  moveBeforeImpl(BB, I, false);
+}
+
+void Instruction::moveBeforePreserving(BasicBlock &BB,
+                                       InstListType::iterator I) {
+  moveBeforeImpl(BB, I, true);
+}
+
+void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
+                              bool Preserve) {
   assert(I == BB.end() || I->getParent() == &BB);
-  BB.splice(I, getParent(), getIterator());
+  bool InsertAtHead = I.getHeadBit();
+
+  // If we've been given the "Preserve" flag, then just move the DbgRecords with
+  // the instruction, no more special handling needed.
+  if (BB.IsNewDbgInfoFormat && DebugMarker && !Preserve) {
+    if (I != this->getIterator() || InsertAtHead) {
+      // "this" is definitely moving in the list, or it's moving ahead of its
+      // attached DbgVariableRecords. Detach any existing DbgRecords.
+      handleMarkerRemoval();
+    }
+  }
+
+  // Move this single instruction. Use the list splice method directly, not
+  // the block splicer, which will do more debug-info things.
+  BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
+
+  if (BB.IsNewDbgInfoFormat && !Preserve) {
+    DbgMarker *NextMarker = getParent()->getNextMarker(this);
+
+    // If we're inserting at point I, and not in front of the DbgRecords
+    // attached there, then we should absorb the DbgRecords attached to I.
+    if (!InsertAtHead && NextMarker && !NextMarker->empty()) {
+      adoptDbgRecords(&BB, I, false);
+    }
+  }
+
+  if (isTerminator())
+    getParent()->flushTerminatorDbgRecords();
+}
+
+iterator_range<DbgRecord::self_iterator> Instruction::cloneDebugInfoFrom(
+    const Instruction *From, std::optional<DbgRecord::self_iterator> FromHere,
+    bool InsertAtHead) {
+  if (!From->DebugMarker)
+    return DbgMarker::getEmptyDbgRecordRange();
+
+  assert(getParent()->IsNewDbgInfoFormat);
+  assert(getParent()->IsNewDbgInfoFormat ==
+         From->getParent()->IsNewDbgInfoFormat);
+
+  if (!DebugMarker)
+    getParent()->createMarker(this);
+
+  return DebugMarker->cloneDebugInfoFrom(From->DebugMarker, FromHere,
+                                         InsertAtHead);
+}
+
+std::optional<DbgRecord::self_iterator>
+Instruction::getDbgReinsertionPosition() {
+  // Is there a marker on the next instruction?
+  DbgMarker *NextMarker = getParent()->getNextMarker(this);
+  if (!NextMarker)
+    return std::nullopt;
+
+  // Are there any DbgRecords in the next marker?
+  if (NextMarker->StoredDbgRecords.empty())
+    return std::nullopt;
+
+  return NextMarker->StoredDbgRecords.begin();
+}
+
+bool Instruction::hasDbgRecords() const { return !getDbgRecordRange().empty(); }
+
+void Instruction::adoptDbgRecords(BasicBlock *BB, BasicBlock::iterator It,
+                                  bool InsertAtHead) {
+  DbgMarker *SrcMarker = BB->getMarker(It);
+  auto ReleaseTrailingDbgRecords = [BB, It, SrcMarker]() {
+    if (BB->end() == It) {
+      SrcMarker->eraseFromParent();
+      BB->deleteTrailingDbgRecords();
+    }
+  };
+
+  if (!SrcMarker || SrcMarker->StoredDbgRecords.empty()) {
+    ReleaseTrailingDbgRecords();
+    return;
+  }
+
+  // If we have DbgMarkers attached to this instruction, we have to honour the
+  // ordering of DbgRecords between this and the other marker. Fall back to just
+  // absorbing from the source.
+  if (DebugMarker || It == BB->end()) {
+    // Ensure we _do_ have a marker.
+    getParent()->createMarker(this);
+    DebugMarker->absorbDebugValues(*SrcMarker, InsertAtHead);
+
+    // Having transferred everything out of SrcMarker, we _could_ clean it up
+    // and free the marker now. However, that's a lot of heap-accounting for a
+    // small amount of memory with a good chance of re-use. Leave it for the
+    // moment. It will be released when the Instruction is freed in the worst
+    // case.
+    // However: if we transferred from a trailing marker off the end of the
+    // block, it's important to not leave the empty marker trailing. It will
+    // give a misleading impression that some debug records have been left
+    // trailing.
+    ReleaseTrailingDbgRecords();
+  } else {
+    // Optimisation: we're transferring all the DbgRecords from the source
+    // marker onto this empty location: just adopt the other instructions
+    // marker.
+    DebugMarker = SrcMarker;
+    DebugMarker->MarkedInstr = this;
+    It->DebugMarker = nullptr;
+  }
+}
+
+void Instruction::dropDbgRecords() {
+  if (DebugMarker)
+    DebugMarker->dropDbgRecords();
+}
+
+void Instruction::dropOneDbgRecord(DbgRecord *DVR) {
+  DebugMarker->dropOneDbgRecord(DVR);
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
-  assert(Parent && Other->Parent &&
+  assert(getParent() && Other->getParent() &&
          "instructions without BB parents have no order");
-  assert(Parent == Other->Parent && "cross-BB instruction order comparison");
-  if (!Parent->isInstrOrderValid())
-    Parent->renumberInstructions();
+  assert(getParent() == Other->getParent() &&
+         "cross-BB instruction order comparison");
+  if (!getParent()->isInstrOrderValid())
+    const_cast<BasicBlock *>(getParent())->renumberInstructions();
   return Order < Other->Order;
 }
 
-Instruction *Instruction::getInsertionPointAfterDef() {
+std::optional<BasicBlock::iterator> Instruction::getInsertionPointAfterDef() {
   assert(!getType()->isVoidTy() && "Instruction must define result");
   BasicBlock *InsertBB;
   BasicBlock::iterator InsertPt;
@@ -141,18 +338,22 @@ Instruction *Instruction::getInsertionPointAfterDef() {
   } else if (isa<CallBrInst>(this)) {
     // Def is available in multiple successors, there's no single dominating
     // insertion point.
-    return nullptr;
+    return std::nullopt;
   } else {
     assert(!isTerminator() && "Only invoke/callbr terminators return value");
     InsertBB = getParent();
     InsertPt = std::next(getIterator());
+    // Any instruction inserted immediately after "this" will come before any
+    // debug-info records take effect -- thus, set the head bit indicating that
+    // to debug-info-transfer code.
+    InsertPt.setHeadBit(true);
   }
 
   // catchswitch blocks don't have any legal insertion point (because they
   // are both an exception pad and a terminator).
   if (InsertPt == InsertBB->end())
-    return nullptr;
-  return &*InsertPt;
+    return std::nullopt;
+  return InsertPt;
 }
 
 bool Instruction::isOnlyUserOfAnyOperand() {
@@ -160,23 +361,46 @@ bool Instruction::isOnlyUserOfAnyOperand() {
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoUnsignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(b);
 }
 
 void Instruction::setHasNoSignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoSignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoSignedWrap(b);
 }
 
 void Instruction::setIsExact(bool b) {
   cast<PossiblyExactOperator>(this)->setIsExact(b);
 }
 
+void Instruction::setNonNeg(bool b) {
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
+  SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
+                         (b * PossiblyNonNegInst::NonNeg);
+}
+
 bool Instruction::hasNoUnsignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoUnsignedWrap();
+
+  return cast<TruncInst>(this)->hasNoUnsignedWrap();
 }
 
 bool Instruction::hasNoSignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoSignedWrap();
+
+  return cast<TruncInst>(this)->hasNoSignedWrap();
+}
+
+bool Instruction::hasNonNeg() const {
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
+  return (SubclassOptionalData & PossiblyNonNegInst::NonNeg) != 0;
 }
 
 bool Instruction::hasPoisonGeneratingFlags() const {
@@ -200,10 +424,25 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<PossiblyExactOperator>(this)->setIsExact(false);
     break;
 
+  case Instruction::Or:
+    cast<PossiblyDisjointInst>(this)->setIsDisjoint(false);
+    break;
+
   case Instruction::GetElementPtr:
-    cast<GetElementPtrInst>(this)->setIsInBounds(false);
+    cast<GetElementPtrInst>(this)->setNoWrapFlags(GEPNoWrapFlags::none());
+    break;
+
+  case Instruction::UIToFP:
+  case Instruction::ZExt:
+    setNonNeg(false);
+    break;
+
+  case Instruction::Trunc:
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(false);
+    cast<TruncInst>(this)->setHasNoSignedWrap(false);
     break;
   }
+
   if (isa<FPMathOperator>(this)) {
     setHasNoNaNs(false);
     setHasNoInfs(false);
@@ -222,6 +461,27 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_range);
   eraseMetadata(LLVMContext::MD_nonnull);
   eraseMetadata(LLVMContext::MD_align);
+}
+
+bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+  if (const auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
+    return RetAttrs.hasAttribute(Attribute::Range) ||
+           RetAttrs.hasAttribute(Attribute::Alignment) ||
+           RetAttrs.hasAttribute(Attribute::NonNull);
+  }
+  return false;
+}
+
+void Instruction::dropPoisonGeneratingReturnAttributes() {
+  if (auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeMask AM;
+    AM.addAttribute(Attribute::Range);
+    AM.addAttribute(Attribute::Alignment);
+    AM.addAttribute(Attribute::NonNull);
+    CB->removeRetAttrs(AM);
+  }
+  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -365,10 +625,21 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     }
   }
 
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(TI->hasNoUnsignedWrap());
+    }
+  }
+
   // Copy the exact flag.
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
       setIsExact(PE->isExact());
+
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(SrcPD->isDisjoint());
 
   // Copy the fast-math flags.
   if (auto *FP = dyn_cast<FPMathOperator>(V))
@@ -377,7 +648,12 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() |
+                              DestGEP->getNoWrapFlags());
+
+  if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
+    if (isa<PossiblyNonNegInst>(this))
+      setNonNeg(NNI->hasNonNeg());
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -388,9 +664,20 @@ void Instruction::andIRFlags(const Value *V) {
     }
   }
 
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(hasNoSignedWrap() && TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(hasNoUnsignedWrap() && TI->hasNoUnsignedWrap());
+    }
+  }
+
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
       setIsExact(isExact() && PE->isExact());
+
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(DestPD->isDisjoint() && SrcPD->isDisjoint());
 
   if (auto *FP = dyn_cast<FPMathOperator>(V)) {
     if (isa<FPMathOperator>(this)) {
@@ -402,7 +689,12 @@ void Instruction::andIRFlags(const Value *V) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() &
+                              DestGEP->getNoWrapFlags());
+
+  if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
+    if (isa<PossiblyNonNegInst>(this))
+      setNonNeg(hasNonNeg() && NNI->hasNonNeg());
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
@@ -743,6 +1035,42 @@ bool Instruction::isVolatile() const {
   }
 }
 
+Type *Instruction::getAccessType() const {
+  switch (getOpcode()) {
+  case Instruction::Store:
+    return cast<StoreInst>(this)->getValueOperand()->getType();
+  case Instruction::Load:
+  case Instruction::AtomicRMW:
+    return getType();
+  case Instruction::AtomicCmpXchg:
+    return cast<AtomicCmpXchgInst>(this)->getNewValOperand()->getType();
+  case Instruction::Call:
+  case Instruction::Invoke:
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::masked_load:
+      case Intrinsic::masked_gather:
+      case Intrinsic::masked_expandload:
+      case Intrinsic::vp_load:
+      case Intrinsic::vp_gather:
+      case Intrinsic::experimental_vp_strided_load:
+        return II->getType();
+      case Intrinsic::masked_store:
+      case Intrinsic::masked_scatter:
+      case Intrinsic::masked_compressstore:
+      case Intrinsic::vp_store:
+      case Intrinsic::vp_scatter:
+      case Intrinsic::experimental_vp_strided_store:
+        return II->getOperand(0)->getType();
+      default:
+        break;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 static bool canUnwindPastLandingPad(const LandingPadInst *LP,
                                     bool IncludePhaseOneUnwind) {
   // Because phase one unwinding skips cleanup landingpads, we effectively
@@ -848,7 +1176,16 @@ Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   return nullptr;
 }
 
+const DebugLoc &Instruction::getStableDebugLoc() const {
+  if (isa<DbgInfoIntrinsic>(this))
+    if (const Instruction *Next = getNextNonDebugInstruction())
+      return Next->getDebugLoc();
+  return getDebugLoc();
+}
+
 bool Instruction::isAssociative() const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isAssociative();
   unsigned Opcode = getOpcode();
   if (isAssociative(Opcode))
     return true;
@@ -919,12 +1256,23 @@ Instruction *Instruction::cloneImpl() const {
 
 void Instruction::swapProfMetadata() {
   MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if (!ProfileData || ProfileData->getNumOperands() != 3)
+  if (!ProfileData)
+    return;
+  unsigned FirstIdx = getBranchWeightOffset(ProfileData);
+  if (ProfileData->getNumOperands() != 2 + FirstIdx)
     return;
 
-  // The first operand is the name. Fetch them backwards and build a new one.
-  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
-                     ProfileData->getOperand(1)};
+  unsigned SecondIdx = FirstIdx + 1;
+  SmallVector<Metadata *, 4> Ops;
+  // If there are more weights past the second, we can't swap them
+  if (ProfileData->getNumOperands() > SecondIdx + 1)
+    return;
+  for (unsigned Idx = 0; Idx < FirstIdx; ++Idx) {
+    Ops.push_back(ProfileData->getOperand(Idx));
+  }
+  // Switch the order of the weights
+  Ops.push_back(ProfileData->getOperand(SecondIdx));
+  Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
 }
@@ -934,9 +1282,7 @@ void Instruction::copyMetadata(const Instruction &SrcInst,
   if (!SrcInst.hasMetadata())
     return;
 
-  DenseSet<unsigned> WLS;
-  for (unsigned M : WL)
-    WLS.insert(M);
+  SmallDenseSet<unsigned, 4> WLS(WL.begin(), WL.end());
 
   // Otherwise, enumerate and copy over metadata from the old instruction to the
   // new one.

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/InitAllTranslations.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
 
 using namespace mlir;
@@ -21,11 +21,19 @@ namespace mlir {
 // Defined in the test directory, no public header.
 void registerTestRoundtripSPIRV();
 void registerTestRoundtripDebugSPIRV();
+#ifdef MLIR_INCLUDE_TESTS
+void registerTestToLLVMIR();
+void registerTestFromLLVMIR();
+#endif
 } // namespace mlir
 
 static void registerTestTranslations() {
   registerTestRoundtripSPIRV();
   registerTestRoundtripDebugSPIRV();
+#ifdef MLIR_INCLUDE_TESTS
+  registerTestToLLVMIR();
+  registerTestFromLLVMIR();
+#endif
 }
 
 int main(int argc, char **argv) {

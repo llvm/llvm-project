@@ -222,7 +222,13 @@ __host__ __device__ void hostdevicef() {
 // Test for address of overloaded function resolution in the global context.
 HostFnPtr fp_h = h;
 HostFnPtr fp_ch = ch;
+#if defined (__CUDA_ARCH__)
+__device__
+#endif
 CurrentFnPtr fp_dh = dh;
+#if defined (__CUDA_ARCH__)
+__device__
+#endif
 CurrentFnPtr fp_cdh = cdh;
 GlobalFnPtr fp_g = g;
 
@@ -463,7 +469,7 @@ int test_constexpr_overload(C2 &x, C2 &y) {
 // Verify no ambiguity for new operator.
 void *a = new int;
 __device__ void *b = new int;
-// expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables.}}
+// expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
 
 // Verify no ambiguity for new operator.
 template<typename _Tp> _Tp&& f();

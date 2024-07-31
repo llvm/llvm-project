@@ -14,10 +14,20 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include <functional>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace include_cleaner {
@@ -44,6 +54,22 @@ cl::opt<std::string> HTMLReportPath{
     "html",
     cl::desc("Specify an output filename for an HTML report. "
              "This describes both recommendations and reasons for changes."),
+    cl::cat(IncludeCleaner),
+};
+
+cl::opt<std::string> OnlyHeaders{
+    "only-headers",
+    cl::desc("A comma-separated list of regexes to match against suffix of a "
+             "header. Only headers that match will be analyzed."),
+    cl::init(""),
+    cl::cat(IncludeCleaner),
+};
+
+cl::opt<std::string> IgnoreHeaders{
+    "ignore-headers",
+    cl::desc("A comma-separated list of regexes to match against suffix of a "
+             "header, and disable analysis if matched."),
+    cl::init(""),
     cl::cat(IncludeCleaner),
 };
 
@@ -91,9 +117,26 @@ format::FormatStyle getStyle(llvm::StringRef Filename) {
 }
 
 class Action : public clang::ASTFrontendAction {
+public:
+  Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
+         llvm::StringMap<std::string> &EditedFiles)
+      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {}
+
+private:
   RecordedAST AST;
   RecordedPP PP;
   PragmaIncludes PI;
+  llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  llvm::StringMap<std::string> &EditedFiles;
+
+  bool BeginInvocation(CompilerInstance &CI) override {
+    // We only perform include-cleaner analysis. So we disable diagnostics that
+    // won't affect our analysis to make the tool more robust against
+    // in-development code.
+    CI.getLangOpts().ModulesDeclUse = false;
+    CI.getLangOpts().ModulesStrictDeclUse = false;
+    return true;
+  }
 
   void ExecuteAction() override {
     auto &P = getCompilerInstance().getPreprocessor();
@@ -108,23 +151,31 @@ class Action : public clang::ASTFrontendAction {
   }
 
   void EndSourceFile() override {
+    const auto &SM = getCompilerInstance().getSourceManager();
+    if (SM.getDiagnostics().hasUncompilableErrorOccurred()) {
+      llvm::errs()
+          << "Skipping file " << getCurrentFile()
+          << " due to compiler errors. clang-include-cleaner expects to "
+             "work on compilable source code.\n";
+      return;
+    }
+
     if (!HTMLReportPath.empty())
       writeHTML();
 
-    const auto &SM = getCompilerInstance().getSourceManager();
-    auto &HS = getCompilerInstance().getPreprocessor().getHeaderSearchInfo();
     llvm::StringRef Path =
         SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
     auto Results =
-        analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI, SM, HS);
+        analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
+                getCompilerInstance().getPreprocessor(), HeaderFilter);
     if (!Insert)
       Results.Missing.clear();
     if (!Remove)
       Results.Unused.clear();
-    std::string Final = fixIncludes(Results, Code, getStyle(Path));
+    std::string Final = fixIncludes(Results, Path, Code, getStyle(Path));
 
     if (Print.getNumOccurrences()) {
       switch (Print) {
@@ -140,17 +191,8 @@ class Action : public clang::ASTFrontendAction {
       }
     }
 
-    if (Edit) {
-      if (auto Err = llvm::writeToOutput(
-              Path, [&](llvm::raw_ostream &OS) -> llvm::Error {
-                OS << Final;
-                return llvm::Error::success();
-              })) {
-        llvm::errs() << "Failed to apply edits to " << Path << ": "
-                     << toString(std::move(Err)) << "\n";
-        ++Errors;
-      }
-    }
+    if (!Results.Missing.empty() || !Results.Unused.empty())
+      EditedFiles.try_emplace(Path, Final);
   }
 
   void writeHTML() {
@@ -168,6 +210,65 @@ class Action : public clang::ASTFrontendAction {
         getCompilerInstance().getPreprocessor().getHeaderSearchInfo(), &PI, OS);
   }
 };
+class ActionFactory : public tooling::FrontendActionFactory {
+public:
+  ActionFactory(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter)
+      : HeaderFilter(HeaderFilter) {}
+
+  std::unique_ptr<clang::FrontendAction> create() override {
+    return std::make_unique<Action>(HeaderFilter, EditedFiles);
+  }
+
+  const llvm::StringMap<std::string> &editedFiles() const {
+    return EditedFiles;
+  }
+
+private:
+  llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  // Map from file name to final code with the include edits applied.
+  llvm::StringMap<std::string> EditedFiles;
+};
+
+// Compiles a regex list into a function that return true if any match a header.
+// Prints and returns nullptr if any regexes are invalid.
+std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
+  auto FilterRegs = std::make_shared<std::vector<llvm::Regex>>();
+  llvm::SmallVector<llvm::StringRef> Headers;
+  RegexFlag.split(Headers, ',', -1, /*KeepEmpty=*/false);
+  for (auto HeaderPattern : Headers) {
+    std::string AnchoredPattern = "(" + HeaderPattern.str() + ")$";
+    llvm::Regex CompiledRegex(AnchoredPattern);
+    std::string RegexError;
+    if (!CompiledRegex.isValid(RegexError)) {
+      llvm::errs() << llvm::formatv("Invalid regular expression '{0}': {1}\n",
+                                    HeaderPattern, RegexError);
+      return nullptr;
+    }
+    FilterRegs->push_back(std::move(CompiledRegex));
+  }
+  return [FilterRegs](llvm::StringRef Path) {
+    for (const auto &F : *FilterRegs) {
+      if (F.match(Path))
+        return true;
+    }
+    return false;
+  };
+}
+
+std::function<bool(llvm::StringRef)> headerFilter() {
+  auto OnlyMatches = matchesAny(OnlyHeaders);
+  auto IgnoreMatches = matchesAny(IgnoreHeaders);
+  if (!OnlyMatches || !IgnoreMatches)
+    return nullptr;
+
+  return [OnlyMatches, IgnoreMatches](llvm::StringRef Header) {
+    if (!OnlyHeaders.empty() && !OnlyMatches(Header))
+      return true;
+    if (!IgnoreHeaders.empty() && IgnoreMatches(Header))
+      return true;
+    return false;
+  };
+}
 
 } // namespace
 } // namespace include_cleaner
@@ -193,9 +294,29 @@ int main(int argc, const char **argv) {
       }
     }
   }
-  auto Factory = clang::tooling::newFrontendActionFactory<Action>();
-  return clang::tooling::ClangTool(OptionsParser->getCompilations(),
-                                   OptionsParser->getSourcePathList())
-             .run(Factory.get()) ||
-         Errors != 0;
+
+  clang::tooling::ClangTool Tool(OptionsParser->getCompilations(),
+                                 OptionsParser->getSourcePathList());
+
+  auto HeaderFilter = headerFilter();
+  if (!HeaderFilter)
+    return 1; // error already reported.
+  ActionFactory Factory(HeaderFilter);
+  auto ErrorCode = Tool.run(&Factory);
+  if (Edit) {
+    for (const auto &NameAndContent : Factory.editedFiles()) {
+      llvm::StringRef FileName = NameAndContent.first();
+      const std::string &FinalCode = NameAndContent.second;
+      if (auto Err = llvm::writeToOutput(
+              FileName, [&](llvm::raw_ostream &OS) -> llvm::Error {
+                OS << FinalCode;
+                return llvm::Error::success();
+              })) {
+        llvm::errs() << "Failed to apply edits to " << FileName << ": "
+                     << toString(std::move(Err)) << "\n";
+        ++Errors;
+      }
+    }
+  }
+  return ErrorCode || Errors != 0;
 }

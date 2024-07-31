@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_EXTENSION_ERRORS_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_EXTENSION_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h> // For error macros
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 constexpr MsgTable<52> LINUX_ERRORS = {
     MsgMapping(ENOTBLK, "Block device required"),
@@ -70,6 +71,6 @@ constexpr MsgTable<52> LINUX_ERRORS = {
     MsgMapping(EHWPOISON, "Memory page has hardware error"),
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_EXTENSION_ERRORS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_EXTENSION_ERRORS_H

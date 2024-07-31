@@ -9,11 +9,11 @@ set(ORC_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 #       regression testing entirely when it's not available.
 if (NOT ANDROID AND NOT COMPILER_RT_STANDALONE_BUILD AND
     NOT LLVM_RUNTIMES_BUILD)
-  list(APPEND ORC_TEST_DEPS llvm-jitlink)
+  list(APPEND ORC_TEST_DEPS llvm-jitlink lli)
 endif()
 
 set(ORC_TEST_ARCH ${ORC_SUPPORTED_ARCH})
-if (COMPILER_RT_BUILD_ORC AND COMPILER_RT_HAS_ORC)
+if (COMPILER_RT_BUILD_ORC)
   list(APPEND ORC_TEST_DEPS orc)
   foreach(arch ${ORC_TEST_ARCH})
     set(ORC_TEST_TARGET_ARCH ${arch})
@@ -32,4 +32,3 @@ endif()
 add_lit_testsuite(check-orc-rt "Running the ORC runtime tests"
   ${ORC_TESTSUITES}
   DEPENDS ${ORC_TEST_DEPS})
-set_target_properties(check-orc-rt PROPERTIES FOLDER "Compiler-RT Misc")

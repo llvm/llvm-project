@@ -32,14 +32,19 @@ intermediate LLVM representation.
    DebuggingJITedCode
    DirectXUsage
    Docker
+   FatLTO
    ExtendingLLVM
+   GitHub
    GoldPlugin
+   GlobalISel/MIRPatterns
    HowToBuildOnARM
    HowToBuildWithPGO
    HowToBuildWindowsItaniumPrograms
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstCombineContributorGuide
+   InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
    LoopTerminology
@@ -53,14 +58,16 @@ intermediate LLVM representation.
    JITLink
    NewPassManager
    NVPTXUsage
-   Phabricator
    Passes
    ReportingGuide
    ResponseGuide
    Remarks
+   RemoveDIsDebugInfo
    RISCVUsage
+   RISCV/RISCVVectorExtension
    SourceLevelDebugging
    SPIRVUsage
+   SandboxIR
    StackSafetyAnalysis
    SupportLibrary
    TableGen/index
@@ -118,12 +125,13 @@ LLVM Builds and Distributions
 Optimizations
 -------------
 
-:doc:`WritingAnLLVMPass`
-   Information on how to write LLVM transformations and analyses.
-
 :doc:`WritingAnLLVMNewPMPass`
    Information on how to write LLVM transformations under the new pass
    manager.
+
+:doc:`WritingAnLLVMPass`
+   Information on how to write LLVM transformations and analyses under the
+   legacy pass manager.
 
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.
@@ -174,6 +182,18 @@ Optimizations
    referencing, to determine variable locations for debug info in the final
    stages of compilation.
 
+:doc:`RemoveDIsDebugInfo`
+   This is a migration guide describing how to move from debug info using
+   intrinsics such as dbg.value to using the non-instruction DbgRecord object.
+
+:doc:`InstrProfileFormat`
+   This document explains two binary formats of instrumentation-based profiles.
+
+:doc:`InstCombineContributorGuide`
+   This document specifies guidelines for contributions for InstCombine and
+   related passes.
+
+
 Code Generation
 ---------------
 
@@ -188,6 +208,13 @@ Code Generation
 :doc:`TableGen <TableGen/index>`
    Describes the TableGen tool, which is used heavily by the LLVM code
    generator.
+
+==========
+GlobalISel
+==========
+
+:doc:`MIRPatterns <GlobalISel/MIRPatterns>`
+   Describes the design of MIR Patterns and how to use them.
 
 ===
 JIT
@@ -261,3 +288,8 @@ Additional Topics
 :doc:`RISCVUsage`
    This document describes using the RISCV-V target.
 
+:doc:`RISCV/RISCVVectorExtension`
+   This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
+
+:doc:`Sandbox IR <SandboxIR>`
+   This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.

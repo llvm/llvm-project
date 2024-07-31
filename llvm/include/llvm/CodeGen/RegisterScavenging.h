@@ -37,10 +37,6 @@ class RegScavenger {
   MachineRegisterInfo *MRI = nullptr;
   MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator MBBI;
-  unsigned NumRegUnits = 0;
-
-  /// True if RegScavenger is currently tracking the liveness of registers.
-  bool Tracking = false;
 
   /// Information on scavenged registers (held in a spill slot).
   struct ScavengedInfo {
@@ -61,11 +57,6 @@ class RegScavenger {
   SmallVector<ScavengedInfo, 2> Scavenged;
 
   LiveRegUnits LiveUnits;
-
-  // These BitVectors are only used internally to forward(). They are members
-  // to avoid frequent reallocations.
-  BitVector KillRegUnits, DefRegUnits;
-  BitVector TmpRegUnits;
 
 public:
   RegScavenger() = default;
@@ -94,40 +85,18 @@ public:
   void enterBasicBlock(MachineBasicBlock &MBB);
 
   /// Start tracking liveness from the end of basic block \p MBB.
-  /// Use backward() to move towards the beginning of the block. This is
-  /// preferred to enterBasicBlock() and forward() because it does not depend
-  /// on the presence of kill flags.
+  /// Use backward() to move towards the beginning of the block.
   void enterBasicBlockEnd(MachineBasicBlock &MBB);
 
-  /// Move the internal MBB iterator and update register states.
-  void forward();
-
-  /// Move the internal MBB iterator and update register states until
-  /// it has processed the specific iterator.
-  void forward(MachineBasicBlock::iterator I) {
-    while (!Tracking || MBBI != I)
-      forward();
-  }
-
-  /// Update internal register state and move MBB iterator backwards.
-  /// Contrary to unprocess() this method gives precise results even in the
-  /// absence of kill flags.
+  /// Update internal register state and move MBB iterator backwards. This
+  /// method gives precise results even in the absence of kill flags.
   void backward();
 
-  /// Call backward() as long as the internal iterator does not point to \p I.
+  /// Call backward() to update internal register state to just before \p *I.
   void backward(MachineBasicBlock::iterator I) {
     while (MBBI != I)
       backward();
   }
-
-  /// Move the internal MBB iterator but do not update register states.
-  void skipTo(MachineBasicBlock::iterator I) {
-    if (I == MachineBasicBlock::iterator(nullptr))
-      Tracking = false;
-    MBBI = I;
-  }
-
-  MachineBasicBlock::iterator getCurrentPosition() const { return MBBI; }
 
   /// Return if a specific register is currently used.
   bool isRegUsed(Register Reg, bool includeReserved = true) const;
@@ -180,25 +149,6 @@ public:
 private:
   /// Returns true if a register is reserved. It is never "unused".
   bool isReserved(Register Reg) const { return MRI->isReserved(Reg); }
-
-  /// setUsed / setUnused - Mark the state of one or a number of register units.
-  ///
-  void setUsed(const BitVector &RegUnits) {
-    LiveUnits.addUnits(RegUnits);
-  }
-  void setUnused(const BitVector &RegUnits) {
-    LiveUnits.removeUnits(RegUnits);
-  }
-
-  /// Processes the current instruction and fill the KillRegUnits and
-  /// DefRegUnits bit vectors.
-  void determineKillsAndDefs();
-
-  /// Add all Reg Units that Reg contains to BV.
-  void addRegUnits(BitVector &BV, MCRegister Reg);
-
-  /// Remove all Reg Units that \p Reg contains from \p BV.
-  void removeRegUnits(BitVector &BV, MCRegister Reg);
 
   /// Initialize RegisterScavenger.
   void init(MachineBasicBlock &MBB);

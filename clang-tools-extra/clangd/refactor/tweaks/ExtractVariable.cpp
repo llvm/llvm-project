@@ -12,8 +12,11 @@
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/LambdaCapture.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -74,10 +77,52 @@ computeReferencedDecls(const clang::Expr *Expr) {
   public:
     std::vector<Decl *> ReferencedDecls;
     bool VisitDeclRefExpr(DeclRefExpr *DeclRef) { // NOLINT
+      // Stop the call operator of lambdas from being marked as a referenced
+      // DeclRefExpr in immediately invoked lambdas.
+      if (const auto *const Method =
+              llvm::dyn_cast<CXXMethodDecl>(DeclRef->getDecl());
+          Method != nullptr && Method->getParent()->isLambda()) {
+        return true;
+      }
       ReferencedDecls.push_back(DeclRef->getDecl());
       return true;
     }
+
+    // Local variables declared inside of the selected lambda cannot go out of
+    // scope. The DeclRefExprs that are important are the variables captured,
+    // the DeclRefExprs inside the initializers of init-capture variables,
+    // variables mentioned in trailing return types, constraints and explicit
+    // defaulted template parameters.
+    bool TraverseLambdaExpr(LambdaExpr *LExpr) {
+      for (const auto &[Capture, Initializer] :
+           llvm::zip(LExpr->captures(), LExpr->capture_inits())) {
+        TraverseLambdaCapture(LExpr, &Capture, Initializer);
+      }
+
+      if (clang::Expr *const RequiresClause =
+              LExpr->getTrailingRequiresClause()) {
+        TraverseStmt(RequiresClause);
+      }
+
+      for (auto *const TemplateParam : LExpr->getExplicitTemplateParameters())
+        TraverseDecl(TemplateParam);
+
+      if (auto *const CallOperator = LExpr->getCallOperator()) {
+        TraverseType(CallOperator->getDeclaredReturnType());
+
+        for (auto *const Param : CallOperator->parameters()) {
+          TraverseParmVarDecl(Param);
+        }
+
+        for (auto *const Attr : CallOperator->attrs()) {
+          TraverseAttr(Attr);
+        }
+      }
+
+      return true;
+    }
   };
+
   FindDeclRefsVisitor Visitor;
   Visitor.TraverseStmt(const_cast<Stmt *>(cast<Stmt>(Expr)));
   return Visitor.ReferencedDecls;
@@ -131,7 +176,8 @@ bool ExtractionContext::exprIsValidOutside(const clang::Stmt *Scope) const {
   SourceLocation ScopeBegin = Scope->getBeginLoc();
   SourceLocation ScopeEnd = Scope->getEndLoc();
   for (const Decl *ReferencedDecl : ReferencedDecls) {
-    if (SM.isPointWithin(ReferencedDecl->getBeginLoc(), ScopeBegin, ScopeEnd) &&
+    if (ReferencedDecl->getBeginLoc().isValid() &&
+        SM.isPointWithin(ReferencedDecl->getBeginLoc(), ScopeBegin, ScopeEnd) &&
         SM.isPointWithin(ReferencedDecl->getEndLoc(), ScopeBegin, ScopeEnd))
       return false;
   }
@@ -152,10 +198,16 @@ const clang::Stmt *ExtractionContext::computeInsertionPoint() const {
   auto CanExtractOutside =
       [](const SelectionTree::Node *InsertionPoint) -> bool {
     if (const clang::Stmt *Stmt = InsertionPoint->ASTNode.get<clang::Stmt>()) {
-      // Allow all expressions except LambdaExpr since we don't want to extract
-      // from the captures/default arguments of a lambda
-      if (isa<clang::Expr>(Stmt))
-        return !isa<LambdaExpr>(Stmt);
+      if (isa<clang::Expr>(Stmt)) {
+        // Do not allow extraction from the initializer of a defaulted parameter
+        // to a local variable (e.g. a function-local lambda).
+        if (InsertionPoint->Parent->ASTNode.get<ParmVarDecl>() != nullptr) {
+          return false;
+        }
+
+        return true;
+      }
+
       // We don't yet allow extraction from switch/case stmt as we would need to
       // jump over the switch stmt even if there is a CompoundStmt inside the
       // switch. And there are other Stmts which we don't care about (e.g.
@@ -240,7 +292,7 @@ struct ParsedBinaryOperator {
     SelectedOperands.clear();
 
     if (const BinaryOperator *Op =
-        llvm::dyn_cast_or_null<BinaryOperator>(N.ASTNode.get<Expr>())) {
+            llvm::dyn_cast_or_null<BinaryOperator>(N.ASTNode.get<Expr>())) {
       Kind = Op->getOpcode();
       ExprLoc = Op->getExprLoc();
       SelectedOperands = N.Children;
@@ -255,7 +307,7 @@ struct ParsedBinaryOperator {
       Kind = BinaryOperator::getOverloadedOpcode(Op->getOperator());
       ExprLoc = Op->getExprLoc();
       // Not all children are args, there's also the callee (operator).
-      for (const auto* Child : N.Children) {
+      for (const auto *Child : N.Children) {
         const Expr *E = Child->ASTNode.get<Expr>();
         assert(E && "callee and args should be Exprs!");
         if (E == Op->getArg(0) || E == Op->getArg(1))
@@ -376,15 +428,15 @@ bool childExprIsStmt(const Stmt *Outer, const Expr *Inner) {
   if (llvm::isa<SwitchCase>(Outer))
     return true;
   // Control flow statements use condition etc, but not the body.
-  if (const auto* WS = llvm::dyn_cast<WhileStmt>(Outer))
+  if (const auto *WS = llvm::dyn_cast<WhileStmt>(Outer))
     return Inner == WS->getBody();
-  if (const auto* DS = llvm::dyn_cast<DoStmt>(Outer))
+  if (const auto *DS = llvm::dyn_cast<DoStmt>(Outer))
     return Inner == DS->getBody();
-  if (const auto* FS = llvm::dyn_cast<ForStmt>(Outer))
+  if (const auto *FS = llvm::dyn_cast<ForStmt>(Outer))
     return Inner == FS->getBody();
-  if (const auto* FS = llvm::dyn_cast<CXXForRangeStmt>(Outer))
+  if (const auto *FS = llvm::dyn_cast<CXXForRangeStmt>(Outer))
     return Inner == FS->getBody();
-  if (const auto* IS = llvm::dyn_cast<IfStmt>(Outer))
+  if (const auto *IS = llvm::dyn_cast<IfStmt>(Outer))
     return Inner == IS->getThen() || Inner == IS->getElse();
   // Assume all other cases may be actual expressions.
   // This includes the important case of subexpressions (where Outer is Expr).
@@ -402,12 +454,6 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   if (!ExprType || ExprType->isVoidType())
     return false;
 
-  // Must know the type of the result in order to spell it, or instead use
-  // `auto` in C++.
-  if (!N->getDeclContext().getParentASTContext().getLangOpts().CPlusPlus11 &&
-      !ExprType)
-    return false;
-
   // A plain reference to a name (e.g. variable) isn't  worth extracting.
   // FIXME: really? What if it's e.g. `std::is_same<void, void>::value`?
   if (llvm::isa<DeclRefExpr>(E))
@@ -422,7 +468,8 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   // FIXME: we could still hoist the assignment, and leave the variable there?
   ParsedBinaryOperator BinOp;
-  if (BinOp.parse(*N) && BinaryOperator::isAssignmentOp(BinOp.Kind))
+  bool IsBinOp = BinOp.parse(*N);
+  if (IsBinOp && BinaryOperator::isAssignmentOp(BinOp.Kind))
     return false;
 
   const SelectionTree::Node &OuterImplicit = N->outerImplicit();
@@ -437,13 +484,48 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
                       OuterImplicit.ASTNode.get<Expr>()))
     return false;
 
+  std::function<bool(const SelectionTree::Node *)> IsFullySelected =
+      [&](const SelectionTree::Node *N) {
+        if (N->ASTNode.getSourceRange().isValid() &&
+            N->Selected != SelectionTree::Complete)
+          return false;
+        for (const auto *Child : N->Children) {
+          if (!IsFullySelected(Child))
+            return false;
+        }
+        return true;
+      };
+  auto ExprIsFullySelectedTargetNode = [&](const Expr *E) {
+    if (E != OuterImplicit.ASTNode.get<Expr>())
+      return false;
+
+    // The above condition is the only relevant one except for binary operators.
+    // Without the following code, we would fail to offer extraction for e.g.:
+    //   int x = 1 + 2 + [[3 + 4 + 5]];
+    // See the documentation of ParsedBinaryOperator for further details.
+    if (!IsBinOp)
+      return true;
+    return IsFullySelected(N);
+  };
+
   // Disable extraction of full RHS on assignment operations, e.g:
-  // auto x = [[RHS_EXPR]];
+  // x = [[RHS_EXPR]];
   // This would just result in duplicating the code.
   if (const auto *BO = Parent->ASTNode.get<BinaryOperator>()) {
-    if (BO->isAssignmentOp() &&
-        BO->getRHS() == OuterImplicit.ASTNode.get<Expr>())
+    if (BO->isAssignmentOp() && ExprIsFullySelectedTargetNode(BO->getRHS()))
       return false;
+  }
+
+  // The same logic as for assignments applies to initializations.
+  // However, we do allow extracting the RHS of an init capture, as it is
+  // a valid use case to move non-trivial expressions out of the capture clause.
+  // FIXME: In that case, the extracted variable should be captured directly,
+  //        rather than an explicit copy.
+  if (const auto *Decl = Parent->ASTNode.get<VarDecl>()) {
+    if (!Decl->isInitCapture() &&
+        ExprIsFullySelectedTargetNode(Decl->getInit())) {
+      return false;
+    }
   }
 
   return true;

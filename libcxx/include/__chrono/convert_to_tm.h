@@ -16,10 +16,12 @@
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
+#include <__chrono/local_info.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__chrono/weekday.h>
@@ -27,10 +29,13 @@
 #include <__chrono/year_month.h>
 #include <__chrono/year_month_day.h>
 #include <__chrono/year_month_weekday.h>
+#include <__chrono/zoned_time.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_error.h>
 #include <__memory/addressof.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_specialization.h>
 #include <cstdint>
 #include <ctime>
 #include <limits>
@@ -77,7 +82,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _Date& __date, chrono::weekday _
 
 template <class _Tm, class _Duration>
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp) {
-  chrono::sys_days __days = chrono::time_point_cast<chrono::days>(__tp);
+  chrono::sys_days __days = chrono::floor<chrono::days>(__tp);
   chrono::year_month_day __ymd{__days};
 
   _Tm __result = std::__convert_to_tm<_Tm>(chrono::year_month_day{__ymd}, chrono::weekday{__days});
@@ -116,12 +121,23 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     //   ...  However, if a flag refers to a "time of day" (e.g. %H, %I, %p,
     //   etc.), then a specialization of duration is interpreted as the time of
     //   day elapsed since midnight.
-    uint64_t __sec = chrono::duration_cast<chrono::seconds>(__value).count();
-    __sec %= 24 * 3600;
-    __result.tm_hour = __sec / 3600;
-    __sec %= 3600;
-    __result.tm_min = __sec / 60;
-    __result.tm_sec = __sec % 60;
+
+    // Not all values can be converted to hours, it may run into ratio
+    // conversion errors. In that case the conversion to seconds works.
+    if constexpr (is_convertible_v<_ChronoT, chrono::hours>) {
+      auto __hour      = chrono::floor<chrono::hours>(__value);
+      auto __sec       = chrono::duration_cast<chrono::seconds>(__value - __hour);
+      __result.tm_hour = __hour.count() % 24;
+      __result.tm_min  = __sec.count() / 60;
+      __result.tm_sec  = __sec.count() % 60;
+    } else {
+      uint64_t __sec = chrono::duration_cast<chrono::seconds>(__value).count();
+      __sec %= 24 * 3600;
+      __result.tm_hour = __sec / 3600;
+      __sec %= 3600;
+      __result.tm_min = __sec / 60;
+      __result.tm_sec = __sec % 60;
+    }
   } else if constexpr (same_as<_ChronoT, chrono::day>)
     __result.tm_mday = static_cast<unsigned>(__value);
   else if constexpr (same_as<_ChronoT, chrono::month>)
@@ -159,6 +175,18 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
       if (__value.hours().count() > std::numeric_limits<decltype(__result.tm_hour)>::max())
         std::__throw_format_error("Formatting hh_mm_ss, encountered an hour overflow");
     __result.tm_hour = __value.hours().count();
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+  } else if constexpr (same_as<_ChronoT, chrono::sys_info>) {
+    // Has no time information.
+  } else if constexpr (same_as<_ChronoT, chrono::local_info>) {
+    // Has no time information.
+#    if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                          \
+        !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+  } else if constexpr (__is_specialization_v<_ChronoT, chrono::zoned_time>) {
+    return std::__convert_to_tm<_Tm>(
+        chrono::sys_time<typename _ChronoT::duration>{__value.get_local_time().time_since_epoch()});
+#    endif
+#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   } else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
 

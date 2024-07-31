@@ -97,7 +97,7 @@ static StringRef ClassifyDiagnostic(QualType VDT) {
     if (const auto *TD = TT->getDecl())
       if (const auto *CA = TD->getAttr<CapabilityAttr>())
         return ClassifyDiagnostic(CA);
-  } else if (VDT->isPointerType() || VDT->isReferenceType())
+  } else if (VDT->isPointerOrReferenceType())
     return ClassifyDiagnostic(VDT->getPointeeType());
 
   return "mutex";
@@ -110,7 +110,8 @@ static StringRef ClassifyDiagnostic(QualType VDT) {
 /// \param D       The declaration to which the attribute is attached.
 /// \param DeclExp An expression involving the Decl to which the attribute
 ///                is attached.  E.g. the call to a function.
-/// \param Self    S-expression to substitute for a \ref CXXThisExpr.
+/// \param Self    S-expression to substitute for a \ref CXXThisExpr in a call,
+///                or argument to a cleanup function.
 CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
                                                const NamedDecl *D,
                                                const Expr *DeclExp,
@@ -144,12 +145,18 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
 
   if (Self) {
     assert(!Ctx.SelfArg && "Ambiguous self argument");
-    Ctx.SelfArg = Self;
+    assert(isa<FunctionDecl>(D) && "Self argument requires function");
+    if (isa<CXXMethodDecl>(D))
+      Ctx.SelfArg = Self;
+    else
+      Ctx.FunArgs = Self;
 
     // If the attribute has no arguments, then assume the argument is "this".
     if (!AttrExp)
       return CapabilityExpr(
-          Self, ClassifyDiagnostic(cast<CXXMethodDecl>(D)->getThisObjectType()),
+          Self,
+          ClassifyDiagnostic(
+              cast<CXXMethodDecl>(D)->getFunctionObjectParameterType()),
           false);
     else  // For most attributes.
       return translateAttrExpr(AttrExp, &Ctx);
@@ -170,7 +177,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     return CapabilityExpr();
 
   if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
-    if (SLit->getString() == StringRef("*"))
+    if (SLit->getString() == "*")
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
       return CapabilityExpr(new (Arena) til::Wildcard(), StringRef("wildcard"),
@@ -190,7 +197,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
     if (UO->getOpcode() == UO_LNot) {
       Neg = true;
-      AttrExp = UO->getSubExpr();
+      AttrExp = UO->getSubExpr()->IgnoreImplicit();
     }
   }
 
@@ -312,8 +319,14 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
               ? (cast<FunctionDecl>(D)->getCanonicalDecl() == Canonical)
               : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
         // Substitute call arguments for references to function parameters
-        assert(I < Ctx->NumArgs);
-        return translate(Ctx->FunArgs[I], Ctx->Prev);
+        if (const Expr *const *FunArgs =
+                Ctx->FunArgs.dyn_cast<const Expr *const *>()) {
+          assert(I < Ctx->NumArgs);
+          return translate(FunArgs[I], Ctx->Prev);
+        }
+
+        assert(I == 0);
+        return Ctx->FunArgs.get<til::SExpr *>();
       }
     }
     // Map the param back to the param of the original function declaration
@@ -982,7 +995,7 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   IncompleteArgs.clear();
 }
 
-/*
+#ifndef NDEBUG
 namespace {
 
 class TILPrinter :
@@ -1003,4 +1016,4 @@ void printSCFG(CFGWalker &Walker) {
 
 } // namespace threadSafety
 } // namespace clang
-*/
+#endif // NDEBUG

@@ -35,7 +35,7 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
 
 public:
   explicit WebAssemblyAsmBackend(bool Is64Bit, bool IsEmscripten)
-      : MCAsmBackend(support::little), Is64Bit(Is64Bit),
+      : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
   unsigned getNumFixupKinds() const override {
@@ -51,13 +51,6 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
-
-  // No instruction requires relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

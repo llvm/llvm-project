@@ -22,7 +22,7 @@ define <vscale x 2 x i16> @vzext_nxv2i1_nxv2i16_unmasked(<vscale x 2 x i1> %a, i
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -46,7 +46,7 @@ define <vscale x 2 x i32> @vzext_nxv2i1_nxv2i32_unmasked(<vscale x 2 x i1> %a, i
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -70,6 +70,6 @@ define <vscale x 2 x i64> @vzext_nxv2i1_nxv2i64_unmasked(<vscale x 2 x i1> %a, i
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i64> %v
 }

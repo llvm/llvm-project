@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -270,6 +269,12 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
       bs << "moduleImport.matchFloatAttr";
     } else if (name == "_var_attr") {
       bs << "moduleImport.matchLocalVariableAttr";
+    } else if (name == "_label_attr") {
+      bs << "moduleImport.matchLabelAttr";
+    } else if (name == "_fpExceptionBehavior_attr") {
+      bs << "moduleImport.matchFPExceptionBehaviorAttr";
+    } else if (name == "_roundingMode_attr") {
+      bs << "moduleImport.matchRoundingModeAttr";
     } else if (name == "_resultType") {
       bs << "moduleImport.convertType(inst->getType())";
     } else if (name == "_location") {

@@ -24,10 +24,6 @@ using namespace llvm;
 
 namespace {
 
-static inline bool isNullConstantOrUndef(SDValue V) {
-  return V.isUndef() || isNullConstant(V);
-}
-
 static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   // This is only used for packed vectors, where using 0 for undef should
   // always be good.
@@ -50,15 +46,13 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
 }
 
 // TODO: Handle undef as zero
-static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG,
-                                        bool Negate = false) {
+static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::BUILD_VECTOR && N->getNumOperands() == 2);
   uint32_t LHSVal, RHSVal;
   if (getConstantValue(N->getOperand(0), LHSVal) &&
       getConstantValue(N->getOperand(1), RHSVal)) {
     SDLoc SL(N);
-    uint32_t K = Negate ? (-LHSVal & 0xffff) | (-RHSVal << 16)
-                        : (LHSVal & 0xffff) | (RHSVal << 16);
+    uint32_t K = (LHSVal & 0xffff) | (RHSVal << 16);
     return DAG.getMachineNode(AMDGPU::S_MOV_B32, SL, N->getValueType(0),
                               DAG.getTargetConstant(K, SL, MVT::i32));
   }
@@ -66,9 +60,6 @@ static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG,
   return nullptr;
 }
 
-static inline SDNode *packNegConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
-  return packConstantV2I16(N, DAG, true);
-}
 } // namespace
 
 /// AMDGPU specific code to select AMDGPU machine instructions for
@@ -88,21 +79,14 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   bool fp16SrcZerosHighBits(unsigned Opc) const;
 
 public:
-  static char ID;
-
   AMDGPUDAGToDAGISel() = delete;
 
-  explicit AMDGPUDAGToDAGISel(TargetMachine &TM, CodeGenOpt::Level OptLevel);
-  ~AMDGPUDAGToDAGISel() override = default;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool matchLoadD16FromBuildVector(SDNode *N) const;
+  explicit AMDGPUDAGToDAGISel(TargetMachine &TM, CodeGenOptLevel OptLevel);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  bool matchLoadD16FromBuildVector(SDNode *N) const;
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
-  StringRef getPassName() const override;
   void PostprocessISelDAG() override;
 
 protected:
@@ -110,21 +94,11 @@ protected:
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
-  bool isInlineImmediate(const SDNode *N, bool Negated = false) const;
-  bool isNegInlineImmediate(const SDNode *N) const {
-    return isInlineImmediate(N, true);
-  }
 
-  bool isInlineImmediate16(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral16(Imm, Subtarget->hasInv2PiInlineImm());
-  }
+  bool isInlineImmediate(const SDNode *N) const;
 
-  bool isInlineImmediate32(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral32(Imm, Subtarget->hasInv2PiInlineImm());
-  }
-
-  bool isInlineImmediate64(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral64(Imm, Subtarget->hasInv2PiInlineImm());
+  bool isInlineImmediate(const APInt &Imm) const {
+    return Subtarget->getInstrInfo()->isInlineConstant(Imm);
   }
 
   bool isInlineImmediate(const APFloat &Imm) const {
@@ -154,8 +128,12 @@ private:
   bool isDSOffsetLegal(SDValue Base, unsigned Offset) const;
   bool isDSOffset2Legal(SDValue Base, unsigned Offset0, unsigned Offset1,
                         unsigned Size) const;
-  bool isFlatScratchBaseLegal(
-      SDValue Base, uint64_t FlatVariant = SIInstrFlags::FlatScratch) const;
+
+  bool isFlatScratchBaseLegal(SDValue Addr) const;
+  bool isFlatScratchBaseLegalSV(SDValue Addr) const;
+  bool isFlatScratchBaseLegalSVImm(SDValue Addr) const;
+  bool isSOffsetLegalWithImmOffset(SDValue *SOffset, bool Imm32Only,
+                                   bool IsBuffer, int64_t ImmOffset = 0) const;
 
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,
@@ -177,6 +155,7 @@ private:
 
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
+  bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
                             SDValue &Offset, uint64_t FlatVariant) const;
@@ -197,11 +176,13 @@ private:
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
-                        bool IsBuffer = false) const;
+                        bool IsBuffer = false, bool HasSOffset = false,
+                        int64_t ImmOffset = 0) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
   bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                             SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false) const;
+                            bool IsBuffer = false, bool HasSOffset = false,
+                            int64_t ImmOffset = 0) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                   SDValue *Offset, bool Imm32Only = false) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
@@ -213,11 +194,16 @@ private:
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
                                SDValue &Offset) const;
+  bool SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
+                             SDValue &Offset) const;
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
+                          bool IsCanonicalizing = true,
                           bool AllowAbs = true) const;
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3ModsNonCanonicalizing(SDValue In, SDValue &Src,
+                                       SDValue &SrcMods) const;
   bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
@@ -239,8 +225,18 @@ private:
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
-  bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
+
+  bool SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
+                               SDValue &SrcMods) const;
+  bool SelectWMMAModsF16Neg(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
+                               SDValue &SrcMods) const;
+  bool SelectWMMAVISrc(SDValue In, SDValue &Src) const;
+
+  bool SelectSWMMACIndex8(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+  bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
@@ -270,6 +266,7 @@ private:
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
   void SelectFMAD_FMA(SDNode *N);
+  void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
@@ -277,10 +274,31 @@ private:
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);
   void SelectINTRINSIC_VOID(SDNode *N);
+  void SelectWAVE_ADDRESS(SDNode *N);
+  void SelectSTACKRESTORE(SDNode *N);
 
 protected:
   // Include the pieces autogenerated from the target description.
 #include "AMDGPUGenDAGISel.inc"
+};
+
+class AMDGPUISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  AMDGPUISelDAGToDAGPass(TargetMachine &TM);
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPUDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+
+  AMDGPUDAGToDAGISelLegacy(TargetMachine &TM, CodeGenOptLevel OptLevel);
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  StringRef getPassName() const override;
 };
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H

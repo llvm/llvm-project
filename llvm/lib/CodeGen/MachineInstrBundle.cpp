@@ -177,26 +177,25 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       }
     }
 
-    for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
-      MachineOperand &MO = *Defs[i];
-      Register Reg = MO.getReg();
+    for (MachineOperand *MO : Defs) {
+      Register Reg = MO->getReg();
       if (!Reg)
         continue;
 
       if (LocalDefSet.insert(Reg).second) {
         LocalDefs.push_back(Reg);
-        if (MO.isDead()) {
+        if (MO->isDead()) {
           DeadDefSet.insert(Reg);
         }
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
-        if (!MO.isDead())
+        if (!MO->isDead())
           // Previously defined but dead.
           DeadDefSet.erase(Reg);
       }
 
-      if (!MO.isDead() && Reg.isPhysical()) {
+      if (!MO->isDead() && Reg.isPhysical()) {
         for (MCPhysReg SubReg : TRI->subregs(Reg)) {
           if (LocalDefSet.insert(SubReg).second)
             LocalDefs.push_back(SubReg);
@@ -208,8 +207,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   }
 
   SmallSet<Register, 32> Added;
-  for (unsigned i = 0, e = LocalDefs.size(); i != e; ++i) {
-    Register Reg = LocalDefs[i];
+  for (Register Reg : LocalDefs) {
     if (Added.insert(Reg).second) {
       // If it's not live beyond end of the bundle, mark it dead.
       bool isDead = DeadDefSet.count(Reg) || KilledDefSet.count(Reg);
@@ -218,8 +216,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     }
   }
 
-  for (unsigned i = 0, e = ExternUses.size(); i != e; ++i) {
-    Register Reg = ExternUses[i];
+  for (Register Reg : ExternUses) {
     bool isKill = KilledUseSet.count(Reg);
     bool isUndef = UndefUseSet.count(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
@@ -307,15 +304,40 @@ VirtRegInfo llvm::AnalyzeVirtRegInBundle(
   return RI;
 }
 
+std::pair<LaneBitmask, LaneBitmask>
+llvm::AnalyzeVirtRegLanesInBundle(const MachineInstr &MI, Register Reg,
+                                  const MachineRegisterInfo &MRI,
+                                  const TargetRegisterInfo &TRI) {
+
+  LaneBitmask UseMask, DefMask;
+
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
+    if (!MO.isReg() || MO.getReg() != Reg)
+      continue;
+
+    unsigned SubReg = MO.getSubReg();
+    if (SubReg == 0 && MO.isUse() && !MO.isUndef())
+      UseMask |= MRI.getMaxLaneMaskForVReg(Reg);
+
+    LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(SubReg);
+    if (MO.isDef()) {
+      if (!MO.isUndef())
+        UseMask |= ~SubRegMask;
+      DefMask |= SubRegMask;
+    } else if (!MO.isUndef())
+      UseMask |= SubRegMask;
+  }
+
+  return {UseMask, DefMask};
+}
+
 PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
                                          const TargetRegisterInfo *TRI) {
   bool AllDefsDead = true;
   PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
   assert(Reg.isPhysical() && "analyzePhysReg not given a physical register!");
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    const MachineOperand &MO = *O;
-
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
     if (MO.isRegMask() && MO.clobbersPhysReg(Reg)) {
       PRI.Clobbered = true;
       continue;

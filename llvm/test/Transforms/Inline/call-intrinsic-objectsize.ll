@@ -27,7 +27,7 @@ define i64 @caller() {
   ret i64 %1
 }
 
-; Testing the InlineCost of the call to @llvm.objectsize.i64.p0i8.
+; Testing the InlineCost of the call to @llvm.objectsize.i64.p0.
 ; Do not change the linkage of @callee; that will give it a severe discount in
 ; cost (LastCallToStaticBonus).
 define i64 @callee() {

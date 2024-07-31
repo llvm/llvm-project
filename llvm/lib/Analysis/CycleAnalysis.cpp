@@ -15,10 +15,7 @@ using namespace llvm;
 
 namespace llvm {
 class Module;
-}
-
-template class llvm::GenericCycleInfo<SSAContext>;
-template class llvm::GenericCycle<SSAContext>;
+} // namespace llvm
 
 CycleInfo CycleAnalysis::run(Function &F, FunctionAnalysisManager &) {
   CycleInfo CI;

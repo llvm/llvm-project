@@ -94,21 +94,19 @@ OUTPUT OPTIONS
  Show more information on test failures, for example the entire test output
  instead of just the test result.
 
+ Each command is printed before it is executed. This can be valuable for
+ debugging test failures, as the last printed command is the one that failed.
+ Moreover, :program:`lit` inserts ``'RUN: at line N'`` before each
+ command pipeline in the output to help you locate the source line of
+ the failed command.
+
 .. option:: -vv, --echo-all-commands
 
- On test failure, echo all commands to stdout as they are being executed.
- This can be valuable for debugging test failures, as the last echoed command
- will be the one which has failed.
- :program:`lit` normally inserts a no-op command (``:`` in the case of bash)
- with argument ``'RUN: at line N'`` before each command pipeline, and this
- option also causes those no-op commands to be echoed to stdout to help you
- locate the source line of the failed command.
- This option implies ``--verbose``.
+ Deprecated alias for -v.
 
 .. option:: -a, --show-all
 
- Show more information about all tests, for example the entire test
- commandline and output.
+ Enable -v, but for all tests not just failed tests.
 
 .. option:: --no-progress-bar
 
@@ -153,6 +151,10 @@ EXECUTION OPTIONS
  feature that can be used to conditionally disable (or expect failure in)
  certain tests.
 
+.. option:: --skip-test-time-recording
+
+ Disable tracking the wall time individual tests take to execute.
+
 .. option:: --time-tests
 
  Track the wall time individual tests take to execute and includes the results
@@ -162,11 +164,6 @@ EXECUTION OPTIONS
 .. option:: --ignore-fail
 
  Exit with status zero even if some tests fail.
-
-.. option:: --no-indirectly-run-check
-
- Do not error if a test would not be run if the user had specified the
- containing directory instead of naming the test directly.
 
 .. _selection-options:
 
@@ -185,6 +182,12 @@ The timing data is stored in the `test_exec_root` in a file named
 
  Run the tests in a random order, not failing/slowest first. Deprecated,
  use :option:`--order` instead.
+
+.. option:: --per-test-coverage
+
+ Emit the necessary test coverage data, divided per test case (involves
+ setting a unique value to LLVM_PROFILE_FILE for each RUN). The coverage
+ data files will be emitted in the directory specified by `config.test_exec_root`.
 
 .. option:: --max-failures N
 
@@ -458,9 +461,8 @@ executed, two important global variables are predefined:
  tests in the suite.
 
  **standalone_tests** When true, mark a directory with tests expected to be run
- standalone. Test discovery is disabled for that directory and
- *--no-indirectly-run-check* is in effect. *lit.suffixes* and *lit.excludes*
- must be empty when this variable is true.
+ standalone. Test discovery is disabled for that directory. *lit.suffixes* and
+ *lit.excludes* must be empty when this variable is true.
 
  **suffixes** For **lit** test formats which scan directories for tests, this
  variable is a list of suffixes to identify test files.  Used by: *ShTest*.
@@ -541,6 +543,16 @@ TestRunner.py:
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
  %/T                     %T but ``\`` is replaced by ``/``
+ %{s:real}               %s after expanding all symbolic links and substitute drives
+ %{S:real}               %S after expanding all symbolic links and substitute drives
+ %{p:real}               %p after expanding all symbolic links and substitute drives
+ %{t:real}               %t after expanding all symbolic links and substitute drives
+ %{T:real}               %T after expanding all symbolic links and substitute drives
+ %{/s:real}              %/s after expanding all symbolic links and substitute drives
+ %{/S:real}              %/S after expanding all symbolic links and substitute drives
+ %{/p:real}              %/p after expanding all symbolic links and substitute drives
+ %{/t:real}              %/t after expanding all symbolic links and substitute drives
+ %{/T:real}              %/T after expanding all symbolic links and substitute drives
  %{/s:regex_replacement} %/s but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/S:regex_replacement} %/S but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/p:regex_replacement} %/p but escaped for use in the replacement of a ``s@@@`` command in sed
@@ -616,6 +628,23 @@ B, C, and D, and a log message for the failing test C:
   Test 'C' failed as a result of exit code 1.
   ********************
   PASS: D (4 of 4)
+
+DEFAULT FEATURES
+~~~~~~~~~~~~~~~~~
+
+For convenience :program:`lit` automatically adds **available_features** for
+some common use cases.
+
+:program:`lit` adds a feature based on the operating system being built on, for
+example: `system-darwin`, `system-linux`, etc. :program:`lit` also
+automatically adds a feature based on the current architecture, for example
+`target-x86_64`, `target-aarch64`, etc.
+
+When building with sanitizers enabled, :program:`lit` automatically adds the
+short name of the sanitizer, for example: `asan`, `tsan`, etc.
+
+To see the full list of features that can be added, see
+*llvm/utils/lit/lit/llvm/config.py*.
 
 LIT EXAMPLE TESTS
 ~~~~~~~~~~~~~~~~~

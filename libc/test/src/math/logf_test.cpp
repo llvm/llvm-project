@@ -6,30 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/logf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcLogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST(LlvmLibcLogfTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::logf(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::logf(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(0.0f), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(-0.0f), FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::logf(1.0f));
+TEST_F(LlvmLibcLogfTest, SpecialNumbers) {
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::logf(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::logf(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::logf(0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::logf(-0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(-1.0f), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::logf(1.0f));
 }
 
-TEST(LlvmLibcLogfTest, TrickyInputs) {
+TEST_F(LlvmLibcLogfTest, TrickyInputs) {
   constexpr int N = 35;
   constexpr uint32_t INPUTS[N] = {
       0x1b7679ffU, /*0x1.ecf3fep-73f*/
@@ -69,20 +71,20 @@ TEST(LlvmLibcLogfTest, TrickyInputs) {
       0x7a17f30aU, /*0x1.2fe614p+117f*/
   };
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
-                                   __llvm_libc::logf(x), 0.5);
+                                   LIBC_NAMESPACE::logf(x), 0.5);
   }
 }
 
-TEST(LlvmLibcLogfTest, InFloatRange) {
+TEST_F(LlvmLibcLogfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
-    if (isnan(x) || isinf(x))
+    float x = FPBits(v).get_val();
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
-                                   __llvm_libc::logf(x), 0.5);
+                                   LIBC_NAMESPACE::logf(x), 0.5);
   }
 }

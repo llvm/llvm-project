@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DDEFAULT=1 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DDEFAULT %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DEBSTRICT=1 -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DEBSTRICT %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -DFAST=1 -ffast-math -ffp-contract=fast -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-FAST %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DNOHONOR=1 -menable-no-infs -menable-no-nans -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-NOHONOR %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DNOHONOR=1 -ffinite-math-only -menable-no-infs -menable-no-nans -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-NOHONOR %s
 
 #define FUN(n) \
   (float z) { return n * z + n; }
@@ -224,7 +224,7 @@ float fun_default FUN(1)
 #endif
                                         float y();
 // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
 // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 class ON {
@@ -246,10 +246,10 @@ class ON {
 };
 ON on;
 #pragma float_control(except, off)
-// CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-NOHONOR: Function Attrs: noinline nounwind optnone{{$$}}
+// CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 class OFF {
   float w = 2 + y() * 7;
 // CHECK-LABEL: define {{.*}} void @_ZN3OFFC2Ev{{.*}}
@@ -284,3 +284,6 @@ MyComplex useAdd() {
 // CHECK-FAST: Function Attrs: noinline nounwind{{$$}}
 // CHECK-NOHONOR: Function Attrs: noinline nounwind{{$$}}
 // CHECK-LABEL: define{{.*}} @_GLOBAL__sub_I_fp_floatcontrol_stack
+
+// CHECK-DEBSTRICT: {{[ ]}}strictfp{{[ ]}}
+// CHECK-DEBSTRICT-NOT: "strictfp"

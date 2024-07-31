@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-pch -o %t.a %s
-// RUN: %clang_cc1 -include-pch %t.a %s -ast-print -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -emit-pch -o %t.a %s
+// RUN: %clang_cc1 -fopenmp -include-pch %t.a %s -ast-print -o - | FileCheck %s
 
 // CHECK: #pragma clang loop vectorize_width(4)
 // CHECK: #pragma clang loop interleave_count(8)
@@ -18,6 +18,9 @@
 // CHECK: #pragma nounroll{{$}}
 // CHECK: #pragma clang loop vectorize_width(V)
 // CHECK: #pragma clang loop interleave_count(I)
+// CHECK: #pragma omp loop bind(thread)
+// CHECK: #pragma omp loop bind(parallel)
+// CHECK: #pragma omp loop bind(teams)
 
 #ifndef HEADER
 #define HEADER
@@ -94,9 +97,37 @@ public:
       List[i] = i;
     }
   }
+
+  inline void run8(int *List, int Length) {
+    int i = 0;
+#pragma omp loop bind(thread)
+    for (int i = 0; i < Length; i++) {
+      List[i] = i;
+    }
+  }
+
+  inline void run9(int *List, int Length) {
+    int i = 0;
+#pragma omp loop bind(parallel)
+    for (int i = 0; i < Length; i++) {
+      List[i] = i;
+    }
+  }
+
+  inline void run10(int *List, int Length) {
+    int i = 0;
+    int j = 0;
+    #pragma omp teams
+    for (int i = 0; i < Length; i++) {
+      #pragma omp loop bind(teams)
+      for (int j = 0; j < Length; j++) {
+        List[i] = i+j;
+      }
+    }
+  }
+
 };
 #else
-
 void test() {
   int List[100];
 
@@ -109,6 +140,9 @@ void test() {
   pt.run5(List, 100);
   pt.run6(List, 100);
   pt.run7<2, 4>(List, 100);
+  pt.run8(List, 100);
+  pt.run9(List, 100);
+  pt.run10(List, 100);
 }
 
 #endif

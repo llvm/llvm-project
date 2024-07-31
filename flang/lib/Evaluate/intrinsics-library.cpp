@@ -20,6 +20,10 @@
 #include <cmath>
 #include <complex>
 #include <functional>
+#if HAS_QUADMATHLIB
+#include "quadmath.h"
+#include "flang/Common/float128.h"
+#endif
 #include <type_traits>
 
 namespace Fortran::evaluate {
@@ -295,8 +299,8 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
-// Remove float bessel functions for AIX as they are not supported
-#ifndef _AIX
+// Remove float bessel functions for AIX and Darwin as they are not supported
+#if !defined(_AIX) && !defined(__APPLE__)
 template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<float, float>;
   using FN = FuncPointer<float, int, float>;
@@ -307,6 +311,69 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
       FolderFactory<F, F{::y0f}>::Create("bessel_y0"),
       FolderFactory<F, F{::y1f}>::Create("bessel_y1"),
       FolderFactory<FN, FN{::ynf}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif
+
+#if HAS_QUADMATHLIB
+template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
+  using F = FuncPointer<__float128, __float128>;
+  using F2 = FuncPointer<__float128, __float128, __float128>;
+  using FN = FuncPointer<__float128, int, __float128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::acosq}>::Create("acos"),
+      FolderFactory<F, F{::acoshq}>::Create("acosh"),
+      FolderFactory<F, F{::asinq}>::Create("asin"),
+      FolderFactory<F, F{::asinhq}>::Create("asinh"),
+      FolderFactory<F, F{::atanq}>::Create("atan"),
+      FolderFactory<F2, F2{::atan2q}>::Create("atan2"),
+      FolderFactory<F, F{::atanhq}>::Create("atanh"),
+      FolderFactory<F, F{::j0q}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1q}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnq}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0q}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1q}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynq}>::Create("bessel_yn"),
+      FolderFactory<F, F{::cosq}>::Create("cos"),
+      FolderFactory<F, F{::coshq}>::Create("cosh"),
+      FolderFactory<F, F{::erfq}>::Create("erf"),
+      FolderFactory<F, F{::erfcq}>::Create("erfc"),
+      FolderFactory<F, F{::expq}>::Create("exp"),
+      FolderFactory<F, F{::tgammaq}>::Create("gamma"),
+      FolderFactory<F, F{::logq}>::Create("log"),
+      FolderFactory<F, F{::log10q}>::Create("log10"),
+      FolderFactory<F, F{::lgammaq}>::Create("log_gamma"),
+      FolderFactory<F2, F2{::powq}>::Create("pow"),
+      FolderFactory<F, F{::sinq}>::Create("sin"),
+      FolderFactory<F, F{::sinhq}>::Create("sinh"),
+      FolderFactory<F, F{::tanq}>::Create("tan"),
+      FolderFactory<F, F{::tanhq}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+template <> struct HostRuntimeLibrary<__complex128, LibraryVersion::Libm> {
+  using F = FuncPointer<__complex128, __complex128>;
+  using F2 = FuncPointer<__complex128, __complex128, __complex128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::cacosq}>::Create("acos"),
+      FolderFactory<F, F{::cacoshq}>::Create("acosh"),
+      FolderFactory<F, F{::casinq}>::Create("asin"),
+      FolderFactory<F, F{::casinhq}>::Create("asinh"),
+      FolderFactory<F, F{::catanq}>::Create("atan"),
+      FolderFactory<F, F{::catanhq}>::Create("atanh"),
+      FolderFactory<F, F{::ccosq}>::Create("cos"),
+      FolderFactory<F, F{::ccoshq}>::Create("cosh"),
+      FolderFactory<F, F{::cexpq}>::Create("exp"),
+      FolderFactory<F, F{::clogq}>::Create("log"),
+      FolderFactory<F2, F2{::cpowq}>::Create("pow"),
+      FolderFactory<F, F{::csinq}>::Create("sin"),
+      FolderFactory<F, F{::csinhq}>::Create("sinh"),
+      FolderFactory<F, F{::csqrtq}>::Create("sqrt"),
+      FolderFactory<F, F{::ctanq}>::Create("tan"),
+      FolderFactory<F, F{::ctanhq}>::Create("tanh"),
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -345,7 +412,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 #endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
-#endif
+#endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -455,6 +522,12 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
             GetHostRuntimeMapHelper<long double, version>(resultType)}) {
       return map;
     }
+#if HAS_QUADMATHLIB
+    if (const auto *map{
+            GetHostRuntimeMapHelper<__float128, version>(resultType)}) {
+      return map;
+    }
+#endif
   }
   if (resultType.category() == TypeCategory::Complex) {
     if (const auto *map{GetHostRuntimeMapHelper<std::complex<float>, version>(
@@ -470,6 +543,12 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
                 resultType)}) {
       return map;
     }
+#if HAS_QUADMATHLIB
+    if (const auto *map{
+            GetHostRuntimeMapHelper<__complex128, version>(resultType)}) {
+      return map;
+    }
+#endif
   }
   return nullptr;
 }
@@ -554,10 +633,243 @@ static DynamicType BiggerType(DynamicType type) {
   return type;
 }
 
+/// Structure to register intrinsic argument checks that must be performed.
+using ArgumentVerifierFunc = bool (*)(
+    const std::vector<Expr<SomeType>> &, FoldingContext &);
+struct ArgumentVerifier {
+  using Key = std::string_view;
+  // Needed for implicit compare with keys.
+  constexpr operator Key() const { return key; }
+  Key key;
+  ArgumentVerifierFunc verifier;
+};
+
+static constexpr int lastArg{-1};
+static constexpr int firstArg{0};
+
+static const Expr<SomeType> &GetArg(
+    int position, const std::vector<Expr<SomeType>> &args) {
+  if (position == lastArg) {
+    CHECK(!args.empty());
+    return args.back();
+  }
+  CHECK(position >= 0 && static_cast<std::size_t>(position) < args.size());
+  return args[position];
+}
+
+template <typename T>
+static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
+  if (auto scalar{GetScalarConstantValue<T>(expr)}) {
+    auto lbValue{Scalar<T>::FromInteger(value::Integer<8>{lb}).value};
+    auto ubValue{Scalar<T>::FromInteger(value::Integer<8>{ub}).value};
+    return Satisfies(RelationalOperator::LE, lbValue.Compare(*scalar)) &&
+        Satisfies(RelationalOperator::LE, scalar->Compare(ubValue));
+  }
+  return true;
+}
+
+/// Verify that the argument in an intrinsic call belongs to [lb, ub] if is
+/// real.
+template <int lb, int ub>
+static bool VerifyInRangeIfReal(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  if (const auto *someReal{
+          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)}) {
+    bool isInRange{
+        std::visit([&](const auto &x) -> bool { return IsInRange(x, lb, ub); },
+            someReal->u)};
+    if (!isInRange) {
+      context.messages().Say(
+          "argument is out of range [%d., %d.]"_warn_en_US, lb, ub);
+    }
+    return isInRange;
+  }
+  return true;
+}
+
+template <int argPosition, const char *argName>
+static bool VerifyStrictlyPositiveIfReal(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  if (const auto *someReal =
+          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
+    const bool isStrictlyPositive{std::visit(
+        [&](const auto &x) -> bool {
+          using T = typename std::decay_t<decltype(x)>::Result;
+          auto scalar{GetScalarConstantValue<T>(x)};
+          return Satisfies(
+              RelationalOperator::LT, Scalar<T>{}.Compare(*scalar));
+        },
+        someReal->u)};
+    if (!isStrictlyPositive) {
+      context.messages().Say(
+          "argument '%s' must be strictly positive"_warn_en_US, argName);
+    }
+    return isStrictlyPositive;
+  }
+  return true;
+}
+
+/// Verify that an intrinsic call argument is not zero if it is real.
+template <int argPosition, const char *argName>
+static bool VerifyNotZeroIfReal(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  if (const auto *someReal =
+          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
+    const bool isNotZero{std::visit(
+        [&](const auto &x) -> bool {
+          using T = typename std::decay_t<decltype(x)>::Result;
+          auto scalar{GetScalarConstantValue<T>(x)};
+          return !scalar || !scalar->IsZero();
+        },
+        someReal->u)};
+    if (!isNotZero) {
+      context.messages().Say(
+          "argument '%s' must be different from zero"_warn_en_US, argName);
+    }
+    return isNotZero;
+  }
+  return true;
+}
+
+/// Verify that the argument in an intrinsic call is not zero if is complex.
+static bool VerifyNotZeroIfComplex(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  if (const auto *someComplex =
+          std::get_if<Expr<SomeComplex>>(&GetArg(firstArg, args).u)) {
+    const bool isNotZero{std::visit(
+        [&](const auto &z) -> bool {
+          using T = typename std::decay_t<decltype(z)>::Result;
+          auto scalar{GetScalarConstantValue<T>(z)};
+          return !scalar || !scalar->IsZero();
+        },
+        someComplex->u)};
+    if (!isNotZero) {
+      context.messages().Say(
+          "complex argument must be different from zero"_warn_en_US);
+    }
+    return isNotZero;
+  }
+  return true;
+}
+
+// Verify that the argument in an intrinsic call is not zero and not a negative
+// integer.
+static bool VerifyGammaLikeArgument(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  if (const auto *someReal =
+          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
+    const bool isValid{std::visit(
+        [&](const auto &x) -> bool {
+          using T = typename std::decay_t<decltype(x)>::Result;
+          auto scalar{GetScalarConstantValue<T>(x)};
+          if (scalar) {
+            return !scalar->IsZero() &&
+                !(scalar->IsNegative() &&
+                    scalar->ToWholeNumber().value == scalar);
+          }
+          return true;
+        },
+        someReal->u)};
+    if (!isValid) {
+      context.messages().Say(
+          "argument must not be a negative integer or zero"_warn_en_US);
+    }
+    return isValid;
+  }
+  return true;
+}
+
+// Verify that two real arguments are not both zero.
+static bool VerifyAtan2LikeArguments(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  if (const auto *someReal =
+          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
+    const bool isValid{std::visit(
+        [&](const auto &typedExpr) -> bool {
+          using T = typename std::decay_t<decltype(typedExpr)>::Result;
+          auto x{GetScalarConstantValue<T>(typedExpr)};
+          auto y{GetScalarConstantValue<T>(GetArg(lastArg, args))};
+          if (x && y) {
+            return !(x->IsZero() && y->IsZero());
+          }
+          return true;
+        },
+        someReal->u)};
+    if (!isValid) {
+      context.messages().Say(
+          "'x' and 'y' arguments must not be both zero"_warn_en_US);
+    }
+    return isValid;
+  }
+  return true;
+}
+
+template <ArgumentVerifierFunc... F>
+static bool CombineVerifiers(
+    const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
+  return (... && F(args, context));
+}
+
+/// Define argument names to be used error messages when the intrinsic have
+/// several arguments.
+static constexpr char xName[]{"x"};
+static constexpr char pName[]{"p"};
+
+/// Register argument verifiers for all intrinsics folded with runtime.
+static constexpr ArgumentVerifier intrinsicArgumentVerifiers[]{
+    {"acos", VerifyInRangeIfReal<-1, 1>},
+    {"asin", VerifyInRangeIfReal<-1, 1>},
+    {"atan2", VerifyAtan2LikeArguments},
+    {"bessel_y0", VerifyStrictlyPositiveIfReal<firstArg, xName>},
+    {"bessel_y1", VerifyStrictlyPositiveIfReal<firstArg, xName>},
+    {"bessel_yn", VerifyStrictlyPositiveIfReal<lastArg, xName>},
+    {"gamma", VerifyGammaLikeArgument},
+    {"log",
+        CombineVerifiers<VerifyStrictlyPositiveIfReal<firstArg, xName>,
+            VerifyNotZeroIfComplex>},
+    {"log10", VerifyStrictlyPositiveIfReal<firstArg, xName>},
+    {"log_gamma", VerifyGammaLikeArgument},
+    {"mod", VerifyNotZeroIfReal<lastArg, pName>},
+};
+
+const ArgumentVerifierFunc *findVerifier(const std::string &intrinsicName) {
+  static constexpr Fortran::common::StaticMultimapView<ArgumentVerifier>
+      verifiers(intrinsicArgumentVerifiers);
+  static_assert(verifiers.Verify(), "map must be sorted");
+  auto range{verifiers.equal_range(intrinsicName)};
+  if (range.first != range.second) {
+    return &range.first->verifier;
+  }
+  return nullptr;
+}
+
+/// Ensure argument verifiers, if any, are run before calling the runtime
+/// wrapper to fold an intrinsic.
+static HostRuntimeWrapper AddArgumentVerifierIfAny(
+    const std::string &intrinsicName, const HostRuntimeFunction &hostFunction) {
+  if (const auto *verifier{findVerifier(intrinsicName)}) {
+    const HostRuntimeFunction *hostFunctionPtr = &hostFunction;
+    return [hostFunctionPtr, verifier](
+               FoldingContext &context, std::vector<Expr<SomeType>> &&args) {
+      const bool validArguments{(*verifier)(args, context)};
+      if (!validArguments) {
+        // Silence fp signal warnings since a more detailed warning about
+        // invalid arguments was already emitted.
+        parser::Messages localBuffer;
+        parser::ContextualMessages localMessages{&localBuffer};
+        FoldingContext localContext{context, localMessages};
+        return hostFunctionPtr->folder(localContext, std::move(args));
+      }
+      return hostFunctionPtr->folder(context, std::move(args));
+    };
+  }
+  return hostFunction.folder;
+}
+
 std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
     DynamicType resultType, const std::vector<DynamicType> &argTypes) {
   if (const auto *hostFunction{SearchHostRuntime(name, resultType, argTypes)}) {
-    return hostFunction->folder;
+    return AddArgumentVerifierIfAny(name, *hostFunction);
   }
   // If no exact match, search with "bigger" types and insert type
   // conversions around the folder.
@@ -568,7 +880,8 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
   }
   if (const auto *hostFunction{
           SearchHostRuntime(name, biggerResultType, biggerArgTypes)}) {
-    return [hostFunction, resultType](
+    auto hostFolderWithChecks{AddArgumentVerifierIfAny(name, *hostFunction)};
+    return [hostFunction, resultType, hostFolderWithChecks](
                FoldingContext &context, std::vector<Expr<SomeType>> &&args) {
       auto nArgs{args.size()};
       for (size_t i{0}; i < nArgs; ++i) {
@@ -578,7 +891,7 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
       }
       return Fold(context,
           ConvertToType(
-              resultType, hostFunction->folder(context, std::move(args)))
+              resultType, hostFolderWithChecks(context, std::move(args)))
               .value());
     };
   }

@@ -215,11 +215,9 @@ CREATE_FUNCTION();
 
 using ty = const int;
 ty p21() {}
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'ty' (aka 'const int') is
 
 typedef const int ty2;
 ty2 p22() {}
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'ty2' (aka 'const int') i
 
 // Declaration uses a macro, while definition doesn't.  In this case, we won't
 // fix the declaration, and will instead issue a warning.
@@ -249,7 +247,6 @@ auto p27() -> int const { return 3; }
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
 
 std::add_const<int>::type p28() { return 3; }
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'std::add_const<int>::typ
 
 // p29, p30 are based on
 // llvm/projects/test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:
@@ -355,3 +352,20 @@ struct p41 {
   // CHECK-FIXES: T foo() const { return 2; }
 };
 template struct p41<int>;
+
+namespace PR73270 {
+  template<typename K, typename V>
+  struct Pair {
+    using first_type = const K;
+    using second_type = V;
+  };
+
+  template<typename PairType>
+  typename PairType::first_type getFirst() {
+    return {};
+  }
+
+  void test() {
+    getFirst<Pair<int, int>>();
+  }
+}

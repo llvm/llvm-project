@@ -7,17 +7,19 @@ target triple = "nvptx64"
 ; CHECK: remark: globalization_remarks.c:5:7: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
 ; CHECK: remark: globalization_remarks.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
-%struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @S = external local_unnamed_addr global ptr
+@foo_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 define void @foo() "kernel" {
 entry:
-  %c = call i32 @__kmpc_target_init(ptr null, i1 false, i1 true)
+  %c = call i32 @__kmpc_target_init(ptr @foo_kernel_environment, ptr null)
   %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !10
   call void @share(ptr %0), !dbg !10
   call void @__kmpc_free_shared(ptr %0)
-  call void @__kmpc_target_deinit(ptr null, i1 false)
+  call void @__kmpc_target_deinit()
   ret void
 }
 
@@ -31,9 +33,9 @@ declare ptr @__kmpc_alloc_shared(i64)
 
 declare void @__kmpc_free_shared(ptr nocapture)
 
-declare i32 @__kmpc_target_init(ptr, i1, i1);
+declare i32 @__kmpc_target_init(ptr, ptr);
 
-declare void @__kmpc_target_deinit(ptr, i1)
+declare void @__kmpc_target_deinit()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

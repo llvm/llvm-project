@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -106,7 +107,7 @@ static inline bool isCodeViewDebugSubsection(object::SectionRef Section,
     return false;
   }
 
-  Reader = BinaryStreamReader(*ContentsOrErr, support::little);
+  Reader = BinaryStreamReader(*ContentsOrErr, llvm::endianness::little);
   uint32_t Magic;
   if (Reader.bytesRemaining() < sizeof(uint32_t))
     return false;
@@ -560,7 +561,7 @@ static bool isMyCode(const SymbolGroup &Group) {
     return true;
 
   StringRef Name = Group.name();
-  if (Name.startswith("Import:"))
+  if (Name.starts_with("Import:"))
     return false;
   if (Name.ends_with_insensitive(".dll"))
     return false;

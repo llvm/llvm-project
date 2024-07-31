@@ -51,16 +51,16 @@
 //PRINT: }
 //DUMP: FunctionDecl{{.*}}templ_foo 'void (int)'
 //DUMP: TemplateArgument type 'int'
-//DUMP: TemplateArgument integral 2
-//DUMP: ParmVarDecl{{.*}}'int':'int'
+//DUMP: TemplateArgument integral '2'
+//DUMP: ParmVarDecl{{.*}}'int'
 //DUMP: OMPGenericLoopDirective
 //DUMP: OMPCollapseClause
 //DUMP: ConstantExpr{{.*}}'int'
 //DUMP: value: Int 2
 //DUMP: OMPReductionClause
-//DUMP: DeclRefExpr{{.*}}'z' 'int':'int'
+//DUMP: DeclRefExpr{{.*}}'z' 'int'
 //DUMP: OMPLastprivateClause
-//DUMP: DeclRefExpr{{.*}}'j' 'int':'int'
+//DUMP: DeclRefExpr{{.*}}'j' 'int'
 //DUMP: OMPBindClause
 //DUMP: ForStmt
 template <typename T, int C>
@@ -157,17 +157,6 @@ void test() {
   #pragma omp teams
   #pragma omp loop bind(teams)
   for (auto i = 0; i < N; ++i) { }
-}
-
-//PRINT: void nobindingfunc() {
-//DUMP: FunctionDecl {{.*}}nobindingfunc 'void ()'
-void nobindingfunc()
-{
-  //PRINT: #pragma omp loop
-  //DUMP: OMPGenericLoopDirective
-  //DUMP: ForStmt
-  #pragma omp loop
-  for (int i=0; i<10; ++i) { }
 }
 
 void bar()

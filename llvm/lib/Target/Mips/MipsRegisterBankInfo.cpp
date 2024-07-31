@@ -32,7 +32,7 @@ enum PartialMappingIdx {
   PMI_Min = PMI_GPR,
 };
 
-RegisterBankInfo::PartialMapping PartMappings[]{
+const RegisterBankInfo::PartialMapping PartMappings[]{
     {0, 32, GPRBRegBank},
     {0, 32, FPRBRegBank},
     {0, 64, FPRBRegBank},
@@ -47,7 +47,7 @@ enum ValueMappingIdx {
     MSAIdx = 10
 };
 
-RegisterBankInfo::ValueMapping ValueMappings[] = {
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
     // up to 3 operands in GPRs
@@ -75,55 +75,6 @@ using namespace llvm;
 
 MipsRegisterBankInfo::MipsRegisterBankInfo(const TargetRegisterInfo &TRI) {}
 
-const RegisterBank &
-MipsRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const {
-  using namespace Mips;
-
-  switch (RC.getID()) {
-  case Mips::GPR32RegClassID:
-  case Mips::CPU16Regs_and_GPRMM16ZeroRegClassID:
-  case Mips::GPRMM16MovePPairFirstRegClassID:
-  case Mips::CPU16Regs_and_GPRMM16MovePPairSecondRegClassID:
-  case Mips::GPRMM16MoveP_and_CPU16Regs_and_GPRMM16ZeroRegClassID:
-  case Mips::GPRMM16MovePPairFirst_and_GPRMM16MovePPairSecondRegClassID:
-  case Mips::SP32RegClassID:
-  case Mips::GP32RegClassID:
-    return getRegBank(Mips::GPRBRegBankID);
-  case Mips::FGRCCRegClassID:
-  case Mips::FGR32RegClassID:
-  case Mips::FGR64RegClassID:
-  case Mips::AFGR64RegClassID:
-  case Mips::MSA128BRegClassID:
-  case Mips::MSA128HRegClassID:
-  case Mips::MSA128WRegClassID:
-  case Mips::MSA128DRegClassID:
-    return getRegBank(Mips::FPRBRegBankID);
-  default:
-    llvm_unreachable("Register class not supported");
-  }
-}
-
-// Instructions where all register operands are floating point.
-static bool isFloatingPointOpcode(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FCEIL:
-  case TargetOpcode::G_FFLOOR:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC:
-    return true;
-  default:
-    return false;
-  }
-}
-
 // Instructions where use operands are floating point registers.
 // Def operands are general purpose.
 static bool isFloatingPointOpcodeUse(unsigned Opc) {
@@ -133,7 +84,7 @@ static bool isFloatingPointOpcodeUse(unsigned Opc) {
   case TargetOpcode::G_FCMP:
     return true;
   default:
-    return isFloatingPointOpcode(Opc);
+    return isPreISelGenericFloatingPointOpcode(Opc);
   }
 }
 
@@ -145,7 +96,7 @@ static bool isFloatingPointOpcodeDef(unsigned Opc) {
   case TargetOpcode::G_UITOFP:
     return true;
   default:
-    return isFloatingPointOpcode(Opc);
+    return isPreISelGenericFloatingPointOpcode(Opc);
   }
 }
 
@@ -155,7 +106,8 @@ static bool isGprbTwoInstrUnalignedLoadOrStore(const MachineInstr *MI) {
     auto MMO = *MI->memoperands_begin();
     const MipsSubtarget &STI = MI->getMF()->getSubtarget<MipsSubtarget>();
     if (MMO->getSize() == 4 && (!STI.systemSupportsUnalignedAccess() &&
-                                MMO->getAlign() < MMO->getSize()))
+                                (!MMO->getSize().hasValue() ||
+                                 MMO->getAlign() < MMO->getSize().getValue())))
       return true;
   }
   return false;
@@ -238,11 +190,11 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::AmbiguousRegDefUseContainer(
   if (MI->getOpcode() == TargetOpcode::G_STORE)
     addUseDef(MI->getOperand(0).getReg(), MRI);
 
-  if (MI->getOpcode() == TargetOpcode::G_PHI) {
-    addDefUses(MI->getOperand(0).getReg(), MRI);
+  if (auto *PHI = dyn_cast<GPhi>(MI)) {
+    addDefUses(PHI->getReg(0), MRI);
 
-    for (unsigned i = 1; i < MI->getNumOperands(); i += 2)
-      addUseDef(MI->getOperand(i).getReg(), MRI);
+    for (unsigned I = 1; I < PHI->getNumIncomingValues(); ++I)
+      addUseDef(PHI->getIncomingValue(I), MRI);
   }
 
   if (MI->getOpcode() == TargetOpcode::G_SELECT) {
@@ -675,9 +627,15 @@ using InstListTy = GISelWorkList<4>;
 namespace {
 class InstManager : public GISelChangeObserver {
   InstListTy &InstList;
+  MachineIRBuilder &B;
 
 public:
-  InstManager(InstListTy &Insts) : InstList(Insts) {}
+  InstManager(MachineIRBuilder &B, InstListTy &Insts) : InstList(Insts), B(B) {
+    assert(!B.isObservingChanges());
+    B.setChangeObserver(*this);
+  }
+
+  ~InstManager() { B.stopObservingChanges(); }
 
   void createdInstr(MachineInstr &MI) override { InstList.insert(&MI); }
   void erasingInstr(MachineInstr &MI) override {}
@@ -724,17 +682,18 @@ combineAwayG_UNMERGE_VALUES(LegalizationArtifactCombiner &ArtCombiner,
 }
 
 void MipsRegisterBankInfo::applyMappingImpl(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
+  Builder.setInstrAndDebugLoc(MI);
+
   InstListTy NewInstrs;
   MachineFunction *MF = MI.getMF();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   const LegalizerInfo &LegInfo = *MF->getSubtarget().getLegalizerInfo();
 
-  InstManager NewInstrObserver(NewInstrs);
-  MachineIRBuilder B(MI, NewInstrObserver);
-  LegalizerHelper Helper(*MF, NewInstrObserver, B);
-  LegalizationArtifactCombiner ArtCombiner(B, MF->getRegInfo(), LegInfo);
+  InstManager NewInstrObserver(Builder, NewInstrs);
+  LegalizerHelper Helper(*MF, NewInstrObserver, Builder);
+  LegalizationArtifactCombiner ArtCombiner(Builder, MF->getRegInfo(), LegInfo);
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD:

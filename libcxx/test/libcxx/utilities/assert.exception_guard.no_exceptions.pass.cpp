@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // REQUIRES: has-unix-headers
-// XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions -D_LIBCPP_ENABLE_ASSERTIONS=1
-
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
+// UNSUPPORTED: c++03
+// REQUIRES: libcpp-hardening-mode=debug
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
 #include <__utility/exception_guard.h>
 

@@ -167,7 +167,7 @@ FUZZER_FLAG_INT(purge_allocator_interval, 1, "Purge allocator caches and "
     "purge_allocator_interval=-1 to disable this functionality.")
 FUZZER_FLAG_INT(trace_malloc, 0, "If >= 1 will print all mallocs/frees. "
     "If >= 2 will also print stack traces.")
-FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
+FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon "
     "reaching this limit of RSS memory usage.")
 FUZZER_FLAG_INT(malloc_limit_mb, 0, "If non-zero, the fuzzer will exit "
     "if the target tries to allocate this number of Mb with one malloc call. "

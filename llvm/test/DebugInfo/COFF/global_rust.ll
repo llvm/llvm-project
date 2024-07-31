@@ -41,38 +41,38 @@ target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-pc-windows-msvc"
 
 @alloc7 = private unnamed_addr constant <{ [4 x i8] }> <{ [4 x i8] c"*\00\00\00" }>, align 4
-@vtable.0 = private unnamed_addr constant <{ i8*, [16 x i8], i8* }> <{ i8* bitcast (void (i32*)* @"_ZN4core3ptr24drop_in_place$LT$u32$GT$17h5aa897c8344c34eaE" to i8*), [16 x i8] c"\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00", i8* bitcast (void (i32*)* @_ZN11global_rust3Foo3foo17h17696ada84e467feE to i8*) }>, align 8, !dbg !0
+@vtable.0 = private unnamed_addr constant <{ ptr, [16 x i8], ptr }> <{ ptr @"_ZN4core3ptr24drop_in_place$LT$u32$GT$17h5aa897c8344c34eaE", [16 x i8] c"\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00", ptr @_ZN11global_rust3Foo3foo17h17696ada84e467feE }>, align 8, !dbg !0
 
 ; core::ptr::drop_in_place<u32>
 ; Function Attrs: inlinehint uwtable
-define internal void @"_ZN4core3ptr24drop_in_place$LT$u32$GT$17h5aa897c8344c34eaE"(i32* %_1) unnamed_addr #0 !dbg !22 {
+define internal void @"_ZN4core3ptr24drop_in_place$LT$u32$GT$17h5aa897c8344c34eaE"(ptr %_1) unnamed_addr #0 !dbg !22 {
 start:
-  %_1.dbg.spill = alloca i32*, align 8
-  store i32* %_1, i32** %_1.dbg.spill, align 8
-  call void @llvm.dbg.declare(metadata i32** %_1.dbg.spill, metadata !30, metadata !DIExpression()), !dbg !33
+  %_1.dbg.spill = alloca ptr, align 8
+  store ptr %_1, ptr %_1.dbg.spill, align 8
+  call void @llvm.dbg.declare(metadata ptr %_1.dbg.spill, metadata !30, metadata !DIExpression()), !dbg !33
   ret void, !dbg !33
 }
 
 ; global_rust::Foo::foo
 ; Function Attrs: uwtable
-define void @_ZN11global_rust3Foo3foo17h17696ada84e467feE(i32* align 4 %self) unnamed_addr #1 !dbg !34 {
+define void @_ZN11global_rust3Foo3foo17h17696ada84e467feE(ptr align 4 %self) unnamed_addr #1 !dbg !34 {
 start:
-  %self.dbg.spill = alloca i32*, align 8
-  store i32* %self, i32** %self.dbg.spill, align 8
-  call void @llvm.dbg.declare(metadata i32** %self.dbg.spill, metadata !42, metadata !DIExpression()), !dbg !45
+  %self.dbg.spill = alloca ptr, align 8
+  store ptr %self, ptr %self.dbg.spill, align 8
+  call void @llvm.dbg.declare(metadata ptr %self.dbg.spill, metadata !42, metadata !DIExpression()), !dbg !45
   ret void, !dbg !45
 }
 
 ; global_rust::foo
 ; Function Attrs: uwtable
-define void @_ZN11global_rust3foo17hbb4da99a7bb855e3E({}* align 1 %_1.0, [3 x i64]* align 8 %_1.1) unnamed_addr #1 !dbg !46 {
+define void @_ZN11global_rust3foo17hbb4da99a7bb855e3E(ptr align 1 %_1.0, ptr align 8 %_1.1) unnamed_addr #1 !dbg !46 {
 start:
-  %_1.dbg.spill = alloca { {}*, [3 x i64]* }, align 8
-  %0 = getelementptr inbounds { {}*, [3 x i64]* }, { {}*, [3 x i64]* }* %_1.dbg.spill, i32 0, i32 0
-  store {}* %_1.0, {}** %0, align 8
-  %1 = getelementptr inbounds { {}*, [3 x i64]* }, { {}*, [3 x i64]* }* %_1.dbg.spill, i32 0, i32 1
-  store [3 x i64]* %_1.1, [3 x i64]** %1, align 8
-  call void @llvm.dbg.declare(metadata { {}*, [3 x i64]* }* %_1.dbg.spill, metadata !60, metadata !DIExpression()), !dbg !61
+  %_1.dbg.spill = alloca { ptr, ptr }, align 8
+  %0 = getelementptr inbounds { ptr, ptr }, ptr %_1.dbg.spill, i32 0, i32 0
+  store ptr %_1.0, ptr %0, align 8
+  %1 = getelementptr inbounds { ptr, ptr }, ptr %_1.dbg.spill, i32 0, i32 1
+  store ptr %_1.1, ptr %1, align 8
+  call void @llvm.dbg.declare(metadata ptr %_1.dbg.spill, metadata !60, metadata !DIExpression()), !dbg !61
   ret void, !dbg !61
 }
 
@@ -81,7 +81,7 @@ start:
 define void @_ZN11global_rust3bar17h9ea8de32fc3f1360E() unnamed_addr #1 !dbg !62 {
 start:
 ; call global_rust::foo
-  call void @_ZN11global_rust3foo17hbb4da99a7bb855e3E({}* align 1 bitcast (<{ [4 x i8] }>* @alloc7 to {}*), [3 x i64]* align 8 bitcast (<{ i8*, [16 x i8], i8* }>* @vtable.0 to [3 x i64]*)), !dbg !65
+  call void @_ZN11global_rust3foo17hbb4da99a7bb855e3E(ptr align 1 @alloc7, ptr align 8 @vtable.0), !dbg !65
   br label %bb1, !dbg !65
 
 bb1:                                              ; preds = %start

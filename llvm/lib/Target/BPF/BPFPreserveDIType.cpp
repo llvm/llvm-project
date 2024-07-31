@@ -13,6 +13,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -56,7 +57,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       if (!GV)
         continue;
 
-      if (GV->getName().startswith("llvm.bpf.btf.type.id")) {
+      if (GV->getName().starts_with("llvm.bpf.btf.type.id")) {
         if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
           report_fatal_error(
               "Missing metadata for llvm.bpf.btf.type.id intrinsic");
@@ -82,18 +83,19 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
     uint32_t Reloc;
     if (FlagValue == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL_RELOC) {
-      Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL;
+      Reloc = BTF::BTF_TYPE_ID_LOCAL;
     } else {
-      Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE;
-      DIType *Ty = cast<DIType>(MD);
-      while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-        unsigned Tag = DTy->getTag();
-        if (Tag != dwarf::DW_TAG_const_type &&
-            Tag != dwarf::DW_TAG_volatile_type)
-          break;
-        Ty = DTy->getBaseType();
-      }
+      Reloc = BTF::BTF_TYPE_ID_REMOTE;
+    }
+    DIType *Ty = cast<DIType>(MD);
+    while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+      unsigned Tag = DTy->getTag();
+      if (Tag != dwarf::DW_TAG_const_type && Tag != dwarf::DW_TAG_volatile_type)
+        break;
+      Ty = DTy->getBaseType();
+    }
 
+    if (Reloc == BTF::BTF_TYPE_ID_REMOTE) {
       if (Ty->getName().empty()) {
         if (isa<DISubroutineType>(Ty))
           report_fatal_error(
@@ -101,8 +103,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
         else
           report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
       }
-      MD = Ty;
     }
+    MD = Ty;
 
     BasicBlock *BB = Call->getParent();
     IntegerType *VarType = Type::getInt64Ty(BB->getContext());
@@ -114,8 +116,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     GV->setMetadata(LLVMContext::MD_preserve_access_index, MD);
 
     // Load the global variable which represents the type info.
-    auto *LDInst =
-        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+    auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                                Call->getIterator());
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
     Call->replaceAllUsesWith(PassThroughInst);
@@ -125,27 +127,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
   return true;
 }
-
-class BPFPreserveDIType final : public FunctionPass {
-  bool runOnFunction(Function &F) override;
-
-public:
-  static char ID;
-  BPFPreserveDIType() : FunctionPass(ID) {}
-};
 } // End anonymous namespace
-
-char BPFPreserveDIType::ID = 0;
-INITIALIZE_PASS(BPFPreserveDIType, DEBUG_TYPE, "BPF Preserve Debuginfo Type",
-                false, false)
-
-FunctionPass *llvm::createBPFPreserveDIType() {
-  return new BPFPreserveDIType();
-}
-
-bool BPFPreserveDIType::runOnFunction(Function &F) {
-  return BPFPreserveDITypeImpl(F);
-}
 
 PreservedAnalyses BPFPreserveDITypePass::run(Function &F,
                                              FunctionAnalysisManager &AM) {

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -run-pass=simple-register-coalescing | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -run-pass=register-coalescer | FileCheck %s
 # PR40010: DBG_VALUEs do not contribute to the liveness of virtual registers,
 # and the register coalescer would merge new live values on top of DBG_VALUEs,
 # leading to them presenting new (wrong) values to the debugger. Test that
@@ -13,13 +13,13 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
   ; Original IR source here:
-  define i32 @test(i32* %pin) {
+  define i32 @test(ptr %pin) {
   entry:
     br label %start.test1
 
   start.test1:                                       ; preds = %start, %entry
     %foo = phi i32 [ 0, %entry ], [ %bar, %start.test1 ]
-    %baz = load i32, i32* %pin, align 1
+    %baz = load i32, ptr %pin, align 1
     %qux = xor i32 %baz, 1234
     %bar = add i32 %qux, %foo
     call void @llvm.dbg.value(metadata i32 %foo, metadata !3, metadata !DIExpression()), !dbg !5
@@ -31,7 +31,7 @@
   }
 
   ; Stubs to appease the MIR parser
-  define i32 @test2(i32* %pin) {
+  define i32 @test2(ptr %pin) {
   entry:
     ret i32 0
   start.test2:
@@ -41,7 +41,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }

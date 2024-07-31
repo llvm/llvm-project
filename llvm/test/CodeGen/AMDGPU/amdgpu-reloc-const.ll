@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
-; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
 ; GCN-LABEL: {{^}}ps_main:
@@ -12,12 +12,12 @@
 
 ; ELF: Relocations [
 ; ELF-NEXT: Section (3) .rel.text {
-; ELF-NEXT: 0x{{[0-9]+}} R_AMDGPU_ABS32 doff_0_0_b{{$}}
+; ELF-NEXT: 0x{{[0-9]+}} R_AMDGPU_ABS32_LO doff_0_0_b{{$}}
 
 define amdgpu_ps void @ps_main(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local_unnamed_addr #0 {
   %rc = call i32 @llvm.amdgcn.reloc.constant(metadata !1)
   %rcf = bitcast i32 %rc to float
-  call void @llvm.amdgcn.exp.f32(i32 immarg 40, i32 immarg 15, float %rcf, float undef, float undef, float undef, i1 immarg false, i1 immarg false) #0
+  call void @llvm.amdgcn.exp.f32(i32 40, i32 15, float %rcf, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }
 

@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cstdint>
 
 namespace llvm {
@@ -76,7 +77,7 @@ bool isInstructionTriviallyDead(Instruction *I,
 /// Return true if the result produced by the instruction would have no side
 /// effects if it was not used. This is equivalent to checking whether
 /// isInstructionTriviallyDead would be true if the use count was 0.
-bool wouldInstructionBeTriviallyDead(Instruction *I,
+bool wouldInstructionBeTriviallyDead(const Instruction *I,
                                      const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if the result produced by the instruction has no side effects on
@@ -162,7 +163,17 @@ bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 /// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
 /// to be clever about PHI nodes which differ only in the order of the incoming
 /// values, but instcombine orders them so it usually won't matter.
+///
+/// This overload removes the duplicate PHI nodes directly.
 bool EliminateDuplicatePHINodes(BasicBlock *BB);
+
+/// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
+/// to be clever about PHI nodes which differ only in the order of the incoming
+/// values, but instcombine orders them so it usually won't matter.
+///
+/// This overload collects the PHI nodes to be removed into the ToRemove set.
+bool EliminateDuplicatePHINodes(BasicBlock *BB,
+                                SmallPtrSetImpl<PHINode *> &ToRemove);
 
 /// This function is used to do simplification of a CFG.  For example, it
 /// adjusts branches to branches to eliminate the extra hop, it eliminates
@@ -196,12 +207,21 @@ bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
 /// to create a stack slot for X.
 AllocaInst *DemoteRegToStack(Instruction &X,
                              bool VolatileLoads = false,
-                             Instruction *AllocaPoint = nullptr);
+                             std::optional<BasicBlock::iterator> AllocaPoint = std::nullopt);
 
 /// This function takes a virtual register computed by a phi node and replaces
 /// it with a slot in the stack frame, allocated via alloca. The phi node is
 /// deleted and it returns the pointer to the alloca inserted.
-AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
+AllocaInst *DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterator> AllocaPoint = std::nullopt);
+
+/// If the specified pointer points to an object that we control, try to modify
+/// the object's alignment to PrefAlign. Returns a minimum known alignment of
+/// the value after the operation, which may be lower than PrefAlign.
+///
+/// Increating value alignment isn't often possible though. If alignment is
+/// important, a more reliable approach is to simply align all global variables
+/// and allocation instructions to their preferred alignment from the beginning.
+Align tryEnforceAlignment(Value *V, Align PrefAlign, const DataLayout &DL);
 
 /// Try to ensure that the alignment of \p V is at least \p PrefAlign bytes. If
 /// the owning object can be modified and has an alignment less than \p
@@ -243,16 +263,22 @@ CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      StoreInst *SI, DIBuilder &Builder);
+void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, StoreInst *SI,
+                                     DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      LoadInst *LI, DIBuilder &Builder);
+void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
+                                     DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      PHINode *LI, DIBuilder &Builder);
+void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *LI,
+                                     DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
 /// llvm.dbg.value intrinsics.
@@ -283,12 +309,12 @@ void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 /// cannot be salvaged changes its debug uses to undef.
 void salvageDebugInfo(Instruction &I);
 
-
 /// Implementation of salvageDebugInfo, applying only to instructions in
 /// \p Insns, rather than all debug users from findDbgUsers( \p I).
 /// Mark undef if salvaging cannot be completed.
 void salvageDebugInfoForDbgValues(Instruction &I,
-                                  ArrayRef<DbgVariableIntrinsic *> Insns);
+                                  ArrayRef<DbgVariableIntrinsic *> Insns,
+                                  ArrayRef<DbgVariableRecord *> DPInsns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
@@ -331,6 +357,13 @@ Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 /// or deleted. Returns true if any debug users were updated.
 bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
                            DominatorTree &DT);
+
+/// If a terminator in an unreachable basic block has an operand of type
+/// Instruction, transform it into poison. Return true if any operands
+/// are changed to poison. Original Values prior to being changed to poison
+/// are returned in \p PoisonedValues.
+bool handleUnreachableTerminator(Instruction *I,
+                                 SmallVectorImpl<Value *> &PoisonedValues);
 
 /// Remove all instructions from a basic block other than its terminator
 /// and any present EH pad instructions. Returns a pair where the first element
@@ -407,6 +440,18 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 /// the end of the given BasicBlock. Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlock *BB);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the given edge and the callback ShouldReplace returns true. Returns the
+/// number of replacements made.
+unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Edge,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the end of the given BasicBlock and the callback ShouldReplace returns true.
+/// Returns the number of replacements made.
+unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
 
 /// Return true if this call calls a gc leaf function.
 ///
@@ -441,6 +486,14 @@ void dropDebugUsers(Instruction &I);
 /// (DILocations) and their debug intrinsic instructions are removed.
 void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                               BasicBlock *BB);
+
+/// Given a constant, create a debug information expression.
+DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
+                                       Type &Ty);
+
+/// Remap the operands of the debug records attached to \p Inst, and the
+/// operands of \p Inst itself if it's a debug intrinsic.
+void remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst);
 
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching

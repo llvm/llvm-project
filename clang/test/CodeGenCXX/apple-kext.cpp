@@ -22,8 +22,6 @@ D::~D() {}
 // CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD1Ev({{.*}}) unnamed_addr #[[ATTR1:.*]] align 2 {
 
 // CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD0Ev({{.*}}) unnamed_addr #[[ATTR1]] align 2 {
-
-// rdar://11241230
 namespace test0 {
   struct A { A(); ~A(); };
   A a;
@@ -40,5 +38,5 @@ namespace test0 {
 // CHECK:      call void @_ZN5test01AD1Ev(ptr @_ZN5test01aE)
 // CHECK-NEXT: ret void
 
-// CHECK: attributes #[[ATTR0]] = { alwaysinline nounwind {{.*}} }
-// CHECK: attributes #[[ATTR1]] = { noinline nounwind {{.*}} }
+// CHECK: attributes #[[ATTR0]] = { alwaysinline mustprogress nounwind {{.*}} }
+// CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind {{.*}} }

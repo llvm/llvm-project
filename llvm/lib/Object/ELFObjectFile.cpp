@@ -13,7 +13,6 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInstrAnalysis.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -21,10 +20,12 @@
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstddef>
@@ -287,12 +288,87 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   return Features;
 }
 
+static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
+  switch (Attr) {
+  case 5:
+    return "v5";
+  case 55:
+    return "v55";
+  case 60:
+    return "v60";
+  case 62:
+    return "v62";
+  case 65:
+    return "v65";
+  case 67:
+    return "v67";
+  case 68:
+    return "v68";
+  case 69:
+    return "v69";
+  case 71:
+    return "v71";
+  case 73:
+    return "v73";
+  default:
+    return {};
+  }
+}
+
+SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
+  SubtargetFeatures Features;
+  HexagonAttributeParser Parser;
+  if (Error E = getBuildAttributes(Parser)) {
+    // Return no attributes if none can be read.
+    // This behavior is important for backwards compatibility.
+    consumeError(std::move(E));
+    return Features;
+  }
+  std::optional<unsigned> Attr;
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH))) {
+    if (std::optional<std::string> FeatureString =
+            hexagonAttrToFeatureString(*Attr))
+      Features.AddFeature(*FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH))) {
+    std::optional<std::string> FeatureString =
+        hexagonAttrToFeatureString(*Attr);
+    // There is no corresponding hvx arch for v5 and v55.
+    if (FeatureString && *Attr >= 60)
+      Features.AddFeature("hvx" + *FeatureString);
+  }
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXIEEEFP)))
+    if (*Attr)
+      Features.AddFeature("hvx-ieee-fp");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXQFLOAT)))
+    if (*Attr)
+      Features.AddFeature("hvx-qfloat");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ZREG)))
+    if (*Attr)
+      Features.AddFeature("zreg");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::AUDIO)))
+    if (*Attr)
+      Features.AddFeature("audio");
+
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::CABAC)))
+    if (*Attr)
+      Features.AddFeature("cabac");
+
+  return Features;
+}
+
 Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   SubtargetFeatures Features;
   unsigned PlatformFlags = getPlatformFlags();
 
   if (PlatformFlags & ELF::EF_RISCV_RVC) {
-    Features.AddFeature("c");
+    Features.AddFeature("zca");
   }
 
   RISCVAttributeParser Attributes;
@@ -315,7 +391,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
     else
       llvm_unreachable("XLEN should be 32 or 64.");
 
-    Features.addFeaturesVector(ISAInfo->toFeatureVector());
+    Features.addFeaturesVector(ISAInfo->toFeatures());
   }
 
   return Features;
@@ -349,6 +425,8 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getFeatures() const {
     return getRISCVFeatures();
   case ELF::EM_LOONGARCH:
     return getLoongArchFeatures();
+  case ELF::EM_HEXAGON:
+    return getHexagonFeatures();
   default:
     return SubtargetFeatures();
   }
@@ -358,6 +436,9 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   switch (getEMachine()) {
   case ELF::EM_AMDGPU:
     return getAMDGPUCPUName();
+  case ELF::EM_CUDA:
+    return getNVPTXCPUName();
+  case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
   default:
@@ -501,8 +582,99 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1102";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103:
     return "gfx1103";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150:
+    return "gfx1150";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151:
+    return "gfx1151";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152:
+    return "gfx1152";
+
+  // AMDGCN GFX12.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
+    return "gfx1200";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
+    return "gfx1201";
+
+  // Generic AMDGCN targets
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
+    return "gfx9-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:
+    return "gfx10-1-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:
+    return "gfx10-3-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:
+    return "gfx11-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:
+    return "gfx12-generic";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
+  }
+}
+
+StringRef ELFObjectFileBase::getNVPTXCPUName() const {
+  assert(getEMachine() == ELF::EM_CUDA);
+  unsigned SM = getPlatformFlags() & ELF::EF_CUDA_SM;
+
+  switch (SM) {
+  // Fermi architecture.
+  case ELF::EF_CUDA_SM20:
+    return "sm_20";
+  case ELF::EF_CUDA_SM21:
+    return "sm_21";
+
+  // Kepler architecture.
+  case ELF::EF_CUDA_SM30:
+    return "sm_30";
+  case ELF::EF_CUDA_SM32:
+    return "sm_32";
+  case ELF::EF_CUDA_SM35:
+    return "sm_35";
+  case ELF::EF_CUDA_SM37:
+    return "sm_37";
+
+  // Maxwell architecture.
+  case ELF::EF_CUDA_SM50:
+    return "sm_50";
+  case ELF::EF_CUDA_SM52:
+    return "sm_52";
+  case ELF::EF_CUDA_SM53:
+    return "sm_53";
+
+  // Pascal architecture.
+  case ELF::EF_CUDA_SM60:
+    return "sm_60";
+  case ELF::EF_CUDA_SM61:
+    return "sm_61";
+  case ELF::EF_CUDA_SM62:
+    return "sm_62";
+
+  // Volta architecture.
+  case ELF::EF_CUDA_SM70:
+    return "sm_70";
+  case ELF::EF_CUDA_SM72:
+    return "sm_72";
+
+  // Turing architecture.
+  case ELF::EF_CUDA_SM75:
+    return "sm_75";
+
+  // Ampere architecture.
+  case ELF::EF_CUDA_SM80:
+    return "sm_80";
+  case ELF::EF_CUDA_SM86:
+    return "sm_86";
+  case ELF::EF_CUDA_SM87:
+    return "sm_87";
+
+  // Ada architecture.
+  case ELF::EF_CUDA_SM89:
+    return "sm_89";
+
+  // Hopper architecture.
+  case ELF::EF_CUDA_SM90:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_90a" : "sm_90";
+  default:
+    llvm_unreachable("Unknown EF_CUDA_SM value");
   }
 }
 
@@ -705,10 +877,13 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
 
 template <class ELFT>
 Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
-    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex) {
+    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) {
   using Elf_Shdr = typename ELFT::Shdr;
   bool IsRelocatable = EF.getHeader().e_type == ELF::ET_REL;
   std::vector<BBAddrMap> BBAddrMaps;
+  if (PGOAnalyses)
+    PGOAnalyses->clear();
 
   const auto &Sections = cantFail(EF.sections());
   auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
@@ -722,7 +897,10 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
       return createError("unable to get the linked-to section for " +
                          describe(EF, Sec) + ": " +
                          toString(TextSecOrErr.takeError()));
-    if (*TextSectionIndex != std::distance(Sections.begin(), *TextSecOrErr))
+    assert(*TextSecOrErr >= Sections.begin() &&
+           "Text section pointer outside of bounds");
+    if (*TextSectionIndex !=
+        (unsigned)std::distance(Sections.begin(), *TextSecOrErr))
       return false;
     return true;
   };
@@ -737,13 +915,20 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
       return createError("unable to get relocation section for " +
                          describe(EF, *Sec));
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
-        EF.decodeBBAddrMap(*Sec, RelocSec);
-    if (!BBAddrMapOrErr)
+        EF.decodeBBAddrMap(*Sec, RelocSec, PGOAnalyses);
+    if (!BBAddrMapOrErr) {
+      if (PGOAnalyses)
+        PGOAnalyses->clear();
       return createError("unable to read " + describe(EF, *Sec) + ": " +
                          toString(BBAddrMapOrErr.takeError()));
+    }
     std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),
               std::back_inserter(BBAddrMaps));
   }
+  if (PGOAnalyses)
+    assert(PGOAnalyses->size() == BBAddrMaps.size() &&
+           "The same number of BBAddrMaps and PGOAnalysisMaps should be "
+           "returned when PGO information is requested");
   return BBAddrMaps;
 }
 
@@ -817,13 +1002,25 @@ ELFObjectFileBase::readDynsymVersions() const {
 }
 
 Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
-    std::optional<unsigned> TextSectionIndex) const {
+    std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) const {
   if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
-                           TextSectionIndex);
+                           TextSectionIndex, PGOAnalyses);
+}
+
+StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
+  auto Data = Sec.getRawDataRefImpl();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return Obj->getCrelDecodeProblem(Data);
+  return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
 }

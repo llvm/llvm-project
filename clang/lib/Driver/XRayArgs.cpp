@@ -31,32 +31,28 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
                     options::OPT_fno_xray_instrument, false))
     return;
   XRayInstrument = Args.getLastArg(options::OPT_fxray_instrument);
-  if (Triple.getOS() == llvm::Triple::Linux) {
+  if (Triple.isMacOSX()) {
+    switch (Triple.getArch()) {
+    case llvm::Triple::aarch64:
+    case llvm::Triple::x86_64:
+      break;
+    default:
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << XRayInstrument->getSpelling() << Triple.str();
+      break;
+    }
+  } else if (Triple.isOSBinFormatELF()) {
     switch (Triple.getArch()) {
     case llvm::Triple::x86_64:
     case llvm::Triple::arm:
     case llvm::Triple::aarch64:
     case llvm::Triple::hexagon:
     case llvm::Triple::ppc64le:
+    case llvm::Triple::loongarch64:
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
-      break;
-    default:
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << XRayInstrument->getSpelling() << Triple.str();
-    }
-  } else if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() ||
-             Triple.isOSNetBSD() || Triple.isMacOSX()) {
-    if (Triple.getArch() != llvm::Triple::x86_64) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << XRayInstrument->getSpelling() << Triple.str();
-    }
-  } else if (Triple.getOS() == llvm::Triple::Fuchsia) {
-    switch (Triple.getArch()) {
-    case llvm::Triple::x86_64:
-    case llvm::Triple::aarch64:
       break;
     default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -74,7 +70,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         << XRayInstrument->getSpelling() << A->getSpelling();
 
   if (!Args.hasFlag(options::OPT_fxray_link_deps,
-                    options::OPT_fnoxray_link_deps, true))
+                    options::OPT_fno_xray_link_deps, true))
     XRayRT = false;
 
   auto Bundles =

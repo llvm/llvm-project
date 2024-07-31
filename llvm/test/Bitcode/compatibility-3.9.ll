@@ -361,8 +361,6 @@ declare ghccc void @f.ghccc()
 ; CHECK: declare ghccc void @f.ghccc()
 declare cc11 void @f.cc11()
 ; CHECK: declare cc11 void @f.cc11()
-declare webkit_jscc void @f.webkit_jscc()
-; CHECK: declare webkit_jscc void @f.webkit_jscc()
 declare anyregcc void @f.anyregcc()
 ; CHECK: declare anyregcc void @f.anyregcc()
 declare preserve_mostcc void @f.preserve_mostcc()
@@ -815,7 +813,7 @@ define void @typesystem() {
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
   %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
+  ; CHECK: %t7 = alloca <1 x i64>
   %t8 = alloca %opaquety*
   ; CHECK: %t8 = alloca ptr
 
@@ -1320,16 +1318,16 @@ define void @instructions.va_arg(i8* %v, ...) {
   %ap2 = bitcast i8** %ap to i8*
 
   call void @llvm.va_start(i8* %ap2)
-  ; CHECK: call void @llvm.va_start(ptr %ap2)
+  ; CHECK: call void @llvm.va_start.p0(ptr %ap2)
 
   va_arg i8* %ap2, i32
   ; CHECK: va_arg ptr %ap2, i32
 
   call void @llvm.va_copy(i8* %v, i8* %ap2)
-  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap2)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap2)
 
   call void @llvm.va_end(i8* %ap2)
-  ; CHECK: call void @llvm.va_end(ptr %ap2)
+  ; CHECK: call void @llvm.va_end.p0(ptr %ap2)
 
   ret void
 }
@@ -1385,9 +1383,9 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
 
   %stack = call i8* @llvm.stacksave()
-  ; CHECK: %stack = call ptr @llvm.stacksave()
+  ; CHECK: %stack = call ptr @llvm.stacksave.p0()
   call void @llvm.stackrestore(i8* %stack)
-  ; CHECK: call void @llvm.stackrestore(ptr %stack)
+  ; CHECK: call void @llvm.stackrestore.p0(ptr %stack)
 
   call void @llvm.prefetch(i8* %stack, i32 0, i32 3, i32 0)
   ; CHECK: call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)
@@ -1626,11 +1624,11 @@ declare void @f.writeonly() writeonly
 ; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { nounwind memory(argmem: read) }
-; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #40 = { nocallback nounwind }
+; CHECK: attributes #36 = { nounwind memory(argmem: read) }
+; CHECK: attributes #37 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #39 = { nocallback nounwind }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #41 = { memory(write) }
 ; CHECK: attributes #42 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #43 = { builtin }

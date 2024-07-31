@@ -11,7 +11,6 @@
 // XFAIL: availability-synchronization_library-missing
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
 
 #include <__stop_token/atomic_unique_lock.h>
 #include <atomic>

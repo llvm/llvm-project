@@ -15,11 +15,13 @@ static_library("elf-core") {
   include_dirs = [ "//lldb/source" ]
   sources = [
     "ProcessElfCore.cpp",
+    "RegisterContextLinuxCore_x86_64.cpp",
     "RegisterContextPOSIXCore_arm.cpp",
     "RegisterContextPOSIXCore_arm64.cpp",
     "RegisterContextPOSIXCore_mips64.cpp",
     "RegisterContextPOSIXCore_powerpc.cpp",
     "RegisterContextPOSIXCore_ppc64le.cpp",
+    "RegisterContextPOSIXCore_riscv64.cpp",
     "RegisterContextPOSIXCore_s390x.cpp",
     "RegisterContextPOSIXCore_x86_64.cpp",
     "RegisterUtilities.cpp",

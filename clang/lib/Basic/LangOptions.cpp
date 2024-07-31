@@ -34,8 +34,8 @@ void LangOptions::resetNonModularOptions() {
   // invocations that cannot be round-tripped to arguments.
   // FIXME: we should derive this automatically from ImpliedBy in tablegen.
   AllowFPReassoc = UnsafeFPMath;
-  NoHonorNaNs = FiniteMathOnly;
-  NoHonorInfs = FiniteMathOnly;
+  NoHonorInfs = FastMath;
+  NoHonorNaNs = FastMath;
 
   // These options do not affect AST generation.
   NoSanitizeFiles.clear();
@@ -48,7 +48,7 @@ void LangOptions::resetNonModularOptions() {
 
 bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
   for (unsigned i = 0, e = NoBuiltinFuncs.size(); i != e; ++i)
-    if (FuncName.equals(NoBuiltinFuncs[i]))
+    if (FuncName == NoBuiltinFuncs[i])
       return true;
   return false;
 }
@@ -111,7 +111,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.C99 = Std.isC99();
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
-  Opts.C2x = Std.isC2x();
+  Opts.C23 = Std.isC23();
+  Opts.C2y = Std.isC2y();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();
@@ -124,6 +125,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.HexFloats = Std.hasHexFloats();
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
+  Opts.RawStringLiterals = Std.hasRawStringLiterals();
 
   Opts.HLSL = Lang == Language::HLSL;
   if (Opts.HLSL && Opts.IncludeDefaultHeader)
@@ -201,8 +203,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
 
   Opts.RenderScript = Lang == Language::RenderScript;
 
-  // OpenCL, C++ and C2x have bool, true, false keywords.
-  Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C2x;
+  // OpenCL, C++ and C23 have bool, true, false keywords.
+  Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 
   // OpenCL and HLSL have half keyword
   Opts.Half = Opts.OpenCL || Opts.HLSL;

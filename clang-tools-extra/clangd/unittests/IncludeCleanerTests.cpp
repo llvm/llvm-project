@@ -15,22 +15,21 @@
 #include "TestTU.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
-#include "support/Context.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace clang {
@@ -73,13 +72,11 @@ MATCHER_P(writtenInclusion, Written, "") {
 }
 
 TEST(IncludeCleaner, StdlibUnused) {
-  setIncludeCleanerAnalyzesStdlib(true);
-  auto Cleanup =
-      llvm::make_scope_exit([] { setIncludeCleanerAnalyzesStdlib(false); });
-
   auto TU = TestTU::withCode(R"cpp(
     #include <list>
     #include <queue>
+    #include <vector> // IWYU pragma: keep
+    #include <string> // IWYU pragma: export
     std::list<int> x;
   )cpp");
   // Layout of std library impl is not relevant.
@@ -88,10 +85,13 @@ TEST(IncludeCleaner, StdlibUnused) {
     namespace std {
       template <typename> class list {};
       template <typename> class queue {};
+      template <typename> class vector {};
     }
   )cpp";
-  TU.AdditionalFiles["list"] = "#include <bits>";
-  TU.AdditionalFiles["queue"] = "#include <bits>";
+  TU.AdditionalFiles["list"] = guard("#include <bits>");
+  TU.AdditionalFiles["queue"] = guard("#include <bits>");
+  TU.AdditionalFiles["vector"] = guard("#include <bits>");
+  TU.AdditionalFiles["string"] = guard("#include <bits>");
   TU.ExtraArgs = {"-isystem", testRoot()};
   auto AST = TU.build();
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
@@ -108,6 +108,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
     #include "unguarded.h"
     #include "unused.h"
     #include <system_header.h>
+    #include <non_system_angled_header.h>
     void foo() {
       a();
       b();
@@ -122,6 +123,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
   TU.AdditionalFiles["dir/c.h"] = guard("void c();");
   TU.AdditionalFiles["unused.h"] = guard("void unused();");
   TU.AdditionalFiles["dir/unused.h"] = guard("void dirUnused();");
+  TU.AdditionalFiles["dir/non_system_angled_header.h"] = guard("");
   TU.AdditionalFiles["system/system_header.h"] = guard("");
   TU.AdditionalFiles["unguarded.h"] = "";
   TU.ExtraArgs.push_back("-I" + testPath("dir"));
@@ -133,6 +135,48 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
       Findings.UnusedIncludes,
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
+}
+
+TEST(IncludeCleaner, IgnoredAngledHeaders) {
+  // Currently the default behavior is to ignore unused angled includes
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, UnusedAngledHeaders) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST, true);
+  EXPECT_THAT(Findings.UnusedIncludes,
+              UnorderedElementsAre(
+                  Pointee(writtenInclusion("<system_unused.h>")),
+                  Pointee(writtenInclusion("<non_system_angled_unused.h>"))));
 }
 
 TEST(IncludeCleaner, ComputeMissingHeaders) {
@@ -167,7 +211,8 @@ TEST(IncludeCleaner, ComputeMissingHeaders) {
   size_t End = llvm::cantFail(positionToOffset(MainFile.code(), Range.end));
   syntax::FileRange BRange{SM.getMainFileID(), static_cast<unsigned int>(Start),
                            static_cast<unsigned int>(End)};
-  include_cleaner::Header Header{*SM.getFileManager().getFile("b.h")};
+  include_cleaner::Header Header{
+      *SM.getFileManager().getOptionalFileRef("b.h")};
   MissingIncludeDiagInfo BInfo{B, BRange, {Header}};
   EXPECT_THAT(Findings.MissingIncludes, ElementsAre(BInfo));
 }
@@ -185,6 +230,10 @@ $insert_f[[]]$insert_vector[[]]
 
 #define DEF(X) const Foo *X;
 #define BAZ(X) const X x
+
+// No missing include insertion for ambiguous macro refs.
+#if defined(FOO)
+#endif
 
   void foo() {
     $b[[b]]();
@@ -210,7 +259,7 @@ $insert_f[[]]$insert_vector[[]]
 })cpp");
 
   TestTU TU;
-  TU.Filename = "foo.cpp";
+  TU.Filename = "main.cpp";
   TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
   TU.AdditionalFiles["b.h"] = guard("void b();");
 
@@ -247,7 +296,7 @@ $insert_f[[]]$insert_vector[[]]
   auto Findings = computeIncludeCleanerFindings(AST);
   Findings.UnusedIncludes.clear();
   std::vector<clangd::Diag> Diags = issueIncludeCleanerDiagnostics(
-      AST, TU.Code, Findings,
+      AST, TU.Code, Findings, MockFS(),
       {[](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }});
   EXPECT_THAT(
       Diags,
@@ -311,8 +360,10 @@ TEST(IncludeCleaner, IWYUPragmas) {
     #include "public.h"
 
     void bar() { foo(); }
+    #include "keep_main_file.h" // IWYU pragma: keep
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["keep_main_file.h"] = guard("");
   TU.AdditionalFiles["exported.h"] = guard("");
   TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
   TU.AdditionalFiles["private.h"] = guard(R"cpp(
@@ -455,46 +506,30 @@ TEST(IncludeCleaner, NoCrash) {
       MainCode.range());
 }
 
-TEST(IncludeCleaner, FirstMatchedProvider) {
-  struct {
-    const char *Code;
-    const std::vector<include_cleaner::Header> Providers;
-    const std::optional<include_cleaner::Header> ExpectedProvider;
-  } Cases[] = {
-      {R"cpp(
-        #include "bar.h"
-        #include "foo.h"
-      )cpp",
-       {include_cleaner::Header{"bar.h"}, include_cleaner::Header{"foo.h"}},
-       include_cleaner::Header{"bar.h"}},
-      {R"cpp(
-        #include "bar.h"
-        #include "foo.h"
-      )cpp",
-       {include_cleaner::Header{"foo.h"}, include_cleaner::Header{"bar.h"}},
-       include_cleaner::Header{"foo.h"}},
-      {"#include \"bar.h\"",
-       {include_cleaner::Header{"bar.h"}},
-       include_cleaner::Header{"bar.h"}},
-      {"#include \"bar.h\"", {include_cleaner::Header{"foo.h"}}, std::nullopt},
-      {"#include \"bar.h\"", {}, std::nullopt}};
-  for (const auto &Case : Cases) {
-    Annotations Code{Case.Code};
-    SCOPED_TRACE(Code.code());
+TEST(IncludeCleaner, IsPreferredProvider) {
+  auto TU = TestTU::withCode(R"cpp(
+     #include "decl.h"
+     #include "def.h"
+     #include "def.h"
+  )cpp");
+  TU.AdditionalFiles["decl.h"] = "";
+  TU.AdditionalFiles["def.h"] = "";
 
-    TestTU TU;
-    TU.Code = Code.code();
-    TU.AdditionalFiles["bar.h"] = "";
-    TU.AdditionalFiles["foo.h"] = "";
+  auto AST = TU.build();
+  auto &IncludeDecl = AST.getIncludeStructure().MainFileIncludes[0];
+  auto &IncludeDef1 = AST.getIncludeStructure().MainFileIncludes[1];
+  auto &IncludeDef2 = AST.getIncludeStructure().MainFileIncludes[2];
 
-    auto AST = TU.build();
-    std::optional<include_cleaner::Header> MatchedProvider =
-        firstMatchedProvider(
-            convertIncludes(AST.getSourceManager(),
-                            AST.getIncludeStructure().MainFileIncludes),
-            Case.Providers);
-    EXPECT_EQ(MatchedProvider, Case.ExpectedProvider);
-  }
+  auto &FM = AST.getSourceManager().getFileManager();
+  auto DeclH = *FM.getOptionalFileRef("decl.h");
+  auto DefH = *FM.getOptionalFileRef("def.h");
+
+  auto Includes = convertIncludes(AST);
+  std::vector<include_cleaner::Header> Providers = {
+      include_cleaner::Header(DefH), include_cleaner::Header(DeclH)};
+  EXPECT_FALSE(isPreferredProvider(IncludeDecl, Includes, Providers));
+  EXPECT_TRUE(isPreferredProvider(IncludeDef1, Includes, Providers));
+  EXPECT_TRUE(isPreferredProvider(IncludeDef2, Includes, Providers));
 }
 
 TEST(IncludeCleaner, BatchFix) {
@@ -514,8 +549,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   auto AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -529,8 +564,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -548,8 +583,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code,
-                                     computeIncludeCleanerFindings(AST)),
+      issueIncludeCleanerDiagnostics(
+          AST, TU.Code, computeIncludeCleanerFindings(AST), MockFS()),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("add all missing includes"),
                                     FixMessage("fix all includes")}),
@@ -560,6 +595,77 @@ TEST(IncludeCleaner, BatchFix) {
                                     FixMessage("fix all includes")})));
 }
 
+// In the presence of IWYU pragma private, we should accept spellings other
+// than the recommended one if they appear to name the same public header.
+TEST(IncludeCleaner, VerbatimEquivalence) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include "lib/rel/public.h"
+    int x = Public;
+  )cpp");
+  TU.AdditionalFiles["repo/lib/rel/private.h"] = R"cpp(
+    #pragma once
+    // IWYU pragma: private, include "rel/public.h"
+    int Public;
+  )cpp";
+  TU.AdditionalFiles["repo/lib/rel/public.h"] = R"cpp(
+    #pragma once
+    #include "rel/private.h"
+  )cpp";
+
+  TU.ExtraArgs.push_back("-Irepo");
+  TU.ExtraArgs.push_back("-Irepo/lib");
+
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, ResourceDirIsIgnored) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include <amintrin.h>
+    #include <imintrin.h>
+    void baz() {
+      bar();
+    }
+  )cpp");
+  TU.ExtraArgs.push_back("-resource-dir");
+  TU.ExtraArgs.push_back(testPath("resources"));
+  TU.AdditionalFiles["resources/include/amintrin.h"] = guard("");
+  TU.AdditionalFiles["resources/include/imintrin.h"] = guard(R"cpp(
+    #include <emintrin.h>
+  )cpp");
+  TU.AdditionalFiles["resources/include/emintrin.h"] = guard(R"cpp(
+    void bar();
+  )cpp");
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, DifferentHeaderSameSpelling) {
+  // `foo` is declared in foo_inner/foo.h, but there's no way to spell it
+  // directly. Make sure we don't generate unusued/missing include findings in
+  // such cases.
+  auto TU = TestTU::withCode(R"cpp(
+    #include <foo.h>
+    void baz() {
+      foo();
+    }
+  )cpp");
+  TU.AdditionalFiles["foo/foo.h"] = guard("#include_next <foo.h>");
+  TU.AdditionalFiles["foo_inner/foo.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  TU.ExtraArgs.push_back("-Ifoo");
+  TU.ExtraArgs.push_back("-Ifoo_inner");
+
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

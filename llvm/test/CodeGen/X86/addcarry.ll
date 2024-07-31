@@ -4,6 +4,7 @@
 declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64)
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64) #1
 declare { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64) #1
+declare { i128, i1 } @llvm.sadd.with.overflow.i128(i128, i128)
 
 define i128 @add128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: add128:
@@ -48,7 +49,7 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq %r9, %rsi
+; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
@@ -388,6 +389,34 @@ define i128 @addcarry1_not(i128 %n) nounwind {
   ret i128 %2
 }
 
+define { i128, i1 } @saddo_not_1(i128 %x) nounwind {
+; CHECK-LABEL: saddo_not_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    sbbq %rsi, %rdx
+; CHECK-NEXT:    seto %cl
+; CHECK-NEXT:    retq
+  %not = xor i128 %x, -1
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %not, i128 1)
+  ret { i128, i1 } %r
+}
+
+define { i128, i1 } @saddo_carry_not_1(i128 %x) nounwind {
+; CHECK-LABEL: saddo_carry_not_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    movl $1, %edx
+; CHECK-NEXT:    sbbq %rsi, %rdx
+; CHECK-NEXT:    seto %cl
+; CHECK-NEXT:    retq
+  %not = xor i128 %x, -1
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %not, i128 u0x10000000000000001)
+  ret { i128, i1 } %r
+}
+
 define i128 @addcarry_to_subcarry(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: addcarry_to_subcarry:
 ; CHECK:       # %bb.0:
@@ -641,18 +670,18 @@ define { i64, i1 } @addcarry_fake_carry(i64 %a, i64 %b, i1 %carryin) nounwind {
 ; CHECK-NEXT:    adcq %rsi, %rax
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    retq
-    %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-    %partial = extractvalue { i64, i1 } %t1, 0
-    %k1 = extractvalue { i64, i1 } %t1, 1
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
 
-    %zcarryin = zext i1 %carryin to i64
-    %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
-    %k2 = extractvalue { i64, i1 } %sum, 1
+  %zcarryin = zext i1 %carryin to i64
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
 
-    %carryout = or i1 %k1, %k2
+  %carryout = or i1 %k1, %k2
 
-    %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
-    ret { i64, i1 } %ret
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
 }
 
 ; negative test: %carryin does not look like carry
@@ -666,17 +695,17 @@ define { i64, i1 } @addcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) nounwi
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    retq
-    %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-    %partial = extractvalue { i64, i1 } %t1, 0
-    %k1 = extractvalue { i64, i1 } %t1, 1
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
 
-    %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %carryin)
-    %k2 = extractvalue { i64, i1 } %sum, 1
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %carryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
 
-    %carryout = or i1 %k1, %k2
+  %carryout = or i1 %k1, %k2
 
-    %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
-    ret { i64, i1 } %ret
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
 }
 
 ; negative test: %carryin does not look like carry
@@ -690,18 +719,41 @@ define { i64, i1 } @addcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) nounwind 
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    retq
-    %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-    %partial = extractvalue { i64, i1 } %t1, 0
-    %k1 = extractvalue { i64, i1 } %t1, 1
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
 
-    %zcarryin = zext i8 %carryin to i64
-    %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
-    %k2 = extractvalue { i64, i1 } %sum, 1
+  %zcarryin = zext i8 %carryin to i64
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
 
-    %carryout = or i1 %k1, %k2
+  %carryout = or i1 %k1, %k2
 
-    %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
-    ret { i64, i1 } %ret
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
+}
+
+; Check that we can reconstruct a carry if it is masked.
+define { i64, i1 } @addcarry_carry_and_1(i64 %a, i64 %b, i64 %carryin) nounwind {
+; CHECK-LABEL: addcarry_carry_and_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btl $0, %edx
+; CHECK-NEXT:    adcq %rsi, %rax
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    retq
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
+
+  %mcarryin = and i64 %carryin, 1
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %mcarryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
+
+  %carryout = or i1 %k1, %k2
+
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
 }
 
 ; negative test for combineCarryDiamond(): uaddo mixed with usubo
@@ -1437,4 +1489,27 @@ define { i64, i64 } @addcarry_commutative_2(i64 %x0, i64 %x1, i64 %y0, i64 %y1) 
   %r0 = insertvalue { i64, i64 } poison, i64 %z1s, 0
   %r1 = insertvalue { i64, i64 } %r0, i64 %b1s, 1
   ret { i64, i64 } %r1
+}
+
+define i1 @pr84831(i64 %arg) {
+; CHECK-LABEL: pr84831:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    addb $-1, %al
+; CHECK-NEXT:    adcq $1, %rcx
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
+  %a = icmp ult i64 0, %arg
+  %add1 = add i64 0, 1
+  %carryout1 = icmp ult i64 %add1, 0
+  %b = zext i1 %a to i64
+  %add2 = add i64 %add1, %b
+  %carryout2 = icmp ult i64 %add2, %add1
+  %zc1 = zext i1 %carryout1 to i63
+  %zc2 = zext i1 %carryout2 to i63
+  %or = or i63 %zc1, %zc2
+  %trunc = trunc i63 %or to i1
+  ret i1 %trunc
 }

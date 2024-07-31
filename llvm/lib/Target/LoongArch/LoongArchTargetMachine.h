@@ -27,8 +27,8 @@ public:
   LoongArchTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
                          std::optional<Reloc::Model> RM,
-                         std::optional<CodeModel::Model> CM,
-                         CodeGenOpt::Level OL, bool JIT);
+                         std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                         bool JIT);
   ~LoongArchTargetMachine() override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
@@ -45,6 +45,11 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  // Addrspacecasts are always noops.
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+    return true;
+  }
 };
 
 } // end namespace llvm

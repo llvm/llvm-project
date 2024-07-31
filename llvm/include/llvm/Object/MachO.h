@@ -22,7 +22,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Swift.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -30,6 +29,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <memory>
@@ -134,9 +134,9 @@ public:
   BindRebaseSegInfo(const MachOObjectFile *Obj);
 
   // Used to check a Mach-O Bind or Rebase entry for errors when iterating.
-  const char* checkSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
-                                 uint8_t PointerSize, uint32_t Count=1,
-                                 uint32_t Skip=0);
+  const char *checkSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
+                                 uint8_t PointerSize, uint64_t Count = 1,
+                                 uint64_t Skip = 0);
   // Used with valid SegIndex/SegOffset values from checked entries.
   StringRef segmentName(int32_t SegIndex);
   StringRef sectionName(int32_t SegIndex, uint64_t SegOffset);
@@ -414,7 +414,8 @@ public:
 
   static Expected<std::unique_ptr<MachOObjectFile>>
   create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
-         uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
+         uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0,
+         size_t MachOFilesetEntryOffset = 0);
 
   static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch);
 
@@ -575,8 +576,9 @@ public:
   //
   // This is used by MachOBindEntry::moveNext() to validate a MachOBindEntry.
   const char *BindEntryCheckSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
-                                         uint8_t PointerSize, uint32_t Count=1,
-                                          uint32_t Skip=0) const {
+                                          uint8_t PointerSize,
+                                          uint64_t Count = 1,
+                                          uint64_t Skip = 0) const {
     return BindRebaseSectionTable->checkSegAndOffsets(SegIndex, SegOffset,
                                                      PointerSize, Count, Skip);
   }
@@ -590,8 +592,8 @@ public:
   const char *RebaseEntryCheckSegAndOffsets(int32_t SegIndex,
                                             uint64_t SegOffset,
                                             uint8_t PointerSize,
-                                            uint32_t Count=1,
-                                            uint32_t Skip=0) const {
+                                            uint64_t Count = 1,
+                                            uint64_t Skip = 0) const {
     return BindRebaseSectionTable->checkSegAndOffsets(SegIndex, SegOffset,
                                                       PointerSize, Count, Skip);
   }
@@ -697,6 +699,8 @@ public:
   getRoutinesCommand64(const LoadCommandInfo &L) const;
   MachO::thread_command
   getThreadCommand(const LoadCommandInfo &L) const;
+  MachO::fileset_entry_command
+  getFilesetEntryLoadCommand(const LoadCommandInfo &L) const;
 
   MachO::any_relocation_info getRelocation(DataRefImpl Rel) const;
   MachO::data_in_code_entry getDice(DataRefImpl Rel) const;
@@ -760,6 +764,8 @@ public:
 
   bool hasPageZeroSegment() const { return HasPageZeroSegment; }
 
+  size_t getMachOFilesetEntryOffset() const { return MachOFilesetEntryOffset; }
+
   static bool classof(const Binary *v) {
     return v->isMachO();
   }
@@ -784,21 +790,16 @@ public:
 
   static std::string getBuildPlatform(uint32_t platform) {
     switch (platform) {
-    case MachO::PLATFORM_MACOS: return "macos";
-    case MachO::PLATFORM_IOS: return "ios";
-    case MachO::PLATFORM_TVOS: return "tvos";
-    case MachO::PLATFORM_WATCHOS: return "watchos";
-    case MachO::PLATFORM_BRIDGEOS: return "bridgeos";
-    case MachO::PLATFORM_MACCATALYST: return "macCatalyst";
-    case MachO::PLATFORM_IOSSIMULATOR: return "iossimulator";
-    case MachO::PLATFORM_TVOSSIMULATOR: return "tvossimulator";
-    case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
-    case MachO::PLATFORM_DRIVERKIT: return "driverkit";
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case MachO::PLATFORM_##platform:                                             \
+    return #name;
+#include "llvm/BinaryFormat/MachO.def"
     default:
       std::string ret;
       raw_string_ostream ss(ret);
       ss << format_hex(platform, 8, true);
-      return ss.str();
+      return ret;
     }
   }
 
@@ -813,7 +814,7 @@ public:
       std::string ret;
       raw_string_ostream ss(ret);
       ss << format_hex(tools, 8, true);
-      return ss.str();
+      return ret;
     }
   }
 
@@ -826,7 +827,7 @@ public:
     Version = utostr(major) + "." + utostr(minor);
     if (update != 0)
       Version += "." + utostr(update);
-    return std::string(std::string(Version.str()));
+    return std::string(std::string(Version));
   }
 
   /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
@@ -839,7 +840,8 @@ public:
 private:
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
                   Error &Err, uint32_t UniversalCputype = 0,
-                  uint32_t UniversalIndex = 0);
+                  uint32_t UniversalIndex = 0,
+                  size_t MachOFilesetEntryOffset = 0);
 
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
 
@@ -867,6 +869,7 @@ private:
   const char *DyldExportsTrieLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
   bool HasPageZeroSegment = false;
+  size_t MachOFilesetEntryOffset = 0;
 };
 
 /// DiceRef

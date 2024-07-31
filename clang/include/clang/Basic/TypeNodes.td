@@ -3,7 +3,7 @@ include "clang/Basic/ASTNode.td"
 class TypeNode<TypeNode base, bit abstract = 0> : ASTNode {
 	TypeNode Base = base;
   bit Abstract = abstract;
-} 
+}
 
 /// A type node that is only used to represent dependent types in C++.  For
 /// example, DependentTemplateSpecializationType is used to represent types
@@ -64,6 +64,7 @@ def ConstantArrayType : TypeNode<ArrayType>;
 def IncompleteArrayType : TypeNode<ArrayType>;
 def VariableArrayType : TypeNode<ArrayType>;
 def DependentSizedArrayType : TypeNode<ArrayType>, AlwaysDependent;
+def ArrayParameterType : TypeNode<ConstantArrayType>;
 def DependentSizedExtVectorType : TypeNode<Type>, AlwaysDependent;
 def DependentAddressSpaceType : TypeNode<Type>, AlwaysDependent;
 def VectorType : TypeNode<Type>;
@@ -103,10 +104,13 @@ def InjectedClassNameType : TypeNode<Type>, AlwaysDependent, LeafType;
 def DependentNameType : TypeNode<Type>, AlwaysDependent;
 def DependentTemplateSpecializationType : TypeNode<Type>, AlwaysDependent;
 def PackExpansionType : TypeNode<Type>, AlwaysDependent;
+def PackIndexingType  : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def ObjCTypeParamType : TypeNode<Type>, NeverCanonical;
 def ObjCObjectType : TypeNode<Type>;
 def ObjCInterfaceType : TypeNode<ObjCObjectType>, LeafType;
 def ObjCObjectPointerType : TypeNode<Type>;
+def BoundsAttributedType : TypeNode<Type, 1>;
+def CountAttributedType : TypeNode<BoundsAttributedType>, NeverCanonical;
 def PipeType : TypeNode<Type>;
 def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;

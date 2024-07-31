@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -14,14 +17,14 @@
 
 // recursive_directory_iterator& operator=(recursive_directory_iterator const&);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 recursive_directory_iterator createInterestingIterator(const static_test_env &static_env)

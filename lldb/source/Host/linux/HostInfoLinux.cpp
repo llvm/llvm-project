@@ -123,7 +123,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
         if (strstr(distribution_id, distributor_id_key)) {
           // strip newlines
           std::string id_string(distribution_id + strlen(distributor_id_key));
-          llvm::erase_value(id_string, '\n');
+          llvm::erase(id_string, '\n');
 
           // lower case it and convert whitespace to underscores
           std::transform(

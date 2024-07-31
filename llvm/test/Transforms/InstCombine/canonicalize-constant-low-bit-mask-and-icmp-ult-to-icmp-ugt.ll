@@ -62,8 +62,7 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 
 define <2 x i1> @p2_vec_nonsplat_edgecase0(<2 x i8> %x) {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase0(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 0>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <2 x i8> [[X:%.*]], <i8 3, i8 0>
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
@@ -81,22 +80,22 @@ define <2 x i1> @p2_vec_nonsplat_edgecase1(<2 x i8> %x) {
   ret <2 x i1> %ret
 }
 
-define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
-; CHECK-LABEL: @p3_vec_splat_undef(
-; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <3 x i8> [[X:%.*]], <i8 3, i8 3, i8 3>
+define <3 x i1> @p3_vec_splat_poison(<3 x i8> %x) {
+; CHECK-LABEL: @p3_vec_splat_poison(
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <3 x i8> [[X:%.*]], <i8 3, i8 poison, i8 3>
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 poison, i8 3>
   %ret = icmp ult <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
 }
 
-define <3 x i1> @p3_vec_nonsplat_undef(<3 x i8> %x) {
-; CHECK-LABEL: @p3_vec_nonsplat_undef(
-; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <3 x i8> [[X:%.*]], <i8 7, i8 31, i8 7>
+define <3 x i1> @p3_vec_nonsplat_poison(<3 x i8> %x) {
+; CHECK-LABEL: @p3_vec_nonsplat_poison(
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <3 x i8> [[X:%.*]], <i8 7, i8 31, i8 poison>
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %tmp0 = and <3 x i8> %x, <i8 7, i8 31, i8 undef>
+  %tmp0 = and <3 x i8> %x, <i8 7, i8 31, i8 poison>
   %ret = icmp ult <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
 }
@@ -186,8 +185,8 @@ define i1 @oneuse0(i8 %x) {
 
 define i1 @n0(i8 %x) {
 ; CHECK-LABEL: @n0(
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -5
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 4 ; power-of-two, but invalid.
@@ -208,8 +207,8 @@ define i1 @n1(i8 %x, i8 %y, i8 %notx) {
 
 define <2 x i1> @n2(<2 x i8> %x) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 16>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -17>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 16> ; only the first one is valid.

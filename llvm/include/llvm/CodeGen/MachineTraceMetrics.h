@@ -143,7 +143,7 @@ public:
   /// The getResources() function above must have been called first.
   ///
   /// These numbers have already been scaled by SchedModel.getResourceFactor().
-  ArrayRef<unsigned> getProcResourceCycles(unsigned MBBNum) const;
+  ArrayRef<unsigned> getProcReleaseAtCycles(unsigned MBBNum) const;
 
   /// A virtual register or regunit required by a basic block or its trace
   /// successors.
@@ -243,6 +243,7 @@ public:
     SmallVector<LiveInReg, 4> LiveIns;
 
     void print(raw_ostream&) const;
+    void dump() const { print(dbgs()); }
   };
 
   /// InstrCycles represents the cycle height and depth of an instruction in a
@@ -271,6 +272,7 @@ public:
     explicit Trace(Ensemble &te, TraceBlockInfo &tbi) : TE(te), TBI(tbi) {}
 
     void print(raw_ostream&) const;
+    void dump() const { print(dbgs()); }
 
     /// Compute the total number of instructions in the trace.
     unsigned getInstrCount() const {
@@ -361,7 +363,8 @@ public:
     virtual ~Ensemble();
 
     virtual const char *getName() const = 0;
-    void print(raw_ostream&) const;
+    void print(raw_ostream &) const;
+    void dump() const { print(dbgs()); }
     void invalidate(const MachineBasicBlock *MBB);
     void verify() const;
 
@@ -404,9 +407,9 @@ private:
   // Cycles consumed on each processor resource per block.
   // The number of processor resource kinds is constant for a given subtarget,
   // but it is not known at compile time. The number of cycles consumed by
-  // block B on processor resource R is at ProcResourceCycles[B*Kinds + R]
+  // block B on processor resource R is at ProcReleaseAtCycles[B*Kinds + R]
   // where Kinds = SchedModel.getNumProcResourceKinds().
-  SmallVector<unsigned, 0> ProcResourceCycles;
+  SmallVector<unsigned, 0> ProcReleaseAtCycles;
 
   // One ensemble per strategy.
   Ensemble

@@ -8,8 +8,13 @@
 
 // RUN: %clang --target=i386 -march=i386 -mmmx -m3dnow -m3dnowa %s -### 2>&1 | FileCheck -check-prefix=MMX %s
 // RUN: %clang --target=i386 -march=i386 -mno-mmx -mno-3dnow -mno-3dnowa %s -### 2>&1 | FileCheck -check-prefix=NO-MMX %s
-// MMX: "-target-feature" "+mmx" "-target-feature" "+3dnow" "-target-feature" "+3dnowa"
-// NO-MMX: "-target-feature" "-mmx" "-target-feature" "-3dnow" "-target-feature" "-3dnowa"
+// MMX: warning: the clang compiler does not support '-m3dnowa'
+// MMX: warning: the clang compiler does not support '-m3dnow'
+// MMX-NOT: "3dnow"
+// MMX: "-target-feature" "+mmx"
+// MMX-NOT: "3dnow"
+// NO-MMX-NOT: warning
+// NO-MMX: "-target-feature" "-mmx"
 
 // RUN: %clang --target=i386 -march=i386 -msse -msse2 -msse3 -mssse3 -msse4a -msse4.1 -msse4.2 %s -### 2>&1 | FileCheck -check-prefix=SSE %s
 // RUN: %clang --target=i386 -march=i386 -mno-sse -mno-sse2 -mno-sse3 -mno-ssse3 -mno-sse4a -mno-sse4.1 -mno-sse4.2 %s -### 2>&1 | FileCheck -check-prefix=NO-SSE %s
@@ -21,10 +26,10 @@
 // SSE4-AES: "-target-feature" "+sse4.2" "-target-feature" "+aes"
 // NO-SSE4-AES: "-target-feature" "-sse4.1" "-target-feature" "-aes"
 
-// RUN: %clang --target=i386 -march=i386 -mavx -mavx2 -mavx512f -mavx512cd -mavx512er -mavx512pf -mavx512dq -mavx512bw -mavx512vl -mavx512vbmi -mavx512vbmi2 -mavx512ifma %s -### 2>&1 | FileCheck -check-prefix=AVX %s
-// RUN: %clang --target=i386 -march=i386 -mno-avx -mno-avx2 -mno-avx512f -mno-avx512cd -mno-avx512er -mno-avx512pf -mno-avx512dq -mno-avx512bw -mno-avx512vl -mno-avx512vbmi -mno-avx512vbmi2 -mno-avx512ifma %s -### 2>&1 | FileCheck -check-prefix=NO-AVX %s
-// AVX: "-target-feature" "+avx" "-target-feature" "+avx2" "-target-feature" "+avx512f" "-target-feature" "+avx512cd" "-target-feature" "+avx512er" "-target-feature" "+avx512pf" "-target-feature" "+avx512dq" "-target-feature" "+avx512bw" "-target-feature" "+avx512vl" "-target-feature" "+avx512vbmi" "-target-feature" "+avx512vbmi2" "-target-feature" "+avx512ifma"
-// NO-AVX: "-target-feature" "-avx" "-target-feature" "-avx2" "-target-feature" "-avx512f" "-target-feature" "-avx512cd" "-target-feature" "-avx512er" "-target-feature" "-avx512pf" "-target-feature" "-avx512dq" "-target-feature" "-avx512bw" "-target-feature" "-avx512vl" "-target-feature" "-avx512vbmi" "-target-feature" "-avx512vbmi2" "-target-feature" "-avx512ifma"
+// RUN: %clang --target=i386 -march=i386 -mavx -mavx2 -mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl -mavx512vbmi -mavx512vbmi2 -mavx512ifma %s -### 2>&1 | FileCheck -check-prefix=AVX %s
+// RUN: %clang --target=i386 -march=i386 -mno-avx -mno-avx2 -mno-avx512f -mno-avx512cd -mno-avx512dq -mno-avx512bw -mno-avx512vl -mno-avx512vbmi -mno-avx512vbmi2 -mno-avx512ifma %s -### 2>&1 | FileCheck -check-prefix=NO-AVX %s
+// AVX: "-target-feature" "+avx" "-target-feature" "+avx2" "-target-feature" "+avx512f" "-target-feature" "+avx512cd" "-target-feature" "+avx512dq" "-target-feature" "+avx512bw" "-target-feature" "+avx512vl" "-target-feature" "+avx512vbmi" "-target-feature" "+avx512vbmi2" "-target-feature" "+avx512ifma"
+// NO-AVX: "-target-feature" "-avx" "-target-feature" "-avx2" "-target-feature" "-avx512f" "-target-feature" "-avx512cd" "-target-feature" "-avx512dq" "-target-feature" "-avx512bw" "-target-feature" "-avx512vl" "-target-feature" "-avx512vbmi" "-target-feature" "-avx512vbmi2" "-target-feature" "-avx512ifma"
 
 // RUN: %clang --target=i386 -march=i386 -mpclmul -mrdrnd -mfsgsbase -mbmi -mbmi2 %s -### 2>&1 | FileCheck -check-prefix=BMI %s
 // RUN: %clang --target=i386 -march=i386 -mno-pclmul -mno-rdrnd -mno-fsgsbase -mno-bmi -mno-bmi2 %s -### 2>&1 | FileCheck -check-prefix=NO-BMI %s
@@ -85,11 +90,6 @@
 // RUN: %clang --target=i386 -march=i386 -mno-sgx %s -### 2>&1 | FileCheck -check-prefix=NO-SGX %s
 // SGX: "-target-feature" "+sgx"
 // NO-SGX: "-target-feature" "-sgx"
-
-// RUN: %clang --target=i386 -march=i386 -mprefetchwt1 %s -### 2>&1 | FileCheck -check-prefix=PREFETCHWT1 %s
-// RUN: %clang --target=i386 -march=i386 -mno-prefetchwt1 %s -### 2>&1 | FileCheck -check-prefix=NO-PREFETCHWT1 %s
-// PREFETCHWT1: "-target-feature" "+prefetchwt1"
-// NO-PREFETCHWT1: "-target-feature" "-prefetchwt1"
 
 // RUN: %clang --target=i386 -march=i386 -mprefetchi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PREFETCHI %s
 // RUN: %clang --target=i386 -march=i386 -mno-prefetchi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-PREFETCHI %s
@@ -170,11 +170,11 @@
 // LVICFI: "-target-feature" "+lvi-cfi"
 // NO-LVICFI-NOT: lvi-cfi
 
-// RUN: %clang -target i386-linux-gnu -mlvi-cfi -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVICFI-SLH %s
+// RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVICFI-SLH %s
 // LVICFI-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mlvi-cfi'
-// RUN: %clang -target i386-linux-gnu -mlvi-cfi -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE %s
+// RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE %s
 // LVICFI-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mlvi-cfi'
-// RUN: %clang -target i386-linux-gnu -mlvi-cfi -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE-EXTERNAL-THUNK %s
 // LVICFI-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-cfi'
 
 // RUN: %clang -target i386-linux-gnu -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING %s
@@ -182,11 +182,11 @@
 // LVIHARDENING: "-target-feature" "+lvi-load-hardening" "-target-feature" "+lvi-cfi"
 // NO-LVIHARDENING-NOT: "+lvi-
 
-// RUN: %clang -target i386-linux-gnu -mlvi-hardening -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-SLH %s
+// RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-SLH %s
 // LVIHARDENING-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mlvi-hardening'
-// RUN: %clang -target i386-linux-gnu -mlvi-hardening -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE %s
+// RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE %s
 // LVIHARDENING-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mlvi-hardening'
-// RUN: %clang -target i386-linux-gnu -mlvi-hardening -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE-EXTERNAL-THUNK %s
 // LVIHARDENING-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-hardening'
 
 // RUN: %clang -target i386-linux-gnu -mseses %s -### 2>&1 | FileCheck -check-prefix=SESES %s
@@ -200,14 +200,14 @@
 // SESES-NOLVICFI: "-target-feature" "+seses"
 // SESES-NOLVICFI-NOT: lvi-cfi
 
-// RUN: %clang -target i386-linux-gnu -mseses -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-SLH %s
+// RUN: not %clang --target=i386-linux-gnu -mseses -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-SLH %s
 // SESES-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mseses'
-// RUN: %clang -target i386-linux-gnu -mseses -mretpoline %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE %s
+// RUN: not %clang --target=i386-linux-gnu -mseses -mretpoline %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE %s
 // SESES-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mseses'
-// RUN: %clang -target i386-linux-gnu -mseses -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: not %clang --target=i386-linux-gnu -mseses -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE-EXTERNAL-THUNK %s
 // SESES-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mseses'
 
-// RUN: %clang -target i386-linux-gnu -mseses -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-LVIHARDENING %s
+// RUN: not %clang --target=i386-linux-gnu -mseses -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-LVIHARDENING %s
 // SESES-LVIHARDENING: error: invalid argument 'mlvi-hardening' not allowed with 'mseses'
 
 // RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### 2>&1 | FileCheck -check-prefix=WAITPKG %s
@@ -309,8 +309,8 @@
 // HRESET: "-target-feature" "+hreset"
 // NO-HRESET: "-target-feature" "-hreset"
 
-// RUN: %clang --target=i386 -march=i386 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
-// RUN: %clang --target=i386 -march=i386 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
+// RUN: %clang --target=x86_64 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
+// RUN: %clang --target=x86_64 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
 // UINTR: "-target-feature" "+uintr"
 // NO-UINTR: "-target-feature" "-uintr"
 
@@ -349,16 +349,80 @@
 // AVXNECONVERT: "-target-feature" "+avxneconvert"
 // NO-AVXNECONVERT: "-target-feature" "-avxneconvert"
 
+// RUN: %clang --target=i386 -msha512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SHA512 %s
+// RUN: %clang --target=i386 -mno-sha512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SHA512 %s
+// SHA512: "-target-feature" "+sha512"
+// NO-SHA512: "-target-feature" "-sha512"
+
+// RUN: %clang --target=i386 -msm3 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SM3 %s
+// RUN: %clang --target=i386 -mno-sm3 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SM3 %s
+// SM3: "-target-feature" "+sm3"
+// NO-SM3: "-target-feature" "-sm3"
+
+// RUN: %clang --target=i386 -msm4 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SM4 %s
+// RUN: %clang --target=i386 -mno-sm4 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SM4 %s
+// SM4: "-target-feature" "+sm4"
+// NO-SM4: "-target-feature" "-sm4"
+
+// RUN: %clang --target=i386 -mavxvnniint16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVXVNNIINT16 %s
+// RUN: %clang --target=i386 -mno-avxvnniint16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVXVNNIINT16 %s
+// AVXVNNIINT16: "-target-feature" "+avxvnniint16"
+// NO-AVXVNNIINT16: "-target-feature" "-avxvnniint16"
+
+// RUN: %clang --target=i386 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EVEX512 %s
+// RUN: %clang --target=i386 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EVEX512 %s
+// EVEX512: "-target-feature" "+evex512"
+// NO-EVEX512: "-target-feature" "-evex512"
+
+// RUN: %clang --target=i386 -mavx10.1 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
+// RUN: %clang --target=i386 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
+// RUN: %clang --target=i386 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_512 %s
+// RUN: %clang --target=i386 -mavx10.1-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_512 %s
+// RUN: %clang --target=i386 -mavx10.1-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
+// RUN: not %clang --target=i386 -march=i386 -mavx10.1-128 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
+// RUN: not %clang --target=i386 -march=i386 -mavx10.a-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
+// RUN: not %clang --target=i386 -march=i386 -mavx10.1024-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mavx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-avx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
+// RUN: %clang --target=i386 -march=i386 -mavx10.1 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-EVEX512 %s
+// AVX10_1_256: "-target-feature" "+avx10.1-256"
+// AVX10_1_512: "-target-feature" "+avx10.1-512"
+// BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
+// AVX10-AVX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}avx512f"
+// AVX10-EVEX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}evex512"
+
+// RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
+// RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
+// USERMSR: "-target-feature" "+usermsr"
+// NO-USERMSR: "-target-feature" "-usermsr"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"
 // NO-CRC32: "-target-feature" "-crc32"
 
+// RUN: not %clang -### --target=aarch64 -mcrc32 -msse4.1 -msse4.2 -mno-sgx %s 2>&1 | FileCheck --check-prefix=NONX86 %s
+// NONX86:      error: unsupported option '-mcrc32' for target 'aarch64'
+// NONX86-NEXT: error: unsupported option '-msse4.1' for target 'aarch64'
+/// TODO: This warning is a workaround for https://github.com/llvm/llvm-project/issues/63270
+// NONX86-NEXT: warning: argument unused during compilation: '-msse4.2' [-Wunused-command-line-argument]
+// NONX86-NEXT: error: unsupported option '-mno-sgx' for target 'aarch64'
+
+// RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
+// RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
+// NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
+// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APX-NOT:  error: {{.*}} -mapx-features=
+
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=none -mharden-sls=all %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,SLS-RET %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=all -mharden-sls=none %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SLS %s
-// RUN: %clang --target=i386 -march=i386 -mharden-sls=return,indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-SLS %s
+// RUN: not %clang --target=i386 -march=i386 -mharden-sls=return,indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-SLS %s
 // NO-SLS-NOT: "+harden-sls-
 // SLS-RET-DAG: "-target-feature" "+harden-sls-ret"
 // SLS-IJMP-DAG: "-target-feature" "+harden-sls-ijmp"
@@ -367,3 +431,46 @@
 
 // RUN: touch %t.o
 // RUN: %clang -fdriver-only -Werror --target=x86_64-pc-linux-gnu -mharden-sls=all %t.o -o /dev/null 2>&1 | count 0
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
+//
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ppx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PPX %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ccmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CCMP %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=nf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NF %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=cf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CF %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=zu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ZU %s
+// EGPR: "-target-feature" "+egpr"
+// PUSH2POP2: "-target-feature" "+push2pop2"
+// PPX: "-target-feature" "+ppx"
+// NDD: "-target-feature" "+ndd"
+// CCMP: "-target-feature" "+ccmp"
+// NF: "-target-feature" "+nf"
+// CF: "-target-feature" "+cf"
+// ZU: "-target-feature" "+zu"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apx-features=egpr -mno-apx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apx-features=egpr -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apx-features=egpr,ndd -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NO-NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,ndd -mno-apx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NDD %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr -mno-apx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
+//
+// EGPR-NDD: "-target-feature" "+egpr" "-target-feature" "+ndd"
+// EGPR-NO-NDD: "-target-feature" "-ndd" "-target-feature" "+egpr"
+// NO-EGPR-NDD: "-target-feature" "+ndd" "-target-feature" "-egpr"
+// NO-EGPR-NO-NDD: "-target-feature" "-egpr" "-target-feature" "-ndd"
+
+// RUN: not %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,foo,bar %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ERROR %s
+//
+// ERROR: unsupported argument 'foo' to option '-mapx-features='
+// ERROR: unsupported argument 'bar' to option '-mapx-features='

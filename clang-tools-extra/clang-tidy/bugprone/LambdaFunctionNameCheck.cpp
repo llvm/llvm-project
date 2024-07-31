@@ -8,7 +8,9 @@
 
 #include "LambdaFunctionNameCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -18,6 +20,8 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 namespace {
+
+static constexpr bool DefaultIgnoreMacros = false;
 
 // Keep track of macro expansions that contain both __FILE__ and __LINE__. If
 // such a macro also uses __func__ or __FUNCTION__, we don't want to issue a
@@ -54,12 +58,28 @@ private:
   LambdaFunctionNameCheck::SourceRangeSet* SuppressMacroExpansions;
 };
 
+AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
+
 } // namespace
 
+LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
+                                                 ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(
+          Options.getLocalOrGlobal("IgnoreMacros", DefaultIgnoreMacros)) {}
+
+void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
-  // Match on PredefinedExprs inside a lambda.
-  Finder->addMatcher(predefinedExpr(hasAncestor(lambdaExpr())).bind("E"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(isInLambda(),
+                    hasBody(forEachDescendant(
+                        predefinedExpr(hasAncestor(cxxMethodDecl().bind("fn")))
+                            .bind("E"))),
+                    equalsBoundNode("fn")),
+      this);
 }
 
 void LambdaFunctionNameCheck::registerPPCallbacks(
@@ -70,12 +90,15 @@ void LambdaFunctionNameCheck::registerPPCallbacks(
 
 void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<PredefinedExpr>("E");
-  if (E->getIdentKind() != PredefinedExpr::Func &&
-      E->getIdentKind() != PredefinedExpr::Function) {
+  if (E->getIdentKind() != PredefinedIdentKind::Func &&
+      E->getIdentKind() != PredefinedIdentKind::Function) {
     // We don't care about other PredefinedExprs.
     return;
   }
   if (E->getLocation().isMacroID()) {
+    if (IgnoreMacros)
+      return;
+
     auto ER =
         Result.SourceManager->getImmediateExpansionRange(E->getLocation());
     if (SuppressMacroExpansions.find(ER.getAsRange()) !=
@@ -84,6 +107,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
   }
+
   diag(E->getLocation(),
        "inside a lambda, '%0' expands to the name of the function call "
        "operator; consider capturing the name of the enclosing function "

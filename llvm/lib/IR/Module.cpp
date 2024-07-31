@@ -54,6 +54,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 //===----------------------------------------------------------------------===//
 // Methods to implement the globals and functions lists.
 //
@@ -71,7 +73,8 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
-      ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL("") {
+      ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL(""),
+      IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
 }
 
@@ -82,6 +85,28 @@ Module::~Module() {
   FunctionList.clear();
   AliasList.clear();
   IFuncList.clear();
+}
+
+void Module::removeDebugIntrinsicDeclarations() {
+  auto *DeclareIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug declare intrinsic should have had uses removed.");
+  DeclareIntrinsicFn->eraseFromParent();
+  auto *ValueIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug value intrinsic should have had uses removed.");
+  ValueIntrinsicFn->eraseFromParent();
+  auto *AssignIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug assign intrinsic should have had uses removed.");
+  AssignIntrinsicFn->eraseFromParent();
+  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
+         "Debug label intrinsic should have had uses removed.");
+  LabelntrinsicFn->eraseFromParent();
 }
 
 std::unique_ptr<RandomNumberGenerator>
@@ -148,18 +173,11 @@ FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
   if (!F) {
     // Nope, add it
     Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
-                                     DL.getProgramAddressSpace(), Name);
+                                     DL.getProgramAddressSpace(), Name, this);
     if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
-    FunctionList.push_back(New);
     return {Ty, New}; // Return the new prototype.
   }
-
-  // If the function exists but has the wrong type, return a bitcast to the
-  // right type.
-  auto *PTy = PointerType::get(Ty, F->getAddressSpace());
-  if (F->getType() != PTy)
-    return {Ty, ConstantExpr::getBitCast(F, PTy)};
 
   // Otherwise, we just found the existing function or a prototype.
   return {Ty, F};
@@ -210,13 +228,6 @@ Constant *Module::getOrInsertGlobal(
   if (!GV)
     GV = CreateGlobalCallback();
   assert(GV && "The CreateGlobalCallback is expected to create a global");
-
-  // If the variable exists but has the wrong type, return a bitcast to the
-  // right type.
-  Type *GVTy = GV->getType();
-  PointerType *PTy = PointerType::get(Ty, GVTy->getPointerAddressSpace());
-  if (GVTy != PTy)
-    return ConstantExpr::getBitCast(GV, PTy);
 
   // Otherwise, we just found the existing function or a prototype.
   return GV;
@@ -376,8 +387,7 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
-    MDNode *Flag = ModFlags->getOperand(I);
+  for (MDNode *Flag : ModFlags->operands()) {
     ModFlagBehavior MFB;
     MDString *K = nullptr;
     Metadata *V = nullptr;
@@ -388,14 +398,21 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   }
   addModuleFlag(Behavior, Key, Val);
 }
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           Constant *Val) {
+  setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint32_t Val) {
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
+}
 
 void Module::setDataLayout(StringRef Desc) {
   DL.reset(Desc);
 }
 
 void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
-
-const DataLayout &Module::getDataLayout() const { return DL; }
 
 DICompileUnit *Module::debug_compile_units_iterator::operator*() const {
   return cast<DICompileUnit>(CUs->getOperand(Idx));
@@ -633,6 +650,23 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+std::optional<uint64_t> Module::getLargeDataThreshold() const {
+  auto *Val =
+      cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));
+
+  if (!Val)
+    return std::nullopt;
+
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
+}
+
+void Module::setLargeDataThreshold(uint64_t Threshold) {
+  // Since the large data threshold goes along with the code model, the merge
+  // behavior is the same.
+  addModuleFlag(ModFlagBehavior::Error, "Large Data Threshold",
+                ConstantInt::get(Type::getInt64Ty(Context), Threshold));
+}
+
 void Module::setProfileSummary(Metadata *M, ProfileSummary::Kind Kind) {
   if (Kind == ProfileSummary::PSK_CSInstr)
     setModuleFlag(ModFlagBehavior::Error, "CSProfileSummary", M);
@@ -858,7 +892,7 @@ StringRef Module::getDarwinTargetVariantTriple() const {
 }
 
 void Module::setDarwinTargetVariantTriple(StringRef T) {
-  addModuleFlag(ModFlagBehavior::Override, "darwin.target_variant.triple",
+  addModuleFlag(ModFlagBehavior::Warning, "darwin.target_variant.triple",
                 MDString::get(getContext(), T));
 }
 

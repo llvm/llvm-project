@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s bugprone-lambda-function-name %t
+// RUN: %check_clang_tidy -check-suffixes=,NO-CONFIG %s bugprone-lambda-function-name %t
+// RUN: %check_clang_tidy %s bugprone-lambda-function-name %t -- -config="{CheckOptions: [{key: bugprone-lambda-function-name.IgnoreMacros, value: true}]}" --
+
 
 void Foo(const char* a, const char* b, int c) {}
 
@@ -12,11 +14,27 @@ void Positives() {
   [] { __FUNCTION__; }();
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: inside a lambda, '__FUNCTION__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
   [] { FUNC_MACRO; }();
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+  // CHECK-MESSAGES-NO-CONFIG: :[[@LINE-1]]:8: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
   [] { FUNCTION_MACRO; }();
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: inside a lambda, '__FUNCTION__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+  // CHECK-MESSAGES-NO-CONFIG: :[[@LINE-1]]:8: warning: inside a lambda, '__FUNCTION__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
   [] { EMBED_IN_ANOTHER_MACRO1; }();
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+  // CHECK-MESSAGES-NO-CONFIG: :[[@LINE-1]]:8: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+  [] {
+    __func__;
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+    struct S {
+      void f() {
+        __func__;
+        [] {
+          __func__;
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+        }();
+        __func__;
+      }
+    };
+    __func__;
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
+  }();
 }
 
 #define FUNC_MACRO_WITH_FILE_AND_LINE Foo(__func__, __FILE__, __LINE__)
@@ -38,4 +56,7 @@ void Negatives() {
   [] { FUNC_MACRO_WITH_FILE_AND_LINE; }();
   [] { FUNCTION_MACRO_WITH_FILE_AND_LINE; }();
   [] { EMBED_IN_ANOTHER_MACRO2; }();
+
+  [] (const char* func = __func__) { func; }();
+  [func=__func__] { func; }();
 }

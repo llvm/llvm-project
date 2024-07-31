@@ -1,0 +1,14 @@
+101 MENUEX
+BEGIN
+    POPUP "File",                                           40182
+    BEGIN
+        MENUITEM "Load",                                    40011
+        MENUITEM "", 0, 0x00000800L
+
+        POPUP "Savestate Slot",                             40187
+        BEGIN
+            MENUITEM "&1",                                  40099
+            MENUITEM "&2",                                  40100
+        END
+    END
+END

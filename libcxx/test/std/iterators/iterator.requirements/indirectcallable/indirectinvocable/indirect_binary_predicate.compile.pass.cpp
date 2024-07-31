@@ -11,10 +11,12 @@
 // template<class F, class I1, class I2>
 // concept indirect_binary_predicate;
 
+#include <functional>
 #include <iterator>
 #include <type_traits>
 
 #include "indirectly_readable.h"
+#include "test_macros.h"
 
 using It1 = IndirectlyReadable<struct Token1>;
 using It2 = IndirectlyReadable<struct Token2>;
@@ -74,9 +76,18 @@ struct BadPredicate5 {
 };
 static_assert(!std::indirect_binary_predicate<BadPredicate5, It1, It2>);
 
-// Should fail when the predicate can't be called with (iter_common_reference_t, iter_common_reference_t)
-struct BadPredicate6 {
-    template <class T, class U> bool operator()(T const&, U const&) const;
-    bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
+// This case was made valid by P2997R1.
+struct GoodPredicate6 {
+  template <class T, class U>
+  bool operator()(T const&, U const&) const;
+  bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
-static_assert(!std::indirect_binary_predicate<BadPredicate6, It1, It2>);
+static_assert(std::indirect_binary_predicate<GoodPredicate6, It1, It2>);
+
+// Test ADL-proofing (P2538R1)
+#if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(std::indirect_binary_predicate<std::less<Holder<Incomplete>*>, Holder<Incomplete>**, Holder<Incomplete>**>);
+static_assert(!std::indirect_binary_predicate<Holder<Incomplete>*, Holder<Incomplete>**, Holder<Incomplete>**>);
+#endif

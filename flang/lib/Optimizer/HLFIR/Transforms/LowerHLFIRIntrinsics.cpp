@@ -18,12 +18,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include <mlir/IR/MLIRContext.h>
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <optional>
 
 namespace hlfir {
@@ -61,7 +60,7 @@ protected:
     mlir::Type desiredType;
   };
 
-  /// Lower the arguments to the intrinsic: adding nesecarry boxing and
+  /// Lower the arguments to the intrinsic: adding necessary boxing and
   /// conversion to match the signature of the intrinsic in the runtime library.
   llvm::SmallVector<fir::ExtendedValue, 3>
   lowerArguments(mlir::Operation *op,
@@ -69,8 +68,7 @@ protected:
                  mlir::PatternRewriter &rewriter,
                  const fir::IntrinsicArgumentLoweringRules *argLowering) const {
     mlir::Location loc = op->getLoc();
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, op};
 
     llvm::SmallVector<fir::ExtendedValue, 3> ret;
     llvm::SmallVector<std::function<void()>, 2> cleanupFns;
@@ -154,6 +152,9 @@ protected:
 
     std::optional<hlfir::EntityWithAttributes> resultEntity;
     if (fir::isa_trivial(firBaseTy)) {
+      // Some intrinsics return i1 when the original operation
+      // produces fir.logical<>, so we may need to cast it.
+      firBase = builder.createConvert(loc, op->getResult(0).getType(), firBase);
       resultEntity = hlfir::EntityWithAttributes{firBase};
     } else {
       resultEntity =
@@ -174,10 +175,18 @@ protected:
           rewriter.eraseOp(use);
       }
     }
-    rewriter.replaceAllUsesWith(op->getResults(), {base});
+
     rewriter.replaceOp(op, base);
   }
 };
+
+// Given an integer or array of integer type, calculate the Kind parameter from
+// the width for use in runtime intrinsic calls.
+static unsigned getKindForType(mlir::Type ty) {
+  mlir::Type eltty = hlfir::getFortranElementType(ty);
+  unsigned width = mlir::cast<mlir::IntegerType>(eltty).getWidth();
+  return width / 8;
+}
 
 template <class OP>
 class HlfirReductionIntrinsicConversion : public HlfirIntrinsicConversion<OP> {
@@ -199,6 +208,21 @@ protected:
     return lowerArguments(operation, inArgs, rewriter, argLowering);
   };
 
+  auto buildMinMaxLocArgs(OP operation, mlir::Type i32, mlir::Type logicalType,
+                          mlir::PatternRewriter &rewriter, std::string opName,
+                          fir::FirOpBuilder builder) const {
+    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
+    inArgs.push_back({operation.getArray(), operation.getArray().getType()});
+    inArgs.push_back({operation.getDim(), i32});
+    inArgs.push_back({operation.getMask(), logicalType});
+    mlir::Value kind = builder.createIntegerConstant(
+        operation->getLoc(), i32, getKindForType(operation.getType()));
+    inArgs.push_back({kind, i32});
+    inArgs.push_back({operation.getBack(), i32});
+    auto *argLowering = fir::getIntrinsicArgumentLowering(opName);
+    return lowerArguments(operation, inArgs, rewriter, argLowering);
+  };
+
   auto buildLogicalArgs(OP operation, mlir::Type i32, mlir::Type logicalType,
                         mlir::PatternRewriter &rewriter,
                         std::string opName) const {
@@ -210,7 +234,7 @@ protected:
   };
 
 public:
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(OP operation,
                   mlir::PatternRewriter &rewriter) const override {
     std::string opName;
@@ -218,6 +242,14 @@ public:
       opName = "sum";
     } else if constexpr (std::is_same_v<OP, hlfir::ProductOp>) {
       opName = "product";
+    } else if constexpr (std::is_same_v<OP, hlfir::MaxvalOp>) {
+      opName = "maxval";
+    } else if constexpr (std::is_same_v<OP, hlfir::MinvalOp>) {
+      opName = "minval";
+    } else if constexpr (std::is_same_v<OP, hlfir::MinlocOp>) {
+      opName = "minloc";
+    } else if constexpr (std::is_same_v<OP, hlfir::MaxlocOp>) {
+      opName = "maxloc";
     } else if constexpr (std::is_same_v<OP, hlfir::AnyOp>) {
       opName = "any";
     } else if constexpr (std::is_same_v<OP, hlfir::AllOp>) {
@@ -226,8 +258,7 @@ public:
       return mlir::failure();
     }
 
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, operation.getOperation()};
     const mlir::Location &loc = operation->getLoc();
 
     mlir::Type i32 = builder.getI32Type();
@@ -237,8 +268,14 @@ public:
     llvm::SmallVector<fir::ExtendedValue, 0> args;
 
     if constexpr (std::is_same_v<OP, hlfir::SumOp> ||
-                  std::is_same_v<OP, hlfir::ProductOp>) {
+                  std::is_same_v<OP, hlfir::ProductOp> ||
+                  std::is_same_v<OP, hlfir::MaxvalOp> ||
+                  std::is_same_v<OP, hlfir::MinvalOp>) {
       args = buildNumericalArgs(operation, i32, logicalType, rewriter, opName);
+    } else if constexpr (std::is_same_v<OP, hlfir::MinlocOp> ||
+                         std::is_same_v<OP, hlfir::MaxlocOp>) {
+      args = buildMinMaxLocArgs(operation, i32, logicalType, rewriter, opName,
+                                builder);
     } else {
       args = buildLogicalArgs(operation, i32, logicalType, rewriter, opName);
     }
@@ -258,18 +295,59 @@ using SumOpConversion = HlfirReductionIntrinsicConversion<hlfir::SumOp>;
 
 using ProductOpConversion = HlfirReductionIntrinsicConversion<hlfir::ProductOp>;
 
+using MaxvalOpConversion = HlfirReductionIntrinsicConversion<hlfir::MaxvalOp>;
+
+using MinvalOpConversion = HlfirReductionIntrinsicConversion<hlfir::MinvalOp>;
+
+using MinlocOpConversion = HlfirReductionIntrinsicConversion<hlfir::MinlocOp>;
+
+using MaxlocOpConversion = HlfirReductionIntrinsicConversion<hlfir::MaxlocOp>;
+
 using AnyOpConversion = HlfirReductionIntrinsicConversion<hlfir::AnyOp>;
 
 using AllOpConversion = HlfirReductionIntrinsicConversion<hlfir::AllOp>;
 
+struct CountOpConversion : public HlfirIntrinsicConversion<hlfir::CountOp> {
+  using HlfirIntrinsicConversion<hlfir::CountOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CountOp count,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, count.getOperation()};
+    const mlir::Location &loc = count->getLoc();
+
+    mlir::Type i32 = builder.getI32Type();
+    mlir::Type logicalType = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+
+    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
+    inArgs.push_back({count.getMask(), logicalType});
+    inArgs.push_back({count.getDim(), i32});
+    mlir::Value kind = builder.createIntegerConstant(
+        count->getLoc(), i32, getKindForType(count.getType()));
+    inArgs.push_back({kind, i32});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("count");
+    llvm::SmallVector<fir::ExtendedValue, 3> args =
+        lowerArguments(count, inArgs, rewriter, argLowering);
+
+    mlir::Type scalarResultType = hlfir::getFortranElementType(count.getType());
+
+    auto [resultExv, mustBeFreed] =
+        fir::genIntrinsicCall(builder, loc, "count", scalarResultType, args);
+
+    processReturnValue(count, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   using HlfirIntrinsicConversion<hlfir::MatmulOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::MatmulOp matmul,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, matmul.getOperation()};
     const mlir::Location &loc = matmul->getLoc();
 
     mlir::Value lhs = matmul.getLhs();
@@ -297,11 +375,10 @@ struct DotProductOpConversion
     : public HlfirIntrinsicConversion<hlfir::DotProductOp> {
   using HlfirIntrinsicConversion<hlfir::DotProductOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DotProductOp dotProduct,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, dotProduct.getOperation()};
     const mlir::Location &loc = dotProduct->getLoc();
 
     mlir::Value lhs = dotProduct.getLhs();
@@ -329,11 +406,10 @@ class TransposeOpConversion
     : public HlfirIntrinsicConversion<hlfir::TransposeOp> {
   using HlfirIntrinsicConversion<hlfir::TransposeOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::TransposeOp transpose,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, transpose.getOperation()};
     const mlir::Location &loc = transpose->getLoc();
 
     mlir::Value arg = transpose.getArray();
@@ -360,11 +436,10 @@ struct MatmulTransposeOpConversion
   using HlfirIntrinsicConversion<
       hlfir::MatmulTransposeOp>::HlfirIntrinsicConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::MatmulTransposeOp multranspose,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, multranspose.getOperation()};
     const mlir::Location &loc = multranspose->getLoc();
 
     mlir::Value lhs = multranspose.getLhs();
@@ -392,31 +467,29 @@ class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
   void runOnOperation() override {
-    // TODO: make this a pass operating on FuncOp. The issue is that
-    // FirOpBuilder helpers may generate new FuncOp because of runtime/llvm
-    // intrinsics calls creation. This may create race conflict if the pass is
-    // scheduled on FuncOp. A solution could be to provide an optional mutex
-    // when building a FirOpBuilder and locking around FuncOp and GlobalOp
-    // creation, but this needs a bit more thinking, so at this point the pass
-    // is scheduled on the moduleOp.
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
-                    AllOpConversion, AnyOpConversion, SumOpConversion,
-                    ProductOpConversion, TransposeOpConversion,
-                    DotProductOpConversion>(context);
-    mlir::ConversionTarget target(*context);
-    target.addLegalDialect<mlir::BuiltinDialect, mlir::arith::ArithDialect,
-                           mlir::func::FuncDialect, fir::FIROpsDialect,
-                           hlfir::hlfirDialect>();
-    target.addIllegalOp<hlfir::MatmulOp, hlfir::MatmulTransposeOp, hlfir::SumOp,
-                        hlfir::ProductOp, hlfir::TransposeOp, hlfir::AnyOp,
-                        hlfir::AllOp, hlfir::DotProductOp>();
-    target.markUnknownOpDynamicallyLegal(
-        [](mlir::Operation *) { return true; });
-    if (mlir::failed(
-            mlir::applyFullConversion(module, target, std::move(patterns)))) {
+    patterns
+        .insert<MatmulOpConversion, MatmulTransposeOpConversion,
+                AllOpConversion, AnyOpConversion, SumOpConversion,
+                ProductOpConversion, TransposeOpConversion, CountOpConversion,
+                DotProductOpConversion, MaxvalOpConversion, MinvalOpConversion,
+                MinlocOpConversion, MaxlocOpConversion>(context);
+
+    // While conceptually this pass is performing dialect conversion, we use
+    // pattern rewrites here instead of dialect conversion because this pass
+    // looses array bounds from some of the expressions e.g.
+    // !hlfir.expr<2xi32> -> !hlfir.expr<?xi32>
+    // MLIR thinks this is a different type so dialect conversion fails.
+    // Pattern rewriting only requires that the resulting IR is still valid
+    mlir::GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
+
+    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+            module, std::move(patterns), config))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "failure in HLFIR intrinsic lowering");
       signalPassFailure();
@@ -424,7 +497,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createLowerHLFIRIntrinsicsPass() {
-  return std::make_unique<LowerHLFIRIntrinsics>();
-}

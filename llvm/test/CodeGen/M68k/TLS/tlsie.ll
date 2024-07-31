@@ -7,10 +7,10 @@ define dso_local ptr @get_addr() nounwind {
 ; CHECK-LABEL: get_addr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
-; CHECK-NEXT:    jsr __m68k_read_tp@PLT
+; CHECK-NEXT:    jsr __m68k_read_tp
 ; CHECK-NEXT:    move.l %a0, %d0
 ; CHECK-NEXT:    lea (_GLOBAL_OFFSET_TABLE_@GOTPCREL,%pc), %a0
-; CHECK-NEXT:    add.l (0,myvar@GOTTPOFF,%a0), %d0
+; CHECK-NEXT:    add.l (myvar@GOTTPOFF,%a0), %d0
 ; CHECK-NEXT:    move.l %d0, %a0
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts

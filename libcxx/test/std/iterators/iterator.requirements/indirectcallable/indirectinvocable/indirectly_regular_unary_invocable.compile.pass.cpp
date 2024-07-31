@@ -15,6 +15,7 @@
 #include <concepts>
 
 #include "indirectly_readable.h"
+#include "test_macros.h"
 
 using It = IndirectlyReadable<struct Token>;
 using R1 = T1<struct ReturnToken>;
@@ -55,12 +56,13 @@ struct BadInvocable3 {
 };
 static_assert(!std::indirectly_regular_unary_invocable<BadInvocable3, It>);
 
-// Should fail when the invocable can't be called with (iter_common_reference_t)
-struct BadInvocable4 {
-    template <class T> R1 operator()(T const&) const;
-    R1 operator()(std::iter_common_reference_t<It>) const = delete;
+// This case was made valid by P2997R1.
+struct GoodInvocable4 {
+  template <class T>
+  R1 operator()(T const&) const;
+  R1 operator()(std::iter_common_reference_t<It>) const = delete;
 };
-static_assert(!std::indirectly_regular_unary_invocable<BadInvocable4, It>);
+static_assert(std::indirectly_regular_unary_invocable<GoodInvocable4, It>);
 
 // Should fail when the invocable doesn't have a common reference between its return types
 struct BadInvocable5 {
@@ -85,3 +87,12 @@ static_assert(!std::indirectly_regular_unary_invocable<int (*)(int*, int*), int*
 static_assert(!std::indirectly_regular_unary_invocable<int (&)(int*, int*), int*>);
 static_assert(!std::indirectly_regular_unary_invocable<int (S::*)(int*), S*>);
 static_assert(!std::indirectly_regular_unary_invocable<int (S::*)(int*) const, S*>);
+
+// Test ADL-proofing (P2538R1)
+#if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
+struct Incomplete;
+template<class T> struct Holder { T t; };
+struct HolderIncompletePred { bool operator()(Holder<Incomplete>*) const; };
+static_assert(std::indirectly_regular_unary_invocable<HolderIncompletePred, Holder<Incomplete>**>);
+static_assert(!std::indirectly_regular_unary_invocable<Holder<Incomplete>*, Holder<Incomplete>**>);
+#endif

@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-//
 // Check that we properly detect CUDA installation.
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
@@ -10,7 +7,6 @@
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=x86_64-apple-macosx \
 // RUN:   --sysroot=%S/no-cuda-there --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
-
 
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/Inputs/CUDA --cuda-path-ignore-env 2>&1 | FileCheck %s
@@ -29,7 +25,7 @@
 // RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=x86_64-unknown-linux \
 // RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
-// RUN: %clang -v --target=x84_64-apple-macosx \
+// RUN: %clang -v --target=x86_64-apple-macosx \
 // RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 
 // ... unless the user doesn't need libdevice
@@ -110,19 +106,19 @@
 // RUN:     -check-prefixes PTX42,LIBDEVICE,LIBDEVICE35
 
 // We should not add any CUDA include paths if there's no valid CUDA installation
-// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
+// RUN: not %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC
-// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
+// RUN: not %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC
 
 // Verify that we get an error if there's no libdevice library to link with.
 // NOTE: Inputs/CUDA deliberately does *not* have libdevice.compute_20  for this purpose.
-// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_20 \
+// RUN: not %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_20 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix MISSINGLIBDEVICE
-// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_20 \
+// RUN: not %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_20 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix MISSINGLIBDEVICE
 
@@ -136,19 +132,19 @@
 
 // Verify that we don't add include paths, link with libdevice or
 // -include __clang_cuda_runtime_wrapper.h without valid CUDA installation.
-// RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
+// RUN: not %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix NOCUDAINC
-// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
+// RUN: not %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix NOCUDAINC
 
 // Verify that C++ include paths are passed for both host and device frontends.
 // RUN: %clang -### --target=x86_64-linux-gnu %s \
-// RUN: --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
-// RUN: --gcc-toolchain="" 2>&1 \
+// RUN:   --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
+// RUN:   -nogpulib -nogpuinc 2>&1 \
 // RUN: | FileCheck %s --check-prefix CHECK-CXXINCLUDE
 
 // Verify that CUDA SDK version is propagated to the CC1 compilations.

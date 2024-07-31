@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -22,16 +23,12 @@ JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
 }
 
 Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
-  // FIXME: getProcessTriple is bogus. It returns the host LLVM was compiled on,
-  //        rather than a valid triple for the current process.
   JITTargetMachineBuilder TMBuilder((Triple(sys::getProcessTriple())));
 
   // Retrieve host CPU name and sub-target features and add them to builder.
   // Relocation model, code model and codegen opt level are kept to default
   // values.
-  llvm::StringMap<bool> FeatureMap;
-  llvm::sys::getHostCPUFeatures(FeatureMap);
-  for (auto &Feature : FeatureMap)
+  for (const auto &Feature : llvm::sys::getHostCPUFeatures())
     TMBuilder.getFeatures().AddFeature(Feature.first(), Feature.second);
 
   TMBuilder.setCPU(std::string(llvm::sys::getHostCPUName()));
@@ -128,16 +125,16 @@ void JITTargetMachineBuilderPrinter::print(raw_ostream &OS) const {
   OS << "\n"
      << Indent << "  Optimization Level = ";
   switch (JTMB.OptLevel) {
-  case CodeGenOpt::None:
+  case CodeGenOptLevel::None:
     OS << "None";
     break;
-  case CodeGenOpt::Less:
+  case CodeGenOptLevel::Less:
     OS << "Less";
     break;
-  case CodeGenOpt::Default:
+  case CodeGenOptLevel::Default:
     OS << "Default";
     break;
-  case CodeGenOpt::Aggressive:
+  case CodeGenOptLevel::Aggressive:
     OS << "Aggressive";
     break;
   }

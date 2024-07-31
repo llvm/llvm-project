@@ -1,6 +1,6 @@
-; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
-; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
-; XUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=COMMON %s
+; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
+; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
+; XUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=COMMON %s
 
 ; SI hits an assertion at -O0, evergreen hits a not implemented unreachable.
 

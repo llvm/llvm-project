@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=W32 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=W64 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck -check-prefix=W32 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=W64 %s
 
 
 # Test v_wmma_f32_16x16x16_f16

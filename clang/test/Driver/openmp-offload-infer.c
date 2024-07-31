@@ -1,9 +1,5 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:          --offload-arch=sm_52 --offload-arch=gfx803 \
+// RUN:          -nogpulib --offload-arch=sm_52 --offload-arch=gfx803 \
 // RUN:          --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgpu-gfx803.bc \
 // RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
 // RUN:   | FileCheck %s
@@ -13,7 +9,7 @@
 // CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx803"
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908:sramecc+:xnack- \
@@ -39,13 +35,11 @@
 // CHECK-ARCH-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[BINARY]]"], output: "[[HOST_OBJ:.*]]"
 // CHECK-ARCH-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
-// RUN:     --offload-arch=sm_70 --offload-arch=gfx908 --offload-arch=native \
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp \
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 --offload-arch=skylake \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-FAILED
 
-// CHECK-FAILED: error: failed to deduce triple for target architecture 'skylake'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead.
+// CHECK-FAILED: error: failed to deduce triple for target architecture 'skylake'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 -fno-openmp \

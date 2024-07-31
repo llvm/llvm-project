@@ -3,6 +3,12 @@ RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/
 RUN: llvm-readobj --sections --section-data %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=READOBJ
 RUN: llvm-dwarfdump --show-section-sizes %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=DWARFDUMP
 
+RUN: dsymutil --linker parallel -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose -no-swiftmodule-timestamp | FileCheck %s --check-prefix=DSYMUTIL
+RUN: dsymutil --linker parallel -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose | FileCheck %s --check-prefix=DSYMUTIL
+RUN: llvm-readobj --sections --section-data %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=READOBJ
+RUN: llvm-dwarfdump --show-section-sizes %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=DWARFDUMP
+
+
 The tested object file has been created by the dummy Swift code:
 let x = 1
 

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! C1577
 program main
   type t1(k,l)
@@ -34,7 +34,16 @@ program main
   integer :: sf9
   !ERROR: Defining expression of statement function 'sf9' cannot be converted to its result type INTEGER(4)
   sf9(n) = "bad"
-  sf10 = 1.
+  !ERROR: Statement function 'sf10' may not reference another statement function 'sf11' that is defined later
+  sf10(n) = sf11(n)
+  sf11(n) = sf10(n) ! mutual recursion, caused crash
+  integer(1) iarg1
+  !PORTABILITY: nonstandard usage: based POINTER
+  pointer(iarg1p, iarg1)
+  sf13(iarg1) = iarg1
+  ! executable part
+  print *, sf13(iarg1) ! ok
+  sf14 = 1.
  contains
   real function explicit(x,y)
     integer, intent(in) :: x
@@ -47,6 +56,44 @@ program main
   end function
   subroutine foo
     !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope
-    sf10(x) = 2.*x
+    sf14(x) = 2.*x
   end subroutine
+end
+
+subroutine s0
+  allocatable :: sf
+  !ERROR: 'sf' is not a callable procedure
+  sf(x) = 1.
+end
+
+subroutine s1
+  asynchronous :: sf
+  !ERROR: An entity may not have the ASYNCHRONOUS attribute unless it is a variable
+  sf(x) = 1.
+end
+
+subroutine s2
+  pointer :: sf
+  !ERROR: A statement function must not have the POINTER attribute
+  sf(x) = 1.
+end
+
+subroutine s3
+  save :: sf
+  !ERROR: The entity 'sf' with an explicit SAVE attribute must be a variable, procedure pointer, or COMMON block
+  sf(x) = 1.
+end
+
+subroutine s4
+  volatile :: sf
+  !ERROR: VOLATILE attribute may apply only to a variable
+  sf(x) = 1.
+end
+
+subroutine s5
+  !ERROR: Invalid specification expression: reference to impure function 'k'
+  real x(k())
+  !WARNING: Name 'k' from host scope should have a type declaration before its local statement function definition
+  !ERROR: 'k' is already declared in this scoping unit
+  k() = 0.0
 end

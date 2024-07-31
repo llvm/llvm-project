@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 
@@ -34,39 +33,6 @@ class CallOp;
 class FuncOp;
 } // namespace func
 
-/// Replace the `loop` with `newIterOperands` added as new initialization
-/// values. `newYieldValuesFn` is a callback that can be used to specify
-/// the additional values to be yielded by the loop. The number of
-/// values returned by the callback should match the number of new
-/// initialization values. This function
-/// - Moves (i.e. doesnt clone) operations from the `loop` to the newly created
-///   loop
-/// - Replaces the uses of `loop` with the new loop.
-/// - `loop` isnt erased, but is left in a "no-op" state where the body of the
-///   loop just yields the basic block arguments that correspond to the
-///   initialization values of a loop. The loop is dead after this method.
-/// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
-///   `newIterOperands` within the generated new loop are replaced
-///   with the corresponding `BlockArgument` in the loop body.
-using NewYieldValueFn = std::function<SmallVector<Value>(
-    OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs)>;
-scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
-                                    ValueRange newIterOperands,
-                                    const NewYieldValueFn &newYieldValuesFn,
-                                    bool replaceIterOperandsUsesInLoop = true);
-// Simpler API if the new yields are just a list of values that can be
-// determined ahead of time.
-inline scf::ForOp
-replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
-                         ValueRange newIterOperands, ValueRange newYields,
-                         bool replaceIterOperandsUsesInLoop = true) {
-  auto fn = [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-    return SmallVector<Value>(newYields.begin(), newYields.end());
-  };
-  return replaceLoopWithNewYields(builder, loop, newIterOperands, fn,
-                                  replaceIterOperandsUsesInLoop);
-}
-
 /// Update a perfectly nested loop nest to yield new values from the innermost
 /// loop and propagating it up through the loop nest. This function
 /// - Expects `loopNest` to be a perfectly nested loop with outer most loop
@@ -82,11 +48,10 @@ replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 /// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
 ///   `newIterOperands` within the generated new loop are replaced with the
 ///   corresponding `BlockArgument` in the loop body.
-SmallVector<scf::ForOp>
-replaceLoopNestWithNewYields(OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
-                             ValueRange newIterOperands,
-                             const NewYieldValueFn &newYieldValueFn,
-                             bool replaceIterOperandsUsesInLoop = true);
+SmallVector<scf::ForOp> replaceLoopNestWithNewYields(
+    RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
+    ValueRange newIterOperands, const NewYieldValuesFn &newYieldValuesFn,
+    bool replaceIterOperandsUsesInLoop = true);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the
@@ -134,16 +99,17 @@ getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
 /// `loops` contains a list of perfectly nested loops with bounds and steps
 /// independent of any loop induction variable involved in the nest.
 LogicalResult coalesceLoops(MutableArrayRef<scf::ForOp> loops);
+LogicalResult coalesceLoops(RewriterBase &rewriter,
+                            MutableArrayRef<scf::ForOp>);
+
+/// Walk an affine.for to find a band to coalesce.
+LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 
 /// Take the ParallelLoop and for each set of dimension indices, combine them
 /// into a single dimension. combinedDimensions must contain each index into
 /// loops exactly once.
-void collapseParallelLoops(scf::ParallelOp loops,
+void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
-
-/// Promotes the loop body of a scf::ForOp to its containing block if the loop
-/// was known to have a single iteration.
-LogicalResult promoteIfSingleIteration(scf::ForOp forOp);
 
 /// Unrolls this for operation by the specified unroll factor. Returns failure
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
@@ -152,6 +118,25 @@ LogicalResult promoteIfSingleIteration(scf::ForOp forOp);
 LogicalResult loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+
+/// Unrolls and jams this `scf.for` operation by the specified unroll factor.
+/// Returns failure if the loop cannot be unrolled either due to restrictions or
+/// due to invalid unroll factors. In case of unroll factor of 1, the function
+/// bails out without doing anything (returns success). Currently, only constant
+/// trip count that are divided by the unroll factor is supported. Currently,
+/// for operations with results are not supported.
+LogicalResult loopUnrollJamByFactor(scf::ForOp forOp, uint64_t unrollFactor);
+
+/// Materialize bounds and step of a zero-based and unit-step loop derived by
+/// normalizing the specified bounds and step.
+Range emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
+                               OpFoldResult lb, OpFoldResult ub,
+                               OpFoldResult step);
+
+/// Get back the original induction variable values after loop normalization.
+void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
+                                  Value normalizedIv, OpFoldResult origLb,
+                                  OpFoldResult origStep);
 
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations
@@ -188,6 +173,27 @@ Loops tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes);
 /// AffineForOp, and the second op is a terminator).
 void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
                              scf::ForOp root);
+
+/// Given two scf.forall loops, `target` and `source`, fuses `target` into
+/// `source`. Assumes that the given loops are siblings and are independent of
+/// each other.
+///
+/// This function does not perform any legality checks and simply fuses the
+/// loops. The caller is responsible for ensuring that the loops are legal to
+/// fuse.
+scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
+                                                scf::ForallOp source,
+                                                RewriterBase &rewriter);
+
+/// Given two scf.for loops, `target` and `source`, fuses `target` into
+/// `source`. Assumes that the given loops are siblings and are independent of
+/// each other.
+///
+/// This function does not perform any legality checks and simply fuses the
+/// loops. The caller is responsible for ensuring that the loops are legal to
+/// fuse.
+scf::ForOp fuseIndependentSiblingForLoops(scf::ForOp target, scf::ForOp source,
+                                          RewriterBase &rewriter);
 
 } // namespace mlir
 

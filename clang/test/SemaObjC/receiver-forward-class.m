@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wreceiver-forward-class -verify %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only  -Wreceiver-forward-class -verify %s
-// rdar://10686120
 
 @class A; // expected-note {{forward declaration of class here}}
 

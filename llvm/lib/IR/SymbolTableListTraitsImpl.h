@@ -28,10 +28,10 @@ template <> void invalidateParentIListOrdering(BasicBlock *BB);
 /// setSymTabObject - This is called when (f.e.) the parent of a basic block
 /// changes.  This requires us to remove all the instruction symtab entries from
 /// the current function and reinsert them into the new function.
-template <typename ValueSubClass>
+template <typename ValueSubClass, typename... Args>
 template <typename TPtr>
-void SymbolTableListTraits<ValueSubClass>::setSymTabObject(TPtr *Dest,
-                                                           TPtr Src) {
+void SymbolTableListTraits<ValueSubClass, Args...>::setSymTabObject(TPtr *Dest,
+                                                                    TPtr Src) {
   // Get the old symtab and value list before doing the assignment.
   ValueSymbolTable *OldST = getSymTab(getListOwner());
 
@@ -61,11 +61,11 @@ void SymbolTableListTraits<ValueSubClass>::setSymTabObject(TPtr *Dest,
       if (I->hasName())
         NewST->reinsertValue(&*I);
   }
-
 }
 
-template <typename ValueSubClass>
-void SymbolTableListTraits<ValueSubClass>::addNodeToList(ValueSubClass *V) {
+template <typename ValueSubClass, typename... Args>
+void SymbolTableListTraits<ValueSubClass, Args...>::addNodeToList(
+    ValueSubClass *V) {
   assert(!V->getParent() && "Value already in a container!!");
   ItemParentClass *Owner = getListOwner();
   V->setParent(Owner);
@@ -75,8 +75,8 @@ void SymbolTableListTraits<ValueSubClass>::addNodeToList(ValueSubClass *V) {
       ST->reinsertValue(V);
 }
 
-template <typename ValueSubClass>
-void SymbolTableListTraits<ValueSubClass>::removeNodeFromList(
+template <typename ValueSubClass, typename... Args>
+void SymbolTableListTraits<ValueSubClass, Args...>::removeNodeFromList(
     ValueSubClass *V) {
   V->setParent(nullptr);
   if (V->hasName())
@@ -84,8 +84,8 @@ void SymbolTableListTraits<ValueSubClass>::removeNodeFromList(
       ST->removeValueName(V->getValueName());
 }
 
-template <typename ValueSubClass>
-void SymbolTableListTraits<ValueSubClass>::transferNodesFromList(
+template <typename ValueSubClass, typename... Args>
+void SymbolTableListTraits<ValueSubClass, Args...>::transferNodesFromList(
     SymbolTableListTraits &L2, iterator first, iterator last) {
   // Transfering nodes, even within the same BB, invalidates the ordering. The
   // list that we removed the nodes from still has a valid ordering.

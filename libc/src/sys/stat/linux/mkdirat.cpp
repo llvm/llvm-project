@@ -11,15 +11,16 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, mkdirat, (int dfd, const char *path, mode_t mode)) {
 #ifdef SYS_mkdirat
-  long ret = __llvm_libc::syscall_impl(SYS_mkdirat, dfd, path, mode);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_mkdirat, dfd, path, mode);
 #else
 #error "mkdirat syscall not available."
 #endif
@@ -31,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, mkdirat, (int dfd, const char *path, mode_t mode)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

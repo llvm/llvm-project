@@ -126,8 +126,7 @@ public:
   // Add a Location Entry.
   void addLocationConstant(dwarf::Attribute Attr, LVUnsigned Constant,
                            uint64_t LocDescOffset);
-  void addLocationOperands(LVSmall Opcode, uint64_t Operand1,
-                           uint64_t Operand2);
+  void addLocationOperands(LVSmall Opcode, ArrayRef<uint64_t> Operands);
   void addLocation(dwarf::Attribute Attr, LVAddress LowPC, LVAddress HighPC,
                    LVUnsigned SectionOffset, uint64_t LocDescOffset,
                    bool CallSiteLocation = false);

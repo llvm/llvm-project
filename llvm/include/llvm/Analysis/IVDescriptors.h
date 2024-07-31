@@ -13,7 +13,6 @@
 #ifndef LLVM_ANALYSIS_IVDESCRIPTORS_H
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -33,25 +32,28 @@ class StoreInst;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
-  None,       ///< Not a recurrence.
-  Add,        ///< Sum of integers.
-  Mul,        ///< Product of integers.
-  Or,         ///< Bitwise or logical OR of integers.
-  And,        ///< Bitwise or logical AND of integers.
-  Xor,        ///< Bitwise or logical XOR of integers.
-  SMin,       ///< Signed integer min implemented in terms of select(cmp()).
-  SMax,       ///< Signed integer max implemented in terms of select(cmp()).
-  UMin,       ///< Unisgned integer min implemented in terms of select(cmp()).
-  UMax,       ///< Unsigned integer max implemented in terms of select(cmp()).
-  FAdd,       ///< Sum of floats.
-  FMul,       ///< Product of floats.
-  FMin,       ///< FP min implemented in terms of select(cmp()).
-  FMax,       ///< FP max implemented in terms of select(cmp()).
-  FMulAdd,    ///< Fused multiply-add of floats (a * b + c).
-  SelectICmp, ///< Integer select(icmp(),x,y) where one of (x,y) is loop
-              ///< invariant
-  SelectFCmp  ///< Integer select(fcmp(),x,y) where one of (x,y) is loop
-              ///< invariant
+  None,     ///< Not a recurrence.
+  Add,      ///< Sum of integers.
+  Mul,      ///< Product of integers.
+  Or,       ///< Bitwise or logical OR of integers.
+  And,      ///< Bitwise or logical AND of integers.
+  Xor,      ///< Bitwise or logical XOR of integers.
+  SMin,     ///< Signed integer min implemented in terms of select(cmp()).
+  SMax,     ///< Signed integer max implemented in terms of select(cmp()).
+  UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
+  UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
+  FAdd,     ///< Sum of floats.
+  FMul,     ///< Product of floats.
+  FMin,     ///< FP min implemented in terms of select(cmp()).
+  FMax,     ///< FP max implemented in terms of select(cmp()).
+  FMinimum, ///< FP min with llvm.minimum semantics
+  FMaximum, ///< FP max with llvm.maximum semantics
+  FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
+  IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
+            ///< loop invariant, and both x and y are integer type.
+  FAnyOf    ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
+            ///< loop invariant, and both x and y are integer type.
+  // TODO: Any_of reduction need not be restricted to integer type only.
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -147,8 +149,8 @@ public:
   /// where one of (X, Y) is a loop invariant integer and the other is a PHI
   /// value. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
-  static InstDesc isSelectCmpPattern(Loop *Loop, PHINode *OrigPhi,
-                                     Instruction *I, InstDesc &Prev);
+  static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi, Instruction *I,
+                                 InstDesc &Prev);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
@@ -223,7 +225,8 @@ public:
 
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::FMin || Kind == RecurKind::FMax;
+    return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
+           Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum;
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
@@ -233,8 +236,8 @@ public:
 
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
-  static bool isSelectCmpRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::SelectICmp || Kind == RecurKind::SelectFCmp;
+  static bool isAnyOfRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the
@@ -306,7 +309,7 @@ public:
   enum InductionKind {
     IK_NoInduction,  ///< Not an induction variable.
     IK_IntInduction, ///< Integer induction variable. Step = C.
-    IK_PtrInduction, ///< Pointer induction var. Step = C / sizeof(elem).
+    IK_PtrInduction, ///< Pointer induction var. Step = C.
     IK_FpInduction   ///< Floating point induction variable.
   };
 
@@ -366,11 +369,6 @@ public:
                           : Instruction::BinaryOpsEnd;
   }
 
-  Type *getElementType() const {
-    assert(IK == IK_PtrInduction && "Only pointer induction has element type");
-    return ElementType;
-  }
-
   /// Returns a reference to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
@@ -382,7 +380,6 @@ private:
   /// Private constructor - used by \c isInductionPHI.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
-                      Type *ElementType = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr);
 
   /// Start value.
@@ -393,9 +390,6 @@ private:
   const SCEV *Step = nullptr;
   // Instruction that advances induction variable.
   BinaryOperator *InductionBinOp = nullptr;
-  // Element type for pointer induction variables.
-  // TODO: This can be dropped once support for typed pointers is removed.
-  Type *ElementType = nullptr;
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;

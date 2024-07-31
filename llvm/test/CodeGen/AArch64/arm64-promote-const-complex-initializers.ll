@@ -30,10 +30,10 @@ define [1 x <4 x float>] @test1() {
 define [1 x <4 x float>] @test2() {
 ; CHECK-LABEL:    .p2align    4, 0x0              ; -- Begin function test2
 ; CHECK-NEXT: lCPI1_0:
-; CHECK-NEXT:     .long   0x00000000              ; float 0
-; CHECK-NEXT:     .long   0x00000000              ; float 0
-; CHECK-NEXT:     .long   0x00000000              ; float 0
-; CHECK-NEXT:     .long   0x3f800000              ; float 1
+; CHECK-NEXT:     .long   0x80000000              ; float -0
+; CHECK-NEXT:     .long   0x80000000              ; float -0
+; CHECK-NEXT:     .long   0x80000000              ; float -0
+; CHECK-NEXT:     .long   0xbf800000              ; float -1
 ; CHECK-NEXT:     .section    __TEXT,__text,regular,pure_instructions
 ; CHECK-NEXT:     .globl  _test2
 ; CHECK-NEXT:     .p2align    2
@@ -43,17 +43,7 @@ define [1 x <4 x float>] @test2() {
 ; CHECK-NEXT: Lloh2:
 ; CHECK-NEXT:     adrp    x8, lCPI1_0@PAGE
 ; CHECK-NEXT: Lloh3:
-; CHECK-NEXT:     ldr q1, [x8, lCPI1_0@PAGEOFF]
-; CHECK-NEXT:     mov s2, v1[1]
-; CHECK-NEXT:     mov s3, v1[2]
-; CHECK-NEXT:     fneg    s0, s1
-; CHECK-NEXT:     mov s1, v1[3]
-; CHECK-NEXT:     fneg    s2, s2
-; CHECK-NEXT:     fneg    s3, s3
-; CHECK-NEXT:     fneg    s1, s1
-; CHECK-NEXT:     mov.s   v0[1], v2[0]
-; CHECK-NEXT:     mov.s   v0[2], v3[0]
-; CHECK-NEXT:     mov.s   v0[3], v1[0]
+; CHECK-NEXT:     ldr q0, [x8, lCPI1_0@PAGEOFF]
 ; CHECK-NEXT:     ret
 ;
   %constexpr = fneg float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 0)

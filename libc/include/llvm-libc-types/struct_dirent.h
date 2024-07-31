@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_DIRENT_H__
-#define __LLVM_LIBC_TYPES_STRUCT_DIRENT_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_DIRENT_H
+#define LLVM_LIBC_TYPES_STRUCT_DIRENT_H
 
-#include <llvm-libc-types/ino_t.h>
-#include <llvm-libc-types/off_t.h>
+#include "llvm-libc-types/ino_t.h"
+#include "llvm-libc-types/off_t.h"
 
 struct dirent {
   ino_t d_ino;
-#ifdef __unix__
+#ifdef __linux__
   off_t d_off;
   unsigned short d_reclen;
 #endif
@@ -26,4 +26,4 @@ struct dirent {
   char d_name[1];
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_DIRENT_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_DIRENT_H

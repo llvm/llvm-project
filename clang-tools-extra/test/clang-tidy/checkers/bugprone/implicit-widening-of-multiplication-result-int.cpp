@@ -2,13 +2,13 @@
 // RUN: %check_clang_tidy -check-suffixes=ALL,CXX %s bugprone-implicit-widening-of-multiplication-result %t -- -- -target x86_64-unknown-unknown -x c++
 
 // RUN: %check_clang_tidy -check-suffixes=ALL,C -std=c99 %s bugprone-implicit-widening-of-multiplication-result %t -- \
-// RUN:     -config='{CheckOptions: [ \
-// RUN:         {key: bugprone-implicit-widening-of-multiplication-result.UseCXXStaticCastsInCppSources, value: false} \
-// RUN:     ]}' -- -target x86_64-unknown-unknown -x c
+// RUN:     -config='{CheckOptions: { \
+// RUN:         bugprone-implicit-widening-of-multiplication-result.UseCXXStaticCastsInCppSources: false \
+// RUN:     }}' -- -target x86_64-unknown-unknown -x c
 // RUN: %check_clang_tidy -check-suffixes=ALL,C %s bugprone-implicit-widening-of-multiplication-result %t -- \
-// RUN:     -config='{CheckOptions: [ \
-// RUN:         {key: bugprone-implicit-widening-of-multiplication-result.UseCXXStaticCastsInCppSources, value: false} \
-// RUN:     ]}' -- -target x86_64-unknown-unknown -x c++
+// RUN:     -config='{CheckOptions: { \
+// RUN:         bugprone-implicit-widening-of-multiplication-result.UseCXXStaticCastsInCppSources: false \
+// RUN:     }}' -- -target x86_64-unknown-unknown -x c++
 
 long t0(int a, int b) {
   return a * b;
@@ -18,7 +18,7 @@ long t0(int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (long)
-  // CHECK-NOTES-CXX:                  static_cast<long>()
+  // CHECK-NOTES-CXX:                  static_cast<long>( )
 }
 unsigned long t1(int a, int b) {
   return a * b;
@@ -28,7 +28,7 @@ unsigned long t1(int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (long)
-  // CHECK-NOTES-CXX:                  static_cast<long>()
+  // CHECK-NOTES-CXX:                  static_cast<long>( )
 }
 
 long t2(unsigned int a, int b) {
@@ -39,7 +39,7 @@ long t2(unsigned int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (unsigned long)
-  // CHECK-NOTES-CXX:                  static_cast<unsigned long>()
+  // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
 }
 unsigned long t3(unsigned int a, int b) {
   return a * b;
@@ -49,7 +49,7 @@ unsigned long t3(unsigned int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (unsigned long)
-  // CHECK-NOTES-CXX:                  static_cast<unsigned long>()
+  // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
 }
 
 long t4(int a, unsigned int b) {

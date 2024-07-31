@@ -58,16 +58,15 @@ display their output.  For brevity, the '-t' output is not included here.
 Notice the 'expected failures=1' message at the end of the run.  This is because
 of a bug currently in lldb such that setting target.process.output-path to
 'stdout.txt' does not have any effect on the redirection of the standard output
-of the subsequent launched process.  We are using unittest2 (a backport of new
-unittest features for Python 2.4-2.6) to decorate (mark) the particular test
-method as such:
+of the subsequent launched process.  We are using unittest to decorate (mark)
+the particular test method as such:
 
-    @unittest2.expectedFailure
+    @unittest.expectedFailure
     # rdar://problem/8435794
     # settings set target.process.output-path does not seem to work
     def test_set_output_path(self):
 
-See http://pypi.python.org/pypi/unittest2 for more details.
+See http://docs.python.org/library/unittest.html for more details.
 
 Now let's look inside the test method:
 

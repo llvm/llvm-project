@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
@@ -79,7 +80,8 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(new MCPseudoProbeAddrFragment(AddrDelta));
+      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
+          AddrDelta));
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.
@@ -145,7 +147,7 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
     dbgs() << "Group [\n";
     MCPseudoProbeTable::DdgPrintIndent += 2;
   });
-  assert(!isRoot() && "Root should be handled seperately");
+  assert(!isRoot() && "Root should be handled separately");
 
   // Emit probes grouped by GUID.
   LLVM_DEBUG({
@@ -181,13 +183,10 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
   // Emit sorted descendant. InlineSite is unique for each pair, so there will
   // be no ordering of Inlinee based on MCPseudoProbeInlineTree*
   using InlineeType = std::pair<InlineSite, MCPseudoProbeInlineTree *>;
-  auto Comparer = [](const InlineeType &A, const InlineeType &B) {
-    return A.first < B.first;
-  };
   std::vector<InlineeType> Inlinees;
   for (const auto &Child : Children)
     Inlinees.emplace_back(Child.first, Child.second.get());
-  std::sort(Inlinees.begin(), Inlinees.end(), Comparer);
+  llvm::sort(Inlinees, llvm::less_first());
 
   for (const auto &Inlinee : Inlinees) {
     // Emit probe index
@@ -209,9 +208,18 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
 
 void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
   MCContext &Ctx = MCOS->getContext();
-  for (auto &ProbeSec : MCProbeDivisions) {
-    const auto *FuncSym = ProbeSec.first;
-    const auto &Root = ProbeSec.second;
+  SmallVector<std::pair<MCSymbol *, MCPseudoProbeInlineTree *>> Vec;
+  Vec.reserve(MCProbeDivisions.size());
+  for (auto &ProbeSec : MCProbeDivisions)
+    Vec.emplace_back(ProbeSec.first, &ProbeSec.second);
+  for (auto I : llvm::enumerate(MCOS->getAssembler()))
+    I.value().setOrdinal(I.index());
+  llvm::sort(Vec, [](auto A, auto B) {
+    return A.first->getSection().getOrdinal() <
+           B.first->getSection().getOrdinal();
+  });
+  for (auto [FuncSym, RootPtr] : Vec) {
+    const auto &Root = *RootPtr;
     if (auto *S = Ctx.getObjectFileInfo()->getPseudoProbeSection(
             FuncSym->getSection())) {
       // Switch to the .pseudoprobe section or a comdat group.
@@ -220,13 +228,10 @@ void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
       // Emit sorted descendant. InlineSite is unique for each pair, so there
       // will be no ordering of Inlinee based on MCPseudoProbeInlineTree*
       using InlineeType = std::pair<InlineSite, MCPseudoProbeInlineTree *>;
-      auto Comparer = [](const InlineeType &A, const InlineeType &B) {
-        return A.first < B.first;
-      };
       std::vector<InlineeType> Inlinees;
       for (const auto &Child : Root.getChildren())
         Inlinees.emplace_back(Child.first, Child.second.get());
-      std::sort(Inlinees.begin(), Inlinees.end(), Comparer);
+      llvm::sort(Inlinees, llvm::less_first());
 
       for (const auto &Inlinee : Inlinees) {
         // Emit the group guarded by a sentinel probe.
@@ -275,7 +280,7 @@ void MCPseudoProbeFuncDesc::print(raw_ostream &OS) {
 }
 
 void MCDecodedPseudoProbe::getInlineContext(
-    SmallVectorImpl<MCPseduoProbeFrameLocation> &ContextStack,
+    SmallVectorImpl<MCPseudoProbeFrameLocation> &ContextStack,
     const GUIDProbeFunctionMap &GUID2FuncMAP) const {
   uint32_t Begin = ContextStack.size();
   MCDecodedPseudoProbeInlineTree *Cur = InlineTree;
@@ -284,7 +289,7 @@ void MCDecodedPseudoProbe::getInlineContext(
   while (Cur->hasInlineSite()) {
     StringRef FuncName = getProbeFNameForGUID(GUID2FuncMAP, Cur->Parent->Guid);
     ContextStack.emplace_back(
-        MCPseduoProbeFrameLocation(FuncName, std::get<1>(Cur->ISite)));
+        MCPseudoProbeFrameLocation(FuncName, std::get<1>(Cur->ISite)));
     Cur = static_cast<MCDecodedPseudoProbeInlineTree *>(Cur->Parent);
   }
   // Make the ContextStack in caller-callee order
@@ -294,7 +299,7 @@ void MCDecodedPseudoProbe::getInlineContext(
 std::string MCDecodedPseudoProbe::getInlineContextStr(
     const GUIDProbeFunctionMap &GUID2FuncMAP) const {
   std::ostringstream OContextStr;
-  SmallVector<MCPseduoProbeFrameLocation, 16> ContextStack;
+  SmallVector<MCPseudoProbeFrameLocation, 16> ContextStack;
   getInlineContext(ContextStack, GUID2FuncMAP);
   for (auto &Cxt : ContextStack) {
     if (OContextStr.str().size())
@@ -333,7 +338,7 @@ template <typename T> ErrorOr<T> MCPseudoProbeDecoder::readUnencodedNumber() {
   if (Data + sizeof(T) > End) {
     return std::error_code();
   }
-  T Val = endian::readNext<T, little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little>(Data);
   return ErrorOr<T>(Val);
 }
 
@@ -562,9 +567,8 @@ void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
 }
 
 void MCPseudoProbeDecoder::printProbesForAllAddresses(raw_ostream &OS) {
-  std::vector<uint64_t> Addresses;
-  for (auto Entry : Address2ProbesMap)
-    Addresses.push_back(Entry.first);
+  auto Entries = make_first_range(Address2ProbesMap);
+  SmallVector<uint64_t, 0> Addresses(Entries.begin(), Entries.end());
   llvm::sort(Addresses);
   for (auto K : Addresses) {
     OS << "Address:\t";
@@ -584,10 +588,20 @@ MCPseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   const MCDecodedPseudoProbe *CallProbe = nullptr;
   for (const auto &Probe : Probes) {
     if (Probe.isCall()) {
-      assert(!CallProbe &&
-             "There should be only one call probe corresponding to address "
-             "which is a callsite.");
+      // Disabling the assert and returning first call probe seen so far.
+      // Subsequent call probes, if any, are ignored. Due to the the way
+      // .pseudo_probe section is decoded, probes of the same-named independent
+      // static functions are merged thus multiple call probes may be seen for a
+      // callsite. This should only happen to compiler-generated statics, with
+      // -funique-internal-linkage-names where user statics get unique names.
+      //
+      // TODO: re-enable or narrow down the assert to static functions only.
+      //
+      // assert(!CallProbe &&
+      //        "There should be only one call probe corresponding to address "
+      //        "which is a callsite.");
       CallProbe = &Probe;
+      break;
     }
   }
   return CallProbe;
@@ -602,7 +616,7 @@ MCPseudoProbeDecoder::getFuncDescForGUID(uint64_t GUID) const {
 
 void MCPseudoProbeDecoder::getInlineContextForProbe(
     const MCDecodedPseudoProbe *Probe,
-    SmallVectorImpl<MCPseduoProbeFrameLocation> &InlineContextStack,
+    SmallVectorImpl<MCPseudoProbeFrameLocation> &InlineContextStack,
     bool IncludeLeaf) const {
   Probe->getInlineContext(InlineContextStack, GUID2FuncDescMap);
   if (!IncludeLeaf)
@@ -611,7 +625,7 @@ void MCPseudoProbeDecoder::getInlineContextForProbe(
   // hence we need to retrieve and prepend leaf if requested.
   const auto *FuncDesc = getFuncDescForGUID(Probe->getGuid());
   InlineContextStack.emplace_back(
-      MCPseduoProbeFrameLocation(FuncDesc->FuncName, Probe->getIndex()));
+      MCPseudoProbeFrameLocation(FuncDesc->FuncName, Probe->getIndex()));
 }
 
 const MCPseudoProbeFuncDesc *MCPseudoProbeDecoder::getInlinerDescForProbe(

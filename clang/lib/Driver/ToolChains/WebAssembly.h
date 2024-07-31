@@ -18,7 +18,7 @@ namespace driver {
 namespace tools {
 namespace wasm {
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   explicit Linker(const ToolChain &TC) : Tool("wasm::Linker", "linker", TC) {}
   bool isLinkJob() const override { return true; }
@@ -47,7 +47,6 @@ private:
   bool isPICDefault() const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;
-  bool IsIntegratedAssemblerDefault() const override;
   bool hasBlocksRuntime() const override;
   bool SupportsProfiling() const override;
   bool HasNativeLLVMSupport() const override;
@@ -68,7 +67,7 @@ private:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   SanitizerMask getSupportedSanitizers() const override;
 
-  const char *getDefaultLinker() const override { return "wasm-ld"; }
+  const char *getDefaultLinker() const override;
 
   CXXStdlibType GetDefaultCXXStdlibType() const override {
     return ToolChain::CST_Libcxx;

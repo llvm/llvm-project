@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "TestTypes.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -27,7 +28,7 @@ public:
   LogicalResult
   matchAndRewrite(test::TestTypeProducerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::NullOp>(op, getVoidPtrType());
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, getVoidPtrType());
     return success();
   }
 };
@@ -49,12 +50,11 @@ struct TestConvertCallOp
     ModuleOp m = getOperation();
 
     LowerToLLVMOptions options(m.getContext());
-    options.useOpaquePointers = false;
 
     // Populate type conversions.
     LLVMTypeConverter typeConverter(m.getContext(), options);
     typeConverter.addConversion([&](test::TestType type) {
-      return LLVM::LLVMPointerType::get(IntegerType::get(m.getContext(), 8));
+      return LLVM::LLVMPointerType::get(m.getContext());
     });
     typeConverter.addConversion([&](test::SimpleAType type) {
       return IntegerType::get(type.getContext(), 42);

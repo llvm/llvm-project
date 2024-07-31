@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_THREADS_TSS_DELETE_H
 #define LLVM_LIBC_SRC_THREADS_TSS_DELETE_H
 
+#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 void tss_delete(tss_t key);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_TSS_DELETE_H

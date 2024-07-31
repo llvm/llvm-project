@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 # System modules
 import os
 import sys
@@ -12,7 +10,7 @@ from lldbsuite.test.decorators import *
 
 
 @skipIfRemote
-@skipIfWindows  # llvm.org/pr22274: need a pexpect replacement for windows
+@add_test_categories(["pexpect"])
 class PExpectTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     PROMPT = "(lldb) "
@@ -28,9 +26,15 @@ class PExpectTest(TestBase):
         dimensions=None,
         run_under=None,
         post_spawn=None,
+        encoding=None,
         use_colors=False,
     ):
-        logfile = getattr(sys.stdout, "buffer", sys.stdout) if self.TraceOn() else None
+        # Using a log file is incompatible with using utf-8 as the encoding.
+        logfile = (
+            getattr(sys.stdout, "buffer", sys.stdout)
+            if (self.TraceOn() and not encoding)
+            else None
+        )
 
         args = []
         if run_under is not None:
@@ -60,6 +64,7 @@ class PExpectTest(TestBase):
             timeout=timeout,
             dimensions=dimensions,
             env=env,
+            encoding=encoding,
         )
         self.child.ptyproc.delayafterclose = timeout / 10
         self.child.ptyproc.delayafterterminate = timeout / 10

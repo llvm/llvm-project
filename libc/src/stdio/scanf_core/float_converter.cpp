@@ -11,13 +11,14 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/char_vector.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/converter_utils.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 // All of the floating point conversions are the same for scanf, every name will
@@ -57,8 +58,8 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
   if (to_lower(cur_char) == inf_string[0]) {
     size_t inf_index = 0;
 
-    for (; to_lower(cur_char) == inf_string[inf_index] &&
-           inf_index < sizeof(inf_string) && out_str.length() < max_width;
+    for (; inf_index < sizeof(inf_string) && out_str.length() < max_width &&
+           to_lower(cur_char) == inf_string[inf_index];
          ++inf_index) {
       if (!out_str.append(cur_char)) {
         return ALLOCATION_FAILURE;
@@ -80,8 +81,8 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
   if (to_lower(cur_char) == nan_string[0]) {
     size_t nan_index = 0;
 
-    for (; to_lower(cur_char) == nan_string[nan_index] &&
-           nan_index < sizeof(nan_string) && out_str.length() < max_width;
+    for (; nan_index < sizeof(nan_string) && out_str.length() < max_width &&
+           to_lower(cur_char) == nan_string[nan_index];
          ++nan_index) {
       if (!out_str.append(cur_char)) {
         return ALLOCATION_FAILURE;
@@ -223,4 +224,4 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -23,11 +23,14 @@
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <optional>
 
 using namespace llvm;
@@ -38,8 +41,13 @@ static void eatDiagnostics(const SMDiagnostic &, void *) {}
 namespace clang {
 namespace replace {
 
-std::error_code collectReplacementsFromDirectory(
-    const llvm::StringRef Directory, TUReplacements &TUs,
+namespace detail {
+
+static constexpr std::array<StringRef, 2> AllowedExtensions = {".yaml", ".yml"};
+
+template <typename TranslationUnits>
+static std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TranslationUnits &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
   using namespace llvm::sys::fs;
   using namespace llvm::sys::path;
@@ -54,7 +62,7 @@ std::error_code collectReplacementsFromDirectory(
       continue;
     }
 
-    if (extension(I->path()) != ".yaml")
+    if (!is_contained(AllowedExtensions, extension(I->path())))
       continue;
 
     TUFiles.push_back(I->path());
@@ -68,7 +76,7 @@ std::error_code collectReplacementsFromDirectory(
     }
 
     yaml::Input YIn(Out.get()->getBuffer(), nullptr, &eatDiagnostics);
-    tooling::TranslationUnitReplacements TU;
+    typename TranslationUnits::value_type TU;
     YIn >> TU;
     if (YIn.error()) {
       // File doesn't appear to be a header change description. Ignore it.
@@ -81,49 +89,22 @@ std::error_code collectReplacementsFromDirectory(
 
   return ErrorCode;
 }
+} // namespace detail
 
+template <>
+std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TUReplacements &TUs,
+    TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
+  return detail::collectReplacementsFromDirectory(Directory, TUs, TUFiles,
+                                                  Diagnostics);
+}
+
+template <>
 std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUDiagnostics &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
-  using namespace llvm::sys::fs;
-  using namespace llvm::sys::path;
-
-  std::error_code ErrorCode;
-
-  for (recursive_directory_iterator I(Directory, ErrorCode), E;
-       I != E && !ErrorCode; I.increment(ErrorCode)) {
-    if (filename(I->path())[0] == '.') {
-      // Indicate not to descend into directories beginning with '.'
-      I.no_push();
-      continue;
-    }
-
-    if (extension(I->path()) != ".yaml")
-      continue;
-
-    TUFiles.push_back(I->path());
-
-    ErrorOr<std::unique_ptr<MemoryBuffer>> Out =
-        MemoryBuffer::getFile(I->path());
-    if (std::error_code BufferError = Out.getError()) {
-      errs() << "Error reading " << I->path() << ": " << BufferError.message()
-             << "\n";
-      continue;
-    }
-
-    yaml::Input YIn(Out.get()->getBuffer(), nullptr, &eatDiagnostics);
-    tooling::TranslationUnitDiagnostics TU;
-    YIn >> TU;
-    if (YIn.error()) {
-      // File doesn't appear to be a header change description. Ignore it.
-      continue;
-    }
-
-    // Only keep files that properly parse.
-    TUs.push_back(TU);
-  }
-
-  return ErrorCode;
+  return detail::collectReplacementsFromDirectory(Directory, TUs, TUFiles,
+                                                  Diagnostics);
 }
 
 /// Extract replacements from collected TranslationUnitReplacements and
@@ -138,11 +119,11 @@ std::error_code collectReplacementsFromDirectory(
 ///
 /// \returns A map mapping FileEntry to a set of Replacement targeting that
 /// file.
-static llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
+static llvm::DenseMap<FileEntryRef, std::vector<tooling::Replacement>>
 groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                   const clang::SourceManager &SM) {
   llvm::StringSet<> Warned;
-  llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
+  llvm::DenseMap<FileEntryRef, std::vector<tooling::Replacement>>
       GroupedReplacements;
 
   // Deduplicate identical replacements in diagnostics unless they are from the
@@ -165,7 +146,7 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
     else
       SM.getFileManager().makeAbsolutePath(Path);
 
-    if (auto Entry = SM.getFileManager().getFile(Path)) {
+    if (auto Entry = SM.getFileManager().getOptionalFileRef(Path)) {
       if (SourceTU) {
         auto &Replaces = DiagReplacements[*Entry];
         auto It = Replaces.find(R);
@@ -212,10 +193,10 @@ bool mergeAndDeduplicate(const TUReplacements &TUs, const TUDiagnostics &TUDs,
   // To report conflicting replacements on corresponding file, all replacements
   // are stored into 1 big AtomicChange.
   for (const auto &FileAndReplacements : GroupedReplacements) {
-    const FileEntry *Entry = FileAndReplacements.first;
+    FileEntryRef Entry = FileAndReplacements.first;
     const SourceLocation BeginLoc =
         SM.getLocForStartOfFile(SM.getOrCreateFileID(Entry, SrcMgr::C_User));
-    tooling::AtomicChange FileChange(Entry->getName(), Entry->getName());
+    tooling::AtomicChange FileChange(Entry.getName(), Entry.getName());
     for (const auto &R : FileAndReplacements.second) {
       llvm::Error Err =
           FileChange.replace(SM, BeginLoc.getLocWithOffset(R.getOffset()),

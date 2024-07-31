@@ -3,6 +3,7 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libunwind")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -21,6 +22,7 @@ set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 include(GNUInstallDirs)
+include(CheckSymbolExists)
 
 #===============================================================================
 # Setup CMake Options
@@ -51,6 +53,7 @@ option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
 option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
 option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." ON)
+option(LIBUNWIND_ENABLE_FRAME_APIS "Include libgcc-compatible frame apis." OFF)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -61,11 +64,6 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
-
-# TODO: Remove this after branching for LLVM 15
-if(LIBUNWIND_SYSROOT OR LIBUNWIND_TARGET_TRIPLE OR LIBUNWIND_GCC_TOOLCHAIN)
-  message(WARNING "LIBUNWIND_SYSROOT, LIBUNWIND_TARGET_TRIPLE and LIBUNWIND_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
-endif()
 
 if(MINGW)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
@@ -100,6 +98,20 @@ endif()
 option(LIBUNWIND_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ${LIBUNWIND_DEFAULT_HIDE_SYMBOLS})
 
+# If toolchain is FPXX, we switch to FP64 to save the full FPRs. See:
+# https://web.archive.org/web/20180828210612/https://dmz-portal.mips.com/wiki/MIPS_O32_ABI_-_FR0_and_FR1_Interlinking
+check_symbol_exists(__mips_hard_float "" __MIPSHF)
+check_symbol_exists(_ABIO32 "" __MIPS_O32)
+if (__MIPSHF AND __MIPS_O32)
+  file(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mips_is_fpxx.c
+    "#if __mips_fpr != 0\n"
+    "# error\n"
+    "#endif\n")
+  try_compile(MIPS_FPABI_FPXX ${CMAKE_BINARY_DIR}
+    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mips_is_fpxx.c
+    CMAKE_FLAGS -DCMAKE_C_LINK_EXECUTABLE='echo')
+endif()
+
 #===============================================================================
 # Configure System
 #===============================================================================
@@ -109,29 +121,30 @@ set(CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
     ${CMAKE_MODULE_PATH})
 
-set(LIBUNWIND_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE PATH
+set(LIBUNWIND_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE STRING
     "Path where built libunwind headers should be installed.")
-set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libunwind runtime libraries should be installed.")
 
 set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind" CACHE STRING "Output name for the shared libunwind runtime library.")
 set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the static libunwind runtime library.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
-      "Path where built libunwind libraries should be installed.")
-  if(LIBCXX_LIBDIR_SUBDIR)
-    string(APPEND LIBUNWIND_LIBRARY_DIR /${LIBUNWIND_LIBDIR_SUBDIR})
-    string(APPEND LIBUNWIND_INSTALL_LIBRARY_DIR /${LIBUNWIND_LIBDIR_SUBDIR})
+  set(LIBUNWIND_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBUNWIND_LIBDIR_SUBDIR)
+    string(APPEND LIBUNWIND_TARGET_SUBDIR /${LIBUNWIND_LIBDIR_SUBDIR})
   endif()
+  set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBUNWIND_TARGET_SUBDIR})
+  set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBUNWIND_TARGET_SUBDIR} CACHE STRING
+      "Path where built libunwind libraries should be installed.")
+  unset(LIBUNWIND_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
   else()
     set(LIBUNWIND_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBUNWIND_LIBDIR_SUFFIX})
   endif()
-  set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LIBUNWIND_LIBDIR_SUFFIX} CACHE PATH
+  set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LIBUNWIND_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libunwind libraries should be installed.")
 endif()
 
@@ -143,6 +156,10 @@ set(LIBUNWIND_C_FLAGS "")
 set(LIBUNWIND_CXX_FLAGS "")
 set(LIBUNWIND_COMPILE_FLAGS "")
 set(LIBUNWIND_LINK_FLAGS "")
+set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBUNWIND_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libunwind is linked to which can be provided in cache")
 
 # Include macros for adding and removing libunwind flags.
 include(HandleLibunwindFlags)
@@ -177,6 +194,10 @@ if (WIN32)
   # necessarily the ones that the callers will use anyway) with the
   # attributes.
   add_compile_flags_if_supported(-Wno-dll-attribute-on-redeclaration)
+endif()
+
+if (MIPS_FPABI_FPXX)
+  add_compile_flags(-mfp64)
 endif()
 
 # Get feature flags.
@@ -244,6 +265,11 @@ endif()
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
   add_compile_flags(-D_LIBUNWIND_IS_NATIVE_ONLY)
+endif()
+
+# Include stubs for __register_frame_info_bases and related
+if (LIBUNWIND_ENABLE_FRAME_APIS)
+  add_compile_flags(-D_LIBUNWIND_SUPPORT_FRAME_APIS)
 endif()
 
 # Threading-support

@@ -23,17 +23,19 @@
 #include "SourceCode.h"
 #include "TUScheduler.h"
 #include "XRefs.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "index/StdLib.h"
 #include "refactor/Rename.h"
 #include "refactor/Tweak.h"
 #include "support/Cancellation.h"
+#include "support/Context.h"
 #include "support/Logger.h"
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -52,44 +54,48 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
+
+// Tracks number of times a tweak has been offered.
+static constexpr trace::Metric TweakAvailable(
+    "tweak_available", trace::Metric::Counter, "tweak_id");
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
   UpdateIndexCallbacks(FileIndex *FIndex,
                        ClangdServer::Callbacks *ServerCallbacks,
                        const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks,
-                       bool CollectInactiveRegions,
-                       const ClangdServer::Options &Opts)
-      : FIndex(FIndex), ServerCallbacks(ServerCallbacks),
-        TFS(TFS), Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
-        CollectInactiveRegions(CollectInactiveRegions), Opts(Opts) {}
+                       bool CollectInactiveRegions)
+      : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
+        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
+        CollectInactiveRegions(CollectInactiveRegions) {}
 
   void onPreambleAST(
       PathRef Path, llvm::StringRef Version, CapturedASTCtx ASTCtx,
-      const std::shared_ptr<const CanonicalIncludes> CanonIncludes) override {
+      std::shared_ptr<const include_cleaner::PragmaIncludes> PI) override {
 
     if (!FIndex)
       return;
 
     auto &PP = ASTCtx.getPreprocessor();
     auto &CI = ASTCtx.getCompilerInvocation();
-    if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
+    if (auto Loc = Stdlib->add(CI.getLangOpts(), PP.getHeaderSearchInfo()))
       indexStdlib(CI, std::move(*Loc));
 
     // FIndex outlives the UpdateIndexCallbacks.
     auto Task = [FIndex(FIndex), Path(Path.str()), Version(Version.str()),
-                 ASTCtx(std::move(ASTCtx)),
-                 CanonIncludes(CanonIncludes)]() mutable {
+                 ASTCtx(std::move(ASTCtx)), PI(std::move(PI))]() mutable {
       trace::Span Tracer("PreambleIndexing");
       FIndex->updatePreamble(Path, Version, ASTCtx.getASTContext(),
-                             ASTCtx.getPreprocessor(), *CanonIncludes);
+                             ASTCtx.getPreprocessor(), *PI);
     };
 
-    if (Opts.AsyncPreambleIndexing && Tasks) {
+    if (Tasks) {
       Tasks->runAsync("Preamble indexing for:" + Path + Version,
                       std::move(Task));
     } else
@@ -100,14 +106,20 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     // This task is owned by Tasks, which outlives the TUScheduler and
     // therefore the UpdateIndexCallbacks.
     // We must be careful that the references we capture outlive TUScheduler.
-    auto Task = [LO(*CI.getLangOpts()), Loc(std::move(Loc)),
+    auto Task = [LO(CI.getLangOpts()), Loc(std::move(Loc)),
                  CI(std::make_unique<CompilerInvocation>(CI)),
                  // External values that outlive ClangdServer
                  TFS(&TFS),
                  // Index outlives TUScheduler (declared first)
                  FIndex(FIndex),
                  // shared_ptr extends lifetime
-                 Stdlib(Stdlib)]() mutable {
+                 Stdlib(Stdlib),
+                 // We have some FS implementations that rely on information in
+                 // the context.
+                 Ctx(Context::current().clone())]() mutable {
+      // Make sure we install the context into current thread.
+      WithContext C(std::move(Ctx));
+      clang::noteBottomOfStack();
       IndexFileIn IF;
       IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
       if (Stdlib->isBest(LO))
@@ -124,13 +136,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    assert(AST.getDiagnostics() &&
-           "We issue callback only with fresh preambles");
-    std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
       Publish([&]() {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
-                                            std::move(Diagnostics));
+                                            AST.getDiagnostics());
         if (CollectInactiveRegions) {
           ServerCallbacks->onInactiveRegionsReady(Path,
                                                   getInactiveRegions(AST));
@@ -162,7 +171,6 @@ private:
   std::shared_ptr<StdLibSet> Stdlib;
   AsyncTaskRunner *Tasks;
   bool CollectInactiveRegions;
-  const ClangdServer::Options &Opts;
 };
 
 class DraftStoreFS : public ThreadsafeFS {
@@ -208,6 +216,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            Callbacks *Callbacks)
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      ModulesManager(Opts.ModulesManager),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
@@ -227,7 +236,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                         std::make_unique<UpdateIndexCallbacks>(
                             DynamicIdx.get(), Callbacks, TFS,
                             IndexTasks ? &*IndexTasks : nullptr,
-                            PublishInactiveRegions, Opts));
+                            PublishInactiveRegions));
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
@@ -300,6 +309,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.Index = Index;
   Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
+  Inputs.ModulesManager = ModulesManager;
   bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
@@ -366,7 +376,7 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
         std::lock_guard<std::mutex> Lock(PublishMu);
         for (auto &Entry : ReportableDiagnostics)
           Publish->onDiagnosticsReady(Entry.first(), /*Version=*/"",
-                                      std::move(Entry.second));
+                                      Entry.second);
       }
       return Context::current().derive(Config::Key, std::move(C));
     }
@@ -435,7 +445,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
     // FIXME: Add traling new line if there is none at eof, workaround a crash,
     // see https://github.com/clangd/clangd/issues/332
-    if (!IP->Contents.endswith("\n"))
+    if (!IP->Contents.ends_with("\n"))
       ParseInput.Contents.append("\n");
     ParseInput.Index = Index;
 
@@ -486,7 +496,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
     ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
     // FIXME: Add traling new line if there is none at eof, workaround a crash,
     // see https://github.com/clangd/clangd/issues/332
-    if (!IP->Contents.endswith("\n"))
+    if (!IP->Contents.ends_with("\n"))
       ParseInput.Contents.append("\n");
     ParseInput.Index = Index;
     CB(clangd::signatureHelp(File, Pos, *PreambleData, ParseInput,
@@ -521,7 +531,7 @@ void ClangdServer::formatFile(PathRef File, std::optional<Range> Rng,
   auto Action = [File = File.str(), Code = std::move(*Code),
                  Ranges = std::vector<tooling::Range>{RequestedRange},
                  CB = std::move(CB), this]() mutable {
-    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
+    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS, true);
     tooling::Replacements IncludeReplaces =
         format::sortIncludes(Style, Code, Ranges, File);
     auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
@@ -549,15 +559,10 @@ void ClangdServer::formatOnType(PathRef File, Position Pos,
   auto Action = [File = File.str(), Code = std::move(*Code),
                  TriggerText = TriggerText.str(), CursorPos = *CursorPos,
                  CB = std::move(CB), this]() mutable {
-    auto Style = format::getStyle(format::DefaultFormatStyle, File,
-                                  format::DefaultFallbackStyle, Code,
-                                  TFS.view(/*CWD=*/std::nullopt).get());
-    if (!Style)
-      return CB(Style.takeError());
-
+    auto Style = getFormatStyleForFile(File, Code, TFS, false);
     std::vector<TextEdit> Result;
     for (const tooling::Replacement &R :
-         formatIncremental(Code, CursorPos, TriggerText, *Style))
+         formatIncremental(Code, CursorPos, TriggerText, Style))
       Result.push_back(replacementToEdit(Code, R));
     return CB(Result);
   };
@@ -608,7 +613,7 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
 
     if (Opts.WantFormat) {
       auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                         *InpAST->Inputs.TFS);
+                                         *InpAST->Inputs.TFS, false);
       llvm::Error Err = llvm::Error::success();
       for (auto &E : R->GlobalChanges)
         Err =
@@ -623,9 +628,10 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
   WorkScheduler->runWithAST("Rename", File, std::move(Action));
 }
 
+namespace {
 // May generate several candidate selections, due to SelectionTree ambiguity.
 // vector of pointers because GCC doesn't like non-copyable Selection.
-static llvm::Expected<std::vector<std::unique_ptr<Tweak::Selection>>>
+llvm::Expected<std::vector<std::unique_ptr<Tweak::Selection>>>
 tweakSelection(const Range &Sel, const InputsAndAST &AST,
                llvm::vfs::FileSystem *FS) {
   auto Begin = positionToOffset(AST.Inputs.Contents, Sel.start);
@@ -646,38 +652,86 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST,
   return std::move(Result);
 }
 
-void ClangdServer::enumerateTweaks(
-    PathRef File, Range Sel, llvm::unique_function<bool(const Tweak &)> Filter,
-    Callback<std::vector<TweakRef>> CB) {
-  // Tracks number of times a tweak has been offered.
-  static constexpr trace::Metric TweakAvailable(
-      "tweak_available", trace::Metric::Counter, "tweak_id");
-  auto Action = [Sel, CB = std::move(CB), Filter = std::move(Filter),
+// Some fixes may perform local renaming, we want to convert those to clangd
+// rename commands, such that we can leverage the index for more accurate
+// results.
+std::optional<ClangdServer::CodeActionResult::Rename>
+tryConvertToRename(const Diag *Diag, const Fix &Fix) {
+  bool IsClangTidyRename = Diag->Source == Diag::ClangTidy &&
+                           Diag->Name == "readability-identifier-naming" &&
+                           !Fix.Edits.empty();
+  if (IsClangTidyRename && Diag->InsideMainFile) {
+    ClangdServer::CodeActionResult::Rename R;
+    R.NewName = Fix.Edits.front().newText;
+    R.FixMessage = Fix.Message;
+    R.Diag = {Diag->Range, Diag->Message};
+    return R;
+  }
+
+  return std::nullopt;
+}
+
+} // namespace
+
+void ClangdServer::codeAction(const CodeActionInputs &Params,
+                              Callback<CodeActionResult> CB) {
+  auto Action = [Params, CB = std::move(CB),
                  FeatureModules(this->FeatureModules)](
                     Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto Selections = tweakSelection(Sel, *InpAST, /*FS=*/nullptr);
+    auto KindAllowed =
+        [Only(Params.RequestedActionKinds)](llvm::StringRef Kind) {
+          if (Only.empty())
+            return true;
+          return llvm::any_of(Only, [&](llvm::StringRef Base) {
+            return Kind.consume_front(Base) &&
+                   (Kind.empty() || Kind.starts_with("."));
+          });
+        };
+
+    CodeActionResult Result;
+    Result.Version = InpAST->AST.version().str();
+    if (KindAllowed(CodeAction::QUICKFIX_KIND)) {
+      auto FindMatchedDiag = [&InpAST](const DiagRef &DR) -> const Diag * {
+        for (const auto &Diag : InpAST->AST.getDiagnostics())
+          if (Diag.Range == DR.Range && Diag.Message == DR.Message)
+            return &Diag;
+        return nullptr;
+      };
+      for (const auto &DiagRef : Params.Diagnostics) {
+        if (const auto *Diag = FindMatchedDiag(DiagRef))
+          for (const auto &Fix : Diag->Fixes) {
+            if (auto Rename = tryConvertToRename(Diag, Fix)) {
+              Result.Renames.emplace_back(std::move(*Rename));
+            } else {
+              Result.QuickFixes.push_back({DiagRef, Fix});
+            }
+          }
+      }
+    }
+
+    // Collect Tweaks
+    auto Selections = tweakSelection(Params.Selection, *InpAST, /*FS=*/nullptr);
     if (!Selections)
       return CB(Selections.takeError());
-    std::vector<TweakRef> Res;
     // Don't allow a tweak to fire more than once across ambiguous selections.
     llvm::DenseSet<llvm::StringRef> PreparedTweaks;
     auto DeduplicatingFilter = [&](const Tweak &T) {
-      return Filter(T) && !PreparedTweaks.count(T.id());
+      return KindAllowed(T.kind()) && Params.TweakFilter(T) &&
+             !PreparedTweaks.count(T.id());
     };
     for (const auto &Sel : *Selections) {
       for (auto &T : prepareTweaks(*Sel, DeduplicatingFilter, FeatureModules)) {
-        Res.push_back({T->id(), T->title(), T->kind()});
+        Result.TweakRefs.push_back(TweakRef{T->id(), T->title(), T->kind()});
         PreparedTweaks.insert(T->id());
         TweakAvailable.record(1, T->id());
       }
     }
-
-    CB(std::move(Res));
+    CB(std::move(Result));
   };
 
-  WorkScheduler->runWithAST("EnumerateTweaks", File, std::move(Action),
+  WorkScheduler->runWithAST("codeAction", Params.File, std::move(Action),
                             Transient);
 }
 
@@ -716,7 +770,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       for (auto &It : (*Effect)->ApplyEdits) {
         Edit &E = It.second;
         format::FormatStyle Style =
-            getFormatStyleForFile(File, E.InitialCode, TFS);
+            getFormatStyleForFile(File, E.InitialCode, TFS, false);
         if (llvm::Error Err = reformatEdit(E, Style))
           elog("Failed to format {0}: {1}", It.first(), std::move(Err));
       }
@@ -779,7 +833,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     if (!InpAST)
       return CB(InpAST.takeError());
     format::FormatStyle Style = getFormatStyleForFile(
-        File, InpAST->Inputs.Contents, *InpAST->Inputs.TFS);
+        File, InpAST->Inputs.Contents, *InpAST->Inputs.TFS, false);
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
@@ -903,12 +957,12 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
 
 void ClangdServer::findType(llvm::StringRef File, Position Pos,
                             Callback<std::vector<LocatedSymbol>> CB) {
-  auto Action =
-      [Pos, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        CB(clangd::findType(InpAST->AST, Pos));
-      };
+  auto Action = [Pos, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::findType(InpAST->AST, Pos, Index));
+  };
   WorkScheduler->runWithAST("FindType", File, std::move(Action));
 }
 
@@ -1046,11 +1100,7 @@ void ClangdServer::diagnostics(PathRef File, Callback<std::vector<Diag>> CB) {
       [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
         if (!InpAST)
           return CB(InpAST.takeError());
-        if (auto Diags = InpAST->AST.getDiagnostics())
-          return CB(*Diags);
-        // FIXME: Use ServerCancelled error once it is settled in LSP-3.17.
-        return CB(llvm::make_error<LSPError>("server is busy parsing includes",
-                                             ErrorCode::InternalError));
+        return CB(InpAST->AST.getDiagnostics());
       };
 
   WorkScheduler->runWithAST("Diagnostics", File, std::move(Action));
@@ -1068,7 +1118,8 @@ ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
 #if defined(__has_feature) &&                                                  \
     (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
      __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
-  (*TimeoutSeconds) *= 10;
+  if (TimeoutSeconds.has_value())
+    (*TimeoutSeconds) *= 10;
 #endif
 
   // Nothing else can schedule work on TUScheduler, because it's not threadsafe

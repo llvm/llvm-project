@@ -9,8 +9,10 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "llvm/Support/Path.h"
@@ -31,7 +33,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
   }
   Loc = SM.getExpansionLoc(Loc);
   const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
-  const FileEntry *FE = SM.getFileEntryForID(Decomposed.first);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(Decomposed.first);
   if (FE) {
     OS << llvm::sys::path::filename(FE->getName());
   } else {
@@ -255,20 +257,31 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
       !D->hasAttr<OverloadableAttr>())
     return;
 
-  if (const TemplateArgumentList *
-        SpecArgs = D->getTemplateSpecializationArgs()) {
+  if (D->isFunctionTemplateSpecialization()) {
     Out << '<';
-    for (unsigned I = 0, N = SpecArgs->size(); I != N; ++I) {
-      Out << '#';
-      VisitTemplateArgument(SpecArgs->get(I));
+    if (const TemplateArgumentList *SpecArgs =
+            D->getTemplateSpecializationArgs()) {
+      for (const auto &Arg : SpecArgs->asArray()) {
+        Out << '#';
+        VisitTemplateArgument(Arg);
+      }
+    } else if (const ASTTemplateArgumentListInfo *SpecArgsWritten =
+                   D->getTemplateSpecializationArgsAsWritten()) {
+      for (const auto &ArgLoc : SpecArgsWritten->arguments()) {
+        Out << '#';
+        VisitTemplateArgument(ArgLoc.getArgument());
+      }
     }
     Out << '>';
   }
 
+  QualType CanonicalType = D->getType().getCanonicalType();
   // Mangle in type information for the arguments.
-  for (auto *PD : D->parameters()) {
-    Out << '#';
-    VisitType(PD->getType());
+  if (const auto *FPT = CanonicalType->getAs<FunctionProtoType>()) {
+    for (QualType PT : FPT->param_types()) {
+      Out << '#';
+      VisitType(PT);
+    }
   }
   if (D->isVariadic())
     Out << '.';
@@ -368,14 +381,14 @@ void USRGenerator::VisitTemplateTemplateParmDecl(
 }
 
 void USRGenerator::VisitNamespaceDecl(const NamespaceDecl *D) {
+  if (IgnoreResults)
+    return;
+  VisitDeclContext(D->getDeclContext());
   if (D->isAnonymousNamespace()) {
     Out << "@aN";
     return;
   }
-
-  VisitDeclContext(D->getDeclContext());
-  if (!IgnoreResults)
-    Out << "@N@" << D->getName();
+  Out << "@N@" << D->getName();
 }
 
 void USRGenerator::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
@@ -518,11 +531,16 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       AlreadyStarted = true;
 
       switch (D->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Class:
-      case TTK_Struct: Out << "@ST"; break;
-      case TTK_Union:  Out << "@UT"; break;
-      case TTK_Enum: llvm_unreachable("enum template");
+      case TagTypeKind::Interface:
+      case TagTypeKind::Class:
+      case TagTypeKind::Struct:
+        Out << "@ST";
+        break;
+      case TagTypeKind::Union:
+        Out << "@UT";
+        break;
+      case TagTypeKind::Enum:
+        llvm_unreachable("enum template");
       }
       VisitTemplateParameterList(ClassTmpl->getTemplateParameters());
     } else if (const ClassTemplatePartialSpecializationDecl *PartialSpec
@@ -530,11 +548,16 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       AlreadyStarted = true;
 
       switch (D->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Class:
-      case TTK_Struct: Out << "@SP"; break;
-      case TTK_Union:  Out << "@UP"; break;
-      case TTK_Enum: llvm_unreachable("enum partial specialization");
+      case TagTypeKind::Interface:
+      case TagTypeKind::Class:
+      case TagTypeKind::Struct:
+        Out << "@SP";
+        break;
+      case TagTypeKind::Union:
+        Out << "@UP";
+        break;
+      case TagTypeKind::Enum:
+        llvm_unreachable("enum partial specialization");
       }
       VisitTemplateParameterList(PartialSpec->getTemplateParameters());
     }
@@ -542,11 +565,17 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
 
   if (!AlreadyStarted) {
     switch (D->getTagKind()) {
-      case TTK_Interface:
-      case TTK_Class:
-      case TTK_Struct: Out << "@S"; break;
-      case TTK_Union:  Out << "@U"; break;
-      case TTK_Enum:   Out << "@E"; break;
+    case TagTypeKind::Interface:
+    case TagTypeKind::Class:
+    case TagTypeKind::Struct:
+      Out << "@S";
+      break;
+    case TagTypeKind::Union:
+      Out << "@U";
+      break;
+    case TagTypeKind::Enum:
+      Out << "@E";
+      break;
     }
   }
 
@@ -751,6 +780,11 @@ void USRGenerator::VisitType(QualType T) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:
@@ -926,13 +960,13 @@ void USRGenerator::VisitType(QualType T) {
     if (const auto *const AT = dyn_cast<ArrayType>(T)) {
       Out << '{';
       switch (AT->getSizeModifier()) {
-      case ArrayType::Static:
+      case ArraySizeModifier::Static:
         Out << 's';
         break;
-      case ArrayType::Star:
+      case ArraySizeModifier::Star:
         Out << '*';
         break;
-      case ArrayType::Normal:
+      case ArraySizeModifier::Normal:
         Out << 'n';
         break;
       }
@@ -1034,6 +1068,15 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
     VisitType(Arg.getIntegralType());
     Out << Arg.getAsIntegral();
     break;
+
+  case TemplateArgument::StructuralValue: {
+    Out << 'S';
+    VisitType(Arg.getStructuralValueType());
+    ODRHash Hash{};
+    Hash.AddStructuralValue(Arg.getAsStructuralValue());
+    Out << Hash.CalculateHash();
+    break;
+  }
   }
 }
 

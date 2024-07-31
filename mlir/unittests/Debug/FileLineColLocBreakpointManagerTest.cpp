@@ -98,7 +98,7 @@ TEST(FileLineColLocBreakpointManager, OperationMatch) {
   // Set a breakpoint matching only the second operation in the list.
   auto *breakpoint = breakpointManager.addBreakpoint(
       fileNames[0], lineColLoc[0].first, lineColLoc[0].second);
-  auto checkMatchIdxs = [&](DenseSet<int> idxs) {
+  auto checkMatchIdxs = [&](const DenseSet<int> &idxs) {
     counter = 0;
     int reference = 0;
     for (int i = 0; i < (int)operations.size(); ++i) {

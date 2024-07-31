@@ -10,17 +10,18 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 int printf_main(Writer *writer, const char *__restrict str,
                 internal::ArgList &args);
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_MAIN_H

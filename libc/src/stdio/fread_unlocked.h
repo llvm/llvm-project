@@ -9,13 +9,15 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H
 #define LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
+#include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 size_t fread_unlocked(void *__restrict buffer, size_t size, size_t nmemb,
                       ::FILE *stream);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H

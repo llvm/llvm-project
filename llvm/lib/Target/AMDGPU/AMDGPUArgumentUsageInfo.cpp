@@ -60,6 +60,7 @@ bool AMDGPUArgumentUsageInfo::doFinalization(Module &M) {
   return false;
 }
 
+// TODO: Print preload kernargs?
 void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
   for (const auto &FI : ArgInfoMap) {
     OS << "Arguments for " << FI.first->getName() << '\n'
@@ -114,6 +115,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
     return std::tuple(
         PrivateSegmentWaveByteOffset ? &PrivateSegmentWaveByteOffset : nullptr,
         &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_SIZE:
+    return {PrivateSegmentSize ? &PrivateSegmentSize : nullptr,
+            &AMDGPU::SGPR_32RegClass, LLT::scalar(32)};
   case AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR:
     return std::tuple(KernargSegmentPtr ? &KernargSegmentPtr : nullptr,
                       &AMDGPU::SGPR_64RegClass,
@@ -148,7 +152,7 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
   llvm_unreachable("unexpected preloaded value type");
 }
 
-constexpr AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
+AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AMDGPUFunctionArgInfo AI;
   AI.PrivateSegmentBuffer
     = ArgDescriptor::createRegister(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3);

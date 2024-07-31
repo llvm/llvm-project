@@ -50,8 +50,7 @@ public:
   void setMemoryPermission(uptr Addr, uptr Size, uptr Flags) {
     DCHECK(isAllocated());
     DCHECK((Addr >= getBase()) && (Addr + Size <= getBase() + getCapacity()));
-    return static_cast<Derived *>(this)->setMemoryPermissionImpl(Addr, Size,
-                                                                 Flags);
+    return invokeImpl(&Derived::setMemoryPermissionImpl, Addr, Size, Flags);
   }
 
   // Suggest releasing a set of contiguous physical pages back to the OS. Note

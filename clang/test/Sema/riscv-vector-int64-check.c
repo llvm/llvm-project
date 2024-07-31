@@ -5,4 +5,17 @@
 #include <riscv_vector.h>
 
 vint64m1_t foo() { /* expected-error {{RISC-V type 'vint64m1_t' (aka '__rvv_int64m1_t') requires the 'zve64x' extension}} */
-} /* expected-warning {{non-void function does not return a value}}*/
+  vint64m1_t i64m1; /* expected-error {{RISC-V type 'vint64m1_t' (aka '__rvv_int64m1_t') requires the 'zve64x' extension}} */
+
+  (void)i64m1; /* expected-error {{RISC-V type 'vint64m1_t' (aka '__rvv_int64m1_t') requires the 'zve64x' extension}} */
+
+  return i64m1; /* expected-error {{RISC-V type 'vint64m1_t' (aka '__rvv_int64m1_t') requires the 'zve64x' extension}} */
+}
+
+vint64m1x2_t bar() { /* expected-error {{RISC-V type 'vint64m1x2_t' (aka '__rvv_int64m1x2_t') requires the 'zve64x' extension}} */
+  vint64m1x2_t i64m1x2; /* expected-error {{RISC-V type 'vint64m1x2_t' (aka '__rvv_int64m1x2_t') requires the 'zve64x' extension}} */
+
+  (void)i64m1x2; /* expected-error {{RISC-V type 'vint64m1x2_t' (aka '__rvv_int64m1x2_t') requires the 'zve64x' extension}} */
+
+  return i64m1x2; /* expected-error {{RISC-V type 'vint64m1x2_t' (aka '__rvv_int64m1x2_t') requires the 'zve64x' extension}} */
+}

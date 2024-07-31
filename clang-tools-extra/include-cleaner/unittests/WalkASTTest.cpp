@@ -50,7 +50,7 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   Inputs.ExtraFiles["target.h"] = Target.code().str();
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
-  Inputs.ExtraArgs.push_back("-std=c++17");
+  Inputs.ExtraArgs.push_back("-std=c++20");
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -114,7 +114,7 @@ TEST(WalkAST, DeclRef) {
   testWalk("int $explicit^x;", "int y = ^x;");
   testWalk("int $explicit^foo();", "int y = ^foo();");
   testWalk("namespace ns { int $explicit^x; }", "int y = ns::^x;");
-  testWalk("struct $implicit^S { static int x; };", "int y = S::^x;");
+  testWalk("struct S { static int x; };", "int y = S::^x;");
   // Canonical declaration only.
   testWalk("extern int $explicit^x; int x;", "int y = ^x;");
   // Return type of `foo` isn't used.
@@ -213,6 +213,8 @@ TEST(WalkAST, VarTemplates) {
     template<typename T> T* $explicit^Foo<T*> = nullptr;)cpp",
                        "int *x = ^Foo<int *>;"),
               ElementsAre(Decl::VarTemplateSpecialization));
+  // Implicit specializations through explicit instantiations has source
+  // locations pointing at the primary template.
   EXPECT_THAT(testWalk(R"cpp(
     template<typename T> T $explicit^Foo = 0;
     template int Foo<int>;)cpp",
@@ -227,30 +229,27 @@ TEST(WalkAST, FunctionTemplates) {
   EXPECT_THAT(testWalk("template<typename T> void foo(T) {}",
                        "template void ^foo<int>(int);"),
               ElementsAre());
-  // FIXME: Report specialized template as used from explicit specializations.
-  EXPECT_THAT(testWalk("template<typename T> void foo(T);",
+  EXPECT_THAT(testWalk("template<typename T> void $explicit^foo(T);",
                        "template<> void ^foo<int>(int);"),
-              ElementsAre());
-  EXPECT_THAT(testWalk("template<typename T> void foo(T) {}",
-                       "template<typename T> void ^foo(T*) {}"),
-              ElementsAre());
+              ElementsAre(Decl::FunctionTemplate));
 
   // Implicit instantiations references most relevant template.
   EXPECT_THAT(testWalk(R"cpp(
     template <typename T> void $explicit^foo() {})cpp",
                        "auto x = []{ ^foo<int>(); };"),
-              ElementsAre(Decl::FunctionTemplate));
-  // FIXME: DeclRefExpr points at primary template, not the specialization.
+              ElementsAre(Decl::Function));
   EXPECT_THAT(testWalk(R"cpp(
-    template<typename T> void $explicit^foo() {}
-    template<> void foo<int>(){})cpp",
+    template<typename T> void foo() {}
+    template<> void $explicit^foo<int>(){})cpp",
                        "auto x = []{ ^foo<int>(); };"),
-              ElementsAre(Decl::FunctionTemplate));
+              ElementsAre(Decl::Function));
+  // The decl is actually the specialization, but explicit instantations point
+  // at the primary template.
   EXPECT_THAT(testWalk(R"cpp(
     template<typename T> void $explicit^foo() {};
     template void foo<int>();)cpp",
                        "auto x = [] { ^foo<int>(); };"),
-              ElementsAre(Decl::FunctionTemplate));
+              ElementsAre(Decl::Function));
 }
 TEST(WalkAST, TemplateSpecializationsFromUsingDecl) {
   // Class templates
@@ -282,7 +281,6 @@ template<> void $ambiguous^function(int);       // full specialization
            "using ns::^function;");
 }
 
-
 TEST(WalkAST, Alias) {
   testWalk(R"cpp(
     namespace ns { int x; }
@@ -310,6 +308,14 @@ TEST(WalkAST, Alias) {
     namespace ns { using ::$explicit^Foo; }
     template<> struct ns::Foo<int> {};)cpp",
            "ns::^Foo<int> x;");
+  testWalk(R"cpp(
+    namespace ns { enum class foo { bar }; }
+    using ns::foo;)cpp",
+           "auto x = foo::^bar;");
+  testWalk(R"cpp(
+    namespace ns { enum foo { bar }; }
+    using ns::foo::$explicit^bar;)cpp",
+           "auto x = ^bar;");
 }
 
 TEST(WalkAST, Using) {
@@ -339,6 +345,8 @@ TEST(WalkAST, Using) {
     }
     using ns::$explicit^Y;)cpp",
            "^Y<int> x;");
+  testWalk("namespace ns { enum E {A}; } using enum ns::$explicit^E;",
+           "auto x = ^A;");
 }
 
 TEST(WalkAST, Namespaces) {
@@ -400,10 +408,10 @@ TEST(WalkAST, NestedTypes) {
 }
 
 TEST(WalkAST, MemberExprs) {
-  testWalk("struct $implicit^S { static int f; };", "void foo() { S::^f; }");
-  testWalk("struct B { static int f; }; struct $implicit^S : B {};",
+  testWalk("struct S { static int f; };", "void foo() { S::^f; }");
+  testWalk("struct B { static int f; }; struct S : B {};",
            "void foo() { S::^f; }");
-  testWalk("struct B { static void f(); }; struct $implicit^S : B {};",
+  testWalk("struct B { static void f(); }; struct S : B {};",
            "void foo() { S::^f; }");
   testWalk("struct B { static void f(); }; ",
            "struct S : B { void foo() { ^f(); } };");
@@ -498,6 +506,8 @@ TEST(WalkAST, Functions) {
   // Definition uses declaration, not the other way around.
   testWalk("void $explicit^foo();", "void ^foo() {}");
   testWalk("void foo() {}", "void ^foo();");
+  testWalk("template <typename> void $explicit^foo();",
+           "template <typename> void ^foo() {}");
 
   // Unresolved calls marks all the overloads.
   testWalk("void $ambiguous^foo(int); void $ambiguous^foo(char);",
@@ -505,10 +515,45 @@ TEST(WalkAST, Functions) {
 }
 
 TEST(WalkAST, Enums) {
-  testWalk("enum E { $explicit^A = 42, B = 43 };", "int e = ^A;");
+  testWalk("enum E { $explicit^A = 42 };", "int e = ^A;");
   testWalk("enum class $explicit^E : int;", "enum class ^E : int {};");
   testWalk("enum class E : int {};", "enum class ^E : int ;");
+  testWalk("namespace ns { enum E { $explicit^A = 42 }; }", "int e = ns::^A;");
+  testWalk("namespace ns { enum E { A = 42 }; } using ns::E::$explicit^A;",
+           "int e = ^A;");
+  testWalk("namespace ns { enum E { A = 42 }; } using enum ns::$explicit^E;",
+           "int e = ^A;");
+  testWalk(R"(namespace ns { enum E { A = 42 }; }
+              struct S { using enum ns::E; };)",
+           "int e = S::^A;");
+  testWalk(R"(namespace ns { enum E { A = 42 }; }
+              struct S { using ns::E::A; };)",
+           "int e = S::^A;");
 }
 
+TEST(WalkAST, InitializerList) {
+  testWalk(R"cpp(
+       namespace std {
+        template <typename T> struct $implicit^initializer_list { const T *a, *b; };
+       })cpp",
+           R"cpp(
+       const char* s = "";
+       auto sx = ^{s};)cpp");
+}
+
+TEST(WalkAST, Concepts) {
+  std::string Concept = "template<typename T> concept $explicit^Foo = true;";
+  testWalk(Concept, "template<typename T>concept Bar = ^Foo<T> && true;");
+  testWalk(Concept, "template<^Foo T>void func() {}");
+  testWalk(Concept, "template<typename T> requires ^Foo<T> void func() {}");
+  testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
+  testWalk(Concept, "void func(^Foo auto x) {}");
+  testWalk(Concept, "void func() { ^Foo auto x = 1; }");
+}
+
+TEST(WalkAST, FriendDecl) {
+  testWalk("void $explicit^foo();", "struct Bar { friend void ^foo(); };");
+  testWalk("struct $explicit^Foo {};", "struct Bar { friend struct ^Foo; };");
+}
 } // namespace
 } // namespace clang::include_cleaner

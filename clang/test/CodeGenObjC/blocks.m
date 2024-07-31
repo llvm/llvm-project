@@ -1,13 +1,16 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -Wno-strict-prototypes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -Wno-strict-prototypes -o - %s | FileCheck --check-prefix=CHECK --check-prefix=SIG_STR %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -Wno-strict-prototypes -fdisable-block-signature-string -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NO_SIG_STR %s
 
 // Check that there is only one capture (20o) in the copy/dispose function
 // names.
 
-// CHECK: @[[BLOCK_DESCRIPTOR0:.*]] = linkonce_odr hidden unnamed_addr constant { i32, i32, ptr, ptr, ptr, i32 } { i32 0, i32 28, ptr @__copy_helper_block_4_20o, ptr @__destroy_helper_block_4_20o, ptr @{{.*}}, i32 512 },
+// SIG_STR: @[[STR3:.*]] = private unnamed_addr constant [6 x i8] c"v4@?0\00", align 1
+// SIG_STR: @[[BLOCK_DESCRIPTOR0:"__block_descriptor_28_4_20o_e5_v4\\01\?0l"]] = linkonce_odr hidden unnamed_addr constant { i32, i32, ptr, ptr, ptr, i32 } { i32 0, i32 28, ptr @__copy_helper_block_4_20o, ptr @__destroy_helper_block_4_20o, ptr @[[STR3]], i32 512 },
+// NO_SIG_STR: @[[BLOCK_DESCRIPTOR0:__block_descriptor_28_4_20o_e0_l]] = linkonce_odr hidden unnamed_addr constant { i32, i32, ptr, ptr, ptr, i32 } { i32 0, i32 28, ptr @__copy_helper_block_4_20o, ptr @__destroy_helper_block_4_20o, ptr null, i32 512 },
+
 
 void (^gb0)(void);
 
-// test1.  All of this is somehow testing rdar://6676764
 struct S {
   void (^F)(struct S*);
 } P;
@@ -45,7 +48,6 @@ void foo(T *P) {
 }
 @end
 
-// rdar://problem/9006315
 // In-depth test for the initialization of a __weak __block variable.
 @interface Test2 -(void) destroy; @end
 void test2(Test2 *x) {
@@ -93,7 +95,6 @@ void test2(Test2 *x) {
   test2_helper(^{ [weakX destroy]; });
 }
 
-// rdar://problem/9124263
 // In the test above, check that the use in the invocation function
 // doesn't require a read barrier.
 // CHECK-LABEL:    define internal void @__test2_block_invoke
@@ -104,7 +105,6 @@ void test2(Test2 *x) {
 // CHECK-NEXT: [[WEAKX:%.*]] = getelementptr inbounds [[WEAK_T]]{{.*}}, ptr [[T4]], i32 0, i32 6
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[WEAKX]], align 4
 
-// rdar://problem/12722954
 // Make sure that ... is appropriately positioned in a block call.
 void test3(void (^block)(int, ...)) {
   block(0, 1, 2, 3);
@@ -136,6 +136,9 @@ void test5(A *a) {
 }
 
 // CHECK-LABEL: define void @test5(
+// CHECK: %[[FLAGS:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 1
+// SIG_STR: store i32 -1040187392, ptr %[[FLAGS]], align 4
+// NO_SIG_STR: store i32 -2113929216, ptr %[[FLAGS]], align 4
 // CHECK: %[[V0:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR0]], ptr %[[V0]],
 

@@ -214,8 +214,8 @@ entry:
 define i32 @foo15(i32 %a, i32 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo15:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cinc w0, w8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -227,8 +227,8 @@ entry:
 define i32 @foo16(i32 %a, i32 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cinc w0, w8, le
 ; CHECK-NEXT:    ret
 entry:
@@ -240,8 +240,8 @@ entry:
 define i64 @foo17(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    cinc x0, x8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -253,8 +253,8 @@ entry:
 define i64 @foo18(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    cinc x0, x8, le
 ; CHECK-NEXT:    ret
 entry:
@@ -267,8 +267,8 @@ entry:
 define i64 @foo18_overflow1(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    csel x0, x8, xzr, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -281,8 +281,8 @@ entry:
 define i64 @foo18_overflow2(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    csel x0, xzr, x8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -420,3 +420,92 @@ entry:
   ret i64 %add
 }
 
+define i32 @or(i32 %num, i32 %x) {
+; CHECK-LABEL: or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xff00
+; CHECK-NEXT:    cmp w1, #0
+; CHECK-NEXT:    cinc w0, w8, ne
+; CHECK-NEXT:    ret
+entry:
+  %and = and i32 %num, 65280
+  %tobool.not = icmp ne i32 %x, 0
+  %cond = zext i1 %tobool.not to i32
+  %or = or disjoint i32 %and, %cond
+  ret i32 %or
+}
+
+define i64 @or64(i64 %num, i64 %x) {
+; CHECK-LABEL: or64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0xff00
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    cinc x0, x8, ne
+; CHECK-NEXT:    ret
+entry:
+  %and = and i64 %num, 65280
+  %tobool.not = icmp ne i64 %x, 0
+  %conv = zext i1 %tobool.not to i64
+  %or = or disjoint i64 %and, %conv
+  ret i64 %or
+}
+
+define i32 @selor32(i32 %num, i32 %x) {
+; CHECK-LABEL: selor32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xff00
+; CHECK-NEXT:    cmp w1, #0
+; CHECK-NEXT:    cinc w0, w8, ne
+; CHECK-NEXT:    ret
+entry:
+  %and = and i32 %num, 65280
+  %tobool.not = icmp ne i32 %x, 0
+  %or = or disjoint i32 %and, 1
+  %sel = select i1 %tobool.not, i32 %or, i32 %and
+  ret i32 %sel
+}
+
+define i32 @selor32_2(i32 %num, i32 %x) {
+; CHECK-LABEL: selor32_2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xff00
+; CHECK-NEXT:    cmp w1, #0
+; CHECK-NEXT:    orr w9, w8, #0x2
+; CHECK-NEXT:    csel w0, w9, w8, ne
+; CHECK-NEXT:    ret
+entry:
+  %and = and i32 %num, 65280
+  %tobool.not = icmp ne i32 %x, 0
+  %or = or disjoint i32 %and, 2
+  %sel = select i1 %tobool.not, i32 %or, i32 %and
+  ret i32 %sel
+}
+
+define i64 @selor64(i64 %num, i64 %x) {
+; CHECK-LABEL: selor64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0xff00
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    cinc x0, x8, ne
+; CHECK-NEXT:    ret
+entry:
+  %and = and i64 %num, 65280
+  %tobool.not = icmp ne i64 %x, 0
+  %or = or disjoint i64 %and, 1
+  %sel = select i1 %tobool.not, i64 %or, i64 %and
+  ret i64 %sel
+}
+
+; Same as above with disjoint but without knowing haveNoCommonBitsSet.
+define i64 @selor64_disjoint(i64 %num, i64 %x) {
+; CHECK-LABEL: selor64_disjoint:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    cinc x0, x0, ne
+; CHECK-NEXT:    ret
+entry:
+  %tobool.not = icmp ne i64 %x, 0
+  %or = or disjoint i64 %num, 1
+  %sel = select i1 %tobool.not, i64 %or, i64 %num
+  ret i64 %sel
+}

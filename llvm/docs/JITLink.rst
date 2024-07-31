@@ -15,8 +15,8 @@ what a section, symbol, and relocation are you should find this document
 accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
-JITLink is a library for :ref:`jit_linking`. It was built to support the ORC JIT
-APIs and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
+JITLink is a library for :ref:`jit_linking`. It was built to support the :doc:`ORC JIT
+APIs<ORCv2>` and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
 developed with the aim of supporting the full set of features provided by each
 object format; including static initializers, exception handling, thread local
 variables, and language runtime registration. Supporting these features enables
@@ -466,7 +466,7 @@ finally transferring linked memory to the executing process.
 
       Calls the ``JITLinkContext``'s ``JITLinkMemoryManager`` to allocate both
       working and target memory for the graph. As part of this process the
-      ``JITLinkMemoryManager`` will update the the addresses of all nodes
+      ``JITLinkMemoryManager`` will update the addresses of all nodes
       defined in the graph to their assigned target address.
 
       Note: This step only updates the addresses of nodes defined in this graph.
@@ -1082,48 +1082,68 @@ Major outstanding projects include:
   generic and should be split into an ELFLinkGraphBuilder base class along the
   same lines as the existing generic MachOLinkGraphBuilder.
 
-* Implement ELF support for arm64.
+* Implement support for arm32.
 
-  Once the architecture support code has been refactored to enable sharing and
-  ELF link graph construction has been refactored to allow re-use we should be
-  able to construct an ELF / arm64 JITLink implementation by combining
-  these existing pieces.
-
-* Implement support for new architectures.
-
-* Implement support for COFF.
-
-  There is no COFF implementation of JITLink yet. Such an implementation should
-  follow the MachO and ELF paths: a generic COFFLinkGraphBuilder base class that
-  can be specialized for each architecture.
-
-* Design and implement a shared-memory based JITLinkMemoryManager.
-
-  One use-case that is expected to be common is out-of-process linking targeting
-  another process on the same machine. This allows JITs to sandbox JIT'd code.
-  For this use case a shared-memory based JITLinkMemoryManager would provide the
-  most efficient form of allocation. Creating one will require designing a
-  generic API for shared memory though, as LLVM does not currently have one.
+* Implement support for other new architectures.
 
 JITLink Availability and Feature Status
 ---------------------------------------
 
+The following table describes the status of the JITlink backends for various
+format / architecture combinations (as of July 2023).
+
+Support levels:
+
+* None: No backend. JITLink will return an "architecture not supported" error.
+  Represented by empty cells in the table below.
+* Skeleton: A backend exists, but does not support commonly used relocations.
+  Even simple programs are likely to trigger an "unsupported relocation" error.
+  Backends in this state may be easy to improve by implementing new relocations.
+  Consider getting involved!
+* Basic: The backend supports simple programs, isn't ready for general use yet.
+* Usable: The backend is useable for general use for at least one code and
+  relocation model.
+* Good: The backend supports almost all relocations. Advanced features like
+  native thread local storage may not be available yet.
+* Complete: The backend supports all relocations and object format features.
+
 .. list-table:: Availability and Status
    :widths: 10 30 30 30
    :header-rows: 1
+   :stub-columns: 1
 
    * - Architecture
      - ELF
      - COFF
      - MachO
+   * - arm32
+     - Skeleton
+     -
+     -
    * - arm64
+     - Usable
+     -
+     - Good
+   * - LoongArch
+     - Good
      -
      -
-     - Partial (small code model, PIC relocation model only)
+   * - PowerPC 64
+     - Usable
+     -
+     -
+   * - RISC-V
+     - Good
+     -
+     -
+   * - x86-32
+     - Basic
+     -
+     -
    * - x86-64
-     - Partial
-     -
-     - Full (except TLV and debugging)
+     - Good
+     - Usable
+     - Good
 
 .. [1] See ``llvm/examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin`` for
        a full worked example.

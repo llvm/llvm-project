@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRNCMP_H
 #define LLVM_LIBC_SRC_STRING_STRNCMP_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int strncmp(const char *left, const char *right, size_t n);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRNCMP_H

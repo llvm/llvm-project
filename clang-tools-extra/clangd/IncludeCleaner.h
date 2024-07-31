@@ -21,6 +21,7 @@
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
@@ -52,36 +53,31 @@ struct IncludeCleanerFindings {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
 };
 
-IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST);
+IncludeCleanerFindings
+computeIncludeCleanerFindings(ParsedAST &AST,
+                              bool AnalyzeAngledIncludes = false);
 
 using HeaderFilter = llvm::ArrayRef<std::function<bool(llvm::StringRef)>>;
 std::vector<Diag>
 issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
                                const IncludeCleanerFindings &Findings,
+                               const ThreadsafeFS &TFS,
                                HeaderFilter IgnoreHeader = {});
-
-/// Affects whether standard library includes should be considered for
-/// removal. This is off by default for now due to implementation limitations:
-/// - macros are not tracked
-/// - symbol names without a unique associated header are not tracked
-/// - references to std-namespaced C types are not properly tracked:
-///   instead of std::size_t -> <cstddef> we see ::size_t -> <stddef.h>
-/// FIXME: remove this hack once the implementation is good enough.
-void setIncludeCleanerAnalyzesStdlib(bool B);
 
 /// Converts the clangd include representation to include-cleaner
 /// include representation.
-include_cleaner::Includes
-convertIncludes(const SourceManager &SM,
-                const llvm::ArrayRef<Inclusion> Includes);
+include_cleaner::Includes convertIncludes(const ParsedAST &);
 
 std::vector<include_cleaner::SymbolReference>
 collectMacroReferences(ParsedAST &AST);
 
-/// Find the first provider in the list that is matched by the includes.
-std::optional<include_cleaner::Header>
-firstMatchedProvider(const include_cleaner::Includes &Includes,
-                     llvm::ArrayRef<include_cleaner::Header> Providers);
+/// Whether this #include is considered to provide a particular symbol.
+///
+/// This means it satisfies the reference, and no other #include does better.
+/// `Providers` is the symbol's candidate headers according to walkUsed().
+bool isPreferredProvider(const Inclusion &, const include_cleaner::Includes &,
+                         llvm::ArrayRef<include_cleaner::Header> Providers);
+
 } // namespace clangd
 } // namespace clang
 

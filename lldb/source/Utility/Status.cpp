@@ -92,8 +92,7 @@ llvm::Error Status::ToError() const {
   if (m_type == ErrorType::eErrorTypePOSIX)
     return llvm::errorCodeToError(
         std::error_code(m_code, std::generic_category()));
-  return llvm::make_error<llvm::StringError>(AsCString(),
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError(AsCString());
 }
 
 Status::~Status() = default;
@@ -179,14 +178,6 @@ ErrorType Status::GetType() const { return m_type; }
 // Returns true if this object contains a value that describes an error or
 // otherwise non-success result.
 bool Status::Fail() const { return m_code != 0; }
-
-// Set accessor for the error value to "err" and the type to
-// "eErrorTypeMachKernel"
-void Status::SetMachError(uint32_t err) {
-  m_code = err;
-  m_type = eErrorTypeMachKernel;
-  m_string.clear();
-}
 
 void Status::SetExpressionError(lldb::ExpressionResults result,
                                 const char *mssg) {

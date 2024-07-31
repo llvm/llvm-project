@@ -57,12 +57,8 @@ protected:
   llvm::Value *getThisValue(CodeGenFunction &CGF) {
     return CGF.CXXABIThisValue;
   }
-  Address getThisAddress(CodeGenFunction &CGF) {
-    return Address(
-        CGF.CXXABIThisValue,
-        CGF.ConvertTypeForMem(CGF.CXXABIThisDecl->getType()->getPointeeType()),
-        CGF.CXXABIThisAlignment);
-  }
+
+  Address getThisAddress(CodeGenFunction &CGF);
 
   /// Issue a diagnostic about unsupported features in the ABI.
   void ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S);
@@ -278,8 +274,7 @@ public:
   getAddrOfCXXCatchHandlerType(QualType Ty, QualType CatchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
-  virtual bool shouldTypeidBeNullChecked(bool IsDeref,
-                                         QualType SrcRecordTy) = 0;
+  virtual bool shouldTypeidBeNullChecked(QualType SrcRecordTy) = 0;
   virtual void EmitBadTypeidCall(CodeGenFunction &CGF) = 0;
   virtual llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                                   Address ThisPtr,
@@ -287,16 +282,26 @@ public:
 
   virtual bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
                                                   QualType SrcRecordTy) = 0;
+  virtual bool shouldEmitExactDynamicCast(QualType DestRecordTy) = 0;
 
-  virtual llvm::Value *
-  EmitDynamicCastCall(CodeGenFunction &CGF, Address Value,
-                      QualType SrcRecordTy, QualType DestTy,
-                      QualType DestRecordTy, llvm::BasicBlock *CastEnd) = 0;
+  virtual llvm::Value *emitDynamicCastCall(CodeGenFunction &CGF, Address Value,
+                                           QualType SrcRecordTy,
+                                           QualType DestTy,
+                                           QualType DestRecordTy,
+                                           llvm::BasicBlock *CastEnd) = 0;
 
-  virtual llvm::Value *EmitDynamicCastToVoid(CodeGenFunction &CGF,
+  virtual llvm::Value *emitDynamicCastToVoid(CodeGenFunction &CGF,
                                              Address Value,
-                                             QualType SrcRecordTy,
-                                             QualType DestTy) = 0;
+                                             QualType SrcRecordTy) = 0;
+
+  /// Emit a dynamic_cast from SrcRecordTy to DestRecordTy. The cast fails if
+  /// the dynamic type of Value is not exactly DestRecordTy.
+  virtual llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address Value,
+                                            QualType SrcRecordTy,
+                                            QualType DestTy,
+                                            QualType DestRecordTy,
+                                            llvm::BasicBlock *CastSuccess,
+                                            llvm::BasicBlock *CastFail) = 0;
 
   virtual bool EmitBadCastCall(CodeGenFunction &CGF) = 0;
 
@@ -465,12 +470,6 @@ public:
                                   BaseSubobject Base,
                                   const CXXRecordDecl *NearestVBase) = 0;
 
-  /// Get the address point of the vtable for the given base subobject while
-  /// building a constexpr.
-  virtual llvm::Constant *
-  getVTableAddressPointForConstExpr(BaseSubobject Base,
-                                    const CXXRecordDecl *VTableClass) = 0;
-
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.
   virtual llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
@@ -505,13 +504,15 @@ public:
   virtual void setThunkLinkage(llvm::Function *Thunk, bool ForVTable,
                                GlobalDecl GD, bool ReturnAdjustment) = 0;
 
-  virtual llvm::Value *performThisAdjustment(CodeGenFunction &CGF,
-                                             Address This,
-                                             const ThisAdjustment &TA) = 0;
+  virtual llvm::Value *
+  performThisAdjustment(CodeGenFunction &CGF, Address This,
+                        const CXXRecordDecl *UnadjustedClass,
+                        const ThunkInfo &TI) = 0;
 
-  virtual llvm::Value *performReturnAdjustment(CodeGenFunction &CGF,
-                                               Address Ret,
-                                               const ReturnAdjustment &RA) = 0;
+  virtual llvm::Value *
+  performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                          const CXXRecordDecl *UnadjustedClass,
+                          const ReturnAdjustment &RA) = 0;
 
   virtual void EmitReturnFromThunk(CodeGenFunction &CGF,
                                    RValue RV, QualType ResultType);

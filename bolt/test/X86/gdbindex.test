@@ -4,22 +4,22 @@ RUN: ld.lld --gdb-index %t.o %t2.o -o %tfile.exe
 RUN: llvm-bolt %tfile.exe -o %tfile.exe.bolt --update-debug-sections
 RUN: llvm-dwarfdump -gdb-index %tfile.exe.bolt | FileCheck %s
 
-; test.cpp:
-; int main() { return 0; }
-; test2.cpp:
-; int main2() { return 0; }
-; Compiled with:
-; gcc -gsplit-dwarf -c test.cpp test2.cpp
-; gold --gdb-index test.o test2.o -o dwarfdump-gdbindex-v7.elf-x86-64
-; gcc version 5.3.1 20160413, GNU gold (GNU Binutils for Ubuntu 2.26) 1.11
-; Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
+;; test.cpp:
+;; int main() { return 0; }
+;; test2.cpp:
+;; int main2() { return 0; }
+;; Compiled with:
+;; gcc -gsplit-dwarf -c test.cpp test2.cpp
+;; gold --gdb-index test.o test2.o -o dwarfdump-gdbindex-v7.elf-x86-64
+;; gcc version 5.3.1 20160413, GNU gold (GNU Binutils for Ubuntu 2.26) 1.11
+;; Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
 
 ; CHECK-LABEL: .gdb_index contents:
 ; CHECK: Version = 7
 
 ; CHECK:      CU list offset = 0x18, has 2 entries:
-; CHECK-NEXT:   0: Offset = 0x0, Length = 0x4b
-; CHECK-NEXT:   1: Offset = 0x4b, Length = 0x4f
+; CHECK-NEXT:   0: Offset = 0x0, Length = 0x4f
+; CHECK-NEXT:   1: Offset = 0x4f, Length = 0x53
 
 ; CHECK:      Types CU list offset = 0x38, has 0 entries:
 

@@ -22,7 +22,7 @@ func.func @conversion_dynamic(%arg0 : memref<?xf32>) -> memref<?xf32> {
 }
 
 // CHECK:      %[[CONST:.*]] = arith.constant
-// CHECK-NEXT: %[[DIM:.*]] = memref.dim %[[ARG:.*]], %[[CONST]]
+// CHECK:      %[[DIM:.*]] = memref.dim %[[ARG:.*]], %[[CONST]]
 // CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc(%[[DIM]])
 // CHECK-NEXT: memref.copy %[[ARG]], %[[ALLOC]]
 // CHECK-NEXT: memref.dealloc %[[ARG]]
@@ -30,12 +30,25 @@ func.func @conversion_dynamic(%arg0 : memref<?xf32>) -> memref<?xf32> {
 
 // -----
 
+// CHECK-LABEL: @conversion_unknown
 func.func @conversion_unknown(%arg0 : memref<*xf32>) -> memref<*xf32> {
-// expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
   %1 = bufferization.clone %arg0 : memref<*xf32> to memref<*xf32>
   memref.dealloc %arg0 : memref<*xf32>
   return %1 : memref<*xf32>
 }
+
+// CHECK:      %[[RANK:.*]] = memref.rank %[[ARG:.*]]
+// CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca(%[[RANK]])
+// CHECK-NEXT: %[[FOR:.*]] = scf.for
+// CHECK-NEXT: %[[DIM:.*]] = memref.dim %[[ARG:.*]] %[[ARG:.*]]
+// CHECK-NEXT: memref.store %[[DIM:.*]], %[[ALLOCA:.*]][%[[ARG:.*]]]
+// CHECK-NEXT: %[[MUL:.*]] = arith.muli %[[ARG:.*]], %[[DIM:.*]]
+// CHECK-NEXT: scf.yield %[[MUL:.*]]
+// CHECK:      %[[ALLOC:.*]] = memref.alloc(%[[FOR:.*]])
+// CHECK-NEXT: %[[RESHAPE:.*]] = memref.reshape %[[ALLOC:.*]]
+// CHECK-NEXT: memref.copy
+// CHECK-NEXT: memref.dealloc
+// CHECK-NEXT: return %[[RESHAPE:.*]]
 
 // -----
 
@@ -66,3 +79,20 @@ func.func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, strided<[10]
   memref.dealloc %arg0 : memref<?xf32, strided<[10], offset: ?>>
   return %1 : memref<?xf32, strided<[10], offset: ?>>
 }
+
+// -----
+// Test: check that the dealloc lowering pattern is registered.
+
+// CHECK-NOT: func @deallocHelper
+// CHECK-LABEL: func @conversion_dealloc_simple
+// CHECK-SAME: [[ARG0:%.+]]: memref<2xf32>
+// CHECK-SAME: [[ARG1:%.+]]: i1
+func.func @conversion_dealloc_simple(%arg0: memref<2xf32>, %arg1: i1) {
+  bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg1)
+  return
+}
+
+//      CHECK: scf.if [[ARG1]] {
+// CHECK-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
+// CHECK-NEXT: }
+// CHECK-NEXT: return

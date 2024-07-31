@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
 
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE2)
 #include "x86_64/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/sqrt.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-#include "riscv64/sqrt.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "riscv/sqrt.h"
 #else
 #include "generic/sqrt.h"
 
 #endif
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H

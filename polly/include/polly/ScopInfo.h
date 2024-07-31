@@ -470,6 +470,8 @@ public:
     RT_BOR,  ///< Bitwise Or
     RT_BXOR, ///< Bitwise XOr
     RT_BAND, ///< Bitwise And
+
+    RT_BOTTOM, ///< Pseudo type for the data flow analysis
   };
 
   using SubscriptsTy = SmallVector<const SCEV *, 4>;
@@ -509,7 +511,7 @@ private:
   /// Here not all iterations access the same memory location, but iterations
   /// for which j = 0 holds do. After lifting the equality check in ScopBuilder,
   /// subsequent transformations do not only need check if a statement is
-  /// reduction like, but they also need to verify that that the reduction
+  /// reduction like, but they also need to verify that the reduction
   /// property is only exploited for statement instances that load from and
   /// store to the same data location. Doing so at dependence analysis time
   /// could allow us to handle the above example.
@@ -1139,6 +1141,7 @@ class ScopStmt final {
   friend class ScopBuilder;
 
 public:
+  using MemoryAccessVec = llvm::SmallVector<MemoryAccess *, 8>;
   /// Create the ScopStmt from a BasicBlock.
   ScopStmt(Scop &parent, BasicBlock &bb, StringRef Name, Loop *SurroundingLoop,
            std::vector<Instruction *> Instructions);
@@ -1206,7 +1209,6 @@ private:
   /// The memory accesses of this statement.
   ///
   /// The only side effects of a statement are its memory accesses.
-  using MemoryAccessVec = llvm::SmallVector<MemoryAccess *, 8>;
   MemoryAccessVec MemAccs;
 
   /// Mapping from instructions to (scalar) memory accesses.

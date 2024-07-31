@@ -22,21 +22,10 @@
 
 #include "int_lib.h"
 #include "int_math.h"
+#include "int_types.h"
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-// x86_64 FreeBSD prior v9.3 define fixed-width types incorrectly in
-// 32-bit mode.
-#if defined(__FreeBSD__) && defined(__i386__)
-#include <sys/param.h>
-#if __FreeBSD_version < 903000 // v9.3
-#define uint64_t unsigned long long
-#define int64_t long long
-#undef UINT64_C
-#define UINT64_C(c) (c##ULL)
-#endif
-#endif
 
 #if defined SINGLE_PRECISION
 
@@ -54,8 +43,8 @@ static __inline int rep_clz(rep_t a) { return clzsi(a); }
 // 32x32 --> 64 bit multiply
 static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
   const uint64_t product = (uint64_t)a * b;
-  *hi = product >> 32;
-  *lo = product;
+  *hi = (rep_t)(product >> 32);
+  *lo = (rep_t)product;
 }
 COMPILER_RT_ABI fp_t __addsf3(fp_t a, fp_t b);
 
@@ -69,16 +58,7 @@ typedef double fp_t;
 #define REP_C UINT64_C
 #define significandBits 52
 
-static __inline int rep_clz(rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int rep_clz(rep_t a) { return __builtin_clzll(a); }
 
 #define loWord(a) (a & 0xffffffffU)
 #define hiWord(a) (a >> 32)
@@ -105,17 +85,18 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
 
 #elif defined QUAD_PRECISION
-#if __LDBL_MANT_DIG__ == 113 && defined(__SIZEOF_INT128__)
-#define CRT_LDBL_128BIT
+#if defined(CRT_HAS_F128) && defined(CRT_HAS_128BIT)
 typedef uint64_t half_rep_t;
 typedef __uint128_t rep_t;
 typedef __int128_t srep_t;
-typedef long double fp_t;
+typedef tf_float fp_t;
 #define HALF_REP_C UINT64_C
 #define REP_C (__uint128_t)
+#if defined(CRT_HAS_IEEE_TF)
 // Note: Since there is no explicit way to tell compiler the constant is a
 // 128-bit integer, we let the constant be casted to 128-bit integer
 #define significandBits 112
+#define TF_MANT_DIG (significandBits + 1)
 
 static __inline int rep_clz(rep_t a) {
   const union {
@@ -200,27 +181,17 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 #undef Word_HiMask
 #undef Word_LoMask
 #undef Word_FullMask
-#endif // __LDBL_MANT_DIG__ == 113 && __SIZEOF_INT128__
+#endif // defined(CRT_HAS_IEEE_TF)
+#else
+typedef long double fp_t;
+#endif // defined(CRT_HAS_F128) && defined(CRT_HAS_128BIT)
 #else
 #error SINGLE_PRECISION, DOUBLE_PRECISION or QUAD_PRECISION must be defined.
 #endif
 
 #if defined(SINGLE_PRECISION) || defined(DOUBLE_PRECISION) ||                  \
-    defined(CRT_LDBL_128BIT)
+    (defined(QUAD_PRECISION) && defined(CRT_HAS_TF_MODE))
 #define typeWidth (sizeof(rep_t) * CHAR_BIT)
-#define exponentBits (typeWidth - significandBits - 1)
-#define maxExponent ((1 << exponentBits) - 1)
-#define exponentBias (maxExponent >> 1)
-
-#define implicitBit (REP_C(1) << significandBits)
-#define significandMask (implicitBit - 1U)
-#define signBit (REP_C(1) << (significandBits + exponentBits))
-#define absMask (signBit - 1U)
-#define exponentMask (absMask ^ significandMask)
-#define oneRep ((rep_t)exponentBias << significandBits)
-#define infRep exponentMask
-#define quietBit (implicitBit >> 1)
-#define qnanRep (exponentMask | quietBit)
 
 static __inline rep_t toRep(fp_t x) {
   const union {
@@ -238,13 +209,28 @@ static __inline fp_t fromRep(rep_t x) {
   return rep.f;
 }
 
+#if !defined(QUAD_PRECISION) || defined(CRT_HAS_IEEE_TF)
+#define exponentBits (typeWidth - significandBits - 1)
+#define maxExponent ((1 << exponentBits) - 1)
+#define exponentBias (maxExponent >> 1)
+
+#define implicitBit (REP_C(1) << significandBits)
+#define significandMask (implicitBit - 1U)
+#define signBit (REP_C(1) << (significandBits + exponentBits))
+#define absMask (signBit - 1U)
+#define exponentMask (absMask ^ significandMask)
+#define oneRep ((rep_t)exponentBias << significandBits)
+#define infRep exponentMask
+#define quietBit (implicitBit >> 1)
+#define qnanRep (exponentMask | quietBit)
+
 static __inline int normalize(rep_t *significand) {
   const int shift = rep_clz(*significand) - rep_clz(implicitBit);
   *significand <<= shift;
   return 1 - shift;
 }
 
-static __inline void wideLeftShift(rep_t *hi, rep_t *lo, int count) {
+static __inline void wideLeftShift(rep_t *hi, rep_t *lo, unsigned int count) {
   *hi = *hi << count | *lo >> (typeWidth - count);
   *lo = *lo << count;
 }
@@ -340,6 +326,8 @@ static __inline fp_t __compiler_rt_scalbnX(fp_t x, int y) {
     return fromRep(sign | ((rep_t)exp << significandBits) | sig);
 }
 
+#endif // !defined(QUAD_PRECISION) || defined(CRT_HAS_IEEE_TF)
+
 // Avoid using fmax from libm.
 static __inline fp_t __compiler_rt_fmaxX(fp_t x, fp_t y) {
   // If either argument is NaN, return the other argument. If both are NaN,
@@ -386,31 +374,42 @@ static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
 #endif
 }
 
-#elif defined(QUAD_PRECISION)
-
-#if defined(CRT_LDBL_128BIT)
-static __inline fp_t __compiler_rt_logbl(fp_t x) {
-  return __compiler_rt_logbX(x);
-}
-static __inline fp_t __compiler_rt_scalbnl(fp_t x, int y) {
-  return __compiler_rt_scalbnX(x, y);
-}
-static __inline fp_t __compiler_rt_fmaxl(fp_t x, fp_t y) {
-  return __compiler_rt_fmaxX(x, y);
-}
-#else
+#elif defined(QUAD_PRECISION) && defined(CRT_HAS_TF_MODE)
 // The generic implementation only works for ieee754 floating point. For other
 // floating point types, continue to rely on the libm implementation for now.
-static __inline long double __compiler_rt_logbl(long double x) {
+#if defined(CRT_HAS_IEEE_TF)
+static __inline tf_float __compiler_rt_logbtf(tf_float x) {
+  return __compiler_rt_logbX(x);
+}
+static __inline tf_float __compiler_rt_scalbntf(tf_float x, int y) {
+  return __compiler_rt_scalbnX(x, y);
+}
+static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
+  return __compiler_rt_fmaxX(x, y);
+}
+#define __compiler_rt_logbl __compiler_rt_logbtf
+#define __compiler_rt_scalbnl __compiler_rt_scalbntf
+#define __compiler_rt_fmaxl __compiler_rt_fmaxtf
+#define crt_fabstf crt_fabsf128
+#define crt_copysigntf crt_copysignf128
+#elif defined(CRT_LDBL_128BIT)
+static __inline tf_float __compiler_rt_logbtf(tf_float x) {
   return crt_logbl(x);
 }
-static __inline long double __compiler_rt_scalbnl(long double x, int y) {
+static __inline tf_float __compiler_rt_scalbntf(tf_float x, int y) {
   return crt_scalbnl(x, y);
 }
-static __inline long double __compiler_rt_fmaxl(long double x, long double y) {
+static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
   return crt_fmaxl(x, y);
 }
-#endif // CRT_LDBL_128BIT
+#define __compiler_rt_logbl crt_logbl
+#define __compiler_rt_scalbnl crt_scalbnl
+#define __compiler_rt_fmaxl crt_fmaxl
+#define crt_fabstf crt_fabsl
+#define crt_copysigntf crt_copysignl
+#else
+#error Unsupported TF mode type
+#endif
 
 #endif // *_PRECISION
 

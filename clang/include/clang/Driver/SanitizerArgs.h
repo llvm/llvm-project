@@ -76,6 +76,7 @@ public:
                 bool DiagnoseErrors = true);
 
   bool needsSharedRt() const { return SharedRuntime; }
+  bool needsStableAbi() const { return StableABI; }
 
   bool needsMemProfRt() const { return NeedsMemProfRt; }
   bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
@@ -102,6 +103,9 @@ public:
   bool needsCfiDiagRt() const;
   bool needsStatsRt() const { return Stats; }
   bool needsScudoRt() const { return Sanitizers.has(SanitizerKind::Scudo); }
+  bool needsNsanRt() const {
+    return Sanitizers.has(SanitizerKind::NumericalStability);
+  }
 
   bool hasMemTag() const {
     return hasMemtagHeap() || hasMemtagStack() || hasMemtagGlobals();

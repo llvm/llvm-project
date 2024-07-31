@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -S -emit-llvm -fno-builtin -o - %s | FileCheck --check-prefixes=GLOBAL,CHECK %s
-// RUN: %clang_cc1 -S -emit-llvm -fno-builtin-ceil -fno-builtin-copysign -fno-builtin-cos \
+// RUN: %clang_cc1 -emit-llvm -fno-builtin -o - %s | FileCheck --check-prefixes=GLOBAL,CHECK %s
+// RUN: %clang_cc1 -emit-llvm -fno-builtin-ceil -fno-builtin-copysign -fno-builtin-cos \
 // RUN:  -fno-builtin-fabs -fno-builtin-floor -fno-builtin-strcat -fno-builtin-strncat \
 // RUN:  -fno-builtin-strchr -fno-builtin-strrchr -fno-builtin-strcmp -fno-builtin-strncmp \
 // RUN:  -fno-builtin-strcpy -fno-builtin-stpcpy -fno-builtin-strncpy -fno-builtin-strlen \
@@ -9,8 +9,6 @@
 // RUN:  -o - %s | FileCheck --check-prefixes=INDIVIDUAL,CHECK %s
 // RUN: %clang_cc1 -S -O3 -fno-builtin -o - %s | FileCheck --check-prefix=ASM %s
 // RUN: %clang_cc1 -S -O3 -fno-builtin-ceil -o - %s | FileCheck --check-prefix=ASM-INDIV %s
-
-// rdar://10551066
 
 typedef __SIZE_TYPE__ size_t;
 typedef struct FILE FILE;

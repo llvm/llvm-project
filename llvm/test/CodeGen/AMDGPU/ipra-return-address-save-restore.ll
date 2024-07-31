@@ -28,12 +28,10 @@ declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) nocapture) #1
 ; Function Attrs: norecurse
 define internal fastcc void @svm_node_closure_bsdf(ptr addrspace(1) %sd, ptr %stack, <4 x i32> %node, ptr %offset, i32 %0, i8 %trunc, float %1, float %2, float %mul80, i1 %cmp412.old, <4 x i32> %3, float %4, i32 %5, i1 %cmp440, i1 %cmp442, i1 %or.cond1306, float %.op, ptr addrspace(1) %arrayidx.i.i2202, ptr addrspace(1) %retval.0.i.i22089, ptr addrspace(1) %retval.1.i221310, i1 %cmp575, ptr addrspace(1) %num_closure_left.i2215, i32 %6, i1 %cmp.i2216, i32 %7, i64 %idx.ext.i2223, i32 %sub5.i2221) #2 {
 ; GCN-LABEL: {{^}}svm_node_closure_bsdf:
-; GCN-DAG: v_writelane_b32 [[CSR_VGPR:v[0-9]+]], s30,
-; GCN-DAG: v_writelane_b32 [[CSR_VGPR]], s31,
-; GCN: s_movk_i32 s30, 0x60
+; GCN-NOT: v_writelane_b32
+; GCN: s_movk_i32 s26, 0x60
 ; GCN-NOT: s31
-; GCN-DAG: v_readlane_b32 s31, [[CSR_VGPR]],
-; GCN-DAG: v_readlane_b32 s30, [[CSR_VGPR]],
+; GCN-NOT: v_readlane_b32
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64 s[30:31]
 entry:

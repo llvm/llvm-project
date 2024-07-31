@@ -1,28 +1,36 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with vectorization.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=4 enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with  VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
-
-#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait_op = {
   indexing_maps = [
@@ -48,7 +56,7 @@ module {
                              -> tensor<?xf64, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arg0, %c0 : tensor<?xf64, #SparseVector>
-    %xin = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xin = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_op
       ins(%arg0: tensor<?xf64, #SparseVector>)
       outs(%xin: tensor<?xf64, #SparseVector>) {
@@ -71,7 +79,7 @@ module {
   }
 
   // Driver method to call and verify sign kernel.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %du = arith.constant 0.0 : f64
 
@@ -102,11 +110,16 @@ module {
     //
     // Verify the results.
     //
-    // CHECK: ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 12 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 5, 11, 13, 17, 18, 20, 21, 28, 29, 31 )
+    // CHECK-NEXT: values : ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0 )
+    // CHECK-NEXT: ----
     //
-    %1 = sparse_tensor.values %0 : tensor<?xf64, #SparseVector> to memref<?xf64>
-    %2 = vector.transfer_read %1[%c0], %du: memref<?xf64>, vector<13xf64>
-    vector.print %2 : vector<13xf64>
+    sparse_tensor.print %0 : tensor<?xf64, #SparseVector>
 
     // Release the resources.
     bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>

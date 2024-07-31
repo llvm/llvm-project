@@ -56,7 +56,7 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
 
-  int64_t getMaxInlineSizeThreshold() const;
+  int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 };
 
 class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
@@ -71,6 +71,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
+  static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
 
@@ -102,7 +103,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
-  bool hasBranchDivergence() { return true; }
+  bool hasBranchDivergence(const Function *F = nullptr) const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -135,16 +136,17 @@ public:
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
 
-  int64_t getMaxInlineSizeThreshold() const;
-  Type *getMemcpyLoopLoweringType(
-      LLVMContext & Context, Value * Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
-      std::optional<uint32_t> AtomicElementSize) const;
+  int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
+  Type *
+  getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                            unsigned SrcAddrSpace, unsigned DestAddrSpace,
+                            Align SrcAlign, Align DestAlign,
+                            std::optional<uint32_t> AtomicElementSize) const;
 
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);
 
@@ -154,7 +156,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr);
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
@@ -233,15 +235,17 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr);
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
   unsigned getInliningThresholdMultiplier() const { return 11; }
   unsigned adjustInliningThreshold(const CallBase *CB) const;
+  unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const;
 
-  int getInlinerVectorBonusPercent() const { return 0; }
+  int getInlinerVectorBonusPercent() const { return InlinerVectorBonusPercent; }
 
   InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
@@ -249,9 +253,19 @@ public:
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
-  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsUnsigned, FastMathFlags FMF,
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
+
+  /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
+  unsigned getCacheLineSize() const override { return 128; }
+
+  /// How much before a load we should place the prefetch instruction.
+  /// This is currently measured in number of IR instructions.
+  unsigned getPrefetchDistance() const override;
+
+  /// \return if target want to issue a prefetch in address space \p AS.
+  bool shouldPrefetchAddressSpace(unsigned AS) const override;
 };
 
 } // end namespace llvm

@@ -21,8 +21,8 @@ foreach(arch ${HWASAN_TEST_ARCH})
 endforeach()
 
 set(HWASAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
+list(APPEND HWASAN_TEST_DEPS hwasan)
 if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND HWASAN_TEST_DEPS hwasan)
   if(COMPILER_RT_HAS_LLD AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND HWASAN_TEST_DEPS lld)
   endif()
@@ -33,7 +33,6 @@ add_lit_testsuite(check-hwasan "Running the HWAddressSanitizer tests"
   DEPENDS ${HWASAN_TEST_DEPS}
   PARAMS "HWASAN_ENABLE_ALIASES=1"
   )
-set_target_properties(check-hwasan PROPERTIES FOLDER "Compiler-RT Misc")
 
 add_lit_testsuite(check-hwasan-lam
   "Running the HWAddressSanitizer tests with Intel LAM"
@@ -42,4 +41,3 @@ add_lit_testsuite(check-hwasan-lam
   PARAMS "HWASAN_ENABLE_ALIASES=0"
   EXCLUDE_FROM_CHECK_ALL
   )
-set_target_properties(check-hwasan-lam PROPERTIES FOLDER "Compiler-RT Misc")

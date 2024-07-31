@@ -15,12 +15,14 @@
 #define LLVM_CLANG_SERIALIZATION_ASTRECORDWRITER_H
 
 #include "clang/AST/AbstractBasicWriter.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
 
 namespace clang {
 
+class OpenACCClause;
 class TypeLoc;
 
 /// An object for streaming information to a record.
@@ -141,6 +143,11 @@ public:
     AddSourceLocation(Loc);
   }
 
+  void writeTypeCoupledDeclRefInfo(TypeCoupledDeclRefInfo Info) {
+    writeDeclRef(Info.getDecl());
+    writeBool(Info.isDeref());
+  }
+
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, LocSeq *Seq = nullptr) {
     return Writer->AddSourceRange(Range, *Record, Seq);
@@ -222,6 +229,9 @@ public:
   void AddASTTemplateArgumentListInfo(
       const ASTTemplateArgumentListInfo *ASTTemplArgList);
 
+  // Emits a concept reference.
+  void AddConceptReference(const ConceptReference *CR);
+
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D) {
     return Writer->AddDeclRef(D, *Record);
@@ -283,6 +293,16 @@ public:
 
   /// Writes data related to the OpenMP directives.
   void writeOMPChildren(OMPChildren *Data);
+
+  void writeOpenACCVarList(const OpenACCClauseWithVarList *C);
+
+  void writeOpenACCIntExprList(ArrayRef<Expr *> Exprs);
+
+  /// Writes out a single OpenACC Clause.
+  void writeOpenACCClause(const OpenACCClause *C);
+
+  /// Writes out a list of OpenACC clauses.
+  void writeOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses);
 
   /// Emit a string.
   void AddString(StringRef Str) {

@@ -56,10 +56,17 @@
 # BAD-MODE: error: unknown --android-memtag-mode value: "asymm", should be one of
 # BAD-MODE: {async, sync, none}
 
-# RUN: not ld.lld -shared --android-memtag-mode=async 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=MISSING-STACK-OR-HEAP
-# MISSING-STACK-OR-HEAP: error: when using --android-memtag-mode, at least one of
-# MISSING-STACK-OR-HEAP: --android-memtag-heap or --android-memtag-stack is required
+# RUN: ld.lld -static --android-memtag-mode=sync --android-memtag-heap \
+# RUN:    --android-memtag-stack %t.o -o %t
+# RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=STATIC
+
+# STATIC:      Memtag Dynamic Entries:
+# STATIC-NEXT: < none found >
+# STATIC:      Memtag Android Note:
+# STATIC-NEXT:  Tagging Mode: SYNC
+# STATIC-NEXT:  Heap: Enabled
+# STATIC-NEXT:  Stack: Enabled
+
 
 .globl _start
 _start:

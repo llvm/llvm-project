@@ -15,7 +15,7 @@
 // RUN: %hmaptool write %t/headermap.hmap.json %t/headermap.hmap
 
 // Input headers use paths to the framework root/DSTROOT
-// RUN: %clang_cc1 -extract-api -v --product-name=MyFramework \
+// RUN: %clang_cc1 -extract-api --pretty-sgf -v --product-name=MyFramework \
 // RUN: -triple arm64-apple-macosx \
 // RUN: -iquote%t -I%t/headermap.hmap -F%t/Frameworks \
 // RUN: -x objective-c-header \
@@ -102,6 +102,10 @@ int OtherInt;
         {
           "kind": "identifier",
           "spelling": "MyInt"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -114,8 +118,8 @@ int OtherInt;
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 2
+          "character": 4,
+          "line": 1
         },
         "uri": "file://SRCROOT/MyHeader.h"
       },
@@ -153,6 +157,10 @@ int OtherInt;
         {
           "kind": "identifier",
           "spelling": "MyChar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -165,8 +173,8 @@ int OtherInt;
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 1
+          "character": 5,
+          "line": 0
         },
         "uri": "file://SRCROOT/QuotedHeader.h"
       },

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm  %s -o - | FileCheck %s -check-prefix=CHECK-NOMODEL
-// RUN: %clang_cc1 -triple aarch64-unknown-none-eabi -emit-llvm -mcmodel=tiny %s -o - | FileCheck %s -check-prefix=CHECK-TINY
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm -mcmodel=tiny %s -o - | FileCheck %s -check-prefix=CHECK-TINY
 // RUN: %clang_cc1 -emit-llvm -mcmodel=small %s -o - | FileCheck %s -check-prefix=CHECK-SMALL
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -mcmodel=kernel %s -o - | FileCheck %s -check-prefix=CHECK-KERNEL
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -mcmodel=medium %s -o - | FileCheck %s -check-prefix=CHECK-MEDIUM

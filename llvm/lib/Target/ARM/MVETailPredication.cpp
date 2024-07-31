@@ -355,7 +355,7 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     APInt Mask = APInt::getLowBitsSet(Ty->getPrimitiveSizeInBits(),
                                       Log2_64(VectorWidth));
     if (MaskedValueIsZero(BaseV->getValue(), Mask,
-                          L->getHeader()->getModule()->getDataLayout()))
+                          L->getHeader()->getDataLayout()))
       return SE->getMinusSCEV(EC, BaseV);
   } else if (auto *BaseMul = dyn_cast<SCEVMulExpr>(AddExpr->getStart())) {
     if (auto *BaseC = dyn_cast<SCEVConstant>(BaseMul->getOperand(0)))
@@ -381,7 +381,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
 
   // Insert a phi to count the number of elements processed by the loop.
-  Builder.SetInsertPoint(L->getHeader()->getFirstNonPHI());
+  Builder.SetInsertPoint(L->getHeader(), L->getHeader()->getFirstNonPHIIt());
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 
@@ -436,7 +436,7 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP. Start is " << *StartSCEV
                       << "\n");
-    SCEVExpander Expander(*SE, L->getHeader()->getModule()->getDataLayout(),
+    SCEVExpander Expander(*SE, L->getHeader()->getDataLayout(),
                           "start");
     Instruction *Ins = L->getLoopPreheader()->getTerminator();
     Value *Start = Expander.expandCodeFor(StartSCEV, StartSCEV->getType(), Ins);

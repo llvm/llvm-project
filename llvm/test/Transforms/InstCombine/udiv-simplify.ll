@@ -27,7 +27,7 @@ define i64 @test1_PR2274(i32 %x, i32 %g) nounwind {
 ; CHECK-LABEL: @test1_PR2274(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y]], [[G:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[R]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %y = lshr i32 %x, 30
@@ -39,7 +39,7 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 ; CHECK-LABEL: @test2_PR2274(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y]], [[V:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[R]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %y = lshr i32 %x, 31
@@ -55,11 +55,14 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 define i32 @PR30366(i1 %a) {
 ; CHECK-LABEL: @PR30366(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[Z]], zext (i16 ptrtoint (ptr @b to i16) to i32)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 ptrtoint (ptr @b to i16) to i32
+; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %z = zext i1 %a to i32
-  %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
+  %shl = shl i16 1, ptrtoint (ptr @b to i16)
+  %z2 = zext i16 %shl to i32
+  %d = udiv i32 %z, %z2
   ret i32 %d
 }
 
@@ -67,6 +70,7 @@ define i32 @PR30366(i1 %a) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4857
 define i177 @ossfuzz_4857(i177 %X, i177 %Y) {
 ; CHECK-LABEL: @ossfuzz_4857(
+; CHECK-NEXT:    store i1 poison, ptr undef, align 1
 ; CHECK-NEXT:    ret i177 0
 ;
   %B5 = udiv i177 %Y, -1
@@ -154,10 +158,34 @@ define i8 @udiv_exact_demanded_low_bits_clear(i8 %a) {
 
 define <vscale x 1 x i32> @udiv_demanded3(<vscale x 1 x i32> %a) {
 ; CHECK-LABEL: @udiv_demanded3(
-; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[U]]
 ;
-  %o = or <vscale x 1 x i32> %a, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 3, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-  %u = udiv <vscale x 1 x i32> %o, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  %o = or <vscale x 1 x i32> %a, splat (i32 3)
+  %u = udiv <vscale x 1 x i32> %o, splat (i32 12)
   ret <vscale x 1 x i32> %u
+}
+
+; PR74242
+define i32 @div_by_zero_or_one_from_dom_cond(i32 %a, i32 %b) {
+; CHECK-LABEL: @div_by_zero_or_one_from_dom_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[JOIN:%.*]], label [[ZERO_OR_ONE:%.*]]
+; CHECK:       zero_or_one:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %cmp = icmp ugt i32 %a, 1
+  br i1 %cmp, label %join, label %zero_or_one
+
+zero_or_one:
+  %div = udiv i32 %b, %a
+  br label %join
+
+join:
+  %res = phi i32 [ %div, %zero_or_one ], [ %b, %entry ]
+  ret i32 %res
 }

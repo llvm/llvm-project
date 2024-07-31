@@ -7,8 +7,6 @@
 // RUN: FileCheck %s -check-prefix=WRONG < %t/out
 // WRONG-NOT: CommentXMLInvalid
 
-// rdar://12378714
-
 /**
  * \brief This is a protocol definition
 */

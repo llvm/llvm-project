@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.src.errno.errno
     libc.src.stdlib.atof
-    libc.test.errno_setter_matcher
 )
 
 add_header_library(
@@ -18,6 +17,7 @@ add_header_library(
     AtoiTest.h
   DEPENDS
     libc.src.errno.errno
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
 )
 
@@ -54,20 +54,17 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
-# This fails on NVPTX where the output value is one-off of the expected value.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_fp_unittest(
-    strtod_test
-    SUITE
-      libc-stdlib-tests
-    SRCS
-      strtod_test.cpp
-    DEPENDS
-      libc.src.errno.errno
-      libc.src.stdlib.strtod
-      libc.src.__support.FPUtil.fenv_impl
-  )
-endif()
+add_fp_unittest(
+  strtod_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtod_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.stdlib.strtod
+    libc.src.__support.FPUtil.fenv_impl
+)
 
 add_fp_unittest(
   strtof_test
@@ -126,20 +123,17 @@ add_libc_test(
     .strtol_test_support
 )
 
-# This fails on NVPTX where the output value is one-off of the expected value.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    strtold_test
-    SUITE
-      libc-stdlib-tests
-    SRCS
-      strtold_test.cpp
-    DEPENDS
-      libc.src.errno.errno
-      libc.src.__support.uint128
-      libc.src.stdlib.strtold
-  )
-endif()
+add_libc_test(
+  strtold_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtold_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.uint128
+    libc.src.stdlib.strtold
+)
 
 add_libc_test(
   strtoll_test
@@ -172,6 +166,48 @@ add_libc_test(
   DEPENDS
     libc.src.stdlib.strtoull
     .strtol_test_support
+)
+
+add_header_library(
+  strfrom_test_support
+  HDRS
+  StrfromTest.h
+  DEPENDS
+  libc.src.__support.CPP.type_traits
+  libc.src.__support.FPUtil.fp_bits
+)
+
+add_libc_test(
+  strfromf_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfromf_test.cpp
+  DEPENDS
+    .strfrom_test_support
+    libc.src.stdlib.strfromf
+)
+
+add_libc_test(
+  strfromd_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfromd_test.cpp
+  DEPENDS
+    .strfrom_test_support
+    libc.src.stdlib.strfromd
+)
+
+add_libc_test(
+  strfroml_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfroml_test.cpp
+  DEPENDS
+    .strfrom_test_support
+    libc.src.stdlib.strfroml
 )
 
 add_libc_test(
@@ -255,16 +291,40 @@ add_libc_test(
 )
 
 add_libc_test(
+  quick_sort_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    quick_sort_test.cpp
+  HDRS
+    SortingTest.h
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_test(
+  heap_sort_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    heap_sort_test.cpp
+  HDRS
+    SortingTest.h
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_test(
   qsort_test
   SUITE
     libc-stdlib-tests
   SRCS
     qsort_test.cpp
+  HDRS
+    SortingTest.h
   DEPENDS
-    libc.include.stdlib
     libc.src.stdlib.qsort
 )
-
 
 add_libc_test(
   qsort_r_test
@@ -319,7 +379,20 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
       libc.src.__support.CPP.array
-      libc.src.__support.CPP.utility
+  )
+
+  add_libc_test(
+    at_quick_exit_test
+    # The EXPECT_EXITS test is only availible for unit tests.
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      at_quick_exit_test.cpp
+    DEPENDS
+      libc.src.stdlib.quick_exit
+      libc.src.stdlib.at_quick_exit
+      libc.src.__support.CPP.array
   )
 
   add_libc_test(
@@ -338,8 +411,21 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.signal.raise
   )
 
+  add_libc_test(
+    quick_exit_test
+    # The EXPECT_EXITS test is only availible for unit tests.
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      quick_exit_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib.quick_exit
+  )
+
   # Only the GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  if(LIBC_TARGET_OS_IS_GPU)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

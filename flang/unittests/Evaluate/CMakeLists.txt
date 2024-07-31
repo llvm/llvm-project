@@ -3,13 +3,15 @@ add_library(FortranEvaluateTesting
   testing.cpp
   fp-testing.cpp
 )
+set_target_properties(FortranEvaluateTesting PROPERTIES FOLDER "Flang/Tests")
 if (LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)
 else()
   llvm_map_components_to_libnames(llvm_libs Support)
 endif()
+
 target_link_libraries(FortranEvaluateTesting
-    ${llvm_libs})
+  ${llvm_libs})
 
 add_flang_nongtest_unittest(leading-zero-bit-count
   FortranEvaluateTesting

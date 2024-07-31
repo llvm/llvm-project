@@ -236,7 +236,7 @@ define <4 x float> @fadd_fadd_x_x_fadd_x_x_4f32(<4 x float> %x) #0 {
 define float @fadd_const_multiuse_attr(float %x) #0 {
 ; CHECK-LABEL: fadd_const_multiuse_attr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    addss %xmm0, %xmm1
 ; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0

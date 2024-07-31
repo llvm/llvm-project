@@ -15,14 +15,15 @@
 
 def NeoverseV2Model : SchedMachineModel {
   let IssueWidth            =  16; // Micro-ops dispatched at a time.
-  let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer. NOTE: Copied from N2.
+  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-                                                    [HasSVE2p1]);
+                                                    [HasSVE2p1, HasCPA,
+                                                    HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -88,6 +89,10 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // Define customized scheduler read/write types specific to the Neoverse V2.
 
 //===----------------------------------------------------------------------===//
+
+// Define generic 0 micro-op types
+def V2Write_0cyc : SchedWriteRes<[]> { let Latency = 0; }
+
 // Define generic 1 micro-op types
 
 def V2Write_1cyc_1B    : SchedWriteRes<[V2UnitB]>   { let Latency = 1; }
@@ -102,9 +107,9 @@ def V2Write_2cyc_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 2; }
 def V2Write_3cyc_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 3; }
 def V2Write_5cyc_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 5; }
 def V2Write_12cyc_1M0  : SchedWriteRes<[V2UnitM0]>  { let Latency = 12;
-                                                      let ResourceCycles = [12]; }
+                                                      let ReleaseAtCycles = [12]; }
 def V2Write_20cyc_1M0  : SchedWriteRes<[V2UnitM0]>  { let Latency = 20;
-                                                      let ResourceCycles = [20]; }
+                                                      let ReleaseAtCycles = [20]; }
 def V2Write_4cyc_1L    : SchedWriteRes<[V2UnitL]>   { let Latency = 4; }
 def V2Write_6cyc_1L    : SchedWriteRes<[V2UnitL]>   { let Latency = 6; }
 def V2Write_2cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 2; }
@@ -113,7 +118,7 @@ def V2Write_2cyc_1V01  : SchedWriteRes<[V2UnitV01]> { let Latency = 2; }
 def V2Write_2cyc_1V23  : SchedWriteRes<[V2UnitV23]> { let Latency = 2; }
 def V2Write_3cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 3; }
 def V2Write_3cyc_1V01  : SchedWriteRes<[V2UnitV01]> { let Latency = 3;
-                                                      let ResourceCycles = [2]; }
+                                                      let ReleaseAtCycles = [2]; }
 def V2Write_3cyc_1V23  : SchedWriteRes<[V2UnitV23]> { let Latency = 3; }
 def V2Write_4cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 4; }
 def V2Write_5cyc_1V    : SchedWriteRes<[V2UnitV]>   { let Latency = 5; }
@@ -124,26 +129,26 @@ def V2Write_3cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 3; }
 def V2Write_4cyc_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 4; }
 def V2Write_4cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 4; }
 def V2Write_7cyc_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 7;
-                                                      let ResourceCycles = [7]; }
+                                                      let ReleaseAtCycles = [7]; }
 def V2Write_7cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 7;
-                                                      let ResourceCycles = [2]; }
+                                                      let ReleaseAtCycles = [2]; }
 def V2Write_9cyc_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 9; }
 def V2Write_9cyc_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 9;
-                                                      let ResourceCycles = [2]; }
+                                                      let ReleaseAtCycles = [2]; }
 def V2Write_10cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 10; }
 def V2Write_10cyc_1V02 : SchedWriteRes<[V2UnitV02]> { let Latency = 10;
-                                                      let ResourceCycles = [2]; }
+                                                      let ReleaseAtCycles = [2]; }
 def V2Write_12cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 12;
-                                                      let ResourceCycles = [11]; }
+                                                      let ReleaseAtCycles = [11]; }
 def V2Write_13cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 13; }
 def V2Write_15cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 15; }
 def V2Write_15cyc_1V02 : SchedWriteRes<[V2UnitV02]> { let Latency = 15;
-                                                      let ResourceCycles = [8]; }
+                                                      let ReleaseAtCycles = [8]; }
 def V2Write_16cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 16; }
 def V2Write_16cyc_1V02 : SchedWriteRes<[V2UnitV02]> { let Latency = 16;
-                                                      let ResourceCycles = [8]; }
+                                                      let ReleaseAtCycles = [8]; }
 def V2Write_20cyc_1V0  : SchedWriteRes<[V2UnitV0]>  { let Latency = 20;
-                                                      let ResourceCycles = [20]; }
+                                                      let ReleaseAtCycles = [20]; }
 def V2Write_2cyc_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 2; }
 def V2Write_2cyc_1V13  : SchedWriteRes<[V2UnitV13]> { let Latency = 2; }
 def V2Write_3cyc_1V1   : SchedWriteRes<[V2UnitV1]>  { let Latency = 3; }
@@ -877,20 +882,20 @@ def V2Write_11cyc_18L01_18S_18V01 : SchedWriteRes<[V2UnitL01, V2UnitL01,
 // Define predicate-controlled types
 
 def V2Write_ArithI : SchedWriteVariant<[
-                       SchedVar<NeoverseCheapLSL, [V2Write_1cyc_1I]>,
-                       SchedVar<NoSchedPred,      [V2Write_2cyc_1M]>]>;
+                       SchedVar<IsCheapLSL,  [V2Write_1cyc_1I]>,
+                       SchedVar<NoSchedPred, [V2Write_2cyc_1M]>]>;
 
 def V2Write_ArithF : SchedWriteVariant<[
-                       SchedVar<NeoverseCheapLSL, [V2Write_1cyc_1F]>,
-                       SchedVar<NoSchedPred,      [V2Write_2cyc_1M]>]>;
+                       SchedVar<IsCheapLSL,  [V2Write_1cyc_1F]>,
+                       SchedVar<NoSchedPred, [V2Write_2cyc_1M]>]>;
 
 def V2Write_Logical : SchedWriteVariant<[
                         SchedVar<NeoverseNoLSL, [V2Write_1cyc_1F]>,
                         SchedVar<NoSchedPred,   [V2Write_2cyc_1M]>]>;
 
 def V2Write_Extr : SchedWriteVariant<[
-                     SchedVar<NeoverseOneRegEXTR,  [V2Write_1cyc_1I]>,
-                     SchedVar<NoSchedPred,         [V2Write_3cyc_1I_1M]>]>;
+                     SchedVar<IsRORImmIdiomPred, [V2Write_1cyc_1I]>,
+                     SchedVar<NoSchedPred,       [V2Write_3cyc_1I_1M]>]>;
 
 def V2Write_LdrHQ : SchedWriteVariant<[
                       SchedVar<NeoverseHQForm,  [V2Write_7cyc_1I_1L]>,
@@ -899,6 +904,18 @@ def V2Write_LdrHQ : SchedWriteVariant<[
 def V2Write_StrHQ : SchedWriteVariant<[
                       SchedVar<NeoverseHQForm,  [V2Write_2cyc_1L01_1V01_1I]>,
                       SchedVar<NoSchedPred,     [V2Write_2cyc_1L01_1V01]>]>;
+
+def V2Write_0or1cyc_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V2Write_0cyc]>,
+                      SchedVar<NoSchedPred,      [V2Write_1cyc_1I]>]>;
+
+def V2Write_0or2cyc_1V : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V2Write_0cyc]>,
+                      SchedVar<NoSchedPred,      [V2Write_2cyc_1V]>]>;
+
+def V2Write_0or3cyc_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V2Write_0cyc]>,
+                      SchedVar<NoSchedPred,      [V2Write_3cyc_1M0]>]>;
 
 def V2Write_2or3cyc_1M : SchedWriteVariant<[
                       SchedVar<NeoversePdIsPg,  [V2Write_3cyc_1M]>,
@@ -948,8 +965,8 @@ def V2Write_IncDec : SchedWriteVariant<[
 def V2Wr_IM   : SchedWriteRes<[V2UnitM]>  { let Latency = 2; }
 def V2Wr_IMA  : SchedWriteRes<[V2UnitM0]> { let Latency = 2; }
 def V2Wr_IMUL : SchedWriteVariant<[
-                  SchedVar<NeoverseReg3IsZero, [V2Wr_IM]>,
-                  SchedVar<NoSchedPred,        [V2Wr_IMA]>]>;
+                  SchedVar<IsReg3ZeroPred, [V2Wr_IM]>,
+                  SchedVar<NoSchedPred,    [V2Wr_IMA]>]>;
 def V2Rd_IMA  : SchedReadAdvance<1, [V2Wr_IMA]>;
 
 def V2Wr_FMA : SchedWriteRes<[V2UnitV]> { let Latency = 4; }
@@ -1054,19 +1071,17 @@ def V2Rd_ZBFMAL : SchedReadAdvance<3, [V2Wr_ZBFMAL]>;
 //===----------------------------------------------------------------------===//
 // Define types with long resource cycles (rc)
 
-def V2Write_6cyc_1V1_5rc    : SchedWriteRes<[V2UnitV1]>  { let Latency =  6; let ResourceCycles = [ 5]; }
-def V2Write_7cyc_1V02_7rc   : SchedWriteRes<[V2UnitV02]> { let Latency =  7; let ResourceCycles = [ 7]; }
-def V2Write_10cyc_1V02_5rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ResourceCycles = [ 5]; }
-def V2Write_10cyc_1V02_9rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ResourceCycles = [ 9]; }
-def V2Write_10cyc_1V02_10rc : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ResourceCycles = [10]; }
-def V2Write_10cyc_1V0_9rc   : SchedWriteRes<[V2UnitV0]>  { let Latency = 10; let ResourceCycles = [ 9]; }
-def V2Write_10cyc_1V1_9rc   : SchedWriteRes<[V2UnitV1]>  { let Latency = 10; let ResourceCycles = [ 9]; }
-def V2Write_13cyc_1V0_12rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 13; let ResourceCycles = [12]; }
-def V2Write_13cyc_1V02_12rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ResourceCycles = [12]; }
-def V2Write_13cyc_1V02_13rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ResourceCycles = [13]; }
-def V2Write_15cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 15; let ResourceCycles = [14]; }
-def V2Write_16cyc_1V02_15rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ResourceCycles = [15]; }
-def V2Write_16cyc_1V0_14rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 16; let ResourceCycles = [14]; }
+def V2Write_6cyc_1V1_5rc    : SchedWriteRes<[V2UnitV1]>  { let Latency =  6; let ReleaseAtCycles = [ 5]; }
+def V2Write_7cyc_1V02_7rc   : SchedWriteRes<[V2UnitV02]> { let Latency =  7; let ReleaseAtCycles = [ 7]; }
+def V2Write_10cyc_1V02_5rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [ 5]; }
+def V2Write_10cyc_1V02_9rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [ 9]; }
+def V2Write_10cyc_1V02_10rc : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [10]; }
+def V2Write_10cyc_1V1_9rc   : SchedWriteRes<[V2UnitV1]>  { let Latency = 10; let ReleaseAtCycles = [ 9]; }
+def V2Write_13cyc_1V02_12rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ReleaseAtCycles = [12]; }
+def V2Write_13cyc_1V02_13rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ReleaseAtCycles = [13]; }
+def V2Write_15cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 15; let ReleaseAtCycles = [14]; }
+def V2Write_16cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ReleaseAtCycles = [14]; }
+def V2Write_16cyc_1V02_15rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ReleaseAtCycles = [15]; }
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -1092,12 +1107,17 @@ def : InstRW<[V2Write_1cyc_1B_1R], (instrs BL, BLR)>;
 
 // ALU, basic
 // ALU, basic, flagset
-def : SchedAlias<WriteI,     V2Write_1cyc_1I>;
-def : InstRW<[V2Write_1cyc_1F],
-             (instregex "^(ADC|SBC)S[WX]r$")>;
+def : SchedAlias<WriteI, V2Write_1cyc_1I>;
+def : InstRW<[V2Write_1cyc_1F], (instregex "^(ADD|SUB)S[WX]r[ir]$",
+                        "^(ADC|SBC)S[WX]r$",
+                        "^ANDS[WX]ri$")>;
+def : InstRW<[V2Write_0or1cyc_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V2Write_2cyc_1M>;
+
+// Conditional compare
+def : InstRW<[V2Write_1cyc_1F], (instregex "^CCM[NP][WX][ir]")>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
@@ -1122,8 +1142,8 @@ def : InstRW<[V2Write_2cyc_1M], (instrs IRG, IRGstack)>;
 def : InstRW<[V2Write_1cyc_1I], (instrs GMI, SUBP, SUBPS)>;
 
 // Logical, shift, no flagset
-def : InstRW<[V2Write_1cyc_1I],
-             (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+def : InstRW<[V2Write_1cyc_1I],    (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[V2Write_0or1cyc_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[V2Write_Logical], (instregex "^(AND|BIC)S[WX]rs$")>;
@@ -1213,7 +1233,7 @@ def : InstRW<[V2Write_5cyc_1L_1F], (instrs LDRWl, LDRXl, LDRSWl, PRFMl)>;
 def : InstRW<[V2Write_5cyc_1I_3L, WriteLDHi], (instrs LDPSWi)>;
 
 // Load pair, immed post-index or immed pre-index, signed words
-def : InstRW<[V2Write_5cyc_1I_3L, WriteLDHi, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_5cyc_1I_3L, WriteLDHi],
              (instregex "^LDPSW(post|pre)$")>;
 
 // Store instructions
@@ -1224,7 +1244,7 @@ def : InstRW<[V2Write_5cyc_1I_3L, WriteLDHi, WriteAdr],
 def : SchedAlias<WriteST,    V2Write_1cyc_1L01_1D>;
 def : SchedAlias<WriteSTIdx, V2Write_1cyc_1L01_1D>;
 def : SchedAlias<WriteSTP,   V2Write_1cyc_1L01_1D>;
-def : SchedAlias<WriteAdr,   V2Write_1cyc_1I>; // copied from A57.
+def : SchedAlias<WriteAdr,   V2Write_1cyc_1I>;
 
 // Tag load instructions
 // -----------------------------------------------------------------------------
@@ -1318,7 +1338,8 @@ def : InstRW<[V2Write_3cyc_1V02], (instrs FCVTSHr, FCVTDHr, FCVTHSr, FCVTDSr,
 def : SchedAlias<WriteFImm, V2Write_2cyc_1V>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[V2Write_3cyc_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
+def : InstRW<[V2Write_0or3cyc_1M0],
+             (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[V2Write_5cyc_1M0_1V], (instrs FMOVXDHighr)>;
@@ -1337,7 +1358,7 @@ def : InstRW<[V2Write_6cyc_1L], (instregex "^LDUR[BHSDQ]i$")>;
 
 // Load vector reg, immed post-index
 // Load vector reg, immed pre-index
-def : InstRW<[V2Write_6cyc_1I_1L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_1I_1L],
              (instregex "^LDR[BHSDQ](pre|post)$")>;
 
 // Load vector reg, unsigned immed
@@ -1359,12 +1380,12 @@ def : InstRW<[V2Write_6cyc_2L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
 
 // Load vector pair, immed post-index, S/D-form
 // Load vector pair, immed pre-index, S/D-form
-def : InstRW<[V2Write_6cyc_1I_1L, WriteLDHi, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_1I_1L, WriteLDHi],
              (instregex "^LDP[SD](pre|post)$")>;
 
 // Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[V2Write_6cyc_2I_2L, WriteLDHi, WriteAdr], (instrs LDPQpost,
+def : InstRW<[WriteAdr, V2Write_6cyc_2I_2L, WriteLDHi], (instrs LDPQpost,
                                                                 LDPQpre)>;
 
 // FP store instructions
@@ -1662,6 +1683,7 @@ def : InstRW<[V2Write_3cyc_1V02], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Handled by SchedAlias<WriteV[dq], ...>
+def : InstRW<[V2Write_0or2cyc_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[V2Write_3cyc_1M0], (instregex "^DUPv.+gpr")>;
@@ -1725,220 +1747,220 @@ def : InstRW<[V2Write_5cyc_1M0_1V], (instregex "^INSvi(8|16|32|64)gpr$")>;
 
 // ASIMD load, 1 element, multiple, 1 reg, D-form
 def : InstRW<[V2Write_6cyc_1L], (instregex "^LD1Onev(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_6cyc_1L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_1L],
              (instregex "^LD1Onev(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 1 reg, Q-form
 def : InstRW<[V2Write_6cyc_1L], (instregex "^LD1Onev(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_6cyc_1L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_1L],
              (instregex "^LD1Onev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 2 reg, D-form
 def : InstRW<[V2Write_6cyc_2L], (instregex "^LD1Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_6cyc_2L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_2L],
              (instregex "^LD1Twov(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 2 reg, Q-form
 def : InstRW<[V2Write_6cyc_2L], (instregex "^LD1Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_6cyc_2L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_2L],
              (instregex "^LD1Twov(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 3 reg, D-form
 def : InstRW<[V2Write_6cyc_3L], (instregex "^LD1Threev(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_6cyc_3L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_3L],
              (instregex "^LD1Threev(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 3 reg, Q-form
 def : InstRW<[V2Write_6cyc_3L], (instregex "^LD1Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_6cyc_3L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_6cyc_3L],
              (instregex "^LD1Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 4 reg, D-form
 def : InstRW<[V2Write_7cyc_4L], (instregex "^LD1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_7cyc_4L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_7cyc_4L],
              (instregex "^LD1Fourv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 4 reg, Q-form
 def : InstRW<[V2Write_7cyc_4L], (instregex "^LD1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_7cyc_4L, WriteAdr],
+def : InstRW<[WriteAdr, V2Write_7cyc_4L],
              (instregex "^LD1Fourv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, one lane, B/H/S
 // ASIMD load, 1 element, one lane, D
 def : InstRW<[V2Write_8cyc_1L_1V],           (instregex "LD1i(8|16|32|64)$")>;
-def : InstRW<[V2Write_8cyc_1L_1V, WriteAdr], (instregex "LD1i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_1V], (instregex "LD1i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 1 element, all lanes, D-form, B/H/S
 // ASIMD load, 1 element, all lanes, D-form, D
 def : InstRW<[V2Write_8cyc_1L_1V],           (instregex "LD1Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_8cyc_1L_1V, WriteAdr], (instregex "LD1Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_1V], (instregex "LD1Rv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 1 element, all lanes, Q-form
 def : InstRW<[V2Write_8cyc_1L_1V],           (instregex "LD1Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_8cyc_1L_1V, WriteAdr], (instregex "LD1Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_1V], (instregex "LD1Rv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 2 element, multiple, D-form, B/H/S
 def : InstRW<[V2Write_8cyc_1L_2V],           (instregex "LD2Twov(8b|4h|2s)$")>;
-def : InstRW<[V2Write_8cyc_1L_2V, WriteAdr], (instregex "LD2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_2V], (instregex "LD2Twov(8b|4h|2s)_POST$")>;
 
 // ASIMD load, 2 element, multiple, Q-form, B/H/S
 // ASIMD load, 2 element, multiple, Q-form, D
 def : InstRW<[V2Write_8cyc_2L_2V],           (instregex "LD2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_8cyc_2L_2V, WriteAdr], (instregex "LD2Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_2L_2V], (instregex "LD2Twov(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 2 element, one lane, B/H
 // ASIMD load, 2 element, one lane, S
 // ASIMD load, 2 element, one lane, D
 def : InstRW<[V2Write_8cyc_1L_2V],           (instregex "LD2i(8|16|32|64)$")>;
-def : InstRW<[V2Write_8cyc_1L_2V, WriteAdr], (instregex "LD2i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_2V], (instregex "LD2i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 2 element, all lanes, D-form, B/H/S
 // ASIMD load, 2 element, all lanes, D-form, D
 def : InstRW<[V2Write_8cyc_1L_2V],            (instregex "LD2Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_8cyc_1L_2V, WriteAdr],  (instregex "LD2Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_2V],  (instregex "LD2Rv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 2 element, all lanes, Q-form
 def : InstRW<[V2Write_8cyc_1L_2V],           (instregex "LD2Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_8cyc_1L_2V, WriteAdr], (instregex "LD2Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_1L_2V], (instregex "LD2Rv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 3 element, multiple, D-form, B/H/S
 def : InstRW<[V2Write_8cyc_2L_3V],           (instregex "LD3Threev(8b|4h|2s)$")>;
-def : InstRW<[V2Write_8cyc_2L_3V, WriteAdr], (instregex "LD3Threev(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_2L_3V], (instregex "LD3Threev(8b|4h|2s)_POST$")>;
 
 // ASIMD load, 3 element, multiple, Q-form, B/H/S
 // ASIMD load, 3 element, multiple, Q-form, D
 def : InstRW<[V2Write_8cyc_3L_3V],           (instregex "LD3Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_8cyc_3L_3V, WriteAdr], (instregex "LD3Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_3L_3V], (instregex "LD3Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 3 element, one lane, B/H
 // ASIMD load, 3 element, one lane, S
 // ASIMD load, 3 element, one lane, D
 def : InstRW<[V2Write_8cyc_2L_3V],           (instregex "LD3i(8|16|32|64)$")>;
-def : InstRW<[V2Write_8cyc_2L_3V, WriteAdr], (instregex "LD3i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_2L_3V], (instregex "LD3i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 3 element, all lanes, D-form, B/H/S
 // ASIMD load, 3 element, all lanes, D-form, D
 def : InstRW<[V2Write_8cyc_2L_3V],           (instregex "LD3Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_8cyc_2L_3V, WriteAdr], (instregex "LD3Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_2L_3V], (instregex "LD3Rv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 3 element, all lanes, Q-form, B/H/S
 // ASIMD load, 3 element, all lanes, Q-form, D
 def : InstRW<[V2Write_8cyc_3L_3V],           (instregex "LD3Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_8cyc_3L_3V, WriteAdr], (instregex "LD3Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_3L_3V], (instregex "LD3Rv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, multiple, D-form, B/H/S
 def : InstRW<[V2Write_8cyc_3L_4V],           (instregex "LD4Fourv(8b|4h|2s)$")>;
-def : InstRW<[V2Write_8cyc_3L_4V, WriteAdr], (instregex "LD4Fourv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_3L_4V], (instregex "LD4Fourv(8b|4h|2s)_POST$")>;
 
 // ASIMD load, 4 element, multiple, Q-form, B/H/S
 // ASIMD load, 4 element, multiple, Q-form, D
 def : InstRW<[V2Write_9cyc_6L_4V],           (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_9cyc_6L_4V, WriteAdr], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_9cyc_6L_4V], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, one lane, B/H
 // ASIMD load, 4 element, one lane, S
 // ASIMD load, 4 element, one lane, D
 def : InstRW<[V2Write_8cyc_3L_4V],           (instregex "LD4i(8|16|32|64)$")>;
-def : InstRW<[V2Write_8cyc_3L_4V, WriteAdr], (instregex "LD4i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_3L_4V], (instregex "LD4i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 4 element, all lanes, D-form, B/H/S
 // ASIMD load, 4 element, all lanes, D-form, D
-def : InstRW<[V2Write_8cyc_3L_4V],              (instregex "LD4Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_8cyc_3L_4V, WriteAdr],    (instregex "LD4Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[V2Write_8cyc_3L_4V],           (instregex "LD4Rv(8b|4h|2s|1d)$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_3L_4V], (instregex "LD4Rv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 4 element, all lanes, Q-form, B/H/S
 // ASIMD load, 4 element, all lanes, Q-form, D
-def : InstRW<[V2Write_8cyc_4L_4V],            (instregex "LD4Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_8cyc_4L_4V, WriteAdr],  (instregex "LD4Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[V2Write_8cyc_4L_4V],           (instregex "LD4Rv(16b|8h|4s|2d)$")>;
+def : InstRW<[WriteAdr, V2Write_8cyc_4L_4V], (instregex "LD4Rv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store instructions
 // -----------------------------------------------------------------------------
 
 // ASIMD store, 1 element, multiple, 1 reg, D-form
 def : InstRW<[V2Write_2cyc_1L01_1V01],           (instregex "ST1Onev(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_2cyc_1L01_1V01, WriteAdr], (instregex "ST1Onev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_1L01_1V01], (instregex "ST1Onev(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 1 reg, Q-form
 def : InstRW<[V2Write_2cyc_1L01_1V01],           (instregex "ST1Onev(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_2cyc_1L01_1V01, WriteAdr], (instregex "ST1Onev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_1L01_1V01], (instregex "ST1Onev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 2 reg, D-form
 def : InstRW<[V2Write_2cyc_1L01_1V01],           (instregex "ST1Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_2cyc_1L01_1V01, WriteAdr], (instregex "ST1Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_1L01_1V01], (instregex "ST1Twov(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 2 reg, Q-form
 def : InstRW<[V2Write_2cyc_2L01_2V01],           (instregex "ST1Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_2cyc_2L01_2V01, WriteAdr], (instregex "ST1Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_2L01_2V01], (instregex "ST1Twov(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 3 reg, D-form
 def : InstRW<[V2Write_2cyc_2L01_2V01],           (instregex "ST1Threev(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_2cyc_2L01_2V01, WriteAdr], (instregex "ST1Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_2L01_2V01], (instregex "ST1Threev(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 3 reg, Q-form
 def : InstRW<[V2Write_2cyc_3L01_3V01],           (instregex "ST1Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_2cyc_3L01_3V01, WriteAdr], (instregex "ST1Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_3L01_3V01], (instregex "ST1Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 4 reg, D-form
 def : InstRW<[V2Write_2cyc_2L01_2V01],           (instregex "ST1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[V2Write_2cyc_2L01_2V01, WriteAdr], (instregex "ST1Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_2L01_2V01], (instregex "ST1Fourv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 4 reg, Q-form
 def : InstRW<[V2Write_2cyc_4L01_4V01],           (instregex "ST1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_2cyc_4L01_4V01, WriteAdr], (instregex "ST1Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_2cyc_4L01_4V01], (instregex "ST1Fourv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, one lane, B/H/S
 // ASIMD store, 1 element, one lane, D
 def : InstRW<[V2Write_4cyc_1L01_2V01],           (instregex "ST1i(8|16|32|64)$")>;
-def : InstRW<[V2Write_4cyc_1L01_2V01, WriteAdr], (instregex "ST1i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_4cyc_1L01_2V01], (instregex "ST1i(8|16|32|64)_POST$")>;
 
 // ASIMD store, 2 element, multiple, D-form, B/H/S
 def : InstRW<[V2Write_4cyc_1L01_2V01],           (instregex "ST2Twov(8b|4h|2s)$")>;
-def : InstRW<[V2Write_4cyc_1L01_2V01, WriteAdr], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_4cyc_1L01_2V01], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
 
 // ASIMD store, 2 element, multiple, Q-form, B/H/S
 // ASIMD store, 2 element, multiple, Q-form, D
 def : InstRW<[V2Write_4cyc_2L01_4V01],           (instregex "ST2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_4cyc_2L01_4V01, WriteAdr], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_4cyc_2L01_4V01], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 2 element, one lane, B/H/S
 // ASIMD store, 2 element, one lane, D
 def : InstRW<[V2Write_4cyc_1L01_2V01],           (instregex "ST2i(8|16|32|64)$")>;
-def : InstRW<[V2Write_4cyc_1L01_2V01, WriteAdr], (instregex "ST2i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_4cyc_1L01_2V01], (instregex "ST2i(8|16|32|64)_POST$")>;
 
 // ASIMD store, 3 element, multiple, D-form, B/H/S
 def : InstRW<[V2Write_5cyc_2L01_4V01],           (instregex "ST3Threev(8b|4h|2s)$")>;
-def : InstRW<[V2Write_5cyc_2L01_4V01, WriteAdr], (instregex "ST3Threev(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_5cyc_2L01_4V01], (instregex "ST3Threev(8b|4h|2s)_POST$")>;
 
 // ASIMD store, 3 element, multiple, Q-form, B/H/S
 // ASIMD store, 3 element, multiple, Q-form, D
 def : InstRW<[V2Write_6cyc_3L01_6V01],           (instregex "ST3Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V2Write_6cyc_3L01_6V01, WriteAdr], (instregex "ST3Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_6cyc_3L01_6V01], (instregex "ST3Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 3 element, one lane, B/H
 // ASIMD store, 3 element, one lane, S
 // ASIMD store, 3 element, one lane, D
 def : InstRW<[V2Write_5cyc_2L01_4V01],           (instregex "ST3i(8|16|32|64)$")>;
-def : InstRW<[V2Write_5cyc_2L01_4V01, WriteAdr], (instregex "ST3i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_5cyc_2L01_4V01], (instregex "ST3i(8|16|32|64)_POST$")>;
 
 // ASIMD store, 4 element, multiple, D-form, B/H/S
 def : InstRW<[V2Write_6cyc_2L01_6V01],           (instregex "ST4Fourv(8b|4h|2s)$")>;
-def : InstRW<[V2Write_6cyc_2L01_6V01, WriteAdr], (instregex "ST4Fourv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_6cyc_2L01_6V01], (instregex "ST4Fourv(8b|4h|2s)_POST$")>;
 
 // ASIMD store, 4 element, multiple, Q-form, B/H/S
 def : InstRW<[V2Write_7cyc_4L01_12V01],           (instregex "ST4Fourv(16b|8h|4s)$")>;
-def : InstRW<[V2Write_7cyc_4L01_12V01, WriteAdr], (instregex "ST4Fourv(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_7cyc_4L01_12V01], (instregex "ST4Fourv(16b|8h|4s)_POST$")>;
 
 // ASIMD store, 4 element, multiple, Q-form, D
 def : InstRW<[V2Write_5cyc_4L01_8V01],           (instregex "ST4Fourv(2d)$")>;
-def : InstRW<[V2Write_5cyc_4L01_8V01, WriteAdr], (instregex "ST4Fourv(2d)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_5cyc_4L01_8V01], (instregex "ST4Fourv(2d)_POST$")>;
 
 // ASIMD store, 4 element, one lane, B/H/S
 def : InstRW<[V2Write_6cyc_1L01_3V01],           (instregex "ST4i(8|16|32)$")>;
-def : InstRW<[V2Write_6cyc_1L01_3V01, WriteAdr], (instregex "ST4i(8|16|32)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_6cyc_1L01_3V01], (instregex "ST4i(8|16|32)_POST$")>;
 
 // ASIMD store, 4 element, one lane, D
 def : InstRW<[V2Write_4cyc_2L01_4V01],            (instregex "ST4i(64)$")>;
-def : InstRW<[V2Write_4cyc_2L01_4V01, WriteAdr],  (instregex "ST4i(64)_POST$")>;
+def : InstRW<[WriteAdr, V2Write_4cyc_2L01_4V01],  (instregex "ST4i(64)_POST$")>;
 
 // Cryptography extensions
 // -----------------------------------------------------------------------------
@@ -1998,174 +2020,172 @@ def : InstRW<[V2Write_3or4cyc_1M0_1M], (instrs BRKNS_PPzP, BRKPAS_PPzPP,
 
 // Loop control, based on GPR
 def : InstRW<[V2Write_3cyc_2M],
-             (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]$")>;
-def : InstRW<[V2Write_3cyc_2M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]$")>;
+             (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]")>;
+def : InstRW<[V2Write_3cyc_2M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
 
 // Loop terminate
-def : InstRW<[V2Write_1cyc_2M], (instregex "^CTERM(EQ|NE)_(WW|XX)$")>;
+def : InstRW<[V2Write_1cyc_2M], (instregex "^CTERM(EQ|NE)_(WW|XX)")>;
 
 // Predicate counting scalar
 def : InstRW<[V2Write_2cyc_1M], (instrs ADDPL_XXI, ADDVL_XXI, RDVLI_XI)>;
 def : InstRW<[V2Write_2cyc_1M],
-             (instregex "^(CNT|SQDEC|SQINC|UQDEC|UQINC)[BHWD]_XPiI$",
-                        "^SQ(DEC|INC)[BHWD]_XPiWdI$",
-                        "^UQ(DEC|INC)[BHWD]_WPiI$")>;
+             (instregex "^(CNT|SQDEC|SQINC|UQDEC|UQINC)[BHWD]_XPiI",
+                        "^SQ(DEC|INC)[BHWD]_XPiWdI",
+                        "^UQ(DEC|INC)[BHWD]_WPiI")>;
 
 // Predicate counting scalar, ALL, {1,2,4}
-def : InstRW<[V2Write_IncDec], (instregex "^(DEC|INC)[BHWD]_XPiI$")>;
+def : InstRW<[V2Write_IncDec], (instregex "^(DEC|INC)[BHWD]_XPiI")>;
 
 // Predicate counting scalar, active predicate
 def : InstRW<[V2Write_2cyc_1M],
-             (instregex "^CNTP_XPP_[BHSD]$",
-                        "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)P_XP_[BHSD]$",
-                        "^(UQDEC|UQINC)P_WP_[BHSD]$",
-                        "^(SQDEC|SQINC)P_XPWd_[BHSD]$")>;
+             (instregex "^CNTP_XPP_[BHSD]",
+                        "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)P_XP_[BHSD]",
+                        "^(UQDEC|UQINC)P_WP_[BHSD]",
+                        "^(SQDEC|SQINC)P_XPWd_[BHSD]")>;
 
 // Predicate counting vector, active predicate
 def : InstRW<[V2Write_7cyc_1M_1M0_1V],
-             (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)P_ZP_[HSD]$")>;
+             (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)P_ZP_[HSD]")>;
 
 // Predicate logical
 def : InstRW<[V2Write_1or2cyc_1M0],
-             (instregex "^(AND|BIC|EOR|NAND|NOR|ORN|ORR)_PPzPP$")>;
+             (instregex "^(AND|BIC|EOR|NAND|NOR|ORN|ORR)_PPzPP")>;
 
 // Predicate logical, flag setting
 def : InstRW<[V2Write_1or2cyc_1M0_1M],
-             (instregex "^(ANDS|BICS|EORS|NANDS|NORS|ORNS|ORRS)_PPzPP$")>;
+             (instregex "^(ANDS|BICS|EORS|NANDS|NORS|ORNS|ORRS)_PPzPP")>;
 
 // Predicate reverse
-def : InstRW<[V2Write_2cyc_1M], (instregex "^REV_PP_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1M], (instregex "^REV_PP_[BHSD]")>;
 
 // Predicate select
 def : InstRW<[V2Write_1cyc_1M0], (instrs SEL_PPPP)>;
 
 // Predicate set
-def : InstRW<[V2Write_2cyc_1M], (instregex "^PFALSE$", "^PTRUE_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1M], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[V2Write_3cyc_2M], (instregex "^PTRUES_[BHSD]$")>;
+def : InstRW<[V2Write_3cyc_2M], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
-def : InstRW<[V2Write_2cyc_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1M], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
 def : InstRW<[V2Write_1cyc_1M], (instrs PTEST_PP)>;
 
 // Predicate transpose
-def : InstRW<[V2Write_2cyc_1M], (instregex "^TRN[12]_PPP_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1M], (instregex "^TRN[12]_PPP_[BHSD]")>;
 
 // Predicate unpack and widen
 def : InstRW<[V2Write_2cyc_1M], (instrs PUNPKHI_PP, PUNPKLO_PP)>;
 
 // Predicate zip/unzip
-def : InstRW<[V2Write_2cyc_1M], (instregex "^(ZIP|UZP)[12]_PPP_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1M], (instregex "^(ZIP|UZP)[12]_PPP_[BHSD]")>;
 
 // SVE integer instructions
 // -----------------------------------------------------------------------------
 
 // Arithmetic, absolute diff
-def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU]ABD_ZPmZ_[BHSD]$",
-                                           "^[SU]ABD_ZPZZ_UNDEF_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU]ABD_ZPmZ_[BHSD]",
+                                           "^[SU]ABD_ZPZZ_[BHSD]")>;
 
 // Arithmetic, absolute diff accum
-def : InstRW<[V2Wr_ZA, V2Rd_ZA], (instregex "^[SU]ABA_ZZZ_[BHSD]$")>;
+def : InstRW<[V2Wr_ZA, V2Rd_ZA], (instregex "^[SU]ABA_ZZZ_[BHSD]")>;
 
 // Arithmetic, absolute diff accum long
-def : InstRW<[V2Wr_ZA, V2Rd_ZA], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]$")>;
+def : InstRW<[V2Wr_ZA, V2Rd_ZA], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]")>;
 
 // Arithmetic, absolute diff long
-def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]")>;
 
 // Arithmetic, basic
 def : InstRW<[V2Write_2cyc_1V],
-             (instregex "^(ABS|ADD|CNOT|NEG|SUB|SUBR)_ZPmZ_[BHSD]$",
-                        "^(ABS|CNOT|NEG)_ZPmZ_UNDEF_[BHSD]$",
-                        "^(ADD|SUB)_ZZZ_[BHSD]$",
-                        "^(ADD|SUB|SUBR)_ZI_[BHSD]$",
-                        "^ADR_[SU]XTW_ZZZ_D_[0123]$",
-                        "^ADR_LSL_ZZZ_[SD]_[0123]$",
-                        "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]$",
-                        "^SADDLBT_ZZZ_[HSD]$",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]$",
-                        "^SSUBL(BT|TB)_ZZZ_[HSD]$")>;
+             (instregex "^(ABS|ADD|CNOT|NEG|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^(ADD|SUB)_ZZZ_[BHSD]",
+                        "^(ADD|SUB|SUBR)_ZPZZ_[BHSD]",
+                        "^(ADD|SUB|SUBR)_ZI_[BHSD]",
+                        "^ADR_[SU]XTW_ZZZ_D_[0123]",
+                        "^ADR_LSL_ZZZ_[SD]_[0123]",
+                        "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
+                        "^SADDLBT_ZZZ_[HSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
 def : InstRW<[V2Write_2cyc_1V],
-             (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]$",
-                        "^SQ(ABS|ADD|NEG|SUB|SUBR)_ZPmZ_[BHSD]$",
-                        "^SQ(ABS|NEG)_ZPmZ_UNDEF_[BHSD]$",
-                        "^[SU]Q(ADD|SUB)_ZZZ_[BHSD]$",
-                        "^[SU]Q(ADD|SUB)_ZI_[BHSD]$",
-                        "^(SRH|SUQ|UQ|USQ|URH)ADD_ZPmZ_[BHSD]$",
-                        "^(UQSUB|UQSUBR)_ZPmZ_[BHSD]$")>;
+             (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]",
+                        "^SQ(ABS|ADD|NEG|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]Q(ADD|SUB)_ZZZ_[BHSD]",
+                        "^[SU]Q(ADD|SUB)_ZI_[BHSD]",
+                        "^(SRH|SUQ|UQ|USQ|URH)ADD_ZPmZ_[BHSD]",
+                        "^(UQSUB|UQSUBR)_ZPmZ_[BHSD]")>;
 
 // Arithmetic, large integer
-def : InstRW<[V2Write_2cyc_1V], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]")>;
 
 // Arithmetic, pairwise add
-def : InstRW<[V2Write_2cyc_1V], (instregex "^ADDP_ZPmZ_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^ADDP_ZPmZ_[BHSD]")>;
 
 // Arithmetic, pairwise add and accum long
 def : InstRW<[V2Wr_ZPA, ReadDefault, V2Rd_ZPA],
-             (instregex "^[SU]ADALP_ZPmZ_[HSD]$")>;
+             (instregex "^[SU]ADALP_ZPmZ_[HSD]")>;
 
 // Arithmetic, shift
 def : InstRW<[V2Write_2cyc_1V13],
-             (instregex "^(ASR|LSL|LSR)_WIDE_ZPmZ_[BHS]$",
-                        "^(ASR|LSL|LSR)_WIDE_ZZZ_[BHS]$",
-                        "^(ASR|LSL|LSR)_ZPmI_[BHSD]$",
-                        "^(ASR|LSL|LSR)_ZPmZ_[BHSD]$",
-                        "^(ASR|LSL|LSR)_ZZI_[BHSD]$",
-                        "^(ASR|LSL|LSR)_ZPZ[IZ]_UNDEF_[BHSD]$",
-                        "^(ASRR|LSLR|LSRR)_ZPmZ_[BHSD]$")>;
+             (instregex "^(ASR|LSL|LSR)_WIDE_ZPmZ_[BHS]",
+                        "^(ASR|LSL|LSR)_WIDE_ZZZ_[BHS]",
+                        "^(ASR|LSL|LSR)_ZPmI_[BHSD]",
+                        "^(ASR|LSL|LSR)_ZPmZ_[BHSD]",
+                        "^(ASR|LSL|LSR)_ZZI_[BHSD]",
+                        "^(ASR|LSL|LSR)_ZPZ[IZ]_[BHSD]",
+                        "^(ASRR|LSLR|LSRR)_ZPmZ_[BHSD]")>;
 
 // Arithmetic, shift and accumulate
-def : InstRW<[V2Wr_ZSA, V2Rd_ZSA], (instregex "^[SU]R?SRA_ZZI_[BHSD]$")>;
+def : InstRW<[V2Wr_ZSA, V2Rd_ZSA], (instregex "^[SU]R?SRA_ZZI_[BHSD]")>;
 
 // Arithmetic, shift by immediate
-def : InstRW<[V2Write_2cyc_1V13], (instregex "^SHRN[BT]_ZZI_[BHS]$",
-                                             "^[SU]SHLL[BT]_ZZI_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V13], (instregex "^SHRN[BT]_ZZI_[BHS]",
+                                             "^[SU]SHLL[BT]_ZZI_[HSD]")>;
 
 // Arithmetic, shift by immediate and insert
-def : InstRW<[V2Write_2cyc_1V13], (instregex "^(SLI|SRI)_ZZI_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V13], (instregex "^(SLI|SRI)_ZZI_[BHSD]")>;
 
 // Arithmetic, shift complex
 def : InstRW<[V2Write_4cyc_1V13],
-             (instregex "^(SQ)?RSHRU?N[BT]_ZZI_[BHS]$",
-                        "^(SQRSHL|SQRSHLR|SQSHL|SQSHLR|UQRSHL|UQRSHLR|UQSHL|UQSHLR)_ZPmZ_[BHSD]$",
-                        "^[SU]QR?SHL_ZPZZ_UNDEF_[BHSD]$",
-                        "^(SQSHL|SQSHLU|UQSHL)_ZPmI_[BHSD]$",
-                        "^SQSHRU?N[BT]_ZZI_[BHS]$",
-                        "^UQR?SHRN[BT]_ZZI_[BHS]$")>;
+             (instregex "^(SQ)?RSHRU?N[BT]_ZZI_[BHS]",
+                        "^(SQRSHL|SQRSHLR|SQSHL|SQSHLR|UQRSHL|UQRSHLR|UQSHL|UQSHLR)_ZPmZ_[BHSD]",
+                        "^[SU]QR?SHL_ZPZZ_[BHSD]",
+                        "^(SQSHL|SQSHLU|UQSHL)_(ZPmI|ZPZI)_[BHSD]",
+                        "^SQSHRU?N[BT]_ZZI_[BHS]",
+                        "^UQR?SHRN[BT]_ZZI_[BHS]")>;
 
 // Arithmetic, shift right for divide
-def : InstRW<[V2Write_4cyc_1V13], (instregex "^ASRD_ZPmI_[BHSD]$")>;
+def : InstRW<[V2Write_4cyc_1V13], (instregex "^ASRD_(ZPmI|ZPZI)_[BHSD]")>;
 
 // Arithmetic, shift rounding
-def : InstRW<[V2Write_4cyc_1V13], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]$",
-                                             "^[SU]RSHL_ZPZZ_UNDEF_[BHSD]$",
-                                             "^[SU]RSHR_ZPmI_[BHSD]$")>;
+def : InstRW<[V2Write_4cyc_1V13], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
+                                             "^[SU]RSHL_ZPZZ_[BHSD]",
+                                             "^[SU]RSHR_(ZPmI|ZPZI)_[BHSD]")>;
 
 // Bit manipulation
-def : InstRW<[V2Write_6cyc_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]$")>;
+def : InstRW<[V2Write_6cyc_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[V2Write_2cyc_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ")>;
 
 // Count/reverse bits
-def : InstRW<[V2Write_2cyc_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]$",
-                                           "^(CLS|CLZ|CNT)_ZPmZ_UNDEF_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
 
 // Broadcast logical bitmask immediate to vector
 def : InstRW<[V2Write_2cyc_1V], (instrs DUPM_ZI)>;
 
 // Compare and set flags
 def : InstRW<[V2Write_4or5cyc_1V0_1M0],
-             (instregex "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_PPzZ[IZ]_[BHSD]$",
-                        "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]$")>;
+             (instregex "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_PPzZ[IZ]_[BHSD]",
+                        "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]")>;
 
 // Complex add
-def : InstRW<[V2Write_2cyc_1V], (instregex "^(SQ)?CADD_ZZI_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^(SQ)?CADD_ZZI_[BHSD]")>;
 
 // Complex dot product 8-bit element
 def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instrs CDOT_ZZZ_S, CDOT_ZZZI_S)>;
@@ -2174,201 +2194,200 @@ def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instrs CDOT_ZZZ_S, CDOT_ZZZI_S)>;
 def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instrs CDOT_ZZZ_D, CDOT_ZZZI_D)>;
 
 // Complex multiply-add B, H, S element size
-def : InstRW<[V2Wr_ZCMABHS, V2Rd_ZCMABHS], (instregex "^CMLA_ZZZ_[BHS]$",
-                                                      "^CMLA_ZZZI_[HS]$")>;
+def : InstRW<[V2Wr_ZCMABHS, V2Rd_ZCMABHS], (instregex "^CMLA_ZZZ_[BHS]",
+                                                      "^CMLA_ZZZI_[HS]")>;
 
 // Complex multiply-add D element size
 def : InstRW<[V2Wr_ZCMAD, V2Rd_ZCMAD], (instrs CMLA_ZZZ_D)>;
 
 // Conditional extract operations, scalar form
-def : InstRW<[V2Write_8cyc_1M0_1V01], (instregex "^CLAST[AB]_RPZ_[BHSD]$")>;
+def : InstRW<[V2Write_8cyc_1M0_1V01], (instregex "^CLAST[AB]_RPZ_[BHSD]")>;
 
 // Conditional extract operations, SIMD&FP scalar and vector forms
-def : InstRW<[V2Write_3cyc_1V1], (instregex "^CLAST[AB]_[VZ]PZ_[BHSD]$",
-                                            "^COMPACT_ZPZ_[SD]$",
-                                            "^SPLICE_ZPZZ?_[BHSD]$")>;
+def : InstRW<[V2Write_3cyc_1V1], (instregex "^CLAST[AB]_[VZ]PZ_[BHSD]",
+                                            "^COMPACT_ZPZ_[SD]",
+                                            "^SPLICE_ZPZZ?_[BHSD]")>;
 
 // Convert to floating point, 64b to float or convert to double
-def : InstRW<[V2Write_3cyc_1V02], (instregex "^[SU]CVTF_ZPmZ_Dto[HSD](_UNDEF)?$",
-                                             "^[SU]CVTF_ZPmZ_StoD(_UNDEF)?$")>;
+def : InstRW<[V2Write_3cyc_1V02], (instregex "^[SU]CVTF_ZPmZ_Dto[HSD]",
+                                             "^[SU]CVTF_ZPmZ_StoD")>;
 
 // Convert to floating point, 32b to single or half
-def : InstRW<[V2Write_4cyc_2V02], (instregex "^[SU]CVTF_ZPmZ_Sto[HS](_UNDEF)?$")>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^[SU]CVTF_ZPmZ_Sto[HS]")>;
 
 // Convert to floating point, 16b to half
-def : InstRW<[V2Write_6cyc_4V02], (instregex "^[SU]CVTF_ZPmZ_HtoH(_UNDEF)?$")>;
+def : InstRW<[V2Write_6cyc_4V02], (instregex "^[SU]CVTF_ZPmZ_HtoH")>;
 
 // Copy, scalar
-def : InstRW<[V2Write_5cyc_1M0_1V], (instregex "^CPY_ZPmR_[BHSD]$")>;
+def : InstRW<[V2Write_5cyc_1M0_1V], (instregex "^CPY_ZPmR_[BHSD]")>;
 
 // Copy, scalar SIMD&FP or imm
-def : InstRW<[V2Write_2cyc_1V], (instregex "^CPY_ZPm[IV]_[BHSD]$",
-                                           "^CPY_ZPzI_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^CPY_ZPm[IV]_[BHSD]",
+                                           "^CPY_ZPzI_[BHSD]")>;
 
 // Divides, 32 bit
-def : InstRW<[V2Write_12cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_S$",
-                                             "^[SU]DIV_ZPZZ_UNDEF_S$")>;
+def : InstRW<[V2Write_12cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_S",
+                                             "^[SU]DIV_ZPZZ_S")>;
 
 // Divides, 64 bit
-def : InstRW<[V2Write_20cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_D$",
-                                             "^[SU]DIV_ZPZZ_UNDEF_D$")>;
+def : InstRW<[V2Write_20cyc_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
+                                             "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D")>;
 
 // Duplicate, immediate and indexed form
-def : InstRW<[V2Write_2cyc_1V], (instregex "^DUP_ZI_[BHSD]$",
-                                           "^DUP_ZZI_[BHSDQ]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^DUP_ZI_[BHSD]",
+                                           "^DUP_ZZI_[BHSDQ]")>;
 
 // Duplicate, scalar form
-def : InstRW<[V2Write_3cyc_1M0], (instregex "^DUP_ZR_[BHSD]$")>;
+def : InstRW<[V2Write_3cyc_1M0], (instregex "^DUP_ZR_[BHSD]")>;
 
 // Extend, sign or zero
-def : InstRW<[V2Write_2cyc_1V13], (instregex "^[SU]XTB_ZPmZ(_UNDEF)?_[HSD]$",
-                                             "^[SU]XTH_ZPmZ(_UNDEF)?_[SD]$",
-                                             "^[SU]XTW_ZPmZ(_UNDEF)?_[D]$")>;
+def : InstRW<[V2Write_2cyc_1V13], (instregex "^[SU]XTB_ZPmZ_[HSD]",
+                                             "^[SU]XTH_ZPmZ_[SD]",
+                                             "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
 def : InstRW<[V2Write_2cyc_1V], (instrs EXT_ZZI, EXT_ZZI_B)>;
 
 // Extract narrow saturating
-def : InstRW<[V2Write_4cyc_1V13], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]$",
-                                             "^SQXTUN[BT]_ZZ_[BHS]$")>;
+def : InstRW<[V2Write_4cyc_1V13], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
+                                             "^SQXTUN[BT]_ZZ_[BHS]")>;
 
 // Extract/insert operation, SIMD and FP scalar form
-def : InstRW<[V2Write_3cyc_1V1], (instregex "^LAST[AB]_VPZ_[BHSD]$",
-                                            "^INSR_ZV_[BHSD]$")>;
+def : InstRW<[V2Write_3cyc_1V1], (instregex "^LAST[AB]_VPZ_[BHSD]",
+                                            "^INSR_ZV_[BHSD]")>;
 
 // Extract/insert operation, scalar
-def : InstRW<[V2Write_6cyc_1V1_1M0], (instregex "^LAST[AB]_RPZ_[BHSD]$",
-                                                "^INSR_ZR_[BHSD]$")>;
+def : InstRW<[V2Write_6cyc_1V1_1M0], (instregex "^LAST[AB]_RPZ_[BHSD]",
+                                                "^INSR_ZR_[BHSD]")>;
 
 // Histogram operations
-def : InstRW<[V2Write_2cyc_1V], (instregex "^HISTCNT_ZPzZZ_[SD]$",
-                                           "^HISTSEG_ZZZ$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^HISTCNT_ZPzZZ_[SD]",
+                                           "^HISTSEG_ZZZ")>;
 
 // Horizontal operations, B, H, S form, immediate operands only
-def : InstRW<[V2Write_4cyc_1V02], (instregex "^INDEX_II_[BHS]$")>;
+def : InstRW<[V2Write_4cyc_1V02], (instregex "^INDEX_II_[BHS]")>;
 
 // Horizontal operations, B, H, S form, scalar, immediate operands/ scalar
 // operands only / immediate, scalar operands
-def : InstRW<[V2Write_7cyc_1M0_1V02], (instregex "^INDEX_(IR|RI|RR)_[BHS]$")>;
+def : InstRW<[V2Write_7cyc_1M0_1V02], (instregex "^INDEX_(IR|RI|RR)_[BHS]")>;
 
 // Horizontal operations, D form, immediate operands only
 def : InstRW<[V2Write_5cyc_2V02], (instrs INDEX_II_D)>;
 
 // Horizontal operations, D form, scalar, immediate operands)/ scalar operands
 // only / immediate, scalar operands
-def : InstRW<[V2Write_8cyc_2M0_2V02], (instregex "^INDEX_(IR|RI|RR)_D$")>;
+def : InstRW<[V2Write_8cyc_2M0_2V02], (instregex "^INDEX_(IR|RI|RR)_D")>;
 
 // Logical
 def : InstRW<[V2Write_2cyc_1V],
-             (instregex "^(AND|EOR|ORR)_ZI$",
-                        "^(AND|BIC|EOR|ORR)_ZZZ$",
-                        "^EOR(BT|TB)_ZZZ_[BHSD]$",
-                        "^(AND|BIC|EOR|NOT|ORR)_ZPmZ_[BHSD]$",
-                        "^NOT_ZPmZ_UNDEF_[BHSD]$")>;
+             (instregex "^(AND|EOR|ORR)_ZI",
+                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^EOR(BT|TB)_ZZZ_[BHSD]",
+                        "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
+                        "^NOT_ZPmZ_[BHSD]")>;
 
 // Max/min, basic and pairwise
-def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]$",
-                                           "^[SU](MAX|MIN)P?_ZPmZ_[BHSD]$",
-                                           "^[SU](MAX|MIN)_ZPZZ_UNDEF_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
+                                           "^[SU](MAX|MIN)P?_ZPmZ_[BHSD]",
+                                           "^[SU](MAX|MIN)_ZPZZ_[BHSD]")>;
 
 // Matching operations
 // FIXME: SOG p. 44, n. 5: If the consuming instruction has a flag source, the
 // latency for this instruction is 4 cycles.
-def : InstRW<[V2Write_2or3cyc_1V0_1M], (instregex "^N?MATCH_PPzZZ_[BH]$")>;
+def : InstRW<[V2Write_2or3cyc_1V0_1M], (instregex "^N?MATCH_PPzZZ_[BH]")>;
 
 // Matrix multiply-accumulate
 def : InstRW<[V2Wr_ZMMA, V2Rd_ZMMA], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
 
 // Move prefix
-def : InstRW<[V2Write_2cyc_1V], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]$",
-                                           "^MOVPRFX_ZZ$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]",
+                                           "^MOVPRFX_ZZ")>;
 
 // Multiply, B, H, S element size
-def : InstRW<[V2Write_4cyc_1V02], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHS]$",
-                                             "^MUL_ZPZZ_UNDEF_[BHS]$",
-                                             "^[SU]MULH_(ZPmZ|ZZZ)_[BHS]$",
-                                             "^[SU]MULH_ZPZZ_UNDEF_[BHS]$")>;
+def : InstRW<[V2Write_4cyc_1V02], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHS]",
+                                             "^MUL_ZPZZ_[BHS]",
+                                             "^[SU]MULH_(ZPmZ|ZZZ)_[BHS]",
+                                             "^[SU]MULH_ZPZZ_[BHS]")>;
 
 // Multiply, D element size
-def : InstRW<[V2Write_5cyc_2V02], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_D$",
-                                             "^MUL_ZPZZ_UNDEF_D$",
-                                             "^[SU]MULH_(ZPmZ|ZZZ)_D$",
-                                             "^[SU]MULH_ZPZZ_UNDEF_D$")>;
+def : InstRW<[V2Write_5cyc_2V02], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_D",
+                                             "^MUL_ZPZZ_D",
+                                             "^[SU]MULH_(ZPmZ|ZZZ)_D",
+                                             "^[SU]MULH_ZPZZ_D")>;
 
 // Multiply long
-def : InstRW<[V2Write_4cyc_1V02], (instregex "^[SU]MULL[BT]_ZZZI_[SD]$",
-                                             "^[SU]MULL[BT]_ZZZ_[HSD]$")>;
+def : InstRW<[V2Write_4cyc_1V02], (instregex "^[SU]MULL[BT]_ZZZI_[SD]",
+                                             "^[SU]MULL[BT]_ZZZ_[HSD]")>;
 
 // Multiply accumulate, B, H, S element size
 def : InstRW<[V2Wr_ZMABHS, V2Rd_ZMABHS],
-             (instregex "^ML[AS]_ZZZI_[HS]$", "^ML[AS]_ZPZZZ_UNDEF_[BHS]$")>;
+             (instregex "^ML[AS]_ZZZI_[HS]", "^ML[AS]_ZPZZZ_[BHS]")>;
 def : InstRW<[V2Wr_ZMABHS, ReadDefault, V2Rd_ZMABHS],
-             (instregex "^(ML[AS]|MAD|MSB)_ZPmZZ_[BHS]$")>;
+             (instregex "^(ML[AS]|MAD|MSB)_ZPmZZ_[BHS]")>;
 
 // Multiply accumulate, D element size
 def : InstRW<[V2Wr_ZMAD, V2Rd_ZMAD],
-             (instregex "^ML[AS]_ZZZI_D$", "^ML[AS]_ZPZZZ_UNDEF_D$")>;
+             (instregex "^ML[AS]_ZZZI_D", "^ML[AS]_ZPZZZ_D")>;
 def : InstRW<[V2Wr_ZMAD, ReadDefault, V2Rd_ZMAD],
-             (instregex "^(ML[AS]|MAD|MSB)_ZPmZZ_D$")>;
+             (instregex "^(ML[AS]|MAD|MSB)_ZPmZZ_D")>;
 
 // Multiply accumulate long
-def : InstRW<[V2Wr_ZMAL, V2Rd_ZMAL], (instregex "^[SU]ML[AS]L[BT]_ZZZ_[HSD]$",
-                                                "^[SU]ML[AS]L[BT]_ZZZI_[SD]$")>;
+def : InstRW<[V2Wr_ZMAL, V2Rd_ZMAL], (instregex "^[SU]ML[AS]L[BT]_ZZZ_[HSD]",
+                                                "^[SU]ML[AS]L[BT]_ZZZI_[SD]")>;
 
 // Multiply accumulate saturating doubling long regular
 def : InstRW<[V2Wr_ZMASQL, V2Rd_ZMASQ],
-             (instregex "^SQDML[AS]L(B|T|BT)_ZZZ_[HSD]$",
-                        "^SQDML[AS]L[BT]_ZZZI_[SD]$")>;
+             (instregex "^SQDML[AS]L(B|T|BT)_ZZZ_[HSD]",
+                        "^SQDML[AS]L[BT]_ZZZI_[SD]")>;
 
 // Multiply saturating doubling high, B, H, S element size
-def : InstRW<[V2Write_4cyc_1V02], (instregex "^SQDMULH_ZZZ_[BHS]$",
-                                             "^SQDMULH_ZZZI_[HS]$")>;
+def : InstRW<[V2Write_4cyc_1V02], (instregex "^SQDMULH_ZZZ_[BHS]",
+                                             "^SQDMULH_ZZZI_[HS]")>;
 
 // Multiply saturating doubling high, D element size
 def : InstRW<[V2Write_5cyc_2V02], (instrs SQDMULH_ZZZ_D, SQDMULH_ZZZI_D)>;
 
 // Multiply saturating doubling long
-def : InstRW<[V2Write_4cyc_1V02], (instregex "^SQDMULL[BT]_ZZZ_[HSD]$",
-                                             "^SQDMULL[BT]_ZZZI_[SD]$")>;
+def : InstRW<[V2Write_4cyc_1V02], (instregex "^SQDMULL[BT]_ZZZ_[HSD]",
+                                             "^SQDMULL[BT]_ZZZI_[SD]")>;
 
 // Multiply saturating rounding doubling regular/complex accumulate, B, H, S
 // element size
-def : InstRW<[V2Wr_ZMASQBHS, V2Rd_ZMASQ], (instregex "^SQRDML[AS]H_ZZZ_[BHS]$",
-                                                     "^SQRDCMLAH_ZZZ_[BHS]$",
-                                                     "^SQRDML[AS]H_ZZZI_[HS]$",
-                                                     "^SQRDCMLAH_ZZZI_[HS]$")>;
+def : InstRW<[V2Wr_ZMASQBHS, V2Rd_ZMASQ], (instregex "^SQRDML[AS]H_ZZZ_[BHS]",
+                                                     "^SQRDCMLAH_ZZZ_[BHS]",
+                                                     "^SQRDML[AS]H_ZZZI_[HS]",
+                                                     "^SQRDCMLAH_ZZZI_[HS]")>;
 
 // Multiply saturating rounding doubling regular/complex accumulate, D element
 // size
-def : InstRW<[V2Wr_ZMASQD, V2Rd_ZMASQ], (instregex "^SQRDML[AS]H_ZZZI?_D$",
-                                                   "^SQRDCMLAH_ZZZ_D$")>;
+def : InstRW<[V2Wr_ZMASQD, V2Rd_ZMASQ], (instregex "^SQRDML[AS]H_ZZZI?_D",
+                                                   "^SQRDCMLAH_ZZZ_D")>;
 
 // Multiply saturating rounding doubling regular/complex, B, H, S element size
-def : InstRW<[V2Write_4cyc_1V02], (instregex "^SQRDMULH_ZZZ_[BHS]$",
-                                             "^SQRDMULH_ZZZI_[HS]$")>;
+def : InstRW<[V2Write_4cyc_1V02], (instregex "^SQRDMULH_ZZZ_[BHS]",
+                                             "^SQRDMULH_ZZZI_[HS]")>;
 
 // Multiply saturating rounding doubling regular/complex, D element size
-def : InstRW<[V2Write_5cyc_2V02], (instregex "^SQRDMULH_ZZZI?_D$")>;
+def : InstRW<[V2Write_5cyc_2V02], (instregex "^SQRDMULH_ZZZI?_D")>;
 
 // Multiply/multiply long, (8x8) polynomial
-def : InstRW<[V2Write_2cyc_1V23], (instregex "^PMUL_ZZZ_B$",
-                                             "^PMULL[BT]_ZZZ_[HDQ]$")>;
+def : InstRW<[V2Write_2cyc_1V23], (instregex "^PMUL_ZZZ_B",
+                                             "^PMULL[BT]_ZZZ_[HDQ]")>;
 
 // Predicate counting vector
-def : InstRW<[V2Write_2cyc_1V], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
 
 // Reciprocal estimate
-def : InstRW<[V2Write_4cyc_2V02], (instrs URECPE_ZPmZ_S, URSQRTE_ZPmZ_S,
-                                          URECPE_ZPmZ_UNDEF_S, URSQRTE_ZPmZ_UNDEF_S)>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
 def : InstRW<[V2Write_9cyc_2V_4V13], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
@@ -2383,47 +2402,47 @@ def : InstRW<[V2Write_6cyc_2V_2V13], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
 def : InstRW<[V2Write_4cyc_2V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_D")>;
 
 // Reduction, logical
-def : InstRW<[V2Write_6cyc_1V_1V13], (instregex "^(AND|EOR|OR)V_VPZ_[BHSD]$")>;
+def : InstRW<[V2Write_6cyc_1V_1V13], (instregex "^(AND|EOR|OR)V_VPZ_[BHSD]")>;
 
 // Reverse, vector
-def : InstRW<[V2Write_2cyc_1V], (instregex "^REV_ZZ_[BHSD]$",
-                                           "^REVB_ZPmZ_[HSD]$",
-                                           "^REVH_ZPmZ_[SD]$",
-                                           "^REVW_ZPmZ_D$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^REV_ZZ_[BHSD]",
+                                           "^REVB_ZPmZ_[HSD]",
+                                           "^REVH_ZPmZ_[SD]",
+                                           "^REVW_ZPmZ_D")>;
 
 // Select, vector form
-def : InstRW<[V2Write_2cyc_1V], (instregex "^SEL_ZPZZ_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^SEL_ZPZZ_[BHSD]")>;
 
 // Table lookup
-def : InstRW<[V2Write_2cyc_1V], (instregex "^TBL_ZZZZ?_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^TBL_ZZZZ?_[BHSD]")>;
 
 // Table lookup extension
-def : InstRW<[V2Write_2cyc_1V], (instregex "^TBX_ZZZ_[BHSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^TBX_ZZZ_[BHSD]")>;
 
 // Transpose, vector form
-def : InstRW<[V2Write_2cyc_1V], (instregex "^TRN[12]_ZZZ_[BHSDQ]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^TRN[12]_ZZZ_[BHSDQ]")>;
 
 // Unpack and extend
-def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU]UNPK(HI|LO)_ZZ_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^[SU]UNPK(HI|LO)_ZZ_[HSD]")>;
 
 // Zip/unzip
-def : InstRW<[V2Write_2cyc_1V], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]")>;
 
 // SVE floating-point instructions
 // -----------------------------------------------------------------------------
 
 // Floating point absolute value/difference
-def : InstRW<[V2Write_2cyc_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]$",
-                                           "^FABD_ZPZZ_UNDEF_[HSD]$",
-                                           "^FABS_ZPmZ_UNDEF_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]",
+                                           "^FABD_ZPZZ_[HSD]",
+                                           "^FABS_ZPmZ_[HSD]")>;
 
 // Floating point arithmetic
-def : InstRW<[V2Write_2cyc_1V], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]$",
-                                           "^F(ADD|SUB)_ZPZ[IZ]_UNDEF_[HSD]$",
-                                           "^FADDP_ZPmZZ_[HSD]$",
-                                           "^FNEG_ZPmZ(_UNDEF)?_[HSD]$",
-                                           "^FSUBR_ZPm[IZ]_[HSD]$",
-                                           "^FSUBR_ZPZI_UNDEF_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]",
+                                           "^F(ADD|SUB)_ZPZ[IZ]_[HSD]",
+                                           "^FADDP_ZPmZZ_[HSD]",
+                                           "^FNEG_ZPmZ_[HSD]",
+                                           "^FSUBR_ZPm[IZ]_[HSD]",
+                                           "^FSUBR_(ZPZI|ZPZZ)_[HSD]")>;
 
 // Floating point associative add, F16
 def : InstRW<[V2Write_10cyc_1V1_9rc], (instrs FADDA_VPZ_H)>;
@@ -2435,144 +2454,138 @@ def : InstRW<[V2Write_6cyc_1V1_5rc], (instrs FADDA_VPZ_S)>;
 def : InstRW<[V2Write_4cyc_1V], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
-def : InstRW<[V2Write_2cyc_1V0], (instregex "^FACG[ET]_PPzZZ_[HSD]$",
-                                            "^FCM(EQ|GE|GT|NE)_PPzZ[0Z]_[HSD]$",
-                                            "^FCM(LE|LT)_PPzZ0_[HSD]$",
-                                            "^FCMUO_PPzZZ_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V0], (instregex "^FACG[ET]_PPzZZ_[HSD]",
+                                            "^FCM(EQ|GE|GT|NE)_PPzZ[0Z]_[HSD]",
+                                            "^FCM(LE|LT)_PPzZ0_[HSD]",
+                                            "^FCMUO_PPzZZ_[HSD]")>;
 
 // Floating point complex add
-def : InstRW<[V2Write_3cyc_1V], (instregex "^FCADD_ZPmZ_[HSD]$")>;
+def : InstRW<[V2Write_3cyc_1V], (instregex "^FCADD_ZPmZ_[HSD]")>;
 
 // Floating point complex multiply add
-def : InstRW<[V2Wr_ZFCMA, ReadDefault, V2Rd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]$")>;
-def : InstRW<[V2Wr_ZFCMA, V2Rd_ZFCMA],              (instregex "^FCMLA_ZZZI_[HS]$")>;
+def : InstRW<[V2Wr_ZFCMA, ReadDefault, V2Rd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
+def : InstRW<[V2Wr_ZFCMA, V2Rd_ZFCMA],              (instregex "^FCMLA_ZZZI_[HS]")>;
 
 // Floating point convert, long or narrow (F16 to F32 or F32 to F16)
-def : InstRW<[V2Write_4cyc_2V02], (instregex "^FCVT_ZPmZ_(HtoS|StoH)(_UNDEF)?$",
-                                             "^FCVTLT_ZPmZ_HtoS$",
-                                             "^FCVTNT_ZPmZ_StoH$")>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^FCVT_ZPmZ_(HtoS|StoH)",
+                                             "^FCVTLT_ZPmZ_HtoS",
+                                             "^FCVTNT_ZPmZ_StoH")>;
 
 // Floating point convert, long or narrow (F16 to F64, F32 to F64, F64 to F32
 // or F64 to F16)
-def : InstRW<[V2Write_3cyc_1V02], (instregex "^FCVT_ZPmZ_(HtoD|StoD|DtoS|DtoH)(_UNDEF)?$",
-                                             "^FCVTLT_ZPmZ_StoD$",
-                                             "^FCVTNT_ZPmZ_DtoS$")>;
+def : InstRW<[V2Write_3cyc_1V02], (instregex "^FCVT_ZPmZ_(HtoD|StoD|DtoS|DtoH)",
+                                             "^FCVTLT_ZPmZ_StoD",
+                                             "^FCVTNT_ZPmZ_DtoS")>;
 
 // Floating point convert, round to odd
 def : InstRW<[V2Write_3cyc_1V02], (instrs FCVTX_ZPmZ_DtoS, FCVTXNT_ZPmZ_DtoS)>;
 
 // Floating point base2 log, F16
-def : InstRW<[V2Write_6cyc_4V02], (instrs FLOGB_ZPmZ_H)>;
+def : InstRW<[V2Write_6cyc_4V02], (instregex "^FLOGB_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point base2 log, F32
-def : InstRW<[V2Write_4cyc_2V02], (instrs FLOGB_ZPmZ_S)>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^FLOGB_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point base2 log, F64
-def : InstRW<[V2Write_3cyc_1V02], (instrs FLOGB_ZPmZ_D)>;
+def : InstRW<[V2Write_3cyc_1V02], (instregex "^FLOGB_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point convert to integer, F16
-def : InstRW<[V2Write_6cyc_4V02], (instregex "^FCVTZ[SU]_ZPmZ_HtoH(_UNDEF)?$")>;
+def : InstRW<[V2Write_6cyc_4V02], (instregex "^FCVTZ[SU]_ZPmZ_HtoH")>;
 
 // Floating point convert to integer, F32
-def : InstRW<[V2Write_4cyc_2V02], (instregex "^FCVTZ[SU]_ZPmZ_(HtoS|StoS)(_UNDEF)?$")>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^FCVTZ[SU]_ZPmZ_(HtoS|StoS)")>;
 
 // Floating point convert to integer, F64
 def : InstRW<[V2Write_3cyc_1V02],
-             (instregex "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)(_UNDEF)?$")>;
+             (instregex "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)")>;
 
 // Floating point copy
-def : InstRW<[V2Write_2cyc_1V], (instregex "^FCPY_ZPmI_[HSD]$",
-                                           "^FDUP_ZI_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^FCPY_ZPmI_[HSD]",
+                                           "^FDUP_ZI_[HSD]")>;
 
 // Floating point divide, F16
-def : InstRW<[V2Write_13cyc_1V02_12rc], (instregex "^FDIVR?_ZPmZ_H$",
-                                                   "^FDIV_ZPZZ_UNDEF_H$")>;
+def : InstRW<[V2Write_13cyc_1V02_12rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point divide, F32
-def : InstRW<[V2Write_10cyc_1V02_9rc], (instregex "^FDIVR?_ZPmZ_S$",
-                                                  "^FDIV_ZPZZ_UNDEF_S$")>;
+def : InstRW<[V2Write_10cyc_1V02_9rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point divide, F64
-def : InstRW<[V2Write_15cyc_1V02_14rc], (instregex "^FDIVR?_ZPmZ_D$",
-                                                   "^FDIV_ZPZZ_UNDEF_D$")>;
+def : InstRW<[V2Write_15cyc_1V02_14rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point min/max pairwise
-def : InstRW<[V2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
 
 // Floating point min/max
-def : InstRW<[V2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]$",
-                                           "^F(MAX|MIN)(NM)?_ZPZ[IZ]_UNDEF_[HSD]$")>;
+def : InstRW<[V2Write_2cyc_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
+                                           "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[V2Write_3cyc_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]$",
-                                           "^FMULX_ZPZZ_UNDEF_[HSD]$",
-                                           "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]$",
-                                           "^FMUL_ZPZ[IZ]_UNDEF_[HSD]$")>;
+def : InstRW<[V2Write_3cyc_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+                                           "^FMULX_ZPZZ_[HSD]",
+                                           "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
+                                           "^FMUL_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply accumulate
 def : InstRW<[V2Wr_ZFMA, ReadDefault, V2Rd_ZFMA],
-             (instregex "^FN?ML[AS]_ZPmZZ_[HSD]$",
-                        "^FN?(MAD|MSB)_ZPmZZ_[HSD]$")>;
+             (instregex "^FN?ML[AS]_ZPmZZ_[HSD]",
+                        "^FN?(MAD|MSB)_ZPmZZ_[HSD]")>;
 def : InstRW<[V2Wr_ZFMA, V2Rd_ZFMA],
-             (instregex "^FML[AS]_ZZZI_[HSD]$",
-                        "^FN?ML[AS]_ZPZZZ_UNDEF_[HSD]$")>;
+             (instregex "^FML[AS]_ZZZI_[HSD]",
+                        "^FN?ML[AS]_ZPZZZ_[HSD]")>;
 
 // Floating point multiply add/sub accumulate long
-def : InstRW<[V2Wr_ZFMAL, V2Rd_ZFMAL], (instregex "^FML[AS]L[BT]_ZZZI?_SHH$")>;
+def : InstRW<[V2Wr_ZFMAL, V2Rd_ZFMAL], (instregex "^FML[AS]L[BT]_ZZZI?_SHH")>;
 
 // Floating point reciprocal estimate, F16
-def : InstRW<[V2Write_6cyc_4V02], (instrs FRECPE_ZZ_H, FRECPX_ZPmZ_H,
-                                          FRSQRTE_ZZ_H, FRECPX_ZPmZ_UNDEF_H)>;
+def : InstRW<[V2Write_6cyc_4V02], (instregex "^FR(ECP|SQRT)E_ZZ_H", "^FRECPX_ZPmZ_H")>;
 
 // Floating point reciprocal estimate, F32
-def : InstRW<[V2Write_4cyc_2V02], (instrs FRECPE_ZZ_S, FRECPX_ZPmZ_S,
-                                          FRSQRTE_ZZ_S, FRECPX_ZPmZ_UNDEF_S)>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^FR(ECP|SQRT)E_ZZ_S", "^FRECPX_ZPmZ_S")>;
 
 // Floating point reciprocal estimate, F64
-def : InstRW<[V2Write_3cyc_1V02], (instrs FRECPE_ZZ_D, FRECPX_ZPmZ_D,
-                                          FRSQRTE_ZZ_D, FRECPX_ZPmZ_UNDEF_D)>;
+def : InstRW<[V2Write_3cyc_1V02], (instregex "^FR(ECP|SQRT)E_ZZ_D", "^FRECPX_ZPmZ_D")>;
 
 // Floating point reciprocal step
-def : InstRW<[V2Write_4cyc_1V], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]$")>;
+def : InstRW<[V2Write_4cyc_1V], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]")>;
 
 // Floating point reduction, F16
 def : InstRW<[V2Write_8cyc_4V],
-             (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_H$")>;
+             (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_H")>;
 
 // Floating point reduction, F32
 def : InstRW<[V2Write_6cyc_3V],
-             (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_S$")>;
+             (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_S")>;
 
 // Floating point reduction, F64
 def : InstRW<[V2Write_4cyc_2V],
-             (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_D$")>;
+             (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_D")>;
 
 // Floating point round to integral, F16
-def : InstRW<[V2Write_6cyc_4V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ(_UNDEF)?_H$")>;
+def : InstRW<[V2Write_6cyc_4V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_H")>;
 
 // Floating point round to integral, F32
-def : InstRW<[V2Write_4cyc_2V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ(_UNDEF)?_S$")>;
+def : InstRW<[V2Write_4cyc_2V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_S")>;
 
 // Floating point round to integral, F64
-def : InstRW<[V2Write_3cyc_1V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ(_UNDEF)?_D$")>;
+def : InstRW<[V2Write_3cyc_1V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_D")>;
 
 // Floating point square root, F16
-def : InstRW<[V2Write_13cyc_1V0_12rc], (instrs FSQRT_ZPmZ_H, FSQRT_ZPmZ_UNDEF_H)>;
+def : InstRW<[V2Write_13cyc_1V02_12rc], (instregex "^FSQRT_ZPmZ_H")>;
 
 // Floating point square root, F32
-def : InstRW<[V2Write_10cyc_1V0_9rc], (instrs FSQRT_ZPmZ_S, FSQRT_ZPmZ_UNDEF_S)>;
+def : InstRW<[V2Write_10cyc_1V02_9rc], (instregex "^FSQRT_ZPmZ_S")>;
 
 // Floating point square root, F64
-def : InstRW<[V2Write_16cyc_1V0_14rc], (instrs FSQRT_ZPmZ_D, FSQRT_ZPmZ_UNDEF_D)>;
+def : InstRW<[V2Write_16cyc_1V02_14rc], (instregex "^FSQRT_ZPmZ_D")>;
 
 // Floating point trigonometric exponentiation
-def : InstRW<[V2Write_3cyc_1V1], (instregex "^FEXPA_ZZ_[HSD]$")>;
+def : InstRW<[V2Write_3cyc_1V1], (instregex "^FEXPA_ZZ_[HSD]")>;
 
 // Floating point trigonometric multiply add
-def : InstRW<[V2Write_4cyc_1V], (instregex "^FTMAD_ZZI_[HSD]$")>;
+def : InstRW<[V2Write_4cyc_1V], (instregex "^FTMAD_ZZI_[HSD]")>;
 
 // Floating point trigonometric, miscellaneous
-def : InstRW<[V2Write_3cyc_1V], (instregex "^FTS(MUL|SEL)_ZZZ_[HSD]$")>;
+def : InstRW<[V2Write_3cyc_1V], (instregex "^FTS(MUL|SEL)_ZZZ_[HSD]")>;
 
 // SVE BFloat16 (BF16) instructions
 // -----------------------------------------------------------------------------
@@ -2587,7 +2600,7 @@ def : InstRW<[V2Wr_ZBFDOT, V2Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 def : InstRW<[V2Wr_ZBFMMA, V2Rd_ZBFMMA], (instrs BFMMLA_ZZZ)>;
 
 // Multiply accumulate long
-def : InstRW<[V2Wr_ZBFMAL, V2Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZI?$")>;
+def : InstRW<[V2Wr_ZBFMAL, V2Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZI?")>;
 
 // SVE Load instructions
 // -----------------------------------------------------------------------------
@@ -2599,10 +2612,10 @@ def : InstRW<[V2Write_6cyc_1L], (instrs LDR_ZXI)>;
 def : InstRW<[V2Write_6cyc_1L_1M], (instrs LDR_PXI)>;
 
 // Contiguous load, scalar + imm
-def : InstRW<[V2Write_6cyc_1L], (instregex "^LD1[BHWD]_IMM_REAL$",
-                                           "^LD1S?B_[HSD]_IMM_REAL$",
-                                           "^LD1S?H_[SD]_IMM_REAL$",
-                                           "^LD1S?W_D_IMM_REAL$" )>;
+def : InstRW<[V2Write_6cyc_1L], (instregex "^LD1[BHWD]_IMM$",
+                                           "^LD1S?B_[HSD]_IMM$",
+                                           "^LD1S?H_[SD]_IMM$",
+                                           "^LD1S?W_D_IMM$" )>;
 // Contiguous load, scalar + scalar
 def : InstRW<[V2Write_6cyc_1L], (instregex "^LD1[BHWD]$",
                                            "^LD1S?B_[HSD]$",
@@ -2625,24 +2638,24 @@ def : InstRW<[V2Write_6cyc_1L], (instregex "^LD1RQ_[BHWD]$")>;
 def : InstRW<[V2Write_6cyc_1L], (instregex "^LDNT1[BHWD]_ZR[IR]$")>;
 
 // Non temporal gather load, vector + scalar 32-bit element size
-def : InstRW<[V2Write_9cyc_2L_4V], (instregex "^LDNT1[BHW]_ZZR_S_REAL$",
-                                              "^LDNT1S[BH]_ZZR_S_REAL$")>;
+def : InstRW<[V2Write_9cyc_2L_4V], (instregex "^LDNT1[BHW]_ZZR_S$",
+                                              "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[V2Write_9cyc_2L_2V1], (instregex "^LDNT1S?[BHW]_ZZR_D_REAL$")>;
-def : InstRW<[V2Write_9cyc_2L_2V1], (instrs LDNT1D_ZZR_D_REAL)>;
+def : InstRW<[V2Write_9cyc_2L_2V1], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[V2Write_9cyc_2L_2V1], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
-def : InstRW<[V2Write_6cyc_1L_1S], (instregex "^LDFF1[BHWD]_REAL$",
-                                              "^LDFF1S?B_[HSD]_REAL$",
-                                              "^LDFF1S?H_[SD]_REAL$",
-                                              "^LDFF1S?W_D_REAL$")>;
+def : InstRW<[V2Write_6cyc_1L_1S], (instregex "^LDFF1[BHWD]$",
+                                              "^LDFF1S?B_[HSD]$",
+                                              "^LDFF1S?H_[SD]$",
+                                              "^LDFF1S?W_D$")>;
 
 // Contiguous non faulting load, scalar + imm
-def : InstRW<[V2Write_6cyc_1L], (instregex "^LDNF1[BHWD]_IMM_REAL$",
-                                           "^LDNF1S?B_[HSD]_IMM_REAL$",
-                                           "^LDNF1S?H_[SD]_IMM_REAL$",
-                                           "^LDNF1S?W_D_IMM_REAL$")>;
+def : InstRW<[V2Write_6cyc_1L], (instregex "^LDNF1[BHWD]_IMM$",
+                                           "^LDNF1S?B_[HSD]_IMM$",
+                                           "^LDNF1S?H_[SD]_IMM$",
+                                           "^LDNF1S?W_D_IMM$")>;
 
 // Contiguous Load two structures to two vectors, scalar + imm
 def : InstRW<[V2Write_8cyc_2L_2V], (instregex "^LD2[BHWD]_IMM$")>;
@@ -2663,33 +2676,33 @@ def : InstRW<[V2Write_9cyc_4L_8V], (instregex "^LD4[BHWD]_IMM$")>;
 def : InstRW<[V2Write_10cyc_4L_8V_4S], (instregex "^LD4[BHWD]$")>;
 
 // Gather load, vector + imm, 32-bit element size
-def : InstRW<[V2Write_9cyc_1L_4V], (instregex "^GLD(FF)?1S?[BH]_S_IMM_REAL$",
-                                              "^GLD(FF)?1W_IMM_REAL$")>;
+def : InstRW<[V2Write_9cyc_1L_4V], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
+                                              "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[V2Write_9cyc_1L_4V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM_REAL$",
-                                              "^GLD(FF)?1D_IMM_REAL$")>;
+def : InstRW<[V2Write_9cyc_1L_4V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+                                              "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 32-bit scaled offset
 def : InstRW<[V2Write_10cyc_1L_8V],
-             (instregex "^GLD(FF)?1S?H_S_[SU]XTW_SCALED_REAL$",
-                        "^GLD(FF)?1W_[SU]XTW_SCALED_REAL")>;
+             (instregex "^GLD(FF)?1S?H_S_[SU]XTW_SCALED$",
+                        "^GLD(FF)?1W_[SU]XTW_SCALED")>;
 
 // Gather load, 64-bit scaled offset
 // NOTE: These instructions are not specified in the SOG.
 def : InstRW<[V2Write_10cyc_1L_4V],
-             (instregex "^GLD(FF)?1S?[HW]_D_([SU]XTW_)?SCALED_REAL$",
-                        "^GLD(FF)?1D_([SU]XTW_)?SCALED_REAL$")>;
+             (instregex "^GLD(FF)?1S?[HW]_D_([SU]XTW_)?SCALED$",
+                        "^GLD(FF)?1D_([SU]XTW_)?SCALED$")>;
 
 // Gather load, 32-bit unpacked unscaled offset
-def : InstRW<[V2Write_9cyc_1L_4V], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW_REAL$",
-                                              "^GLD(FF)?1W_[SU]XTW_REAL$")>;
+def : InstRW<[V2Write_9cyc_1L_4V], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
+                                              "^GLD(FF)?1W_[SU]XTW$")>;
 
 // Gather load, 64-bit unpacked unscaled offset
 // NOTE: These instructions are not specified in the SOG.
 def : InstRW<[V2Write_9cyc_1L_2V],
-             (instregex "^GLD(FF)?1S?[BHW]_D_([SU]XTW_)?REAL$",
-                        "^GLD(FF)?1D_([SU]XTW_)?REAL$")>;
+             (instregex "^GLD(FF)?1S?[BHW]_D(_[SU]XTW)?$",
+                        "^GLD(FF)?1D(_[SU]XTW)?$")>;
 
 // SVE Store instructions
 // -----------------------------------------------------------------------------
@@ -2780,10 +2793,10 @@ def : InstRW<[V2Write_2cyc_2L01_2V01], (instregex "^SST1[BHW]_D$",
 // -----------------------------------------------------------------------------
 
 // Read first fault register, unpredicated
-def : InstRW<[V2Write_2cyc_1M0], (instrs RDFFR_P_REAL)>;
+def : InstRW<[V2Write_2cyc_1M0], (instrs RDFFR_P)>;
 
 // Read first fault register, predicated
-def : InstRW<[V2Write_3or4cyc_1M0_1M], (instrs RDFFR_PPz_REAL)>;
+def : InstRW<[V2Write_3or4cyc_1M0_1M], (instrs RDFFR_PPz)>;
 
 // Read first fault register and set flags
 def : InstRW<[V2Write_4or5cyc_2M0_2M], (instrs RDFFRS_PPz)>;

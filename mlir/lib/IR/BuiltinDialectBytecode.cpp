@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinDialectBytecode.h"
+#include "AttributeDetail.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -32,7 +33,8 @@ namespace {
 static unsigned getIntegerBitWidth(DialectBytecodeReader &reader, Type type) {
   if (auto intType = dyn_cast<IntegerType>(type)) {
     return intType.getWidth();
-  } else if (llvm::isa<IndexType>(type)) {
+  }
+  if (llvm::isa<IndexType>(type)) {
     return IndexType::kInternalStorageBitWidth;
   }
   reader.emitError()

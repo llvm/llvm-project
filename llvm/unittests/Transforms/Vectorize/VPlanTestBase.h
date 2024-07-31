@@ -20,6 +20,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -62,10 +63,13 @@ protected:
   }
 
   VPlanPtr buildHCFG(BasicBlock *LoopHeader) {
-    doAnalysis(*LoopHeader->getParent());
+    Function &F = *LoopHeader->getParent();
+    assert(!verifyFunction(F) && "input function must be valid");
+    doAnalysis(F);
 
     auto Plan = VPlan::createInitialVPlan(
-        SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE);
+        SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE, true, false,
+        LI->getLoopFor(LoopHeader));
     VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
     HCFGBuilder.buildHierarchicalCFG();
     return Plan;
@@ -73,10 +77,13 @@ protected:
 
   /// Build the VPlan plain CFG for the loop starting from \p LoopHeader.
   VPlanPtr buildPlainCFG(BasicBlock *LoopHeader) {
-    doAnalysis(*LoopHeader->getParent());
+    Function &F = *LoopHeader->getParent();
+    assert(!verifyFunction(F) && "input function must be valid");
+    doAnalysis(F);
 
     auto Plan = VPlan::createInitialVPlan(
-        SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE);
+        SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE, true, false,
+        LI->getLoopFor(LoopHeader));
     VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
     HCFGBuilder.buildPlainCFG();
     return Plan;

@@ -1,7 +1,9 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
+import sys
 from mlir.ir import *
+from mlir.dialects._ods_common import _cext
 
 
 def run(f):
@@ -104,3 +106,18 @@ def testIsRegisteredOperation():
     print(f"cf.cond_br: {ctx.is_registered_operation('cf.cond_br')}")
     # CHECK: func.not_existing: False
     print(f"func.not_existing: {ctx.is_registered_operation('func.not_existing')}")
+
+
+# CHECK-LABEL: TEST: testAppendPrefixSearchPath
+@run
+def testAppendPrefixSearchPath():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        assert not _cext.globals._check_dialect_module_loaded("custom")
+        Operation.create("custom.op")
+        assert not _cext.globals._check_dialect_module_loaded("custom")
+
+        sys.path.append(".")
+        _cext.globals.append_dialect_search_prefix("custom_dialect")
+        assert _cext.globals._check_dialect_module_loaded("custom")

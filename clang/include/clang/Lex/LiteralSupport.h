@@ -36,6 +36,15 @@ class LangOptions;
 /// Copy characters from Input to Buf, expanding any UCNs.
 void expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input);
 
+/// Return true if the token corresponds to a function local predefined macro,
+/// which expands to a string literal, that can be concatenated with other
+/// string literals (only in Microsoft mode).
+bool isFunctionLocalStringLiteralMacro(tok::TokenKind K, const LangOptions &LO);
+
+/// Return true if the token is a string literal, or a function local
+/// predefined macro, which expands to a string literal.
+bool tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO);
+
 /// NumericLiteralParser - This performs strict semantic analysis of the content
 /// of a ppnumber, classifying it as either integer, floating, or erroneous,
 /// determines the radix of the value and can convert it to a useful value.
@@ -71,7 +80,8 @@ public:
   bool isFloat128 : 1;      // 1.0q
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
-  bool isBitInt : 1;        // 1wb, 1uwb (C2x)
+  bool isBitInt : 1;        // 1wb, 1uwb (C23) or 1__wb, 1__uwb (Clang extension in C++
+                            // mode)
   uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
 
 
@@ -108,12 +118,10 @@ public:
   /// bits of the result and return true.  Otherwise, return false.
   bool GetIntegerValue(llvm::APInt &Val);
 
-  /// GetFloatValue - Convert this numeric literal to a floating value, using
-  /// the specified APFloat fltSemantics (specifying float, double, etc).
-  /// The optional bool isExact (passed-by-reference) has its value
-  /// set to true if the returned APFloat can represent the number in the
-  /// literal exactly, and false otherwise.
-  llvm::APFloat::opStatus GetFloatValue(llvm::APFloat &Result);
+  /// Convert this numeric literal to a floating value, using the specified
+  /// APFloat fltSemantics (specifying float, double, etc) and rounding mode.
+  llvm::APFloat::opStatus GetFloatValue(llvm::APFloat &Result,
+                                        llvm::RoundingMode RM);
 
   /// GetFixedPointValue - Convert this numeric literal value into a
   /// scaled integer that represents this value. Returns true if an overflow
@@ -212,6 +220,11 @@ public:
   }
 };
 
+enum class StringLiteralEvalMethod {
+  Evaluated,
+  Unevaluated,
+};
+
 /// StringLiteralParser - This decodes string escape characters and performs
 /// wide string analysis and Translation Phase #6 (concatenation of string
 /// literals) (C99 5.1.1.2p1).
@@ -230,19 +243,22 @@ class StringLiteralParser {
   SmallString<32> UDSuffixBuf;
   unsigned UDSuffixToken;
   unsigned UDSuffixOffset;
+  StringLiteralEvalMethod EvalMethod;
+
 public:
-  StringLiteralParser(ArrayRef<Token> StringToks,
-                      Preprocessor &PP);
-  StringLiteralParser(ArrayRef<Token> StringToks,
-                      const SourceManager &sm, const LangOptions &features,
-                      const TargetInfo &target,
+  StringLiteralParser(ArrayRef<Token> StringToks, Preprocessor &PP,
+                      StringLiteralEvalMethod StringMethod =
+                          StringLiteralEvalMethod::Evaluated);
+  StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
+                      const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
-    : SM(sm), Features(features), Target(target), Diags(diags),
-      MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
-      ResultPtr(ResultBuf.data()), hadError(false), Pascal(false) {
+      : SM(sm), Features(features), Target(target), Diags(diags),
+        MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
+        ResultPtr(ResultBuf.data()),
+        EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
+        Pascal(false) {
     init(StringToks);
   }
-
 
   bool hadError;
   bool Pascal;
@@ -269,6 +285,9 @@ public:
   bool isUTF16() const { return Kind == tok::utf16_string_literal; }
   bool isUTF32() const { return Kind == tok::utf32_string_literal; }
   bool isPascal() const { return Pascal; }
+  bool isUnevaluated() const {
+    return EvalMethod == StringLiteralEvalMethod::Unevaluated;
+  }
 
   StringRef getUDSuffix() const { return UDSuffixBuf; }
 

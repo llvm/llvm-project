@@ -27,7 +27,7 @@
 //
 // There is a development effort going on to migrate loop vectorizer to the
 // VPlan infrastructure and to introduce outer loop vectorization support (see
-// docs/Proposal/VectorizationPlan.rst and
+// docs/VectorizationPlan.rst and
 // http://lists.llvm.org/pipermail/llvm-dev/2017-December/119523.html). For this
 // purpose, we temporarily introduced the VPlan-native vectorization path: an
 // alternative vectorization path that is natively implemented on top of the
@@ -67,6 +67,7 @@ class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
+class Instruction;
 class Loop;
 class LoopAccessInfoManager;
 class LoopInfo;
@@ -205,13 +206,6 @@ public:
 void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
-
-/// Reports an informative message: print \p Msg for debugging purposes as well
-/// as an optimization remark. Uses either \p I as location of the remark, or
-/// otherwise \p TheLoop.
-void reportVectorizationInfo(const StringRef OREMsg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                             Instruction *I = nullptr);
 
 } // end namespace llvm
 

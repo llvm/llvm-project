@@ -59,22 +59,24 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
     }
 
     lldb::ByteOrder byte_order = GetByteOrder();
-    uint8_t dst[RegisterValue::kMaxRegisterByteSize];
+    RegisterValue::BytesContainer dst(full_reg_info->byte_size);
 
     // Get the bytes for the full register.
     const uint32_t dest_size = full_value.GetAsMemoryData(
-        *full_reg_info, dst, sizeof(dst), byte_order, error);
+        *full_reg_info, dst.data(), dst.size(), byte_order, error);
     if (error.Success() && dest_size) {
-      uint8_t src[RegisterValue::kMaxRegisterByteSize];
+      RegisterValue::BytesContainer src(reg_info->byte_size);
 
       // Get the bytes for the source data.
       const uint32_t src_size = reg_value.GetAsMemoryData(
-          *reg_info, src, sizeof(src), byte_order, error);
+          *reg_info, src.data(), src.size(), byte_order, error);
       if (error.Success() && src_size && (src_size < dest_size)) {
         // Copy the src bytes to the destination.
-        memcpy(dst + (reg_info->byte_offset & 0x1), src, src_size);
+        memcpy(dst.data() + (reg_info->byte_offset & 0x1), src.data(),
+               src_size);
         // Set this full register as the value to write.
-        value_to_write.SetBytes(dst, full_value.GetByteSize(), byte_order);
+        value_to_write.SetBytes(dst.data(), full_value.GetByteSize(),
+                                byte_order);
         value_to_write.SetType(*full_reg_info);
         reg_to_write = full_reg;
       }

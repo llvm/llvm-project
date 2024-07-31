@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <utility>
 
@@ -79,7 +80,7 @@ struct DumpVisitor {
 
   void printStr(const char *S) { fprintf(stderr, "%s", S); }
   void print(std::string_view SV) {
-    fprintf(stderr, "\"%.*s\"", (int)SV.size(), &*SV.begin());
+    fprintf(stderr, "\"%.*s\"", (int)SV.size(), SV.data());
   }
   void print(const Node *N) {
     if (N)
@@ -365,13 +366,13 @@ public:
 
 using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
-char *llvm::itaniumDemangle(std::string_view MangledName) {
+char *llvm::itaniumDemangle(std::string_view MangledName, bool ParseParams) {
   if (MangledName.empty())
     return nullptr;
 
   Demangler Parser(MangledName.data(),
                    MangledName.data() + MangledName.length());
-  Node *AST = Parser.parse();
+  Node *AST = Parser.parse(ParseParams);
   if (!AST)
     return nullptr;
 

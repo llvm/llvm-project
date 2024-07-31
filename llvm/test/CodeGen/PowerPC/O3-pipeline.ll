@@ -27,7 +27,6 @@
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Split GEPs to a variadic base and a constant offset for better CSE
 ; CHECK-NEXT:       Early CSE
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
@@ -65,6 +64,7 @@
 ; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Partially inline calls to library functions
 ; CHECK-NEXT:       Expand vector predication intrinsics
+; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
@@ -72,6 +72,9 @@
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
+; CHECK-NEXT:       PPC Merge String Pool
+; CHECK-NEXT:       FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Prepare loop for ppc preferred instruction forms
@@ -125,6 +128,8 @@
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       PowerPC Reduce CR logical Operation
+; CHECK-NEXT:       Remove unreachable machine basic blocks
+; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
@@ -145,6 +150,7 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Modulo Software Pipelining
 ; CHECK-NEXT:       Detect Dead Lanes
+; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
@@ -154,7 +160,7 @@
 ; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
-; CHECK-NEXT:       Simple Register Coalescing
+; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler
 ; CHECK-NEXT:       PowerPC VSX FMA Mutation

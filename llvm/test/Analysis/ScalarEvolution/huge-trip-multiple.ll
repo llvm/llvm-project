@@ -14,12 +14,10 @@ define void @trip_count_4294967295() {
 ; CHECK-NEXT:    %add = add nuw nsw i64 %i.02, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,4294967296) S: [1,4294967296) Exits: 4294967295 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @trip_count_4294967295
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 4294967294
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 4294967294
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 4294967294
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 4294967294
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4294967295
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 4294967294
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 4294967294
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 4294967294
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4294967295
 ;
 entry:
   br label %for.body
@@ -43,12 +41,10 @@ define void @trip_count_4294967296() {
 ; CHECK-NEXT:    %add = add nuw nsw i64 %i.02, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,4294967297) S: [1,4294967297) Exits: 4294967296 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @trip_count_4294967296
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 4294967295
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 4294967295
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 4294967295
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 4294967295
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2147483648
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2147483648
 ;
 entry:
   br label %for.body
@@ -72,12 +68,10 @@ define void @trip_count_8589935692() {
 ; CHECK-NEXT:    %add = add nuw nsw i64 %i.02, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,8589934593) S: [1,8589934593) Exits: 8589934592 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @trip_count_8589935692
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 8589934591
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 8589934591
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 8589934591
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 8589934591
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2147483648
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 8589934591
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 8589934591
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 8589934591
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2147483648
 ;
 entry:
   br label %for.body
@@ -101,12 +95,10 @@ define void @trip_count_9223372036854775808() {
 ; CHECK-NEXT:    %add = add nuw nsw i64 %i.02, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,-9223372036854775807) S: [1,-9223372036854775807) Exits: -9223372036854775808 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @trip_count_9223372036854775808
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 9223372036854775807
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 9223372036854775807
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 9223372036854775807
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 9223372036854775807
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2147483648
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2147483648
 ;
 entry:
   br label %for.body
@@ -130,12 +122,10 @@ define void @trip_count_18446744073709551615() {
 ; CHECK-NEXT:    %add = add nuw nsw i64 %i.02, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: -1 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @trip_count_18446744073709551615
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is -2
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is -2
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is -2
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body

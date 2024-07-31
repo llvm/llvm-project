@@ -52,9 +52,9 @@ entry:
 }
 
 ; CHECK: define void @f()
-; CHECK:   %[[STACKSAVE:.*]] = call ptr @llvm.stacksave()
+; CHECK:   %[[STACKSAVE:.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK:   %[[ARGMEM:.*]] = alloca inalloca <{ %struct.Foo }>, align 4
 ; CHECK:   %[[CALL:.*]] = call x86_thiscallcc ptr @"\01??0Foo@@QAE@XZ"(ptr %[[ARGMEM]])
 ; CHECK:   call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(ptr %[[ARGMEM]])
-; CHECK:   call void @llvm.stackrestore(ptr %[[STACKSAVE]])
+; CHECK:   call void @llvm.stackrestore.p0(ptr %[[STACKSAVE]])
 ; CHECK:   ret void

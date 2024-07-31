@@ -29,6 +29,8 @@
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
+
+#include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -44,7 +46,7 @@ class PlatformProperties : public Properties {
 public:
   PlatformProperties();
 
-  static ConstString GetSettingName();
+  static llvm::StringRef GetSettingName();
 
   bool GetUseModuleCache() const;
   bool SetUseModuleCache(bool use_module_cache);
@@ -106,21 +108,6 @@ public:
   static ArchSpec GetAugmentedArchSpec(Platform *platform,
                                        llvm::StringRef triple);
 
-  /// Find a platform plugin for a given process.
-  ///
-  /// Scans the installed Platform plug-ins and tries to find an instance that
-  /// can be used for \a process
-  ///
-  /// \param[in] process
-  ///     The process for which to try and locate a platform
-  ///     plug-in instance.
-  ///
-  /// \param[in] plugin_name
-  ///     An optional name of a specific platform plug-in that
-  ///     should be used. If nullptr, pick the best plug-in.
-  //        static lldb::PlatformSP
-  //        FindPlugin (Process *process, ConstString plugin_name);
-
   /// Set the target's executable based off of the existing architecture
   /// information in \a target given a path to an executable \a exe_file.
   ///
@@ -137,7 +124,7 @@ public:
   ///     Returns \b true if this Platform plug-in was able to find
   ///     a suitable executable, \b false otherwise.
   virtual Status ResolveExecutable(const ModuleSpec &module_spec,
-                                   lldb::ModuleSP &module_sp,
+                                   lldb::ModuleSP &exe_module_sp,
                                    const FileSpecList *module_search_paths_ptr);
 
   /// Find a symbol file given a symbol file module specification.
@@ -286,12 +273,43 @@ public:
   // current computers global settings.
   virtual FileSpecList
   LocateExecutableScriptingResources(Target *target, Module &module,
-                                     Stream *feedback_stream);
+                                     Stream &feedback_stream);
 
+  /// \param[in] module_spec
+  ///     The ModuleSpec of a binary to find.
+  ///
+  /// \param[in] process
+  ///     A Process.
+  ///
+  /// \param[out] module_sp
+  ///     A Module that matches the ModuleSpec, if one is found.
+  ///
+  /// \param[in] module_search_paths_ptr
+  ///     Locations to possibly look for a binary that matches the ModuleSpec.
+  ///
+  /// \param[out] old_modules
+  ///     Existing Modules in the Process' Target image list which match
+  ///     the FileSpec.
+  ///
+  /// \param[out] did_create_ptr
+  ///     Optional boolean, nullptr may be passed for this argument.
+  ///     If this method is returning a *new* ModuleSP, this
+  ///     will be set to true.
+  ///     If this method is returning a ModuleSP that is already in the
+  ///     Target's image list, it will be false.
+  ///
+  /// \return
+  ///     The Status object for any errors found while searching for
+  ///     the binary.
   virtual Status GetSharedModule(
       const ModuleSpec &module_spec, Process *process,
       lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
+                                     lldb::ModuleSP &module_sp,
+                                     FileSpec &symbol_file_spec,
+                                     bool *did_create_ptr);
 
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
@@ -401,6 +419,8 @@ public:
   // will need to fill in the remote case.
   virtual uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &proc_infos);
+
+  ProcessInstanceInfoList GetAllProcesses();
 
   virtual bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
@@ -614,8 +634,8 @@ public:
 
   virtual std::string GetPlatformSpecificConnectionInformation() { return ""; }
 
-  virtual bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                            uint64_t &high);
+  virtual llvm::ErrorOr<llvm::MD5::MD5Result>
+  CalculateMD5(const FileSpec &file_spec);
 
   virtual uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
@@ -878,8 +898,21 @@ public:
   }
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
-  
+
   virtual Args GetExtraStartupCommands();
+
+  typedef std::function<Status(const ModuleSpec &module_spec,
+                               FileSpec &module_file_spec,
+                               FileSpec &symbol_file_spec)>
+      LocateModuleCallback;
+
+  /// Set locate module callback. This allows users to implement their own
+  /// module cache system. For example, to leverage artifacts of build system,
+  /// to bypass pulling files from remote platform, or to search symbol files
+  /// from symbol servers.
+  void SetLocateModuleCallback(LocateModuleCallback callback);
+
+  LocateModuleCallback GetLocateModuleCallback() const;
 
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
@@ -928,6 +961,7 @@ protected:
   std::vector<ConstString> m_trap_handlers;
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
+  LocateModuleCallback m_locate_module_callback;
 
   /// Ask the Platform subclass to fill in the list of trap handler names
   ///
@@ -954,11 +988,6 @@ protected:
                                     const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
-
-  virtual Status
-  ResolveRemoteExecutable(const ModuleSpec &module_spec,
-                          lldb::ModuleSP &exe_module_sp,
-                          const FileSpecList *module_search_paths_ptr);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;

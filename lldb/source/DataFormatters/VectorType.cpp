@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/VectorType.h"
 
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -169,21 +170,49 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
   }
 }
 
-static size_t CalculateNumChildren(
-    CompilerType container_type, CompilerType element_type,
-    lldb_private::ExecutionContextScope *exe_scope =
-        nullptr // does not matter here because all we trade in are basic types
-    ) {
-  std::optional<uint64_t> container_size =
-      container_type.GetByteSize(exe_scope);
-  std::optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
+/// Calculates the number of elements stored in a container (with
+/// element type 'container_elem_type') as if it had elements of type
+/// 'element_type'.
+///
+/// For example, a container of type
+/// `uint8_t __attribute__((vector_size(16)))` has 16 elements.
+/// But calling `CalculateNumChildren` with an 'element_type'
+/// of `float` (4-bytes) will return `4` because we are interpreting
+/// the byte-array as a `float32[]`.
+///
+/// \param[in] container_elem_type The type of the elements stored
+/// in the container we are calculating the children of.
+///
+/// \param[in] num_elements Number of 'container_elem_type's our
+/// container stores.
+///
+/// \param[in] element_type The type of elements we interpret
+/// container_type to contain for the purposes of calculating
+/// the number of children.
+///
+/// \returns The number of elements stored in a container of
+/// type 'element_type'. Returns a std::nullopt if the
+/// size of the container is not a multiple of 'element_type'
+/// or if an error occurs.
+static std::optional<size_t>
+CalculateNumChildren(CompilerType container_elem_type, uint64_t num_elements,
+                     CompilerType element_type) {
+  std::optional<uint64_t> container_elem_size =
+      container_elem_type.GetByteSize(/* exe_scope */ nullptr);
+  if (!container_elem_size)
+    return {};
 
-  if (container_size && element_size && *element_size) {
-    if (*container_size % *element_size)
-      return 0;
-    return *container_size / *element_size;
-  }
-  return 0;
+  auto container_size = *container_elem_size * num_elements;
+
+  std::optional<uint64_t> element_size =
+      element_type.GetByteSize(/* exe_scope */ nullptr);
+  if (!element_size || !*element_size)
+    return {};
+
+  if (container_size % *element_size)
+    return {};
+
+  return container_size / *element_size;
 }
 
 namespace lldb_private {
@@ -196,10 +225,16 @@ public:
 
   ~VectorTypeSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_num_children; }
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_num_children;
+  }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
-    if (idx >= CalculateNumChildren())
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
+    auto num_children_or_err = CalculateNumChildren();
+    if (!num_children_or_err)
+      return ValueObjectConstResult::Create(
+          nullptr, Status(num_children_or_err.takeError()));
+    if (idx >= *num_children_or_err)
       return {};
     std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
     if (!size)
@@ -217,17 +252,20 @@ public:
     return child_sp;
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     m_parent_format = m_backend.GetFormat();
     CompilerType parent_type(m_backend.GetCompilerType());
     CompilerType element_type;
-    parent_type.IsVectorType(&element_type);
+    uint64_t num_elements;
+    parent_type.IsVectorType(&element_type, &num_elements);
     m_child_type = ::GetCompilerTypeForFormat(
         m_parent_format, element_type,
         parent_type.GetTypeSystem().GetSharedPointer());
-    m_num_children = ::CalculateNumChildren(parent_type, m_child_type);
+    m_num_children =
+        ::CalculateNumChildren(element_type, num_elements, m_child_type)
+            .value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return true; }
@@ -235,7 +273,7 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
       return UINT32_MAX;
     return idx;
   }
@@ -262,7 +300,8 @@ bool lldb_private::formatters::VectorTypeSummaryProvider(
   s.PutChar('(');
   bool first = true;
 
-  size_t idx = 0, len = synthetic_children->CalculateNumChildren();
+  size_t idx = 0,
+         len = synthetic_children->CalculateNumChildrenIgnoringErrors();
 
   for (; idx < len; idx++) {
     auto child_sp = synthetic_children->GetChildAtIndex(idx);

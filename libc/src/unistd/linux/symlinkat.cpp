@@ -11,15 +11,16 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, symlinkat,
                    (const char *path1, int fd, const char *path2)) {
-  long ret = __llvm_libc::syscall_impl(SYS_symlinkat, path1, fd, path2);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_symlinkat, path1, fd, path2);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
@@ -27,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, symlinkat,
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

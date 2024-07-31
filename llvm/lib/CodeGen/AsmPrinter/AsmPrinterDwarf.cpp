@@ -204,58 +204,59 @@ void AsmPrinter::emitCallSiteValue(uint64_t Value, unsigned Encoding) const {
 //===----------------------------------------------------------------------===//
 
 void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
+  SMLoc Loc = Inst.getLoc();
   switch (Inst.getOperation()) {
   default:
     llvm_unreachable("Unexpected instruction");
   case MCCFIInstruction::OpDefCfaOffset:
-    OutStreamer->emitCFIDefCfaOffset(Inst.getOffset());
+    OutStreamer->emitCFIDefCfaOffset(Inst.getOffset(), Loc);
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
-    OutStreamer->emitCFIAdjustCfaOffset(Inst.getOffset());
+    OutStreamer->emitCFIAdjustCfaOffset(Inst.getOffset(), Loc);
     break;
   case MCCFIInstruction::OpDefCfa:
-    OutStreamer->emitCFIDefCfa(Inst.getRegister(), Inst.getOffset());
+    OutStreamer->emitCFIDefCfa(Inst.getRegister(), Inst.getOffset(), Loc);
     break;
   case MCCFIInstruction::OpDefCfaRegister:
-    OutStreamer->emitCFIDefCfaRegister(Inst.getRegister());
+    OutStreamer->emitCFIDefCfaRegister(Inst.getRegister(), Loc);
     break;
   case MCCFIInstruction::OpLLVMDefAspaceCfa:
     OutStreamer->emitCFILLVMDefAspaceCfa(Inst.getRegister(), Inst.getOffset(),
-                                         Inst.getAddressSpace());
+                                         Inst.getAddressSpace(), Loc);
     break;
   case MCCFIInstruction::OpOffset:
-    OutStreamer->emitCFIOffset(Inst.getRegister(), Inst.getOffset());
+    OutStreamer->emitCFIOffset(Inst.getRegister(), Inst.getOffset(), Loc);
     break;
   case MCCFIInstruction::OpRegister:
-    OutStreamer->emitCFIRegister(Inst.getRegister(), Inst.getRegister2());
+    OutStreamer->emitCFIRegister(Inst.getRegister(), Inst.getRegister2(), Loc);
     break;
   case MCCFIInstruction::OpWindowSave:
-    OutStreamer->emitCFIWindowSave();
+    OutStreamer->emitCFIWindowSave(Loc);
     break;
   case MCCFIInstruction::OpNegateRAState:
-    OutStreamer->emitCFINegateRAState();
+    OutStreamer->emitCFINegateRAState(Loc);
     break;
   case MCCFIInstruction::OpSameValue:
-    OutStreamer->emitCFISameValue(Inst.getRegister());
+    OutStreamer->emitCFISameValue(Inst.getRegister(), Loc);
     break;
   case MCCFIInstruction::OpGnuArgsSize:
-    OutStreamer->emitCFIGnuArgsSize(Inst.getOffset());
+    OutStreamer->emitCFIGnuArgsSize(Inst.getOffset(), Loc);
     break;
   case MCCFIInstruction::OpEscape:
     OutStreamer->AddComment(Inst.getComment());
-    OutStreamer->emitCFIEscape(Inst.getValues());
+    OutStreamer->emitCFIEscape(Inst.getValues(), Loc);
     break;
   case MCCFIInstruction::OpRestore:
-    OutStreamer->emitCFIRestore(Inst.getRegister());
+    OutStreamer->emitCFIRestore(Inst.getRegister(), Loc);
     break;
   case MCCFIInstruction::OpUndefined:
-    OutStreamer->emitCFIUndefined(Inst.getRegister());
+    OutStreamer->emitCFIUndefined(Inst.getRegister(), Loc);
     break;
   case MCCFIInstruction::OpRememberState:
-    OutStreamer->emitCFIRememberState();
+    OutStreamer->emitCFIRememberState(Loc);
     break;
   case MCCFIInstruction::OpRestoreState:
-    OutStreamer->emitCFIRestoreState();
+    OutStreamer->emitCFIRestoreState(Loc);
     break;
   }
 }

@@ -8,14 +8,14 @@
 
 #include "file.h"
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h" // For error macros
 
-#include <stdio.h>
-#include <stdlib.h>
-
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
@@ -25,7 +25,7 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
 
   prev_op = FileOp::WRITE;
 
-  if (!ENABLE_BUFFER || bufmode == _IONBF) { // unbuffered.
+  if (bufmode == _IONBF) { // unbuffered.
     size_t ret_val =
         write_unlocked_nbf(static_cast<const uint8_t *>(data), len);
     flush_unlocked();
@@ -38,7 +38,7 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
 }
 
 FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
-  if (ENABLE_BUFFER && pos > 0) { // If the buffer is not empty
+  if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
     auto write_result = platform_write(this, buf, write_size);
@@ -282,7 +282,7 @@ int File::ungetc_unlocked(int c) {
   return c;
 }
 
-ErrorOr<int> File::seek(long offset, int whence) {
+ErrorOr<int> File::seek(off_t offset, int whence) {
   FileLock lock(this);
   if (prev_op == FileOp::WRITE && pos > 0) {
 
@@ -305,29 +305,24 @@ ErrorOr<int> File::seek(long offset, int whence) {
   auto result = platform_seek(this, offset, whence);
   if (!result.has_value())
     return Error(result.error());
-  else
-    return 0;
+  return 0;
 }
 
-ErrorOr<long> File::tell() {
+ErrorOr<off_t> File::tell() {
   FileLock lock(this);
   auto seek_target = eof ? SEEK_END : SEEK_CUR;
   auto result = platform_seek(this, 0, seek_target);
   if (!result.has_value() || result.value() < 0)
     return Error(result.error());
-  long platform_offset = result.value();
+  off_t platform_offset = result.value();
   if (prev_op == FileOp::READ)
     return platform_offset - (read_limit - pos);
-  else if (prev_op == FileOp::WRITE)
+  if (prev_op == FileOp::WRITE)
     return platform_offset + pos;
-  else
-    return platform_offset;
+  return platform_offset;
 }
 
 int File::flush_unlocked() {
-  if constexpr (!ENABLE_BUFFER)
-    return 0;
-
   if (prev_op == FileOp::WRITE && pos > 0) {
     auto buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
@@ -335,16 +330,12 @@ int File::flush_unlocked() {
       return buf_result.error;
     }
     pos = 0;
-    return platform_flush(this);
   }
   // TODO: Add POSIX behavior for input streams.
   return 0;
 }
 
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
-  if constexpr (!ENABLE_BUFFER)
-    return EINVAL;
-
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.
   if (buffer != nullptr && size == 0)
@@ -440,4 +431,4 @@ File::ModeFlags File::mode_flags(const char *mode) {
   return flags;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

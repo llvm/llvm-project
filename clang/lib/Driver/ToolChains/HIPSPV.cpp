@@ -143,10 +143,6 @@ void HIPSPVToolChain::addClangTargetOptions(
        // TODO: Allow autovectorization when SPIR-V backend arrives.
        "-mllvm", "-vectorize-loops=false", "-mllvm", "-vectorize-slp=false"});
 
-  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                         options::OPT_fno_cuda_approx_transcendentals, false))
-    CC1Args.push_back("-fcuda-approx-transcendentals");
-
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
@@ -197,7 +193,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);
   if (hipPath.empty()) {
-    getDriver().Diag(diag::err_drv_hipspv_no_hip_path) << 1 << "'-nogpuinc'";
+    getDriver().Diag(diag::err_drv_hipspv_no_hip_path);
     return;
   }
   SmallString<128> P(hipPath);

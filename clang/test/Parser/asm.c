@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 #if !__has_extension(gnu_asm)
 #error Extension 'gnu_asm' should be available by default
@@ -22,10 +22,9 @@ void a(void) {
   __asm__(""); // ok
 }
 
-// rdar://5952468
 __asm ; // expected-error {{expected '(' after 'asm'}}
 
-// <rdar://problem/10465079> - Don't crash on wide string literals in 'asm'.
+// Don't crash on wide string literals in 'asm'.
 int foo asm (L"bar"); // expected-error {{cannot use wide string literal in 'asm'}}
 
 asm() // expected-error {{expected string literal in 'asm'}}
@@ -36,7 +35,7 @@ asm(; // expected-error {{expected string literal in 'asm'}}
 asm("") // expected-error {{expected ';' after top-level asm block}}
 
 // Unterminated asm strings at the end of the file were causing us to crash, so
-// this needs to be last. rdar://15624081
+// this needs to be last.
 // expected-warning@+3 {{missing terminating '"' character}}
 // expected-error@+2 {{expected string literal in 'asm'}}
 // expected-error@+1 {{expected ';' after top-level asm block}}

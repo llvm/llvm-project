@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -rdf-opt=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -rdf-opt=0 < %s -pipeliner-experimental-cg=true -disable-cgp-delete-phis | FileCheck %s
 
 ; Test that we generate the correct name for a value in a prolog block. The
 ; pipeliner was using an incorrect value for an instruction in the 2nd prolog

@@ -8,44 +8,44 @@
   declare void @use(i32)
   declare void @use_2(i32, i32)
 
-  define void @sink_simple() {
+  define void @sink_simple() !dbg !6 {
     call void @llvm.dbg.value(metadata i32 0, metadata !5, metadata !DIExpression()), !dbg !10
     call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !10
     call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !10
     call void @llvm.dbg.value(metadata i32 0, metadata !13, metadata !DIExpression()), !dbg !10
     ret void
   }
-  define void @sink_non_consecutive() {
+  define void @sink_non_consecutive() !dbg !14 {
     unreachable
   }
-  define void @dont_sink_above_def() {
+  define void @dont_sink_above_def() !dbg !15 {
     unreachable
   }
-  define void @sink_to_same_place() {
+  define void @sink_to_same_place() !dbg !16 {
     unreachable
   }
-  define void @cannot_sink_across_same_variable() {
+  define void @cannot_sink_across_same_variable() !dbg !17 {
     unreachable
   }
-  define void @cannot_sink_across_same_variable2() {
+  define void @cannot_sink_across_same_variable2() !dbg !18 {
     unreachable
   }
-  define void @can_sink_across_same_variable_with_same_const() {
+  define void @can_sink_across_same_variable_with_same_const() !dbg !19 {
     unreachable
   }
-  define void @sink_multiple_defs() {
+  define void @sink_multiple_defs() !dbg !20 {
     unreachable
   }
-  define void @clone_same_bb() {
+  define void @clone_same_bb() !dbg !21 {
     unreachable
   }
-  define void @clone_different_bb() {
+  define void @clone_different_bb() !dbg !22 {
     unreachable
   }
-  define void @tee_with_two_use_insts() {
+  define void @tee_with_two_use_insts() !dbg !23 {
     unreachable
   }
-  define void @tee_with_one_inst_with_two_uses() {
+  define void @tee_with_one_inst_with_two_uses() !dbg !24 {
     unreachable
   }
   declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -81,6 +81,17 @@
   ; CHECK: ![[VAR_C:[0-9]+]] = !DILocalVariable(name: "var_c"
   !13 = !DILocalVariable(name: "var_d", scope: !6, file: !1, line: 2, type: !9)
   ; CHECK: ![[VAR_D:[0-9]+]] = !DILocalVariable(name: "var_d"
+  !14 = distinct !DISubprogram(name: "sink_non_consecutive", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !15 = distinct !DISubprogram(name: "dont_sink_above_def", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !16 = distinct !DISubprogram(name: "sink_to_same_place", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !17 = distinct !DISubprogram(name: "cannot_sink_across_same_variable", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !18 = distinct !DISubprogram(name: "cannot_sink_across_same_variable2", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !19 = distinct !DISubprogram(name: "can_sink_across_same_variable_with_same_const", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !20 = distinct !DISubprogram(name: "sink_multiple_defs", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !21 = distinct !DISubprogram(name: "clone_same_bb", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !22 = distinct !DISubprogram(name: "clone_different_bb", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !23 = distinct !DISubprogram(name: "tee_with_two_use_insts", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !24 = distinct !DISubprogram(name: "tee_with_one_inst_with_two_uses", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
 ...
 
 ---

@@ -96,11 +96,6 @@ if(WIN32)
       )
     endforeach()
   endforeach()
-else()
-  # It is difficult to create a dummy assembly file that compiles into an
-  # executable for every architecture and then check the C compiler to
-  # see if -x assembler-with-cpp exists and works, so we assume it does for non-Windows.
-  set(LIBOMP_HAVE_X_ASSEMBLER_WITH_CPP_FLAG TRUE)
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
@@ -155,15 +150,20 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
-# Checking Threading requirements
-find_package(Threads REQUIRED)
-if(WIN32)
-  if(NOT CMAKE_USE_WIN32_THREADS_INIT)
-    libomp_error_say("Need Win32 thread interface on Windows.")
-  endif()
-else()
-  if(NOT CMAKE_USE_PTHREADS_INIT)
-    libomp_error_say("Need pthread interface on Unix-like systems.")
+# Checking threading requirements. Note that compiling to WebAssembly threads
+# with either the Emscripten or wasi-threads flavor ends up using the pthreads
+# interface in a WebAssembly-compiled libc; CMake does not yet know how to
+# detect this.
+if (NOT WASM)
+  find_package(Threads REQUIRED)
+  if(WIN32)
+    if(NOT CMAKE_USE_WIN32_THREADS_INIT)
+      libomp_error_say("Need Win32 thread interface on Windows.")
+    endif()
+  else()
+    if(NOT CMAKE_USE_PTHREADS_INIT)
+      libomp_error_say("Need pthread interface on Unix-like systems.")
+    endif()
   endif()
 endif()
 
@@ -219,30 +219,10 @@ if (IA32 OR INTEL64)
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
 endif()
 
-# Find perl executable
-# Perl is used to create omp.h (and other headers) along with kmp_i18n_id.inc and kmp_i18n_default.inc
-find_package(Perl REQUIRED)
-# The perl scripts take the --os=/--arch= flags which expect a certain format for operating systems and arch's.
-# Until the perl scripts are removed, the most portable way to handle this is to have all operating systems that
-# are neither Windows nor Mac (Most Unix flavors) be considered lin to the perl scripts.  This is rooted
-# in that all the Perl scripts check the operating system and will fail if it isn't "valid".  This
-# temporary solution lets us avoid trying to enumerate all the possible OS values inside the Perl modules.
-if(WIN32)
-  set(LIBOMP_PERL_SCRIPT_OS win)
-elseif(APPLE)
-  set(LIBOMP_PERL_SCRIPT_OS mac)
-else()
-  set(LIBOMP_PERL_SCRIPT_OS lin)
-endif()
-if(IA32)
-  set(LIBOMP_PERL_SCRIPT_ARCH 32)
-elseif(MIC)
-  set(LIBOMP_PERL_SCRIPT_ARCH mic)
-elseif(INTEL64)
-  set(LIBOMP_PERL_SCRIPT_ARCH 32e)
-else()
-  set(LIBOMP_PERL_SCRIPT_ARCH ${LIBOMP_ARCH})
-endif()
+# Find python3 executable
+# Python3 is used to create kmp_i18n_id.inc and
+# kmp_i18n_default.inc and for Windows the *.def files.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Checking features
 # Check if version symbol assembler directives are supported
@@ -326,13 +306,16 @@ else()
       (LIBOMP_ARCH STREQUAL i386) OR
 #      (LIBOMP_ARCH STREQUAL arm) OR
       (LIBOMP_ARCH STREQUAL aarch64) OR
+      (LIBOMP_ARCH STREQUAL aarch64_32) OR
       (LIBOMP_ARCH STREQUAL aarch64_a64fx) OR
       (LIBOMP_ARCH STREQUAL ppc64le) OR
       (LIBOMP_ARCH STREQUAL ppc64) OR
       (LIBOMP_ARCH STREQUAL riscv64) OR
-      (LIBOMP_ARCH STREQUAL loongarch64))
+      (LIBOMP_ARCH STREQUAL loongarch64) OR
+      (LIBOMP_ARCH STREQUAL s390x))
      AND # OS supported?
-     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
+     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
+      (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

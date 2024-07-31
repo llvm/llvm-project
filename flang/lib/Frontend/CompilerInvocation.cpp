@@ -18,6 +18,7 @@
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -31,6 +32,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -98,12 +100,12 @@ static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
 /// Extracts the optimisation level from \a args.
 static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
-  unsigned defaultOpt = llvm::CodeGenOpt::None;
+  unsigned defaultOpt = 0;
 
   if (llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_O_Group)) {
     if (a->getOption().matches(clang::driver::options::OPT_O0))
-      return llvm::CodeGenOpt::None;
+      return 0;
 
     assert(a->getOption().matches(clang::driver::options::OPT_O));
 
@@ -144,6 +146,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
@@ -151,6 +154,78 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
   }
   return true;
+}
+
+static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
+                              llvm::opt::ArgList &args,
+                              clang::DiagnosticsEngine &diags) {
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fveclib);
+  if (!arg)
+    return true;
+
+  using VectorLibrary = llvm::driver::VectorLibrary;
+  std::optional<VectorLibrary> val =
+      llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
+          .Case("Accelerate", VectorLibrary::Accelerate)
+          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("MASSV", VectorLibrary::MASSV)
+          .Case("SVML", VectorLibrary::SVML)
+          .Case("SLEEF", VectorLibrary::SLEEF)
+          .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
+          .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("NoLibrary", VectorLibrary::NoLibrary)
+          .Default(std::nullopt);
+  if (!val.has_value()) {
+    diags.Report(clang::diag::err_drv_invalid_value)
+        << arg->getAsString(args) << arg->getValue();
+    return false;
+  }
+  opts.setVecLib(val.value());
+  return true;
+}
+
+// Generate an OptRemark object containing info on if the -Rgroup
+// specified is enabled or not.
+static CodeGenOptions::OptRemark
+parseOptimizationRemark(clang::DiagnosticsEngine &diags,
+                        llvm::opt::ArgList &args, llvm::opt::OptSpecifier optEq,
+                        llvm::StringRef remarkOptName) {
+  assert((remarkOptName == "pass" || remarkOptName == "pass-missed" ||
+          remarkOptName == "pass-analysis") &&
+         "Unsupported remark option name provided.");
+  CodeGenOptions::OptRemark result;
+
+  for (llvm::opt::Arg *a : args) {
+    if (a->getOption().matches(clang::driver::options::OPT_R_Joined)) {
+      llvm::StringRef value = a->getValue();
+
+      if (value == remarkOptName) {
+        result.Kind = CodeGenOptions::RemarkKind::RK_Enabled;
+        // Enable everything
+        result.Pattern = ".*";
+        result.Regex = std::make_shared<llvm::Regex>(result.Pattern);
+
+      } else if (value.split('-') ==
+                 std::make_pair(llvm::StringRef("no"), remarkOptName)) {
+        result.Kind = CodeGenOptions::RemarkKind::RK_Disabled;
+        // Disable everything
+        result.Pattern = "";
+        result.Regex = nullptr;
+      }
+    } else if (a->getOption().matches(optEq)) {
+      result.Kind = CodeGenOptions::RemarkKind::RK_WithPattern;
+      result.Pattern = a->getValue();
+      result.Regex = std::make_shared<llvm::Regex>(result.Pattern);
+      std::string regexError;
+
+      if (!result.Regex->isValid(regexError)) {
+        diags.Report(clang::diag::err_drv_optimization_remark_pattern)
+            << regexError << a->getAsString(args);
+        return CodeGenOptions::OptRemark();
+      }
+    }
+  }
+  return result;
 }
 
 static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
@@ -163,12 +238,30 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.DebugPassManager = 1;
 
   if (args.hasFlag(clang::driver::options::OPT_fstack_arrays,
-                   clang::driver::options::OPT_fno_stack_arrays, false)) {
+                   clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
-  }
+
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
-                   clang::driver::options::OPT_fno_loop_versioning, false)) {
+                   clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  opts.AliasAnalysis = opts.OptimizationLevel > 0;
+
+  // -mframe-pointer=none/non-leaf/all option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
+    std::optional<llvm::FramePointerKind> val =
+        llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
+            .Case("none", llvm::FramePointerKind::None)
+            .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("all", llvm::FramePointerKind::All)
+            .Default(std::nullopt);
+
+    if (!val.has_value()) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    } else
+      opts.setFramePointer(val.value());
   }
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
@@ -190,8 +283,75 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.PrepareForThinLTO = true;
   }
 
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mcode_object_version_EQ)) {
+    llvm::StringRef s = a->getValue();
+    if (s == "6")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_6;
+    if (s == "5")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
+    if (s == "4")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_4;
+    if (s == "none")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_None;
+  }
+
+  // -f[no-]save-optimization-record[=<format>]
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_opt_record_file))
+    opts.OptRecordFile = a->getValue();
+
+  // Optimization file format. Defaults to yaml
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_opt_record_format))
+    opts.OptRecordFormat = a->getValue();
+
+  // Specifies, using a regex, which successful optimization passes(middle and
+  // backend), to include in the final optimization record file generated. If
+  // not provided -fsave-optimization-record will include all passes.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_opt_record_passes))
+    opts.OptRecordPasses = a->getValue();
+
+  // Create OptRemark that allows printing of all successful optimization
+  // passes applied.
+  opts.OptimizationRemark =
+      parseOptimizationRemark(diags, args, clang::driver::options::OPT_Rpass_EQ,
+                              /*remarkOptName=*/"pass");
+
+  // Create OptRemark that allows all missed optimization passes to be printed.
+  opts.OptimizationRemarkMissed = parseOptimizationRemark(
+      diags, args, clang::driver::options::OPT_Rpass_missed_EQ,
+      /*remarkOptName=*/"pass-missed");
+
+  // Create OptRemark that allows all optimization decisions made by LLVM
+  // to be printed.
+  opts.OptimizationRemarkAnalysis = parseOptimizationRemark(
+      diags, args, clang::driver::options::OPT_Rpass_analysis_EQ,
+      /*remarkOptName=*/"pass-analysis");
+
+  if (opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo) {
+    // If the user requested a flag that requires source locations available in
+    // the backend, make sure that the backend tracks source location
+    // information.
+    bool needLocTracking = !opts.OptRecordFile.empty() ||
+                           !opts.OptRecordPasses.empty() ||
+                           !opts.OptRecordFormat.empty() ||
+                           opts.OptimizationRemark.hasValidPattern() ||
+                           opts.OptimizationRemarkMissed.hasValidPattern() ||
+                           opts.OptimizationRemarkAnalysis.hasValidPattern();
+
+    if (needLocTracking)
+      opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
+  }
+
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
+
+  // -mlink-builtin-bitcode
+  for (auto *a :
+       args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
+    opts.BuiltinBCLibs.push_back(a->getValue());
 
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
@@ -227,6 +387,29 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
+  // -mcmodel option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
+    llvm::StringRef modelName = a->getValue();
+    std::optional<llvm::CodeModel::Model> codeModel = getCodeModel(modelName);
+
+    if (codeModel.has_value())
+      opts.CodeModel = modelName;
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << modelName;
+  }
+
+  if (const llvm::opt::Arg *arg = args.getLastArg(
+          clang::driver::options::OPT_mlarge_data_threshold_EQ)) {
+    uint64_t LDT;
+    if (llvm::StringRef(arg->getValue()).getAsInteger(/*Radix=*/10, LDT)) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getSpelling() << arg->getValue();
+    }
+    opts.LargeDataThreshold = LDT;
+  }
+
   // This option is compatible with -f[no-]underscoring in gfortran.
   if (args.hasFlag(clang::driver::options::OPT_fno_underscoring,
                    clang::driver::options::OPT_funderscoring, false)) {
@@ -247,6 +430,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_tune_cpu))
+    opts.cpuToTuneFor = a->getValue();
 
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
@@ -333,6 +520,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       break;
     case clang::driver::options::OPT_fdebug_unparse_with_symbols:
       opts.programAction = DebugUnparseWithSymbols;
+      break;
+    case clang::driver::options::OPT_fdebug_unparse_with_modules:
+      opts.programAction = DebugUnparseWithModules;
       break;
     case clang::driver::options::OPT_fdebug_dump_symbols:
       opts.programAction = DebugDumpSymbols;
@@ -428,6 +618,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                 // pre-processed inputs.
                 .Case("f95", Language::Fortran)
                 .Case("f95-cpp-input", Language::Fortran)
+                // CUDA Fortran
+                .Case("cuda", Language::Fortran)
                 .Default(Language::Unknown);
 
     // Flang's intermediate representations.
@@ -562,19 +754,19 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 }
 
 // Generate the path to look for intrinsic modules
-static std::string getIntrinsicDir() {
+static std::string getIntrinsicDir(const char *argv) {
   // TODO: Find a system independent API
   llvm::SmallString<128> driverPath;
-  driverPath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
 }
 
 // Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir() {
+static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(includePath);
   includePath.append("/../include/flang/OpenMP/");
   return std::string(includePath);
@@ -617,6 +809,7 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
+  opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
 
 /// Parses all semantic related arguments and populates the variables
@@ -642,6 +835,11 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -fdebug-module-writer option
   if (args.hasArg(clang::driver::options::OPT_fdebug_module_writer)) {
     res.setDebugModuleDir(true);
+  }
+
+  // -fhermetic-module-files option
+  if (args.hasArg(clang::driver::options::OPT_fhermetic_module_files)) {
+    res.setHermeticModuleFileOutput(true);
   }
 
   // -module-suffix
@@ -686,6 +884,9 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().showColors =
       parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
+  // Honor color diagnostics.
+  res.getDiagnosticOpts().ShowColors = res.getFrontendOpts().showColors;
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -704,6 +905,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.getDefaultKinds().set_defaultIntegerKind(8);
     res.getDefaultKinds().set_subscriptIntegerKind(8);
     res.getDefaultKinds().set_sizeIntegerKind(8);
+    res.getDefaultKinds().set_defaultLogicalKind(8);
   }
   if (args.hasArg(clang::driver::options::OPT_fdefault_double_8)) {
     if (!args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
@@ -720,6 +922,13 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
     res.getDefaultKinds().set_sizeIntegerKind(8);
 
+  // -x cuda
+  auto language = args.getLastArgValue(clang::driver::options::OPT_x);
+  if (language == "cuda") {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::CUDA);
+  }
+
   // -fopenmp and -fopenacc
   if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
     res.getFrontendOpts().features.Enable(
@@ -735,8 +944,11 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             res.getLangOpts().OpenMPVersion, diags)) {
       res.getLangOpts().OpenMPVersion = Version;
     }
-    if (args.hasArg(clang::driver::options::OPT_fopenmp_is_device)) {
-      res.getLangOpts().OpenMPIsDevice = 1;
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
+      res.getLangOpts().OpenMPForceUSM = 1;
+    }
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
+      res.getLangOpts().OpenMPIsTargetDevice = 1;
 
       // Get OpenMP host file path if any and report if a non existent file is
       // found
@@ -780,6 +992,25 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
           res.getLangOpts().OpenMPTargetDebug = 1;
       }
+      if (args.hasArg(clang::driver::options::OPT_nogpulib))
+        res.getLangOpts().NoGPULib = 1;
+    }
+
+    switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
+    case llvm::Triple::nvptx:
+    case llvm::Triple::nvptx64:
+    case llvm::Triple::amdgcn:
+      if (!res.getLangOpts().OpenMPIsTargetDevice) {
+        const unsigned diagID = diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error,
+            "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+        diags.Report(diagID);
+      }
+      res.getLangOpts().OpenMPIsGPU = 1;
+      break;
+    default:
+      res.getLangOpts().OpenMPIsGPU = 0;
+      break;
     }
   }
 
@@ -788,13 +1019,18 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setEnableConformanceChecks();
     res.setEnableUsageChecks();
   }
+
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w))
+    res.setDisableWarnings();
+
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
-    if (standard.equals("f2018")) {
+    if (standard == "f2018") {
       res.setEnableConformanceChecks();
     } else {
       const unsigned diagID =
@@ -836,7 +1072,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(fpContractMode);
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
+  if (args.getLastArg(clang::driver::options::OPT_menable_no_infs)) {
     opts.NoHonorInfs = true;
   }
 
@@ -873,8 +1109,81 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Parses vscale range options and populates the CompilerInvocation
+/// accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
+                            clang::DiagnosticsEngine &diags) {
+  const auto *vscaleMin =
+      args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ);
+  const auto *vscaleMax =
+      args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ);
+
+  if (!vscaleMin && !vscaleMax)
+    return true;
+
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+  if (!triple.isAArch64() && !triple.isRISCV()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "`-mvscale-max` and `-mvscale-min` are not "
+                              "supported for this architecture: %0");
+    diags.Report(diagID) << triple.getArchName();
+    return false;
+  }
+
+  LangOptions &opts = invoc.getLangOpts();
+  if (vscaleMin) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
+    unsigned vscaleMinVal;
+    if (argValue.getAsInteger(/*Radix=*/10, vscaleMinVal)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << vscaleMax->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMin = vscaleMinVal;
+  }
+
+  if (vscaleMax) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMax->getValue());
+    unsigned vscaleMaxVal;
+    if (argValue.getAsInteger(/*Radix=w*/ 10, vscaleMaxVal)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << vscaleMax->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMax = vscaleMaxVal;
+  }
+  return true;
+}
+
+static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
+                                   llvm::opt::ArgList &args,
+                                   clang::DiagnosticsEngine &diags) {
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+
+  // TODO: support --dependent-lib on other platforms when MLIR supports
+  //       !llvm.dependent.lib
+  if (args.hasArg(clang::driver::options::OPT_dependent_lib) &&
+      !triple.isOSWindows()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "--dependent-lib is only supported on Windows");
+    diags.Report(diagID);
+    return false;
+  }
+
+  invoc.getCodeGenOpts().DependentLibs =
+      args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
-    CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
+    CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
 
   bool success = true;
@@ -885,15 +1194,15 @@ bool CompilerInvocation::createFromArgs(
   // NOTE: Like in Clang, it would be nice to use option marshalling
   // for this so that the entire logic for setting-up the triple is in one
   // place.
-  res.getTargetOpts().triple =
+  invoc.getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   // Parse the arguments
   const llvm::opt::OptTable &opts = clang::driver::getDriverOptTable();
-  const unsigned includedFlagsBitmask = clang::driver::options::FC1Option;
+  llvm::opt::Visibility visibilityMask(clang::driver::options::FC1Option);
   unsigned missingArgIndex, missingArgCount;
   llvm::opt::InputArgList args = opts.ParseArgs(
-      commandLineArgs, missingArgIndex, missingArgCount, includedFlagsBitmask);
+      commandLineArgs, missingArgIndex, missingArgCount, visibilityMask);
 
   // Check for missing argument error.
   if (missingArgCount) {
@@ -906,7 +1215,7 @@ bool CompilerInvocation::createFromArgs(
   for (const auto *a : args.filtered(clang::driver::options::OPT_UNKNOWN)) {
     auto argString = a->getAsString(args);
     std::string nearest;
-    if (opts.findNearest(argString, nearest, includedFlagsBitmask) > 1)
+    if (opts.findNearest(argString, nearest, visibilityMask) > 1)
       diags.Report(clang::diag::err_drv_unknown_argument) << argString;
     else
       diags.Report(clang::diag::err_drv_unknown_argument_with_suggestion)
@@ -917,31 +1226,81 @@ bool CompilerInvocation::createFromArgs(
   // -flang-experimental-hlfir
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
-    res.loweringOpts.setLowerToHighLevelFIR(true);
+    invoc.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
-  success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
-  parseTargetArgs(res.getTargetOpts(), args);
-  parsePreprocessorArgs(res.getPreprocessorOpts(), args);
-  parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
-  success &= parseDebugArgs(res.getCodeGenOpts(), args, diags);
-  success &= parseSemaArgs(res, args, diags);
-  success &= parseDialectArgs(res, args, diags);
-  success &= parseDiagArgs(res, args, diags);
-  res.frontendOpts.llvmArgs =
-      args.getAllArgValues(clang::driver::options::OPT_mllvm);
+  // -flang-deprecated-no-hlfir
+  if (args.hasArg(clang::driver::options::OPT_flang_deprecated_no_hlfir) &&
+      !args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
+    if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "Options '-flang-experimental-hlfir' and "
+          "'-flang-deprecated-no-hlfir' cannot be both specified");
+      diags.Report(diagID);
+    }
+    invoc.loweringOpts.setLowerToHighLevelFIR(false);
+  }
 
-  res.frontendOpts.mlirArgs =
+  // -fno-ppc-native-vector-element-order
+  if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
+    invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
+  }
+
+  // -flang-experimental-integer-overflow
+  if (args.hasArg(
+          clang::driver::options::OPT_flang_experimental_integer_overflow)) {
+    invoc.loweringOpts.setNSWOnLoopVarInc(true);
+  }
+
+  // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
+  // -Rpass-analysis. This will be used later when processing and outputting the
+  // remarks generated by LLVM in ExecuteCompilerInvocation.cpp.
+  for (auto *a : args.filtered(clang::driver::options::OPT_R_Group)) {
+    if (a->getOption().matches(clang::driver::options::OPT_R_value_Group))
+      // This is -Rfoo=, where foo is the name of the diagnostic
+      // group. Add only the remark option name to the diagnostics. e.g. for
+      // -Rpass= we will add the string "pass".
+      invoc.getDiagnosticOpts().Remarks.push_back(
+          std::string(a->getOption().getName().drop_front(1).rtrim("=-")));
+    else
+      // If no regex was provided, add the provided value, e.g. for -Rpass add
+      // the string "pass".
+      invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
+  }
+
+  success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
+  parseTargetArgs(invoc.getTargetOpts(), args);
+  parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
+  parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
+  success &= parseSemaArgs(invoc, args, diags);
+  success &= parseDialectArgs(invoc, args, diags);
+  success &= parseDiagArgs(invoc, args, diags);
+
+  // Collect LLVM (-mllvm) and MLIR (-mmlir) options.
+  // NOTE: Try to avoid adding any options directly to `llvmArgs` or
+  // `mlirArgs`. Instead, you can use
+  //    * `-mllvm <your-llvm-option>`, or
+  //    * `-mmlir <your-mlir-option>`.
+  invoc.frontendOpts.llvmArgs =
+      args.getAllArgValues(clang::driver::options::OPT_mllvm);
+  invoc.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
-  success &= parseFloatingPointArgs(res, args, diags);
+  success &= parseFloatingPointArgs(invoc, args, diags);
+
+  success &= parseVScaleArgs(invoc, args, diags);
+
+  success &= parseLinkerOptionsArgs(invoc, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent
   // compiler driver invocation with an environment variable, or failing that
   // set to the command line arguments of the frontend driver invocation.
-  res.allCompilerInvocOpts = std::string();
-  llvm::raw_string_ostream os(res.allCompilerInvocOpts);
+  invoc.allCompilerInvocOpts = std::string();
+  llvm::raw_string_ostream os(invoc.allCompilerInvocOpts);
   char *compilerOptsEnv = std::getenv("FLANG_COMPILER_OPTIONS_STRING");
   if (compilerOptsEnv != nullptr) {
     os << compilerOptsEnv;
@@ -952,6 +1311,8 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  invoc.setArgv0(argv0);
 
   return success;
 }
@@ -995,7 +1356,8 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   // Add the location of omp_lib.h to the search directories. Currently this is
   // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(getOpenMPHeadersDir());
+  fortranOptions.searchDirectories.emplace_back(
+      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1018,17 +1380,31 @@ void CompilerInvocation::setDefaultPredefinitions() {
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenACC)) {
-    fortranOptions.predefinitions.emplace_back("_OPENACC", "202011");
+    fortranOptions.predefinitions.emplace_back("_OPENACC", "202211");
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
     Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
                                     fortranOptions.predefinitions);
   }
+
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+  if (targetTriple.isPPC()) {
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+  }
+  if (targetTriple.isOSLinux()) {
+    fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  }
+
+  switch (targetTriple.getArch()) {
+  default:
+    break;
+  case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
   }
 }
 
@@ -1060,7 +1436,8 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
   //  Add the default intrinsic module directory
-  fortranOptions.intrinsicModuleDirectories.emplace_back(getIntrinsicDir());
+  fortranOptions.intrinsicModuleDirectories.emplace_back(
+      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
@@ -1081,35 +1458,34 @@ void CompilerInvocation::setFortranOpts() {
 
   if (getEnableUsageChecks())
     fortranOptions.features.WarnOnAllUsage();
+
+  if (getDisableWarnings()) {
+    fortranOptions.features.DisableAllNonstandardWarnings();
+    fortranOptions.features.DisableAllUsageWarnings();
+  }
 }
 
-void CompilerInvocation::setSemanticsOpts(
-    Fortran::parser::AllCookedSources &allCookedSources) {
+std::unique_ptr<Fortran::semantics::SemanticsContext>
+CompilerInvocation::getSemanticsCtx(
+    Fortran::parser::AllCookedSources &allCookedSources,
+    const llvm::TargetMachine &targetMachine) {
   auto &fortranOptions = getFortranOpts();
 
-  semanticsContext = std::make_unique<semantics::SemanticsContext>(
+  auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
       .set_intrinsicModuleDirectories(fortranOptions.intrinsicModuleDirectories)
       .set_warningsAreErrors(getWarnAsErr())
-      .set_moduleFileSuffix(getModuleFileSuffix());
+      .set_moduleFileSuffix(getModuleFileSuffix())
+      .set_underscoring(getCodeGenOpts().Underscoring);
 
-  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    semanticsContext->targetCharacteristics().DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
-
-  std::string version = Fortran::common::getFlangFullVersion();
-  semanticsContext->targetCharacteristics()
-      .set_compilerOptionsString(allCompilerInvocOpts)
-      .set_compilerVersionString(version);
-
-  if (targetTriple.isPPC())
-    semanticsContext->targetCharacteristics().set_isPPC(true);
+  std::string compilerVersion = Fortran::common::getFlangFullVersion();
+  Fortran::tools::setUpTargetCharacteristics(
+      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
+      allCompilerInvocOpts);
+  return semanticsContext;
 }
 
 /// Set \p loweringOptions controlling lowering behavior based
@@ -1119,6 +1495,7 @@ void CompilerInvocation::setLoweringOptions() {
 
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
+  loweringOpts.setUnderscoring(codegenOpts.Underscoring);
 
   const LangOptions &langOptions = getLangOpts();
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();

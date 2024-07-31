@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
 #include <cassert>
@@ -243,10 +244,18 @@ void updatePublicTypeTestCalls(Module &M,
                                bool WholeProgramVisibilityEnabledInLTO);
 void updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
-    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
+    bool ValidateAllVtablesHaveTypeInfos,
+    function_ref<bool(StringRef)> IsVisibleToRegularObj);
 void updateVCallVisibilityInIndex(
     ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
-    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
+    const DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols);
+
+void getVisibleToRegularObjVtableGUIDs(
+    ModuleSummaryIndex &Index,
+    DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols,
+    function_ref<bool(StringRef)> IsVisibleToRegularObj);
 
 /// Perform index-based whole program devirtualization on the \p Summary
 /// index. Any devirtualized targets used by a type test in another module

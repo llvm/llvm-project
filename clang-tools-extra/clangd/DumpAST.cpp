@@ -118,8 +118,8 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   std::string getKind(const Decl *D) { return D->getDeclKindName(); }
   std::string getKind(const Stmt *S) {
     std::string Result = S->getStmtClassName();
-    if (llvm::StringRef(Result).endswith("Stmt") ||
-        llvm::StringRef(Result).endswith("Expr"))
+    if (llvm::StringRef(Result).ends_with("Stmt") ||
+        llvm::StringRef(Result).ends_with("Expr"))
       Result.resize(Result.size() - 4);
     return Result;
   }
@@ -143,6 +143,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_ARGUMENT_KIND(Declaration);
       TEMPLATE_ARGUMENT_KIND(Template);
       TEMPLATE_ARGUMENT_KIND(TemplateExpansion);
+      TEMPLATE_ARGUMENT_KIND(StructuralValue);
 #undef TEMPLATE_ARGUMENT_KIND
     }
     llvm_unreachable("Unhandled ArgKind enum");
@@ -204,6 +205,11 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     // There aren't really any variants of CXXBaseSpecifier.
     // To avoid special cases in the API/UI, use public/private as the kind.
     return getAccessSpelling(CBS.getAccessSpecifier()).str();
+  }
+  std::string getKind(const ConceptReference *CR) {
+    // Again there are no variants here.
+    // Kind is "Concept", role is "reference"
+    return "Concept";
   }
 
   // Detail is the single most important fact about the node.
@@ -305,6 +311,9 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   std::string getDetail(const CXXBaseSpecifier &CBS) {
     return CBS.isVirtual() ? "virtual" : "";
   }
+  std::string getDetail(const ConceptReference *CR) {
+    return CR->getNamedConcept()->getNameAsString();
+  }
 
   /// Arcana is produced by TextNodeDumper, for the types it supports.
 
@@ -365,6 +374,10 @@ public:
   bool TraverseAttr(Attr *A) {
     return !A || traverseNode("attribute", A, [&] { Base::TraverseAttr(A); });
   }
+  bool TraverseConceptReference(ConceptReference *C) {
+    return !C || traverseNode("reference", C,
+                              [&] { Base::TraverseConceptReference(C); });
+  }
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &CBS) {
     return traverseNode("base", CBS,
                         [&] { Base::TraverseCXXBaseSpecifier(CBS); });
@@ -422,6 +435,8 @@ ASTNode dumpAST(const DynTypedNode &N, const syntax::TokenBuffer &Tokens,
     V.TraverseTemplateArgumentLoc(*const_cast<TemplateArgumentLoc *>(TAL));
   else if (const auto *CBS = N.get<CXXBaseSpecifier>())
     V.TraverseCXXBaseSpecifier(*const_cast<CXXBaseSpecifier *>(CBS));
+  else if (const auto *CR = N.get<ConceptReference>())
+    V.TraverseConceptReference(const_cast<ConceptReference *>(CR));
   else
     elog("dumpAST: unhandled DynTypedNode kind {0}",
          N.getNodeKind().asStringRef());

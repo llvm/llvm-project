@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Support
   TargetParser
+  FrontendOpenMP
   )
 
 find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
@@ -39,6 +40,8 @@ add_custom_command(OUTPUT "${version_inc}"
                            "-DHEADER_FILE=${version_inc}"
                            "-DLLVM_VC_REPOSITORY=${llvm_vc_repository}"
                            "-DLLVM_VC_REVISION=${llvm_vc_revision}"
+                           "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                           "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
                            -P "${generate_vcs_version_script}")
 
 # Mark the generated header as being generated.
@@ -52,6 +55,7 @@ if(CLANG_VENDOR)
 endif()
 
 add_clang_library(clangBasic
+  ASTSourceDescriptor.cpp
   Attributes.cpp
   Builtins.cpp
   CLWarnings.cpp
@@ -83,6 +87,7 @@ add_clang_library(clangBasic
   Sarif.cpp
   SourceLocation.cpp
   SourceManager.cpp
+  SourceMgrAdapter.cpp
   Stack.cpp
   TargetID.cpp
   TargetInfo.cpp
@@ -125,6 +130,10 @@ add_clang_library(clangBasic
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
+  # These generated headers are included transitively.
+  ARMTargetParserTableGen
+  AArch64TargetParserTableGen
   )
 
 target_link_libraries(clangBasic

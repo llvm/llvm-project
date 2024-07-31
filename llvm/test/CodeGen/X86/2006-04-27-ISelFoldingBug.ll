@@ -18,15 +18,16 @@ define i1 @loadAndRLEsource_no_exit_2E_1_label_2E_0(i32 %tmp.21.reload, i32 %tmp
 ; CHECK-NEXT:    movl _block, %esi
 ; CHECK-NEXT:    movb %al, 1(%esi,%edx)
 ; CHECK-NEXT:    cmpl %ecx, _last
-; CHECK-NEXT:    jge LBB0_3
-; CHECK-NEXT:  ## %bb.1: ## %label.0
+; CHECK-NEXT:    setl %cl
 ; CHECK-NEXT:    cmpl $257, %eax ## imm = 0x101
-; CHECK-NEXT:    je LBB0_3
-; CHECK-NEXT:  ## %bb.2: ## %label.0.no_exit.1_crit_edge.exitStub
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    testb %al, %cl
+; CHECK-NEXT:    je LBB0_2
+; CHECK-NEXT:  ## %bb.1: ## %label.0.no_exit.1_crit_edge.exitStub
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  LBB0_3: ## %codeRepl5.exitStub
+; CHECK-NEXT:  LBB0_2: ## %codeRepl5.exitStub
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl

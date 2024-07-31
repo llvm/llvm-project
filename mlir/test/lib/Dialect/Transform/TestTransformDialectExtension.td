@@ -17,9 +17,9 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 
 def TestTransformTestDialectHandleType
@@ -72,6 +72,7 @@ def TestProduceValueHandleToResult
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -89,6 +90,7 @@ def TestProduceValueHandleToArgumentOfParentBlock
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -116,6 +118,7 @@ def TestConsumeOperandEach : Op<Transform_Dialect, "test_consume_operand_each",
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state) {
@@ -147,29 +150,6 @@ def TestSucceedIfOperandOfOpKind
   let assemblyFormat =
       "$operand_handle `,` $op_kind attr-dict `:` type($operand_handle)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintRemarkAtOperandOp
-  : Op<Transform_Dialect, "test_print_remark_at_operand",
-       [MatchOpInterface,
-        DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins
-    TransformHandleTypeInterface:$operand,
-    StrAttr:$message);
-  let assemblyFormat =
-    "$operand `,` $message attr-dict `:` type($operand)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintRemarkAtOperandValue
-  : Op<Transform_Dialect, "test_print_remark_at_operand_value",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformValueHandleTypeInterface:$in,
-                       StrAttr:$message);
-  let assemblyFormat = "$in `,` $message attr-dict `:` type($in)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -260,6 +240,7 @@ def TestWrongNumberOfResultsOp
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation * target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -277,6 +258,7 @@ def TestWrongNumberOfMultiResultsOp
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation * target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -295,6 +277,7 @@ def TestCorrectNumberOfMultiResultsOp
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation * target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -313,6 +296,7 @@ def TestMixedNullAndNonNullResultsOp
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation * target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -329,19 +313,11 @@ def TestMixedSuccessAndSilenceableOp
   let cppNamespace = "::mlir::test";
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation * target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
-}
-
-def TestPrintNumberOfAssociatedPayloadIROps
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_ops",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformHandleTypeInterface:$handle);
-  let assemblyFormat = "$handle attr-dict `:` type($handle)";
-  let cppNamespace = "::mlir::test";
 }
 
 def TestCopyPayloadOp
@@ -361,19 +337,6 @@ def TestReportNumberOfTrackedHandlesNestedUnder
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins TransformHandleTypeInterface:$target);
   let assemblyFormat = "$target attr-dict `:` type($target)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintParamOp
-  : Op<Transform_Dialect, "test_print_param",
-       [MatchOpInterface,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-        DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TransformParamTypeInterface:$param,
-                       Optional<TransformHandleTypeInterface>:$anchor,
-                       OptionalAttr<StrAttr>:$message);
-  let assemblyFormat = "$param (`,` $message^)?  (`at` $anchor^)?"
-                       "attr-dict `:` type($param) (`,` type($anchor)^)?";
   let cppNamespace = "::mlir::test";
 }
 
@@ -402,15 +365,14 @@ def TestProduceParamWithNumberOfTestOps
   let cppNamespace = "::mlir::test";
 }
 
-def TestProduceIntegerParamWithTypeOp
-  : Op<Transform_Dialect, "test_produce_integer_param_with_type",
+def TestProduceParamOp
+  : Op<Transform_Dialect, "test_produce_param",
        [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TypeAttr:$type);
+  let arguments = (ins AnyAttr:$attr);
   let results = (outs TransformParamTypeInterface:$result);
-  let assemblyFormat = "$type attr-dict `:` type($result)";
+  let assemblyFormat = "`(` $attr `)` attr-dict `:` type($result)";
   let cppNamespace = "::mlir::test";
-  let hasVerifier = 1;
 }
 
 def TestProduceTransformParamOrForwardOperandOp
@@ -428,6 +390,7 @@ def TestProduceTransformParamOrForwardOperandOp
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -492,13 +455,16 @@ def TestDummyPayloadOp
   : Op<Transform_Dialect, "test_dummy_payload_op",
       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        TransformOpInterface]> {
-  let arguments = (ins Variadic<AnyType>:$args);
+  let arguments = (ins Variadic<AnyType>:$args,
+                       UnitAttr:$fail_to_verify);
   let results = (outs Variadic<AnyType>:$outs);
   let assemblyFormat = "$args attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    DiagnosedSilenceableFailure apply(transform::TransformResults &results,
+    DiagnosedSilenceableFailure apply(transform::TransformRewriter &rewriter,
+                                      transform::TransformResults &results,
                                       transform::TransformState &state) {
       llvm_unreachable("op should not be used as a transform");
       return DiagnosedSilenceableFailure::definiteFailure();
@@ -523,6 +489,64 @@ def ApplyTestPatternsOp
   let results = (outs);
   let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
+}
+
+def ApplyTestConversionPatternsOp
+  : Op<Transform_Dialect, "apply_conversion_patterns.transform.test_conversion_patterns",
+      [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestTypeConverterOp
+  : Op<Transform_Dialect, "apply_conversion_patterns.transform.test_type_converter",
+      [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                                 ["getTypeConverter"]>]> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestReEnterRegionOp
+  : Op<Transform_Dialect, "test_re_enter_region",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict-with-keyword regions";
+  let cppNamespace = "::mlir::test";
+  let hasVerifier = 1;
+}
+
+def TestNotifyPayloadOpReplacedOp
+  : Op<Transform_Dialect, "test_notify_payload_op_replaced",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$original,
+                       TransformHandleTypeInterface:$replacement);
+  let results = (outs);
+  let assemblyFormat = "$original `,` $replacement attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestProduceInvalidIR
+  : Op<Transform_Dialect, "test_produce_invalid_ir",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        TransformOpInterface, TransformEachOpTrait]> {
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

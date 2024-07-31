@@ -37,6 +37,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    .cfi_offset %r14, -32
 ; LINUX-NEXT:    .cfi_offset %r15, -24
 ; LINUX-NEXT:    .cfi_offset %rbp, -16
+; LINUX-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; LINUX-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -45,7 +46,6 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; LINUX-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; LINUX-NEXT:    movq %r9, %r14
 ; LINUX-NEXT:    movq %r8, %r15
 ; LINUX-NEXT:    movq %rcx, %r12
@@ -130,6 +130,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    .cfi_offset %r14, -32
 ; LINUX-X32-NEXT:    .cfi_offset %r15, -24
 ; LINUX-X32-NEXT:    .cfi_offset %rbp, -16
+; LINUX-X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -138,7 +139,6 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; LINUX-X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; LINUX-X32-NEXT:    movq %r9, %r14
 ; LINUX-X32-NEXT:    movq %r8, %r15
 ; LINUX-X32-NEXT:    movq %rcx, %r12

@@ -299,6 +299,17 @@ define <2 x i32> @test74vec(<2 x i32> %x) {
   ret <2 x i32> %2
 }
 
+define i64 @test75(i32 %X) {
+; CHECK-LABEL: @test75(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 8
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = icmp slt i32 %X, 0
+  %2 = select i1 %1, i64 0, i64 8
+  ret i64 %2
+}
+
 ;; Code sequence for (X & 16) ? 16 : 0
 define i32 @test15a(i32 %X) {
 ; CHECK-LABEL: @test15a(
@@ -455,7 +466,7 @@ define i32 @clear_to_clear(i32 %x) {
 ; CHECK-LABEL: @clear_to_clear(
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
-; CHECK-NEXT:    [[T3:%.*]] = or i32 [[T1]], -11
+; CHECK-NEXT:    [[T3:%.*]] = or disjoint i32 [[T1]], -11
 ; CHECK-NEXT:    call void @use1(i1 [[T2]])
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
@@ -473,7 +484,7 @@ define i32 @set_to_set(i32 %x) {
 ; CHECK-LABEL: @set_to_set(
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
-; CHECK-NEXT:    [[T3:%.*]] = or i32 [[T1]], -11
+; CHECK-NEXT:    [[T3:%.*]] = or disjoint i32 [[T1]], -11
 ; CHECK-NEXT:    call void @use1(i1 [[T2]])
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
@@ -520,7 +531,7 @@ define i8 @clear_to_set_decomposebittest(i8 %x) {
 define i8 @clear_to_clear_decomposebittest(i8 %x) {
 ; CHECK-LABEL: @clear_to_clear_decomposebittest(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[T3:%.*]] = or i8 [[TMP1]], 3
+; CHECK-NEXT:    [[T3:%.*]] = or disjoint i8 [[TMP1]], 3
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t2 = icmp sgt i8 %x, -1
@@ -533,7 +544,7 @@ define i8 @clear_to_clear_decomposebittest(i8 %x) {
 define i8 @set_to_set_decomposebittest(i8 %x) {
 ; CHECK-LABEL: @set_to_set_decomposebittest(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[T3:%.*]] = or i8 [[TMP1]], 3
+; CHECK-NEXT:    [[T3:%.*]] = or disjoint i8 [[TMP1]], 3
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t2 = icmp slt i8 %x, 0

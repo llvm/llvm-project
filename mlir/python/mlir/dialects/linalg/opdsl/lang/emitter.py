@@ -31,14 +31,6 @@ __all__ = [
 ValueList = Union[Sequence[Value], OpResultList]
 
 
-def isa(cls: Type, ty: Type):
-    try:
-        cls(ty)
-        return True
-    except ValueError:
-        return False
-
-
 def prepare_common_structured_op(
     op_config: LinalgStructuredOpConfig,
     *ins: Value,
@@ -60,6 +52,7 @@ def prepare_common_structured_op(
         in [
             OperandKind.UNARY_FN_ATTR,
             OperandKind.BINARY_FN_ATTR,
+            OperandKind.TERNARY_FN_ATTR,
             OperandKind.TYPE_FN_ATTR,
         ]
     ]
@@ -126,7 +119,7 @@ def prepare_common_structured_op(
         op_config, in_arg_defs, ins, out_arg_defs, outs
     )
 
-    result_types = [t for t in out_types if isa(RankedTensorType, t)]
+    result_types = [t for t in out_types if isinstance(t, RankedTensorType)]
 
     # Initialize the type dictionary with the predefined types.
     type_mapping = dict()  # type: Dict[str, Type]
@@ -179,6 +172,12 @@ def prepare_common_structured_op(
                     raise ValueError(
                         f"Attribute {fn_attr.name} needs to be of type "
                         f"BinaryFnType but got {type(attr_val)}"
+                    )
+            elif attr_kind == OperandKind.TERNARY_FN_ATTR:
+                if not isinstance(fn, TernaryFnType):
+                    raise ValueError(
+                        f"Attribute {fn_attr.name} needs to be of type "
+                        f"TernaryFnType but got {type(attr_val)}"
                     )
             else:
                 if not isinstance(fn, TypeFnType):
@@ -310,7 +309,7 @@ def emit_named_structured_op(
         )
 
     # Set the index attributes used to compute the indexing maps.
-    named_op = getattr(linalg, op_class_name)(ins, outs, result_types)
+    named_op = getattr(linalg, op_class_name)(result_types, ins, outs)
     for name, value in index_attrs.items():
         named_op.operation.attributes[name] = value
 
@@ -527,28 +526,28 @@ class _BodyBuilder:
 
     def _binary_max_signed(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MaxFOp(lhs, rhs).result
+            return arith.MaximumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MaxSIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'max' operands: {lhs}, {rhs}")
 
     def _binary_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MaxFOp(lhs, rhs).result
+            return arith.MaximumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MaxUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'max_unsigned' operands: {lhs}, {rhs}")
 
     def _binary_min_signed(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MinFOp(lhs, rhs).result
+            return arith.MinimumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MinSIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'min' operands: {lhs}, {rhs}")
 
     def _binary_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MinFOp(lhs, rhs).result
+            return arith.MinimumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MinUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'min_unsigned' operands: {lhs}, {rhs}")

@@ -62,6 +62,8 @@
 #define INSTR_PROF_VISIBILITY
 #endif
 
+// clang-format off:consider re-enabling clang-format if auto-formatted C macros
+// are readable (e.g., after `issue #82426` is fixed)
 /* INSTR_PROF_DATA start. */
 /* Definition of member fields of the per-function control structure. */
 #ifndef INSTR_PROF_DATA
@@ -76,21 +78,43 @@ INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
 INSTR_PROF_DATA(const IntPtrT, IntPtrTy, CounterPtr, RelativeCounterPtr)
+INSTR_PROF_DATA(const IntPtrT, IntPtrTy, BitmapPtr, RelativeBitmapPtr)
 /* This is used to map function pointers for the indirect call targets to
  * function name hashes during the conversion from raw to merged profile
  * data.
  */
-INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
+INSTR_PROF_DATA(const IntPtrT, llvm::PointerType::getUnqual(Ctx), FunctionPointer, \
                 FunctionAddr)
-INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
+INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
-                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
+                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
 
+/* For a virtual table object, record the name hash to associate profiled
+ * addresses with global variables, and record {starting address, size in bytes}
+ * to map the profiled virtual table (which usually have an offset from the
+ * starting address) back to a virtual table object. */
+#ifndef INSTR_PROF_VTABLE_DATA
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_VTABLE_DATA_DEFINED
+#endif
+INSTR_PROF_VTABLE_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), \
+                       VTableNameHash, ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
+                       IndexedInstrProf::ComputeHash(PGOVTableName)))
+INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::PointerType::getUnqual(Ctx), \
+                       VTablePointer, VTableAddr)
+INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize, \
+                       ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
+                                        VTableSizeVal))
+#undef INSTR_PROF_VTABLE_DATA
+/* INSTR_PROF_VTABLE_DATA end. */
 
 /* This is an internal data structure used by value profiler. It
  * is defined here to allow serialization code sharing by LLVM
@@ -113,13 +137,15 @@ INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Value, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
 INSTR_PROF_VALUE_NODE(uint64_t, llvm::Type::getInt64Ty(Ctx), Count, \
                       ConstantInt::get(llvm::Type::GetInt64Ty(Ctx), 0))
-INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::Type::getInt8PtrTy(Ctx), Next, \
-                      ConstantInt::get(llvm::Type::GetInt8PtrTy(Ctx), 0))
+INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
+                      ConstantInt::get(llvm::PointerType::getUnqual(Ctx), 0))
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
 
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
+/* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
+   raw profile format. */
 #ifndef INSTR_PROF_RAW_HEADER
 #define INSTR_PROF_RAW_HEADER(Type, Name, Initializer)
 #else
@@ -128,16 +154,20 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::Type::getInt8PtrTy(Ctx), Next, \
 INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
 INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
 INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
-/* FIXME: A more accurate name is NumData */
-INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
+INSTR_PROF_RAW_HEADER(uint64_t, NumData, NumData)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCounters)
-/* FIXME: A more accurate name is NumCounters */
-INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+INSTR_PROF_RAW_HEADER(uint64_t, NumCounters, NumCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
+INSTR_PROF_RAW_HEADER(uint64_t, NumBitmapBytes, NumBitmapBytes)
+INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterBitmapBytes, PaddingBytesAfterBitmapBytes)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
                       (uintptr_t)CountersBegin - (uintptr_t)DataBegin)
+INSTR_PROF_RAW_HEADER(uint64_t, BitmapDelta,
+                      (uintptr_t)BitmapBegin - (uintptr_t)DataBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
+INSTR_PROF_RAW_HEADER(uint64_t, NumVTables, NumVTables)
+INSTR_PROF_RAW_HEADER(uint64_t, VNamesSize, VNamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #undef INSTR_PROF_RAW_HEADER
 /* INSTR_PROF_RAW_HEADER  end */
@@ -155,7 +185,7 @@ INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #endif
 VALUE_PROF_FUNC_PARAM(uint64_t, TargetValue, Type::getInt64Ty(Ctx)) \
                       INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(void *, Data, Type::getInt8PtrTy(Ctx)) INSTR_PROF_COMMA
+VALUE_PROF_FUNC_PARAM(void *, Data, PointerType::getUnqual(Ctx)) INSTR_PROF_COMMA
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #undef VALUE_PROF_FUNC_PARAM
 #undef INSTR_PROF_COMMA
@@ -179,13 +209,26 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0, "indirect call target")
 /* For memory intrinsic functions size profiling. */
 VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
+/* For virtual table address profiling, the address point of the virtual table
+ * (i.e., the address contained in objects pointing to a virtual table) are
+ * profiled. Note this may not be the address of the per C++ class virtual table
+ *  object (e.g., there might be an offset).
+ *
+ * The profiled addresses are stored in raw profile, together with the following
+ * two types of information.
+ * 1. The (starting and ending) addresses of per C++ class virtual table objects.
+ * 2. The (compressed) virtual table object names.
+ * RawInstrProfReader converts profiled virtual table addresses to virtual table
+ *  objects' MD5 hash.
+ */
+VALUE_PROF_KIND(IPVK_VTableTarget, 2, "The profiled address point of the vtable")
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
  * array created with the template can be
  * indexed with the kind value.
  */
 VALUE_PROF_KIND(IPVK_First, IPVK_IndirectCallTarget, "first")
-VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize, "last")
+VALUE_PROF_KIND(IPVK_Last, IPVK_VTableTarget, "last")
 
 #undef VALUE_PROF_KIND
 /* VALUE_PROF_KIND end */
@@ -208,9 +251,9 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize, "last")
 #define INSTR_PROF_DATA_DEFINED
 #endif
 #ifdef COVMAP_V1
-COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
+COVMAP_FUNC_RECORD(const IntPtrT, llvm::PointerType::getUnqual(Ctx), \
                    NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
-                   llvm::Type::getInt8PtrTy(Ctx)))
+                   llvm::PointerType::getUnqual(Ctx)))
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                    NameValue.size()))
@@ -269,15 +312,24 @@ INSTR_PROF_SECT_ENTRY(IPSK_data, \
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
                       INSTR_PROF_CNTS_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
+                      INSTR_PROF_BITS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_name, \
                       INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
                       INSTR_PROF_NAME_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vname, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VNAME_COMMON), \
+                      INSTR_PROF_VNAME_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_vals, \
                       INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON), \
                       INSTR_PROF_VALS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
                       INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), \
                       INSTR_PROF_VNODES_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vtab, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VTAB_COMMON), \
+                      INSTR_PROF_VTAB_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
                       INSTR_PROF_COVMAP_COFF, "__LLVM_COV,")
@@ -287,6 +339,12 @@ INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
 INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
                       INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON), \
+                      INSTR_PROF_COVDATA_COFF, "__LLVM_COV,")
+INSTR_PROF_SECT_ENTRY(IPSK_covname, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON), \
+                      INSTR_PROF_COVNAME_COFF, "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -342,7 +400,7 @@ typedef struct ValueProfRecord {
    * Do byte swap for this instance. \c Old is the original order before
    * the swap, and \c New is the New byte order.
    */
-  void swapBytes(support::endianness Old, support::endianness New);
+  void swapBytes(llvm::endianness Old, llvm::endianness New);
 #endif
 } ValueProfRecord;
 
@@ -397,15 +455,15 @@ typedef struct ValueProfData {
   static Expected<std::unique_ptr<ValueProfData>>
   getValueProfData(const unsigned char *SrcBuffer,
                    const unsigned char *const SrcBufferEnd,
-                   support::endianness SrcDataEndianness);
+                   llvm::endianness SrcDataEndianness);
   /*!
    * Swap byte order from \c Endianness order to host byte order.
    */
-  void swapBytesToHost(support::endianness Endianness);
+  void swapBytesToHost(llvm::endianness Endianness);
   /*!
    * Swap byte order from host byte order to \c Endianness order.
    */
-  void swapBytesFromHost(support::endianness Endianness);
+  void swapBytesFromHost(llvm::endianness Endianness);
   /*!
    * Return the total size of \c ValueProfileData.
    */
@@ -478,12 +536,14 @@ getValueProfRecordHeaderSize(uint32_t NumValueSites);
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 #endif
 
+// clang-format on
+
 /*!
  * Return the \c ValueProfRecord header size including the
  * padding bytes.
  */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
-uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE uint32_t
+getValueProfRecordHeaderSize(uint32_t NumValueSites) {
   uint32_t Size = offsetof(ValueProfRecord, SiteCountArray) +
                   sizeof(uint8_t) * NumValueSites;
   /* Round the size to multiple of 8 bytes. */
@@ -495,9 +555,8 @@ uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
  * Return the total size of the value profile record including the
  * header and the value data.
  */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
-uint32_t getValueProfRecordSize(uint32_t NumValueSites,
-                                uint32_t NumValueData) {
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE uint32_t
+getValueProfRecordSize(uint32_t NumValueSites, uint32_t NumValueData) {
   return getValueProfRecordHeaderSize(NumValueSites) +
          sizeof(InstrProfValueData) * NumValueData;
 }
@@ -505,8 +564,8 @@ uint32_t getValueProfRecordSize(uint32_t NumValueSites,
 /*!
  * Return the pointer to the start of value data array.
  */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
-InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE InstrProfValueData *
+getValueProfRecordValueData(ValueProfRecord *This) {
   return (InstrProfValueData *)((char *)This + getValueProfRecordHeaderSize(
                                                    This->NumValueSites));
 }
@@ -514,8 +573,8 @@ InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
 /*!
  * Return the total number of value data for \c This record.
  */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
-uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE uint32_t
+getValueProfRecordNumValueData(ValueProfRecord *This) {
   uint32_t NumValueData = 0;
   uint32_t I;
   for (I = 0; I < This->NumValueSites; I++)
@@ -526,8 +585,8 @@ uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
 /*!
  * Use this method to advance to the next \c This \c ValueProfRecord.
  */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
-ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE ValueProfRecord *
+getValueProfRecordNext(ValueProfRecord *This) {
   uint32_t NumValueData = getValueProfRecordNumValueData(This);
   return (ValueProfRecord *)((char *)This +
                              getValueProfRecordSize(This->NumValueSites,
@@ -537,8 +596,8 @@ ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
 /*!
  * Return the first \c ValueProfRecord instance.
  */
-INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
-ValueProfRecord *getFirstValueProfRecord(ValueProfData *This) {
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE ValueProfRecord *
+getFirstValueProfRecord(ValueProfData *This) {
   return (ValueProfRecord *)((char *)This + sizeof(ValueProfData));
 }
 
@@ -621,6 +680,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 
 /*============================================================================*/
 
+// clang-format off:consider re-enabling clang-format if auto-formatted C macros
+// are readable (e.g., after `issue #82426` is fixed)
 #ifndef INSTR_PROF_DATA_DEFINED
 
 #ifndef INSTR_PROF_DATA_INC
@@ -646,17 +707,16 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
        (uint64_t)'p' << 40 | (uint64_t)'r' << 32 | (uint64_t)'o' << 24 |  \
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
-/* FIXME: Please remedy the fixme in the header before bumping the version. */
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 8
+#define INSTR_PROF_RAW_VERSION 10
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 10
+#define INSTR_PROF_INDEX_VERSION 12
 /* Coverage mapping format version (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 5
+#define INSTR_PROF_COVMAP_VERSION 6
 
-/* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
- * version for other variants of profile. We set the lowest bit of the upper 8
- * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
+/* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
+ * version for other variants of profile. We set the 8th most significant bit 
+ * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
  * The 59th bit indicates whether to use debug info to correlate profiles.
@@ -665,7 +725,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * The 62nd bit indicates whether memory profile information is present.
  * The 63rd bit indicates if this is a temporal profile.
  */
-#define VARIANT_MASKS_ALL 0xff00000000000000ULL
+#define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
@@ -678,7 +738,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_VAR __llvm_profile_counter_bias
+#define INSTR_PROF_PROFILE_BITMAP_BIAS_VAR __llvm_profile_bitmap_bias
 #define INSTR_PROF_PROFILE_SET_TIMESTAMP __llvm_profile_set_timestamp
+#define INSTR_PROF_PROFILE_SAMPLING_VAR __llvm_profile_sampling
 
 /* The variable that holds the name of the profile data
  * specified via command line. */
@@ -688,22 +750,35 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
+#define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
+#define INSTR_PROF_VTAB_COMMON __llvm_prf_vtab
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
+#define INSTR_PROF_COVDATA_COMMON __llvm_covdata
+#define INSTR_PROF_COVNAME_COMMON __llvm_covnames
 #define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
  */
 #define INSTR_PROF_DATA_COFF ".lprfd$M"
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
+#define INSTR_PROF_VNAME_COFF ".lprfvn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
+#define INSTR_PROF_BITS_COFF ".lprfb$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
+#define INSTR_PROF_VTAB_COFF ".lprfvt$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
 #define INSTR_PROF_COVFUN_COFF ".lcovfun$M"
+/* Since cov data and cov names sections are not allocated, we don't need to
+ * access them at runtime.
+ */
+#define INSTR_PROF_COVDATA_COFF ".lcovd"
+#define INSTR_PROF_COVNAME_COFF ".lcovn"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
 #ifdef _WIN32
@@ -711,6 +786,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COFF
 #define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COFF
 #define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COFF
+#define INSTR_PROF_BITS_SECT_NAME INSTR_PROF_BITS_COFF
+#define INSTR_PROF_VTAB_SECT_NAME INSTR_PROF_VTAB_COFF
+#define INSTR_PROF_VNAME_SECT_NAME INSTR_PROF_VNAME_COFF
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
@@ -719,12 +797,17 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COFF
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_COVFUN_COFF
+#define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_COVDATA_COFF
+#define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_COVNAME_COFF
 #define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
 #else
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
 #define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON)
 #define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON)
+#define INSTR_PROF_BITS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON)
+#define INSTR_PROF_VTAB_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VTAB_COMMON)
+#define INSTR_PROF_VNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNAME_COMMON)
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
@@ -733,6 +816,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON)
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON)
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON)
+#define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON)
+#define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON)
 /* Order file instrumentation. */
 #define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
   INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)
@@ -872,6 +957,8 @@ INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 int InstProfPopcountll(unsigned long long X) { return __builtin_popcountll(X); }
 
 #endif  /* defined(_MSC_VER) && !defined(__clang__) */
+
+// clang-format on
 
 /* Map an (observed) memop size value to the representative value of its range.
  * For example, 5 -> 5, 22 -> 17, 99 -> 65, 256 -> 256, 1001 -> 513. */

@@ -11,12 +11,13 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFDebugRanges::DWARFDebugRanges() : m_range_map() {}
 
 void DWARFDebugRanges::Extract(DWARFContext &context) {
   llvm::DWARFDataExtractor extractor =
-      context.getOrLoadRangesData().GetAsLLVM();
+      context.getOrLoadRangesData().GetAsLLVMDWARF();
   llvm::DWARFDebugRangeList extracted_list;
   uint64_t current_offset = 0;
   auto extract_next_list = [&] {

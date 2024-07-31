@@ -1,4 +1,7 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
 
 ;; This test checks that Invoke parameter of OpEnueueKernel instruction meet the
 ;; following specification requirements in case of enqueueing empty block:

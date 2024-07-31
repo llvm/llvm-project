@@ -1,9 +1,9 @@
-; RUN: llvm-dis -opaque-pointers=0 -o - %s.bc | FileCheck %s
-; RUN: llvm-dis -opaque-pointers=1 -o - %s.bc | FileCheck %s
+; RUN: llvm-dis -o - %s.bc | FileCheck %s
+; RUN: llvm-dis -o - %s.bc --load-bitcode-into-experimental-debuginfo-iterators=true | FileCheck %s
 %class.A = type { i32, i32, i32, i32 }
 
 define void @_Z3fooi(%class.A* sret(%class.A) %agg.result) #0 !dbg !3 {
-  ; CHECK: call void @llvm.dbg.declare({{.*}}, metadata !DIExpression()), !dbg
+  ; CHECK: #dbg_declare({{.*}}, !DIExpression(),
   call void @llvm.dbg.declare(metadata %class.A* %agg.result, metadata !13, metadata !16), !dbg !17
   ret void, !dbg !17
 }

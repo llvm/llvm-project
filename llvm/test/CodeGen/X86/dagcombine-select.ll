@@ -194,12 +194,10 @@ define i32 @sel_constants_shl_constant(i1 %cond) {
 define i32 @shl_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: shl_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    xorb $3, %cl
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    notb %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    leal 4(,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
   %bo = shl i32 1, %sel
@@ -209,12 +207,10 @@ define i32 @shl_constant_sel_constants(i1 %cond) {
 define i32 @shl_constant_sel_setcc(i32 %a) {
 ; CHECK-LABEL: shl_constant_sel_setcc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    xorb $3, %cl
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    leal 4(,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %m = and i32 %a, 1
   %cond = icmp ne i32 %m, 0
@@ -226,12 +222,9 @@ define i32 @shl_constant_sel_setcc(i32 %a) {
 define i32 @lshr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: lshr_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    xorb $3, %cl
-; CHECK-NEXT:    movl $64, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    leal 8(,%rdi,8), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
   %bo = lshr i32 64, %sel
@@ -241,12 +234,9 @@ define i32 @lshr_constant_sel_constants(i1 %cond) {
 define i32 @lshr_constant_sel_setcc(i32 %a) {
 ; CHECK-LABEL: lshr_constant_sel_setcc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    xorb $3, %cl
-; CHECK-NEXT:    movl $64, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    leal 8(,%rdi,8), %eax
 ; CHECK-NEXT:    retq
   %m = and i32 %a, 1
   %cond = icmp ne i32 %m, 0
@@ -258,12 +248,10 @@ define i32 @lshr_constant_sel_setcc(i32 %a) {
 define i32 @ashr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: ashr_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    xorb $3, %cl
-; CHECK-NEXT:    movl $128, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    shll $4, %edi
+; CHECK-NEXT:    leal 16(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
   %bo = ashr i32 128, %sel
@@ -273,12 +261,10 @@ define i32 @ashr_constant_sel_constants(i1 %cond) {
 define i32 @ashr_constant_sel_setcc(i32 %a) {
 ; CHECK-LABEL: ashr_constant_sel_setcc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    xorb $3, %cl
-; CHECK-NEXT:    movl $128, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    shll $4, %edi
+; CHECK-NEXT:    leal 16(%rdi), %eax
 ; CHECK-NEXT:    retq
   %m = and i32 %a, 1
   %cond = icmp ne i32 %m, 0
@@ -293,10 +279,10 @@ define double @fsub_constant_sel_constants(i1 %cond) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB20_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [-1.8200000000000003E+1,0.0E+0]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB20_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [9.0999999999999996E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fsub double 5.1, %sel
@@ -309,10 +295,10 @@ define double @fdiv_constant_sel_constants(i1 %cond) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB21_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.188841201716738E-1,0.0E+0]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB21_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [-1.2749999999999999E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fdiv double 5.1, %sel
@@ -325,10 +311,10 @@ define double @frem_constant_sel_constants(i1 %cond) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB22_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [5.0999999999999996E+0,0.0E+0]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB22_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0999999999999996E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double 5.1, %sel

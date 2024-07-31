@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPmerge_test(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.char<1>>{{.*}}, %[[arg1:.*]]: index{{.*}},  %[[arg2:[^:]+]]: !fir.boxchar<1>{{.*}}, %[[arg3:[^:]+]]: !fir.boxchar<1>{{.*}}, %[[arg4:.*]]: !fir.ref<!fir.logical<4>>{{.*}}) -> !fir.boxchar<1> {
@@ -14,7 +14,7 @@ merge_test = merge(o1, o2, mask)
 ! CHECK: %[[a2:.*]] = fir.load %[[arg4]] : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[a3:.*]] = fir.convert %[[a2]] : (!fir.logical<4>) -> i1
 ! CHECK: %[[a4:.*]] = arith.select %[[a3]], %[[a0_cast]], %[[a1_cast]] : !fir.ref<!fir.char<1>>
-! CHECK:  %{{.*}} = fir.convert %[[a4]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
+! CHECK:  %{{.*}} = fir.load %[[a4]] : !fir.ref<!fir.char<1>>
 end
 
 ! CHECK-LABEL: func @_QPmerge_test2(

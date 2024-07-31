@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Function.h"
@@ -45,7 +46,7 @@ using namespace llvm;
 namespace llvm {
 cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
                                       cl::init(4));
-}
+} // namespace llvm
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 

@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: not llvm-dwarfdump --verify %t.o | FileCheck %s
+# RUN: not llvm-dwarfdump --error-display=details --verify %t.o | FileCheck %s
 
 # CHECK: Verifying .debug_abbrev...
 # CHECK-NEXT: Verifying .debug_info Unit Header Chain...
@@ -11,6 +11,8 @@
 # CHECK-NEXT: DW_TAG_skeleton_unit
 # CHECK-NEXT: error: Skeleton compilation unit has children.
 # CHECK-NEXT: Verifying dwo Units...
+# CHECK-NEXT: Verifying .debug_line...
+# CHECK-NEXT: Verifying .debug_str_offsets...
 # CHECK-NEXT: Errors detected.
 
         .section .debug_abbrev,"",@progbits
@@ -51,5 +53,3 @@
         .byte   2                       # Abbrev [2]
         .byte   0
 .Lcu_end1:
-
-

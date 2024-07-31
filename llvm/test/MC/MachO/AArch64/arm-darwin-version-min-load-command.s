@@ -22,6 +22,9 @@
 // RUN: llvm-mc -triple arm64e-apple-driverkit19.0 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-DRIVERKIT-ARM64
 // RUN: llvm-mc -triple arm64-apple-driverkit20.1 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-DRIVERKIT-ARM64_1
 
+// RUN: llvm-mc -triple arm64-apple-xros1 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck --check-prefix=CHECK-XROS-ARM64 %s
+// RUN: llvm-mc -triple arm64-apple-xros1-simulator %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck --check-prefix=CHECK-XROS-SIM %s
+
 // CHECK-BUILD-IOS-ARM64E:           cmd LC_BUILD_VERSION
 // CHECK-BUILD-IOS-ARM64E-NEXT:  cmdsize 24
 // CHECK-BUILD-IOS-ARM64E-NEXT: platform ios
@@ -37,6 +40,14 @@
 // CHECK-BUILD-IOS-ARM64E3-NEXT:    minos 14.1
 // CHECK-BUILD-IOS-ARM64E3-NEXT:   ntools 0
 // CHECK-BUILD-IOS-ARM64E3-NOT: LC_VERSION_MIN
+
+// CHECK-XROS-ARM64:            cmd LC_BUILD_VERSION
+// CHECK-XROS-ARM64-NEXT:   cmdsize 24
+// CHECK-XROS-ARM64-NEXT:  platform xros
+// CHECK-XROS-ARM64-NEXT:       sdk n/a
+// CHECK-XROS-ARM64-NEXT:     minos 1.0
+// CHECK-XROS-ARM64-NEXT:    ntools 0
+// CHECK-XROS-ARM64-NOT: LC_VERSION_MIN
 
 // CHECK-BUILD-IOSSIM2:           cmd LC_BUILD_VERSION
 // CHECK-BUILD-IOSSIM2-NEXT:  cmdsize 24
@@ -69,6 +80,14 @@
 // CHECK-BUILD-WATCHOSSIM2-NEXT:    minos 7.0
 // CHECK-BUILD-WATCHOSSIM2-NEXT:   ntools 0
 // CHECK-BUILD-WATCHOSSIM2-NOT: LC_VERSION_MIN
+
+// CHECK-XROS-SIM:            cmd LC_BUILD_VERSION
+// CHECK-XROS-SIM-NEXT:   cmdsize 24
+// CHECK-XROS-SIM-NEXT:  platform xrsimulator
+// CHECK-XROS-SIM-NEXT:       sdk n/a
+// CHECK-XROS-SIM-NEXT:     minos 1.0
+// CHECK-XROS-SIM-NEXT:    ntools 0
+// CHECK-XROS-SIM-NOT: LC_VERSION_MIN
 
 // CHECK-BUILD-MACOS-ARM64:           cmd LC_BUILD_VERSION
 // CHECK-BUILD-MACOS-ARM64-NEXT:  cmdsize 24

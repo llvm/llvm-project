@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/FileCheck/FileCheck.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -187,14 +188,12 @@ static bool checkOutput(std::string CheckString, std::string Output) {
   SmallString<4096> CheckFileBuffer;
   FileCheckRequest Req;
   FileCheck FC(Req);
-  StringRef CheckFileText =
-      FC.CanonicalizeFile(*CheckBuffer.get(), CheckFileBuffer);
+  StringRef CheckFileText = FC.CanonicalizeFile(*CheckBuffer, CheckFileBuffer);
 
   SourceMgr SM;
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(CheckFileText, "CheckFile"),
                         SMLoc());
-  Regex PrefixRE = FC.buildCheckPrefixRegex();
-  if (FC.readCheckFile(SM, CheckFileText, PrefixRE))
+  if (FC.readCheckFile(SM, CheckFileText))
     return false;
 
   auto OutBuffer = OutputBuffer->getBuffer();
@@ -254,7 +253,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
@@ -278,7 +277,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -404,7 +403,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
@@ -428,7 +427,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
@@ -502,7 +501,7 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MF);
+  MachineModuleSlotTracker MST(MMI, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ(
@@ -527,7 +526,7 @@ body:             |
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
-  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, *MF); });
+  std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
 CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}

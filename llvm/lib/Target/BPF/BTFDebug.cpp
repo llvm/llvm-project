@@ -17,6 +17,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -30,7 +32,7 @@ using namespace llvm;
 
 static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
-#include "BTF.def"
+#include "llvm/DebugInfo/BTF/BTF.def"
 };
 
 /// Emit a BTF common type.
@@ -587,7 +589,7 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
   for (const Metadata *Annotation : Annotations->operands()) {
     const MDNode *MD = cast<MDNode>(Annotation);
     const MDString *Name = cast<MDString>(MD->getOperand(0));
-    if (!Name->getString().equals("btf_decl_tag"))
+    if (Name->getString() != "btf_decl_tag")
       continue;
 
     const MDString *Value = cast<MDString>(MD->getOperand(1));
@@ -626,7 +628,7 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
     for (const Metadata *Annotations : Annots->operands()) {
       const MDNode *MD = cast<MDNode>(Annotations);
       const MDString *Name = cast<MDString>(MD->getOperand(0));
-      if (!Name->getString().equals("btf_type_tag"))
+      if (Name->getString() != "btf_type_tag")
         continue;
       MDStrs.push_back(cast<MDString>(MD->getOperand(1)));
     }
@@ -972,11 +974,10 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
 }
 
 /// Read file contents from the actual file or from the source
-std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
-  auto File = SP->getFile();
+std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string FileName;
 
-  if (!File->getFilename().startswith("/") && File->getDirectory().size())
+  if (!File->getFilename().starts_with("/") && File->getDirectory().size())
     FileName = File->getDirectory().str() + "/" + File->getFilename().str();
   else
     FileName = std::string(File->getFilename());
@@ -1004,9 +1005,9 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   return FileName;
 }
 
-void BTFDebug::constructLineInfo(const DISubprogram *SP, MCSymbol *Label,
+void BTFDebug::constructLineInfo(MCSymbol *Label, const DIFile *File,
                                  uint32_t Line, uint32_t Column) {
-  std::string FileName = populateFileContent(SP);
+  std::string FileName = populateFileContent(File);
   BTFLineInfo LineInfo;
 
   LineInfo.Label = Label;
@@ -1318,14 +1319,18 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   if (MI->isInlineAsm()) {
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
-    for (; MI->getOperand(NumDefs).isReg() && MI->getOperand(NumDefs).isDef();
-         ++NumDefs)
-      ;
-
-    // Skip this inline asm instruction if the asmstr is empty.
-    const char *AsmStr = MI->getOperand(NumDefs).getSymbolName();
-    if (AsmStr[0] == 0)
-      return;
+    while (true) {
+      const MachineOperand &MO = MI->getOperand(NumDefs);
+      if (MO.isReg() && MO.isDef()) {
+        ++NumDefs;
+        continue;
+      }
+      // Skip this inline asm instruction if the asmstr is empty.
+      const char *AsmStr = MO.getSymbolName();
+      if (AsmStr[0] == 0)
+        return;
+      break;
+    }
   }
 
   if (MI->getOpcode() == BPF::LD_imm64) {
@@ -1344,8 +1349,9 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     // If the insn is "r2 = LD_imm64 @<an TypeIdAttr global>",
     // The LD_imm64 result will be replaced with a btf type id.
     processGlobalValue(MI->getOperand(1));
-  } else if (MI->getOpcode() == BPF::CORE_MEM ||
-             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+  } else if (MI->getOpcode() == BPF::CORE_LD64 ||
+             MI->getOpcode() == BPF::CORE_LD32 ||
+             MI->getOpcode() == BPF::CORE_ST ||
              MI->getOpcode() == BPF::CORE_SHIFT) {
     // relocation insn is a load, store or shift insn.
     processGlobalValue(MI->getOperand(3));
@@ -1360,16 +1366,18 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   if (!CurMI) // no debug info
     return;
 
-  // Skip this instruction if no DebugLoc or the DebugLoc
-  // is the same as the previous instruction.
+  // Skip this instruction if no DebugLoc, the DebugLoc
+  // is the same as the previous instruction or Line is 0.
   const DebugLoc &DL = MI->getDebugLoc();
-  if (!DL || PrevInstLoc == DL) {
+  if (!DL || PrevInstLoc == DL || DL.getLine() == 0) {
     // This instruction will be skipped, no LineInfo has
     // been generated, construct one based on function signature.
     if (LineInfoGenerated == false) {
       auto *S = MI->getMF()->getFunction().getSubprogram();
+      if (!S)
+        return;
       MCSymbol *FuncLabel = Asm->getFunctionBegin();
-      constructLineInfo(S, FuncLabel, S->getLine(), 0);
+      constructLineInfo(FuncLabel, S->getFile(), S->getLine(), 0);
       LineInfoGenerated = true;
     }
 
@@ -1381,8 +1389,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   OS.emitLabel(LineSym);
 
   // Construct the lineinfo.
-  auto SP = DL->getScope()->getSubprogram();
-  constructLineInfo(SP, LineSym, DL.getLine(), DL.getCol());
+  constructLineInfo(LineSym, DL->getFile(), DL.getLine(), DL.getCol());
 
   LineInfoGenerated = true;
   PrevInstLoc = DL;
@@ -1409,7 +1416,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       SecName = Sec->getName();
     }
 
-    if (ProcessingMapDef != SecName.startswith(".maps"))
+    if (ProcessingMapDef != SecName.starts_with(".maps"))
       continue;
 
     // Create a .rodata datasec if the global variable is an initialized
@@ -1435,7 +1442,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     DIGlobalVariable *DIGlobal = nullptr;
     for (auto *GVE : GVs) {
       DIGlobal = GVE->getVariable();
-      if (SecName.startswith(".maps"))
+      if (SecName.starts_with(".maps"))
         visitMapDefType(DIGlobal->getType(), GVTypeId);
       else
         visitTypeEntry(DIGlobal->getType(), GVTypeId, false, false);
@@ -1483,11 +1490,34 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     }
 
     // Calculate symbol size
-    const DataLayout &DL = Global.getParent()->getDataLayout();
+    const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
     DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
         Asm->getSymbol(&Global), Size);
+
+    if (Global.hasInitializer())
+      processGlobalInitializer(Global.getInitializer());
+  }
+}
+
+/// Process global variable initializer in pursuit for function
+/// pointers. Add discovered (extern) functions to BTF. Some (extern)
+/// functions might have been missed otherwise. Every symbol needs BTF
+/// info when linking with bpftool. Primary use case: "static"
+/// initialization of BPF maps.
+///
+/// struct {
+///   __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+///   ...
+/// } prog_map SEC(".maps") = { .values = { extern_func } };
+///
+void BTFDebug::processGlobalInitializer(const Constant *C) {
+  if (auto *Fn = dyn_cast<Function>(C))
+    processFuncPrototypes(Fn);
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    for (unsigned I = 0, N = CA->getNumOperands(); I < N; ++I)
+      processGlobalInitializer(CA->getOperand(I));
   }
 }
 
@@ -1510,10 +1540,8 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
           return false;
         }
 
-        if (Reloc == BPFCoreSharedInfo::ENUM_VALUE_EXISTENCE ||
-            Reloc == BPFCoreSharedInfo::ENUM_VALUE ||
-            Reloc == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL ||
-            Reloc == BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE)
+        if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
+            Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);
         else
           OutMI.setOpcode(BPF::MOV_ri);
@@ -1522,8 +1550,9 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
         return true;
       }
     }
-  } else if (MI->getOpcode() == BPF::CORE_MEM ||
-             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+  } else if (MI->getOpcode() == BPF::CORE_LD64 ||
+             MI->getOpcode() == BPF::CORE_LD32 ||
+             MI->getOpcode() == BPF::CORE_ST ||
              MI->getOpcode() == BPF::CORE_SHIFT) {
     const MachineOperand &MO = MI->getOperand(3);
     if (MO.isGlobal()) {

@@ -92,9 +92,9 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
       auto RuntimeHandle = (F.getName() + ".runtime_handle").str();
       if (!HandleTy) {
         Type *Int32 = Type::getInt32Ty(C);
-        HandleTy = StructType::create(
-            C, {Type::getInt8Ty(C)->getPointerTo(0), Int32, Int32},
-            "block.runtime.handle.t");
+        HandleTy =
+            StructType::create(C, {PointerType::getUnqual(C), Int32, Int32},
+                               "block.runtime.handle.t");
       }
 
       auto *GV = new GlobalVariable(

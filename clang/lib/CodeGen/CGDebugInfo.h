@@ -20,8 +20,8 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -29,7 +29,9 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
 #include <optional>
+#include <string>
 
 namespace llvm {
 class MDNode;
@@ -38,6 +40,7 @@ class MDNode;
 namespace clang {
 class ClassTemplateSpecializationDecl;
 class GlobalDecl;
+class Module;
 class ModuleMap;
 class ObjCInterfaceDecl;
 class UsingDecl;
@@ -82,6 +85,8 @@ class CGDebugInfo {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/AMDGPUTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
@@ -343,6 +348,14 @@ class CGDebugInfo {
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
+  /// A cache that maps names of artificial inlined functions to subprograms.
+  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+
+  /// A function that returns the subprogram corresponding to the artificial
+  /// inlined function for traps.
+  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
+                                                  llvm::DIFile *FileScope);
+
   /// Helpers for collecting fields of a record.
   /// @{
   void CollectRecordLambdaFields(const CXXRecordDecl *CXXDecl,
@@ -526,6 +539,12 @@ public:
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
+  /// Emit a pseudo variable and debug info for an intermediate value if it does
+  /// not correspond to a variable in the source code, so that a profiler can
+  /// track more accurate usage of certain instructions of interest.
+  void EmitPseudoVariable(CGBuilderTy &Builder, llvm::Instruction *Value,
+                          QualType Ty);
+
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);
 
@@ -599,6 +618,18 @@ public:
     return CoroutineParameterMappings;
   }
 
+  /// Create a debug location from `TrapLocation` that adds an artificial inline
+  /// frame where the frame name is
+  ///
+  /// * `<Prefix>:<Category>:<FailureMsg>`
+  ///
+  /// `<Prefix>` is "__clang_trap_msg".
+  ///
+  /// This is used to store failure reasons for traps.
+  llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                                StringRef Category,
+                                                StringRef FailureMsg);
+
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
@@ -623,7 +654,8 @@ private:
     llvm::DIType *WrappedType;
   };
 
-  std::string GetName(const Decl*, bool Qualified = false) const;
+  bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
+  std::string GetName(const Decl *, bool Qualified = false) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
@@ -797,6 +829,11 @@ private:
                            llvm::MDTuple *&TemplateParameters,
                            llvm::DIScope *&VDContext);
 
+  /// Create a DIExpression representing the constant corresponding
+  /// to the specified 'Val'. Returns nullptr on failure.
+  llvm::DIExpression *createConstantValueExpression(const clang::ValueDecl *VD,
+                                                    const APValue &Val);
+
   /// Allocate a copy of \p A using the DebugInfoNames allocator
   /// and return a reference to it. If multiple arguments are given the strings
   /// are concatenated.
@@ -832,8 +869,10 @@ public:
 
   // Define copy assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
-    CGF = Other.CGF;
-    Other.CGF = nullptr;
+    if (this != &Other) {
+      CGF = Other.CGF;
+      Other.CGF = nullptr;
+    }
     return *this;
   }
 

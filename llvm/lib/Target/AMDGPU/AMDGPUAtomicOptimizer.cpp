@@ -116,7 +116,7 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
 
   const UniformityInfo *UA =
       &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
 
   DominatorTreeWrapperPass *const DTW =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
@@ -137,7 +137,7 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
 
   const auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
 
   DomTreeUpdater DTU(&AM.getResult<DominatorTreeAnalysis>(F),
                      DomTreeUpdater::UpdateStrategy::Lazy);
@@ -145,13 +145,25 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
 
   bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
-  return AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader, ScanImpl)
-                 .run(F)
-             ? PreservedAnalyses::none()
-             : PreservedAnalyses::all();
+  bool IsChanged =
+      AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader, ScanImpl)
+          .run(F);
+
+  if (!IsChanged) {
+    return PreservedAnalyses::all();
+  }
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
 
 bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
+
+  // Scan option None disables the Pass
+  if (ScanImpl == ScanOptions::None) {
+    return false;
+  }
 
   visit(F);
 
@@ -164,6 +176,20 @@ bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
   ToReplace.clear();
 
   return Changed;
+}
+
+static bool isLegalCrossLaneType(Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
+    return true;
+  case Type::IntegerTyID: {
+    unsigned Size = Ty->getIntegerBitWidth();
+    return (Size == 32 || Size == 64);
+  }
+  default:
+    return false;
+  }
 }
 
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
@@ -190,7 +216,17 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   case AtomicRMWInst::Min:
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
     break;
+  }
+
+  // Only 32 and 64 bit floating point atomic ops are supported.
+  if (AtomicRMWInst::isFPOperation(Op) &&
+      !(I.getType()->isFloatTy() || I.getType()->isDoubleTy())) {
+    return;
   }
 
   const unsigned PtrIdx = 0;
@@ -202,15 +238,18 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
     return;
   }
 
-  const bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
+  bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32
-  // bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || DL->getTypeSizeInBits(I.getType()) != 32)) {
-    return;
+  // we have DPP available on our subtarget (for DPP strategy), and the atomic
+  // operation is 32 or 64 bits.
+  if (ValDivergent) {
+    if (ScanImpl == ScanOptions::DPP && !ST->hasDPP())
+      return;
+
+    if (!isLegalCrossLaneType(I.getType()))
+      return;
   }
 
   // If we get here, we can optimize the atomic using a single wavefront-wide
@@ -227,63 +266,54 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   default:
     return;
-  case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_struct_buffer_atomic_add:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_add:
   case Intrinsic::amdgcn_raw_buffer_atomic_add:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_add:
     Op = AtomicRMWInst::Add;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_sub:
   case Intrinsic::amdgcn_struct_buffer_atomic_sub:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub:
   case Intrinsic::amdgcn_raw_buffer_atomic_sub:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub:
     Op = AtomicRMWInst::Sub;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_and:
   case Intrinsic::amdgcn_struct_buffer_atomic_and:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_and:
   case Intrinsic::amdgcn_raw_buffer_atomic_and:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_and:
     Op = AtomicRMWInst::And;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_or:
   case Intrinsic::amdgcn_struct_buffer_atomic_or:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_or:
   case Intrinsic::amdgcn_raw_buffer_atomic_or:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_or:
     Op = AtomicRMWInst::Or;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_xor:
   case Intrinsic::amdgcn_struct_buffer_atomic_xor:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor:
   case Intrinsic::amdgcn_raw_buffer_atomic_xor:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor:
     Op = AtomicRMWInst::Xor;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_struct_buffer_atomic_smin:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin:
   case Intrinsic::amdgcn_raw_buffer_atomic_smin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin:
     Op = AtomicRMWInst::Min;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_umin:
   case Intrinsic::amdgcn_struct_buffer_atomic_umin:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin:
   case Intrinsic::amdgcn_raw_buffer_atomic_umin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin:
     Op = AtomicRMWInst::UMin;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_smax:
   case Intrinsic::amdgcn_struct_buffer_atomic_smax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax:
   case Intrinsic::amdgcn_raw_buffer_atomic_smax:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax:
     Op = AtomicRMWInst::Max;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_umax:
   case Intrinsic::amdgcn_struct_buffer_atomic_umax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax:
   case Intrinsic::amdgcn_raw_buffer_atomic_umax:
@@ -298,11 +328,14 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32
-  // bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || DL->getTypeSizeInBits(I.getType()) != 32)) {
-    return;
+  // we have DPP available on our subtarget (for DPP strategy), and the atomic
+  // operation is 32 or 64 bits.
+  if (ValDivergent) {
+    if (ScanImpl == ScanOptions::DPP && !ST->hasDPP())
+      return;
+
+    if (!isLegalCrossLaneType(I.getType()))
+      return;
   }
 
   // If any of the other arguments to the intrinsic are divergent, we can't
@@ -332,8 +365,12 @@ static Value *buildNonAtomicBinOp(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
     llvm_unreachable("Unhandled atomic op");
   case AtomicRMWInst::Add:
     return B.CreateBinOp(Instruction::Add, LHS, RHS);
+  case AtomicRMWInst::FAdd:
+    return B.CreateFAdd(LHS, RHS);
   case AtomicRMWInst::Sub:
     return B.CreateBinOp(Instruction::Sub, LHS, RHS);
+  case AtomicRMWInst::FSub:
+    return B.CreateFSub(LHS, RHS);
   case AtomicRMWInst::And:
     return B.CreateBinOp(Instruction::And, LHS, RHS);
   case AtomicRMWInst::Or:
@@ -353,6 +390,10 @@ static Value *buildNonAtomicBinOp(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::UMin:
     Pred = CmpInst::ICMP_ULT;
     break;
+  case AtomicRMWInst::FMax:
+    return B.CreateMaxNum(LHS, RHS);
+  case AtomicRMWInst::FMin:
+    return B.CreateMinNum(LHS, RHS);
   }
   Value *Cond = B.CreateICmp(Pred, LHS, RHS);
   return B.CreateSelect(Cond, LHS, RHS);
@@ -364,10 +405,10 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
                                                  AtomicRMWInst::BinOp Op,
                                                  Value *V,
                                                  Value *const Identity) const {
-  Type *const Ty = V->getType();
+  Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, Ty);
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
   // Reduce within each row of 16 lanes.
   for (unsigned Idx = 0; Idx < 4; Idx++) {
@@ -380,27 +421,27 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
 
   // Reduce within each pair of rows (i.e. 32 lanes).
   assert(ST->hasPermLaneX16());
-  V = buildNonAtomicBinOp(
-      B, Op, V,
-      B.CreateIntrinsic(
-          Intrinsic::amdgcn_permlanex16, {},
-          {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()}));
-
-  if (ST->isWave32())
+  Value *Permlanex16Call = B.CreateIntrinsic(
+      V->getType(), Intrinsic::amdgcn_permlanex16,
+      {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
+  V = buildNonAtomicBinOp(B, Op, V, Permlanex16Call);
+  if (ST->isWave32()) {
     return V;
+  }
 
   if (ST->hasPermLane64()) {
     // Reduce across the upper and lower 32 lanes.
-    return buildNonAtomicBinOp(
-        B, Op, V, B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {}, V));
+    Value *Permlane64Call =
+        B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_permlane64, V);
+    return buildNonAtomicBinOp(B, Op, V, Permlane64Call);
   }
 
   // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
   // combine them with a scalar operation.
   Function *ReadLane =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
-  Value *const Lane0 = B.CreateCall(ReadLane, {V, B.getInt32(0)});
-  Value *const Lane32 = B.CreateCall(ReadLane, {V, B.getInt32(32)});
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, AtomicTy);
+  Value *Lane0 = B.CreateCall(ReadLane, {V, B.getInt32(0)});
+  Value *Lane32 = B.CreateCall(ReadLane, {V, B.getInt32(32)});
   return buildNonAtomicBinOp(B, Op, Lane0, Lane32);
 }
 
@@ -408,11 +449,11 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
 // all lanes active.
 Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
                                             AtomicRMWInst::BinOp Op, Value *V,
-                                            Value *const Identity) const {
-  Type *const Ty = V->getType();
+                                            Value *Identity) const {
+  Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, Ty);
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
   for (unsigned Idx = 0; Idx < 4; Idx++) {
     V = buildNonAtomicBinOp(
@@ -440,23 +481,25 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     // Combine lane 15 into lanes 16..31 (and, for wave 64, lane 47 into lanes
     // 48..63).
     assert(ST->hasPermLaneX16());
-    Value *const PermX = B.CreateIntrinsic(
-        Intrinsic::amdgcn_permlanex16, {},
+    Value *PermX = B.CreateIntrinsic(
+        V->getType(), Intrinsic::amdgcn_permlanex16,
         {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
-    V = buildNonAtomicBinOp(
-        B, Op, V,
-        B.CreateCall(UpdateDPP,
-                     {Identity, PermX, B.getInt32(DPP::QUAD_PERM_ID),
-                      B.getInt32(0xa), B.getInt32(0xf), B.getFalse()}));
+
+    Value *UpdateDPPCall = B.CreateCall(
+        UpdateDPP, {Identity, PermX, B.getInt32(DPP::QUAD_PERM_ID),
+                    B.getInt32(0xa), B.getInt32(0xf), B.getFalse()});
+    V = buildNonAtomicBinOp(B, Op, V, UpdateDPPCall);
+
     if (!ST->isWave32()) {
       // Combine lane 31 into lanes 32..63.
-      Value *const Lane31 = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
-                                              {V, B.getInt32(31)});
-      V = buildNonAtomicBinOp(
-          B, Op, V,
-          B.CreateCall(UpdateDPP,
-                       {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),
-                        B.getInt32(0xc), B.getInt32(0xf), B.getFalse()}));
+      Value *const Lane31 = B.CreateIntrinsic(
+          V->getType(), Intrinsic::amdgcn_readlane, {V, B.getInt32(31)});
+
+      Value *UpdateDPPCall = B.CreateCall(
+          UpdateDPP, {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),
+                      B.getInt32(0xc), B.getInt32(0xf), B.getFalse()});
+
+      V = buildNonAtomicBinOp(B, Op, V, UpdateDPPCall);
     }
   }
   return V;
@@ -465,12 +508,11 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 // Use the builder to create a shift right of V across the wavefront, with all
 // lanes active, to turn an inclusive scan into an exclusive scan.
 Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
-                                                  Value *const Identity) const {
-  Type *const Ty = V->getType();
+                                                  Value *Identity) const {
+  Type *AtomicTy = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, Ty);
-
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, AtomicTy);
   if (ST->hasDPPWavefrontShifts()) {
     // GFX9 has DPP wavefront shift operations.
     V = B.CreateCall(UpdateDPP,
@@ -478,9 +520,9 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                       B.getInt32(0xf), B.getFalse()});
   } else {
     Function *ReadLane =
-        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
+        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, AtomicTy);
     Function *WriteLane =
-        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_writelane, {});
+        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_writelane, AtomicTy);
 
     // On GFX10 all DPP operations are confined to a single row. To get cross-
     // row operations we have to use permlane or readlane.
@@ -517,7 +559,6 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
 std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
     IRBuilder<> &B, AtomicRMWInst::BinOp Op, Value *const Identity, Value *V,
     Instruction &I, BasicBlock *ComputeLoop, BasicBlock *ComputeEnd) const {
-
   auto *Ty = I.getType();
   auto *WaveTy = B.getIntNTy(ST->getWavefrontSize());
   auto *EntryBB = I.getParent();
@@ -542,17 +583,18 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   // Use llvm.cttz instrinsic to find the lowest remaining active lane.
   auto *FF1 =
       B.CreateIntrinsic(Intrinsic::cttz, WaveTy, {ActiveBits, B.getTrue()});
-  auto *LaneIdxInt = B.CreateTrunc(FF1, Ty);
+
+  auto *LaneIdxInt = B.CreateTrunc(FF1, B.getInt32Ty());
 
   // Get the value required for atomic operation
-  auto *LaneValue =
-      B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {}, {V, LaneIdxInt});
+  Value *LaneValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_readlane,
+                                       {V, LaneIdxInt});
 
   // Perform writelane if intermediate scan results are required later in the
   // kernel computations
   Value *OldValue = nullptr;
   if (NeedResult) {
-    OldValue = B.CreateIntrinsic(Intrinsic::amdgcn_writelane, {},
+    OldValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_writelane,
                                  {Accumulator, LaneIdxInt, OldValuePhi});
     OldValuePhi->addIncoming(OldValue, ComputeLoop);
   }
@@ -578,8 +620,10 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   return {OldValue, NewAccumulator};
 }
 
-static APInt getIdentityValueForAtomicOp(AtomicRMWInst::BinOp Op,
-                                         unsigned BitWidth) {
+static Constant *getIdentityValueForAtomicOp(Type *const Ty,
+                                             AtomicRMWInst::BinOp Op) {
+  LLVMContext &C = Ty->getContext();
+  const unsigned BitWidth = Ty->getPrimitiveSizeInBits();
   switch (Op) {
   default:
     llvm_unreachable("Unhandled atomic op");
@@ -588,14 +632,25 @@ static APInt getIdentityValueForAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
   case AtomicRMWInst::UMax:
-    return APInt::getMinValue(BitWidth);
+    return ConstantInt::get(C, APInt::getMinValue(BitWidth));
   case AtomicRMWInst::And:
   case AtomicRMWInst::UMin:
-    return APInt::getMaxValue(BitWidth);
+    return ConstantInt::get(C, APInt::getMaxValue(BitWidth));
   case AtomicRMWInst::Max:
-    return APInt::getSignedMinValue(BitWidth);
+    return ConstantInt::get(C, APInt::getSignedMinValue(BitWidth));
   case AtomicRMWInst::Min:
-    return APInt::getSignedMaxValue(BitWidth);
+    return ConstantInt::get(C, APInt::getSignedMaxValue(BitWidth));
+  case AtomicRMWInst::FAdd:
+    return ConstantFP::get(C, APFloat::getZero(Ty->getFltSemantics(), true));
+  case AtomicRMWInst::FSub:
+    return ConstantFP::get(C, APFloat::getZero(Ty->getFltSemantics(), false));
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMax:
+    // FIXME: atomicrmw fmax/fmin behave like llvm.maxnum/minnum so NaN is the
+    // closest thing they have to an identity, but it still does not preserve
+    // the difference between quiet and signaling NaNs or NaNs with different
+    // payloads.
+    return ConstantFP::get(C, APFloat::getNaN(Ty->getFltSemantics()));
   }
 }
 
@@ -610,6 +665,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
                                                bool ValDivergent) const {
   // Start building just before the instruction.
   IRBuilder<> B(&I);
+
+  if (AtomicRMWInst::isFPOperation(Op)) {
+    B.setIsFPConstrained(I.getFunction()->hasFnAttribute(Attribute::StrictFP));
+  }
 
   // If we are in a pixel shader, because of how we have to mask out helper
   // lane invocations, we need to record the entry and exit BB's.
@@ -637,12 +696,13 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   }
 
   Type *const Ty = I.getType();
-  const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
-  auto *const VecTy = FixedVectorType::get(B.getInt32Ty(), 2);
+  Type *Int32Ty = B.getInt32Ty();
+  bool isAtomicFloatingPointTy = Ty->isFloatingPointTy();
+  [[maybe_unused]] const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
 
   // This is the value in the atomic operation we need to combine in order to
   // reduce the number of atomic operations.
-  Value *const V = I.getOperand(ValIdx);
+  Value *V = I.getOperand(ValIdx);
 
   // We need to know how many lanes are active within the wavefront, and we do
   // this by doing a ballot of active lanes.
@@ -659,39 +719,42 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
                               {Ballot, B.getInt32(0)});
   } else {
-    Value *const BitCast = B.CreateBitCast(Ballot, VecTy);
-    Value *const ExtractLo = B.CreateExtractElement(BitCast, B.getInt32(0));
-    Value *const ExtractHi = B.CreateExtractElement(BitCast, B.getInt32(1));
+    Value *const ExtractLo = B.CreateTrunc(Ballot, Int32Ty);
+    Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(Ballot, 32), Int32Ty);
     Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
                               {ExtractLo, B.getInt32(0)});
     Mbcnt =
         B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {}, {ExtractHi, Mbcnt});
   }
-  Mbcnt = B.CreateIntCast(Mbcnt, Ty, false);
 
-  Value *const Identity = B.getInt(getIdentityValueForAtomicOp(Op, TyBitWidth));
+  Function *F = I.getFunction();
+  LLVMContext &C = F->getContext();
+
+  // For atomic sub, perform scan with add operation and allow one lane to
+  // subtract the reduced value later.
+  AtomicRMWInst::BinOp ScanOp = Op;
+  if (Op == AtomicRMWInst::Sub) {
+    ScanOp = AtomicRMWInst::Add;
+  } else if (Op == AtomicRMWInst::FSub) {
+    ScanOp = AtomicRMWInst::FAdd;
+  }
+  Value *Identity = getIdentityValueForAtomicOp(Ty, ScanOp);
 
   Value *ExclScan = nullptr;
   Value *NewV = nullptr;
 
   const bool NeedResult = !I.use_empty();
 
-  Function *F = I.getFunction();
-  LLVMContext &C = F->getContext();
   BasicBlock *ComputeLoop = nullptr;
   BasicBlock *ComputeEnd = nullptr;
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
-    const AtomicRMWInst::BinOp ScanOp =
-        Op == AtomicRMWInst::Sub ? AtomicRMWInst::Add : Op;
     if (ScanImpl == ScanOptions::DPP) {
       // First we need to set all inactive invocations to the identity value, so
       // that they can correctly contribute to the final result.
       NewV =
           B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
-      const AtomicRMWInst::BinOp ScanOp =
-          Op == AtomicRMWInst::Sub ? AtomicRMWInst::Add : Op;
       if (!NeedResult && ST->hasPermLaneX16()) {
         // On GFX10 the permlanex16 instruction helps us build a reduction
         // without too many readlanes and writelanes, which are generally bad
@@ -705,18 +768,19 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         // of each active lane in the wavefront. This will be our new value
         // which we will provide to the atomic operation.
         Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
-        assert(TyBitWidth == 32);
-        NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
+        NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
                                  {NewV, LastLaneIdx});
       }
       // Finally mark the readlanes in the WWM section.
       NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
-    } else {
+    } else if (ScanImpl == ScanOptions::Iterative) {
       // Alternative implementation for scan
       ComputeLoop = BasicBlock::Create(C, "ComputeLoop", F);
       ComputeEnd = BasicBlock::Create(C, "ComputeEnd", F);
       std::tie(ExclScan, NewV) = buildScanIteratively(B, ScanOp, Identity, V, I,
                                                       ComputeLoop, ComputeEnd);
+    } else {
+      llvm_unreachable("Atomic Optimzer is disabled for None strategy");
     }
   } else {
     switch (Op) {
@@ -732,13 +796,22 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       NewV = buildMul(B, V, Ctpop);
       break;
     }
-
+    case AtomicRMWInst::FAdd:
+    case AtomicRMWInst::FSub: {
+      Value *const Ctpop = B.CreateIntCast(
+          B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Int32Ty, false);
+      Value *const CtpopFP = B.CreateUIToFP(Ctpop, Ty);
+      NewV = B.CreateFMul(V, CtpopFP);
+      break;
+    }
     case AtomicRMWInst::And:
     case AtomicRMWInst::Or:
     case AtomicRMWInst::Max:
     case AtomicRMWInst::Min:
     case AtomicRMWInst::UMax:
     case AtomicRMWInst::UMin:
+    case AtomicRMWInst::FMin:
+    case AtomicRMWInst::FMax:
       // These operations with a uniform value are idempotent: doing the atomic
       // operation multiple times has the same effect as doing it once.
       NewV = V;
@@ -757,10 +830,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // We only want a single lane to enter our new control flow, and we do this
   // by checking if there are any active lanes below us. Only one lane will
   // have 0 active lanes below us, so that will be the only one to progress.
-  Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getIntN(TyBitWidth, 0));
+  Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
 
   // Store I's original basic block before we split the block.
-  BasicBlock *const EntryBB = I.getParent();
+  BasicBlock *const OriginalBB = I.getParent();
 
   // We need to introduce some new control flow to force a single lane to be
   // active. We do this by splitting I's basic block at I, and introducing the
@@ -769,9 +842,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   //       \------------------> exit
   Instruction *const SingleLaneTerminator =
       SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
-
-  // Control flow is changed here after splitting I's block
-  assert(DTU.getDomTree().verify(DominatorTree::VerificationLevel::Full));
 
   // At this point, we have split the I's block to allow one lane in wavefront
   // to update the precomputed reduced value. Also, completed the codegen for
@@ -784,26 +854,36 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   BasicBlock *Predecessor = nullptr;
   if (ValDivergent && ScanImpl == ScanOptions::Iterative) {
     // Move terminator from I's block to ComputeEnd block.
-    Instruction *Terminator = EntryBB->getTerminator();
+    //
+    // OriginalBB is known to have a branch as terminator because
+    // SplitBlockAndInsertIfThen will have inserted one.
+    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);
 
     // Branch to ComputeLoop Block unconditionally from the I's block for
     // iterative approach.
-    B.SetInsertPoint(EntryBB);
+    B.SetInsertPoint(OriginalBB);
     B.CreateBr(ComputeLoop);
 
     // Update the dominator tree for new control flow.
-    DTU.applyUpdates(
-        {{DominatorTree::Insert, EntryBB, ComputeLoop},
-         {DominatorTree::Insert, ComputeLoop, ComputeEnd},
-         {DominatorTree::Delete, EntryBB, SingleLaneTerminator->getParent()}});
-    assert(DTU.getDomTree().verify(DominatorTree::VerificationLevel::Full));
+    SmallVector<DominatorTree::UpdateType, 6> DomTreeUpdates(
+        {{DominatorTree::Insert, OriginalBB, ComputeLoop},
+         {DominatorTree::Insert, ComputeLoop, ComputeEnd}});
+
+    // We're moving the terminator from EntryBB to ComputeEnd, make sure we move
+    // the DT edges as well.
+    for (auto *Succ : Terminator->successors()) {
+      DomTreeUpdates.push_back({DominatorTree::Insert, ComputeEnd, Succ});
+      DomTreeUpdates.push_back({DominatorTree::Delete, OriginalBB, Succ});
+    }
+
+    DTU.applyUpdates(DomTreeUpdates);
 
     Predecessor = ComputeEnd;
   } else {
-    Predecessor = EntryBB;
+    Predecessor = OriginalBB;
   }
   // Move the IR builder into single_lane next.
   B.SetInsertPoint(SingleLaneTerminator);
@@ -828,26 +908,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // lane) to all other lanes in the wavefront. We use an intrinsic for this,
     // but have to handle 64-bit broadcasts with two calls to this intrinsic.
     Value *BroadcastI = nullptr;
-
-    if (TyBitWidth == 64) {
-      Value *const ExtractLo = B.CreateTrunc(PHI, B.getInt32Ty());
-      Value *const ExtractHi =
-          B.CreateTrunc(B.CreateLShr(PHI, 32), B.getInt32Ty());
-      CallInst *const ReadFirstLaneLo =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
-      CallInst *const ReadFirstLaneHi =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
-      Value *const PartialInsert = B.CreateInsertElement(
-          PoisonValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
-      Value *const Insert =
-          B.CreateInsertElement(PartialInsert, ReadFirstLaneHi, B.getInt32(1));
-      BroadcastI = B.CreateBitCast(Insert, Ty);
-    } else if (TyBitWidth == 32) {
-
-      BroadcastI = B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, PHI);
-    } else {
-      llvm_unreachable("Unhandled atomic bit width");
-    }
+    BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
 
     // Now that we have the result of our single atomic operation, we need to
     // get our individual lane's slice into the result. We use the lane offset
@@ -858,10 +919,14 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       if (ScanImpl == ScanOptions::DPP) {
         LaneOffset =
             B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
-      } else {
+      } else if (ScanImpl == ScanOptions::Iterative) {
         LaneOffset = ExclScan;
+      } else {
+        llvm_unreachable("Atomic Optimzer is disabled for None strategy");
       }
     } else {
+      Mbcnt = isAtomicFloatingPointTy ? B.CreateUIToFP(Mbcnt, Ty)
+                                      : B.CreateIntCast(Mbcnt, Ty, false);
       switch (Op) {
       default:
         llvm_unreachable("Unhandled atomic op");
@@ -875,18 +940,38 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       case AtomicRMWInst::Min:
       case AtomicRMWInst::UMax:
       case AtomicRMWInst::UMin:
+      case AtomicRMWInst::FMin:
+      case AtomicRMWInst::FMax:
         LaneOffset = B.CreateSelect(Cond, Identity, V);
         break;
       case AtomicRMWInst::Xor:
         LaneOffset = buildMul(B, V, B.CreateAnd(Mbcnt, 1));
         break;
+      case AtomicRMWInst::FAdd:
+      case AtomicRMWInst::FSub: {
+        LaneOffset = B.CreateFMul(V, Mbcnt);
+        break;
+      }
       }
     }
-    Value *const Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
+    Value *Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
+    if (isAtomicFloatingPointTy) {
+      // For fadd/fsub the first active lane of LaneOffset should be the
+      // identity (-0.0 for fadd or +0.0 for fsub) but the value we calculated
+      // is V * +0.0 which might have the wrong sign or might be nan (if V is
+      // inf or nan).
+      //
+      // For all floating point ops if the in-memory value was a nan then the
+      // binop we just built might have quieted it or changed its payload.
+      //
+      // Correct all these problems by using BroadcastI as the result in the
+      // first active lane.
+      Result = B.CreateSelect(Cond, BroadcastI, Result);
+    }
 
     if (IsPixelShader) {
       // Need a final PHI to reconverge to above the helper lane branch mask.
-      B.SetInsertPoint(PixelExitBB->getFirstNonPHI());
+      B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
 
       PHINode *const PHI = B.CreatePHI(Ty, 2);
       PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);

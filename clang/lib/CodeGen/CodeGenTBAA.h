@@ -29,6 +29,7 @@ namespace clang {
   class Type;
 
 namespace CodeGen {
+class CodeGenTypes;
 
 // TBAAAccessKind - A kind of TBAA memory access descriptor.
 enum class TBAAAccessKind : unsigned {
@@ -115,6 +116,7 @@ struct TBAAAccessInfo {
 /// while lowering AST types to LLVM types.
 class CodeGenTBAA {
   ASTContext &Context;
+  CodeGenTypes &CGTypes;
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
@@ -166,9 +168,14 @@ class CodeGenTBAA {
   /// used to describe accesses to objects of the given base type.
   llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
 
+  /// getValidBaseTypeInfo - Return metadata that describes the given base
+  /// access type. The type must be suitable.
+  llvm::MDNode *getValidBaseTypeInfo(QualType QTy);
+
 public:
-  CodeGenTBAA(ASTContext &Ctx, llvm::Module &M, const CodeGenOptions &CGO,
-              const LangOptions &Features, MangleContext &MContext);
+  CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
+              const CodeGenOptions &CGO, const LangOptions &Features,
+              MangleContext &MContext);
   ~CodeGenTBAA();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the
@@ -187,8 +194,9 @@ public:
   /// the given type.
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// getBaseTypeInfo - Get metadata that describes the given base access type.
-  /// Return null if the type is not suitable for use in TBAA access tags.
+  /// getBaseTypeInfo - Get metadata that describes the given base access
+  /// type. Return null if the type is not suitable for use in TBAA access
+  /// tags.
   llvm::MDNode *getBaseTypeInfo(QualType QTy);
 
   /// getAccessTagInfo - Get TBAA tag for a given memory access.

@@ -8,10 +8,15 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/i386.h"
+#include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -333,7 +338,8 @@ void LinkGraph::dump(raw_ostream &OS) {
   OS << "\nExternal symbols:\n";
   if (!external_symbols().empty()) {
     for (auto *Sym : external_symbols())
-      OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
+      OS << "  " << Sym->getAddress() << ": " << *Sym
+         << (Sym->isWeaklyReferenced() ? " (weakly referenced)" : "") << "\n";
   } else
     OS << "  none\n";
 }
@@ -416,6 +422,38 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                                   " is not aligned to " + Twine(N) + " bytes");
 }
 
+AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+    return aarch64::createAnonymousPointer;
+  case Triple::x86_64:
+    return x86_64::createAnonymousPointer;
+  case Triple::x86:
+    return i386::createAnonymousPointer;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    return loongarch::createAnonymousPointer;
+  default:
+    return nullptr;
+  }
+}
+
+PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+    return aarch64::createAnonymousPointerJumpStub;
+  case Triple::x86_64:
+    return x86_64::createAnonymousPointerJumpStub;
+  case Triple::x86:
+    return i386::createAnonymousPointerJumpStub;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    return loongarch::createAnonymousPointerJumpStub;
+  default:
+    return nullptr;
+  }
+}
+
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
@@ -429,6 +467,41 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
+}
+
+std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
+                                                    orc::SymbolMap Symbols) {
+  unsigned PointerSize;
+  endianness Endianness =
+      TT.isLittleEndian() ? endianness::little : endianness::big;
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+  case llvm::Triple::riscv64:
+  case Triple::x86_64:
+    PointerSize = 8;
+    break;
+  case llvm::Triple::arm:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::x86:
+    PointerSize = 4;
+    break;
+  default:
+    llvm::report_fatal_error("unhandled target architecture");
+  }
+
+  static std::atomic<uint64_t> Counter = {0};
+  auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
+  auto G = std::make_unique<LinkGraph>(
+      "<Absolute Symbols " + std::to_string(Index) + ">", TT, PointerSize,
+      Endianness, /*GetEdgeKindName=*/nullptr);
+  for (auto &[Name, Def] : Symbols) {
+    auto &Sym =
+        G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,
+                             Linkage::Strong, Scope::Default, /*IsLive=*/true);
+    Sym.setCallable(Def.getFlags().isCallable());
+  }
+
+  return G;
 }
 
 void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {

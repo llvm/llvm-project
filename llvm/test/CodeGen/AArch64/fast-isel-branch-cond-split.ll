@@ -4,13 +4,11 @@
 define i64 @test_or(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_or:
 ; CHECK:       ; %bb.0: ; %bb1
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    cbnz w0, LBB0_2
+; CHECK-NEXT:  LBB0_1:
 ; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    cbnz w8, LBB0_2
-; CHECK-NEXT:  LBB0_1: ; %common.ret
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %bb1.cond.split
-; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    cbz w1, LBB0_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb4
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -37,13 +35,11 @@ bb4:
 define i64 @test_or_select(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_or_select:
 ; CHECK:       ; %bb.0: ; %bb1
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    cbnz w0, LBB1_2
+; CHECK-NEXT:  LBB1_1:
 ; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    cbnz w8, LBB1_2
-; CHECK-NEXT:  LBB1_1: ; %common.ret
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB1_2: ; %bb1.cond.split
-; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    cbz w1, LBB1_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb4
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -70,13 +66,11 @@ bb4:
 define i64 @test_and(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_and:
 ; CHECK:       ; %bb.0: ; %bb1
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    cbnz w0, LBB2_2
+; CHECK-NEXT:  LBB2_1:
 ; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    cbnz w8, LBB2_2
-; CHECK-NEXT:  LBB2_1: ; %common.ret
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB2_2: ; %bb1.cond.split
-; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    cbz w1, LBB2_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb4
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -103,13 +97,11 @@ bb4:
 define i64 @test_and_select(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_and_select:
 ; CHECK:       ; %bb.0: ; %bb1
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    cbnz w0, LBB3_2
+; CHECK-NEXT:  LBB3_1:
 ; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    cbnz w8, LBB3_2
-; CHECK-NEXT:  LBB3_1: ; %common.ret
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB3_2: ; %bb1.cond.split
-; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    cbz w1, LBB3_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb4
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -153,9 +145,6 @@ define i64 @test_or_unpredictable(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB4_2: ; %common.ret
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 bb1:
   %0 = icmp eq i32 %a, 0
@@ -189,9 +178,6 @@ define i64 @test_and_unpredictable(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB5_2: ; %common.ret
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 bb1:
   %0 = icmp ne i32 %a, 0
@@ -212,4 +198,3 @@ declare i64 @bar()
 !0 = !{!"branch_weights", i32 5128, i32 32}
 !1 = !{!"branch_weights", i32 1024, i32 4136}
 !2 = !{}
-

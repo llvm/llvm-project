@@ -17,6 +17,7 @@
 #include <locale>
 #include <ios>
 #include <cassert>
+#include <cstdio>
 #include <streambuf>
 #include <cmath>
 #include "test_macros.h"
@@ -8929,11 +8930,10 @@ void test4()
     char str[200];
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
-#ifdef _AIX
-    std::string inf = "INF";
-#else
-    std::string inf = "inf";
-#endif
+
+    // This should match the underlying C library
+    std::snprintf(str, sizeof(str), "%f", INFINITY);
+    std::string inf = str;
 
     const my_facet f(1);
     {
@@ -10722,24 +10722,24 @@ void test5()
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
     const my_facet f(1);
-#if defined(_AIX)
-    std::string nan= "NaNQ";
-    std::string NaN = "NaNQ";
-    std::string nan_padding25 = "*********************";
-    std::string pnan_sign = "+";
-    std::string pnan_padding25 = "********************";
-#else
-    std::string nan= "nan";
-    std::string NaN = "NAN";
-    std::string nan_padding25 = "**********************";
-#if defined(TEST_HAS_GLIBC) || defined(_WIN32)
-    std::string pnan_sign = "+";
-    std::string pnan_padding25 = "*********************";
-#else
-    std::string pnan_sign = "";
-    std::string pnan_padding25 = "**********************";
-#endif
-#endif
+
+    // The output here depends on the underlying C library, so work out what
+    // that does.
+    std::snprintf(str, sizeof(str), "%f", std::nan(""));
+    std::string nan = str;
+
+    std::snprintf(str, sizeof(str), "%F", std::nan(""));
+    std::string NaN = str;
+
+    std::snprintf(str, sizeof(str), "%+f", std::nan(""));
+    std::string pnan_sign;
+    if (str[0] == '+') {
+      pnan_sign = "+";
+    }
+
+    std::string nan_padding25  = std::string(25 - nan.length(), '*');
+    std::string pnan_padding25 = std::string(25 - nan.length() - pnan_sign.length(), '*');
+
     {
         long double v = std::nan("");
         std::ios ios(0);

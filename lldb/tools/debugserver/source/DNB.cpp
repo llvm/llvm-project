@@ -50,6 +50,7 @@
 #include "MacOSX/MachProcess.h"
 #include "MacOSX/MachTask.h"
 #include "MacOSX/ThreadInfo.h"
+#include "RNBRemote.h"
 
 typedef std::shared_ptr<MachProcess> MachProcessSP;
 typedef std::map<nub_process_t, MachProcessSP> ProcessMap;
@@ -382,11 +383,22 @@ nub_process_t DNBProcessLaunch(
         if (err_str && err_len > 0) {
           if (launch_err.AsString()) {
             ::snprintf(err_str, err_len,
-                       "failed to get the task for process %i (%s)", pid,
+                       "failed to get the task for process %i: %s", pid,
                        launch_err.AsString());
           } else {
+
+            const char *ent_name =
+#if TARGET_OS_OSX
+              "com.apple.security.get-task-allow";
+#else
+              "get-task-allow";
+#endif
             ::snprintf(err_str, err_len,
-                       "failed to get the task for process %i", pid);
+                       "failed to get the task for process %i: this likely "
+                       "means the process cannot be debugged, either because "
+                       "it's a system process or because the process is "
+                       "missing the %s entitlement.",
+                       pid, ent_name);
           }
         }
       } else {
@@ -521,7 +533,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
 
     if (set_events == 0) {
       if (err_str && err_len > 0)
-        snprintf(err_str, err_len, "operation timed out");
+        snprintf(err_str, err_len,
+                 "attached to process, but could not pause execution; attach "
+                 "failed");
       pid = INVALID_NUB_PROCESS;
     } else {
       if (set_events & (eEventProcessRunningStateChanged |
@@ -732,7 +746,6 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
         break;
       }
     } else {
-
       // Get the current process list, and check for matches that
       // aren't in our original list. If anyone wants to attach
       // to an existing process by name, they should do it with
@@ -786,7 +799,33 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
         break;
       }
 
-      ::usleep(waitfor_interval); // Sleep for WAITFOR_INTERVAL, then poll again
+      // Now we're going to wait a while before polling again.  But we also
+      // need to check whether we've gotten an event from the debugger  
+      // telling us to interrupt the wait.  So we'll use the wait for a possible
+      // next event to also be our short pause...
+      struct timespec short_timeout;
+      DNBTimer::OffsetTimeOfDay(&short_timeout, 0, waitfor_interval);
+      uint32_t event_mask = RNBContext::event_read_packet_available 
+          | RNBContext::event_read_thread_exiting;
+      nub_event_t set_events = ctx->Events().WaitForSetEvents(event_mask, 
+          &short_timeout);
+      if (set_events & RNBContext::event_read_packet_available) {
+        // If we get any packet from the debugger while waiting on the async,
+        // it has to be telling us to interrupt.  So always exit here.
+        // Over here in DNB land we can see that there was a packet, but all
+        // the methods to actually handle it are protected.  It's not worth
+        // rearranging all that just to get which packet we were sent...
+        DNBLogError("Interrupted by packet while waiting for '%s' to appear.\n",
+                   waitfor_process_name);
+        break;
+      }
+      if (set_events & RNBContext::event_read_thread_exiting) {
+        // The packet thread is shutting down, get out of here...
+        DNBLogError("Interrupted by packet thread shutdown while waiting for "
+                    "%s to appear.\n", waitfor_process_name);
+        break;
+      }
+      
     }
   }
 
@@ -1021,6 +1060,14 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
         plo_pthread_tsd_entry_size);
   }
   return INVALID_NUB_ADDRESS;
+}
+
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetMainBinaryCPUTypes(pid);
+  return {};
 }
 
 JSONGenerator::ObjectSP
@@ -1847,4 +1894,12 @@ bool DNBGetAddressingBits(uint32_t &addressing_bits) {
   addressing_bits = g_addressing_bits;
 
   return addressing_bits > 0;
+}
+
+nub_process_t DNBGetParentProcessID(nub_process_t child_pid) {
+  return MachProcess::GetParentProcessID(child_pid);
+}
+
+bool DNBProcessIsBeingDebugged(nub_process_t pid) {
+  return MachProcess::ProcessIsBeingDebugged(pid);
 }

@@ -53,6 +53,7 @@ namespace arith {
 class ConstantIntOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant int op that produces an integer of the specified width.
   static void build(OpBuilder &builder, OperationState &result, int64_t value,
@@ -74,6 +75,7 @@ public:
 class ConstantFloatOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
   /// Build a constant float op that produces a float of the specified type.
   static void build(OpBuilder &builder, OperationState &result,
@@ -90,7 +92,7 @@ public:
 class ConstantIndexOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
-
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
   /// Build a constant int op that produces an index.
   static void build(OpBuilder &builder, OperationState &result, int64_t value);
 
@@ -122,12 +124,28 @@ bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
                        const APFloat &rhs);
 
 /// Returns the identity value attribute associated with an AtomicRMWKind op.
+/// `useOnlyFiniteValue` defines whether the identity value should steer away
+/// from infinity representations or anything that is not a proper finite
+/// number.
+/// E.g., The identity value for maxf is in theory `-Inf`, but if we want to
+/// stay in the finite range, it would be `BiggestRepresentableNegativeFloat`.
+/// The purpose of this boolean is to offer constants that will play nice
+/// with fast math related optimizations.
 TypedAttr getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
-                               OpBuilder &builder, Location loc);
+                               OpBuilder &builder, Location loc,
+                               bool useOnlyFiniteValue = false);
+
+/// Return the identity numeric value associated to the give op. Return
+/// std::nullopt if there is no known neutral element.
+/// If `op` has `FastMathFlags::ninf`, only finite values will be used
+/// as neutral element.
+std::optional<TypedAttr> getNeutralElement(Operation *op);
 
 /// Returns the identity value associated with an AtomicRMWKind op.
+/// \see getIdentityValueAttr for a description of what `useOnlyFiniteValue`
+/// does.
 Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
-                       Location loc);
+                       Location loc, bool useOnlyFiniteValue = false);
 
 /// Returns the value obtained by applying the reduction operation kind
 /// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.

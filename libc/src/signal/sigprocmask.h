@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_SIGPROCMASK_H
 #define LLVM_LIBC_SRC_SIGNAL_SIGPROCMASK_H
 
-#include "include/signal.h"
+#include "hdr/types/sigset_t.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int sigprocmask(int how, const sigset_t *__restrict set,
                 sigset_t *__restrict oldset);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGPROCMASK_H

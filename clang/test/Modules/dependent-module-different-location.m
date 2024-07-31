@@ -14,7 +14,7 @@
 // RUN:            -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
 
 // Test the case when a dependent module is found in a different location, so
-// module cache has outdated information. <rdar://97216258>
+// module cache has outdated information.
 
 //--- StableFrameworks/Movable.framework/Headers/Movable.h
 // empty

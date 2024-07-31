@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_STRCASECMP_H
-#define LLVM_LIBC_SRC_STRING_STRCASECMP_H
+#ifndef LLVM_LIBC_SRC_STRING_STRCASESTR_H
+#define LLVM_LIBC_SRC_STRING_STRCASESTR_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 char *strcasestr(const char *needle, const char *haystack);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STRING_STRCASECMP_H
+#endif // LLVM_LIBC_SRC_STRING_STRCASESTR_H

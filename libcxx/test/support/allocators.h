@@ -209,7 +209,7 @@ public:
         : id_(id), copy_assigned_into_(copy_assigned_into) {}
 
     template <class U>
-    MaybePOCCAAllocator(const MaybePOCCAAllocator<U, POCCAValue>& that)
+    TEST_CONSTEXPR MaybePOCCAAllocator(const MaybePOCCAAllocator<U, POCCAValue>& that)
         : id_(that.id_), copy_assigned_into_(that.copy_assigned_into_) {}
 
     MaybePOCCAAllocator(const MaybePOCCAAllocator&) = default;

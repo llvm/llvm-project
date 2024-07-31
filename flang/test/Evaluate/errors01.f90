@@ -6,20 +6,24 @@ module m
     real x
   end type t
  contains
-  subroutine s1(a,b)
-    real :: a(*), b(:)
+  subroutine s1(a,b,c)
+    real :: a(*), b(:), c(..)
     !CHECK: error: DIM=1 dimension is out of range for rank-1 assumed-size array
     integer :: ub1(ubound(a,1))
     !CHECK-NOT: error: DIM=1 dimension is out of range for rank-1 assumed-size array
     integer :: lb1(lbound(a,1))
-    !CHECK: error: DIM=0 dimension is out of range for rank-1 array
+    !CHECK: error: DIM=0 dimension must be positive
     integer :: ub2(ubound(a,0))
     !CHECK: error: DIM=2 dimension is out of range for rank-1 array
     integer :: ub3(ubound(a,2))
-    !CHECK: error: DIM=0 dimension is out of range for rank-1 array
+    !CHECK: error: DIM=0 dimension must be positive
     integer :: lb2(lbound(b,0))
     !CHECK: error: DIM=2 dimension is out of range for rank-1 array
     integer :: lb3(lbound(b,2))
+    !CHECK: error: DIM=0 dimension must be positive
+    integer :: lb4(lbound(c,0))
+    !CHECK: error: DIM=666 dimension is too large for any array (maximum rank 15)
+    integer :: lb4(lbound(c,666))
   end subroutine
   subroutine s2
     integer, parameter :: array(2,3) = reshape([(j, j=1, 6)], shape(array))
@@ -152,6 +156,17 @@ module m
     !CHECK: error: NCOPIES= argument to REPEAT() should be nonnegative, but is -666
     print *, repeat(' ', -666)
   end subroutine
+  subroutine s14(n)
+    integer, intent(in) :: n
+    !CHECK: error: bit position for IBITS(POS=-1) is negative
+    print *, ibits(0, -1, n)
+    !CHECK: error: bit length for IBITS(LEN=-1) is negative
+    print *, ibits(0, n, -1)
+    !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
+    print *, ibits(0, n, 33)
+    !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
+    print *, ibits(0, 33, n)
+  end
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
@@ -163,7 +178,23 @@ module m
     real, parameter :: bad3 = dim(huge(1.),-.5*huge(1.))
     !CHECK: warning: DIM intrinsic folding overflow
     integer, parameter :: bad4 = dim(huge(1),-1)
+    !CHECK: warning: HYPOT intrinsic folding overflow
+    real, parameter :: bad5 = hypot(huge(0.), huge(0.))
+    !CHECK: warning: SUM() of INTEGER(4) data overflowed
+    integer, parameter :: bad6 = sum([huge(1),huge(1)])
+    !CHECK: warning: SUM() of REAL(4) data overflowed
+    real, parameter :: bad7 = sum([huge(1.),huge(1.)])
+    !CHECK: warning: SUM() of COMPLEX(4) data overflowed
+    complex, parameter :: bad8 = sum([(huge(1.),0.),(huge(1.),0.)])
+    !CHECK: warning: PRODUCT() of INTEGER(4) data overflowed
+    integer, parameter :: bad9 = product([huge(1),huge(1)])
+    !CHECK: warning: PRODUCT() of REAL(4) data overflowed
+    real, parameter :: bad10 = product([huge(1.),huge(1.)])
+    !CHECK: warning: PRODUCT() of COMPLEX(4) data overflowed
+    complex, parameter :: bad11 = product([(huge(1.),0.),(huge(1.),0.)])
     !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
     x = 1.D40
+    !CHECK-NOT: warning: invalid argument
+    if (.not. isnan(real(z'ffffffffffffffff',8))) stop
   end subroutine
 end module

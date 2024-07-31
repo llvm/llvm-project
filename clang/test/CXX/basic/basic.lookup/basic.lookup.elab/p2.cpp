@@ -9,7 +9,7 @@ namespace test0 {
     typedef int A; // expected-note {{declared here}}
 
     int test() {
-      struct A a; // expected-error {{typedef 'A' cannot be referenced with a struct specifier}}
+      struct A a; // expected-error {{typedef 'A' cannot be referenced with the 'struct' specifier}}
       return a.foo;
     }
   }
@@ -18,7 +18,7 @@ namespace test0 {
     template <class> class A; // expected-note {{declared here}}
 
     int test() {
-      struct A a; // expected-error {{template 'A' cannot be referenced with a struct specifier}}
+      struct A a; // expected-error {{template 'A' cannot be referenced with the 'struct' specifier}}
       return a.foo;
     }
   }
@@ -51,7 +51,6 @@ namespace test0 {
   }
 
   // This should magically be okay;  see comment in SemaDecl.cpp.
-  // rdar://problem/7898108
   typedef struct A A;
   int test() {
     struct A a;

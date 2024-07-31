@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Utils/IndexingUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "llvm/ADT/StringSet.h"
@@ -34,40 +33,6 @@ namespace linalg {
 //===----------------------------------------------------------------------===//
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
-
-/// Possible dimension candidates that define a matmul embedded in the indexing
-/// maps of a LinalgOp.
-struct EmbeddedMatmulDimsCandidates {
-  DenseSet<int64_t> mPos, nPos, kPos;
-};
-
-/// Given a `linalgOp` and one of its `opOperand`, returns the positions of the
-/// iterators of type `iter` that index the `opOperand` as a permutation.
-/// This is useful to infer various subcomputations on a given `linalgOp`.
-/// This is performed by looking up each result in the matching indexing map and
-/// determining whether:
-///   - It is a single AffineDimExpr.
-///   - It is the only result involving this AffineDimExpr.
-DenseSet<int64_t> findPermutationsIndexingOperand(LinalgOp linalgOp,
-                                                  OpOperand *opOperand,
-                                                  utils::IteratorType iter);
-
-/// Return true if `linalgOp` contains an embedded matmul subcomputation in its
-/// most minor dimensions.
-bool containsMostMinorMatmul(linalg::LinalgOp linalgOp);
-
-/// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
-/// a matmul subcomputation within `linalgOp`. These dimensions are such that:
-///   1. The m dimension is involved in an outer-product along LHS
-///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
-///   2. The n dimension is involved in an outer-product along RHS
-///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
-///   3. The k dimension appears as a permutation on LHS and RHS.
-///   4. m, n and k appear only once in any given indexing.
-/// This allows detecting that some matmul is embedded within `linalgOp` with
-/// some orthogonal heuristic.
-FailureOr<EmbeddedMatmulDimsCandidates>
-inferMatmulDims(linalg::LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // General utilities
@@ -129,10 +94,6 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 /// point (and potentially cannot be handled).
 std::optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
-
-/// Return the identity numeric value associated to the give op. Return
-/// std::nullopt if there is no known neutral element.
-std::optional<TypedAttr> getNeutralElement(Operation *op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
@@ -258,7 +219,6 @@ struct FusionInfo {
   LinalgOp fusedProducer;
 };
 
-/// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling
@@ -266,7 +226,6 @@ struct FusionInfo {
 FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
 
-/// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling

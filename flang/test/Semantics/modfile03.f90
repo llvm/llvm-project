@@ -176,3 +176,98 @@ end
 ! use m7a,only:x
 ! private::x
 !end
+
+module m8a
+  private foo
+  type t
+   contains
+    procedure, nopass :: foo
+  end type
+ contains
+  pure integer function foo(n)
+    integer, intent(in) :: n
+    foo = n
+  end
+end
+!Expect: m8a.mod
+!module m8a
+!type::t
+!contains
+!procedure,nopass::foo
+!end type
+!private::foo
+!contains
+!pure function foo(n)
+!integer(4),intent(in)::n
+!integer(4)::foo
+!end
+!end
+
+module m8b
+  use m8a
+ contains
+  subroutine foo(x,a)
+    type(t), intent(in) :: x
+    real a(x%foo(10))
+  end
+end
+!Expect: m8b.mod
+!module m8b
+!use m8a,only:m8a$foo=>foo
+!use m8a,only:t
+!private::m8a$foo
+!contains
+!subroutine foo(x,a)
+!type(t),intent(in)::x
+!real(4)::a(1_8:int(m8a$foo(10_4),kind=8))
+!end
+!end
+
+module m9a
+  private
+  public t
+  type t
+    integer n
+   contains
+    procedure f
+  end type
+ contains
+  pure integer function f(x, k)
+    class(t), intent(in) :: x
+    integer, intent(in) :: k
+    f = x%n + k
+  end
+end
+!Expect: m9a.mod
+!module m9a
+!type::t
+!integer(4)::n
+!contains
+!procedure::f
+!end type
+!private::f
+!contains
+!pure function f(x,k)
+!class(t),intent(in)::x
+!integer(4),intent(in)::k
+!integer(4)::f
+!end
+!end
+
+module m9b
+  use m9a
+ contains
+  subroutine s(x, y)
+    class(t), intent(in) :: x
+    real y(x%f(x%n))
+  end
+end
+!Expect: m9b.mod
+!module m9b
+!use m9a,only:t
+!contains
+!subroutine s(x,y)
+!class(t),intent(in)::x
+!real(4)::y(1_8:int(x%f(x%n),kind=8))
+!end
+!end

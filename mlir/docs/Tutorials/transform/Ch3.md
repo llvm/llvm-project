@@ -2,7 +2,7 @@
 
 ## Type Constraints and ApplyEach Trait
 
-A transform operation that applies to each payload operation individually and requires it to be of a specific kind is a repeated pattern. One can use Transform dialect types to specify the preconditions of the type. Specifically, we can change the expected operand type from the wide `TransformHandleTypeInterface` to the more narrow `Transform_ConcreteOp&lt;"func.call">`. Furthermore, we use the `TransformEachOpTrait` trait to provide the skeleton implementation of the `apply` method that performs verification, iteration over payloads and result concatenation. The improved ODS op definition is as follows.
+A transform operation that applies to each payload operation individually and requires it to be of a specific kind is a repeated pattern. One can use Transform dialect types to specify the preconditions of the type. Specifically, we can change the expected operand type from the wide `TransformHandleTypeInterface` to the more narrow `Transform_ConcreteOp<"func.call">`. Furthermore, we use the `TransformEachOpTrait` trait to provide the skeleton implementation of the `apply` method that performs verification, iteration over payloads and result concatenation. The improved ODS op definition is as follows.
 
 ```tablegen
 // In MyExtension.td.
@@ -10,26 +10,26 @@ A transform operation that applies to each payload operation individually and re
 // Define the new operation. By convention, prefix its name with the name of the dialect extension, "my.". The full operation name will be further prefixed with "transform.".
 def ChangeCallTargetOp : Op<Transform_Dialect, "my.change_call_target",
     // Indicate that the operation implements the required TransformOpInterface and
-    // MemoryEffectsOpInterface. Use the TransformEach trait to provide the 
+    // MemoryEffectsOpInterface. Use the TransformEach trait to provide the
     // implementation for TransformOpInterface.
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  // Provide a brief and a full description. It is recommended that the latter describes 
+  // Provide a brief and a full description. It is recommended that the latter describes
   // the effects on the operands and how the operation processes various failure modes.
   let summary = "Changes the callee of a call operation to the specified one";
   let description = [{
-    For each `func.call` payload operation associated with the handle, changes its 
+    For each `func.call` payload operation associated with the handle, changes its
     callee to be the symbol whose name is provided as an attribute to this operation.
 
-    Generates a silenceable failure if the operand is associated with payload operations 
+    Generates a silenceable failure if the operand is associated with payload operations
     that are not `func.call`.
     Only reads the operand.
   }];
 
-  // The arguments include the handle to the payload operations and the attribute that 
-  // specifies the new callee. The handle must implement TransformHandleTypeInterface.   
-  // We use a string attribute as the symbol may not exist in the transform IR so the 
-  // verification may fail. 
+  // The arguments include the handle to the payload operations and the attribute that
+  // specifies the new callee. The handle must implement TransformHandleTypeInterface.
+  // We use a string attribute as the symbol may not exist in the transform IR so the
+  // verification may fail.
   let arguments = (ins
     Transform_ConcreteOpType<"func.call">:$call,
     StrAttr:$new_target);
@@ -43,6 +43,7 @@ def ChangeCallTargetOp : Op<Transform_Dialect, "my.change_call_target",
   // Declare the function implementing the interface for a single payload operation.
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::func::CallOp call,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -54,7 +55,8 @@ Now, instead of defining the `apply` method with a loop, we can simply define a 
 
 ```c++
 ::mlir::DiagnosedSilenceableFailure ChangeCallTargetOp::applyToOne(
-    ::mlir::func::CallOp call,,
+    ::mlir::transform::TransformRewriter &rewriter,
+    ::mlir::func::CallOp call,
     ::mlir::transform::ApplyToEachResultList &results,
     ::mlir::transform::TransformState &state) {
   // Call the actual transformation function.
@@ -77,7 +79,7 @@ def CallOpInterfaceHandle
       // The type must implement `TransformHandleTypeInterface`.
       [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
 
-  // The usual components of a type such as description, mnemonic and assembly format 
+  // The usual components of a type such as description, mnemonic and assembly format
   // should be provided.
   let summary = "handle to payload operations implementing CallOpInterface";
   let mnemonic = "my.call_op_interface";
@@ -85,7 +87,7 @@ def CallOpInterfaceHandle
 }
 ```
 
-We will omit the generation of declaration and definitions using Tablegen for brevity as it is identical to the regular case. 
+We will omit the generation of declaration and definitions using Tablegen for brevity as it is identical to the regular case.
 
 To finalize the definition of a transform type, one must implement the interface methods.
 
@@ -107,9 +109,9 @@ mlir::transform::CallOpInterfaceHandleType::checkPayload(
     if (llvm::isa<mlir::CallOpInterface>(op))
       continue;
 
-    // By convention, these verifiers always emit a silenceable failure since they are 
+    // By convention, these verifiers always emit a silenceable failure since they are
     // checking a precondition.
-    DiagnosedSilenceableFailure diag = emitSilenceableError(loc) 
+    DiagnosedSilenceableFailure diag = emitSilenceableError(loc)
         << "expected the payload operation to implement CallOpInterface";
     diag.attachNote(op->getLoc()) << "offending operation";
     return diag;
@@ -127,8 +129,8 @@ Additional attributes and types need to be registered in the extension, next to 
 // In MyExtension.cpp.
 
 void MyExtension::init() {
-  // …
-  
+  // ...
+
   registerTypes<
 #define GET_TYPEDEF_LIST
 #include "MyExtensionTypes.cpp.inc"
@@ -136,7 +138,7 @@ void MyExtension::init() {
 }
 ```
 
-This type is now directly available in the transform dialect and can be used in operations.
+This type is now directly available in the Transform dialect and can be used in operations.
 
 
 ```mlir
@@ -150,14 +152,13 @@ This type is now directly available in the transform dialect and can be used in 
 
 As an exercise, let us modify the rewriting operation to consume the operand. This would be necessary, for example, if the transformation were to rewrite the `func.call` operation into a custom operation `my.mm4`. Since the operand handle is now consumed, the operation can return a new handle to the newly produced payload operation. Otherwise, the ODS definition of the transform operation remains unchanged.
 
-
 ```tablegen
 // In MyExtension.td.
 
 // Define another transform operation.
 def CallToOp : Op<Transform_Dialect, "my.call_to_op",
      // Indicate that the operation implements the required TransformOpInterface and
-     // MemoryEffectsOpInterface. Use the TransformEach trait to provide the 
+     // MemoryEffectsOpInterface. Use the TransformEach trait to provide the
      // implementation for TransformOpInterface.
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
@@ -166,7 +167,7 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
   // The argument is the handle to the payload operations.
   let arguments = (ins CallOpInterfaceHandle:$call);
 
-  // The result is the handle to the payload operations produced during the 
+  // The result is the handle to the payload operations produced during the
   // transformation.
   let results = (outs TransformHandleTypeInterface:$transformed);
 
@@ -176,6 +177,7 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
   // Declare the function implementing the interface for a single payload operation.
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::CallOpInterface call,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -189,23 +191,24 @@ Now let’s look at the implementation of interface methods.
 // In MyExtension.cpp.
 
 ::mlir::DiagnosedSilenceableFailure CallToOp::applyToOne(
+    ::mlir::transform::TransformRewriter &rewriter,
     ::mlir::CallOpInterface call,
     ::mlir::transform::ApplyToEachResultList &results,
     ::mlir::transform::TransformState &state) {
   // Call the actual rewrite.
   Operation *rewritten = rewriteToOp(call);
 
-  // Report an error if the rewriter produced a null pointer. Note that it may have 
+  // Report an error if the rewriter produced a null pointer. Note that it may have
   // irreversibly modified the payload IR, so we produce a definite failure.
   if (!rewritten) {
     return emitDefiniteError() << "failed to rewrite call to operation";
   }
 
-  // On success, push the resulting operation into the result list. The list is expected 
-  // to contain exactly one entity per result and per application. The handles will be 
+  // On success, push the resulting operation into the result list. The list is expected
+  // to contain exactly one entity per result and per application. The handles will be
   // associated with lists of the respective values produced by each application.
   results.push_back(rewritten);
-  
+
   // If everything is fine, return success.
   return DiagnosedSilenceableFailure::success();
 }
@@ -228,6 +231,7 @@ Note that since `applyToOne` always expects one payload entity to be associated 
 
 ```c++
 ::mlir::DiagnosedSilenceableFailure SomeOtherOp::apply(
+    ::mlir::transform::TransformRewriter &rewriter,
     ::mlir::transform::TransformResults &results,
     ::mlir::transform::TransformState &state) {
   // ...
@@ -263,7 +267,7 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
   // The argument is the handle to the payload operations.
   let arguments = (ins CallOpInterfaceHandle:$call);
 
-  // The result is the handle to the payload operations produced during the 
+  // The result is the handle to the payload operations produced during the
   // transformation.
   let results = (outs TransformHandleTypeInterface:$transformed);
 
@@ -273,6 +277,7 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
   // Declare the function implementing the interface for a single payload operation.
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::CallOpInterface call,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -282,5 +287,5 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
 
 ## Appendix: Autogenerated Documentation
 
-[include "MyExtensionCh3.md"]
+[include "Tutorials/transform/MyExtensionCh3.md"]
 

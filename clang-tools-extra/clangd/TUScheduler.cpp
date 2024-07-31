@@ -54,7 +54,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
 #include "support/Logger.h"
@@ -63,6 +63,7 @@
 #include "support/ThreadCrashReporter.h"
 #include "support/Threading.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -464,6 +465,10 @@ public:
   }
 
   void run() {
+    // We mark the current as the stack bottom so that clang running on this
+    // thread can notice the stack usage and prevent stack overflow with best
+    // efforts. Same applies to other calls thoughout clangd.
+    clang::noteBottomOfStack();
     while (true) {
       std::optional<PreambleThrottlerRequest> Throttle;
       {
@@ -943,9 +948,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     // Emit diagnostics from (possibly) stale preamble while waiting for a
     // rebuild. Newly built preamble cannot emit diagnostics before this call
     // finishes (ast callbacks are called from astpeer thread), hence we
-    // gurantee eventual consistency.
-    if (LatestPreamble && WantDiags != WantDiagnostics::No &&
-        Config::current().Diagnostics.AllowStalePreamble)
+    // guarantee eventual consistency.
+    if (LatestPreamble && WantDiags != WantDiagnostics::No)
       generateDiagnostics(std::move(Invocation), std::move(Inputs),
                           std::move(CompilerInvocationDiags));
 
@@ -1081,9 +1085,9 @@ void PreambleThread::build(Request Req) {
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
       [&](CapturedASTCtx ASTCtx,
-          std::shared_ptr<const CanonicalIncludes> CanonIncludes) {
+          std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
         Callbacks.onPreambleAST(FileName, Inputs.Version, std::move(ASTCtx),
-                                CanonIncludes);
+                                std::move(PI));
       },
       &Stats);
   if (!LatestBuild)
@@ -1101,7 +1105,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
   llvm::StringLiteral TaskName = "Build AST";
   // Store preamble and build diagnostics with new preamble if requested.
   auto Task = [this, Preamble = std::move(Preamble), CI = std::move(CI),
-               PI = std::move(PI), CIDiags = std::move(CIDiags),
+               CIDiags = std::move(CIDiags),
                WantDiags = std::move(WantDiags)]() mutable {
     // Update the preamble inside ASTWorker queue to ensure atomicity. As a task
     // running inside ASTWorker assumes internals won't change until it
@@ -1127,22 +1131,17 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
     // We only need to build the AST if diagnostics were requested.
     if (WantDiags == WantDiagnostics::No)
       return;
-    // The file may have been edited since we started building this preamble.
-    // If diagnostics need a fresh preamble, we must use the old version that
-    // matches the preamble. We make forward progress as updatePreamble()
-    // receives increasing versions, and this is the only place we emit
-    // diagnostics.
-    // If diagnostics can use a stale preamble, we use the current contents of
-    // the file instead. This provides more up-to-date diagnostics, and avoids
-    // diagnostics going backwards (we may have already emitted staler-preamble
-    // diagnostics for the new version). We still have eventual consistency: at
-    // some point updatePreamble() will catch up to the current file.
-    if (Config::current().Diagnostics.AllowStalePreamble)
-      PI = FileInputs;
+    // Since the file may have been edited since we started building this
+    // preamble, we use the current contents of the file instead. This provides
+    // more up-to-date diagnostics, and avoids diagnostics going backwards (we
+    // may have already emitted staler-preamble diagnostics for the new
+    // version).
+    // We still have eventual consistency: at some point updatePreamble() will
+    // catch up to the current file.
     // Report diagnostics with the new preamble to ensure progress. Otherwise
     // diagnostics might get stale indefinitely if user keeps invalidating the
     // preamble.
-    generateDiagnostics(std::move(CI), std::move(PI), std::move(CIDiags));
+    generateDiagnostics(std::move(CI), FileInputs, std::move(CIDiags));
   };
   if (RunSync) {
     runTask(TaskName, Task);
@@ -1389,6 +1388,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
 }
 
 void ASTWorker::run() {
+  clang::noteBottomOfStack();
   while (true) {
     {
       std::unique_lock<std::mutex> Lock(Mutex);
@@ -1783,6 +1783,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
                Ctx = Context::current().derive(FileBeingProcessed,
                                                std::string(File)),
                Action = std::move(Action), this]() mutable {
+    clang::noteBottomOfStack();
     ThreadCrashReporter ScopedReporter([&Name, &Contents, &Command]() {
       llvm::errs() << "Signalled during preamble action: " << Name << "\n";
       crashDumpCompileCommand(llvm::errs(), Command);

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
@@ -65,13 +65,13 @@ void ReachingDefAnalysis::enterBasicBlock(MachineBasicBlock *MBB) {
   // This is the entry block.
   if (MBB->pred_empty()) {
     for (const auto &LI : MBB->liveins()) {
-      for (MCRegUnitIterator Unit(LI.PhysReg, TRI); Unit.isValid(); ++Unit) {
+      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         // Treat function live-ins as if they were defined just before the first
         // instruction.  Usually, function arguments are set up immediately
         // before the call.
-        if (LiveRegs[*Unit] != -1) {
-          LiveRegs[*Unit] = -1;
-          MBBReachingDefs[MBBNumber][*Unit].push_back(-1);
+        if (LiveRegs[Unit] != -1) {
+          LiveRegs[Unit] = -1;
+          MBBReachingDefs[MBBNumber][Unit].push_back(-1);
         }
       }
     }
@@ -128,16 +128,15 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
   for (auto &MO : MI->operands()) {
     if (!isValidRegDef(MO))
       continue;
-    for (MCRegUnitIterator Unit(MO.getReg().asMCReg(), TRI); Unit.isValid();
-         ++Unit) {
+    for (MCRegUnit Unit : TRI->regunits(MO.getReg().asMCReg())) {
       // This instruction explicitly defines the current reg unit.
-      LLVM_DEBUG(dbgs() << printRegUnit(*Unit, TRI) << ":\t" << CurInstr
-                        << '\t' << *MI);
+      LLVM_DEBUG(dbgs() << printRegUnit(Unit, TRI) << ":\t" << CurInstr << '\t'
+                        << *MI);
 
       // How many instructions since this reg unit was last written?
-      if (LiveRegs[*Unit] != CurInstr) {
-        LiveRegs[*Unit] = CurInstr;
-        MBBReachingDefs[MBBNumber][*Unit].push_back(CurInstr);
+      if (LiveRegs[Unit] != CurInstr) {
+        LiveRegs[Unit] = CurInstr;
+        MBBReachingDefs[MBBNumber][Unit].push_back(CurInstr);
       }
     }
   }
@@ -182,7 +181,7 @@ void ReachingDefAnalysis::reprocessBasicBlock(MachineBasicBlock *MBB) {
         MBBReachingDefs[MBBNumber][Unit].insert(Start, Def);
       }
 
-      // Update reaching def at end of of BB. Keep in mind that these are
+      // Update reaching def at end of BB. Keep in mind that these are
       // adjusted relative to the end of the basic block.
       if (MBBOutRegsInfos[MBBNumber][Unit] < Def - NumInsts)
         MBBOutRegsInfos[MBBNumber][Unit] = Def - NumInsts;
@@ -269,8 +268,8 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI,
   assert(MBBNumber < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
   int LatestDef = ReachingDefDefaultVal;
-  for (MCRegUnitIterator Unit(PhysReg, TRI); Unit.isValid(); ++Unit) {
-    for (int Def : MBBReachingDefs[MBBNumber][*Unit]) {
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    for (int Def : MBBReachingDefs[MBBNumber][Unit]) {
       if (Def >= InstId)
         break;
       DefRes = Def;
@@ -422,9 +421,9 @@ void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB,
     return;
 
   VisitedBBs.insert(MBB);
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (LiveRegs.available(MBB->getParent()->getRegInfo(), PhysReg))
+  if (LiveRegs.available(PhysReg))
     return;
 
   if (auto *Def = getLocalLiveOutMIDef(MBB, PhysReg))
@@ -470,11 +469,11 @@ MachineInstr *ReachingDefAnalysis::getMIOperand(MachineInstr *MI,
 bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI,
                                          MCRegister PhysReg) const {
   MachineBasicBlock *MBB = MI->getParent();
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
 
   // Yes if the register is live out of the basic block.
-  if (!LiveRegs.available(MBB->getParent()->getRegInfo(), PhysReg))
+  if (!LiveRegs.available(PhysReg))
     return true;
 
   // Walk backwards through the block to see if the register is live at some
@@ -482,7 +481,7 @@ bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI,
   for (MachineInstr &Last :
        instructionsWithoutDebug(MBB->instr_rbegin(), MBB->instr_rend())) {
     LiveRegs.stepBackward(Last);
-    if (!LiveRegs.available(MBB->getParent()->getRegInfo(), PhysReg))
+    if (!LiveRegs.available(PhysReg))
       return InstIds.lookup(&Last) > InstIds.lookup(MI);
   }
   return false;
@@ -505,9 +504,9 @@ bool ReachingDefAnalysis::isRegDefinedAfter(MachineInstr *MI,
 bool ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI,
                                                MCRegister PhysReg) const {
   MachineBasicBlock *MBB = MI->getParent();
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (LiveRegs.available(MBB->getParent()->getRegInfo(), PhysReg))
+  if (LiveRegs.available(PhysReg))
     return false;
 
   auto Last = MBB->getLastNonDebugInstr();
@@ -526,9 +525,9 @@ bool ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI,
 MachineInstr *
 ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
                                           MCRegister PhysReg) const {
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (LiveRegs.available(MBB->getParent()->getRegInfo(), PhysReg))
+  if (LiveRegs.available(PhysReg))
     return nullptr;
 
   auto Last = MBB->getLastNonDebugInstr();

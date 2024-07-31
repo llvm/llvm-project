@@ -162,14 +162,14 @@ def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64>
 
 // A store operation that actually needs release semantics.
 class releasing_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
   let IsAtomic = 1;
   let IsAtomicOrderingReleaseOrStronger = 1;
 }
 
 // An atomic store operation that doesn't actually need to be atomic on AArch64.
 class relaxed_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
   let IsAtomic = 1;
   let IsAtomicOrderingReleaseOrStronger = 0;
 }
@@ -541,4 +541,66 @@ let Predicates = [HasLSE] in {
   // and -> clr.
   defm : LDOPregister_patterns_mod<"LDADD", "atomic_load_sub", "SUB">;
   defm : LDOPregister_patterns_mod<"LDCLR", "atomic_load_and", "ORN">;
+}
+
+// v8.9a/v9.4a FEAT_LRCPC patterns
+let Predicates = [HasRCPC3, HasNEON] in {
+  // LDAP1 loads
+  def : Pat<(vector_insert (v2i64 VecListOne128:$Rd),
+                (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)), (i64 VectorIndexD:$idx)),
+            (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
+  def : Pat<(vector_insert (v2f64 VecListOne128:$Rd),
+                (f64 (bitconvert (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))), (i64 VectorIndexD:$idx)),
+            (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector
+                (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))),
+            (EXTRACT_SUBREG (LDAP1 (v2i64 (IMPLICIT_DEF)), (i64 0), GPR64sp:$Rn), dsub)>;
+  def : Pat<(v1f64 (scalar_to_vector
+                (f64 (bitconvert (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))))),
+            (EXTRACT_SUBREG (LDAP1 (v2f64 (IMPLICIT_DEF)), (i64 0), GPR64sp:$Rn), dsub)>;
+
+  // STL1 stores
+  def : Pat<(releasing_store<atomic_store_64> GPR64sp:$Rn,
+                (i64 (vector_extract (v2i64 VecListOne128:$Vt), VectorIndexD:$idx))),
+            (STL1 VecListOne128:$Vt, VectorIndexD:$idx, GPR64sp:$Rn)>;
+  def : Pat<(releasing_store<atomic_store_64> GPR64sp:$Rn,
+                (i64 (bitconvert (f64 (vector_extract (v2f64 VecListOne128:$Vt), VectorIndexD:$idx))))),
+            (STL1 VecListOne128:$Vt, VectorIndexD:$idx, GPR64sp:$Rn)>;
+  // The v1i64 version of the vldap1_lane_* intrinsic is represented as a
+  // vector_insert -> vector_extract -> atomic store sequence, which is captured
+  // by the patterns above. We only need to cover the v1f64 case manually.
+  def : Pat<(releasing_store<atomic_store_64> GPR64sp:$Rn,
+                (i64 (bitconvert (v1f64 VecListOne64:$Vt)))),
+            (STL1 (SUBREG_TO_REG (i64 0), VecListOne64:$Vt, dsub), (i64 0), GPR64sp:$Rn)>;
+}
+
+// v8.4a FEAT_LRCPC2 patterns
+let Predicates = [HasRCPC_IMMO] in {
+  // Load-Acquire RCpc Register unscaled loads
+  def : Pat<(acquiring_load<atomic_load_az_8>
+               (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURBi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(acquiring_load<atomic_load_az_16>
+               (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURHi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(acquiring_load<atomic_load_32>
+               (am_unscaled32 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(acquiring_load<atomic_load_64>
+               (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURXi GPR64sp:$Rn, simm9:$offset)>;
+
+  // Store-Release Register unscaled stores
+  def : Pat<(releasing_store<atomic_store_8>
+               (am_unscaled8 GPR64sp:$Rn, simm9:$offset), GPR32:$val),
+          (STLURBi GPR32:$val, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(releasing_store<atomic_store_16>
+               (am_unscaled16 GPR64sp:$Rn, simm9:$offset), GPR32:$val),
+          (STLURHi GPR32:$val, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(releasing_store<atomic_store_32>
+               (am_unscaled32 GPR64sp:$Rn, simm9:$offset), GPR32:$val),
+          (STLURWi GPR32:$val, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(releasing_store<atomic_store_64>
+               (am_unscaled64 GPR64sp:$Rn, simm9:$offset), GPR64:$val),
+          (STLURXi GPR64:$val, GPR64sp:$Rn, simm9:$offset)>;
 }

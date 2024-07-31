@@ -105,6 +105,14 @@ namespace Intrinsic {
   /// Map a MS builtin name to an intrinsic ID.
   ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
 
+  /// Returns true if the intrinsic ID is for one of the "Constrained
+  /// Floating-Point Intrinsics".
+  bool isConstrainedFPIntrinsic(ID QID);
+
+  /// Returns true if the intrinsic ID is for one of the "Constrained
+  /// Floating-Point Intrinsics" that take rounding mode metadata.
+  bool hasConstrainedFPRoundingModeOperand(ID QID);
+
   /// This is a type descriptor which explains the type requirements of an
   /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
   struct IITDescriptor {
@@ -128,8 +136,6 @@ namespace Intrinsic {
       TruncArgument,
       HalfVecArgument,
       SameVecWidthArgument,
-      PtrToArgument,
-      PtrToElt,
       VecOfAnyPtrsToElt,
       VecElementArgument,
       Subdivide2Argument,
@@ -137,7 +143,6 @@ namespace Intrinsic {
       VecOfBitcastsToInt,
       AMX,
       PPCQuad,
-      AnyPtrToElt,
       AArch64Svcount,
     } Kind;
 
@@ -160,8 +165,7 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == PtrToArgument ||
-             Kind == PtrToElt || Kind == VecElementArgument ||
+             Kind == SameVecWidthArgument || Kind == VecElementArgument ||
              Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
              Kind == VecOfBitcastsToInt);
       return Argument_Info >> 3;
@@ -169,21 +173,20 @@ namespace Intrinsic {
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == PtrToArgument ||
+             Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);
     }
 
-    // VecOfAnyPtrsToElt and AnyPtrToElt uses both an overloaded argument (for
-    // address space) and a reference argument (for matching vector width and
-    // element types)
+    // VecOfAnyPtrsToElt uses both an overloaded argument (for address space)
+    // and a reference argument (for matching vector width and element types)
     unsigned getOverloadArgNumber() const {
-      assert(Kind == VecOfAnyPtrsToElt || Kind == AnyPtrToElt);
+      assert(Kind == VecOfAnyPtrsToElt);
       return Argument_Info >> 16;
     }
     unsigned getRefArgNumber() const {
-      assert(Kind == VecOfAnyPtrsToElt || Kind == AnyPtrToElt);
+      assert(Kind == VecOfAnyPtrsToElt);
       return Argument_Info & 0xFFFF;
     }
 
@@ -236,7 +239,12 @@ namespace Intrinsic {
   /// specified by the .td file. The overloaded types are pushed into the
   /// AgTys vector.
   ///
-  /// Returns false if the given function is not a valid intrinsic call.
+  /// Returns false if the given ID and function type combination is not a
+  /// valid intrinsic call.
+  bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
+                             SmallVectorImpl<Type *> &ArgTys);
+
+  /// Same as previous, but accepts a Function instead of ID and FunctionType.
   bool getIntrinsicSignature(Function *F, SmallVectorImpl<Type *> &ArgTys);
 
   // Checks if the intrinsic name matches with its signature and if not

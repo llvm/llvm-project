@@ -13,6 +13,7 @@
 #ifndef ROCDLIR_OPS
 #define ROCDLIR_OPS
 
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -36,6 +37,12 @@ def ROCDL_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
     }
+    /// MLIR's gpu-related infrastructure effectively assume uniform workgroup
+    /// sizes, so this attribute defaults to "true" on `rocdl.kernel` functions.
+    /// It is provided here to allow overriding this assumption.
+    static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
+    }
 
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
@@ -44,7 +51,27 @@ def ROCDL_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
+
+  let discardableAttrs = (ins
+     "::mlir::UnitAttr":$kernel,
+     "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
+     "::mlir::StringAttr":$flat_work_group_size,
+     "::mlir::IntegerAttr":$max_flat_work_group_size,
+     "::mlir::IntegerAttr":$waves_per_eu
+  );
+
+  let useDefaultAttributePrinterParser = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// ROCDL attribute definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<ROCDL_Dialect, attrName, traits> {
+  let mnemonic = attrMnemonic;
+}
+
 
 //===----------------------------------------------------------------------===//
 // ROCDL op definitions
@@ -53,6 +80,18 @@ def ROCDL_Dialect : Dialect {
 class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<ROCDL_Dialect, mnemonic, traits> {
 }
+
+class ROCDL_IntrPure1Op<string mnemonic> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+  "amdgcn_" # !subst(".", "_", mnemonic), [], [], [Pure], 1>;
+
+class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
+  list<int> overloadedOperands, list<Trait> traits, int numResults,
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0> :
+  LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
+    "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
+    overloadedOperands, traits, numResults, requiresAccessGroup,
+    requiresAliasAnalysis>;
 
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
@@ -75,6 +114,67 @@ class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
   string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
   # device_function # "\", " # parameter # ");";
   let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+//===----------------------------------------------------------------------===//
+// Wave-level primitives
+
+class ROCDL_MbcntOp<string mnemonic> :
+    ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
+  Arguments<(ins I32:$in0, I32:$in1)> {
+  let assemblyFormat = [{
+    $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
+def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
+
+def ROCDL_DsSwizzleOp :
+ROCDL_Op<"ds_swizzle">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$src,
+               I32:$offset)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_swizzle, {$src, $offset});
+  }];
+  let assemblyFormat = [{
+    $src `,` $offset  attr-dict `:` `(` type($src) `,` type($offset) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_DsBpermuteOp :
+ROCDL_Op<"ds_bpermute">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$index,
+               I32:$src)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_bpermute, {$index, $src});
+  }];
+  let assemblyFormat = [{
+    $index `,` $src  attr-dict `:` `(` type($index) `,` type($src) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_BallotOp :
+  ROCDL_Op<"ballot">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins I1:$pred)> {
+  let summary = "Vote across thread group";
+
+  let description = [{
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      The nth bit of the result contains the 1 bit contributed by the nth warp lane.
+  }];
+
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$_resultType});
+  }];
+
+  let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -101,16 +201,33 @@ def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z",
                                                "__ockl_get_local_size", 2>;
 
 def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x",
-                                               "__ockl_get_global_size", 0>;
+                                               "__ockl_get_num_groups", 0>;
 
 def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
-                                               "__ockl_get_global_size", 1>;
+                                               "__ockl_get_num_groups", 1>;
 
 def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
-                                               "__ockl_get_global_size", 2>;
+                                               "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+
+// Emits the waintcnt instruction. The bitfield's semantics depend
+// on the target chipset
+def ROCDL_WaitcntOp : ROCDL_Op<"waitcnt">, Arguments<(ins I32Attr:$bitfield)> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_waitcnt,
+      {builder.getInt32($bitfield)});
+  }];
+  let assemblyFormat = "attr-dict $bitfield";
+}
+
+def ROCDL_SBarrierOp : ROCDL_Op<"s.barrier"> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
+  }];
+  let assemblyFormat = "attr-dict";
+}
 
 def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   string llvmBuilder = [{
@@ -123,6 +240,23 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   }];
   let assemblyFormat = "attr-dict";
 }
+
+def ROCDL_SetPrioOp : ROCDL_IntrOp<"s.setprio", [], [], [], 0>,
+  Arguments<(ins I16Attr:$priority)> {
+  let results = (outs);
+  let assemblyFormat = "$priority attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_setprio,builder.getInt16(op.getPriority()));";
+}
+
+def ROCDL_SchedBarrier : ROCDL_IntrOp<"sched.barrier", [], [], [], 0>,
+  Arguments<(ins I32Attr:$mask)> {
+  let results = (outs);
+  let assemblyFormat = "$mask attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_sched_barrier,builder.getInt32(op.getMask()));";
+}
+
 
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
@@ -183,40 +317,113 @@ def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.b
 def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8">;
 
 //===---------------------------------------------------------------------===//
-// Vector buffer load/store intrinsics
-
-def ROCDL_MubufLoadOp :
-  ROCDL_Op<"buffer.load">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$rsrc,
-                 LLVM_Type:$vindex,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$glc,
-                 LLVM_Type:$slc)>{
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc,
-          $slc}, {$_resultType});
-  }];
-  let hasCustomAssemblyFormat = 1;
+// WMMA intrinsics
+class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
+                        list<Trait> traits = []> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+                  "amdgcn_" # !subst(".","_", mnemonic),
+                  [0], overloadedOperands, traits, 1>,
+  Arguments<(ins Variadic<LLVM_Type>:$args)> {
+  let assemblyFormat =
+    "$args attr-dict `:` functional-type($args, $res)";
 }
 
-def ROCDL_MubufStoreOp :
-  ROCDL_Op<"buffer.store">,
-  Arguments<(ins LLVM_Type:$vdata,
-                 LLVM_Type:$rsrc,
-                 LLVM_Type:$vindex,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$glc,
-                 LLVM_Type:$slc)>{
-  string llvmBuilder = [{
-    auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
-    createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
-          $offset, $glc, $slc}, {vdataType});
-  }];
-  let hasCustomAssemblyFormat = 1;
+// Available on RDNA3
+def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16", [0]>;
+def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16", [0]>;
+def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16", [0]>;
+def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16", [0]>;
+def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
+def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
+
+//===---------------------------------------------------------------------===//
+// Operations on raw buffer resources (stride of 0, bounds checks either off or in
+// raw buffer mode).
+//===---------------------------------------------------------------------===//
+
+def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
+
+def ROCDL_MakeBufferRsrcOp :
+  ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
+  Arguments<(ins LLVM_AnyPointer:$base,
+                 I16:$stride,
+                 I32:$numRecords,
+                 I32:$flags)> {
+  let results = (outs ROCDLBufferRsrc:$res);
+  let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
 }
+
+def ROCDL_RawPtrBufferLoadOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load", [0], [], [], 1, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRes()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferStoreOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.store", [], [0], [], 0, 0, 1> {
+  dag args = (ins LLVM_Type:$vdata,
+                  Arg<ROCDLBufferRsrc, "", [MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+
+}
+
+def ROCDL_RawPtrBufferAtomicCmpSwap :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic.cmpswap",
+    [0], [], [AllTypesMatch<["res", "src", "cmp"]>], 1, 0, 1> {
+  dag args = (ins LLVM_Type:$src,
+                  LLVM_Type:$cmp,
+                  Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+class ROCDL_RawPtrBufferAtomicNoRet<string op> :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic." # op, [], [0], [], 0, 0, 1> {
+  dag args = (ins LLVM_Type:$vdata,
+                  Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferAtomicFmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"fmax">;
+def ROCDL_RawPtrBufferAtomicSmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"smax">;
+def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicNoRet<"umin">;
+// Note: not supported on all architectures
+def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
 
 //===---------------------------------------------------------------------===//
 // Raw buffer load/store intrinsics
@@ -347,4 +554,172 @@ def ROCDL_RawBufferAtomicUMinOp :
   let hasCustomAssemblyFormat = 1;
 }
 
+//===---------------------------------------------------------------------===//
+// 8-bit float intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtF32Bf8Op :
+    ROCDL_IntrOp<"cvt.f32.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$srcA, I32:$byteSel)> {
+  let summary = "Convert bf8 to f32";
+  let description = [{
+    Convert 8-bit bf8 value from the `byteSel`th bit of `srcA` to fp32.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtF32Fp8Op :
+    ROCDL_IntrOp<"cvt.f32.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$srcA, I32:$byteSel)> {
+  let summary = "Convert fp8 to f32";
+  let description = [{
+    Convert 8-bit fp8 value from the `byteSel`th bit of `srcA` to fp32.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtPkBf8F32Op :
+    ROCDL_IntrOp<"cvt.pk.bf8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1:$wordSel)> {
+  let summary = "Convert two f32's to bf8";
+  let description = [{
+    Convert `srcA` and `srcB` to bf8 and store into the low/high word of
+    `old`, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtPkFp8F32Op :
+    ROCDL_IntrOp<"cvt.pk.fp8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1:$wordSel)> {
+  let summary = "Convert two f32's to fp8";
+  let description = [{
+    Convert `srcA` and `srcB` to fp8 and store into the low/high word of
+    `old`, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtSrBf8F32Op :
+    ROCDL_IntrOp<"cvt.sr.bf8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32:$byteSel)> {
+  let summary = "Convert f32 to bf8, stochiastic rounding";
+  let description = [{
+    Convert `srcA` to bf8, adding the rounding factor from `srcB`,
+    and store into the `byteSel`th byte of `old`, preserving the others.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtSrFp8F32Op :
+    ROCDL_IntrOp<"cvt.sr.fp8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32:$byteSel)> {
+  let summary = "Convert f32 to fp8, stochiastic rounding";
+  let description = [{
+    Convert `srcA` to fp8, adding the rounding factor from `srcB`,
+    and store into the `byteSel`th byte of `old`, preserving the others.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ROCDL target attribute.
+//===----------------------------------------------------------------------===//
+
+def ROCDL_TargettAttr :
+    ROCDL_Attr<"ROCDLTarget", "target"> {
+  let description = [{
+    ROCDL target attribute for controlling compilation of AMDGPU targets. All
+    parameters decay into default values if not present.
+
+    Examples:
+
+    1. Target with default values.
+    ```
+      gpu.module @mymodule [#rocdl.target] attributes {...} {
+        ...
+      }
+    ```
+
+    2. Target with `gfx90a` chip and fast math.
+    ```
+      gpu.module @mymodule [#rocdl.target<chip = "gfx90a", flags = {fast, no_wave64}>] {
+        ...
+      }
+    ```
+  }];
+  let parameters = (ins
+    DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
+    StringRefParameter<"Target triple.", "\"amdgcn-amd-amdhsa\"">:$triple,
+    StringRefParameter<"Target chip.", "\"gfx900\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"\"">:$features,
+    // Also update the default builder below and rocdl-attach-target in
+    // Dialect/GPU/Transforms/Passes.td .
+    StringRefParameter<"ABI version.", "\"500\"">:$abi,
+    OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
+    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
+  );
+  let assemblyFormat = [{
+    (`<` struct($O, $triple, $chip, $features, $abi, $flags, $link)^ `>`)?
+  }];
+  let builders = [
+    AttrBuilder<(ins CArg<"int", "2">:$optLevel,
+                     CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
+                     CArg<"StringRef", "\"gfx900\"">:$chip,
+                     CArg<"StringRef", "\"\"">:$features,
+                     CArg<"StringRef", "\"500\"">:$abiVersion,
+                     CArg<"DictionaryAttr", "nullptr">:$targetFlags,
+                     CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
+      return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,
+                       targetFlags, linkFiles);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    bool hasFlag(StringRef flag) const;
+    bool hasWave64() const;
+    bool hasFastMath() const;
+    bool hasDaz() const;
+    bool hasFiniteOnly() const;
+    bool hasUnsafeMath() const;
+    bool hasCorrectSqrt() const;
+  }];
+  let extraClassDefinition = [{
+    bool $cppClass::hasFlag(StringRef flag) const {
+      if (DictionaryAttr flags = getFlags())
+        return flags.get(flag) != nullptr;
+      return false;
+    }
+    bool $cppClass::hasWave64() const {
+      return hasFlag("wave64") || !hasFlag("no_wave64");
+    }
+    bool $cppClass::hasFastMath() const {
+      return hasFlag("fast");
+    }
+    bool $cppClass::hasDaz() const {
+      return hasFlag("daz");
+    }
+    bool $cppClass::hasFiniteOnly() const {
+      return hasFlag("finite_only");
+    }
+    bool $cppClass::hasUnsafeMath() const {
+      return hasFlag("unsafe_math");
+    }
+    bool $cppClass::hasCorrectSqrt() const {
+      return !hasFlag("unsafe_sqrt");
+    }
+  }];
+}
 #endif // ROCDLIR_OPS

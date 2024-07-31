@@ -25,6 +25,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -33,11 +36,10 @@ namespace ranges {
 namespace __generate_n {
 
 struct __fn {
-
   template <input_or_output_iterator _OutIter, copy_constructible _Func>
-  requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  _OutIter operator()(_OutIter __first, iter_difference_t<_OutIter> __n, _Func __gen) const {
+    requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
+  _LIBCPP_HIDE_FROM_ABI constexpr _OutIter
+  operator()(_OutIter __first, iter_difference_t<_OutIter> __n, _Func __gen) const {
     for (; __n > 0; --__n) {
       *__first = __gen();
       ++__first;
@@ -45,18 +47,19 @@ struct __fn {
 
     return __first;
   }
-
 };
 
 } // namespace __generate_n
 
 inline namespace __cpo {
-  inline constexpr auto generate_n = __generate_n::__fn{};
+inline constexpr auto generate_n = __generate_n::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_GENERATE_N_H

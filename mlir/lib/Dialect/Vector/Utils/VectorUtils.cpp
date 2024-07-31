@@ -25,10 +25,14 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+
+#define DEBUG_TYPE "vector-utils"
+
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -87,14 +91,11 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
   if (srcGtOneDims.size() != 2)
     return failure();
 
-  SmallVector<int64_t> transp;
-  for (auto attr : op.getTransp())
-    transp.push_back(cast<IntegerAttr>(attr).getInt());
-
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
   // transpose pattens. Otherwise, these patterns are not applicable.
-  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1], transp))
+  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
+                                  op.getPermutation()))
     return failure();
 
   return std::pair<int, int>(srcGtOneDims[0], srcGtOneDims[1]);
@@ -165,7 +166,7 @@ static SetVector<Operation *> getParentsOfType(Block *block) {
   SetVector<Operation *> res;
   auto *current = block->getParentOp();
   while (current) {
-    if (auto typedParent = dyn_cast<T>(current)) {
+    if ([[maybe_unused]] auto typedParent = dyn_cast<T>(current)) {
       assert(res.count(current) == 0 && "Already inserted");
       res.insert(current);
     }
@@ -251,4 +252,146 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
   return ratio.has_value();
+}
+
+bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
+  if (vectorType.isScalable())
+    return false;
+
+  ArrayRef<int64_t> vectorShape = vectorType.getShape();
+  auto vecRank = vectorType.getRank();
+
+  if (!trailingNDimsContiguous(memrefType, vecRank))
+    return false;
+
+  // Extract the trailing dims and strides of the input memref
+  auto memrefShape = memrefType.getShape().take_back(vecRank);
+
+  // Compare the dims of `vectorType` against `memrefType` (in reverse).
+  // In the most basic case, all dims will match.
+  auto firstNonMatchingDim =
+      std::mismatch(vectorShape.rbegin(), vectorShape.rend(),
+                    memrefShape.rbegin(), memrefShape.rend());
+  if (firstNonMatchingDim.first == vectorShape.rend())
+    return true;
+
+  // One non-matching dim is still fine, however the remaining leading dims of
+  // `vectorType` need to be 1.
+  SmallVector<int64_t> leadingDims(++firstNonMatchingDim.first,
+                                   vectorShape.rend());
+
+  return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
+}
+
+std::optional<StaticTileOffsetRange>
+vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
+  if (vType.getRank() <= targetRank)
+    return {};
+  // Attempt to unroll until targetRank or the first scalable dimension (which
+  // cannot be unrolled).
+  auto shapeToUnroll = vType.getShape().drop_back(targetRank);
+  auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
+  auto it =
+      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto firstScalableDim = it - scalableDimsToUnroll.begin();
+  if (firstScalableDim == 0)
+    return {};
+  // All scalable dimensions should be removed now.
+  scalableDimsToUnroll = scalableDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(scalableDimsToUnroll, true) &&
+         "unexpected leading scalable dimension");
+  // Create an unroll iterator for leading dimensions.
+  shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
+  return StaticTileOffsetRange(shapeToUnroll, /*unrollStep=*/1);
+}
+
+SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
+                                                    Operation *xfer,
+                                                    RewriterBase &rewriter) {
+  auto loc = xfer->getLoc();
+
+  Value base = TypeSwitch<Operation *, Value>(xfer)
+                   .Case<vector::TransferReadOp>(
+                       [&](auto readOp) { return readOp.getSource(); })
+                   .Case<vector::TransferWriteOp>(
+                       [&](auto writeOp) { return writeOp.getOperand(1); });
+
+  SmallVector<OpFoldResult> mixedSourceDims =
+      hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, base)
+                         : memref::getMixedSizes(rewriter, loc, base);
+  return mixedSourceDims;
+}
+
+bool vector::isLinearizableVector(VectorType type) {
+  return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
+}
+
+Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                     Value source, ArrayRef<int64_t> readShape,
+                                     Value padValue,
+                                     bool useInBoundsInsteadOfMasking) {
+  assert(llvm::none_of(readShape,
+                       [](int64_t s) { return s == ShapedType::kDynamic; }) &&
+         "expected static shape");
+  auto sourceShapedType = cast<ShapedType>(source.getType());
+  auto sourceShape = sourceShapedType.getShape();
+  assert(sourceShape.size() == readShape.size() && "expected same ranks.");
+  auto maskType = VectorType::get(readShape, builder.getI1Type());
+  auto vectorType = VectorType::get(readShape, padValue.getType());
+  assert(padValue.getType() == sourceShapedType.getElementType() &&
+         "expected same pad element type to match source element type");
+  int64_t readRank = readShape.size();
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  SmallVector<bool> inBoundsVal(readRank, true);
+  if (useInBoundsInsteadOfMasking) {
+    // Update the inBounds attribute.
+    for (unsigned i = 0; i < readRank; i++)
+      inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&
+                       !ShapedType::isDynamic(sourceShape[i]);
+  }
+  auto transferReadOp = builder.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/source,
+      /*indices=*/SmallVector<Value>(readRank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/inBoundsVal);
+
+  if (llvm::equal(readShape, sourceShape) || useInBoundsInsteadOfMasking)
+    return transferReadOp;
+  SmallVector<OpFoldResult> mixedSourceDims =
+      tensor::getMixedSizes(builder, loc, source);
+  Value mask =
+      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  return mlir::vector::maskOperation(builder, transferReadOp, mask)
+      ->getResult(0);
+}
+
+LogicalResult
+vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                                 ArrayRef<int64_t> inputVectorSizes) {
+  LDBG("Iteration space static sizes:");
+  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
+
+  if (inputVectorSizes.size() != shape.size()) {
+    LDBG("Input vector sizes don't match the number of loops");
+    return failure();
+  }
+  if (ShapedType::isDynamicShape(inputVectorSizes)) {
+    LDBG("Input vector sizes can't have dynamic dimensions");
+    return failure();
+  }
+  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
+                    [](std::tuple<int64_t, int64_t> sizePair) {
+                      int64_t staticSize = std::get<0>(sizePair);
+                      int64_t inputSize = std::get<1>(sizePair);
+                      return ShapedType::isDynamic(staticSize) ||
+                             staticSize <= inputSize;
+                    })) {
+    LDBG("Input vector sizes must be greater than or equal to iteration space "
+         "static sizes");
+    return failure();
+  }
+  return success();
 }

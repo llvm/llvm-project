@@ -8,15 +8,15 @@
 
 // <iostream>
 
-// istream wcerr;
+// wostream wcerr;
 
 // UNSUPPORTED: no-wide-characters
 // REQUIRES: target={{.+}}-windows-{{.+}}
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: check-stderr.sh, test.dat
+// FILE_DEPENDENCIES: test.dat
 // RUN: %{build}
-// RUN: %{exec} bash check-stderr.sh "%t.exe" "test.dat"
+// RUN: %{exec} %t.exe 2> %t.actual
+// RUN: diff test.dat %t.actual
 
 // Check that wcerr works, preserving the unicode characters, after switching
 // stderr to wide mode.

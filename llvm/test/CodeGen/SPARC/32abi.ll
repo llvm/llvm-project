@@ -21,21 +21,21 @@ define void @intarg(i8  %a0,   ; %i0
                     i8  %a1,   ; %i1
                     i16 %a2,   ; %i2
                     i32 %a3,   ; %i3
-                    i8* %a4,   ; %i4
+                    ptr %a4,   ; %i4
                     i32 %a5,   ; %i5
                     i32 signext %a6,   ; [%fp+92]
-                    i8* %a7) { ; [%fp+96]
-  store volatile i8 %a0, i8* %a4
-  store volatile i8 %a1, i8* %a4
-  %p16 = bitcast i8* %a4 to i16*
-  store volatile i16 %a2, i16* %p16
-  %p32 = bitcast i8* %a4 to i32*
-  store volatile i32 %a3, i32* %p32
-  %pp = bitcast i8* %a4 to i8**
-  store volatile i8* %a4, i8** %pp
-  store volatile i32 %a5, i32* %p32
-  store volatile i32 %a6, i32* %p32
-  store volatile i8* %a7, i8** %pp
+                    ptr %a7) { ; [%fp+96]
+  store volatile i8 %a0, ptr %a4
+  store volatile i8 %a1, ptr %a4
+  %p16 = bitcast ptr %a4 to ptr
+  store volatile i16 %a2, ptr %p16
+  %p32 = bitcast ptr %a4 to ptr
+  store volatile i32 %a3, ptr %p32
+  %pp = bitcast ptr %a4 to ptr
+  store volatile ptr %a4, ptr %pp
+  store volatile i32 %a5, ptr %p32
+  store volatile i32 %a6, ptr %p32
+  store volatile ptr %a7, ptr %pp
   ret void
 }
 
@@ -47,8 +47,8 @@ define void @intarg(i8  %a0,   ; %i0
 ; CHECK: call intarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
-define void @call_intarg(i32 %i0, i8* %i1) {
-  call void @intarg(i8 0, i8 1, i16 2, i32 3, i8* undef, i32 5, i32 %i0, i8* %i1)
+define void @call_intarg(i32 %i0, ptr %i1) {
+  call void @intarg(i8 0, i8 1, i16 2, i32 3, ptr undef, i32 5, i32 %i0, ptr %i1)
   ret void
 }
 
@@ -166,10 +166,10 @@ define double @floatarg(double %a0,   ; %i0,%i1
 ; SOFT-NEXT:  call floatarg
 ; SOFT:  std %o0, [%i4]
 ; CHECK: restore
-define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
+define void @call_floatarg(float %f1, double %d2, float %f5, ptr %p) {
   %r = call double @floatarg(double %d2, float %f1, double %d2, double %d2,
                              double %d2, float %f1)
-  store double %r, double* %p
+  store double %r, ptr %p
   ret void
 }
 
@@ -242,8 +242,8 @@ define i64 @i64arg(i64 %a0,    ; %i0,%i1
 ; CHECK: std %o0, [%i3]
 ; CHECK-NEXT: restore
 
-define void @call_i64arg(i32 %a0, i64 %a1, i64* %p) {
+define void @call_i64arg(i32 %a0, i64 %a1, ptr %p) {
   %r = call i64 @i64arg(i64 %a1, i32 %a0, i64 %a1, i64 %a1, i64 %a1, i32 %a0)
-  store i64 %r, i64* %p
+  store i64 %r, ptr %p
   ret void
 }

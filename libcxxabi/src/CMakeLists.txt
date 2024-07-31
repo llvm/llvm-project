@@ -67,9 +67,7 @@ if (LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST)
   add_definitions(-D_LIBCXXABI_FORGIVING_DYNAMIC_CAST)
 endif()
 
-if (APPLE)
-  add_library_flags_if(LIBCXXABI_HAS_SYSTEM_LIB System)
-else()
+if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
   if (LIBCXXABI_ENABLE_THREADS)
     add_library_flags_if(LIBCXXABI_HAS_PTHREAD_LIB pthread)
   endif()
@@ -160,26 +158,31 @@ include(WarningFlags)
 add_library(cxxabi_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
 cxx_add_warning_flags(cxxabi_shared_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
+  if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY OR
+      (DEFINED LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_SHARED))
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared_objects) # propagate usage requirements
     target_sources(cxxabi_shared_objects PUBLIC $<TARGET_OBJECTS:unwind_shared_objects>)
   else()
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_BUILTINS_LIBRARY} ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_LIBRARIES})
+if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
+endif()
 target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
     DEFINE_SYMBOL ""
 )
 if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
   set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
+target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED)
@@ -203,7 +206,7 @@ if (LIBCXXABI_ENABLE_SHARED)
 
   target_link_libraries(cxxabi_shared
     PUBLIC cxxabi_shared_objects
-    PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+    PRIVATE ${LIBCXXABI_LIBRARIES})
 
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
   if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
@@ -211,31 +214,34 @@ if (LIBCXXABI_ENABLE_SHARED)
   endif()
 
   add_library(cxxabi-reexports INTERFACE)
-
-  # -exported_symbols_list is only available on Apple platforms
-  if (APPLE)
-    function(export_symbols file)
+  function(reexport_symbols file)
+    # -exported_symbols_list is only available on Apple platforms
+    if (APPLE)
       target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
-    endfunction()
-    function(reexport_symbols file)
-      export_symbols("${file}")
       target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
-    endfunction()
-
-    export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
-
-    if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
     endif()
+  endfunction()
 
-    if (LIBCXXABI_ENABLE_EXCEPTIONS)
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/exceptions.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-misc.exp")
 
-      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-        reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
-      else()
-        reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
-      endif()
+  if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+  endif()
+
+  # Note that std:: exception types are always defined by the library regardless of
+  # whether the exception runtime machinery is provided.
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
+
+  if (LIBCXXABI_ENABLE_EXCEPTIONS)
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
+
+    if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
+    else()
+      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
     endif()
   endif()
 endif()
@@ -252,10 +258,11 @@ target_link_libraries(cxxabi_static_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
+target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
@@ -263,7 +270,10 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   # then its code shouldn't declare them with hidden visibility.  They might
   # actually be provided by a shared library at link time.
   if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+      target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    endif()
   endif()
   # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
   # __config_site too. Define it in the same way here, to avoid redefinition
@@ -296,6 +306,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
+add_dependencies(cxxabi-test-depends cxxabi cxx)
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}

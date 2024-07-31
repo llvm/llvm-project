@@ -14,7 +14,7 @@
 // RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // Check we didn't build the PCH during dependency scanning.
-// RUN: not cat %/t/pch.h.gch
+// RUN: not cat %/t/pch.h.pch
 //
 // CHECK-PCH:      {
 // CHECK-PCH-NEXT:   "modules": [
@@ -28,6 +28,7 @@
 // CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_1.h",
 // CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
+// CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon1"
 // CHECK-PCH-NEXT:     },
 // CHECK-PCH-NEXT:     {
@@ -40,6 +41,7 @@
 // CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_2.h",
 // CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
+// CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon2"
 // CHECK-PCH-NEXT:     },
 // CHECK-PCH-NEXT:     {
@@ -57,6 +59,7 @@
 // CHECK-PCH-NEXT:         "[[PREFIX]]/mod_pch.h",
 // CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-PCH-NEXT:       ],
+// CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModPCH"
 // CHECK-PCH-NEXT:     }
 // CHECK-PCH-NEXT:   ],
@@ -113,6 +116,7 @@
 // CHECK-TU-NEXT:         "[[PREFIX]]/mod_tu.h",
 // CHECK-TU-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-TU-NEXT:       ],
+// CHECK-TU-NEXT:       "link-libraries": [],
 // CHECK-TU-NEXT:       "name": "ModTU"
 // CHECK-TU-NEXT:     }
 // CHECK-TU-NEXT:   ],
@@ -129,7 +133,7 @@
 // CHECK-TU:            ],
 // CHECK-TU:            "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
-// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
+// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }
@@ -162,6 +166,7 @@
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/mod_tu_with_common.h",
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
+// CHECK-TU-WITH-COMMON-NEXT:       "link-libraries": [],
 // CHECK-TU-WITH-COMMON-NEXT:       "name": "ModTUWithCommon"
 // CHECK-TU-WITH-COMMON-NEXT:     }
 // CHECK-TU-WITH-COMMON-NEXT:   ],
@@ -179,7 +184,7 @@
 // CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON:            "file-deps": [
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/tu_with_common.c",
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.gch"
+// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "input-file": "[[PREFIX]]/tu_with_common.c"
 // CHECK-TU-WITH-COMMON-NEXT:     }

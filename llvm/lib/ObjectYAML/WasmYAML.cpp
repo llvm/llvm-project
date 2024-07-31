@@ -12,6 +12,7 @@
 
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -45,6 +46,7 @@ void MappingTraits<WasmYAML::Object>::mapping(IO &IO,
 static void commonSectionMapping(IO &IO, WasmYAML::Section &Section) {
   IO.mapRequired("Type", Section.Type);
   IO.mapOptional("Relocations", Section.Relocations);
+  IO.mapOptional("HeaderSecSizeEncodingLen", Section.HeaderSecSizeEncodingLen);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
@@ -382,6 +384,8 @@ void MappingTraits<WasmYAML::ElemSegment>::mapping(
   if (!IO.outputting() ||
       Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND)
     IO.mapOptional("ElemKind", Segment.ElemKind);
+  // TODO: Omit "offset" for passive segments? It's neither meaningful nor
+  // encoded.
   IO.mapRequired("Offset", Segment.Offset);
   IO.mapRequired("Functions", Segment.Functions);
 }
@@ -517,7 +521,9 @@ void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,
     IO.mapRequired("Tag", Info.ElementIndex);
   } else if (Info.Kind == wasm::WASM_SYMBOL_TYPE_DATA) {
     if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-      IO.mapRequired("Segment", Info.DataRef.Segment);
+      if ((Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE) == 0) {
+        IO.mapRequired("Segment", Info.DataRef.Segment);
+      }
       IO.mapOptional("Offset", Info.DataRef.Offset, 0u);
       IO.mapRequired("Size", Info.DataRef.Size);
     }
@@ -555,6 +561,7 @@ void ScalarBitSetTraits<WasmYAML::SegmentFlags>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_SEG_FLAG_##X)
   BCase(STRINGS);
   BCase(TLS);
+  BCase(RETAIN);
 #undef BCase
 }
 
@@ -572,6 +579,7 @@ void ScalarBitSetTraits<WasmYAML::SymbolFlags>::bitset(
   BCaseMask(EXPLICIT_NAME, EXPLICIT_NAME);
   BCaseMask(NO_STRIP, NO_STRIP);
   BCaseMask(TLS, TLS);
+  BCaseMask(ABSOLUTE, ABSOLUTE);
 #undef BCaseMask
 }
 
@@ -589,7 +597,8 @@ void ScalarEnumerationTraits<WasmYAML::SymbolKind>::enumeration(
 
 void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
     IO &IO, WasmYAML::ValueType &Type) {
-#define ECase(X) IO.enumCase(Type, #X, wasm::WASM_TYPE_##X);
+#define CONCAT(X) (uint32_t) wasm::ValType::X
+#define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(I32);
   ECase(I64);
   ECase(F32);
@@ -597,7 +606,8 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(EXTERNREF);
-  ECase(FUNC);
+  ECase(EXNREF);
+  ECase(OTHERREF);
 #undef ECase
 }
 
@@ -627,9 +637,12 @@ void ScalarEnumerationTraits<WasmYAML::Opcode>::enumeration(
 
 void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
     IO &IO, WasmYAML::TableType &Type) {
-#define ECase(X) IO.enumCase(Type, #X, wasm::WASM_TYPE_##X);
+#define CONCAT(X) (uint32_t) wasm::ValType::X
+#define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
+  ECase(OTHERREF);
 #undef ECase
 }
 

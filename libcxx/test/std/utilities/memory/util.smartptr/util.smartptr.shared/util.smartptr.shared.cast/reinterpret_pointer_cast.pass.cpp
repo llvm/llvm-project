@@ -12,12 +12,15 @@
 
 // template<class T, class U>
 //     shared_ptr<T> reinterpret_pointer_cast(const shared_ptr<U>& r) noexcept;
+// template<class T, class U>
+//     shared_ptr<T> reinterpret_pointer_cast(shared_ptr<U>&& r) noexcept;
 
 #include "test_macros.h"
 
+#include <cassert>
 #include <memory>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 struct A {
   int x;
@@ -29,6 +32,7 @@ struct Derived : public Base { };
 int main(int, char**) {
   {
     const std::shared_ptr<A> pA(new A);
+    ASSERT_NOEXCEPT(std::reinterpret_pointer_cast<int>(pA));
     std::shared_ptr<int> pi = std::reinterpret_pointer_cast<int>(pA);
     std::shared_ptr<A> pA2 = std::reinterpret_pointer_cast<A>(pi);
     assert(pA2.get() == pA.get());
@@ -70,6 +74,20 @@ int main(int, char**) {
     assert(!pi.owner_before(pA) && !pA.owner_before(pi));
   }
 #endif // TEST_STD_VER > 14
+#if TEST_STD_VER > 20
+  {
+    A* pA_raw = new A;
+    std::shared_ptr<A> pA(pA_raw);
+    ASSERT_NOEXCEPT(std::reinterpret_pointer_cast<int>(std::move(pA)));
+    std::shared_ptr<int> pi = std::reinterpret_pointer_cast<int>(std::move(pA));
+    assert(pA.get() == nullptr);
+    assert(pi.use_count() == 1);
+    std::shared_ptr<A> pA2 = std::reinterpret_pointer_cast<A>(std::move(pi));
+    assert(pi.get() == nullptr);
+    assert(pA2.get() == pA_raw);
+    assert(pA2.use_count() == 1);
+  }
+#endif // TEST_STD_VER > 20
 
   return 0;
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @vectorize_matmul
 // CHECK-SAME: %[[A:.*]]: tensor<24x12xf32>
@@ -16,11 +16,62 @@ func.func @vectorize_matmul(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @vectorize_matmul_memref
+// CHECK-SAME: %[[A:.*]]: memref<24x12xf32>
+// CHECK-SAME: %[[B:.*]]: memref<12x25xf32>
+// CHECK-SAME: %[[C:.*]]: memref<24x25xf32>
+func.func @vectorize_matmul_memref(%arg0: memref<24x12xf32>,
+                                   %arg1: memref<12x25xf32>,
+                                   %arg2: memref<24x25xf32>) {
+  // CHECK: %[[vA:.+]] = vector.transfer_read %[[A]]
+  // CHECK: %[[vB:.+]] = vector.transfer_read %[[B]]
+  // CHECK: %[[vC:.+]] = vector.transfer_read %[[C]]
+  // CHECK: %[[vR:.+]] = vector.contract {{.*}} %[[vA]], %[[vB]], %[[vC]]
+  // CHECK: vector.transfer_write %[[vR]], %[[C]]
+  linalg.matmul ins(%arg0, %arg1 : memref<24x12xf32>, memref<12x25xf32>) outs(%arg2 : memref<24x25xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @vectorize_copy_memref
+// CHECK-SAME: %[[A:.*]]: memref<100x100xf32>,
+// CHECK-SAME: %[[B:.*]]: memref<100x100xf32>
+func.func @vectorize_copy_memref(%arg0: memref<100x100xf32>,
+                                 %arg1: memref<100x100xf32>) {
+  // CHECK: %[[vA:.+]] = vector.transfer_read %[[A]]
+  // CHECK: vector.transfer_write %[[vA]], %[[B]]
+  linalg.copy ins(%arg0 : memref<100x100xf32>) outs(%arg1 : memref<100x100xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -62,11 +113,13 @@ func.func @vectorize_keep_pad(
   return %9 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -110,11 +163,13 @@ func.func @vectorize_pad(
   return %9 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1 {vectorize_padding} : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 {vectorize_padding} : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -127,9 +182,11 @@ func.func @vectorize(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{op requires isolated-from-above targets}}
-  %2 = transform.structured.vectorize %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{op requires isolated-from-above targets}}
+    %2 = transform.structured.vectorize_children_and_apply_patterns %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

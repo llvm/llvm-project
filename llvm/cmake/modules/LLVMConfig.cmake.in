@@ -14,10 +14,7 @@ set(LLVM_PACKAGE_BUGREPORT @PACKAGE_BUGREPORT@)
 
 set(LLVM_BUILD_TYPE @CMAKE_BUILD_TYPE@)
 
-set(LLVM_USE_CRT_DEBUG @LLVM_USE_CRT_DEBUG@)
-set(LLVM_USE_CRT_MINSIZEREL @LLVM_USE_CRT_MINSIZEREL@)
-set(LLVM_USE_CRT_RELEASE @LLVM_USE_CRT_RELEASE@)
-set(LLVM_USE_CRT_RELWITHDEBINFO @LLVM_USE_CRT_RELWITHDEBINFO@)
+set(CMAKE_MSVC_RUNTIME_LIBRARY @CMAKE_MSVC_RUNTIME_LIBRARY@)
 
 set(LLVM_USE_SPLIT_DWARF @LLVM_USE_SPLIT_DWARF@)
 
@@ -63,11 +60,6 @@ if(LLVM_ENABLE_LIBEDIT)
   find_package(LibEdit)
 endif()
 
-set(LLVM_ENABLE_TERMINFO @LLVM_ENABLE_TERMINFO@)
-if(LLVM_ENABLE_TERMINFO)
-  find_package(Terminfo)
-endif()
-
 set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
 
 set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
@@ -91,6 +83,11 @@ endif()
 set(LLVM_ENABLE_CURL @LLVM_ENABLE_CURL@)
 if(LLVM_ENABLE_CURL)
   find_package(CURL)
+endif()
+
+set(LLVM_ENABLE_HTTPLIB @LLVM_ENABLE_HTTPLIB@)
+if(LLVM_ENABLE_HTTPLIB)
+  find_package(httplib)
 endif()
 
 set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
@@ -143,8 +140,6 @@ set(LLVM_ENABLE_SHARED_LIBS @BUILD_SHARED_LIBS@)
 set(LLVM_DEFAULT_EXTERNAL_LIT "@LLVM_CONFIG_DEFAULT_EXTERNAL_LIT@")
 set(LLVM_LIT_ARGS "@LLVM_LIT_ARGS@")
 
-set(LLVM_HAVE_LIBXAR "@LLVM_HAVE_LIBXAR@")
-
 if(NOT TARGET LLVMSupport)
   @LLVM_CONFIG_INCLUDE_EXPORTS@
   @llvm_config_include_buildtree_only_exports@
@@ -161,6 +156,12 @@ if(NOT TARGET omp_gen)
 endif()
 if(NOT TARGET acc_gen)
   add_custom_target(acc_gen)
+endif()
+if(NOT TARGET ARMTargetParserTableGen)
+  add_custom_target(ARMTargetParserTableGen)
+endif()
+if(NOT TARGET AArch64TargetParserTableGen)
+  add_custom_target(AArch64TargetParserTableGen)
 endif()
 if(NOT TARGET RISCVTargetParserTableGen)
   add_custom_target(RISCVTargetParserTableGen)

@@ -17,7 +17,6 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -620,29 +619,30 @@ void X86DomainReassignment::initConverters() {
         std::make_unique<InstrReplacerDstCOPY>(From, To);
   };
 
-  createReplacerDstCOPY(X86::MOVZX32rm16, X86::KMOVWkm);
-  createReplacerDstCOPY(X86::MOVZX64rm16, X86::KMOVWkm);
+#define GET_EGPR_IF_ENABLED(OPC) STI->hasEGPR() ? OPC##_EVEX : OPC
+  createReplacerDstCOPY(X86::MOVZX32rm16, GET_EGPR_IF_ENABLED(X86::KMOVWkm));
+  createReplacerDstCOPY(X86::MOVZX64rm16, GET_EGPR_IF_ENABLED(X86::KMOVWkm));
 
-  createReplacerDstCOPY(X86::MOVZX32rr16, X86::KMOVWkk);
-  createReplacerDstCOPY(X86::MOVZX64rr16, X86::KMOVWkk);
+  createReplacerDstCOPY(X86::MOVZX32rr16, GET_EGPR_IF_ENABLED(X86::KMOVWkk));
+  createReplacerDstCOPY(X86::MOVZX64rr16, GET_EGPR_IF_ENABLED(X86::KMOVWkk));
 
   if (STI->hasDQI()) {
-    createReplacerDstCOPY(X86::MOVZX16rm8, X86::KMOVBkm);
-    createReplacerDstCOPY(X86::MOVZX32rm8, X86::KMOVBkm);
-    createReplacerDstCOPY(X86::MOVZX64rm8, X86::KMOVBkm);
+    createReplacerDstCOPY(X86::MOVZX16rm8, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
+    createReplacerDstCOPY(X86::MOVZX32rm8, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
+    createReplacerDstCOPY(X86::MOVZX64rm8, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
 
-    createReplacerDstCOPY(X86::MOVZX16rr8, X86::KMOVBkk);
-    createReplacerDstCOPY(X86::MOVZX32rr8, X86::KMOVBkk);
-    createReplacerDstCOPY(X86::MOVZX64rr8, X86::KMOVBkk);
+    createReplacerDstCOPY(X86::MOVZX16rr8, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
+    createReplacerDstCOPY(X86::MOVZX32rr8, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
+    createReplacerDstCOPY(X86::MOVZX64rr8, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
   }
 
   auto createReplacer = [&](unsigned From, unsigned To) {
     Converters[{MaskDomain, From}] = std::make_unique<InstrReplacer>(From, To);
   };
 
-  createReplacer(X86::MOV16rm, X86::KMOVWkm);
-  createReplacer(X86::MOV16mr, X86::KMOVWmk);
-  createReplacer(X86::MOV16rr, X86::KMOVWkk);
+  createReplacer(X86::MOV16rm, GET_EGPR_IF_ENABLED(X86::KMOVWkm));
+  createReplacer(X86::MOV16mr, GET_EGPR_IF_ENABLED(X86::KMOVWmk));
+  createReplacer(X86::MOV16rr, GET_EGPR_IF_ENABLED(X86::KMOVWkk));
   createReplacer(X86::SHR16ri, X86::KSHIFTRWri);
   createReplacer(X86::SHL16ri, X86::KSHIFTLWri);
   createReplacer(X86::NOT16r, X86::KNOTWrr);
@@ -650,15 +650,25 @@ void X86DomainReassignment::initConverters() {
   createReplacer(X86::AND16rr, X86::KANDWrr);
   createReplacer(X86::XOR16rr, X86::KXORWrr);
 
+  bool HasNDD = STI->hasNDD();
+  if (HasNDD) {
+    createReplacer(X86::SHR16ri_ND, X86::KSHIFTRWri);
+    createReplacer(X86::SHL16ri_ND, X86::KSHIFTLWri);
+    createReplacer(X86::NOT16r_ND, X86::KNOTWrr);
+    createReplacer(X86::OR16rr_ND, X86::KORWrr);
+    createReplacer(X86::AND16rr_ND, X86::KANDWrr);
+    createReplacer(X86::XOR16rr_ND, X86::KXORWrr);
+  }
+
   if (STI->hasBWI()) {
-    createReplacer(X86::MOV32rm, X86::KMOVDkm);
-    createReplacer(X86::MOV64rm, X86::KMOVQkm);
+    createReplacer(X86::MOV32rm, GET_EGPR_IF_ENABLED(X86::KMOVDkm));
+    createReplacer(X86::MOV64rm, GET_EGPR_IF_ENABLED(X86::KMOVQkm));
 
-    createReplacer(X86::MOV32mr, X86::KMOVDmk);
-    createReplacer(X86::MOV64mr, X86::KMOVQmk);
+    createReplacer(X86::MOV32mr, GET_EGPR_IF_ENABLED(X86::KMOVDmk));
+    createReplacer(X86::MOV64mr, GET_EGPR_IF_ENABLED(X86::KMOVQmk));
 
-    createReplacer(X86::MOV32rr, X86::KMOVDkk);
-    createReplacer(X86::MOV64rr, X86::KMOVQkk);
+    createReplacer(X86::MOV32rr, GET_EGPR_IF_ENABLED(X86::KMOVDkk));
+    createReplacer(X86::MOV64rr, GET_EGPR_IF_ENABLED(X86::KMOVQkk));
 
     createReplacer(X86::SHR32ri, X86::KSHIFTRDri);
     createReplacer(X86::SHR64ri, X86::KSHIFTRQri);
@@ -684,10 +694,27 @@ void X86DomainReassignment::initConverters() {
     createReplacer(X86::XOR32rr, X86::KXORDrr);
     createReplacer(X86::XOR64rr, X86::KXORQrr);
 
+    if (HasNDD) {
+      createReplacer(X86::SHR32ri_ND, X86::KSHIFTRDri);
+      createReplacer(X86::SHL32ri_ND, X86::KSHIFTLDri);
+      createReplacer(X86::ADD32rr_ND, X86::KADDDrr);
+      createReplacer(X86::NOT32r_ND, X86::KNOTDrr);
+      createReplacer(X86::OR32rr_ND, X86::KORDrr);
+      createReplacer(X86::AND32rr_ND, X86::KANDDrr);
+      createReplacer(X86::XOR32rr_ND, X86::KXORDrr);
+      createReplacer(X86::SHR64ri_ND, X86::KSHIFTRQri);
+      createReplacer(X86::SHL64ri_ND, X86::KSHIFTLQri);
+      createReplacer(X86::ADD64rr_ND, X86::KADDQrr);
+      createReplacer(X86::NOT64r_ND, X86::KNOTQrr);
+      createReplacer(X86::OR64rr_ND, X86::KORQrr);
+      createReplacer(X86::AND64rr_ND, X86::KANDQrr);
+      createReplacer(X86::XOR64rr_ND, X86::KXORQrr);
+    }
+
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
-    //createReplacer(X86::TEST32rr, X86::KTESTDrr);
-    //createReplacer(X86::TEST64rr, X86::KTESTQrr);
+    // createReplacer(X86::TEST32rr, X86::KTESTDrr);
+    // createReplacer(X86::TEST64rr, X86::KTESTQrr);
   }
 
   if (STI->hasDQI()) {
@@ -696,9 +723,9 @@ void X86DomainReassignment::initConverters() {
 
     createReplacer(X86::AND8rr, X86::KANDBrr);
 
-    createReplacer(X86::MOV8rm, X86::KMOVBkm);
-    createReplacer(X86::MOV8mr, X86::KMOVBmk);
-    createReplacer(X86::MOV8rr, X86::KMOVBkk);
+    createReplacer(X86::MOV8rm, GET_EGPR_IF_ENABLED(X86::KMOVBkm));
+    createReplacer(X86::MOV8mr, GET_EGPR_IF_ENABLED(X86::KMOVBmk));
+    createReplacer(X86::MOV8rr, GET_EGPR_IF_ENABLED(X86::KMOVBkk));
 
     createReplacer(X86::NOT8r, X86::KNOTBrr);
 
@@ -709,11 +736,23 @@ void X86DomainReassignment::initConverters() {
 
     // TODO: KTEST is not a replacement for TEST due to flag differences. Need
     // to prove only Z flag is used.
-    //createReplacer(X86::TEST8rr, X86::KTESTBrr);
-    //createReplacer(X86::TEST16rr, X86::KTESTWrr);
+    // createReplacer(X86::TEST8rr, X86::KTESTBrr);
+    // createReplacer(X86::TEST16rr, X86::KTESTWrr);
 
     createReplacer(X86::XOR8rr, X86::KXORBrr);
+
+    if (HasNDD) {
+      createReplacer(X86::ADD8rr_ND, X86::KADDBrr);
+      createReplacer(X86::ADD16rr_ND, X86::KADDWrr);
+      createReplacer(X86::AND8rr_ND, X86::KANDBrr);
+      createReplacer(X86::NOT8r_ND, X86::KNOTBrr);
+      createReplacer(X86::OR8rr_ND, X86::KORBrr);
+      createReplacer(X86::SHR8ri_ND, X86::KSHIFTRBri);
+      createReplacer(X86::SHL8ri_ND, X86::KSHIFTLBri);
+      createReplacer(X86::XOR8rr_ND, X86::KXORBrr);
+    }
   }
+#undef GET_EGPR_IF_ENABLED
 }
 
 bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
@@ -752,6 +791,10 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   unsigned ClosureID = 0;
   for (unsigned Idx = 0; Idx < MRI->getNumVirtRegs(); ++Idx) {
     Register Reg = Register::index2VirtReg(Idx);
+
+    // Skip unused VRegs.
+    if (MRI->reg_nodbg_empty(Reg))
+      continue;
 
     // GPR only current source domain supported.
     if (!isGPR(MRI->getRegClass(Reg)))

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple mipsel-unknown-linux -O3 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
-// RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -S -target-abi n64 -o - -emit-llvm %s | FileCheck %s -check-prefix=N64
-// RUN: %clang_cc1 -triple mipsel-unknown-linux -target-feature "+fp64" -O3 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
+// RUN: %clang_cc1 -triple mipsel-unknown-linux -O3 -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
+// RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -target-abi n64 -o - -emit-llvm %s | FileCheck %s -check-prefix=N64
+// RUN: %clang_cc1 -triple mipsel-unknown-linux -target-feature "+fp64" -O3 -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
 
 typedef struct {
   double d;
@@ -33,9 +33,9 @@ void foo3(int a0, long double a1) {
 
 // Insert padding after hidden argument.
 //
-// N64-LABEL: define{{.*}} void @foo5(ptr noalias sret(%struct.S0) align 16 %agg.result, i64 %0, fp128 noundef %a0)
-// N64: call void @foo6(ptr sret(%struct.S0) align 16 %agg.result, i32 noundef signext 1, i32 noundef signext 2, i64 undef, fp128 noundef %a0)
-// N64: declare void @foo6(ptr sret(%struct.S0) align 16, i32 noundef signext, i32 noundef signext, i64, fp128 noundef)
+// N64-LABEL: define{{.*}} void @foo5(ptr dead_on_unwind noalias writable sret(%struct.S0) align 16 %agg.result, i64 %0, fp128 noundef %a0)
+// N64: call void @foo6(ptr dead_on_unwind writable sret(%struct.S0) align 16 %agg.result, i32 noundef signext 1, i32 noundef signext 2, i64 undef, fp128 noundef %a0)
+// N64: declare void @foo6(ptr dead_on_unwind writable sret(%struct.S0) align 16, i32 noundef signext, i32 noundef signext, i64, fp128 noundef)
 
 extern S0 foo6(int, int, long double);
 

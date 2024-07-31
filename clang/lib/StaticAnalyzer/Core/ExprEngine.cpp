@@ -65,6 +65,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
@@ -298,7 +299,7 @@ ProgramStateRef ExprEngine::getInitialState(const LocationContext *InitLoc) {
   }
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-    if (!MD->isStatic()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       // Precondition: 'this' is always non-null upon entry to the
       // top-level function.  This is our starting assumption for
       // analyzing an "open" program.
@@ -386,15 +387,19 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       State = finishObjectConstruction(State, MT, LC);
       State = State->BindExpr(Result, LC, *V);
       return State;
-    } else {
+    } else if (const ValueDecl *VD = MT->getExtendingDecl()) {
       StorageDuration SD = MT->getStorageDuration();
+      assert(SD != SD_FullExpression);
       // If this object is bound to a reference with static storage duration, we
       // put it in a different region to prevent "address leakage" warnings.
       if (SD == SD_Static || SD == SD_Thread) {
-        TR = MRMgr.getCXXStaticTempObjectRegion(Init);
+        TR = MRMgr.getCXXStaticLifetimeExtendedObjectRegion(Init, VD);
       } else {
-        TR = MRMgr.getCXXTempObjectRegion(Init, LC);
+        TR = MRMgr.getCXXLifetimeExtendedObjectRegion(Init, VD, LC);
       }
+    } else {
+      assert(MT->getStorageDuration() == SD_FullExpression);
+      TR = MRMgr.getCXXTempObjectRegion(Init, LC);
     }
   } else {
     TR = MRMgr.getCXXTempObjectRegion(Init, LC);
@@ -988,6 +993,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       ProcessLoopExit(E.castAs<CFGLoopExit>().getLoopStmt(), Pred);
       return;
     case CFGElement::LifetimeEnds:
+    case CFGElement::CleanupFunction:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
       return;
@@ -1216,6 +1222,14 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
       evalBind(Tmp, Init, Pred, FieldLoc, InitVal, /*isInit=*/true, &PP);
     }
+  } else if (BMI->isBaseInitializer() && isa<InitListExpr>(Init)) {
+    // When the base class is initialized with an initialization list and the
+    // base class does not have a ctor, there will not be a CXXConstructExpr to
+    // initialize the base region. Hence, we need to make the bind for it.
+    SVal BaseLoc = getStoreManager().evalDerivedToBase(
+        thisVal, QualType(BMI->getBaseClass(), 0), BMI->isBaseVirtual());
+    SVal InitVal = State->getSVal(Init, stackFrame);
+    evalBind(Tmp, Init, Pred, BaseLoc, InitVal, /*isInit=*/true);
   } else {
     assert(BMI->isBaseInitializer() || BMI->isDelegatingInitializer());
     Tmp.insert(Pred);
@@ -1242,7 +1256,7 @@ ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
                                             const QualType &ElementTy,
                                             const LocationContext *LCtx,
                                             SVal *ElementCountVal) {
-  assert(Region != nullptr && "Not-null region expected");	
+  assert(Region != nullptr && "Not-null region expected");
 
   QualType Ty = ElementTy.getDesugaredType(getContext());
   while (const auto *NTy = dyn_cast<ArrayType>(Ty))
@@ -1723,6 +1737,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
+    case Stmt::PackIndexingExprClass:
     case Stmt::SubstNonTypeTemplateParmPackExprClass:
     case Stmt::FunctionParmPackExprClass:
     case Stmt::CoroutineBodyStmtClass:
@@ -1741,6 +1756,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPForSimdDirectiveClass:
     case Stmt::OMPSectionsDirectiveClass:
     case Stmt::OMPSectionDirectiveClass:
+    case Stmt::OMPScopeDirectiveClass:
     case Stmt::OMPSingleDirectiveClass:
     case Stmt::OMPMasterDirectiveClass:
     case Stmt::OMPCriticalDirectiveClass:
@@ -1795,7 +1811,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    case Stmt::OMPReverseDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
+    case Stmt::OMPInterchangeDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
     case Stmt::OMPMaskedDirectiveClass:
@@ -1805,6 +1823,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPParallelGenericLoopDirectiveClass:
     case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     case Stmt::CapturedStmtClass:
+    case Stmt::OpenACCComputeConstructClass:
+    case Stmt::OpenACCLoopConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
@@ -1931,7 +1951,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXPseudoDestructorExprClass:
     case Stmt::SubstNonTypeTemplateParmExprClass:
     case Stmt::CXXNullPtrLiteralExprClass:
-    case Stmt::OMPArraySectionExprClass:
+    case Stmt::ArraySectionExprClass:
     case Stmt::OMPArrayShapingExprClass:
     case Stmt::OMPIteratorExprClass:
     case Stmt::SYCLUniqueStableNameExprClass:
@@ -2039,11 +2059,17 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
-    case Stmt::GCCAsmStmtClass:
+    case Stmt::GCCAsmStmtClass: {
       Bldr.takeNodes(Pred);
-      VisitGCCAsmStmt(cast<GCCAsmStmt>(S), Pred, Dst);
+      ExplodedNodeSet PreVisit;
+      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+      ExplodedNodeSet PostVisit;
+      for (ExplodedNode *const N : PreVisit)
+        VisitGCCAsmStmt(cast<GCCAsmStmt>(S), N, PostVisit);
+      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       Bldr.addNodes(Dst);
       break;
+    }
 
     case Stmt::MSAsmStmtClass:
       Bldr.takeNodes(Pred);
@@ -2107,7 +2133,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // valid region.
       const Decl *Callee = OCE->getCalleeDecl();
       if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Callee)) {
-        if (MD->isInstance()) {
+        if (MD->isImplicitObjectMemberFunction()) {
           ProgramStateRef State = Pred->getState();
           const LocationContext *LCtx = Pred->getLocationContext();
           ProgramStateRef NewState =
@@ -2404,6 +2430,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
+
+    case Stmt::EmbedExprClass:
+      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
+      break;
   }
 }
 
@@ -2502,7 +2532,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
-    if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt>(Term))
+    if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
     // Widen.
     const LocationContext *LCtx = Pred->getLocationContext();
@@ -2636,9 +2666,7 @@ static const Stmt *ResolveCondition(const Stmt *Condition,
   // The invariants are still shifting, but it is possible that the
   // last element in a CFGBlock is not a CFGStmt.  Look for the last
   // CFGStmt as the value of the condition.
-  CFGBlock::const_reverse_iterator I = B->rbegin(), E = B->rend();
-  for (; I != E; ++I) {
-    CFGElement Elem = *I;
+  for (CFGElement Elem : llvm::reverse(*B)) {
     std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>();
     if (!CS)
       continue;
@@ -2846,9 +2874,9 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
   if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
     const LabelDecl *L = LV->getLabel();
 
-    for (iterator I = builder.begin(), E = builder.end(); I != E; ++I) {
-      if (I.getLabel() == L) {
-        builder.generateNode(I, state);
+    for (iterator Succ : builder) {
+      if (Succ.getLabel() == L) {
+        builder.generateNode(Succ, state);
         return;
       }
     }
@@ -2867,8 +2895,8 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
   // This is really a catch-all.  We don't support symbolics yet.
   // FIXME: Implement dispatch for symbolic pointers.
 
-  for (iterator I = builder.begin(), E = builder.end(); I != E; ++I)
-    builder.generateNode(I, state);
+  for (iterator Succ : builder)
+    builder.generateNode(Succ, state);
 }
 
 void ExprEngine::processBeginOfFunction(NodeBuilderContext &BC,
@@ -3352,7 +3380,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
 
       // Handle C++ method calls.
       if (const auto *MD = dyn_cast<CXXMethodDecl>(Member)) {
-        if (MD->isInstance())
+        if (MD->isImplicitObjectMemberFunction())
           state = createTemporaryRegionIfNeeded(state, LCtx, BaseExpr);
 
         SVal MDVal = svalBuilder.getFunctionPointer(MD);
@@ -3801,12 +3829,9 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     BugReporter &BR = static_cast<ExprEngine &>(
       N->getState()->getStateManager().getOwningEngine()).getBugReporter();
 
-    const auto EQClasses =
-        llvm::make_range(BR.EQClasses_begin(), BR.EQClasses_end());
-
-    for (const auto &EQ : EQClasses) {
-      for (const auto &I : EQ.getReports()) {
-        const auto *PR = dyn_cast<PathSensitiveBugReport>(I.get());
+    for (const auto &Class : BR.equivalenceClasses()) {
+      for (const auto &Report : Class.getReports()) {
+        const auto *PR = dyn_cast<PathSensitiveBugReport>(Report.get());
         if (!PR)
           continue;
         const ExplodedNode *EN = PR->getErrorNode();
@@ -3883,7 +3908,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     State->printDOT(Out, N->getLocationContext(), Space);
 
     Out << "\\l}\\l";
-    return Out.str();
+    return Buf;
   }
 };
 
@@ -3904,10 +3929,9 @@ std::string ExprEngine::DumpGraph(bool trim, StringRef Filename) {
     std::vector<const ExplodedNode *> Src;
 
     // Iterate through the reports and get their nodes.
-    for (BugReporter::EQClasses_iterator
-           EI = BR.EQClasses_begin(), EE = BR.EQClasses_end(); EI != EE; ++EI) {
+    for (const auto &Class : BR.equivalenceClasses()) {
       const auto *R =
-          dyn_cast<PathSensitiveBugReport>(EI->getReports()[0].get());
+          dyn_cast<PathSensitiveBugReport>(Class.getReports()[0].get());
       if (!R)
         continue;
       const auto *N = const_cast<ExplodedNode *>(R->getErrorNode());

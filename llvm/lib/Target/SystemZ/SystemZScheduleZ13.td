@@ -92,7 +92,7 @@ let NumMicroOps = 0 in {
   def : WriteRes<VecMul,  [Z13_VecUnit]>;
   def : WriteRes<VecStr,  [Z13_VecUnit]>;
   def : WriteRes<VecXsPm, [Z13_VecUnit]>;
-  foreach Num = 2-5 in { let ResourceCycles = [Num] in {
+  foreach Num = 2-5 in { let ReleaseAtCycles = [Num] in {
     def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z13_FXaUnit]>;
     def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z13_FXbUnit]>;
     def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z13_LSUnit]>;
@@ -104,7 +104,7 @@ let NumMicroOps = 0 in {
     def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z13_VecUnit]>;
   }}
 
-  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ResourceCycles = [30]; }
+  def : WriteRes<VecFPd,  [Z13_VecFPdUnit]> { let ReleaseAtCycles = [30]; }
 
   def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
 }
@@ -506,9 +506,9 @@ def : InstRW<[WLat5LSU, WLat5LSU, FXa4, LSU, GroupAlone2],
 def : InstRW<[WLat2LSU, FXa, LSU, NormalGr], (instregex "RLL(G)?$")>;
 
 // Rotate and insert
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBH(G|H|L)$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBL(G|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?(Z)?$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select
@@ -784,9 +784,7 @@ def : InstRW<[WLat2, FXb2, GroupAlone], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BR$")>;
-def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BRCompare$")>;
-def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone],
-             (instregex "LTXBR(Compare)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "CPSDR(d|s)(d|s)$")>;
@@ -1554,6 +1552,12 @@ def : InstRW<[WLat30, MCD], (instregex "SCHM$")>;
 def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
 def : InstRW<[WLat30, MCD], (instregex "TPI$")>;
 def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
+
+//===----------------------------------------------------------------------===//
+// NOPs
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "NOP(R)?$")>;
 
 }
 

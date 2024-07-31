@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d -mattr=+xtheadfmemidx -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64XTHEADFMEMIDX
 
-define float @flrw(float* %a, i64 %b) {
+define float @flrw(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: flrw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.flrw fa5, a0, a1, 2
@@ -16,13 +16,13 @@ define float @flrw(float* %a, i64 %b) {
 ; RV64XTHEADFMEMIDX-NEXT:    th.flrw fa5, a0, a1, 2
 ; RV64XTHEADFMEMIDX-NEXT:    fadd.s fa0, fa5, fa5
 ; RV64XTHEADFMEMIDX-NEXT:    ret
-  %1 = getelementptr float, float* %a, i64 %b
-  %2 = load float, float* %1, align 4
+  %1 = getelementptr float, ptr %a, i64 %b
+  %2 = load float, ptr %1, align 4
   %3 = fadd float %2, %2
   ret float %3
 }
 
-define float @flurw(float* %a, i32 %b) {
+define float @flurw(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: flurw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.flrw fa5, a0, a1, 2
@@ -35,13 +35,13 @@ define float @flurw(float* %a, i32 %b) {
 ; RV64XTHEADFMEMIDX-NEXT:    fadd.s fa0, fa5, fa5
 ; RV64XTHEADFMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr float, float* %a, i64 %1
-  %3 = load float, float* %2, align 4
+  %2 = getelementptr float, ptr %a, i64 %1
+  %3 = load float, ptr %2, align 4
   %4 = fadd float %3, %3
   ret float %4
 }
 
-define void @fsrw(float* %a, i64 %b, float %c) {
+define void @fsrw(ptr %a, i64 %b, float %c) {
 ; RV32XTHEADMEMIDX-LABEL: fsrw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    fadd.s fa5, fa0, fa0
@@ -54,12 +54,12 @@ define void @fsrw(float* %a, i64 %b, float %c) {
 ; RV64XTHEADFMEMIDX-NEXT:    th.fsrw fa5, a0, a1, 2
 ; RV64XTHEADFMEMIDX-NEXT:    ret
   %1 = fadd float %c, %c
-  %2 = getelementptr float, float* %a, i64 %b
-  store float %1, float* %2, align 4
+  %2 = getelementptr float, ptr %a, i64 %b
+  store float %1, ptr %2, align 4
   ret void
 }
 
-define void @fsurw(float* %a, i32 %b, float %c) {
+define void @fsurw(ptr %a, i32 %b, float %c) {
 ; RV32XTHEADMEMIDX-LABEL: fsurw:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    fadd.s fa5, fa0, fa0
@@ -73,12 +73,12 @@ define void @fsurw(float* %a, i32 %b, float %c) {
 ; RV64XTHEADFMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = fadd float %c, %c
-  %3 = getelementptr float, float* %a, i64 %1
-  store float %2, float* %3, align 4
+  %3 = getelementptr float, ptr %a, i64 %1
+  store float %2, ptr %3, align 4
   ret void
 }
 
-define double @flrd(double* %a, i64 %b) {
+define double @flrd(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: flrd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.flrd fa5, a0, a1, 3
@@ -90,13 +90,13 @@ define double @flrd(double* %a, i64 %b) {
 ; RV64XTHEADFMEMIDX-NEXT:    th.flrd fa5, a0, a1, 3
 ; RV64XTHEADFMEMIDX-NEXT:    fadd.d fa0, fa5, fa5
 ; RV64XTHEADFMEMIDX-NEXT:    ret
-  %1 = getelementptr double, double* %a, i64 %b
-  %2 = load double, double* %1, align 8
+  %1 = getelementptr double, ptr %a, i64 %b
+  %2 = load double, ptr %1, align 8
   %3 = fadd double %2, %2
   ret double %3
 }
 
-define double @flurd(double* %a, i32 %b) {
+define double @flurd(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: flurd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    th.flrd fa5, a0, a1, 3
@@ -109,13 +109,13 @@ define double @flurd(double* %a, i32 %b) {
 ; RV64XTHEADFMEMIDX-NEXT:    fadd.d fa0, fa5, fa5
 ; RV64XTHEADFMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
-  %2 = getelementptr double, double* %a, i64 %1
-  %3 = load double, double* %2, align 8
+  %2 = getelementptr double, ptr %a, i64 %1
+  %3 = load double, ptr %2, align 8
   %4 = fadd double %3, %3
   ret double %4
 }
 
-define void @fsrd(double* %a, i64 %b, double %c) {
+define void @fsrd(ptr %a, i64 %b, double %c) {
 ; RV32XTHEADMEMIDX-LABEL: fsrd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    fadd.d fa5, fa0, fa0
@@ -128,12 +128,12 @@ define void @fsrd(double* %a, i64 %b, double %c) {
 ; RV64XTHEADFMEMIDX-NEXT:    th.fsrd fa5, a0, a1, 3
 ; RV64XTHEADFMEMIDX-NEXT:    ret
   %1 = fadd double %c, %c
-  %2 = getelementptr double, double* %a, i64 %b
-  store double %1, double* %2, align 8
+  %2 = getelementptr double, ptr %a, i64 %b
+  store double %1, ptr %2, align 8
   ret void
 }
 
-define void @fsurd(double* %a, i32 %b, double %c) {
+define void @fsurd(ptr %a, i32 %b, double %c) {
 ; RV32XTHEADMEMIDX-LABEL: fsurd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    fadd.d fa5, fa0, fa0
@@ -147,7 +147,7 @@ define void @fsurd(double* %a, i32 %b, double %c) {
 ; RV64XTHEADFMEMIDX-NEXT:    ret
   %1 = zext i32 %b to i64
   %2 = fadd double %c, %c
-  %3 = getelementptr double, double* %a, i64 %1
-  store double %2, double* %3, align 8
+  %3 = getelementptr double, ptr %a, i64 %1
+  store double %2, ptr %3, align 8
   ret void
 }

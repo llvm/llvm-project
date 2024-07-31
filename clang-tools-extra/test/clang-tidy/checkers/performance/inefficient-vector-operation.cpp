@@ -1,11 +1,11 @@
 // RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- \
 // RUN: -format-style=llvm \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: performance-inefficient-vector-operation.EnableProto, value: true}]}'
+// RUN:  {performance-inefficient-vector-operation.EnableProto: true}}'
 
 namespace std {
 
-typedef int size_t;
+typedef decltype(sizeof 0) size_t;
 
 template<class E> class initializer_list {
 public:
@@ -15,6 +15,8 @@ public:
   using size_type = size_t;
   using iterator = const E*;
   using const_iterator = const E*;
+  iterator p;
+  size_t sz;
   initializer_list();
   size_t size() const; // number of elements
   const E* begin() const; // first element
@@ -387,3 +389,38 @@ void foo(const StructWithFieldContainer &Src) {
     B.push_back(Number);
   }
 }
+
+namespace gh95596 {
+
+void f(std::vector<int>& t) {
+  {
+    std::vector<int> gh95596_0;
+    // CHECK-FIXES: gh95596_0.reserve(10);
+    for (unsigned i = 0; i < 10; ++i)
+      gh95596_0.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+  {
+    std::vector<int> gh95596_1;
+    // CHECK-FIXES: gh95596_1.reserve(10);
+    for (int i = 0U; i < 10; ++i)
+      gh95596_1.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+  {
+    std::vector<int> gh95596_2;
+    // CHECK-FIXES: gh95596_2.reserve(10);
+    for (unsigned i = 0U; i < 10; ++i)
+      gh95596_2.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+  {
+    std::vector<int> gh95596_3;
+    // CHECK-FIXES: gh95596_3.reserve(10U);
+    for (int i = 0; i < 10U; ++i)
+      gh95596_3.push_back(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'push_back' is called inside a loop; consider pre-allocating the container capacity before the loop
+  }
+}
+
+} // namespace gh95596

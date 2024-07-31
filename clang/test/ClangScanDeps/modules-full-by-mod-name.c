@@ -45,6 +45,7 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:         "[[PREFIX]]/direct.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -63,6 +64,7 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:         "[[PREFIX]]/root.h"
 // CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -75,6 +77,7 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:         "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "transitive"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

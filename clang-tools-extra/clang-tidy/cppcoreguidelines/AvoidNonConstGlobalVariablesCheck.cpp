@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidNonConstGlobalVariablesCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -15,25 +14,34 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-namespace {
-AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
-} // namespace
+AvoidNonConstGlobalVariablesCheck::AvoidNonConstGlobalVariablesCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowInternalLinkage(Options.get("AllowInternalLinkage", false)) {}
 
 void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
+  auto NamespaceMatcher = AllowInternalLinkage
+                              ? namespaceDecl(unless(isAnonymous()))
+                              : namespaceDecl();
+  auto GlobalContext =
+      varDecl(hasGlobalStorage(),
+              hasDeclContext(anyOf(NamespaceMatcher, translationUnitDecl())));
+
   auto GlobalVariable = varDecl(
-      hasGlobalStorage(),
+      GlobalContext,
+      AllowInternalLinkage ? varDecl(unless(isStaticStorageClass()))
+                           : varDecl(),
       unless(anyOf(
-          isLocalVarDecl(), isConstexpr(), hasType(isConstQualified()),
+          isConstexpr(), hasType(isConstQualified()),
           hasType(referenceType())))); // References can't be changed, only the
                                        // data they reference can be changed.
 
   auto GlobalReferenceToNonConst =
-      varDecl(hasGlobalStorage(), hasType(referenceType()),
+      varDecl(GlobalContext, hasType(referenceType()),
               unless(hasType(references(qualType(isConstQualified())))));
 
-  auto GlobalPointerToNonConst =
-      varDecl(hasGlobalStorage(),
-              hasType(pointerType(pointee(unless(isConstQualified())))));
+  auto GlobalPointerToNonConst = varDecl(
+      GlobalContext, hasType(pointerType(pointee(unless(isConstQualified())))));
 
   Finder->addMatcher(GlobalVariable.bind("non-const_variable"), this);
   Finder->addMatcher(GlobalReferenceToNonConst.bind("indirection_to_non-const"),
@@ -44,7 +52,6 @@ void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
 
 void AvoidNonConstGlobalVariablesCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("non-const_variable")) {
     diag(Variable->getLocation(), "variable %0 is non-const and globally "
@@ -62,6 +69,11 @@ void AvoidNonConstGlobalVariablesCheck::check(
         << VD
         << VD->getType()->isPointerType(); // FIXME: Add fix-it hint to Variable
   }
+}
+
+void AvoidNonConstGlobalVariablesCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowInternalLinkage", AllowInternalLinkage);
 }
 
 } // namespace clang::tidy::cppcoreguidelines

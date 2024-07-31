@@ -96,23 +96,23 @@ int main(int, char**)
     }
 
 #if TEST_STD_VER > 17 && defined(_LIBCPP_VERSION)
-    // This won't pass when LWG-2996 is implemented.
     {
       std::shared_ptr<A> pA(new A);
       assert(pA.use_count() == 1);
 
+#  if TEST_STD_VER >= 20
+      // LWG-2996 is only implemented in c++20 and beyond.
+      // We don't backport because it is an evolutionary change.
       {
         B b;
         std::shared_ptr<B> pB(std::move(pA), &b);
         assert(A::count == 1);
         assert(B::count == 1);
-        assert(pA.use_count() == 2);
-        assert(pB.use_count() == 2);
+        assert(pA.use_count() == 0);
+        assert(pB.use_count() == 1);
         assert(pB.get() == &b);
       }
-      assert(pA.use_count() == 1);
-      assert(A::count == 1);
-      assert(B::count == 0);
+#  endif // TEST_STD_VER > 20
     }
     assert(A::count == 0);
     assert(B::count == 0);

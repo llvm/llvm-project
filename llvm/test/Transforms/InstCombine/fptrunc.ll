@@ -190,3 +190,16 @@ define half @ItoFtoF_u25_f32_f16(i25 %i) {
   %r = fptrunc float %x to half
   ret half %r
 }
+
+; Negative test - bitcast bfloat to half is not optimized
+
+define half @fptrunc_to_bfloat_bitcast_to_half(float %src) {
+; CHECK-LABEL: @fptrunc_to_bfloat_bitcast_to_half(
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc float [[SRC:%.*]] to bfloat
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast bfloat [[TRUNC]] to half
+; CHECK-NEXT:    ret half [[CAST]]
+;
+  %trunc = fptrunc float %src to bfloat
+  %cast = bitcast bfloat %trunc to half
+  ret half %cast
+}

@@ -27,8 +27,9 @@ class LinkModuleTest : public testing::Test {
 protected:
   void SetUp() override {
     M.reset(new Module("MyModule", Ctx));
-    FunctionType *FTy = FunctionType::get(
-        Type::getInt8PtrTy(Ctx), Type::getInt32Ty(Ctx), false /*=isVarArg*/);
+    FunctionType *FTy =
+        FunctionType::get(PointerType::getUnqual(Ctx), Type::getInt32Ty(Ctx),
+                          false /*=isVarArg*/);
     F = Function::Create(FTy, Function::ExternalLinkage, "ba_func", M.get());
     F->setCallingConv(CallingConv::C);
 
@@ -37,10 +38,11 @@ protected:
     SwitchCase2BB = BasicBlock::Create(Ctx, "switch.case.2", F);
     ExitBB = BasicBlock::Create(Ctx, "exit", F);
 
-    AT = ArrayType::get(Type::getInt8PtrTy(Ctx), 3);
+    AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
 
-    GV = new GlobalVariable(*M.get(), AT, false /*=isConstant*/,
-                            GlobalValue::InternalLinkage, nullptr,"switch.bas");
+    GV =
+        new GlobalVariable(*M, AT, false /*=isConstant*/,
+                           GlobalValue::InternalLinkage, nullptr, "switch.bas");
 
     // Global Initializer
     std::vector<Constant *> Init;
@@ -51,8 +53,8 @@ protected:
     Init.push_back(SwitchCase2BA);
 
     ConstantInt *One = ConstantInt::get(Type::getInt32Ty(Ctx), 1);
-    Constant *OnePtr = ConstantExpr::getCast(Instruction::IntToPtr, One,
-                                             Type::getInt8PtrTy(Ctx));
+    Constant *OnePtr =
+        ConstantExpr::getIntToPtr(One, PointerType::getUnqual(Ctx));
     Init.push_back(OnePtr);
 
     GV->setInitializer(ConstantArray::get(AT, Init));
@@ -71,7 +73,7 @@ protected:
   BasicBlock *ExitBB;
 };
 
-static void expectNoDiags(const DiagnosticInfo &DI, void *C) {
+static void expectNoDiags(const DiagnosticInfo *DI, void *C) {
   llvm_unreachable("expectNoDiags called!");
 }
 
@@ -94,7 +96,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.CreateBr(ExitBB);
 
   Builder.SetInsertPoint(ExitBB);
-  Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
+  Builder.CreateRet(ConstantPointerNull::get(PointerType::getUnqual(Ctx)));
 
   Module *LinkedModule = new Module("MyModuleLinked", Ctx);
   Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
@@ -109,7 +111,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   //    i8* blockaddress(@ba_func, %switch.case.2),
   //    i8* inttoptr (i32 1 to i8*)]
 
-  ArrayType *AT = ArrayType::get(Type::getInt8PtrTy(Ctx), 3);
+  ArrayType *AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
   EXPECT_EQ(AT, Init->getType());
 
   Value *Elem = Init->getOperand(0);
@@ -133,7 +135,7 @@ static Module *getExternal(LLVMContext &Ctx, StringRef FuncName) {
   // Create a module with an empty externally-linked function
   Module *M = new Module("ExternalModule", Ctx);
   FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false /*=isVarArgs*/);
+      Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false /*=isVarArgs*/);
 
   Function *F =
       Function::Create(FTy, Function::ExternalLinkage, FuncName, M);
@@ -148,7 +150,7 @@ static Module *getExternal(LLVMContext &Ctx, StringRef FuncName) {
 static Module *getInternal(LLVMContext &Ctx) {
   Module *InternalM = new Module("InternalModule", Ctx);
   FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false /*=isVarArgs*/);
+      Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false /*=isVarArgs*/);
 
   Function *F =
       Function::Create(FTy, Function::InternalLinkage, "bar", InternalM);

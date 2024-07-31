@@ -14,11 +14,13 @@
 #define LLVM_IR_BASICBLOCK_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
@@ -30,12 +32,15 @@ namespace llvm {
 
 class AssemblyAnnotationWriter;
 class CallInst;
+class DataLayout;
 class Function;
 class LandingPadInst;
 class LLVMContext;
 class Module;
 class PHINode;
 class ValueSymbolTable;
+class DbgVariableRecord;
+class DbgMarker;
 
 /// LLVM Basic Block Representation
 ///
@@ -55,15 +60,100 @@ class ValueSymbolTable;
 class BasicBlock final : public Value, // Basic blocks are data objects also
                          public ilist_node_with_parent<BasicBlock, Function> {
 public:
-  using InstListType = SymbolTableList<Instruction>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+  /// Flag recording whether or not this block stores debug-info in the form
+  /// of intrinsic instructions (false) or non-instruction records (true).
+  bool IsNewDbgInfoFormat;
 
 private:
+  // Allow Function to renumber blocks.
+  friend class Function;
+  /// Per-function unique number.
+  unsigned Number = -1u;
+
   friend class BlockAddress;
   friend class SymbolTableListTraits<BasicBlock>;
 
   InstListType InstList;
   Function *Parent;
 
+public:
+  /// Attach a DbgMarker to the given instruction. Enables the storage of any
+  /// debug-info at this position in the program.
+  DbgMarker *createMarker(Instruction *I);
+  DbgMarker *createMarker(InstListType::iterator It);
+
+  /// Convert variable location debugging information stored in dbg.value
+  /// intrinsics into DbgMarkers / DbgRecords. Deletes all dbg.values in
+  /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if
+  /// the UseNewDbgInfoFormat LLVM command line option is given.
+  void convertToNewDbgValues();
+
+  /// Convert variable location debugging information stored in DbgMarkers and
+  /// DbgRecords into the dbg.value intrinsic representation. Sets
+  /// IsNewDbgInfoFormat = false.
+  void convertFromNewDbgValues();
+
+  /// Ensure the block is in "old" dbg.value format (\p NewFlag == false) or
+  /// in the new format (\p NewFlag == true), converting to the desired format
+  /// if necessary.
+  void setIsNewDbgInfoFormat(bool NewFlag);
+  void setNewDbgInfoFormatFlag(bool NewFlag);
+
+  unsigned getNumber() const {
+    assert(getParent() && "only basic blocks in functions have valid numbers");
+    return Number;
+  }
+
+  /// Record that the collection of DbgRecords in \p M "trails" after the last
+  /// instruction of this block. These are equivalent to dbg.value intrinsics
+  /// that exist at the end of a basic block with no terminator (a transient
+  /// state that occurs regularly).
+  void setTrailingDbgRecords(DbgMarker *M);
+
+  /// Fetch the collection of DbgRecords that "trail" after the last instruction
+  /// of this block, see \ref setTrailingDbgRecords. If there are none, returns
+  /// nullptr.
+  DbgMarker *getTrailingDbgRecords();
+
+  /// Delete any trailing DbgRecords at the end of this block, see
+  /// \ref setTrailingDbgRecords.
+  void deleteTrailingDbgRecords();
+
+  void dumpDbgValues() const;
+
+  /// Return the DbgMarker for the position given by \p It, so that DbgRecords
+  /// can be inserted there. This will either be nullptr if not present, a
+  /// DbgMarker, or TrailingDbgRecords if It is end().
+  DbgMarker *getMarker(InstListType::iterator It);
+
+  /// Return the DbgMarker for the position that comes after \p I. \see
+  /// BasicBlock::getMarker, this can be nullptr, a DbgMarker, or
+  /// TrailingDbgRecords if there is no next instruction.
+  DbgMarker *getNextMarker(Instruction *I);
+
+  /// Insert a DbgRecord into a block at the position given by \p I.
+  void insertDbgRecordAfter(DbgRecord *DR, Instruction *I);
+
+  /// Insert a DbgRecord into a block at the position given by \p Here.
+  void insertDbgRecordBefore(DbgRecord *DR, InstListType::iterator Here);
+
+  /// Eject any debug-info trailing at the end of a block. DbgRecords can
+  /// transiently be located "off the end" of a block if the blocks terminator
+  /// is temporarily removed. Once a terminator is re-inserted this method will
+  /// move such DbgRecords back to the right place (ahead of the terminator).
+  void flushTerminatorDbgRecords();
+
+  /// In rare circumstances instructions can be speculatively removed from
+  /// blocks, and then be re-inserted back into that position later. When this
+  /// happens in RemoveDIs debug-info mode, some special patching-up needs to
+  /// occur: inserting into the middle of a sequence of dbg.value intrinsics
+  /// does not have an equivalent with DbgRecords.
+  void reinsertInstInDbgRecords(Instruction *I,
+                                std::optional<DbgRecord::self_iterator> Pos);
+
+private:
   void setParent(Function *parent);
 
   /// Constructor.
@@ -91,11 +181,28 @@ public:
 
   // These functions and classes need access to the instruction list.
   friend void Instruction::removeFromParent();
-  friend iplist<Instruction>::iterator Instruction::eraseFromParent();
+  friend BasicBlock::iterator Instruction::eraseFromParent();
   friend BasicBlock::iterator Instruction::insertInto(BasicBlock *BB,
                                                       BasicBlock::iterator It);
-  friend class llvm::SymbolTableListTraits<llvm::Instruction>;
-  friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock>;
+  friend class llvm::SymbolTableListTraits<
+      llvm::Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
+  friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock,
+                                            ilist_iterator_bits<true>,
+                                            ilist_parent<BasicBlock>>;
+
+  // Friendly methods that need to access us for the maintenence of
+  // debug-info attachments.
+  friend void Instruction::insertBefore(BasicBlock::iterator InsertPos);
+  friend void Instruction::insertAfter(Instruction *InsertPos);
+  friend void Instruction::insertBefore(BasicBlock &BB,
+                                        InstListType::iterator InsertPos);
+  friend void Instruction::moveBeforeImpl(BasicBlock &BB,
+                                          InstListType::iterator I,
+                                          bool Preserve);
+  friend iterator_range<DbgRecord::self_iterator>
+  Instruction::cloneDebugInfoFrom(
+      const Instruction *From, std::optional<DbgRecord::self_iterator> FromHere,
+      bool InsertAtHead);
 
   /// Creates a new BasicBlock.
   ///
@@ -121,6 +228,11 @@ public:
     return const_cast<Module *>(
                             static_cast<const BasicBlock *>(this)->getModule());
   }
+
+  /// Get the data layout of the module this basic block belongs to.
+  ///
+  /// Requires the basic block to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// Returns the terminator instruction if the block is well formed or null
   /// if the block is not well formed.
@@ -171,6 +283,16 @@ public:
   Instruction* getFirstNonPHI() {
     return const_cast<Instruction *>(
                        static_cast<const BasicBlock *>(this)->getFirstNonPHI());
+  }
+
+  /// Iterator returning form of getFirstNonPHI. Installed as a placeholder for
+  /// the RemoveDIs project that will eventually remove debug intrinsics.
+  InstListType::const_iterator getFirstNonPHIIt() const;
+  InstListType::iterator getFirstNonPHIIt() {
+    BasicBlock::iterator It =
+        static_cast<const BasicBlock *>(this)->getFirstNonPHIIt().getNonConst();
+    It.setHeadBit(true);
+    return It;
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
@@ -323,8 +445,19 @@ public:
   //===--------------------------------------------------------------------===//
   /// Instruction iterator methods
   ///
-  inline iterator                begin()       { return InstList.begin(); }
-  inline const_iterator          begin() const { return InstList.begin(); }
+  inline iterator begin() {
+    iterator It = InstList.begin();
+    // Set the head-inclusive bit to indicate that this iterator includes
+    // any debug-info at the start of the block. This is a no-op unless the
+    // appropriate CMake flag is set.
+    It.setHeadBit(true);
+    return It;
+  }
+  inline const_iterator begin() const {
+    const_iterator It = InstList.begin();
+    It.setHeadBit(true);
+    return It;
+  }
   inline iterator                end  ()       { return InstList.end();   }
   inline const_iterator          end  () const { return InstList.end();   }
 
@@ -399,6 +532,24 @@ private:
   static InstListType BasicBlock::*getSublistAccess(Instruction *) {
     return &BasicBlock::InstList;
   }
+
+  /// Dedicated function for splicing debug-info: when we have an empty
+  /// splice (i.e. zero instructions), the caller may still intend any
+  /// debug-info in between the two "positions" to be spliced.
+  void spliceDebugInfoEmptyBlock(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                                 BasicBlock::iterator FromBeginIt,
+                                 BasicBlock::iterator FromEndIt);
+
+  /// Perform any debug-info specific maintenence for the given splice
+  /// activity. In the DbgRecord debug-info representation, debug-info is not
+  /// in instructions, and so it does not automatically move from one block
+  /// to another.
+  void spliceDebugInfo(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                       BasicBlock::iterator FromBeginIt,
+                       BasicBlock::iterator FromEndIt);
+  void spliceDebugInfoImpl(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                           BasicBlock::iterator FromBeginIt,
+                           BasicBlock::iterator FromEndIt);
 
 public:
   /// Returns a pointer to the symbol table if one exists.
@@ -641,6 +792,32 @@ BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 /// implemented in the .cpp file to avoid circular header deps.
 inline void BasicBlock::validateInstrOrdering() const {}
 #endif
+
+// Specialize DenseMapInfo for iterators, so that ththey can be installed into
+// maps and sets. The iterator is made up of its node pointer, and the
+// debug-info "head" bit.
+template <> struct DenseMapInfo<BasicBlock::iterator> {
+  static inline BasicBlock::iterator getEmptyKey() {
+    return BasicBlock::iterator(nullptr);
+  }
+
+  static inline BasicBlock::iterator getTombstoneKey() {
+    BasicBlock::iterator It(nullptr);
+    It.setHeadBit(true);
+    return It;
+  }
+
+  static unsigned getHashValue(const BasicBlock::iterator &It) {
+    return DenseMapInfo<void *>::getHashValue(
+               reinterpret_cast<void *>(It.getNodePtr())) ^
+           (unsigned)It.getHeadBit();
+  }
+
+  static bool isEqual(const BasicBlock::iterator &LHS,
+                      const BasicBlock::iterator &RHS) {
+    return LHS == RHS && LHS.getHeadBit() == RHS.getHeadBit();
+  }
+};
 
 } // end namespace llvm
 

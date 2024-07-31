@@ -197,8 +197,8 @@ TEST(ToolInvocation, TestMapVirtualFile) {
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {
   // FIXME: Currently, this only tests that we don't exit with an error if a
-  // mapped module.map is found on the include path. In the future, expand this
-  // test to run a full modules enabled compilation, so we make sure we can
+  // mapped module.modulemap is found on the include path. In the future, expand
+  // this test to run a full modules enabled compilation, so we make sure we can
   // rerun modules compilations with a virtual file system.
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
       new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
@@ -218,9 +218,9 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
       "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("#include <abc>\n"));
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
-  // Add a module.map file in the include directory of our header, so we trigger
-  // the module.map header search logic.
-  InMemoryFileSystem->addFile("def/module.map", 0,
+  // Add a module.modulemap file in the include directory of our header, so we
+  // trigger the module.modulemap header search logic.
+  InMemoryFileSystem->addFile("def/module.modulemap", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
 }
@@ -449,6 +449,13 @@ TEST_F(CommandLineExtractorTest, AcceptSaveTemps) {
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 
+TEST_F(CommandLineExtractorTest, AcceptPreprocessedInputFile) {
+  addFile("test.i", "int main() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0", "-c",
+                        "test.i"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
 TEST_F(CommandLineExtractorTest, RejectMultipleArchitectures) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0",
@@ -579,6 +586,11 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
   EXPECT_FALSE(runToolOnCodeWithArgs(
       std::make_unique<SkipBodyAction>(),
       "template<typename T> int skipMeNot() { an_error_here }", Args2));
+
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<SkipBodyAction>(),
+      "__inline __attribute__((__gnu_inline__)) void skipMe() {}",
+      {"--cuda-host-only", "-nocudainc", "-xcuda"}));
 }
 
 TEST(runToolOnCodeWithArgs, TestNoDepFile) {

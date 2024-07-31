@@ -555,6 +555,14 @@ size_t ObjectFileELF::GetModuleSpecifications(
     if (header.Parse(data, &header_offset)) {
       if (data_sp) {
         ModuleSpec spec(file);
+        // In Android API level 23 and above, bionic dynamic linker is able to
+        // load .so file directly from zip file. In that case, .so file is
+        // page aligned and uncompressed, and this module spec should retain the
+        // .so file offset and file size to pass through the information from
+        // lldb-server to LLDB. For normal file, file_offset should be 0,
+        // length should be the size of the file.
+        spec.SetObjectOffset(file_offset);
+        spec.SetObjectSize(length);
 
         const uint32_t sub_type = subTypeFromElfHeader(header);
         spec.GetArchitecture().SetArchitecture(
@@ -586,8 +594,12 @@ size_t ObjectFileELF::GetModuleSpecifications(
                       __FUNCTION__, file.GetPath().c_str());
           }
 
+          // When ELF file does not contain GNU build ID, the later code will
+          // calculate CRC32 with this data_sp file_offset and length. It is
+          // important for Android zip .so file, which is a slice of a file,
+          // to not access the outside of the file slice range.
           if (data_sp->GetByteSize() < length)
-            data_sp = MapFileData(file, -1, file_offset);
+            data_sp = MapFileData(file, length, file_offset);
           if (data_sp)
             data.SetData(data_sp);
           // In case there is header extension in the section #0, the header we
@@ -705,6 +717,20 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
         // Iterate through the object file sections to find all of the sections
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
+
+        // PT_TLS segments can have the same p_vaddr and p_paddr as other
+        // PT_LOAD segments so we shouldn't load them. If we do load them, then
+        // the SectionLoadList will incorrectly fill in the instance variable
+        // SectionLoadList::m_addr_to_sect with the same address as a PT_LOAD
+        // segment and we won't be able to resolve addresses in the PT_LOAD
+        // segment whose p_vaddr entry matches that of the PT_TLS. Any variables
+        // that appear in the PT_TLS segments get resolved by the DWARF
+        // expressions. If this ever changes we will need to fix all object
+        // file plug-ins, but until then, we don't want PT_TLS segments to
+        // remove the entry from SectionLoadList::m_addr_to_sect when we call
+        // SetSectionLoadAddress() below.
+        if (section_sp->IsThreadSpecific())
+          continue;
         if (section_sp->Test(SHF_ALLOC) ||
             section_sp->GetType() == eSectionTypeContainer) {
           lldb::addr_t load_addr = section_sp->GetFileAddress();
@@ -923,6 +949,16 @@ lldb_private::Address ObjectFileELF::GetEntryPointAddress() {
 }
 
 Address ObjectFileELF::GetBaseAddress() {
+  if (GetType() == ObjectFile::eTypeObjectFile) {
+    for (SectionHeaderCollIter I = std::next(m_section_headers.begin());
+         I != m_section_headers.end(); ++I) {
+      const ELFSectionHeaderInfo &header = *I;
+      if (header.sh_flags & SHF_ALLOC)
+        return Address(GetSectionList()->FindSectionByID(SectionIndex(I)), 0);
+    }
+    return LLDB_INVALID_ADDRESS;
+  }
+
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &H = EnumPHdr.value();
     if (H.p_type != PT_LOAD)
@@ -1660,12 +1696,13 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   return llvm::StringSwitch<SectionType>(Name)
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
-      .Cases(".bss", ".tbss", eSectionTypeZeroFill)
+      .Case(".ctf", eSectionTypeDebug)
       .Cases(".data", ".tdata", eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
       .Case(".text", eSectionTypeCode)
+      .Case(".swift_ast", eSectionTypeSwiftModules)
       .Default(eSectionTypeOther);
 }
 
@@ -1674,6 +1711,10 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_PROGBITS:
     if (H.sh_flags & SHF_EXECINSTR)
       return eSectionTypeCode;
+    break;
+  case SHT_NOBITS:
+    if (H.sh_flags & SHF_ALLOC)
+      return eSectionTypeZeroFill;
     break;
   case SHT_SYMTAB:
     return eSectionTypeELFSymbolTable;
@@ -1750,7 +1791,12 @@ class VMAddressProvider {
   VMRange GetVMRange(const ELFSectionHeader &H) {
     addr_t Address = H.sh_addr;
     addr_t Size = H.sh_flags & SHF_ALLOC ? H.sh_size : 0;
-    if (ObjectType == ObjectFile::Type::eTypeObjectFile && Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
+
+    // When this is a debug file for relocatable file, the address is all zero
+    // and thus needs to use accumulate method
+    if ((ObjectType == ObjectFile::Type::eTypeObjectFile ||
+         (ObjectType == ObjectFile::Type::eTypeDebugInfo && H.sh_addr == 0)) &&
+        Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
       NextVMAddress =
           llvm::alignTo(NextVMAddress, std::max<addr_t>(H.sh_addralign, 1));
       Address = NextVMAddress;
@@ -1823,6 +1869,39 @@ public:
                     std::move(Sect));
   }
 };
+}
+
+// We have to do this because ELF doesn't have section IDs, and also
+// doesn't require section names to be unique.  (We use the section index
+// for section IDs, but that isn't guaranteed to be the same in separate
+// debug images.)
+static SectionSP FindMatchingSection(const SectionList &section_list,
+                                     SectionSP section) {
+  SectionSP sect_sp;
+
+  addr_t vm_addr = section->GetFileAddress();
+  ConstString name = section->GetName();
+  offset_t byte_size = section->GetByteSize();
+  bool thread_specific = section->IsThreadSpecific();
+  uint32_t permissions = section->GetPermissions();
+  uint32_t alignment = section->GetLog2Align();
+
+  for (auto sect : section_list) {
+    if (sect->GetName() == name &&
+        sect->IsThreadSpecific() == thread_specific &&
+        sect->GetPermissions() == permissions &&
+        sect->GetByteSize() == byte_size && sect->GetFileAddress() == vm_addr &&
+        sect->GetLog2Align() == alignment) {
+      sect_sp = sect;
+      break;
+    } else {
+      sect_sp = FindMatchingSection(sect->GetChildren(), section);
+      if (sect_sp)
+        break;
+    }
+  }
+
+  return sect_sp;
 }
 
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
@@ -1998,13 +2077,17 @@ static char FindArmAarch64MappingSymbol(const char *symbol_name) {
 #define IS_MICROMIPS(ST_OTHER) (((ST_OTHER)&STO_MIPS_ISA) == STO_MICROMIPS)
 
 // private
-unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
-                                     SectionList *section_list,
-                                     const size_t num_symbols,
-                                     const DataExtractor &symtab_data,
-                                     const DataExtractor &strtab_data) {
+std::pair<unsigned, ObjectFileELF::FileAddressToAddressClassMap>
+ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
+                            SectionList *section_list, const size_t num_symbols,
+                            const DataExtractor &symtab_data,
+                            const DataExtractor &strtab_data) {
   ELFSymbol symbol;
   lldb::offset_t offset = 0;
+  // The changes these symbols would make to the class map. We will also update
+  // m_address_class_map but need to tell the caller what changed because the
+  // caller may be another object file.
+  FileAddressToAddressClassMap address_class_map;
 
   static ConstString text_section_name(".text");
   static ConstString init_section_name(".init");
@@ -2038,10 +2121,12 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   SectionList *module_section_list =
       module_sp ? module_sp->GetSectionList() : nullptr;
 
-  // Local cache to avoid doing a FindSectionByName for each symbol. The "const
-  // char*" key must came from a ConstString object so they can be compared by
-  // pointer
-  std::unordered_map<const char *, lldb::SectionSP> section_name_to_section;
+  // We might have debug information in a separate object, in which case
+  // we need to map the sections from that object to the sections in the
+  // main object during symbol lookup.  If we had to compare the sections
+  // for every single symbol, that would be expensive, so this map is
+  // used to accelerate the process.
+  std::unordered_map<lldb::SectionSP, lldb::SectionSP> section_map;
 
   unsigned i;
   for (i = 0; i < num_symbols; ++i) {
@@ -2149,18 +2234,18 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             switch (mapping_symbol) {
             case 'a':
               // $a[.<any>]* - marks an ARM instruction sequence
-              m_address_class_map[symbol.st_value] = AddressClass::eCode;
+              address_class_map[symbol.st_value] = AddressClass::eCode;
               break;
             case 'b':
             case 't':
               // $b[.<any>]* - marks a THUMB BL instruction sequence
               // $t[.<any>]* - marks a THUMB instruction sequence
-              m_address_class_map[symbol.st_value] =
+              address_class_map[symbol.st_value] =
                   AddressClass::eCodeAlternateISA;
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
-              m_address_class_map[symbol.st_value] = AddressClass::eData;
+              address_class_map[symbol.st_value] = AddressClass::eData;
               break;
             }
           }
@@ -2174,11 +2259,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             switch (mapping_symbol) {
             case 'x':
               // $x[.<any>]* - marks an A64 instruction sequence
-              m_address_class_map[symbol.st_value] = AddressClass::eCode;
+              address_class_map[symbol.st_value] = AddressClass::eCode;
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
-              m_address_class_map[symbol.st_value] = AddressClass::eData;
+              address_class_map[symbol.st_value] = AddressClass::eData;
               break;
             }
           }
@@ -2196,11 +2281,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             // conjunction with symbol.st_value to produce the final
             // symbol_value that we store in the symtab.
             symbol_value_offset = -1;
-            m_address_class_map[symbol.st_value ^ 1] =
+            address_class_map[symbol.st_value ^ 1] =
                 AddressClass::eCodeAlternateISA;
           } else {
             // This address is ARM
-            m_address_class_map[symbol.st_value] = AddressClass::eCode;
+            address_class_map[symbol.st_value] = AddressClass::eCode;
           }
         }
       }
@@ -2221,17 +2306,17 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       */
       if (arch.IsMIPS()) {
         if (IS_MICROMIPS(symbol.st_other))
-          m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
+          address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
         else if ((symbol.st_value & 1) && (symbol_type == eSymbolTypeCode)) {
           symbol.st_value = symbol.st_value & (~1ull);
-          m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
+          address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
         } else {
           if (symbol_type == eSymbolTypeCode)
-            m_address_class_map[symbol.st_value] = AddressClass::eCode;
+            address_class_map[symbol.st_value] = AddressClass::eCode;
           else if (symbol_type == eSymbolTypeData)
-            m_address_class_map[symbol.st_value] = AddressClass::eData;
+            address_class_map[symbol.st_value] = AddressClass::eData;
           else
-            m_address_class_map[symbol.st_value] = AddressClass::eUnknown;
+            address_class_map[symbol.st_value] = AddressClass::eUnknown;
         }
       }
     }
@@ -2246,14 +2331,14 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_section_sp && module_section_list &&
         module_section_list != section_list) {
-      ConstString sect_name = symbol_section_sp->GetName();
-      auto section_it = section_name_to_section.find(sect_name.GetCString());
-      if (section_it == section_name_to_section.end())
-        section_it =
-            section_name_to_section
-                .emplace(sect_name.GetCString(),
-                         module_section_list->FindSectionByName(sect_name))
-                .first;
+      auto section_it = section_map.find(symbol_section_sp);
+      if (section_it == section_map.end()) {
+        section_it = section_map
+                         .emplace(symbol_section_sp,
+                                  FindMatchingSection(*module_section_list,
+                                                      symbol_section_sp))
+                         .first;
+      }
       if (section_it->second)
         symbol_section_sp = section_it->second;
     }
@@ -2292,13 +2377,30 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     bool symbol_size_valid =
         symbol.st_size != 0 || symbol.getType() != STT_FUNC;
 
+    bool is_trampoline = false;
+    if (arch.IsValid() && (arch.GetMachine() == llvm::Triple::aarch64)) {
+      // On AArch64, trampolines are registered as code.
+      // If we detect a trampoline (which starts with __AArch64ADRPThunk_ or
+      // __AArch64AbsLongThunk_) we register the symbol as a trampoline. This
+      // way we will be able to detect the trampoline when we step in a function
+      // and step through the trampoline.
+      if (symbol_type == eSymbolTypeCode) {
+        llvm::StringRef trampoline_name = mangled.GetName().GetStringRef();
+        if (trampoline_name.starts_with("__AArch64ADRPThunk_") ||
+            trampoline_name.starts_with("__AArch64AbsLongThunk_")) {
+          symbol_type = eSymbolTypeTrampoline;
+          is_trampoline = true;
+        }
+      }
+    }
+
     Symbol dc_symbol(
         i + start_id, // ID is the original symbol table index.
         mangled,
         symbol_type,                    // Type of this symbol
         is_global,                      // Is this globally visible?
         false,                          // Is this symbol debug info?
-        false,                          // Is this symbol a trampoline?
+        is_trampoline,                  // Is this symbol a trampoline?
         false,                          // Is this symbol artificial?
         AddressRange(symbol_section_sp, // Section in which this symbol is
                                         // defined or null.
@@ -2311,24 +2413,33 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       dc_symbol.SetIsWeak(true);
     symtab->AddSymbol(dc_symbol);
   }
-  return i;
+
+  m_address_class_map.merge(address_class_map);
+  return {i, address_class_map};
 }
 
-unsigned ObjectFileELF::ParseSymbolTable(Symtab *symbol_table,
-                                         user_id_t start_id,
-                                         lldb_private::Section *symtab) {
+std::pair<unsigned, ObjectFileELF::FileAddressToAddressClassMap>
+ObjectFileELF::ParseSymbolTable(Symtab *symbol_table, user_id_t start_id,
+                                lldb_private::Section *symtab) {
   if (symtab->GetObjectFile() != this) {
     // If the symbol table section is owned by a different object file, have it
     // do the parsing.
     ObjectFileELF *obj_file_elf =
         static_cast<ObjectFileELF *>(symtab->GetObjectFile());
-    return obj_file_elf->ParseSymbolTable(symbol_table, start_id, symtab);
+    auto [num_symbols, address_class_map] =
+        obj_file_elf->ParseSymbolTable(symbol_table, start_id, symtab);
+
+    // The other object file returned the changes it made to its address
+    // class map, make the same changes to ours.
+    m_address_class_map.merge(address_class_map);
+
+    return {num_symbols, address_class_map};
   }
 
   // Get section list for this object file.
   SectionList *section_list = m_sections_up.get();
   if (!section_list)
-    return 0;
+    return {};
 
   user_id_t symtab_id = symtab->GetID();
   const ELFSectionHeaderInfo *symtab_hdr = GetSectionHeaderByIndex(symtab_id);
@@ -2354,7 +2465,7 @@ unsigned ObjectFileELF::ParseSymbolTable(Symtab *symbol_table,
     }
   }
 
-  return 0;
+  return {0, {}};
 }
 
 size_t ObjectFileELF::ParseDynamicSymbols() {
@@ -2868,9 +2979,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   if (!module_sp)
     return;
 
-  Progress progress(
-      llvm::formatv("Parsing symbol table for {0}",
-                    m_file.GetFilename().AsCString("<Unknown>")));
+  Progress progress("Parsing symbol table",
+                    m_file.GetFilename().AsCString("<Unknown>"));
   ElapsedTime elapsed(module_sp->GetSymtabParseTime());
 
   // We always want to use the main object file so we (hopefully) only have one
@@ -2892,8 +3002,12 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // while the reverse is not necessarily true.
   Section *symtab =
       section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
-  if (symtab)
-    symbol_id += ParseSymbolTable(&lldb_symtab, symbol_id, symtab);
+  if (symtab) {
+    auto [num_symbols, address_class_map] =
+        ParseSymbolTable(&lldb_symtab, symbol_id, symtab);
+    m_address_class_map.merge(address_class_map);
+    symbol_id += num_symbols;
+  }
 
   // The symtab section is non-allocable and can be stripped, while the
   // .dynsym section which should always be always be there. To support the
@@ -2906,8 +3020,12 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
     Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
-    if (dynsym)
-      symbol_id += ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
+    if (dynsym) {
+      auto [num_symbols, address_class_map] =
+          ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
+      symbol_id += num_symbols;
+      m_address_class_map.merge(address_class_map);
+    }
   }
 
   // DT_JMPREL
@@ -3440,10 +3558,28 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
 
   case llvm::ELF::ET_EXEC:
     // 2 - Executable file
-    // TODO: is there any way to detect that an executable is a kernel
-    // related executable by inspecting the program headers, section headers,
-    // symbols, or any other flag bits???
-    return eStrataUser;
+    {
+      SectionList *section_list = GetSectionList();
+      if (section_list) {
+        static ConstString loader_section_name(".interp");
+        SectionSP loader_section =
+            section_list->FindSectionByName(loader_section_name);
+        if (loader_section) {
+          char buffer[256];
+          size_t read_size =
+              ReadSectionData(loader_section.get(), 0, buffer, sizeof(buffer));
+
+          // We compare the content of .interp section
+          // It will contains \0 when counting read_size, so the size needs to
+          // decrease by one
+          llvm::StringRef loader_name(buffer, read_size - 1);
+          llvm::StringRef freebsd_kernel_loader_name("/red/herring");
+          if (loader_name == freebsd_kernel_loader_name)
+            return eStrataKernel;
+        }
+      }
+      return eStrataUser;
+    }
 
   case llvm::ELF::ET_DYN:
     // 3 - Shared object file

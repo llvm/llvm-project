@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX11 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX11 %s
 
 # GFX11-LABEL: name: image_sample_l_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_nsa_gfx11 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)

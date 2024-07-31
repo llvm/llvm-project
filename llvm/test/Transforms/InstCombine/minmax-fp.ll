@@ -117,16 +117,12 @@ define float @fmin_fmin_zero_mismatch(float %x) {
   ret float %min2
 }
 
-; TODO: We do not recognize these as max ops because of the mismatched zeros.
 ; max(max(x, -0.0), -0.0) --> max(x, -0.0)
-
 define float @fmax_fmax_zero_mismatch(float %x) {
 ; CHECK-LABEL: @fmax_fmax_zero_mismatch(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], float [[X]], float -0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[MAX1]], 0.000000e+00
-; CHECK-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], float -0.000000e+00, float [[MAX1]]
-; CHECK-NEXT:    ret float [[MAX2]]
+; CHECK-NEXT:    ret float [[MAX1]]
 ;
   %cmp1 = fcmp ogt float %x, 0.0
   %max1 = select i1 %cmp1, float %x, float -0.0
@@ -261,7 +257,7 @@ define double @t16(i32 %x) {
 define double @t17(i32 %x) {
 ; CHECK-LABEL: @t17(
 ; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 2)
-; CHECK-NEXT:    [[SEL:%.*]] = sitofp i32 [[SEL1]] to double
+; CHECK-NEXT:    [[SEL:%.*]] = uitofp nneg i32 [[SEL1]] to double
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = icmp sgt i32 %x, 2
@@ -452,4 +448,17 @@ define float @minnum_no_nnan(float %a, float %b) {
   %cond = fcmp ole float %a, %b
   %f = select nsz i1 %cond, float %a, float %b
   ret float %f
+}
+
+define float @pr64937_preserve_min_idiom(float %a) {
+; CHECK-LABEL: @pr64937_preserve_min_idiom(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[A:%.*]], 3.276700e+04
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[CMP]], float [[A]], float 3.276700e+04
+; CHECK-NEXT:    [[RES:%.*]] = fmul nnan float [[SEL]], 6.553600e+04
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp nnan olt float %a, 3.276700e+04
+  %sel = select nnan i1 %cmp, float %a, float 3.276700e+04
+  %res = fmul nnan float %sel, 6.553600e+04
+  ret float %res
 }

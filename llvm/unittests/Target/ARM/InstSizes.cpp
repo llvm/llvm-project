@@ -3,6 +3,7 @@
 #include "ARMTargetMachine.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -83,7 +84,7 @@ TEST(InstSizes, PseudoInst) {
   TargetOptions Options;
   auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOpt::Default)));
+                             std::nullopt, CodeGenOptLevel::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);

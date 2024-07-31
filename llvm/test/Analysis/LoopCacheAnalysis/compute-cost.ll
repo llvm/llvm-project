@@ -1,5 +1,5 @@
-; RUN: opt < %s  -opaque-pointers -cache-line-size=32 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=SMALLER-CACHELINE %s
-; RUN: opt < %s  -opaque-pointers -cache-line-size=256 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=LARGER-CACHELINE %s
+; RUN: opt < %s  -cache-line-size=32 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=SMALLER-CACHELINE %s
+; RUN: opt < %s  -cache-line-size=256 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=LARGER-CACHELINE %s
 
 ;; This test is similar to test/Analysis/LoopCacheAnalysis/PowerPC/compute-cost.ll,
 ;; with differences that it tests the scenarios where an option for cache line size is
@@ -8,11 +8,14 @@
 ; Check IndexedReference::computeRefCost can handle type differences between
 ; Stride and TripCount
 
+; Round costs up to the nearest whole number i.e. in 'for.cond5' cost is calculated 12.5 and
+; it makes more sense to say 13 cache lines are used rather than 12 cache lines.
+
 ; SMALLER-CACHELINE: Loop 'for.cond' has cost = 256
 ; LARGER-CACHELINE: Loop 'for.cond' has cost = 32
-%struct._Handleitem = type { %struct._Handleitem* }
+%struct._Handleitem = type { ptr }
 
-define void @handle_to_ptr(%struct._Handleitem** %blocks) {
+define void @handle_to_ptr(ptr %blocks) {
 ; Preheader:
 entry:
   br label %for.cond
@@ -25,8 +28,8 @@ for.cond:                                         ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = zext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds %struct._Handleitem*, %struct._Handleitem** %blocks, i64 %idxprom
-  store %struct._Handleitem* null, %struct._Handleitem** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %blocks, i64 %idxprom
+  store ptr null, ptr %arrayidx, align 8
   %inc = add nuw nsw i32 %i.0, 1
   br label %for.cond
 
@@ -40,10 +43,10 @@ for.end:                                          ; preds = %for.cond
 
 ; SMALLER-CACHELINE: Loop 'for.cond' has cost = 100000000
 ; SMALLER-CACHELINE: Loop 'for.cond1' has cost = 1000000
-; SMALLER-CACHELINE: Loop 'for.cond5' has cost = 120000
+; SMALLER-CACHELINE: Loop 'for.cond5' has cost = 130000
 ; LARGER-CACHELINE: Loop 'for.cond' has cost = 100000000
 ; LARGER-CACHELINE: Loop 'for.cond1' has cost = 1000000
-; LARGER-CACHELINE: Loop 'for.cond5' has cost = 10000
+; LARGER-CACHELINE: Loop 'for.cond5' has cost = 20000
 @data = external dso_local global [2 x [4 x [18 x i32]]], align 1
 
 define dso_local void @handle_to_ptr_2(i1 %b0, i1 %b1, i1 %b2) {
@@ -90,7 +93,7 @@ for.end19:
 
 ; SMALLER-CACHELINE: Loop 'for.neg.cond' has cost = 256
 ; LARGER-CACHELINE: Loop 'for.neg.cond' has cost = 32
-define void @handle_to_ptr_neg_stride(%struct._Handleitem** %blocks) {
+define void @handle_to_ptr_neg_stride(ptr %blocks) {
 ; Preheader:
 entry:
   br label %for.neg.cond
@@ -103,8 +106,8 @@ for.neg.cond:                                         ; preds = %for.neg.body, %
 
 for.neg.body:                                         ; preds = %for.neg.cond
   %idxprom = zext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds %struct._Handleitem*, %struct._Handleitem** %blocks, i64 %idxprom
-  store %struct._Handleitem* null, %struct._Handleitem** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %blocks, i64 %idxprom
+  store ptr null, ptr %arrayidx, align 8
   %dec = add nsw i32 %i.0, -1
   br label %for.neg.cond
 
@@ -122,9 +125,9 @@ for.neg.end:                                          ; preds = %for.neg.cond
 ; access functions. When this is fixed this testcase should have a cost
 ; approximately 2x higher.
 
-; SMALLER-CACHELINE: Loop 'for.cond2' has cost = 10240
-; LARGER-CACHELINE: Loop 'for.cond2' has cost = 1280
-define void @Test2(double* %B) {
+; SMALLER-CACHELINE: Loop 'for.cond2' has cost = 10241
+; LARGER-CACHELINE: Loop 'for.cond2' has cost = 1281
+define void @Test2(ptr %B) {
 entry:
   br label %for.cond2
 
@@ -136,11 +139,11 @@ for.cond2:                                         ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.cond
   %sub = sub nsw i32 40960, %i.0
   %idxprom = sext i32 %sub to i64
-  %arrayidx = getelementptr inbounds double, double* %B, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %B, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %idxprom1 = sext i32 %i.0 to i64
-  %arrayidx2 = getelementptr inbounds double, double* %B, i64 %idxprom1
-  store double %0, double* %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %B, i64 %idxprom1
+  store double %0, ptr %arrayidx2, align 8
   %dec = add nsw i32 %i.0, -1
   br label %for.cond2
 
@@ -153,9 +156,9 @@ for.end:                                          ; preds = %for.cond
 ;   for (i = 40960; i > 0; i--)
 ;     C[i] = C[i];
 
-; SMALLER-CACHELINE: Loop 'for.cond3' has cost = 10240
-; LARGER-CACHELINE: Loop 'for.cond3' has cost = 1280
-define void @Test3(double** %C) {
+; SMALLER-CACHELINE: Loop 'for.cond3' has cost = 10241
+; LARGER-CACHELINE: Loop 'for.cond3' has cost = 1281
+define void @Test3(ptr %C) {
 entry:
   br label %for.cond3
 
@@ -166,11 +169,11 @@ for.cond3:                                         ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds double*, double** %C, i64 %idxprom
-  %0 = load double*, double** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %C, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom1 = sext i32 %i.0 to i64
-  %arrayidx2 = getelementptr inbounds double*, double** %C, i64 %idxprom1
-  store double* %0, double** %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds ptr, ptr %C, i64 %idxprom1
+  store ptr %0, ptr %arrayidx2, align 8
   %dec = add nsw i32 %i.0, -1
   br label %for.cond3
 
@@ -183,9 +186,9 @@ for.end:                                          ; preds = %for.cond
 ;  for (i = 0; i < 40960; i++)
 ;     D[i] = D[i];
 
-; SMALLER-CACHELINE: Loop 'for.cond4' has cost = 10240
-; LARGER-CACHELINE: Loop 'for.cond4' has cost = 1280
-define void @Test4(double** %D) {
+; SMALLER-CACHELINE: Loop 'for.cond4' has cost = 10241
+; LARGER-CACHELINE: Loop 'for.cond4' has cost = 1281
+define void @Test4(ptr %D) {
 entry:
   br label %for.cond4
 
@@ -196,11 +199,11 @@ for.cond4:                                         ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds double*, double** %D, i64 %idxprom
-  %0 = load double*, double** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %D, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom1 = sext i32 %i.0 to i64
-  %arrayidx2 = getelementptr inbounds double*, double** %D, i64 %idxprom1
-  store double* %0, double** %arrayidx2, align 8
+  %arrayidx2 = getelementptr inbounds ptr, ptr %D, i64 %idxprom1
+  store ptr %0, ptr %arrayidx2, align 8
   %inc = add nsw i32 %i.0, 1
   br label %for.cond4
 

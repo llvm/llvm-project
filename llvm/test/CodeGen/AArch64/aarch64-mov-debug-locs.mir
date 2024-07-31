@@ -4,7 +4,7 @@
 #
 # This test is for the problem from https://bugs.llvm.org/show_bug.cgi?id=38714.
 # 
-# Specifically, Simple Register Coalescing creates following conversion :
+# Specifically, Register Coalescer creates following conversion :
 #
 # undef %0.sub_32:gpr64 = ORRWrs $wzr, %3:gpr32common, 0, debug-location !24;
 #
@@ -42,10 +42,10 @@
   @.str = private unnamed_addr constant [17 x i8] c"Argument %d: %s\0A\00", align 1
   
   ; Function Attrs: nounwind
-  define dso_local i32 @main(i32 %argc, i8** nocapture readonly %argv) local_unnamed_addr #0 !dbg !7 {
+  define dso_local i32 @main(i32 %argc, ptr nocapture readonly %argv) local_unnamed_addr #0 !dbg !7 {
   entry:
     call void @llvm.dbg.value(metadata i32 %argc, metadata !15, metadata !DIExpression()), !dbg !19
-    call void @llvm.dbg.value(metadata i8** %argv, metadata !16, metadata !DIExpression()), !dbg !19
+    call void @llvm.dbg.value(metadata ptr %argv, metadata !16, metadata !DIExpression()), !dbg !19
     call void @llvm.dbg.value(metadata i32 1, metadata !17, metadata !DIExpression()), !dbg !20
     %cmp5 = icmp sgt i32 %argc, 1, !dbg !21
     br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup, !dbg !23
@@ -60,10 +60,10 @@
   for.body:                                         ; preds = %for.body, %for.body.preheader
     %indvars.iv = phi i64 [ 1, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
     call void @llvm.dbg.value(metadata i64 %indvars.iv, metadata !17, metadata !DIExpression()), !dbg !20
-    %scevgep = getelementptr i8*, i8** %argv, i64 %indvars.iv, !dbg !25
-    %0 = load i8*, i8** %scevgep, align 8, !dbg !25, !tbaa !28
+    %scevgep = getelementptr ptr, ptr %argv, i64 %indvars.iv, !dbg !25
+    %0 = load ptr, ptr %scevgep, align 8, !dbg !25, !tbaa !28
     %tmp = trunc i64 %indvars.iv to i32
-    %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @.str, i64 0, i64 0), i32 %tmp, i8* %0), !dbg !32
+    %call = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %tmp, ptr %0), !dbg !32
     %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !33
     call void @llvm.dbg.value(metadata i32 undef, metadata !17, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !20
     %exitcond = icmp eq i64 %wide.trip.count, %indvars.iv.next, !dbg !21
@@ -71,13 +71,13 @@
   }
   
   ; Function Attrs: nounwind
-  declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr #1
+  declare dso_local i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr #1
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #2
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
 
   attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }

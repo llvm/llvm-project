@@ -96,7 +96,7 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   if (FirstStmt == SecondStmt)
     return true;
 
-  if (FirstStmt->getStmtClass() != FirstStmt->getStmtClass())
+  if (FirstStmt->getStmtClass() != SecondStmt->getStmtClass())
     return false;
 
   if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {
@@ -111,6 +111,30 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   FirstStmt->Profile(DataFirst, Context, Canonical);
   SecondStmt->Profile(DataSecond, Context, Canonical);
   return DataFirst == DataSecond;
+}
+
+const IndirectFieldDecl *
+findOutermostIndirectFieldDeclForField(const FieldDecl *FD) {
+  const RecordDecl *Record = FD->getParent();
+  assert(Record->isAnonymousStructOrUnion() &&
+         "FD must be a field in an anonymous record");
+
+  const DeclContext *Context = Record;
+  while (isa<RecordDecl>(Context) &&
+         cast<RecordDecl>(Context)->isAnonymousStructOrUnion()) {
+    Context = Context->getParent();
+  }
+
+  // Search for the target IndirectFieldDecl within the located context.
+  for (const auto *D : Context->decls()) {
+    const auto *IFD = dyn_cast<IndirectFieldDecl>(D);
+    if (!IFD)
+      continue;
+    if (IFD->getAnonField() == FD)
+      return IFD;
+  }
+
+  return nullptr;
 }
 
 } // namespace clang::tidy::utils

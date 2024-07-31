@@ -132,7 +132,7 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   [[CALLEE_CTXT:%.*]] = tail call ptr @llvm.coro.async.context.alloc(ptr %task, ptr nonnull @my_other_async_function_fp)
 ; CHECK:   [[CALLEE_CTXT_SPILL:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 160
 ; CHECK:   store ptr [[CALLEE_CTXT]], ptr [[CALLEE_CTXT_SPILL]]
-; CHECK:   [[TYPED_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds %async.ctxt, ptr [[CALLEE_CTXT]], i64 0, i32 1
+; CHECK:   [[TYPED_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CALLEE_CTXT]], i64 8
 ; CHECK:   store ptr @my_async_functionTQ0_, ptr [[TYPED_RETURN_TO_CALLER_ADDR]]
 ; CHECK:   store ptr %async.ctxt, ptr [[CALLEE_CTXT]]
 ; Make sure the spill is underaligned to the max context alignment (16).
@@ -211,7 +211,7 @@ entry:
   %continuation_actor_arg = extractvalue {ptr, ptr, ptr} %res.2, 1
 
   tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %continuation_actor_arg)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -501,7 +501,7 @@ declare ptr @llvm.coro.prepare.async(ptr)
 declare token @llvm.coro.id.async(i32, i32, i32, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.end.async(ptr, i1, ...)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare {ptr, ptr, ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
 declare ptr @llvm.coro.async.context.alloc(ptr, ptr)
 declare void @llvm.coro.async.context.dealloc(ptr)

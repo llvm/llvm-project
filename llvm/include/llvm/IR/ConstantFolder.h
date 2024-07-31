@@ -18,8 +18,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
@@ -89,22 +89,22 @@ public:
   }
 
   Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
-                      FastMathFlags FMF) const override {
+                     FastMathFlags FMF) const override {
     if (Constant *C = dyn_cast<Constant>(V))
       return ConstantFoldUnaryInstruction(Opc, C);
     return nullptr;
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return ConstantExpr::getCompare(P, LC, RC);
+      return ConstantFoldCompareInstruction(P, LC, RC);
     return nullptr;
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
+                 GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -113,10 +113,7 @@ public:
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
 
-      if (IsInBounds)
-        return ConstantExpr::getInBoundsGetElementPtr(Ty, PC, IdxList);
-      else
-        return ConstantExpr::getGetElementPtr(Ty, PC, IdxList);
+      return ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW);
     }
     return nullptr;
   }
@@ -173,14 +170,25 @@ public:
     return nullptr;
   }
 
+  Value *FoldCast(Instruction::CastOps Op, Value *V,
+                  Type *DestTy) const override {
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (ConstantExpr::isDesirableCastOp(Op))
+        return ConstantExpr::getCast(Op, C, DestTy);
+      return ConstantFoldCastInstruction(Op, C, DestTy);
+    }
+    return nullptr;
+  }
+
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource) const override {
+    // Use TargetFolder or InstSimplifyFolder instead.
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
-
-  Constant *CreateCast(Instruction::CastOps Op, Constant *C,
-                       Type *DestTy) const override {
-    return ConstantExpr::getCast(Op, C, DestTy);
-  }
 
   Constant *CreatePointerCast(Constant *C, Type *DestTy) const override {
     return ConstantExpr::getPointerCast(C, DestTy);
@@ -189,48 +197,6 @@ public:
   Constant *CreatePointerBitCastOrAddrSpaceCast(Constant *C,
                                                 Type *DestTy) const override {
     return ConstantExpr::getPointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  Constant *CreateIntCast(Constant *C, Type *DestTy,
-                          bool isSigned) const override {
-    return ConstantExpr::getIntegerCast(C, DestTy, isSigned);
-  }
-
-  Constant *CreateFPCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getFPCast(C, DestTy);
-  }
-
-  Constant *CreateBitCast(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::BitCast, C, DestTy);
-  }
-
-  Constant *CreateIntToPtr(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::IntToPtr, C, DestTy);
-  }
-
-  Constant *CreatePtrToInt(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::PtrToInt, C, DestTy);
-  }
-
-  Constant *CreateZExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getZExtOrBitCast(C, DestTy);
-  }
-
-  Constant *CreateSExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getSExtOrBitCast(C, DestTy);
-  }
-
-  Constant *CreateTruncOrBitCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getTruncOrBitCast(C, DestTy);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
-                       Constant *RHS) const override {
-    return ConstantExpr::getCompare(P, LHS, RHS);
   }
 };
 

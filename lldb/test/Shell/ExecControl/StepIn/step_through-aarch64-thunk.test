@@ -1,0 +1,17 @@
+# REQUIRES: native && target-aarch64
+
+# This test is specific to elf platforms.
+# UNSUPPORTED: system-windows, system-darwin
+
+# RUN: %clangxx_host %p/Inputs/aarch64_thunk.cc -g -o %t.out
+# RUN: %lldb %t.out -s %s | FileCheck %s
+
+b main
+# CHECK: Breakpoint 1: where = step_through-aarch64-thunk.test.tmp.out`main
+
+r
+# CHECK: stop reason = breakpoint 1.1
+
+s
+# CHECK: stop reason = step in
+# CHECK:     frame #0: {{.*}} step_through-aarch64-thunk.test.tmp.out`::step_here()

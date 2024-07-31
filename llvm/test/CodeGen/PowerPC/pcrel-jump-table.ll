@@ -1,15 +1,15 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-min-jump-table-entries=4 < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-R
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables \
+; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables -ppc-min-jump-table-entries=4 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-A-LE
 ; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
-; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-min-jump-table-entries=4 < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-R
 ; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
-; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables \
+; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables -ppc-min-jump-table-entries=4 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-A-BE
 
@@ -20,8 +20,8 @@
 define dso_local signext i32 @jumptable(i32 signext %param) {
 ; CHECK-R-LABEL: jumptable:
 ; CHECK-R:       # %bb.1: # %entry
-; CHECK-R-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
 ; CHECK-R-NEXT:    rldic r4, r4
+; CHECK-R-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
 ; CHECK-R-NEXT:    lwax r4, r4, r5
 ; CHECK-R-NEXT:    add r4, r4, r5
 ; CHECK-R-NEXT:    mtctr r4
@@ -35,8 +35,8 @@ define dso_local signext i32 @jumptable(i32 signext %param) {
 ; CHECK-A-LE-NEXT:    bctr
 ; CHECK-A-BE-LABEL: jumptable:
 ; CHECK-A-BE:       # %bb.1: # %entry
-; CHECK-A-BE-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
 ; CHECK-A-BE-NEXT:    rldic r4, r4
+; CHECK-A-BE-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
 ; CHECK-A-BE-NEXT:    lwax r4, r4, r5
 ; CHECK-A-BE-NEXT:    mtctr r4
 ; CHECK-A-BE-NEXT:    bctr

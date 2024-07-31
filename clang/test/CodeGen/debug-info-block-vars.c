@@ -8,14 +8,14 @@
 // CHECK: %.block_descriptor.addr = alloca ptr, align 8
 // CHECK: %block.addr = alloca ptr, align 8
 // CHECK: store ptr %.block_descriptor, ptr %.block_descriptor.addr, align 8
-// CHECK: call void @llvm.dbg.declare(metadata ptr %.block_descriptor.addr,
-// CHECK-SAME:                        metadata !DIExpression())
+// CHECK: #dbg_declare(ptr %.block_descriptor.addr,
+// CHECK-SAME:                        !DIExpression(),
 // CHECK-OPT-NOT: alloca
 // Since the block address is not used anywhere in this function,
 // the optimizer (DeadArgElim) has replaced all the false uses
 // (i.e., metadata users) with poison.
-// CHECK-OPT: call void @llvm.dbg.value(metadata ptr poison,
-// CHECK-OPT-SAME:                      metadata !DIExpression())
+// CHECK-OPT: #dbg_value(ptr poison,
+// CHECK-OPT-SAME:                      !DIExpression(),
 void f(void) {
   a(^{
     b();

@@ -1,4 +1,4 @@
-//===- TransformOps.td - Transform dialect operations ------*- tablegen -*-===//
+//===- PDLExtensionOps.td - Transform dialect operations ---*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_TRANSFORM_PDLEXTENSION_PDLEXTENSIONOPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"

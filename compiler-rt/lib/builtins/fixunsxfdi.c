@@ -32,8 +32,8 @@
 #pragma warning(disable : 4700)
 #endif
 
-COMPILER_RT_ABI du_int __fixunsxfdi(long double a) {
-  long_double_bits fb;
+COMPILER_RT_ABI du_int __fixunsxfdi(xf_float a) {
+  xf_bits fb;
   fb.f = a;
   int e = (fb.u.high.s.low & 0x00007FFF) - 16383;
   if (e < 0 || (fb.u.high.s.low & 0x00008000))

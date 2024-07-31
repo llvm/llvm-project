@@ -5,6 +5,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.A = type { [7 x i8] }
 
+@g = external global i8
+
 define ptr @test1(ptr %b, ptr %e) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[E_PTR:%.*]] = ptrtoint ptr [[E:%.*]] to i64
@@ -160,7 +162,7 @@ define ptr @test7(ptr %b, ptr %e) {
 
 define ptr @undef_inbounds_var_idx(i64 %idx) {
 ; CHECK-LABEL: @undef_inbounds_var_idx(
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    ret ptr undef
 ;
   %el = getelementptr inbounds i64, ptr undef, i64 %idx
   ret ptr %el
@@ -176,7 +178,7 @@ define ptr @undef_no_inbounds_var_idx(i64 %idx) {
 
 define <8 x ptr> @undef_vec1() {
 ; CHECK-LABEL: @undef_vec1(
-; CHECK-NEXT:    ret <8 x ptr> poison
+; CHECK-NEXT:    ret <8 x ptr> undef
 ;
   %el = getelementptr inbounds i64, ptr undef, <8 x i64> undef
   ret <8 x ptr> %el
@@ -271,6 +273,14 @@ define <vscale x 2 x ptr> @ptr_idx_mix_scalar_scalable_vector() {
   ret <vscale x 2 x ptr> %v
 }
 
+define ptr @constexpr_gep_nusw_nuw() {
+; CHECK-LABEL: @constexpr_gep_nusw_nuw(
+; CHECK-NEXT:    ret ptr getelementptr nusw nuw (i8, ptr @g, i64 ptrtoint (ptr @g to i64))
+;
+  %v = getelementptr nusw nuw i8, ptr @g, i64 ptrtoint (ptr @g to i64)
+  ret ptr %v
+}
+
 ; Check ConstantExpr::getGetElementPtr() using ElementCount for size queries - end.
 
 define ptr @poison() {
@@ -357,4 +367,13 @@ define <8 x ptr> @gep_vector_index_op3_poison_constant_index_afterwards(ptr %ptr
 ;
   %res = getelementptr inbounds %t.3, ptr %ptr, i64 0, i32 1, <8 x i64> poison, i32 1
   ret <8 x ptr> %res
+}
+
+define i64 @gep_array_of_scalable_vectors_ptrdiff(ptr %ptr) {
+  %c1 = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr %ptr, i64 4
+  %c2 = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr %ptr, i64 6
+  %c1.int = ptrtoint ptr %c1 to i64
+  %c2.int = ptrtoint ptr %c2 to i64
+  %diff = sub i64 %c2.int, %c1.int
+  ret i64 %diff
 }

@@ -51,11 +51,8 @@ struct CommandMangler {
                   llvm::StringRef TargetFile) const;
 
 private:
-  CommandMangler();
-
   Memoize<llvm::StringMap<std::string>> ResolvedDrivers;
   Memoize<llvm::StringMap<std::string>> ResolvedDriversNoFollow;
-  llvm::cl::TokenizerCallback Tokenizer;
 };
 
 // Removes args from a command-line in a semantically-aware way.

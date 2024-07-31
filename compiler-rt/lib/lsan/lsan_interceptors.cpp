@@ -389,7 +389,7 @@ INTERCEPTOR(int, atexit, void (*f)()) {
 extern "C" {
 extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
                            void (*child)());
-};
+}
 
 INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
             void (*child)()) {
@@ -490,9 +490,9 @@ INTERCEPTOR(int, pthread_detach, void *thread) {
   return result;
 }
 
-INTERCEPTOR(int, pthread_exit, void *retval) {
+INTERCEPTOR(void, pthread_exit, void *retval) {
   GetThreadArgRetval().Finish(GetThreadSelf(), retval);
-  return REAL(pthread_exit)(retval);
+  REAL(pthread_exit)(retval);
 }
 
 #  if SANITIZER_INTERCEPT_TRYJOIN
@@ -525,7 +525,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 #    define LSAN_MAYBE_INTERCEPT_TIMEDJOIN
 #  endif  // SANITIZER_INTERCEPT_TIMEDJOIN
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(void, _exit, int status) {
   if (status == 0 && HasReportedLeaks()) status = common_flags()->exitcode;
@@ -533,6 +533,7 @@ INTERCEPTOR(void, _exit, int status) {
 }
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
+#define SIGNAL_INTERCEPTOR_ENTER() ENSURE_LSAN_INITED
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
 #endif  // SANITIZER_POSIX
@@ -542,6 +543,7 @@ namespace __lsan {
 void InitializeInterceptors() {
   // Fuchsia doesn't use interceptors that require any setup.
 #if !SANITIZER_FUCHSIA
+  __interception::DoesNotSupportStaticLinking();
   InitializeSignalInterceptors();
 
   INTERCEPT_FUNCTION(malloc);

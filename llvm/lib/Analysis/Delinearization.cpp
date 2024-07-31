@@ -25,8 +25,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -296,7 +294,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
 
   // Remove duplicates.
   array_pod_sort(Terms.begin(), Terms.end());
-  Terms.erase(std::unique(Terms.begin(), Terms.end()), Terms.end());
+  Terms.erase(llvm::unique(Terms), Terms.end());
 
   // Put larger terms first.
   llvm::sort(Terms, [](const SCEV *LHS, const SCEV *RHS) {
@@ -561,24 +559,6 @@ bool llvm::tryDelinearizeFixedSizeImpl(
 
 namespace {
 
-class Delinearization : public FunctionPass {
-  Delinearization(const Delinearization &); // do not implement
-protected:
-  Function *F;
-  LoopInfo *LI;
-  ScalarEvolution *SE;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  Delinearization() : FunctionPass(ID) {
-    initializeDelinearizationPass(*PassRegistry::getPassRegistry());
-  }
-  bool runOnFunction(Function &F) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void print(raw_ostream &O, const Module *M = nullptr) const override;
-};
-
 void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
                           ScalarEvolution *SE) {
   O << "Delinearization on function " << F->getName() << ":\n";
@@ -630,32 +610,6 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
 }
 
 } // end anonymous namespace
-
-void Delinearization::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<ScalarEvolutionWrapperPass>();
-}
-
-bool Delinearization::runOnFunction(Function &F) {
-  this->F = &F;
-  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  return false;
-}
-
-void Delinearization::print(raw_ostream &O, const Module *) const {
-  printDelinearization(O, F, LI, SE);
-}
-
-char Delinearization::ID = 0;
-static const char delinearization_name[] = "Delinearization";
-INITIALIZE_PASS_BEGIN(Delinearization, DL_NAME, delinearization_name, true,
-                      true)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(Delinearization, DL_NAME, delinearization_name, true, true)
-
-FunctionPass *llvm::createDelinearizationPass() { return new Delinearization; }
 
 DelinearizationPrinterPass::DelinearizationPrinterPass(raw_ostream &OS)
     : OS(OS) {}

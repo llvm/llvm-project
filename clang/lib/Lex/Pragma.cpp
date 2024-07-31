@@ -426,7 +426,7 @@ void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
 
   // Get the current file lexer we're looking at.  Ignore _Pragma 'files' etc.
   // Mark the file as a once-only file now.
-  HeaderInfo.MarkFileIncludeOnce(getCurrentFileLexer()->getFileEntry());
+  HeaderInfo.MarkFileIncludeOnce(*getCurrentFileLexer()->getFileEntry());
 }
 
 void Preprocessor::HandlePragmaMark(Token &MarkTok) {
@@ -491,7 +491,7 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
   PreprocessorLexer *TheLexer = getCurrentFileLexer();
 
   // Mark the file as a system header.
-  HeaderInfo.MarkFileSystemHeader(TheLexer->getFileEntry());
+  HeaderInfo.MarkFileSystemHeader(*TheLexer->getFileEntry());
 
   PresumedLoc PLoc = SourceMgr.getPresumedLoc(SysHeaderTok.getLocation());
   if (PLoc.isInvalid())
@@ -548,7 +548,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     return;
   }
 
-  const FileEntry *CurFile = getCurrentFileLexer()->getFileEntry();
+  OptionalFileEntryRef CurFile = getCurrentFileLexer()->getFileEntry();
 
   // If this file is older than the file it depends on, emit a diagnostic.
   if (CurFile && CurFile->getModificationTime() < File->getModificationTime()) {
@@ -1088,7 +1088,8 @@ struct PragmaDebugHandler : public PragmaHandler {
       if (DiagName.is(tok::eod))
         PP.getDiagnostics().dump();
       else if (DiagName.is(tok::string_literal) && !DiagName.hasUDSuffix()) {
-        StringLiteralParser Literal(DiagName, PP);
+        StringLiteralParser Literal(DiagName, PP,
+                                    StringLiteralEvalMethod::Unevaluated);
         if (Literal.hadError)
           return;
         PP.getDiagnostics().dump(Literal.GetString());
@@ -1291,16 +1292,26 @@ public:
     IdentifierInfo *II = Tok.getIdentifierInfo();
     PPCallbacks *Callbacks = PP.getPPCallbacks();
 
+    // Get the next token, which is either an EOD or a string literal. We lex
+    // it now so that we can early return if the previous token was push or pop.
+    PP.LexUnexpandedToken(Tok);
+
     if (II->isStr("pop")) {
       if (!PP.getDiagnostics().popMappings(DiagLoc))
         PP.Diag(Tok, diag::warn_pragma_diagnostic_cannot_pop);
       else if (Callbacks)
         Callbacks->PragmaDiagnosticPop(DiagLoc, Namespace);
+
+      if (Tok.isNot(tok::eod))
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_diagnostic_invalid_token);
       return;
     } else if (II->isStr("push")) {
       PP.getDiagnostics().pushMappings(DiagLoc);
       if (Callbacks)
         Callbacks->PragmaDiagnosticPush(DiagLoc, Namespace);
+
+      if (Tok.isNot(tok::eod))
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_diagnostic_invalid_token);
       return;
     }
 
@@ -1316,9 +1327,8 @@ public:
       return;
     }
 
-    PP.LexUnexpandedToken(Tok);
+    // At this point, we expect a string literal.
     SourceLocation StringLoc = Tok.getLocation();
-
     std::string WarningName;
     if (!PP.FinishLexStringLiteral(Tok, WarningName, "pragma diagnostic",
                                    /*AllowMacroExpansion=*/false))
@@ -1434,7 +1444,8 @@ struct PragmaWarningHandler : public PragmaHandler {
                                  .Case("once", PPCallbacks::PWS_Once)
                                  .Case("suppress", PPCallbacks::PWS_Suppress)
                                  .Default(-1);
-          if ((SpecifierValid = SpecifierInt != -1))
+          SpecifierValid = SpecifierInt != -1;
+          if (SpecifierValid)
             Specifier =
                 static_cast<PPCallbacks::PragmaWarningSpecifier>(SpecifierInt);
 
@@ -1759,7 +1770,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
 
     // If the module isn't available, it doesn't make sense to enter it.
     if (Preprocessor::checkModuleIsAvailable(
-            PP.getLangOpts(), PP.getTargetInfo(), PP.getDiagnostics(), M)) {
+            PP.getLangOpts(), PP.getTargetInfo(), *M, PP.getDiagnostics())) {
       PP.Diag(BeginLoc, diag::note_pp_module_begin_here)
         << M->getTopLevelModuleName();
       return;

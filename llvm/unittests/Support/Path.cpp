@@ -190,6 +190,7 @@ TEST(Support, Path) {
   paths.push_back("c:\\foo\\");
   paths.push_back("c:\\foo/");
   paths.push_back("c:/foo\\bar");
+  paths.push_back(":");
 
   for (SmallVector<StringRef, 40>::const_iterator i = paths.begin(),
                                                   e = paths.end();
@@ -625,8 +626,8 @@ TEST(SupportDeathTest, TempDirectoryOnWindows) {
   // different values of specific env vars. To prevent corrupting env vars of
   // the current process all checks are done in separated processes.
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:\\OtherFolder"), "C:\\OtherFolder");
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Seperators"),
-                  "C:\\Unix\\Path\\Seperators");
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Separators"),
+                  "C:\\Unix\\Path\\Separators");
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"Local Path"), ".+\\Local Path$");
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"F:\\TrailingSep\\"), "F:\\TrailingSep");
   EXPECT_TEMP_DIR(
@@ -708,12 +709,16 @@ TEST_F(FileSystemTest, Unique) {
 
   ASSERT_NO_ERROR(fs::remove(Twine(TempPath2)));
 
+#ifndef _WIN32
   // Two paths representing the same file on disk should still provide the
   // same unique id.  We can test this by making a hard link.
+  // FIXME: Our implementation of getUniqueID on Windows doesn't consider hard
+  // links to be the same file.
   ASSERT_NO_ERROR(fs::create_link(Twine(TempPath), Twine(TempPath2)));
   fs::UniqueID D2;
   ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath2), D2));
   ASSERT_EQ(D2, F1);
+#endif
 
   ::close(FileDescriptor);
 
@@ -878,7 +883,7 @@ TEST_F(FileSystemTest, TempFiles) {
   int FD2;
   SmallString<64> TempPath2;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD2, TempPath2));
-  ASSERT_TRUE(TempPath2.endswith(".temp"));
+  ASSERT_TRUE(TempPath2.ends_with(".temp"));
   ASSERT_NE(TempPath.str(), TempPath2.str());
 
   fs::file_status A, B;
@@ -904,17 +909,21 @@ TEST_F(FileSystemTest, TempFiles) {
 
   SmallString<64> TempPath3;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "", TempPath3));
-  ASSERT_FALSE(TempPath3.endswith("."));
+  ASSERT_FALSE(TempPath3.ends_with("."));
   FileRemover Cleanup3(TempPath3);
 
   // Create a hard link to Temp1.
   ASSERT_NO_ERROR(fs::create_link(Twine(TempPath), Twine(TempPath2)));
+#ifndef _WIN32
+  // FIXME: Our implementation of equivalent() on Windows doesn't consider hard
+  // links to be the same file.
   bool equal;
   ASSERT_NO_ERROR(fs::equivalent(Twine(TempPath), Twine(TempPath2), equal));
   EXPECT_TRUE(equal);
   ASSERT_NO_ERROR(fs::status(Twine(TempPath), A));
   ASSERT_NO_ERROR(fs::status(Twine(TempPath2), B));
   EXPECT_TRUE(fs::equivalent(A, B));
+#endif
 
   // Remove Temp1.
   ::close(FileDescriptor);
@@ -1507,13 +1516,13 @@ TEST(Support, NormalizePath) {
   const char *Path7a = "~/aaa";
   SmallString<64> Path7(Path7a);
   path::native(Path7, path::Style::windows_backslash);
-  EXPECT_TRUE(Path7.endswith("\\aaa"));
-  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_TRUE(Path7.ends_with("\\aaa"));
+  EXPECT_TRUE(Path7.starts_with(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
   Path7 = Path7a;
   path::native(Path7, path::Style::windows_slash);
-  EXPECT_TRUE(Path7.endswith("/aaa"));
-  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_TRUE(Path7.ends_with("/aaa"));
+  EXPECT_TRUE(Path7.starts_with(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
 
   const char *Path8a = "~";
@@ -1746,6 +1755,28 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   // however the expected behaviour will differ depending on the configuration
   // of the Windows file system.
 #endif
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
+  std::string Buf(5, '?');
+  Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
+#ifdef _WIN32
+  EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
+#else
+  ASSERT_THAT_EXPECTED(FD, Succeeded());
+  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  Expected<size_t> BytesRead =
+      fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
+  EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
+#endif
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
+  int FD;
+  std::error_code EC = fs::openFileForWrite(Twine(TestDirectory), FD);
+  if (!EC)
+    ::close(FD);
+  EXPECT_EQ(EC, errc::is_a_directory);
 }
 
 static void createFileWithData(const Twine &Path, bool ShouldExistBefore,

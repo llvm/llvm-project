@@ -13,12 +13,31 @@
 
 #include "toy/Dialect.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/TypeSupport.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <string>
 
 using namespace mlir;
 using namespace mlir::toy;
@@ -60,8 +79,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator(toy.return) by replacing it with a new
   /// operation as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
@@ -176,7 +194,7 @@ void ConstantOp::print(mlir::OpAsmPrinter &printer) {
 }
 
 /// Verify that the given attribute value is valid for the given type.
-static mlir::LogicalResult verifyConstantForType(mlir::Type type,
+static llvm::LogicalResult verifyConstantForType(mlir::Type type,
                                                  mlir::Attribute opaqueValue,
                                                  mlir::Operation *op) {
   if (llvm::isa<mlir::TensorType>(type)) {
@@ -233,11 +251,11 @@ static mlir::LogicalResult verifyConstantForType(mlir::Type type,
 
 /// Verifier for the constant operation. This corresponds to the `::verify(...)`
 /// in the op definition.
-mlir::LogicalResult ConstantOp::verify() {
+llvm::LogicalResult ConstantOp::verify() {
   return verifyConstantForType(getResult().getType(), getValue(), *this);
 }
 
-mlir::LogicalResult StructConstantOp::verify() {
+llvm::LogicalResult StructConstantOp::verify() {
   return verifyConstantForType(getResult().getType(), getValue(), *this);
 }
 
@@ -327,27 +345,6 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
       getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
-/// Returns the region on the function operation that is callable.
-mlir::Region *FuncOp::getCallableRegion() { return &getBody(); }
-
-/// Returns the results types that the callable region produces when
-/// executed.
-llvm::ArrayRef<mlir::Type> FuncOp::getCallableResults() {
-  return getFunctionType().getResults();
-}
-
-/// Returns the argument attributes for all callable region arguments or
-/// null if there are none.
-ArrayAttr FuncOp::getCallableArgAttrs() {
-  return getArgAttrs().value_or(nullptr);
-}
-
-/// Returns the result attributes for all callable region results or
-/// null if there are none.
-ArrayAttr FuncOp::getCallableResAttrs() {
-  return getResAttrs().value_or(nullptr);
-}
-
 //===----------------------------------------------------------------------===//
 // GenericCallOp
 //===----------------------------------------------------------------------===//
@@ -377,6 +374,12 @@ void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 /// call interface.
 Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
 
+/// Get the argument operands to the called function as a mutable range, this is
+/// required by the call interface.
+MutableOperandRange GenericCallOp::getArgOperandsMutable() {
+  return getInputsMutable();
+}
+
 //===----------------------------------------------------------------------===//
 // MulOp
 //===----------------------------------------------------------------------===//
@@ -402,7 +405,7 @@ void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult ReturnOp::verify() {
+llvm::LogicalResult ReturnOp::verify() {
   // We know that the parent operation is a function, because of the 'HasParent'
   // trait attached to the operation definition.
   auto function = cast<FuncOp>((*this)->getParentOp());
@@ -450,7 +453,7 @@ void StructAccessOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
   build(b, state, resultType, input, b.getI64IntegerAttr(index));
 }
 
-mlir::LogicalResult StructAccessOp::verify() {
+llvm::LogicalResult StructAccessOp::verify() {
   StructType structTy = llvm::cast<StructType>(getInput().getType());
   size_t indexValue = getIndex();
   if (indexValue >= structTy.getNumElementTypes())
@@ -479,7 +482,7 @@ void TransposeOp::inferShapes() {
   getResult().setType(RankedTensorType::get(dims, arrayTy.getElementType()));
 }
 
-mlir::LogicalResult TransposeOp::verify() {
+llvm::LogicalResult TransposeOp::verify() {
   auto inputType = llvm::dyn_cast<RankedTensorType>(getOperand().getType());
   auto resultType = llvm::dyn_cast<RankedTensorType>(getType());
   if (!inputType || !resultType)

@@ -34,8 +34,6 @@ namespace format {
 
 class FormatTokenLexer;
 
-using clang::format::FormatStyle;
-
 // An imported symbol in a JavaScript ES6 import/export, possibly aliased.
 struct JsImportedSymbol {
   StringRef Symbol;
@@ -178,7 +176,7 @@ public:
         }
       }
     }
-    llvm::StringRef PreviousText = getSourceText(InsertionPoint);
+    StringRef PreviousText = getSourceText(InsertionPoint);
     if (ReferencesText == PreviousText)
       return {Result, 0};
 
@@ -209,7 +207,7 @@ public:
     // FIXME: better error handling. For now, just print error message and skip
     // the replacement for the release version.
     if (Err) {
-      llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+      llvm::errs() << toString(std::move(Err)) << "\n";
       assert(false);
     }
 
@@ -217,8 +215,8 @@ public:
   }
 
 private:
-  FormatToken *Current;
-  FormatToken *LineEnd;
+  FormatToken *Current = nullptr;
+  FormatToken *LineEnd = nullptr;
 
   FormatToken invalidToken;
 
@@ -276,7 +274,7 @@ private:
         SortChunk.push_back(*Start);
         ++Start;
       }
-      llvm::stable_sort(SortChunk);
+      stable_sort(SortChunk);
       mergeModuleReferences(SortChunk);
       ReferencesSorted.insert(ReferencesSorted.end(), SortChunk.begin(),
                               SortChunk.end());
@@ -334,10 +332,10 @@ private:
     // Sort the individual symbols within the import.
     // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
     SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
-    llvm::stable_sort(
-        Symbols, [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
-          return LHS.Symbol.compare_insensitive(RHS.Symbol) < 0;
-        });
+    stable_sort(Symbols,
+                [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
+                  return LHS.Symbol.compare_insensitive(RHS.Symbol) < 0;
+                });
     if (!Reference.SymbolsMerged && Symbols == Reference.Symbols) {
       // Symbols didn't change, just emit the entire module reference.
       StringRef ReferenceStmt = getSourceText(Reference.Range);
@@ -349,7 +347,7 @@ private:
     // ... then the references in order ...
     if (!Symbols.empty()) {
       Buffer += getSourceText(Symbols.front().Range);
-      for (const JsImportedSymbol &Symbol : llvm::drop_begin(Symbols)) {
+      for (const JsImportedSymbol &Symbol : drop_begin(Symbols)) {
         Buffer += ",";
         Buffer += getSourceText(Symbol.Range);
       }
@@ -468,10 +466,10 @@ private:
       // URL = TokenText without the quotes.
       Reference.URL =
           Current->TokenText.substr(1, Current->TokenText.size() - 2);
-      if (Reference.URL.startswith("..")) {
+      if (Reference.URL.starts_with("..")) {
         Reference.Category =
             JsModuleReference::ReferenceCategory::RELATIVE_PARENT;
-      } else if (Reference.URL.startswith(".")) {
+      } else if (Reference.URL.starts_with(".")) {
         Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
       } else {
         Reference.Category = JsModuleReference::ReferenceCategory::ABSOLUTE;
@@ -530,7 +528,7 @@ private:
           nextToken();
           if (Current->is(tok::semi))
             return true;
-          if (!Current->is(tok::period))
+          if (Current->isNot(tok::period))
             return false;
           nextToken();
         }
@@ -548,10 +546,12 @@ private:
       nextToken();
       if (Current->is(tok::r_brace))
         break;
-      bool isTypeOnly =
-          Current->is(Keywords.kw_type) && Current->Next &&
-          Current->Next->isOneOf(tok::identifier, tok::kw_default);
-      if (!isTypeOnly && !Current->isOneOf(tok::identifier, tok::kw_default))
+      auto IsIdentifier = [](const auto *Tok) {
+        return Tok->isOneOf(tok::identifier, tok::kw_default, tok::kw_template);
+      };
+      bool isTypeOnly = Current->is(Keywords.kw_type) && Current->Next &&
+                        IsIdentifier(Current->Next);
+      if (!isTypeOnly && !IsIdentifier(Current))
         return false;
 
       JsImportedSymbol Symbol;
@@ -565,7 +565,7 @@ private:
 
       if (Current->is(Keywords.kw_as)) {
         nextToken();
-        if (!Current->isOneOf(tok::identifier, tok::kw_default))
+        if (!IsIdentifier(Current))
           return false;
         Symbol.Alias = Current->TokenText;
         nextToken();

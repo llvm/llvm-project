@@ -2,8 +2,10 @@
 add_mlir_library(MLIRLinalgTestPasses
   TestDataLayoutPropagation.cpp
   TestLinalgDecomposeOps.cpp
+  TestLinalgDropUnitDims.cpp
   TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
+  TestLinalgRankReduceContractionOps.cpp
   TestLinalgTransforms.cpp
   TestPadFusion.cpp
 

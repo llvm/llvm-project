@@ -13,15 +13,20 @@
 
 #include "TestAttributes.h"
 #include "TestDialect.h"
+#include "TestTypes.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace test;
@@ -61,6 +66,39 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
 
+Attribute TestDecimalShapeAttr::parse(AsmParser &parser, Type type) {
+  if (parser.parseLess()){
+    return Attribute();
+  }
+  SmallVector<int64_t> shape;
+  if (parser.parseOptionalGreater()) {
+    auto parseDecimal = [&]() {
+      shape.emplace_back();
+      auto parseResult = parser.parseOptionalDecimalInteger(shape.back());
+      if (!parseResult.has_value() || failed(*parseResult)) {
+        parser.emitError(parser.getCurrentLocation()) << "expected an integer";
+        return failure();
+      }
+      return success();
+    };
+    if (failed(parseDecimal())) {
+      return Attribute();
+    }
+    while (failed(parser.parseOptionalGreater())) {
+      if (failed(parser.parseXInDimensionList()) || failed(parseDecimal())) {
+        return Attribute();
+      }
+    }
+  }
+  return get(parser.getContext(), shape);
+}
+
+void TestDecimalShapeAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  llvm::interleave(getShape(), printer, "x");
+  printer << ">";
+}
+
 Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   SmallVector<uint64_t> elements;
   if (parser.parseLess() || parser.parseLSquare())
@@ -81,7 +119,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {
   printer << "<[";
   llvm::interleaveComma(getElements(), printer);
-  printer << "] : " << getType() << ">";
+  printer << "]>";
 }
 
 LogicalResult
@@ -176,11 +214,114 @@ static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
 }
 
 //===----------------------------------------------------------------------===//
+// CopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+CopyCount::CopyCount(const CopyCount &rhs) : value(rhs.value) {
+  CopyCount::counter++;
+}
+
+CopyCount &CopyCount::operator=(const CopyCount &rhs) {
+  CopyCount::counter++;
+  value = rhs.value;
+  return *this;
+}
+
+int CopyCount::counter;
+
+static bool operator==(const test::CopyCount &lhs, const test::CopyCount &rhs) {
+  return lhs.value == rhs.value;
+}
+
+llvm::raw_ostream &test::operator<<(llvm::raw_ostream &os,
+                                    const test::CopyCount &value) {
+  return os << value.value;
+}
+
+template <>
+struct mlir::FieldParser<test::CopyCount> {
+  static FailureOr<test::CopyCount> parse(AsmParser &parser) {
+    std::string value;
+    if (parser.parseKeyword(value))
+      return failure();
+    return test::CopyCount(value);
+  }
+};
+namespace test {
+llvm::hash_code hash_value(const test::CopyCount &copyCount) {
+  return llvm::hash_value(copyCount.value);
+}
+} // namespace test
+
+//===----------------------------------------------------------------------===//
+// TestConditionalAliasAttr
+//===----------------------------------------------------------------------===//
+
+/// Attempt to parse the conditionally-aliased string attribute as a keyword or
+/// string, else try to parse an alias.
+static ParseResult parseConditionalAlias(AsmParser &p, StringAttr &value) {
+  std::string str;
+  if (succeeded(p.parseOptionalKeywordOrString(&str))) {
+    value = StringAttr::get(p.getContext(), str);
+    return success();
+  }
+  return p.parseAttribute(value);
+}
+
+/// Print the string attribute as an alias if it has one, otherwise print it as
+/// a keyword if possible.
+static void printConditionalAlias(AsmPrinter &p, StringAttr value) {
+  if (succeeded(p.printAlias(value)))
+    return;
+  p.printKeywordOrString(value);
+}
+
+//===----------------------------------------------------------------------===//
+// Custom Float Attribute
+//===----------------------------------------------------------------------===//
+
+static void printCustomFloatAttr(AsmPrinter &p, StringAttr typeStrAttr,
+                                 APFloat value) {
+  p << typeStrAttr << " : " << value;
+}
+
+static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
+                                        FailureOr<APFloat> &value) {
+
+  std::string str;
+  if (p.parseString(&str))
+    return failure();
+
+  typeStrAttr = StringAttr::get(p.getContext(), str);
+
+  if (p.parseColon())
+    return failure();
+
+  const llvm::fltSemantics *semantics;
+  if (str == "float")
+    semantics = &llvm::APFloat::IEEEsingle();
+  else if (str == "double")
+    semantics = &llvm::APFloat::IEEEdouble();
+  else if (str == "fp80")
+    semantics = &llvm::APFloat::x87DoubleExtended();
+  else
+    return p.emitError(p.getCurrentLocation(), "unknown float type, expected "
+                                               "'float', 'double' or 'fp80'");
+
+  APFloat parsedValue(0.0);
+  if (p.parseFloat(*semantics, parsedValue))
+    return failure();
+
+  value.emplace(parsedValue);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
 #include "TestAttrInterfaces.cpp.inc"
-
+#include "TestOpEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.cpp.inc"
 

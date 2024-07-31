@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_INTTYPES_STRTOIMAX_H
 #define LLVM_LIBC_SRC_INTTYPES_STRTOIMAX_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 intmax_t strtoimax(const char *__restrict str, char **__restrict str_end,
                    int base);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_INTTYPES_STRTOIMAX_H

@@ -9,9 +9,10 @@
 #include "src/string/strncpy.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strncpy,
                    (char *__restrict dest, const char *__restrict src,
@@ -26,4 +27,4 @@ LLVM_LIBC_FUNCTION(char *, strncpy,
   return dest;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

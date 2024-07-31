@@ -214,23 +214,14 @@ define i1 @trunc_v8i16_cmp(<8 x i16> %a0) nounwind {
 }
 
 define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
-; SSE2-SSSE3-LABEL: bitcast_v16i8_to_v2i8:
-; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: bitcast_v16i8_to_v2i8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovmskb %xmm0, %ecx
-; SSE41-NEXT:    movl %ecx, %eax
-; SSE41-NEXT:    shrl $8, %eax
-; SSE41-NEXT:    addb %cl, %al
-; SSE41-NEXT:    # kill: def $al killed $al killed $eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: bitcast_v16i8_to_v2i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    movl %ecx, %eax
+; SSE-NEXT:    shrl $8, %eax
+; SSE-NEXT:    addb %cl, %al
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v16i8_to_v2i8:
 ; AVX12:       # %bb.0:
@@ -298,7 +289,7 @@ define i1 @trunc_v16i8_cmp(<16 x i8> %a0) nounwind {
 define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ; SSE-LABEL: bitcast_v4i64_to_v2i2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE-NEXT:    movmskps %xmm0, %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shrb $2, %cl
@@ -447,25 +438,15 @@ define i1 @trunc_v8i132_cmp(<8 x i32> %a0) nounwind {
 }
 
 define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
-; SSE2-SSSE3-LABEL: bitcast_v16i16_to_v2i8:
-; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: bitcast_v16i16_to_v2i8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    packsswb %xmm1, %xmm0
-; SSE41-NEXT:    pmovmskb %xmm0, %ecx
-; SSE41-NEXT:    movl %ecx, %eax
-; SSE41-NEXT:    shrl $8, %eax
-; SSE41-NEXT:    addb %cl, %al
-; SSE41-NEXT:    # kill: def $al killed $al killed $eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: bitcast_v16i16_to_v2i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    movl %ecx, %eax
+; SSE-NEXT:    shrl $8, %eax
+; SSE-NEXT:    addb %cl, %al
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_v16i16_to_v2i8:
 ; AVX1:       # %bb.0:
@@ -720,20 +701,16 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 define i1 @trunc_v8i64_cmp(<8 x i64> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: trunc_v8i64_cmp:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,2,4,5,6,7]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,2,4,5,6,7]
-; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; SSE2-SSSE3-NEXT:    psllw $15, %xmm2
-; SSE2-SSSE3-NEXT:    packsswb %xmm2, %xmm2
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-SSSE3-NEXT:    pslld $16, %xmm2
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm2
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-SSSE3-NEXT:    pslld $16, %xmm0
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    psllw $15, %xmm0
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    cmpb $-1, %al
 ; SSE2-SSSE3-NEXT:    sete %al
 ; SSE2-SSSE3-NEXT:    retq
@@ -780,29 +757,17 @@ define i1 @trunc_v8i64_cmp(<8 x i64> %a0) nounwind {
 }
 
 define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
-; SSE2-SSSE3-LABEL: bitcast_v16i32_to_v2i8:
-; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    packsswb %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-SSSE3-NEXT:    addb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: bitcast_v16i32_to_v2i8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    packssdw %xmm3, %xmm2
-; SSE41-NEXT:    packssdw %xmm1, %xmm0
-; SSE41-NEXT:    packsswb %xmm2, %xmm0
-; SSE41-NEXT:    pmovmskb %xmm0, %ecx
-; SSE41-NEXT:    movl %ecx, %eax
-; SSE41-NEXT:    shrl $8, %eax
-; SSE41-NEXT:    addb %cl, %al
-; SSE41-NEXT:    # kill: def $al killed $al killed $eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: bitcast_v16i32_to_v2i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    packssdw %xmm3, %xmm2
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    packsswb %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    movl %ecx, %eax
+; SSE-NEXT:    shrl $8, %eax
+; SSE-NEXT:    addb %cl, %al
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_v16i32_to_v2i8:
 ; AVX1:       # %bb.0:
@@ -1468,19 +1433,15 @@ define [2 x i8] @PR58546(<16 x float> %a0) {
 define i8 @PR59526(<8 x i32> %a, <8 x i32> %b, ptr %mask) {
 ; SSE-LABEL: PR59526:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    movdqu (%rdi), %xmm1
-; SSE-NEXT:    movdqu 16(%rdi), %xmm2
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm4
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm3
-; SSE-NEXT:    packssdw %xmm4, %xmm3
-; SSE-NEXT:    pand %xmm0, %xmm3
-; SSE-NEXT:    pmovmskb %xmm3, %eax
-; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE-NEXT:    movdqu (%rdi), %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    movdqu 16(%rdi), %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    packssdw %xmm0, %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %eax
+; SSE-NEXT:    testl $43690, %eax # imm = 0xAAAA
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;

@@ -231,7 +231,7 @@ void dr251(void) {
   struct dr251_fred *ptr; /* expected-error {{use of 'dr251_fred' with tag type that does not match previous declaration}} */
 }
 
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 /* WG14 DR252: yes
  * Incomplete argument types when calling non-prototyped functions
  */
@@ -247,10 +247,10 @@ void dr252(void) {
    * prototype, but Clang treats it as an error.
    */
   dr252_no_proto(dr252_proto()); /* expected-error {{argument type 'void' is incomplete}}
-                                    expected-warning {{passing arguments to 'dr252_no_proto' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                                    expected-warning {{passing arguments to 'dr252_no_proto' without a prototype is deprecated in all versions of C and is not supported in C23}}
                                   */
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR258: yes
  * Ordering of "defined" and macro replacement
@@ -275,9 +275,12 @@ void dr258(void) {
  * Constant expressions
  */
 void dr261(void) {
-  /* This is still an integer constant expression despite the overflow. */
+  /* This is not an integer constant expression because of the overflow,
+   * but we fold it as a constant expression anyway as a GNU extension. */
   enum e1 {
-    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}}
+                              expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                              expected-note {{value 2147483648 is outside the range of representable values of type 'int'}} */
   };
 
   /* This is not an integer constant expression, because of the comma operator,

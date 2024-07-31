@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
@@ -9,10 +10,10 @@ import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/edit/enable.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
-import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
@@ -45,9 +46,6 @@ import("//llvm/version.gni")
 declare_args() {
   # Enable additional checks that alter the LLVM C++ ABI.
   llvm_enable_abi_breaking_checks = llvm_enable_assertions
-
-  # Iterate unordered llvm containers in reverse.
-  llvm_enable_reverse_iteration = false
 
   # Force enable statistics.
   llvm_force_enable_stats = false
@@ -85,6 +83,7 @@ write_cmake_config("config") {
     "ENABLE_BACKTRACES=1",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
+    "HAVE_BUILTIN_THREAD_POINTER=",
     "HAVE_CRASHREPORTERCLIENT_H=",
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
@@ -123,6 +122,7 @@ write_cmake_config("config") {
     "HOST_LINK_VERSION=",
     "LIBPFM_HAS_FIELD_CYCLES=",
     "LLVM_TARGET_TRIPLE_ENV=",
+    "LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG=1",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
     "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
     "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",
@@ -157,7 +157,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_CRASHREPORTER_INFO=1",
       "HAVE_DECL_ARC4RANDOM=1",
-      "HAVE_DLADDR=1",
       "HAVE_MACH_MACH_H=1",
       "HAVE_MALLOC_MALLOC_H=1",
       "HAVE_MALLOC_ZONE_STATISTICS=1",
@@ -169,7 +168,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_CRASHREPORTER_INFO=",
       "HAVE_DECL_ARC4RANDOM=",
-      "HAVE_DLADDR=",
       "HAVE_MACH_MACH_H=",
       "HAVE_MALLOC_MALLOC_H=",
       "HAVE_MALLOC_ZONE_STATISTICS=",
@@ -208,6 +206,7 @@ write_cmake_config("config") {
   if (current_os == "win") {
     values += [
       "HAVE_DECL_STRERROR_S=1",
+      "HAVE_DLADDR=",
       "HAVE_DLFCN_H=",
       "HAVE_DLOPEN=",
       "HAVE_FUTIMES=",
@@ -243,6 +242,7 @@ write_cmake_config("config") {
     # POSIX-y system defaults.
     values += [
       "HAVE_DECL_STRERROR_S=",
+      "HAVE_DLADDR=1",
       "HAVE_DLFCN_H=1",
       "HAVE_DLOPEN=1",
       "HAVE_FUTIMES=1",
@@ -294,12 +294,6 @@ write_cmake_config("config") {
     values += [ "HAVE_LIBEDIT=" ]
   }
 
-  if (llvm_enable_terminfo) {
-    values += [ "LLVM_ENABLE_TERMINFO=1" ]
-  } else {
-    values += [ "LLVM_ENABLE_TERMINFO=" ]
-  }
-
   if (llvm_enable_libxml2) {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
@@ -322,9 +316,9 @@ write_cmake_config("llvm-config") {
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
-    "LLVM_ENABLE_ZSTD=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
+    "LLVM_HAS_LOGF128=",
     "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
@@ -375,12 +369,6 @@ write_cmake_config("llvm-config") {
     ]
   }
 
-  if (llvm_enable_libxar) {
-    values += [ "LLVM_HAVE_LIBXAR=1" ]
-  } else {
-    values += [ "LLVM_HAVE_LIBXAR=" ]
-  }
-
   if (llvm_enable_dia_sdk) {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
@@ -399,6 +387,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_ZLIB=" ]
   }
 
+  if (llvm_enable_zstd) {
+    values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ZSTD=" ]
+  }
+
   if (llvm_enable_libcurl) {
     values += [ "LLVM_ENABLE_CURL=1" ]
   } else {
@@ -410,6 +404,94 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
+
+  if (llvm_build_AArch64) {
+    values += [ "LLVM_HAS_AARCH64_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AARCH64_TARGET=" ]
+  }
+
+  if (llvm_build_AMDGPU) {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_ARC_TARGET=" ]
+
+  if (llvm_build_ARM) {
+    values += [ "LLVM_HAS_ARM_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_ARM_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_AVR_TARGET=" ]
+
+  if (llvm_build_BPF) {
+    values += [ "LLVM_HAS_BPF_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_BPF_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_CSKY_TARGET=" ]
+  values += [ "LLVM_HAS_DIRECTX_TARGET=" ]
+  values += [ "LLVM_HAS_HEXAGON_TARGET=" ]
+  values += [ "LLVM_HAS_LANAI_TARGET=" ]
+
+  if (llvm_build_LoongArch) {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_M68K_TARGET=" ]
+
+  if (llvm_build_Mips) {
+    values += [ "LLVM_HAS_MIPS_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_MIPS_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_MSP430_TARGET=" ]
+  values += [ "LLVM_HAS_NVPTX_TARGET=" ]
+
+  if (llvm_build_PowerPC) {
+    values += [ "LLVM_HAS_POWERPC_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_POWERPC_TARGET=" ]
+  }
+
+  if (llvm_build_RISCV) {
+    values += [ "LLVM_HAS_RISCV_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_RISCV_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_SPARC_TARGET=" ]
+  values += [ "LLVM_HAS_SPIRV_TARGET=" ]
+
+  if (llvm_build_SystemZ) {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_VE_TARGET=" ]
+
+  if (llvm_build_WebAssembly) {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=" ]
+  }
+
+  if (llvm_build_X86) {
+    values += [ "LLVM_HAS_X86_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_X86_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_XCORE_TARGET=" ]
+  values += [ "LLVM_HAS_XTENSA_TARGET=" ]
 }
 
 ##############################################################################

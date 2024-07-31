@@ -156,7 +156,7 @@ void testAllocatorOperationsCalled() {
 
 template <class T>
 struct AllocatorWithPattern {
-  constexpr static char pattern = 0xDE;
+  constexpr static char pattern = static_cast<char>(0xDE);
 
   using value_type = T;
 

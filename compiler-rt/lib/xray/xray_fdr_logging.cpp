@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 #include "xray_fdr_logging.h"
 #include <cassert>
+#include <cstddef>
 #include <errno.h>
 #include <limits>
 #include <memory>
@@ -54,17 +55,12 @@ struct XRAY_TLS_ALIGNAS(64) ThreadLocalData {
   BufferQueue::Buffer Buffer{};
   BufferQueue *BQ = nullptr;
 
-  using LogWriterStorage =
-      typename std::aligned_storage<sizeof(FDRLogWriter),
-                                    alignof(FDRLogWriter)>::type;
-
-  LogWriterStorage LWStorage;
+  using LogWriterStorage = std::byte[sizeof(FDRLogWriter)];
+  alignas(FDRLogWriter) LogWriterStorage LWStorage;
   FDRLogWriter *Writer = nullptr;
 
-  using ControllerStorage =
-      typename std::aligned_storage<sizeof(FDRController<>),
-                                    alignof(FDRController<>)>::type;
-  ControllerStorage CStorage;
+  using ControllerStorage = std::byte[sizeof(FDRController<>)];
+  alignas(FDRController<>) ControllerStorage CStorage;
   FDRController<> *Controller = nullptr;
 };
 
@@ -77,7 +73,7 @@ static_assert(std::is_trivially_destructible<ThreadLocalData>::value,
 static pthread_key_t Key;
 
 // Global BufferQueue.
-static std::aligned_storage<sizeof(BufferQueue)>::type BufferQueueStorage;
+static std::byte BufferQueueStorage[sizeof(BufferQueue)];
 static BufferQueue *BQ = nullptr;
 
 // Global thresholds for function durations.
@@ -128,8 +124,8 @@ static_assert(alignof(ThreadLocalData) >= 64,
               "ThreadLocalData must be cache line aligned.");
 #endif
 static ThreadLocalData &getThreadLocalData() {
-  thread_local typename std::aligned_storage<
-      sizeof(ThreadLocalData), alignof(ThreadLocalData)>::type TLDStorage{};
+  alignas(ThreadLocalData) thread_local std::byte
+      TLDStorage[sizeof(ThreadLocalData)];
 
   if (pthread_getspecific(Key) == NULL) {
     new (reinterpret_cast<ThreadLocalData *>(&TLDStorage)) ThreadLocalData{};
@@ -140,7 +136,7 @@ static ThreadLocalData &getThreadLocalData() {
 }
 
 static XRayFileHeader &fdrCommonHeaderInfo() {
-  static std::aligned_storage<sizeof(XRayFileHeader)>::type HStorage;
+  alignas(XRayFileHeader) static std::byte HStorage[sizeof(XRayFileHeader)];
   static pthread_once_t OnceInit = PTHREAD_ONCE_INIT;
   static bool TSCSupported = true;
   static uint64_t CycleFrequency = NanosecondsPerSecond;
@@ -204,7 +200,8 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   // initialized the first time this function is called. We'll update one part
   // of this information with some relevant data (in particular the number of
   // buffers to expect).
-  static std::aligned_storage<sizeof(XRayFileHeader)>::type HeaderStorage;
+  alignas(
+      XRayFileHeader) static std::byte HeaderStorage[sizeof(XRayFileHeader)];
   static pthread_once_t HeaderOnce = PTHREAD_ONCE_INIT;
   pthread_once(
       &HeaderOnce, +[] {
@@ -580,9 +577,9 @@ void fdrLoggingHandleCustomEvent(void *Event,
   TLD.Controller->customEvent(TSC, CPU, Event, ReducedEventSize);
 }
 
-void fdrLoggingHandleTypedEvent(
-    uint16_t EventType, const void *Event,
-    std::size_t EventSize) noexcept XRAY_NEVER_INSTRUMENT {
+void fdrLoggingHandleTypedEvent(size_t EventType, const void *Event,
+                                size_t EventSize) noexcept
+    XRAY_NEVER_INSTRUMENT {
   auto TC = getTimestamp();
   auto &TSC = TC.TSC;
   auto &CPU = TC.CPU;
@@ -607,7 +604,8 @@ void fdrLoggingHandleTypedEvent(
     return;
 
   int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
-  TLD.Controller->typedEvent(TSC, CPU, EventType, Event, ReducedEventSize);
+  TLD.Controller->typedEvent(TSC, CPU, static_cast<uint16_t>(EventType), Event,
+                             ReducedEventSize);
 }
 
 XRayLogInitStatus fdrLoggingInit(size_t, size_t, void *Options,

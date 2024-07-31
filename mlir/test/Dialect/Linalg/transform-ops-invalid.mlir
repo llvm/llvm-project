@@ -11,7 +11,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects padding_dimensions to contain positive integers, found [1, -7]}}
-  transform.structured.pad %arg0 {padding_dimensions=[1, -7]} : (!transform.any_op) -> !transform.any_op
+  transform.structured.pad %arg0 {padding_dimensions=[1, -7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -19,7 +19,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects pack_paddings to contain booleans (0/1), found [1, 7]}}
-  transform.structured.pad %arg0 {pack_paddings=[1, 7]} : (!transform.any_op) -> !transform.any_op
+  transform.structured.pad %arg0 {pack_paddings=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -27,7 +27,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects transpose_paddings to be a permutation, found [1, 1]}}
-  transform.structured.pad %arg0 {transpose_paddings=[[1, 1]]} : (!transform.any_op) -> !transform.any_op
+  transform.structured.pad %arg0 {transpose_paddings=[[1, 1]]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -76,14 +76,19 @@ transform.sequence failures(propagate) {
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
-  // expected-error @below {{expected 4 result types, got 2}}
-  transform.structured.tile_to_scf_for %arg0 [1, 2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %0 = transform.param.constant 2 : i64 -> !transform.param<i64>
+  // expected-error@below {{custom op 'transform.structured.vectorize' 1 operands present, but expected 2}}
+  transform.structured.vectorize %arg0 vector_sizes [%0, 2] : !transform.any_op, !transform.param<i64>, !transform.param<i64>
+
 }
 
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op):
-  // expected-error @below {{expected 2 operand types, got 1}}
-  transform.structured.tile_to_scf_for %arg0 [%arg1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.param.constant 2 : i64 -> !transform.param<i64>
+  // expected-error@below {{expected ']' in dynamic index list}}
+  // expected-error@below {{custom op 'transform.structured.vectorize' expected SSA value or integer}}
+  transform.structured.vectorize %arg0 vector_sizes [%0 : !transform.param<i64>, 2] : !transform.any_op, !transform.param<i64>
+
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-cuda-mode -fopenmp-host-ir-file-path %t-ppc-host.bc -o -
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -fopenmp-cuda-mode -fopenmp-host-ir-file-path %t-ppc-host.bc -o -
 
 template <typename tx, typename ty>
 struct TT {
@@ -46,23 +46,6 @@ int foo(int n, double *ptr) {
   return a;
 }
 
-template <typename tx>
-tx ftemplate(int n) {
-  tx a = 0;
-  tx b[10];
-
-#pragma omp target reduction(+ \
-                             : a, b) // expected-note {{defined as threadprivate or thread local}}
-  {
-    int e;                        // expected-note {{defined as threadprivate or thread local}}
-#pragma omp parallel shared(a, e) // expected-error 2 {{threadprivate or thread local variable cannot be shared}}
-    a += 1;
-    b[2] += 1;
-  }
-
-  return a;
-}
-
 static int fstatic(int n) {
   int a = 0;
   char aaa = 0;
@@ -101,7 +84,6 @@ int bar(int n, double *ptr) {
   S1 S;
   a += S.r1(n);
   a += fstatic(n);
-  a += ftemplate<int>(n); // expected-note {{in instantiation of function template specialization 'ftemplate<int>' requested here}}
 
   return a;
 }

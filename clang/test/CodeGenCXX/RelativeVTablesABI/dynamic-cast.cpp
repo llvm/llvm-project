@@ -1,7 +1,7 @@
 // dynamic_cast
 // Ensure that dynamic casting works normally
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -o - -emit-llvm | FileCheck %s
 
 // CHECK:      define{{.*}} ptr @_Z6upcastP1B(ptr noundef readnone returned %b) local_unnamed_addr
 // CHECK-NEXT: entry:
@@ -33,7 +33,7 @@
 // CHECK-NEXT:   br i1 [[isnull]], label %[[dynamic_cast_end:[a-z0-9._]+]], label %[[dynamic_cast_notnull:[a-z0-9._]+]]
 // CHECK:      [[dynamic_cast_notnull]]:
 // CHECK-DAG:    [[vtable:%[a-z0-9]+]] = load ptr, ptr %b, align 8
-// CHECK-DAG:    [[offset_ptr:%.+]] = getelementptr inbounds i32, ptr [[vtable]], i64 -2
+// CHECK-DAG:    [[offset_ptr:%.+]] = getelementptr inbounds i8, ptr [[vtable]], i64 -8
 // CHECK-DAG:    [[offset_to_top:%.+]] = load i32, ptr [[offset_ptr]], align 4
 // CHECK-DAG:    [[offset_to_top2:%.+]] = sext i32 [[offset_to_top]] to i64
 // CHECK-DAG:    [[casted:%.+]] = getelementptr inbounds i8, ptr %b, i64 [[offset_to_top2]]

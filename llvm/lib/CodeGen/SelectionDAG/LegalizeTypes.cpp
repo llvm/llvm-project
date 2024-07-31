@@ -188,8 +188,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 
 #ifndef NDEBUG
   // Checked that NewNodes are only used by other NewNodes.
-  for (unsigned i = 0, e = NewNodes.size(); i != e; ++i) {
-    SDNode *N = NewNodes[i];
+  for (SDNode *N : NewNodes) {
     for (SDNode *U : N->uses())
       assert(U->getNodeId() == NewNode && "NewNode used by non-NewNode!");
   }
@@ -235,7 +234,7 @@ bool DAGTypeLegalizer::run() {
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
-    LLVM_DEBUG(dbgs() << "Legalizing node: "; N->dump(&DAG));
+    LLVM_DEBUG(dbgs() << "\nLegalizing node: "; N->dump(&DAG));
     if (IgnoreNodeResults(N)) {
       LLVM_DEBUG(dbgs() << "Ignoring node results\n");
       goto ScanOperands;
@@ -390,8 +389,7 @@ ScanOperands:
     }
 
     if (i == NumOperands) {
-      LLVM_DEBUG(dbgs() << "Legally typed node: "; N->dump(&DAG);
-                 dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "Legally typed node: "; N->dump(&DAG));
     }
     }
 NodeDone:
@@ -1000,7 +998,7 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
                               LVT.getSizeInBits() + HVT.getSizeInBits());
 
-  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout(), false);
+  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   Lo = DAG.getNode(ISD::ZERO_EXTEND, dlLo, NVT, Lo);
   Hi = DAG.getNode(ISD::ANY_EXTEND, dlHi, NVT, Hi);
   Hi = DAG.getNode(ISD::SHL, dlHi, NVT, Hi,

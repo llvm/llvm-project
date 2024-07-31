@@ -56,6 +56,17 @@ static cl::opt<bool> UnrollRuntimeOtherExitPredictable(
     "unroll-runtime-other-exit-predictable", cl::init(false), cl::Hidden,
     cl::desc("Assume the non latch exit block to be predictable"));
 
+// Probability that the loop trip count is so small that after the prolog
+// we do not enter the unrolled loop at all.
+// It is unlikely that the loop trip count is smaller than the unroll factor;
+// other than that, the choice of constant is not tuned yet.
+static const uint32_t UnrolledLoopHeaderWeights[] = {1, 127};
+// Probability that the loop trip count is so small that we skip the unrolled
+// loop completely and immediately enter the epilogue loop.
+// It is unlikely that the loop trip count is smaller than the unroll factor;
+// other than that, the choice of constant is not tuned yet.
+static const uint32_t EpilogHeaderWeights[] = {1, 127};
+
 /// Connect the unrolling prolog code to the original loop.
 /// The unrolling prolog code contains code to execute the
 /// 'extra' iterations if the run-time trip count modulo the
@@ -105,8 +116,8 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
       // PrologLatch. When supporting multiple-exiting block loops, we can have
       // two or more blocks that have the LatchExit as the target in the
       // original loop.
-      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
-                                       PrologExit->getFirstNonPHI());
+      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr");
+      NewPN->insertBefore(PrologExit->getFirstNonPHIIt());
       // Adding a value to the new PHI node from the original loop preheader.
       // This is the value that skips all the prolog code.
       if (L->contains(&PN)) {
@@ -115,7 +126,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                            PreHeader);
       } else {
         // Succ is LatchExit.
-        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
+        NewPN->addIncoming(PoisonValue::get(PN.getType()), PreHeader);
       }
 
       Value *V = PN.getIncomingValueForBlock(Latch);
@@ -169,7 +180,14 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   SplitBlockPredecessors(OriginalLoopLatchExit, Preds, ".unr-lcssa", DT, LI,
                          nullptr, PreserveLCSSA);
   // Add the branch to the exit block (around the unrolled loop)
-  B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader);
+  MDNode *BranchWeights = nullptr;
+  if (hasBranchWeightMD(*Latch->getTerminator())) {
+    // Assume loop is nearly always entered.
+    MDBuilder MDB(B.getContext());
+    BranchWeights = MDB.createBranchWeights(UnrolledLoopHeaderWeights);
+  }
+  B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader,
+                 BranchWeights);
   InsertPt->eraseFromParent();
   if (DT) {
     auto *NewDom = DT->findNearestCommonDominator(OriginalLoopLatchExit,
@@ -194,8 +212,8 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                           BasicBlock *Exit, BasicBlock *PreHeader,
                           BasicBlock *EpilogPreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA,
-                          ScalarEvolution &SE) {
+                          LoopInfo *LI, bool PreserveLCSSA, ScalarEvolution &SE,
+                          unsigned Count) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *EpilogLatch = cast<BasicBlock>(VMap[Latch]);
@@ -235,7 +253,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
 
     // Add incoming PreHeader from branch around the Loop
-    PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
+    PN.addIncoming(PoisonValue::get(PN.getType()), PreHeader);
     SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
@@ -254,7 +272,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                                NewExit);
     // Now PHIs should look like:
     // NewExit:
-    //   PN = PHI [I, Latch], [undef, PreHeader]
+    //   PN = PHI [I, Latch], [poison, PreHeader]
     // ...
     // Exit:
     //   EpilogPN = PHI [PN, NewExit], [VMap[I], EpilogLatch]
@@ -269,8 +287,8 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     for (PHINode &PN : Succ->phis()) {
       // Add new PHI nodes to the loop exit block and update epilog
       // PHIs with the new PHI values.
-      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
-                                       NewExit->getFirstNonPHI());
+      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr");
+      NewPN->insertBefore(NewExit->getFirstNonPHIIt());
       // Adding a value to the new PHI node from the unrolling loop preheader.
       NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
       // Adding a value to the new PHI node from the unrolling loop latch.
@@ -292,7 +310,13 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the unrolling loop)
-  B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit);
+  MDNode *BranchWeights = nullptr;
+  if (hasBranchWeightMD(*Latch->getTerminator())) {
+    // Assume equal distribution in interval [0, Count).
+    MDBuilder MDB(B.getContext());
+    BranchWeights = MDB.createBranchWeights(1, Count - 1);
+  }
+  B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
   InsertPt->eraseFromParent();
   if (DT) {
     auto *NewDom = DT->findNearestCommonDominator(Exit, NewExit);
@@ -316,8 +340,9 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
                 const bool UnrollRemainder,
                 BasicBlock *InsertTop,
                 BasicBlock *InsertBot, BasicBlock *Preheader,
-                std::vector<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
-                ValueToValueMapTy &VMap, DominatorTree *DT, LoopInfo *LI) {
+                             std::vector<BasicBlock *> &NewBlocks,
+                             LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
+                             DominatorTree *DT, LoopInfo *LI, unsigned Count) {
   StringRef suffix = UseEpilogRemainder ? "epil" : "prol";
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -363,14 +388,34 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
       BasicBlock *FirstLoopBB = cast<BasicBlock>(VMap[Header]);
       BranchInst *LatchBR = cast<BranchInst>(NewBB->getTerminator());
       IRBuilder<> Builder(LatchBR);
-      PHINode *NewIdx = PHINode::Create(NewIter->getType(), 2,
-                                        suffix + ".iter",
-                                        FirstLoopBB->getFirstNonPHI());
+      PHINode *NewIdx =
+          PHINode::Create(NewIter->getType(), 2, suffix + ".iter");
+      NewIdx->insertBefore(FirstLoopBB->getFirstNonPHIIt());
       auto *Zero = ConstantInt::get(NewIdx->getType(), 0);
       auto *One = ConstantInt::get(NewIdx->getType(), 1);
-      Value *IdxNext = Builder.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
+      Value *IdxNext =
+          Builder.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
       Value *IdxCmp = Builder.CreateICmpNE(IdxNext, NewIter, NewIdx->getName() + ".cmp");
-      Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot);
+      MDNode *BranchWeights = nullptr;
+      if (hasBranchWeightMD(*LatchBR)) {
+        uint32_t ExitWeight;
+        uint32_t BackEdgeWeight;
+        if (Count >= 3) {
+          // Note: We do not enter this loop for zero-remainders. The check
+          // is at the end of the loop. We assume equal distribution between
+          // possible remainders in [1, Count).
+          ExitWeight = 1;
+          BackEdgeWeight = (Count - 2) / 2;
+        } else {
+          // Unnecessary backedge, should never be taken. The conditional
+          // jump should be optimized away later.
+          ExitWeight = 1;
+          BackEdgeWeight = 0;
+        }
+        MDBuilder MDB(Builder.getContext());
+        BranchWeights = MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
+      }
+      Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
       NewIdx->addIncoming(Zero, InsertTop);
       NewIdx->addIncoming(IdxNext, NewBB);
       LatchBR->eraseFromParent();
@@ -457,37 +502,11 @@ static bool canProfitablyUnrollMultiExitLoop(
   // call.
   return (OtherExits.size() == 1 &&
           (UnrollRuntimeOtherExitPredictable ||
-           OtherExits[0]->getTerminatingDeoptimizeCall()));
+           OtherExits[0]->getPostdominatingDeoptimizeCall()));
   // TODO: These can be fine-tuned further to consider code size or deopt states
   // that are captured by the deoptimize exit block.
   // Also, we can extend this to support more cases, if we actually
   // know of kinds of multiexit loops that would benefit from unrolling.
-}
-
-// Assign the maximum possible trip count as the back edge weight for the
-// remainder loop if the original loop comes with a branch weight.
-static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
-                                                     Loop *RemainderLoop,
-                                                     uint64_t UnrollFactor) {
-  uint64_t TrueWeight, FalseWeight;
-  BranchInst *LatchBR =
-      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
-  if (!extractBranchWeights(*LatchBR, TrueWeight, FalseWeight))
-    return;
-  uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
-                            ? FalseWeight
-                            : TrueWeight;
-  assert(UnrollFactor > 1);
-  uint64_t BackEdgeWeight = (UnrollFactor - 1) * ExitWeight;
-  BasicBlock *Header = RemainderLoop->getHeader();
-  BasicBlock *Latch = RemainderLoop->getLoopLatch();
-  auto *RemainderLatchBR = cast<BranchInst>(Latch->getTerminator());
-  unsigned HeaderIdx = (RemainderLatchBR->getSuccessor(0) == Header ? 0 : 1);
-  MDBuilder MDB(RemainderLatchBR->getContext());
-  MDNode *WeightNode =
-    HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
-                : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
-  RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
 }
 
 /// Calculate ModVal = (BECount + 1) % Count on the abstract integer domain
@@ -651,7 +670,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
 
   BasicBlock *PreHeader = L->getLoopPreheader();
   BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
-  const DataLayout &DL = Header->getModule()->getDataLayout();
+  const DataLayout &DL = Header->getDataLayout();
   SCEVExpander Expander(*SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, SCEVCheapExpansionBudget,
@@ -757,7 +776,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
       !isGuaranteedNotToBeUndefOrPoison(TripCount, AC, PreHeaderBR, DT)) {
     TripCount = B.CreateFreeze(TripCount);
     BECount =
-        B.CreateAdd(TripCount, ConstantInt::get(TripCount->getType(), -1));
+        B.CreateAdd(TripCount, Constant::getAllOnesValue(TripCount->getType()));
   } else {
     // If we don't need to freeze, use SCEVExpander for BECount as well, to
     // allow slightly better value reuse.
@@ -775,7 +794,13 @@ bool llvm::UnrollRuntimeLoopRemainder(
   BasicBlock *RemainderLoop = UseEpilogRemainder ? NewExit : PrologPreHeader;
   BasicBlock *UnrollingLoop = UseEpilogRemainder ? NewPreHeader : PrologExit;
   // Branch to either remainder (extra iterations) loop or unrolling loop.
-  B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop);
+  MDNode *BranchWeights = nullptr;
+  if (hasBranchWeightMD(*Latch->getTerminator())) {
+    // Assume loop is nearly always entered.
+    MDBuilder MDB(B.getContext());
+    BranchWeights = MDB.createBranchWeights(EpilogHeaderWeights);
+  }
+  B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
   PreHeaderBR->eraseFromParent();
   if (DT) {
     if (UseEpilogRemainder)
@@ -804,12 +829,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   BasicBlock *InsertTop = UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
   Loop *remainderLoop = CloneLoopBlocks(
       L, ModVal, UseEpilogRemainder, UnrollRemainder, InsertTop, InsertBot,
-      NewPreHeader, NewBlocks, LoopBlocks, VMap, DT, LI);
-
-  // Assign the maximum possible trip count as the back edge weight for the
-  // remainder loop if the original loop comes with a branch weight.
-  if (remainderLoop && !UnrollRemainder)
-    updateLatchBranchWeightsForRemainderLoop(L, remainderLoop, Count);
+      NewPreHeader, NewBlocks, LoopBlocks, VMap, DT, LI, Count);
 
   // Insert the cloned blocks into the function.
   F->splice(InsertBot->getIterator(), F, NewBlocks[0]->getIterator(), F->end());
@@ -829,7 +849,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
      for (unsigned i = 0; i < oldNumOperands; i++){
        auto *PredBB =PN.getIncomingBlock(i);
        if (PredBB == Latch)
-         // The latch exit is handled seperately, see connectX
+         // The latch exit is handled separately, see connectX
          continue;
        if (!L->contains(PredBB))
          // Even if we had dedicated exits, the code above inserted an
@@ -893,9 +913,12 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // Rewrite the cloned instruction operands to use the values created when the
   // clone is created.
   for (BasicBlock *BB : NewBlocks) {
+    Module *M = BB->getModule();
     for (Instruction &I : *BB) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(M, I.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 
@@ -903,7 +926,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Connect the epilog code to the original loop and update the
     // PHI functions.
     ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader, EpilogPreHeader,
-                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE);
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE, Count);
 
     // Update counter in loop for unrolling.
     // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.
@@ -912,8 +935,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     IRBuilder<> B2(NewPreHeader->getTerminator());
     Value *TestVal = B2.CreateSub(TripCount, ModVal, "unroll_iter");
     BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
-    PHINode *NewIdx = PHINode::Create(TestVal->getType(), 2, "niter",
-                                      Header->getFirstNonPHI());
+    PHINode *NewIdx = PHINode::Create(TestVal->getType(), 2, "niter");
+    NewIdx->insertBefore(Header->getFirstNonPHIIt());
     B2.SetInsertPoint(LatchBR);
     auto *Zero = ConstantInt::get(NewIdx->getType(), 0);
     auto *One = ConstantInt::get(NewIdx->getType(), 1);
@@ -954,7 +977,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     remainderLoop = nullptr;
 
     // Simplify loop values after breaking the backedge
-    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+    const DataLayout &DL = L->getHeader()->getDataLayout();
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     for (BasicBlock *BB : RemainderBlocks) {
       for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
@@ -993,12 +1016,17 @@ bool llvm::UnrollRuntimeLoopRemainder(
   auto UnrollResult = LoopUnrollResult::Unmodified;
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
-    UnrollResult =
-        UnrollLoop(remainderLoop,
-                   {/*Count*/ Count - 1, /*Force*/ false, /*Runtime*/ false,
-                    /*AllowExpensiveTripCount*/ false,
-                    /*UnrollRemainder*/ false, ForgetAllSCEV},
-                   LI, SE, DT, AC, TTI, /*ORE*/ nullptr, PreserveLCSSA);
+    UnrollLoopOptions ULO;
+    ULO.Count = Count - 1;
+    ULO.Force = false;
+    ULO.Runtime = false;
+    ULO.AllowExpensiveTripCount = false;
+    ULO.UnrollRemainder = false;
+    ULO.ForgetAllSCEV = ForgetAllSCEV;
+    assert(!getLoopConvergenceHeart(L) &&
+           "A loop with a convergence heart does not allow runtime unrolling.");
+    UnrollResult = UnrollLoop(remainderLoop, ULO, LI, SE, DT, AC, TTI,
+                              /*ORE*/ nullptr, PreserveLCSSA);
   }
 
   if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)

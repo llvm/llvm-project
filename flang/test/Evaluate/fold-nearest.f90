@@ -14,7 +14,9 @@ module m1
   logical, parameter :: test_6 = nearest(-inf, -1.) == -inf
   logical, parameter :: test_7 = nearest(1.9999999, 1.) == 2.
   logical, parameter :: test_8 = nearest(2., -1.) == 1.9999999
+#if __x86_64__
   logical, parameter :: test_9 = nearest(1.9999999999999999999_10, 1.) == 2._10
+#endif
   logical, parameter :: test_10 = nearest(-1., 1.) == -.99999994
   logical, parameter :: test_11 = nearest(-1., -2.) == -1.0000001
   real, parameter :: negZero = sign(0., -1.)
@@ -24,11 +26,20 @@ module m1
   logical, parameter :: test_14 = nearest(0., negZero) == -minSubnormal
   !WARN: warning: NEAREST: S argument is zero
   logical, parameter :: test_15 = nearest(negZero, 0.) == minSubnormal
+  logical, parameter :: test_16 = nearest(tiny(1.),-1.) == 1.1754942E-38
+  logical, parameter :: test_17 = nearest(tiny(1.),1.) == 1.1754945E-38
+ contains
+  subroutine subr(a)
+    real, intent(in) :: a
+    !WARN: warning: NEAREST: S argument is zero
+    print *, nearest(a, 0.)
+  end
 end module
 
 module m2
   use ieee_arithmetic, only: ieee_next_after
   real, parameter :: minSubnormal = 1.e-45
+  real, parameter :: h = huge(0.0)
   logical, parameter :: test_0 = ieee_next_after(0., 0.) == 0.
   logical, parameter :: test_1 = ieee_next_after(0., 1.) == minSubnormal
   logical, parameter :: test_2 = ieee_next_after(minSubnormal, -1.) == 0
@@ -37,12 +48,14 @@ module m2
   !WARN: warning: division by zero
   real, parameter :: inf = 1. / 0.
   logical, parameter :: test_5 = ieee_next_after(inf, inf) == inf
-  logical, parameter :: test_6 = ieee_next_after(inf, -inf) == inf
-  logical, parameter :: test_7 = ieee_next_after(-inf, inf) == -inf
-  logical, parameter :: test_8 = ieee_next_after(-inf, -1.) == -inf
+  logical, parameter :: test_6 = ieee_next_after(inf, -inf) == h
+  logical, parameter :: test_7 = ieee_next_after(-inf, inf) == -h
+  logical, parameter :: test_8 = ieee_next_after(-inf, -1.) == -h
   logical, parameter :: test_9 = ieee_next_after(1.9999999, 3.) == 2.
   logical, parameter :: test_10 = ieee_next_after(2., 1.) == 1.9999999
+#if __x86_64__
   logical, parameter :: test_11 = ieee_next_after(1.9999999999999999999_10, 3.) == 2._10
+#endif
   logical, parameter :: test_12 = ieee_next_after(1., 1.) == 1.
   !WARN: warning: invalid argument on division
   real, parameter :: nan = 0. / 0.
@@ -57,6 +70,7 @@ end module
 module m3
   use ieee_arithmetic, only: ieee_next_up, ieee_next_down
   real(kind(0.d0)), parameter :: minSubnormal = 5.d-324
+  real(kind(0.d0)), parameter :: h = huge(0.d0)
   logical, parameter :: test_1 = ieee_next_up(0.d0) == minSubnormal
   logical, parameter :: test_2 = ieee_next_down(0.d0) == -minSubnormal
   logical, parameter :: test_3 = ieee_next_up(1.d0) == 1.0000000000000002d0
@@ -69,10 +83,8 @@ module m3
   logical, parameter :: test_6 = ieee_next_down(-huge(0.d0)) == -inf
   !WARN: warning: IEEE_NEXT_UP intrinsic folding: bad argument
   logical, parameter :: test_7 = ieee_next_up(inf) == inf
-  !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: bad argument
-  logical, parameter :: test_8 = ieee_next_down(inf) == inf
-  !WARN: warning: IEEE_NEXT_UP intrinsic folding: bad argument
-  logical, parameter :: test_9 = ieee_next_up(-inf) == -inf
+  logical, parameter :: test_8 = ieee_next_down(inf) == h
+  logical, parameter :: test_9 = ieee_next_up(-inf) == -h
   !WARN: warning: IEEE_NEXT_DOWN intrinsic folding: bad argument
   logical, parameter :: test_10 = ieee_next_down(-inf) == -inf
   logical, parameter :: test_11 = ieee_next_up(1.9999999999999997d0) == 2.d0

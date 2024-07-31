@@ -1,4 +1,5 @@
 include(BuiltinTests)
+include(CheckIncludeFiles)
 include(CheckCSourceCompiles)
 
 # Make all the tests only check the compiler
@@ -13,6 +14,17 @@ builtin_check_c_compiler_flag(-fvisibility=hidden   COMPILER_RT_HAS_VISIBILITY_H
 builtin_check_c_compiler_flag(-fomit-frame-pointer  COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG)
 builtin_check_c_compiler_flag(-ffreestanding        COMPILER_RT_HAS_FFREESTANDING_FLAG)
 builtin_check_c_compiler_flag(-fxray-instrument     COMPILER_RT_HAS_XRAY_COMPILER_FLAG)
+builtin_check_c_compiler_flag(-fno-lto              COMPILER_RT_HAS_FNO_LTO_FLAG)
+builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
+builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC)
+builtin_check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
+builtin_check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
+builtin_check_c_compiler_flag(-fconvergent-functions COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG)
+builtin_check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
+builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
+builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
@@ -28,6 +40,23 @@ asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
+"
+void foo(void)  __arm_streaming_compatible {
+  asm(\".arch armv9-a+sme\");
+  asm(\"smstart\");
+}
+")
+
+check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
+
+if(ANDROID)
+  set(OS_NAME "Android")
+else()
+  set(OS_NAME "${CMAKE_SYSTEM_NAME}")
+endif()
+
+set(AMDGPU amdgcn)
 set(ARM64 aarch64)
 set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
@@ -37,6 +66,7 @@ set(X86_64 x86_64)
 set(LOONGARCH64 loongarch64)
 set(MIPS32 mips mipsel)
 set(MIPS64 mips64 mips64el)
+set(NVPTX nvptx64)
 set(PPC32 powerpc powerpcspe)
 set(PPC64 powerpc64 powerpc64le)
 set(RISCV32 riscv32)
@@ -54,8 +84,8 @@ if(APPLE)
 endif()
 
 set(ALL_BUILTIN_SUPPORTED_ARCH
-  ${X86} ${X86_64} ${ARM32} ${ARM64} ${AVR}
-  ${HEXAGON} ${MIPS32} ${MIPS64} ${PPC32} ${PPC64}
+  ${X86} ${X86_64} ${AMDGPU} ${ARM32} ${ARM64} ${AVR}
+  ${HEXAGON} ${MIPS32} ${MIPS64} ${NVPTX} ${PPC32} ${PPC64}
   ${RISCV32} ${RISCV64} ${SPARC} ${SPARCV9}
   ${WASM32} ${WASM64} ${VE} ${LOONGARCH64})
 
@@ -71,6 +101,8 @@ if(APPLE)
   find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
   find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
   find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  find_darwin_sdk_dir(DARWIN_xrossim_SYSROOT xrsimulator)
+  find_darwin_sdk_dir(DARWIN_xros_SYSROOT xros)
 
   # Get supported architecture from SDKSettings.
   function(sdk_has_arch_support sdk_path os arch has_support)
@@ -140,6 +172,11 @@ if(APPLE)
     if ("${tvossim_sdk_version}" VERSION_GREATER 14.0 OR "${tvossim_sdk_version}" VERSION_EQUAL 14.0)
       list(APPEND DARWIN_tvossim_BUILTIN_ALL_POSSIBLE_ARCHS arm64)
     endif()
+  endif()
+  if(COMPILER_RT_ENABLE_XROS)
+    list(APPEND DARWIN_EMBEDDED_PLATFORMS xros)
+    set(DARWIN_xros_BUILTIN_ALL_POSSIBLE_ARCHS ${ARM64} ${ARM32})
+    set(DARWIN_xrossim_BUILTIN_ALL_POSSIBLE_ARCHS arm64)
   endif()
 
   set(BUILTIN_SUPPORTED_OS osx)
@@ -212,6 +249,13 @@ else()
   # Architectures supported by compiler-rt libraries.
   filter_available_targets(BUILTIN_SUPPORTED_ARCH
     ${ALL_BUILTIN_SUPPORTED_ARCH})
+endif()
+
+if(OS_NAME MATCHES "Linux|SerenityOS" AND NOT LLVM_USE_SANITIZER AND NOT
+   COMPILER_RT_GPU_BUILD)
+  set(COMPILER_RT_HAS_CRT TRUE)
+else()
+  set(COMPILER_RT_HAS_CRT FALSE)
 endif()
 
 message(STATUS "Builtin supported architectures: ${BUILTIN_SUPPORTED_ARCH}")

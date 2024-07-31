@@ -36,6 +36,7 @@ body: |
     $vgpr0 = COPY %1(s32)
 ...
 
+# FIXME: Mode fields are redundant and not considered.
 ---
 name: test_denormal_fconstant
 tracksRegLiveness: true
@@ -49,8 +50,7 @@ body: |
 
     ; CHECK-LABEL: name: test_denormal_fconstant
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.618950e-319
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCANONICALIZE]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](s64)
     %0:_(s64) = G_FCONSTANT double 0x0000000000008000
     %1:_(s64) = G_FCANONICALIZE %0
     $vgpr0_vgpr1 = COPY %1(s64)
@@ -254,8 +254,8 @@ body: |
     ; CHECK-NEXT: %one_s32:_(s32) = G_ANYEXT %one(s16)
     ; CHECK-NEXT: %one_undef:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %one_s32(s32), %undef(s32)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[COPY]], %two_splat
-    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMAXNUM_IEEE %zero_undef, [[FMUL]]
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE %one_undef, [[FMAXNUM_IEEE]]
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMAXNUM_IEEE [[FMUL]], %zero_undef
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE [[FMAXNUM_IEEE]], %one_undef
     ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %two:_(s16) = G_FCONSTANT half 0xH4000
@@ -306,7 +306,7 @@ body: |
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[COPY]], %two_splat
     ; CHECK-NEXT: %snan_undef_fcan:_(<2 x s16>) = G_FCANONICALIZE %snan_undef
     ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMAXNUM_IEEE %snan_undef_fcan, [[FMUL]]
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE %qnan_undef, [[FMAXNUM_IEEE]]
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(<2 x s16>) = G_FMINNUM_IEEE [[FMAXNUM_IEEE]], %qnan_undef
     ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %two:_(s16) = G_FCONSTANT half 0xH4000

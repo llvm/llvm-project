@@ -10,9 +10,10 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace testing {
 
@@ -20,19 +21,14 @@ int get_fe_rounding(RoundingMode mode) {
   switch (mode) {
   case RoundingMode::Upward:
     return FE_UPWARD;
-    break;
   case RoundingMode::Downward:
     return FE_DOWNWARD;
-    break;
   case RoundingMode::TowardZero:
     return FE_TOWARDZERO;
-    break;
   case RoundingMode::Nearest:
     return FE_TONEAREST;
-    break;
-  default:
-    __builtin_unreachable();
   }
+  __builtin_unreachable();
 }
 
 ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
@@ -53,4 +49,4 @@ ForceRoundingMode::~ForceRoundingMode() {
 
 } // namespace testing
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

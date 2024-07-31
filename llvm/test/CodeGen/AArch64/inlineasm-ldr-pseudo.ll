@@ -2,7 +2,7 @@
 ; assembly, the current code path will bypass the parser and just write the
 ; raw text out to the Streamer. We need to actually parse the inlineasm to
 ; demonstrate the bug. Going the asm->obj route does not show the issue.
-; RUN: llc -mtriple=aarch64   < %s -filetype=obj | llvm-objdump --no-print-imm-hex --arch=aarch64 -d - | FileCheck %s
+; RUN: llc -mtriple=aarch64   < %s -filetype=obj | llvm-objdump --no-print-imm-hex --show-all-symbols -d - | FileCheck %s
 
 ; CHECK-LABEL: <foo>:
 ; CHECK:       d29579a0      mov x0, #43981
@@ -16,7 +16,7 @@ entry:
 ; CHECK:        58000040                                         ldr    x0, 0x10
 ; CHECK:        d65f03c0                                         ret
 ; Make sure the constant pool entry comes after the return
-; CHECK-LABEL:        <$d.1>:
+; CHECK-LABEL:        <$d>:
 define i32 @bar() nounwind {
 entry:
   %0 = tail call i32 asm sideeffect "ldr $0,=0x10001", "=r"() nounwind

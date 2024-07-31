@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Logger.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "llvm/Support/WithColor.h"
 
@@ -33,18 +33,17 @@ struct TextualLogger final : Logger {
   TextualLogger(llvm::raw_ostream &OS)
       : OS(OS), ShowColors(llvm::WithColor::defaultAutoDetectFunction()(OS)) {}
 
-  virtual void beginAnalysis(const ControlFlowContext &CFG,
+  virtual void beginAnalysis(const AdornedCFG &ACFG,
                              TypeErasedDataflowAnalysis &Analysis) override {
     {
       llvm::WithColor Header(OS, llvm::raw_ostream::Colors::RED, /*Bold=*/true);
       OS << "=== Beginning data flow analysis ===\n";
     }
-    if (auto *D = CFG.getDecl()) {
-      D->print(OS);
-      OS << "\n";
-      D->dump(OS);
-    }
-    CurrentCFG = &CFG.getCFG();
+    auto &D = ACFG.getDecl();
+    D.print(OS);
+    OS << "\n";
+    D.dump(OS);
+    CurrentCFG = &ACFG.getCFG();
     CurrentCFG->print(OS, Analysis.getASTContext().getLangOpts(), ShowColors);
     CurrentAnalysis = &Analysis;
   }
@@ -58,12 +57,16 @@ struct TextualLogger final : Logger {
     llvm::errs() << "=== Finished analysis: " << Blocks << " blocks in "
                  << Steps << " total steps ===\n";
   }
-  virtual void enterBlock(const CFGBlock &Block) override {
+  virtual void enterBlock(const CFGBlock &Block, bool PostVisit) override {
     unsigned Count = ++VisitCount[&Block];
     {
       llvm::WithColor Header(OS, llvm::raw_ostream::Colors::RED, /*Bold=*/true);
-      OS << "=== Entering block B" << Block.getBlockID() << " (iteration "
-         << Count << ") ===\n";
+      OS << "=== Entering block B" << Block.getBlockID();
+      if (PostVisit)
+        OS << " (post-visit)";
+      else
+        OS << " (iteration " << Count << ")";
+      OS << " ===\n";
     }
     Block.print(OS, CurrentCFG, CurrentAnalysis->getASTContext().getLangOpts(),
                 ShowColors);

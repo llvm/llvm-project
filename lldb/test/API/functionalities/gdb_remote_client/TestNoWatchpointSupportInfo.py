@@ -58,8 +58,10 @@ class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
             print(result.GetOutput())
 
         err = lldb.SBError()
-        wp = target.WatchAddress(0x100, 8, False, True, err)
-        if self.TraceOn() and (err.Fail() or wp.IsValid == False):
+        wp_opts = lldb.SBWatchpointOptions()
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
+        wp = target.WatchpointCreateByAddress(0x100, 8, wp_opts, err)
+        if self.TraceOn() and (err.Fail() or not wp.IsValid):
             strm = lldb.SBStream()
             err.GetDescription(strm)
             print("watchpoint failed: %s" % strm.GetData())

@@ -16,17 +16,14 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -733,53 +730,4 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
-}
-
-namespace {
-class LoopSimplifyCFGLegacyPass : public LoopPass {
-public:
-  static char ID; // Pass ID, replacement for typeid
-  LoopSimplifyCFGLegacyPass() : LoopPass(ID) {
-    initializeLoopSimplifyCFGLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-
-    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto *MSSAA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    std::optional<MemorySSAUpdater> MSSAU;
-    if (MSSAA)
-      MSSAU = MemorySSAUpdater(&MSSAA->getMSSA());
-    if (MSSAA && VerifyMemorySSA)
-      MSSAU->getMemorySSA()->verifyMemorySSA();
-    bool DeleteCurrentLoop = false;
-    bool Changed = simplifyLoopCFG(*L, DT, LI, SE, MSSAU ? &*MSSAU : nullptr,
-                                   DeleteCurrentLoop);
-    if (DeleteCurrentLoop)
-      LPM.markLoopAsDeleted(*L);
-    return Changed;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<MemorySSAWrapperPass>();
-    AU.addPreserved<DependenceAnalysisWrapperPass>();
-    getLoopAnalysisUsage(AU);
-  }
-};
-} // end namespace
-
-char LoopSimplifyCFGLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",
-                      "Simplify loop CFG", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_END(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",
-                    "Simplify loop CFG", false, false)
-
-Pass *llvm::createLoopSimplifyCFGPass() {
-  return new LoopSimplifyCFGLegacyPass();
 }

@@ -1169,7 +1169,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   LazyCallGraph::SCC &NewDC = *NewCs.begin();
   EXPECT_EQ(&NewDC, CG.lookupSCC(D1));
   EXPECT_EQ(&NewDC, CG.lookupSCC(D3));
-  auto NewRCs = DRC.removeInternalRefEdge(D1, {&D2});
+  auto NewRCs = DRC.removeInternalRefEdges({{&D1, &D2}});
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &NewDRC = *NewRCs[0];
   EXPECT_EQ(&NewDRC, CG.lookupRefSCC(D1));
@@ -1186,7 +1186,8 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   EXPECT_TRUE(D2RC.isParentOf(NewDRC));
 
   // Now that we've updated the call graph, D2 is dead, so remove it.
-  CG.removeDeadFunction(D2F);
+  CG.markDeadFunction(D2F);
+  CG.removeDeadFunctions({&D2F});
 
   // Check that the graph still looks the same.
   EXPECT_EQ(&ARC, CG.lookupRefSCC(A1));
@@ -1344,7 +1345,7 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   // Remove the edge from b -> a, which should leave the 3 functions still in
   // a single connected component because of a -> b -> c -> a.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdge(B, {&A});
+      RC.removeInternalRefEdges({{&B, &A}});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(&RC, CG.lookupRefSCC(B));
@@ -1360,7 +1361,7 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
 
   // Remove the edge from c -> a, which should leave 'a' in the original RefSCC
   // and form a new RefSCC for 'b' and 'c'.
-  NewRCs = RC.removeInternalRefEdge(C, {&A});
+  NewRCs = RC.removeInternalRefEdges({{&C, &A}});
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &BCRC = *NewRCs[0];
   LazyCallGraph::RefSCC &ARC = *NewRCs[1];
@@ -1425,7 +1426,7 @@ TEST(LazyCallGraphTest, InternalMultiEdgeRemoval) {
 
   // Remove the edges from b -> a and b -> c, leaving b in its own RefSCC.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdge(B, {&A, &C});
+      RC.removeInternalRefEdges({{&B, &A}, {&B, &C}});
 
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &BRC = *NewRCs[0];
@@ -1494,7 +1495,7 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
 
   // Remove the edge from a -> c which doesn't change anything.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdge(AN, {&CN});
+      RC.removeInternalRefEdges({{&AN, &CN}});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
   EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
@@ -1509,8 +1510,8 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
 
   // Remove the edge from b -> a and c -> b; again this doesn't change
   // anything.
-  NewRCs = RC.removeInternalRefEdge(BN, {&AN});
-  NewRCs = RC.removeInternalRefEdge(CN, {&BN});
+  NewRCs = RC.removeInternalRefEdges({{&BN, &AN}});
+  NewRCs = RC.removeInternalRefEdges({{&CN, &BN}});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
   EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
@@ -1829,7 +1830,7 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
   // a cycle.
   //
   // Diagram for the graph we want on the left and the graph we use to force
-  // the ordering on the right. Edges ponit down or right.
+  // the ordering on the right. Edges point down or right.
   //
   //   A    |    A    |
   //  / \   |   / \   |
@@ -2163,7 +2164,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRef) {
 
   // Now delete 'dead'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(DeadN.getFunction());
+  CG.markDeadFunction(DeadN.getFunction());
+  CG.removeDeadFunctions({&DeadN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2212,7 +2214,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(AN.getFunction());
+  CG.markDeadFunction(AN.getFunction());
+  CG.removeDeadFunctions({&AN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2269,7 +2272,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive2) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(AN.getFunction());
+  CG.markDeadFunction(AN.getFunction());
+  CG.removeDeadFunctions({&AN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2320,7 +2324,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive3) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(AN.getFunction());
+  CG.markDeadFunction(AN.getFunction());
+  CG.removeDeadFunctions({&AN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2392,7 +2397,7 @@ TEST(LazyCallGraphTest, AddSplitFunction2) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2431,7 +2436,8 @@ TEST(LazyCallGraphTest, AddSplitFunction3) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
@@ -2475,11 +2481,12 @@ TEST(LazyCallGraphTest, AddSplitFunction4) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2525,7 +2532,7 @@ TEST(LazyCallGraphTest, AddSplitFunction5) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2673,7 +2680,7 @@ TEST(LazyCallGraphTest, AddSplitFunction8) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2722,7 +2729,8 @@ TEST(LazyCallGraphTest, AddSplitFunction9) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f2.
-  (void)CastInst::CreatePointerCast(&F2, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F2, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
@@ -2769,7 +2777,7 @@ TEST(LazyCallGraphTest, AddSplitFunctions1) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2808,11 +2816,12 @@ TEST(LazyCallGraphTest, AddSplitFunctions2) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2857,15 +2866,17 @@ TEST(LazyCallGraphTest, AddSplitFunctions3) {
   BasicBlock *G1BB = BasicBlock::Create(Context, "", G1);
   BasicBlock *G2BB = BasicBlock::Create(Context, "", G2);
   // Create g1 -ref-> g2 and g2 -ref-> g1.
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "", G1BB);
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
+                                    G1BB);
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
+                                    G2BB);
   (void)ReturnInst::Create(Context, G1BB);
   (void)ReturnInst::Create(Context, G2BB);
 
   // Create f -ref-> g1 and f -ref-> g2.
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2911,17 +2922,20 @@ TEST(LazyCallGraphTest, AddSplitFunctions4) {
   BasicBlock *G1BB = BasicBlock::Create(Context, "", G1);
   BasicBlock *G2BB = BasicBlock::Create(Context, "", G2);
   // Create g1 -ref-> g2 and g2 -ref-> g1.
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "", G1BB);
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
+                                    G1BB);
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
+                                    G2BB);
   // Create g2 -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    G2BB);
   (void)ReturnInst::Create(Context, G1BB);
   (void)ReturnInst::Create(Context, G2BB);
 
   // Create f -ref-> g1 and f -ref-> g2.
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2978,17 +2992,20 @@ TEST(LazyCallGraphTest, AddSplitFunctions5) {
   BasicBlock *G1BB = BasicBlock::Create(Context, "", G1);
   BasicBlock *G2BB = BasicBlock::Create(Context, "", G2);
   // Create g1 -ref-> g2 and g2 -ref-> g1.
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "", G1BB);
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
+                                    G1BB);
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
+                                    G2BB);
   // Create g2 -ref-> f2.
-  (void)CastInst::CreatePointerCast(&F2, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(&F2, PointerType::getUnqual(Context), "",
+                                    G2BB);
   (void)ReturnInst::Create(Context, G1BB);
   (void)ReturnInst::Create(Context, G2BB);
 
   // Create f -ref-> g1 and f -ref-> g2.
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));

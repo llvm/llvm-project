@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Terminal.h"
 #include "llvm/Testing/Support/Error.h"
+#include "TestingSupport/SubsystemRAII.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -20,6 +22,7 @@ using namespace lldb_private;
 
 class TerminalTest : public ::testing::Test {
 protected:
+  SubsystemRAII<FileSystem> subsystems;
   PseudoTerminal m_pty;
   int m_fd;
   Terminal m_term;

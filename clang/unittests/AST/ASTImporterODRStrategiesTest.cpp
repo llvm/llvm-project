@@ -1,4 +1,4 @@
-//===- unittest/AST/ASTImporterODRStrategiesTest.cpp -----------------------===//
+//===- ASTImporterODRStrategiesTest.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -599,6 +599,8 @@ ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
 INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionConservative,
     DefaultTestValuesForRunOptions );
+#else
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FunctionConservative);
 #endif
 INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, TypedefConservative,
@@ -631,6 +633,8 @@ INSTANTIATE_TEST_SUITE_P(
 //INSTANTIATE_TEST_SUITE_P(
     //ODRViolationTests, VarTemplateConservative,
     //DefaultTestValuesForRunOptions);
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(VarTemplateConservative);
+
 INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionTemplateSpecConservative,
     DefaultTestValuesForRunOptions);
@@ -641,12 +645,15 @@ INSTANTIATE_TEST_SUITE_P(
 //INSTANTIATE_TEST_SUITE_P(
     //ODRViolationTests, VarTemplateSpecConservative,
     //DefaultTestValuesForRunOptions);
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(VarTemplateSpecConservative);
 
 // FIXME: These fail on Windows.
 #if !defined(_WIN32)
 INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionLiberal,
     DefaultTestValuesForRunOptions);
+#else
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FunctionLiberal);
 #endif
 INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, TypedefLiberal,
@@ -679,6 +686,8 @@ INSTANTIATE_TEST_SUITE_P(
 // INSTANTIATE_TEST_SUITE_P(
 //     ODRViolationTests, VarTemplateLiberal,
 //     DefaultTestValuesForRunOptions);
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(VarTemplateLiberal);
+
 INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassTemplateSpecLiberal,
     DefaultTestValuesForRunOptions);
@@ -689,6 +698,7 @@ INSTANTIATE_TEST_SUITE_P(
 //INSTANTIATE_TEST_SUITE_P(
     //ODRViolationTests, VarTemplateSpecLiberal,
     //DefaultTestValuesForRunOptions );
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(VarTemplateSpecLiberal);
 
 // clang-format on
 

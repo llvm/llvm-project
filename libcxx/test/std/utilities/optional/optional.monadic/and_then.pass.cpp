@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// XFAIL: availability-bad_optional_access-missing && !no-exceptions
-
 // <optional>
 
 // template<class F> constexpr auto and_then(F&&) &;

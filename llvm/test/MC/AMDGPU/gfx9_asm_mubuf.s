@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 buffer_load_format_x v5, off, s[8:11], s3 offset:4095
 // CHECK: [0xff,0x0f,0x00,0xe0,0x00,0x05,0x02,0x03]

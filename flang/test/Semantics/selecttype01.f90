@@ -200,6 +200,7 @@ module c1162a
     type is (pdt(kind=1, len=*))
     !ERROR: Type specification 'pdt(kind=2_4,len=*)' must be an extension of TYPE 'pdt(kind=1_4,len=:)'
     type is (pdt(kind=2, len=*))
+    !ERROR: Value of KIND type parameter 'kind' must be constant
     !ERROR: Type specification 'pdt(kind=*,len=*)' must be an extension of TYPE 'pdt(kind=1_4,len=:)'
     type is (pdt(kind=*, len=*))
     end select
@@ -287,4 +288,11 @@ subroutine CheckNotProcedure
   function f() result(res)
     class(shape), allocatable :: res
   end
+
+subroutine CheckAssumedRankInSelectType(var)
+  class(*), intent(in) :: var(..)
+  !ERROR: Assumed-rank variable may only be used as actual argument
+  select type(var)
+  end select
+ end
 end

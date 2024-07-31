@@ -9,12 +9,13 @@
 #include "src/math/lrintl.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, lrintl, (long double x)) {
   return fputil::round_to_signed_integer_using_current_rounding_mode<
       long double, long>(x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

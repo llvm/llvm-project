@@ -27,10 +27,12 @@
 #include "Diagnostics.h"
 #include "FS.h"
 #include "Headers.h"
+#include "ModulesBuilder.h"
+
 #include "clang-include-cleaner/Record.h"
-#include "index/CanonicalIncludes.h"
 #include "support/Path.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
@@ -48,7 +50,7 @@
 namespace clang {
 namespace clangd {
 
-/// The captured AST conext.
+/// The captured AST context.
 /// Keeps necessary structs for an ASTContext and Preprocessor alive.
 /// This enables consuming them after context that produced the AST is gone.
 /// (e.g. indexing a preamble ast on a separate thread). ASTContext stored
@@ -98,13 +100,19 @@ struct PreambleData {
   // Version of the ParseInputs this preamble was built from.
   std::string Version;
   tooling::CompileCommand CompileCommand;
+  // Target options used when building the preamble. Changes in target can cause
+  // crashes when deserializing preamble, this enables consumers to use the
+  // same target (without reparsing CompileCommand).
+  std::shared_ptr<TargetOptions> TargetOpts = nullptr;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
   // Processes like code completions and go-to-definitions will need #include
   // information, and their compile action skips preamble range.
   IncludeStructure Includes;
   // Captures #include-mapping information in #included headers.
-  include_cleaner::PragmaIncludes Pragmas;
+  std::shared_ptr<const include_cleaner::PragmaIncludes> Pragmas;
+  // Information about required module files for this preamble.
+  std::unique_ptr<PrerequisiteModules> RequiredModules;
   // Macros defined in the preamble section of the main file.
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.
@@ -114,7 +122,6 @@ struct PreambleData {
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::shared_ptr<PreambleFileStatusCache> StatCache;
-  std::shared_ptr<const CanonicalIncludes> CanonIncludes;
   // Whether there was a (possibly-incomplete) include-guard on the main file.
   // We need to propagate this information "by hand" to subsequent parses.
   bool MainIsIncludeGuarded = false;
@@ -122,7 +129,7 @@ struct PreambleData {
 
 using PreambleParsedCallback =
     std::function<void(CapturedASTCtx ASTCtx,
-                       std::shared_ptr<const CanonicalIncludes> CanonIncludes)>;
+                       std::shared_ptr<const include_cleaner::PragmaIncludes>)>;
 
 /// Timings and statistics from the premble build. Unlike PreambleData, these
 /// do not need to be stored for later, but can be useful for logging, metrics,
@@ -182,11 +189,11 @@ public:
                                         const PreambleData &Baseline);
   /// Returns the FileEntry for the preamble patch of MainFilePath in SM, if
   /// any.
-  static const FileEntry *getPatchEntry(llvm::StringRef MainFilePath,
-                                        const SourceManager &SM);
+  static OptionalFileEntryRef getPatchEntry(llvm::StringRef MainFilePath,
+                                            const SourceManager &SM);
 
   /// Adjusts CI (which compiles the modified inputs) to be used with the
-  /// baseline preamble. This is done by inserting an artifical include to the
+  /// baseline preamble. This is done by inserting an artificial include to the
   /// \p CI that contains new directives calculated in create.
   void apply(CompilerInvocation &CI) const;
 
@@ -203,9 +210,6 @@ public:
 
   /// Returns textual patch contents.
   llvm::StringRef text() const { return PatchContents; }
-
-  /// Whether diagnostics generated using this patch are trustable.
-  bool preserveDiagnostics() const;
 
   /// Returns diag locations for Modified contents.
   llvm::ArrayRef<Diag> patchedDiags() const { return PatchedDiags; }

@@ -16,14 +16,14 @@ body:             |
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s8) from %fixed-stack.0, align 8)
     ; CHECK-NEXT: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
     ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s8) from %fixed-stack.1, align 4)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[C]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC1]], [[TRUNC]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[C]](s32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[C1]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s8) = G_AND [[TRUNC3]], [[TRUNC2]]
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[C1]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s8) = G_AND [[TRUNC2]], [[TRUNC3]]
     ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(s8) = G_UDIV [[AND]], [[AND1]]
     ; CHECK-NEXT: $bd0 = COPY [[UDIV]](s8)
     ; CHECK-NEXT: RTS implicit $bd0

@@ -265,7 +265,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
     }
 
     // Bail if we see an instruction that defines NZCV that we don't handle.
-    if (PredI.definesRegister(AArch64::NZCV))
+    if (PredI.definesRegister(AArch64::NZCV, /*TRI=*/nullptr))
       return false;
 
     // Track clobbered and used registers.
@@ -462,7 +462,9 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
   // Clear kills in the range where changes were made.  This is conservative,
   // but should be okay since kill markers are being phased out.
   LLVM_DEBUG(dbgs() << "Clearing kill flags.\n\tFirstUse: " << *FirstUse
-                    << "\tLastChange: " << *LastChange);
+                    << "\tLastChange: ";
+             if (LastChange == MBB->end()) dbgs() << "<end>\n";
+             else dbgs() << *LastChange);
   for (MachineInstr &MMI : make_range(FirstUse, PredMBB->end()))
     MMI.clearKillInfo();
   for (MachineInstr &MMI : make_range(MBB->begin(), LastChange))

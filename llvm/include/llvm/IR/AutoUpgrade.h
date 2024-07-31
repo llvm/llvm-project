@@ -36,7 +36,8 @@ namespace llvm {
   /// for upgrading, and returns true if it requires upgrading. It may return
   /// null in NewFn if the all calls to the original intrinsic function
   /// should be transformed to non-function-call instructions.
-  bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn);
+  bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                                bool CanUpgradeDebugIntrinsicsToRecords = true);
 
   /// This is the complement to the above, replacing a specific call to an
   /// intrinsic function with a call to the specified new function.
@@ -52,7 +53,7 @@ namespace llvm {
   /// so that it can update all calls to the old function.
   void UpgradeCallsToIntrinsic(Function* F);
 
-  /// This checks for global variables which should be upgraded. It it requires
+  /// This checks for global variables which should be upgraded. If it requires
   /// upgrading, returns a pointer to the upgraded variable.
   GlobalVariable *UpgradeGlobalVariable(GlobalVariable *GV);
 
@@ -90,7 +91,7 @@ namespace llvm {
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    return Name.startswith("llvm.vectorizer.");
+    return Name.starts_with("llvm.vectorizer.");
   }
 
   /// Upgrade the loop attachment metadata node.

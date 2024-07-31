@@ -1569,11 +1569,12 @@ TEST_P(ASTMatchersTest, IsArrow_MatchesMemberVariablesViaArrow) {
       matches("class Y { void x() { y; } int y; };", memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { (*this).y; } int y; };",
                          memberExpr(isArrow())));
-  EXPECT_TRUE(matches("template <class T> class Y { void x() { this->m; } };",
-                      cxxDependentScopeMemberExpr(isArrow())));
   EXPECT_TRUE(
-      notMatches("template <class T> class Y { void x() { (*this).m; } };",
-                 cxxDependentScopeMemberExpr(isArrow())));
+      matches("template <class T> class Y { void x() { this->m; } int m; };",
+              memberExpr(isArrow())));
+  EXPECT_TRUE(notMatches(
+      "template <class T> class Y { void x() { (*this).m; } int m; };",
+      memberExpr(isArrow())));
 }
 
 TEST_P(ASTMatchersTest, IsArrow_MatchesStaticMemberVariablesViaArrow) {
@@ -1638,6 +1639,95 @@ TEST_P(ASTMatchersTest, IsExplicit_CXXConversionDecl_CXX20) {
                       cxxConversionDecl(isExplicit())));
   EXPECT_TRUE(notMatches("struct S { explicit(false) operator int(); };",
                          cxxConversionDecl(isExplicit())));
+}
+
+TEST_P(ASTMatchersTest, ArgumentCountAtLeast_CallExpr) {
+  StatementMatcher Call2PlusArgs = callExpr(argumentCountAtLeast(2));
+
+  EXPECT_TRUE(notMatches("void x(void) { x(); }", Call2PlusArgs));
+  EXPECT_TRUE(notMatches("void x(int) { x(0); }", Call2PlusArgs));
+  EXPECT_TRUE(matches("void x(int, int) { x(0, 0); }", Call2PlusArgs));
+  EXPECT_TRUE(matches("void x(int, int, int) { x(0, 0, 0); }", Call2PlusArgs));
+
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(
+      notMatches("void x(int = 1) { x(); }", traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int = 1) { x(0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int = 1, int = 1) { x(0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int = 1) { x(0, 0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int, int = 1) { x(0, 0, 0); }",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+
+  EXPECT_TRUE(
+      notMatches("void x(int = 1) { x(); }",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("void x(int, int = 1) { x(0); }",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("void x(int, int = 1, int = 1) { x(0); }",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int = 1) { x(0, 0); }",
+                      traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(matches("void x(int, int, int, int = 1) { x(0, 0, 0); }",
+                      traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+}
+
+TEST_P(ASTMatchersTest, ArgumentCountAtLeast_CallExpr_CXX) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  StatementMatcher Call2PlusArgs = callExpr(argumentCountAtLeast(2));
+  EXPECT_TRUE(notMatches("class X { void x() { x(); } };", Call2PlusArgs));
+  EXPECT_TRUE(notMatches("class X { void x(int) { x(0); } };", Call2PlusArgs));
+  EXPECT_TRUE(
+      matches("class X { void x(int, int) { x(0, 0); } };", Call2PlusArgs));
+  EXPECT_TRUE(matches("class X { void x(int, int, int) { x(0, 0, 0); } };",
+                      Call2PlusArgs));
+
+  EXPECT_TRUE(notMatches("class X { void x(int = 1) { x(0); } };",
+                         traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int = 1) { x(0); } };",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int = 1, int = 1) { x(0); } };",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int, int = 1) { x(0, 0); } };",
+                      traverse(TK_AsIs, Call2PlusArgs)));
+  EXPECT_TRUE(
+      matches("class X { void x(int, int, int, int = 1) { x(0, 0, 0); } };",
+              traverse(TK_AsIs, Call2PlusArgs)));
+
+  EXPECT_TRUE(
+      notMatches("class X { void x(int = 1) { x(0); } };",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("class X { void x(int, int = 1) { x(0); } };",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      notMatches("class X { void x(int, int = 1, int = 1) { x(0); } };",
+                 traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(matches("class X { void x(int, int, int = 1) { x(0, 0); } };",
+                      traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+  EXPECT_TRUE(
+      matches("class X { void x(int, int, int, int = 1) { x(0, 0, 0); } };",
+              traverse(TK_IgnoreUnlessSpelledInSource, Call2PlusArgs)));
+
+  EXPECT_TRUE(
+      notMatches("class X { static void x() { x(); } };", Call2PlusArgs));
+  EXPECT_TRUE(
+      notMatches("class X { static void x(int) { x(0); } };", Call2PlusArgs));
+  EXPECT_TRUE(matches("class X { static void x(int, int) { x(0, 0); } };",
+                      Call2PlusArgs));
+  EXPECT_TRUE(
+      matches("class X { static void x(int, int, int) { x(0, 0, 0); } };",
+              Call2PlusArgs));
 }
 
 TEST_P(ASTMatchersTest, ArgumentCountIs_CallExpr) {
@@ -2016,6 +2106,20 @@ TEST_P(ASTMatchersTest, IsPure) {
   EXPECT_TRUE(matches("class X { virtual int f() = 0; };",
                       cxxMethodDecl(isPure(), hasName("::X::f"))));
   EXPECT_TRUE(notMatches("class X { int f(); };", cxxMethodDecl(isPure())));
+}
+
+TEST_P(ASTMatchersTest, IsExplicitObjectMemberFunction) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto ExpObjParamFn = cxxMethodDecl(isExplicitObjectMemberFunction());
+  EXPECT_TRUE(
+      notMatches("struct A { static int operator()(int); };", ExpObjParamFn));
+  EXPECT_TRUE(notMatches("struct A { int operator+(int); };", ExpObjParamFn));
+  EXPECT_TRUE(
+      matches("struct A { int operator-(this A, int); };", ExpObjParamFn));
+  EXPECT_TRUE(matches("struct A { void fun(this A &&self); };", ExpObjParamFn));
 }
 
 TEST_P(ASTMatchersTest, IsCopyAssignmentOperator) {
@@ -2448,6 +2552,10 @@ TEST_P(ASTMatchersTest, HasName_MatchesNamespaces) {
                          recordDecl(hasName("a+b::C"))));
   EXPECT_TRUE(notMatches("namespace a { namespace b { class AC; } }",
                          recordDecl(hasName("C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::C"))));
+  EXPECT_TRUE(matches("namespace a { inline namespace a { class C; } }",
+                      recordDecl(hasName("::a::a::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesOuterClasses) {
@@ -3548,6 +3656,11 @@ TEST_P(ASTMatchersTest, InStdNamespace) {
                       "  class vector {};"
                       "}",
                       cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+
+  EXPECT_TRUE(matches("namespace std {"
+                      "  extern \"C++\" class vector {};"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
 }
 
 TEST_P(ASTMatchersTest, InAnonymousNamespace) {
@@ -4014,15 +4127,102 @@ TEST_P(ASTMatchersTest, IsComparisonOperator) {
       notMatches("void x() { int a; if(a = 0) return; }", BinCompOperator));
 }
 
-TEST_P(ASTMatchersTest, HasInit) {
-  if (!GetParam().isCXX11OrLater()) {
-    // FIXME: Add a test for `hasInit()` that does not depend on C++.
+TEST_P(ASTMatchersTest, isRightFold) {
+  if (!GetParam().isCXX17OrLater()) {
     return;
   }
 
-  EXPECT_TRUE(matches("int x{0};", initListExpr(hasInit(0, expr()))));
-  EXPECT_FALSE(matches("int x{0};", initListExpr(hasInit(1, expr()))));
-  EXPECT_FALSE(matches("int x;", initListExpr(hasInit(0, expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (0 + ... + args); }",
+                       cxxFoldExpr(isRightFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(isRightFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(isRightFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(isRightFold())));
+}
+
+TEST_P(ASTMatchersTest, isLeftFold) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(isLeftFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ... + 0); }",
+                       cxxFoldExpr(isLeftFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(isLeftFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ...); };",
+                       cxxFoldExpr(isLeftFold())));
+}
+
+TEST_P(ASTMatchersTest, isUnaryFold) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (0 + ... + args); }",
+                       cxxFoldExpr(isUnaryFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ... + 0); }",
+                       cxxFoldExpr(isUnaryFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(isUnaryFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(isUnaryFold())));
+}
+
+TEST_P(ASTMatchersTest, isBinaryFold) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(isBinaryFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(isBinaryFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(isBinaryFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ...); };",
+                       cxxFoldExpr(isBinaryFold())));
+}
+
+TEST_P(ASTMatchersTest, hasOperator) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasOperatorName("+"))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasOperatorName("+"))));
+
+  EXPECT_FALSE(
+      matches("template <typename... Args> auto multiply(Args... args) { "
+              "return (0 * ... * args); }",
+              cxxFoldExpr(hasOperatorName("+"))));
+  EXPECT_FALSE(
+      matches("template <typename... Args> auto multiply(Args... args) { "
+              "return (... * args); };",
+              cxxFoldExpr(hasOperatorName("+"))));
 }
 
 TEST_P(ASTMatchersTest, IsMain) {

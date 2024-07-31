@@ -21,12 +21,14 @@ void test1() {
 // CHECK: if (int a = 1)
 // CHECK:  while (int a = 1)
 // CHECK:  switch (int a = 1)
+// CHECK:  for (; int a = 1;)
 
 void test2()
 {
     if (int a = 1) { }
     while (int a = 1) { }
     switch (int a = 1) { }
+    for(; int a = 1; ) { }
 }
 
 // CHECK: new (1) int;

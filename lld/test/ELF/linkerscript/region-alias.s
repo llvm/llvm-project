@@ -11,7 +11,7 @@
 # RUN: }" > %t.script
 
 ## .text to ROM, .data to RAM.
-# RUN: echo "REGION_ALIAS (\"ALIAS_TEXT\", ROM);" > %t.script.inc
+# RUN: echo 'REGION_ALIAS ("ALIAS_TEXT", "ROM");' > %t.script.inc
 # RUN: echo "REGION_ALIAS (\"ALIAS_DATA\", RAM);" >> %t.script.inc
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-objdump --section-headers %t2 | FileCheck %s

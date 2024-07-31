@@ -61,6 +61,7 @@ enum {
   DIR_PWR8,
   DIR_PWR9,
   DIR_PWR10,
+  DIR_PWR11,
   DIR_PWR_FUTURE,
   DIR_64
 };
@@ -245,6 +246,10 @@ public:
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
+  /// Calculates the effective code model for argument GV.
+  CodeModel::Model getCodeModel(const TargetMachine &TM,
+                                const GlobalValue *GV) const;
+
   /// True if the ABI is descriptor based.
   bool usesFunctionDescriptors() const {
     // Both 32-bit and 64-bit AIX are descriptor based. For ELF only the 64-bit
@@ -274,6 +279,12 @@ public:
     assert((is64BitELFABI() || isAIXABI()) &&
            "Should only be called when the target is a TOC based ABI.");
     return IsPPC64 ? PPC::X2 : PPC::R2;
+  }
+
+  MCRegister getThreadPointerRegister() const {
+    assert((is64BitELFABI() || isAIXABI()) &&
+           "Should only be called for targets with a thread pointer register.");
+    return IsPPC64 ? PPC::X13 : PPC::R13;
   }
 
   MCRegister getStackPointerRegister() const {

@@ -13,7 +13,10 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -22,6 +25,14 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include <optional>
+
+// Disable LSan for this test.
+// FIXME: Re-enable once we can assume GCC 13.2 or higher.
+// https://llvm.org/github.com/llvm/llvm-project/issues/67586.
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
+#endif
 
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
@@ -70,6 +81,62 @@ static int checkDiagErrors(const clang::CompilerInstance *CI, bool HasError) {
   return (Errs || HasError) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
+struct ReplListCompleter {
+  clang::IncrementalCompilerBuilder &CB;
+  clang::Interpreter &MainInterp;
+  ReplListCompleter(clang::IncrementalCompilerBuilder &CB,
+                    clang::Interpreter &Interp)
+      : CB(CB), MainInterp(Interp){};
+
+  std::vector<llvm::LineEditor::Completion> operator()(llvm::StringRef Buffer,
+                                                       size_t Pos) const;
+  std::vector<llvm::LineEditor::Completion>
+  operator()(llvm::StringRef Buffer, size_t Pos, llvm::Error &ErrRes) const;
+};
+
+std::vector<llvm::LineEditor::Completion>
+ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos) const {
+  auto Err = llvm::Error::success();
+  auto res = (*this)(Buffer, Pos, Err);
+  if (Err)
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+  return res;
+}
+
+std::vector<llvm::LineEditor::Completion>
+ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
+                              llvm::Error &ErrRes) const {
+  std::vector<llvm::LineEditor::Completion> Comps;
+  std::vector<std::string> Results;
+
+  auto CI = CB.CreateCpp();
+  if (auto Err = CI.takeError()) {
+    ErrRes = std::move(Err);
+    return {};
+  }
+
+  size_t Lines =
+      std::count(Buffer.begin(), std::next(Buffer.begin(), Pos), '\n') + 1;
+  auto Interp = clang::Interpreter::create(std::move(*CI));
+
+  if (auto Err = Interp.takeError()) {
+    // log the error and returns an empty vector;
+    ErrRes = std::move(Err);
+
+    return {};
+  }
+  auto *MainCI = (*Interp)->getCompilerInstance();
+  auto CC = clang::ReplCodeCompleter();
+  CC.codeComplete(MainCI, Buffer, Lines, Pos + 1,
+                  MainInterp.getCompilerInstance(), Results);
+  for (auto c : Results) {
+    if (c.find(CC.Prefix) == 0)
+      Comps.push_back(
+          llvm::LineEditor::Completion(c.substr(CC.Prefix.size()), c));
+  }
+  return Comps;
+}
+
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
   ExitOnErr.setBanner("clang-repl: ");
@@ -85,6 +152,7 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
 
   if (OptHostSupportsJit) {
     auto J = llvm::orc::LLJITBuilder().create();
@@ -133,6 +201,7 @@ int main(int argc, const char **argv) {
     DeviceCI->LoadRequestedPlugins();
 
   std::unique_ptr<clang::Interpreter> Interp;
+
   if (CudaEnabled) {
     Interp = ExitOnErr(
         clang::Interpreter::createWithCUDA(std::move(CI), std::move(DeviceCI)));
@@ -146,21 +215,23 @@ int main(int argc, const char **argv) {
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
-  for (const std::string &input : OptInputs) {
-    if (auto Err = Interp->ParseAndExecute(input))
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-  }
-
   bool HasError = false;
+
+  for (const std::string &input : OptInputs) {
+    if (auto Err = Interp->ParseAndExecute(input)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      HasError = true;
+    }
+  }
 
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
-    // FIXME: Add LE.setListCompleter
     std::string Input;
+    LE.setListCompleter(ReplListCompleter(CB, *Interp));
     while (std::optional<std::string> Line = LE.readLine()) {
       llvm::StringRef L = *Line;
       L = L.trim();
-      if (L.endswith("\\")) {
+      if (L.ends_with("\\")) {
         // FIXME: Support #ifdef X \ ...
         Input += L.drop_back(1);
         LE.setPrompt("clang-repl...   ");
@@ -168,22 +239,17 @@ int main(int argc, const char **argv) {
       }
 
       Input += L;
-
       if (Input == R"(%quit)") {
         break;
-      } else if (Input == R"(%undo)") {
-        if (auto Err = Interp->Undo()) {
+      }
+      if (Input == R"(%undo)") {
+        if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5)) {
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-        HasError = true;
       }
 
       Input = "";

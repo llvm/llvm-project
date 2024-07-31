@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyBoostModule
   BoostTidyModule.cpp
+  UseRangesCheck.cpp
   UseToStringCheck.cpp
 
   LINK_LIBS
@@ -13,6 +14,7 @@ add_clang_library(clangTidyBoostModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyBoostModule

@@ -311,7 +311,7 @@ Absolute symbols are symbols that map directly to addresses without requiring
 further materialization, for example: "foo" = 0x1234. One use case for
 absolute symbols is allowing resolution of process symbols. E.g.
 
-.. code-block: c++
+.. code-block:: c++
 
   JD.define(absoluteSymbols(SymbolMap({
       { Mangle("printf"),
@@ -334,7 +334,7 @@ imagine that your JIT standard library needs access to your JIT object to make
 some calls. We could bake the address of your object into the library, but then
 it would need to be recompiled for each session:
 
-.. code-block: c++
+.. code-block:: c++
 
   // From standard library for JIT'd code:
 
@@ -347,7 +347,7 @@ it would need to be recompiled for each session:
 
 We can turn this into a symbolic reference in the JIT standard library:
 
-.. code-block: c++
+.. code-block:: c++
 
   extern MyJIT *__MyJITInstance;
 
@@ -356,7 +356,7 @@ We can turn this into a symbolic reference in the JIT standard library:
 And then make our JIT object visible to the JIT standard library with an
 absolute symbol definition when the JIT is started:
 
-.. code-block: c++
+.. code-block:: c++
 
   MyJIT J = ...;
 
@@ -379,7 +379,7 @@ there are two implementations in the JIT standard library: ``log_fast`` and
 used when the ``log`` symbol is referenced by setting up an alias at JIT startup
 time:
 
-.. code-block: c++
+.. code-block:: c++
 
   auto &JITStdLibJD = ... ;
 
@@ -397,7 +397,7 @@ The ``symbolAliases`` function allows you to define aliases within a single
 JITDylib. The ``reexports`` function provides the same functionality, but
 operates across JITDylib boundaries. E.g.
 
-.. code-block: c++
+.. code-block:: c++
 
   auto &JD1 = ... ;
   auto &JD2 = ... ;
@@ -738,7 +738,7 @@ or creating any Modules attached to it. E.g.
 
     ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
 
-    ThreadPool TP(NumThreads);
+    DefaultThreadPool TP(NumThreads);
     JITStack J;
 
     for (auto &ModulePath : ModulePaths) {
@@ -780,7 +780,7 @@ constructs a new ThreadSafeContext value from a std::unique_ptr<LLVMContext>:
     // separate context.
     for (const auto &IRPath : IRPaths) {
       auto Ctx = std::make_unique<LLVMContext>();
-      auto M = std::make_unique<LLVMContext>("M", *Ctx);
+      auto M = std::make_unique<Module>("M", *Ctx);
       CompileLayer.add(MainJD, ThreadSafeModule(std::move(M), std::move(Ctx)));
     }
 

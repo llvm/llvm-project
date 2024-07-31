@@ -9,33 +9,31 @@
 
 // <format>
 
-// basic_format_args() noexcept;
 // template<class... Args>
 //   basic_format_args(const format-arg-store<Context, Args...>& store) noexcept;
 
 #include <format>
 #include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 
 template <class CharT>
 void test() {
+  int i         = 1;
+  char c        = 'c';
+  nullptr_t p   = nullptr;
   using Context = std::basic_format_context<CharT*, CharT>;
+  static_assert(!std::is_default_constructible_v<std::basic_format_args<Context>>);
   {
-    ASSERT_NOEXCEPT(std::basic_format_args<Context>{});
-
-    std::basic_format_args<Context> format_args{};
-    assert(!format_args.get(0));
-  }
-  {
-    auto store = std::make_format_args<Context>(1);
+    auto store = std::make_format_args<Context>(i);
     ASSERT_NOEXCEPT(std::basic_format_args<Context>{store});
     std::basic_format_args<Context> format_args{store};
     assert(format_args.get(0));
     assert(!format_args.get(1));
   }
   {
-    auto store = std::make_format_args<Context>(1, 'c');
+    auto store = std::make_format_args<Context>(i, c);
     ASSERT_NOEXCEPT(std::basic_format_args<Context>{store});
     std::basic_format_args<Context> format_args{store};
     assert(format_args.get(0));
@@ -43,7 +41,7 @@ void test() {
     assert(!format_args.get(2));
   }
   {
-    auto store = std::make_format_args<Context>(1, 'c', nullptr);
+    auto store = std::make_format_args<Context>(i, c, p);
     ASSERT_NOEXCEPT(std::basic_format_args<Context>{store});
     std::basic_format_args<Context> format_args{store};
     assert(format_args.get(0));

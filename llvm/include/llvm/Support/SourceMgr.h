@@ -59,7 +59,7 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
-    /// Look up a given \p Ptr in in the buffer, determining which line it came
+    /// Look up a given \p Ptr in the buffer, determining which line it came
     /// from.
     unsigned getLineNumber(const char *Ptr) const;
     template <typename T>
@@ -317,7 +317,7 @@ public:
   ArrayRef<SMFixIt> getFixIts() const { return FixIts; }
 
   void print(const char *ProgName, raw_ostream &S, bool ShowColors = true,
-             bool ShowKindLabel = true) const;
+             bool ShowKindLabel = true, bool ShowLocation = true) const;
 };
 
 } // end namespace llvm

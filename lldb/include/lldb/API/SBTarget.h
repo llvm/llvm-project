@@ -17,10 +17,12 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBSymbolContextList.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBWatchpoint.h"
+#include "lldb/API/SBWatchpointOptions.h"
 
 namespace lldb_private {
 namespace python {
@@ -40,7 +42,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // Constructors
@@ -88,6 +91,15 @@ public:
   /// \return
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics();
+
+  /// Returns a dump of the collected statistics.
+  ///
+  /// \param[in] options
+  ///   An objects object that contains all options for the statistics dumping.
+  ///
+  /// \return
+  ///     A SBStructuredData with the statistics collected.
+  lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
   /// Return the platform object associated with the target.
   ///
@@ -396,8 +408,8 @@ public:
   /// \return
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
-  LLDB_DEPRECATED("Use SetModuleLoadAddress(lldb::SBModule, uint64_t)",
-                  "SetModuleLoadAddress(lldb::SBModule, uint64_t)")
+  LLDB_DEPRECATED_FIXME("Use SetModuleLoadAddress(lldb::SBModule, uint64_t)",
+                        "SetModuleLoadAddress(lldb::SBModule, uint64_t)")
   lldb::SBError SetModuleLoadAddress(lldb::SBModule module,
                                      int64_t sections_offset);
 #endif
@@ -828,8 +840,13 @@ public:
 
   lldb::SBWatchpoint FindWatchpointByID(lldb::watch_id_t watch_id);
 
+  LLDB_DEPRECATED("WatchAddress deprecated, use WatchpointCreateByAddress")
   lldb::SBWatchpoint WatchAddress(lldb::addr_t addr, size_t size, bool read,
-                                  bool write, SBError &error);
+                                  bool modify, SBError &error);
+
+  lldb::SBWatchpoint
+  WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
+                            lldb::SBWatchpointOptions options, SBError &error);
 
   bool EnableAllWatchpoints();
 
@@ -860,6 +877,10 @@ public:
 
   lldb::SBInstructionList ReadInstructions(lldb::SBAddress base_addr,
                                            uint32_t count,
+                                           const char *flavor_string);
+
+  lldb::SBInstructionList ReadInstructions(lldb::SBAddress start_addr,
+                                           lldb::SBAddress end_addr,
                                            const char *flavor_string);
 
   lldb::SBInstructionList GetInstructions(lldb::SBAddress base_addr,
@@ -922,6 +943,7 @@ public:
 
 protected:
   friend class SBAddress;
+  friend class SBAddressRange;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointList;
@@ -937,6 +959,7 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;
 

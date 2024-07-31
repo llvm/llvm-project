@@ -14,377 +14,14 @@
 
 include "riscv_vector_common.td"
 
-//===----------------------------------------------------------------------===//
-// Basic classes with automatic codegen.
-//===----------------------------------------------------------------------===//
-
-class RVVOutBuiltin<string suffix, string prototype, string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IntrinsicTypes = [-1];
-}
-
-class RVVOp0Builtin<string suffix, string prototype, string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IntrinsicTypes = [0];
-}
-
-class RVVOutOp1Builtin<string suffix, string prototype, string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IntrinsicTypes = [-1, 1];
-}
-
-class RVVOutOp0Op1Builtin<string suffix, string prototype, string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IntrinsicTypes = [-1, 0, 1];
-}
-
-multiclass RVVBuiltinSet<string intrinsic_name, string type_range,
-                         list<list<string>> suffixes_prototypes,
-                         list<int> intrinsic_types> {
-  let IRName = intrinsic_name, MaskedIRName = intrinsic_name # "_mask",
-      IntrinsicTypes = intrinsic_types in {
-    foreach s_p = suffixes_prototypes in {
-      let Name = NAME # "_" # s_p[0] in {
-        defvar suffix = s_p[1];
-        defvar prototype = s_p[2];
-        def : RVVBuiltin<suffix, prototype, type_range>;
-      }
-    }
-  }
-}
-
-// IntrinsicTypes is output, op0, op1 [-1, 0, 1]
-multiclass RVVOutOp0Op1BuiltinSet<string intrinsic_name, string type_range,
-                                  list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes,
-                            [-1, 0, 1]>;
-
-multiclass RVVOutBuiltinSet<string intrinsic_name, string type_range,
-                            list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1]>;
-
-multiclass RVVOp0BuiltinSet<string intrinsic_name, string type_range,
-                            list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0]>;
-
-// IntrinsicTypes is output, op1 [-1, 0]
-multiclass RVVOutOp0BuiltinSet<string intrinsic_name, string type_range,
-                               list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 0]>;
-
-// IntrinsicTypes is output, op1 [-1, 1]
-multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
-                               list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1]>;
-
-multiclass RVVOp0Op1BuiltinSet<string intrinsic_name, string type_range,
-                               list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0, 1]>;
-
-multiclass RVVOutOp1Op2BuiltinSet<string intrinsic_name, string type_range,
-                                  list<list<string>> suffixes_prototypes>
-    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1, 2]>;
-
-multiclass RVVSignedBinBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vv", "v", "vvv"],
-                           ["vx", "v", "vve"]]>;
-
-multiclass RVVUnsignedBinBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vv", "Uv", "UvUvUv"],
-                           ["vx", "Uv", "UvUvUe"]]>;
-
-multiclass RVVIntBinBuiltinSet
-    : RVVSignedBinBuiltinSet,
-      RVVUnsignedBinBuiltinSet;
-
-multiclass RVVSlideOneBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vx", "v", "vve"],
-                           ["vx", "Uv", "UvUve"]]>;
-
-multiclass RVVSignedShiftBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vv", "v", "vvUv"],
-                           ["vx", "v", "vvz"]]>;
-
-multiclass RVVUnsignedShiftBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vv", "Uv", "UvUvUv"],
-                           ["vx", "Uv", "UvUvz"]]>;
-
-multiclass RVVShiftBuiltinSet
-    : RVVSignedShiftBuiltinSet,
-      RVVUnsignedShiftBuiltinSet;
-
-let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-  multiclass RVVSignedNShiftBuiltinSet
-      : RVVOutOp0Op1BuiltinSet<NAME, "csil",
-                                     [["wv", "v", "vwUv"],
-                                      ["wx", "v", "vwz"]]>;
-  multiclass RVVUnsignedNShiftBuiltinSet
-      : RVVOutOp0Op1BuiltinSet<NAME, "csil",
-                                     [["wv", "Uv", "UvUwUv"],
-                                      ["wx", "Uv", "UvUwz"]]>;
-}
-
-multiclass RVVCarryinBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vvm", "v", "vvvm"],
-                           ["vxm", "v", "vvem"],
-                           ["vvm", "Uv", "UvUvUvm"],
-                           ["vxm", "Uv", "UvUvUem"]]>;
-
-multiclass RVVCarryOutInBuiltinSet<string intrinsic_name>
-    : RVVOp0Op1BuiltinSet<intrinsic_name, "csil",
-                          [["vvm", "vm", "mvvm"],
-                           ["vxm", "vm", "mvem"],
-                           ["vvm", "Uvm", "mUvUvm"],
-                           ["vxm", "Uvm", "mUvUem"]]>;
-
-multiclass RVVSignedMaskOutBuiltinSet
-    : RVVOp0Op1BuiltinSet<NAME, "csil",
-                          [["vv", "vm", "mvv"],
-                           ["vx", "vm", "mve"]]>;
-
-multiclass RVVUnsignedMaskOutBuiltinSet
-    : RVVOp0Op1BuiltinSet<NAME, "csil",
-                          [["vv", "Uvm", "mUvUv"],
-                           ["vx", "Uvm", "mUvUe"]]>;
-
-multiclass RVVIntMaskOutBuiltinSet
-    : RVVSignedMaskOutBuiltinSet,
-      RVVUnsignedMaskOutBuiltinSet;
-
-class RVVIntExt<string intrinsic_name, string suffix, string prototype,
-                string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IRName = intrinsic_name;
-  let MaskedIRName = intrinsic_name # "_mask";
-  let OverloadedName = NAME;
-  let IntrinsicTypes = [-1, 0];
-}
-
-let HasMaskedOffOperand = false in {
-  multiclass RVVIntTerBuiltinSet {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                  [["vv", "v", "vvvv"],
-                                   ["vx", "v", "vvev"],
-                                   ["vv", "Uv", "UvUvUvUv"],
-                                   ["vx", "Uv", "UvUvUeUv"]]>;
-  }
-  multiclass RVVFloatingTerBuiltinSet {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "xfd",
-                                  [["vv", "v", "vvvv"],
-                                   ["vf", "v", "vvev"]]>;
-  }
-}
-
-let HasMaskedOffOperand = false, Log2LMUL = [-2, -1, 0, 1, 2] in {
-  multiclass RVVFloatingWidenTerBuiltinSet {
-    defm ""  : RVVOutOp1Op2BuiltinSet<NAME, "xf",
-                                      [["vv", "w", "wwvv"],
-                                       ["vf", "w", "wwev"]]>;
-  }
-}
-
-multiclass RVVFloatingBinBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "xfd",
-                          [["vv", "v", "vvv"],
-                           ["vf", "v", "vve"]]>;
-
-multiclass RVVFloatingBinVFBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "xfd",
-                          [["vf", "v", "vve"]]>;
-
-multiclass RVVFloatingMaskOutBuiltinSet
-    : RVVOp0Op1BuiltinSet<NAME, "xfd",
-                          [["vv", "vm", "mvv"],
-                           ["vf", "vm", "mve"]]>;
-
-multiclass RVVFloatingMaskOutVFBuiltinSet
-    : RVVOp0Op1BuiltinSet<NAME, "fd",
-                          [["vf", "vm", "mve"]]>;
-
-class RVVMaskBinBuiltin : RVVOutBuiltin<"m", "mmm", "c"> {
-  let Name = NAME # "_mm";
-  let HasMasked = false;
-}
-
-class RVVMaskUnaryBuiltin : RVVOutBuiltin<"m", "mm", "c"> {
-  let Name = NAME # "_m";
-}
-
-class RVVMaskNullaryBuiltin : RVVOutBuiltin<"m", "m", "c"> {
-  let Name = NAME # "_m";
-  let HasMasked = false;
-  let SupportOverloading = false;
-}
-
-class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
-  let Name = NAME # "_m";
-  let HasMaskedOffOperand = false;
-}
-
-let UnMaskedPolicyScheme = HasPolicyOperand,
-    HasMaskedOffOperand = false in {
-  multiclass RVVSlideUpBuiltinSet {
-    defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
-                               [["vx","v", "vvvz"]]>;
-    defm "" : RVVOutBuiltinSet<NAME, "csil",
-                               [["vx","Uv", "UvUvUvz"]]>;
-  }
-}
-
-let UnMaskedPolicyScheme = HasPassthruOperand,
-    ManualCodegen = [{
-      if (IsMasked) {
-        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
-          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
-      } else {
-        if (PolicyAttrs & RVV_VTA)
-          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
-      }
-
-      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-      IntrinsicTypes = {ResultType, Ops.back()->getType()};
-    }] in {
-  multiclass RVVSlideDownBuiltinSet {
-    defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
-                               [["vx","v", "vvz"]]>;
-    defm "" : RVVOutBuiltinSet<NAME, "csil",
-                               [["vx","Uv", "UvUvz"]]>;
-  }
-}
-
-class RVVFloatingUnaryBuiltin<string builtin_suffix, string ir_suffix,
-                              string prototype>
-    : RVVOutBuiltin<ir_suffix, prototype, "xfd"> {
-  let Name = NAME # "_" # builtin_suffix;
-}
-
-class RVVFloatingUnaryVVBuiltin : RVVFloatingUnaryBuiltin<"v", "v", "vv">;
-
-class RVVConvBuiltin<string suffix, string prototype, string type_range,
-                     string overloaded_name>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IntrinsicTypes = [-1, 0];
-  let OverloadedName = overloaded_name;
-}
-
-class RVVConvToSignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Iv", "Ivv", "xfd", overloaded_name>;
-
-class RVVConvToUnsignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Uv", "Uvv", "xfd", overloaded_name>;
-
-class RVVConvToWidenSignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Iw", "Iwv", "xf", overloaded_name>;
-
-class RVVConvToWidenUnsignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Uw", "Uwv", "xf", overloaded_name>;
-
-class RVVConvToNarrowingSignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Iv", "IvFw", "csi", overloaded_name>;
-
-class RVVConvToNarrowingUnsignedBuiltin<string overloaded_name>
-    : RVVConvBuiltin<"Uv", "UvFw", "csi", overloaded_name>;
-
-let HasMaskedOffOperand = true in {
-  multiclass RVVSignedReductionBuiltin {
-    defm "" : RVVOutOp0BuiltinSet<NAME, "csil",
-                                  [["vs", "vSv", "SvvSv"]]>;
-  }
-  multiclass RVVUnsignedReductionBuiltin {
-    defm "" : RVVOutOp0BuiltinSet<NAME, "csil",
-                                  [["vs", "UvUSv", "USvUvUSv"]]>;
-  }
-  multiclass RVVFloatingReductionBuiltin {
-    defm "" : RVVOutOp0BuiltinSet<NAME, "xfd",
-                                  [["vs", "vSv", "SvvSv"]]>;
-  }
-  multiclass RVVFloatingWidenReductionBuiltin {
-    defm "" : RVVOutOp0BuiltinSet<NAME, "xf",
-                                  [["vs", "vSw", "SwvSw"]]>;
-  }
-}
-
-multiclass RVVIntReductionBuiltinSet
-    : RVVSignedReductionBuiltin,
-      RVVUnsignedReductionBuiltin;
-
-// For widen operation which has different mangling name.
-multiclass RVVWidenBuiltinSet<string intrinsic_name, string type_range,
-                              list<list<string>> suffixes_prototypes> {
-  let Log2LMUL = [-3, -2, -1, 0, 1, 2],
-      IRName = intrinsic_name, MaskedIRName = intrinsic_name # "_mask" in {
-    foreach s_p = suffixes_prototypes in {
-      let Name = NAME # "_" # s_p[0],
-          OverloadedName = NAME # "_" # s_p[0] in {
-        defvar suffix = s_p[1];
-        defvar prototype = s_p[2];
-        def : RVVOutOp0Op1Builtin<suffix, prototype, type_range>;
-      }
-    }
-  }
-}
-
-// For widen operation with widen operand which has different mangling name.
-multiclass RVVWidenWOp0BuiltinSet<string intrinsic_name, string type_range,
-                                  list<list<string>> suffixes_prototypes> {
-  let Log2LMUL = [-3, -2, -1, 0, 1, 2],
-      IRName = intrinsic_name, MaskedIRName = intrinsic_name # "_mask" in {
-    foreach s_p = suffixes_prototypes in {
-      let Name = NAME # "_" # s_p[0],
-          OverloadedName = NAME # "_" # s_p[0] in {
-        defvar suffix = s_p[1];
-        defvar prototype = s_p[2];
-        def : RVVOutOp1Builtin<suffix, prototype, type_range>;
-      }
-    }
-  }
-}
-
-multiclass RVVSignedWidenBinBuiltinSet
-    : RVVWidenBuiltinSet<NAME, "csi",
-                         [["vv", "w", "wvv"],
-                          ["vx", "w", "wve"]]>;
-
-multiclass RVVSignedWidenOp0BinBuiltinSet
-    : RVVWidenWOp0BuiltinSet<NAME # "_w", "csi",
-                             [["wv", "w", "wwv"],
-                              ["wx", "w", "wwe"]]>;
-
-multiclass RVVUnsignedWidenBinBuiltinSet
-    : RVVWidenBuiltinSet<NAME, "csi",
-                         [["vv", "Uw", "UwUvUv"],
-                          ["vx", "Uw", "UwUvUe"]]>;
-
-multiclass RVVUnsignedWidenOp0BinBuiltinSet
-    : RVVWidenWOp0BuiltinSet<NAME # "_w", "csi",
-                             [["wv", "Uw", "UwUwUv"],
-                              ["wx", "Uw", "UwUwUe"]]>;
-
-multiclass RVVFloatingWidenBinBuiltinSet
-    : RVVWidenBuiltinSet<NAME, "xf",
-                         [["vv", "w", "wvv"],
-                          ["vf", "w", "wve"]]>;
-
-multiclass RVVFloatingWidenOp0BinBuiltinSet
-    : RVVWidenWOp0BuiltinSet<NAME # "_w", "xf",
-                             [["wv", "w", "wwv"],
-                              ["wf", "w", "wwe"]]>;
-
-defvar TypeList = ["c","s","i","l","x","f","d"];
+defvar TypeList = ["c","s","i","l","x","f","d","y"];
 defvar EEWList = [["8", "(Log2EEW:3)"],
                   ["16", "(Log2EEW:4)"],
                   ["32", "(Log2EEW:5)"],
                   ["64", "(Log2EEW:6)"]];
 
 class IsFloat<string type> {
-  bit val = !or(!eq(type, "x"), !eq(type, "f"), !eq(type, "d"));
+  bit val = !or(!eq(type, "x"), !eq(type, "f"), !eq(type, "d"), !eq(type, "y"));
 }
 
 let SupportOverloading = false,
@@ -432,7 +69,6 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           IntrinsicTypes = {ResultType, Ops[3]->getType()};
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
         Ops.erase(Ops.begin() + 2);
         llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
@@ -480,7 +116,10 @@ multiclass RVVIndexedLoad<string op> {
       foreach eew_list = EEWList[0-2] in {
         defvar eew = eew_list[0];
         defvar eew_type = eew_list[1];
-        let Name = op # eew # "_v", IRName = op, MaskedIRName = op # "_mask" in {
+        let Name = op # eew # "_v", IRName = op, MaskedIRName = op # "_mask",
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)) in {
           def: RVVOutOp1Builtin<"v", "vPCe" # eew_type # "Uv", type>;
             if !not(IsFloat<type>.val) then {
               def: RVVOutOp1Builtin<"Uv", "UvPCUe" # eew_type # "Uv", type>;
@@ -490,7 +129,9 @@ multiclass RVVIndexedLoad<string op> {
       defvar eew64 = "64";
       defvar eew64_type = "(Log2EEW:6)";
       let Name = op # eew64 # "_v", IRName = op, MaskedIRName = op # "_mask",
-          RequiredFeatures = ["RV64"] in {
+          RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin", "RV64"],
+                                 !if(!eq(type, "y"), ["Zvfbfmin", "RV64"],
+                                                 ["RV64"])) in {
           def: RVVOutOp1Builtin<"v", "vPCe" # eew64_type # "Uv", type>;
             if !not(IsFloat<type>.val) then {
               def: RVVOutOp1Builtin<"Uv", "UvPCUe" # eew64_type # "Uv", type>;
@@ -510,7 +151,6 @@ let HasMaskedOffOperand = false,
         // Builtin: (ptr, value, vl). Intrinsic: (value, ptr, vl)
         std::swap(Ops[0], Ops[1]);
       }
-      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
       if (IsMasked)
         IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
       else
@@ -549,7 +189,6 @@ multiclass RVVVSSEBuiltin<list<string> types> {
           // Builtin: (ptr, stride, value, vl). Intrinsic: (value, ptr, stride, vl)
           std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         if (IsMasked)
           IntrinsicTypes = {Ops[0]->getType(), Ops[4]->getType()};
         else
@@ -575,7 +214,6 @@ multiclass RVVIndexedStore<string op> {
           // Builtin: (ptr, index, value, vl). Intrinsic: (value, ptr, index, vl)
           std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         if (IsMasked)
           IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[4]->getType()};
         else
@@ -585,7 +223,10 @@ multiclass RVVIndexedStore<string op> {
         foreach eew_list = EEWList[0-2] in {
           defvar eew = eew_list[0];
           defvar eew_type = eew_list[1];
-          let Name = op # eew  # "_v", IRName = op, MaskedIRName = op # "_mask" in  {
+          let Name = op # eew  # "_v", IRName = op, MaskedIRName = op # "_mask",
+          RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                 !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                 []<string>)) in  {
             def : RVVBuiltin<"v", "0Pe" # eew_type # "Uvv", type>;
             if !not(IsFloat<type>.val) then {
               def : RVVBuiltin<"Uv", "0PUe" # eew_type # "UvUv", type>;
@@ -595,7 +236,9 @@ multiclass RVVIndexedStore<string op> {
         defvar eew64 = "64";
         defvar eew64_type = "(Log2EEW:6)";
         let Name = op # eew64  # "_v", IRName = op, MaskedIRName = op # "_mask",
-            RequiredFeatures = ["RV64"]  in  {
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin", "RV64"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin", "RV64"],
+                                                   ["RV64"])) in  {
           def : RVVBuiltin<"v", "0Pe" # eew64_type # "Uvv", type>;
           if !not(IsFloat<type>.val) then {
             def : RVVBuiltin<"Uv", "0PUe" # eew64_type # "UvUv", type>;
@@ -700,6 +343,36 @@ class VString<int nf, bit signed> {
                    !eq(nf, 6): !if(signed, "vvvvvv", "UvUvUvUvUvUv"),
                    !eq(nf, 7): !if(signed, "vvvvvvv", "UvUvUvUvUvUvUv"),
                    !eq(nf, 8): !if(signed, "vvvvvvvv", "UvUvUvUvUvUvUvUv"));
+}
+
+
+class FixedVString<int fixed_lmul, int num, string vec> {
+  string V = "(LFixedLog2LMUL:" # fixed_lmul # ")" # vec;
+  string S = !interleave(!listsplat(V, num), "");
+}
+
+multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
+  defvar dst_v = FixedVString<dst_lmul, 1, "v">.V;
+  defvar dst_uv = FixedVString<dst_lmul, 1, "Uv">.V;
+  foreach src_lmul = src_lmul_list in {
+    defvar num = !shl(1, !sub(dst_lmul, src_lmul));
+
+    defvar src_v = FixedVString<src_lmul, num, "v">.V;
+    defvar src_s = FixedVString<src_lmul, num, "v">.S;
+    def vcreate # src_v # dst_v : RVVBuiltin<src_v # dst_v,
+                                             dst_v # src_s,
+                                             "csilxfd">;
+    let RequiredFeatures = ["Zvfbfmin"] in
+      def vcreate_bf16 # src_v # dst_v : RVVBuiltin<src_v # dst_v,
+                                                    dst_v # src_s,
+                                                    "y", dst_v>;
+
+    defvar src_uv = FixedVString<src_lmul, num, "Uv">.V;
+    defvar src_us = FixedVString<src_lmul, num, "Uv">.S;
+    def vcreate_u # src_uv # dst_uv : RVVBuiltin<src_uv # dst_uv,
+                                                 dst_uv # src_us,
+                                                 "csil">;
+  }
 }
 
 multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
@@ -882,7 +555,7 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
           if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
-        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType())); 
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType()));
         if (IsMasked) {
           Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
           // maskedoff, op1, xlen, mask, vl
@@ -905,56 +578,6 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
         }
   }
 }
-
-// Define vread_csr&vwrite_csr described in RVV intrinsics doc.
-let HeaderCode =
-[{
-enum RVV_CSR {
-  RVV_VSTART = 0,
-  RVV_VXSAT,
-  RVV_VXRM,
-  RVV_VCSR,
-};
-
-static __inline__ __attribute__((__always_inline__, __nodebug__))
-unsigned long __riscv_vread_csr(enum RVV_CSR __csr) {
-  unsigned long __rv = 0;
-  switch (__csr) {
-    case RVV_VSTART:
-      __asm__ __volatile__ ("csrr\t%0, vstart" : "=r"(__rv) : : "memory");
-      break;
-    case RVV_VXSAT:
-      __asm__ __volatile__ ("csrr\t%0, vxsat" : "=r"(__rv) : : "memory");
-      break;
-    case RVV_VXRM:
-      __asm__ __volatile__ ("csrr\t%0, vxrm" : "=r"(__rv) : : "memory");
-      break;
-    case RVV_VCSR:
-      __asm__ __volatile__ ("csrr\t%0, vcsr" : "=r"(__rv) : : "memory");
-      break;
-  }
-  return __rv;
-}
-
-static __inline__ __attribute__((__always_inline__, __nodebug__))
-void __riscv_vwrite_csr(enum RVV_CSR __csr, unsigned long __value) {
-  switch (__csr) {
-    case RVV_VSTART:
-      __asm__ __volatile__ ("csrw\tvstart, %z0" : : "rJ"(__value) : "memory");
-      break;
-    case RVV_VXSAT:
-      __asm__ __volatile__ ("csrw\tvxsat, %z0" : : "rJ"(__value) : "memory");
-      break;
-    case RVV_VXRM:
-      __asm__ __volatile__ ("csrw\tvxrm, %z0" : : "rJ"(__value) : "memory");
-      break;
-    case RVV_VCSR:
-      __asm__ __volatile__ ("csrw\tvcsr, %z0" : : "rJ"(__value) : "memory");
-      break;
-  }
-}
-}] in
-def vread_vwrite_csr: RVVHeader;
 
 let HeaderCode =
 [{
@@ -1065,24 +688,40 @@ let HasBuiltinAlias = false,
 // 7.4. Vector Unit-Stride Instructions
 def vlm: RVVVLEMaskBuiltin;
 defm vle8: RVVVLEBuiltin<["c"]>;
-defm vle16: RVVVLEBuiltin<["s","x"]>;
+defm vle16: RVVVLEBuiltin<["s"]>;
+let Name = "vle16_v", RequiredFeatures = ["Zvfhmin"] in
+  defm vle16_h: RVVVLEBuiltin<["x"]>;
+let Name = "vle16_v", RequiredFeatures = ["Zvfbfmin"] in
+  defm vle16_bf16 : RVVVLEBuiltin<["y"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
 
 def vsm : RVVVSEMaskBuiltin;
 defm vse8 : RVVVSEBuiltin<["c"]>;
-defm vse16: RVVVSEBuiltin<["s","x"]>;
+defm vse16: RVVVSEBuiltin<["s"]>;
+let Name = "vse16_v", RequiredFeatures = ["Zvfhmin"] in
+  defm vse16_h: RVVVSEBuiltin<["x"]>;
+let Name = "vse16_v", RequiredFeatures = ["Zvfbfmin"] in
+  defm vse16_bf16: RVVVSEBuiltin<["y"]>;
 defm vse32: RVVVSEBuiltin<["i","f"]>;
 defm vse64: RVVVSEBuiltin<["l","d"]>;
 
 // 7.5. Vector Strided Instructions
 defm vlse8: RVVVLSEBuiltin<["c"]>;
-defm vlse16: RVVVLSEBuiltin<["s","x"]>;
+defm vlse16: RVVVLSEBuiltin<["s"]>;
+let Name = "vlse16_v", RequiredFeatures = ["Zvfhmin"] in
+  defm vlse16_h: RVVVLSEBuiltin<["x"]>;
+let Name = "vlse16_v", RequiredFeatures = ["Zvfbfmin"] in
+  defm vlse16_bf16: RVVVLSEBuiltin<["y"]>;
 defm vlse32: RVVVLSEBuiltin<["i","f"]>;
 defm vlse64: RVVVLSEBuiltin<["l","d"]>;
 
 defm vsse8 : RVVVSSEBuiltin<["c"]>;
-defm vsse16: RVVVSSEBuiltin<["s","x"]>;
+defm vsse16: RVVVSSEBuiltin<["s"]>;
+let Name = "vsse16_v", RequiredFeatures = ["Zvfhmin"] in
+  defm vsse16_h: RVVVSSEBuiltin<["x"]>;
+let Name = "vsse16_v", RequiredFeatures = ["Zvfbfmin"] in
+  defm vsse16_bf: RVVVSSEBuiltin<["y"]>;
 defm vsse32: RVVVSSEBuiltin<["i","f"]>;
 defm vsse64: RVVVSSEBuiltin<["l","d"]>;
 
@@ -1095,7 +734,11 @@ defm : RVVIndexedStore<"vsoxei">;
 
 // 7.7. Unit-stride Fault-Only-First Loads
 defm vle8ff: RVVVLEFFBuiltin<["c"]>;
-defm vle16ff: RVVVLEFFBuiltin<["s","x"]>;
+defm vle16ff: RVVVLEFFBuiltin<["s"]>;
+let Name = "vle16ff_v", RequiredFeatures = ["Zvfhmin"] in
+  defm vle16ff: RVVVLEFFBuiltin<["x"]>;
+let Name = "vle16ff_v", RequiredFeatures = ["Zvfbfmin"] in
+  defm vle16ff: RVVVLEFFBuiltin<["y"]>;
 defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
@@ -1107,12 +750,16 @@ multiclass RVVUnitStridedSegLoadTuple<string op> {
                        !eq(type, "l") : "64",
                        !eq(type, "x") : "16",
                        !eq(type, "f") : "32",
-                       !eq(type, "d") : "64");
+                       !eq(type, "d") : "64",
+                       !eq(type, "y") : "16");
       foreach nf = NFList in {
         let Name = op # nf # "e" # eew # "_v",
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)),
             ManualCodegen = [{
     {
       llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
@@ -1166,13 +813,17 @@ multiclass RVVUnitStridedSegStoreTuple<string op> {
                        !eq(type, "l") : "64",
                        !eq(type, "x") : "16",
                        !eq(type, "f") : "32",
-                       !eq(type, "d") : "64");
+                       !eq(type, "d") : "64",
+                       !eq(type, "y") : "16");
       foreach nf = NFList in {
       let Name = op # nf # "e" # eew # "_v",
           IRName = op # nf,
           MaskedIRName = op # nf # "_mask",
           NF = nf,
           HasMaskedOffOperand = false,
+          RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                 !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                 []<string>)),
           ManualCodegen = [{
     {
       // Masked
@@ -1217,12 +868,16 @@ multiclass RVVUnitStridedSegLoadFFTuple<string op> {
                        !eq(type, "l") : "64",
                        !eq(type, "x") : "16",
                        !eq(type, "f") : "32",
-                       !eq(type, "d") : "64");
+                       !eq(type, "d") : "64",
+                       !eq(type, "y") : "16");
       foreach nf = NFList in {
         let Name = op # nf # "e" # eew # "ff_v",
             IRName = op # nf # "ff",
             MaskedIRName = op # nf # "ff_mask",
             NF = nf,
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)),
             ManualCodegen = [{
     {
       llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
@@ -1290,12 +945,16 @@ multiclass RVVStridedSegLoadTuple<string op> {
                        !eq(type, "l") : "64",
                        !eq(type, "x") : "16",
                        !eq(type, "f") : "32",
-                       !eq(type, "d") : "64");
+                       !eq(type, "d") : "64",
+                       !eq(type, "y") : "16");
       foreach nf = NFList in {
         let Name = op # nf # "e" # eew # "_v",
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)),
             ManualCodegen = [{
     {
       llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
@@ -1350,7 +1009,8 @@ multiclass RVVStridedSegStoreTuple<string op> {
                        !eq(type, "l") : "64",
                        !eq(type, "x") : "16",
                        !eq(type, "f") : "32",
-                       !eq(type, "d") : "64");
+                       !eq(type, "d") : "64",
+                       !eq(type, "y") : "16");
       foreach nf = NFList in {
         let Name = op # nf # "e" # eew # "_v",
             IRName = op # nf,
@@ -1358,6 +1018,9 @@ multiclass RVVStridedSegStoreTuple<string op> {
             NF = nf,
             HasMaskedOffOperand = false,
             MaskedPolicyScheme = NonePolicy,
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)),
             ManualCodegen = [{
     {
       // Masked
@@ -1405,6 +1068,9 @@ multiclass RVVIndexedSegLoadTuple<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)),
             ManualCodegen = [{
     {
       llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
@@ -1466,6 +1132,9 @@ multiclass RVVIndexedSegStoreTuple<string op> {
             NF = nf,
             HasMaskedOffOperand = false,
             MaskedPolicyScheme = NonePolicy,
+            RequiredFeatures = !if(!eq(type, "x"), ["Zvfhmin"],
+                                   !if(!eq(type, "y"), ["Zvfbfmin"],
+                                                   []<string>)),
             ManualCodegen = [{
     {
       // Masked
@@ -1524,8 +1193,8 @@ defm : RVVIndexedSegStoreTuple<"vsuxseg">;
 defm : RVVIndexedSegStoreTuple<"vsoxseg">;
 }
 
-// 12. Vector Integer Arithmetic Instructions
-// 12.1. Vector Single-Width Integer Add and Subtract
+// 11. Vector Integer Arithmetic Instructions
+// 11.1. Vector Single-Width Integer Add and Subtract
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vadd : RVVIntBinBuiltinSet;
 defm vsub : RVVIntBinBuiltinSet;
@@ -1535,7 +1204,7 @@ defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
 }
 defm vneg_v : RVVPseudoUnaryBuiltin<"vrsub", "csil">;
 
-// 12.2. Vector Widening Integer Add/Subtract
+// 11.2. Vector Widening Integer Add/Subtract
 // Widening unsigned integer add/subtract, 2*SEW = SEW +/- SEW
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vwaddu : RVVUnsignedWidenBinBuiltinSet;
@@ -1555,7 +1224,7 @@ defm vwcvtu_x_x_v : RVVPseudoVWCVTBuiltin<"vwaddu", "vwcvtu_x", "csi",
 defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
                                          [["w", "wv"]]>;
 
-// 12.3. Vector Integer Extension
+// 11.3. Vector Integer Extension
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
@@ -1571,7 +1240,7 @@ let Log2LMUL = [-3, -2, -1, 0] in {
 }
 }
 
-// 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+// 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let UnMaskedPolicyScheme = HasPassthruOperand in {
     defm vadc : RVVCarryinBuiltinSet;
@@ -1583,7 +1252,7 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   defm vmsbc : RVVIntMaskOutBuiltinSet;
 }
 
-// 12.5. Vector Bitwise Logical Instructions
+// 11.5. Vector Bitwise Logical Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vand : RVVIntBinBuiltinSet;
 defm vxor : RVVIntBinBuiltinSet;
@@ -1591,13 +1260,13 @@ defm vor : RVVIntBinBuiltinSet;
 }
 defm vnot_v : RVVPseudoVNotBuiltin<"vxor", "csil">;
 
-// 12.6. Vector Single-Width Bit Shift Instructions
+// 11.6. Vector Single-Width Shift Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsll : RVVShiftBuiltinSet;
 defm vsrl : RVVUnsignedShiftBuiltinSet;
 defm vsra : RVVSignedShiftBuiltinSet;
 
-// 12.7. Vector Narrowing Integer Right Shift Instructions
+// 11.7. Vector Narrowing Integer Right Shift Instructions
 defm vnsrl : RVVUnsignedNShiftBuiltinSet;
 defm vnsra : RVVSignedNShiftBuiltinSet;
 }
@@ -1605,7 +1274,7 @@ defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                          [["v", "vw"],
                                           ["Uv", "UvUw"]]>;
 
-// 12.8. Vector Integer Comparison Instructions
+// 11.8. Vector Integer Compare Instructions
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
 defm vmseq : RVVIntMaskOutBuiltinSet;
@@ -1620,31 +1289,29 @@ defm vmsgeu : RVVUnsignedMaskOutBuiltinSet;
 defm vmsge : RVVSignedMaskOutBuiltinSet;
 }
 
-// 12.9. Vector Integer Min/Max Instructions
+// 11.9. Vector Integer Min/Max Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vminu : RVVUnsignedBinBuiltinSet;
 defm vmin : RVVSignedBinBuiltinSet;
 defm vmaxu : RVVUnsignedBinBuiltinSet;
 defm vmax : RVVSignedBinBuiltinSet;
 
-// 12.10. Vector Single-Width Integer Multiply Instructions
+// 11.10. Vector Single-Width Integer Multiply Instructions
 defm vmul : RVVIntBinBuiltinSet;
-let RequiredFeatures = ["FullMultiply"] in {
 defm vmulh : RVVSignedBinBuiltinSet;
 defm vmulhu : RVVUnsignedBinBuiltinSet;
 defm vmulhsu : RVVOutOp1BuiltinSet<"vmulhsu", "csil",
                                    [["vv", "v", "vvUv"],
                                     ["vx", "v", "vvUe"]]>;
-}
 
-// 12.11. Vector Integer Divide Instructions
+// 11.11. Vector Integer Divide Instructions
 defm vdivu : RVVUnsignedBinBuiltinSet;
 defm vdiv : RVVSignedBinBuiltinSet;
 defm vremu : RVVUnsignedBinBuiltinSet;
 defm vrem : RVVSignedBinBuiltinSet;
 }
 
-// 12.12. Vector Widening Integer Multiply Instructions
+// 11.12. Vector Widening Integer Multiply Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2], UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vwmul : RVVOutOp0Op1BuiltinSet<"vwmul", "csi",
                                     [["vv", "w", "wvv"],
@@ -1657,14 +1324,14 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
                                        ["vx", "w", "wvUe"]]>;
 }
 
-// 12.13. Vector Single-Width Integer Multiply-Add Instructions
+// 11.13. Vector Single-Width Integer Multiply-Add Instructions
 let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
 defm vnmsub : RVVIntTerBuiltinSet;
 
-// 12.14. Vector Widening Integer Multiply-Add Instructions
+// 11.14. Vector Widening Integer Multiply-Add Instructions
 let HasMaskedOffOperand = false,
     Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 defm vwmaccu : RVVOutOp1Op2BuiltinSet<"vwmaccu", "csi",
@@ -1681,7 +1348,7 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 }
 }
 
-// 12.15. Vector Integer Merge Instructions
+// 11.15. Vector Integer Merge Instructions
 // C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (passthru, op1, op2, mask, vl)
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
@@ -1699,108 +1366,492 @@ let HasMasked = false,
                                      ["vxm", "Uv", "UvUvUem"]]>;
 }
 
-// 12.16. Vector Integer Move Instructions
+// 11.16. Vector Integer Move Instructions
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
     OverloadedName = "vmv_v" in {
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csil",
                                    [["v", "Uv", "UvUv"]]>;
-    defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csilxfd",
+    defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csilfd",
                                    [["v", "v", "vv"]]>;
+    let RequiredFeatures = ["Zvfhmin"] in
+      defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "x",
+                                    [["v", "v", "vv"]]>;
   let SupportOverloading = false in
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_x", "csil",
                                    [["x", "v", "ve"],
                                     ["x", "Uv", "UvUe"]]>;
 }
 
-// 13. Vector Fixed-Point Arithmetic Instructions
-// 13.1. Vector Single-Width Saturating Add and Subtract
+// 12. Vector Fixed-Point Arithmetic Instructions
+let HeaderCode =
+[{
+enum __RISCV_VXRM {
+  __RISCV_VXRM_RNU = 0,
+  __RISCV_VXRM_RNE = 1,
+  __RISCV_VXRM_RDN = 2,
+  __RISCV_VXRM_ROD = 3,
+};
+}] in
+def vxrm_enum : RVVHeader;
+
+// 12.1. Vector Single-Width Saturating Add and Subtract
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsaddu : RVVUnsignedBinBuiltinSet;
 defm vsadd : RVVSignedBinBuiltinSet;
 defm vssubu : RVVUnsignedBinBuiltinSet;
 defm vssub : RVVSignedBinBuiltinSet;
 
-// 13.2. Vector Single-Width Averaging Add and Subtract
-defm vaaddu : RVVUnsignedBinBuiltinSet;
-defm vaadd : RVVSignedBinBuiltinSet;
-defm vasubu : RVVUnsignedBinBuiltinSet;
-defm vasub : RVVSignedBinBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
 
-// 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
-let RequiredFeatures = ["FullMultiply"] in {
-defm vsmul : RVVSignedBinBuiltinSet;
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    Operands.push_back(Ops[Offset + 2]); // vxrm
+    Operands.push_back(Ops[Offset + 3]); // vl
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(), Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  // 12.2. Vector Single-Width Averaging Add and Subtract
+  defm vaaddu : RVVUnsignedBinBuiltinSetRoundingMode;
+  defm vaadd : RVVSignedBinBuiltinSetRoundingMode;
+  defm vasubu : RVVUnsignedBinBuiltinSetRoundingMode;
+  defm vasub : RVVSignedBinBuiltinSetRoundingMode;
+
+  // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+  defm vsmul : RVVSignedBinBuiltinSetRoundingMode;
+
+  // 12.4. Vector Single-Width Scaling Shift Instructions
+  defm vssrl : RVVUnsignedShiftBuiltinSetRoundingMode;
+  defm vssra : RVVSignedShiftBuiltinSetRoundingMode;
 }
 
-// 13.4. Vector Single-Width Scaling Shift Instructions
-defm vssrl : RVVUnsignedShiftBuiltinSet;
-defm vssra : RVVSignedShiftBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
 
-// 13.5. Vector Narrowing Fixed-Point Clip Instructions
-defm vnclipu : RVVUnsignedNShiftBuiltinSet;
-defm vnclip : RVVSignedNShiftBuiltinSet;
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
 
-// 14. Vector Floating-Point Instructions
-// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm vfadd  : RVVFloatingBinBuiltinSet;
-defm vfsub  : RVVFloatingBinBuiltinSet;
-defm vfrsub : RVVFloatingBinVFBuiltinSet;
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
 
-// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
-// Widening FP add/subtract, 2*SEW = SEW +/- SEW
-defm vfwadd : RVVFloatingWidenBinBuiltinSet;
-defm vfwsub : RVVFloatingWidenBinBuiltinSet;
-// Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
-defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
-defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
 
-// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm vfmul  : RVVFloatingBinBuiltinSet;
-defm vfdiv  : RVVFloatingBinBuiltinSet;
-defm vfrdiv : RVVFloatingBinVFBuiltinSet;
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
 
-// 14.5. Vector Widening Floating-Point Multiply
-let Log2LMUL = [-2, -1, 0, 1, 2] in {
-  defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
-                                       [["vv", "w", "wvv"],
-                                        ["vf", "w", "wve"]]>;
+    Operands.push_back(Ops[Offset + 2]); // vxrm
+    Operands.push_back(Ops[Offset + 3]); // vl
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  // 12.5. Vector Narrowing Fixed-Point Clip Instructions
+  defm vnclipu : RVVUnsignedNShiftBuiltinSetRoundingMode;
+  defm vnclip : RVVSignedNShiftBuiltinSetRoundingMode;
 }
 }
 
-// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand in {
-defm vfmacc  : RVVFloatingTerBuiltinSet;
-defm vfnmacc : RVVFloatingTerBuiltinSet;
-defm vfmsac  : RVVFloatingTerBuiltinSet;
-defm vfnmsac : RVVFloatingTerBuiltinSet;
-defm vfmadd  : RVVFloatingTerBuiltinSet;
-defm vfnmadd : RVVFloatingTerBuiltinSet;
-defm vfmsub  : RVVFloatingTerBuiltinSet;
-defm vfnmsub : RVVFloatingTerBuiltinSet;
+// 13. Vector Floating-Point Instructions
+let HeaderCode =
+[{
+enum __RISCV_FRM {
+  __RISCV_FRM_RNE = 0,
+  __RISCV_FRM_RTZ = 1,
+  __RISCV_FRM_RDN = 2,
+  __RISCV_FRM_RUP = 3,
+  __RISCV_FRM_RMM = 4,
+};
+}] in def frm_enum : RVVHeader;
 
-// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
-defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
-defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
-defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
-}
-
-// 14.8. Vector Floating-Point Square-Root Instruction
 let UnMaskedPolicyScheme = HasPassthruOperand in {
-def vfsqrt : RVVFloatingUnaryVVBuiltin;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-// 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(),
+                      Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = true in {
+    // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+    defm vfadd  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfsub  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfrsub : RVVFloatingBinVFBuiltinSetRoundingMode;
+
+    // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+    defm vfwadd : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
+    defm vfwsub : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
+
+    // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+    defm vfmul  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfdiv  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfrdiv : RVVFloatingBinVFBuiltinSetRoundingMode;
+  }
+  // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+  defm vfadd  : RVVFloatingBinBuiltinSet;
+  defm vfsub  : RVVFloatingBinBuiltinSet;
+  defm vfrsub : RVVFloatingBinVFBuiltinSet;
+
+  // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+  defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
+  defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
+
+  // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+  defm vfmul  : RVVFloatingBinBuiltinSet;
+  defm vfdiv  : RVVFloatingBinBuiltinSet;
+  defm vfrdiv : RVVFloatingBinVFBuiltinSet;
+}
+
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = true in {
+    // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // Widening FP add/subtract, 2*SEW = SEW +/- SEW
+    defm vfwadd : RVVFloatingWidenBinBuiltinSetRoundingMode;
+    defm vfwsub : RVVFloatingWidenBinBuiltinSetRoundingMode;
+
+    // 13.5. Vector Widening Floating-Point Multiply
+    let Log2LMUL = [-2, -1, 0, 1, 2] in {
+      defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
+                                          [["vv", "w", "wvvu"],
+                                            ["vf", "w", "wveu"]]>;
+    }
+  }
+  // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // Widening FP add/subtract, 2*SEW = SEW +/- SEW
+  defm vfwadd : RVVFloatingWidenBinBuiltinSet;
+  defm vfwsub : RVVFloatingWidenBinBuiltinSet;
+
+  // 13.5. Vector Widening Floating-Point Multiply
+  let Log2LMUL = [-2, -1, 0, 1, 2] in {
+    defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
+                                        [["vv", "w", "wvv"],
+                                          ["vf", "w", "wve"]]>;
+  }
+}
+}
+
+
+let UnMaskedPolicyScheme = HasPolicyOperand in {
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+    unsigned Offset = IsMasked ? 2 : 1;
+
+    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Operands.back()->getType()};
+
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+    defm vfmacc  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmacc : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmsac  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmsac : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmadd  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmadd : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmsub  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmsub : RVVFloatingTerBuiltinSetRoundingMode;
+  }
+  // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+  defm vfmacc  : RVVFloatingTerBuiltinSet;
+  defm vfnmacc : RVVFloatingTerBuiltinSet;
+  defm vfmsac  : RVVFloatingTerBuiltinSet;
+  defm vfnmsac : RVVFloatingTerBuiltinSet;
+  defm vfmadd  : RVVFloatingTerBuiltinSet;
+  defm vfnmadd : RVVFloatingTerBuiltinSet;
+  defm vfmsub  : RVVFloatingTerBuiltinSet;
+  defm vfnmsub : RVVFloatingTerBuiltinSet;
+}
+
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+    unsigned Offset = IsMasked ? 2 : 1;
+
+    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Operands.back()->getType()};
+
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+    defm vfwmacc  : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwnmacc : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwmsac  : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwnmsac : RVVFloatingWidenTerBuiltinSetRoundingMode;
+
+    // Vector BF16 widening multiply-accumulate
+    let Log2LMUL = [-2, -1, 0, 1, 2],
+        RequiredFeatures = ["Zvfbfwma"],
+        HasMaskedOffOperand = false in
+    defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
+                                              [["vv", "Fw", "FwFwvvu"],
+                                               ["vf", "Fw", "FwFwevu"]]>;
+  }
+  // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+  defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
+  defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
+  defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
+  defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+
+  // Vector BF16 widening multiply-accumulate
+  let Log2LMUL = [-2, -1, 0, 1, 2],
+      RequiredFeatures = ["Zvfbfwma"],
+      HasMaskedOffOperand = false in
+  defm vfwmaccbf16 : RVVOutOp1Op2BuiltinSet<"vfwmaccbf16", "y",
+                                            [["vv", "Fw", "FwFwvv"],
+                                             ["vf", "Fw", "FwFwev"]]>;
+}
+
+}
+
+let UnMaskedPolicyScheme = HasPassthruOperand in {
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, round_mode, vl)
+    // Masked:   (passthru, op0, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4) :
+      (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 1]); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 1]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 13.8. Vector Floating-Point Square-Root Instruction
+    defm vfsqrt : RVVOutBuiltinSet<"vfsqrt", "xfd", [["v", "v", "vvu"]]>;
+
+    // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
+    defm vfrec7 : RVVOutBuiltinSet<"vfrec7", "xfd", [["v", "v", "vvu"]]>;
+  }
+  // 13.8. Vector Floating-Point Square-Root Instruction
+  defm vfsqrt : RVVOutBuiltinSet<"vfsqrt", "xfd", [["v", "v", "vv"]]>;
+
+  // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
+  defm vfrec7 : RVVOutBuiltinSet<"vfrec7", "xfd", [["v", "v", "vv"]]>;
+}
+
+// 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 def vfrsqrt7 : RVVFloatingUnaryVVBuiltin;
 
-// 14.10. Vector Floating-Point Reciprocal Estimate Instruction
-def vfrec7 : RVVFloatingUnaryVVBuiltin;
-
-// 14.11. Vector Floating-Point MIN/MAX Instructions
+// 13.11. Vector Floating-Point MIN/MAX Instructions
 defm vfmin : RVVFloatingBinBuiltinSet;
 defm vfmax : RVVFloatingBinBuiltinSet;
 
-// 14.12. Vector Floating-Point Sign-Injection Instructions
+// 13.12. Vector Floating-Point Sign-Injection Instructions
 defm vfsgnj  : RVVFloatingBinBuiltinSet;
 defm vfsgnjn : RVVFloatingBinBuiltinSet;
 defm vfsgnjx : RVVFloatingBinBuiltinSet;
@@ -1808,7 +1859,7 @@ defm vfsgnjx : RVVFloatingBinBuiltinSet;
 defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "xfd">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "xfd">;
 
-// 14.13. Vector Floating-Point Compare Instructions
+// 13.13. Vector Floating-Point Compare Instructions
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
@@ -1819,11 +1870,11 @@ defm vmfgt : RVVFloatingMaskOutBuiltinSet;
 defm vmfge : RVVFloatingMaskOutBuiltinSet;
 }
 
-// 14.14. Vector Floating-Point Classify Instruction
+// 13.14. Vector Floating-Point Classify Instruction
 let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "xfd">;
 
-// 14.15. Vector Floating-Point Merge Instructio
+// 13.15. Vector Floating-Point Merge Instruction
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
@@ -1834,13 +1885,16 @@ let HasMasked = false,
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
-  defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
+  defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "fd",
                                     [["vvm", "v", "vvvm"]]>;
+  let RequiredFeatures = ["Zvfhmin"] in
+    defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "x",
+                                      [["vvm", "v", "vvvm"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "xfd",
                                      [["vfm", "v", "vvem"]]>;
 }
 
-// 14.16. Vector Floating-Point Move Instruction
+// 13.16. Vector Floating-Point Move Instruction
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     SupportOverloading = false,
@@ -1849,41 +1903,184 @@ let HasMasked = false,
   defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "xfd",
                                   [["f", "v", "ve"]]>;
 
-// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+// 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
-def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
-def vfcvt_x_f_v : RVVConvToSignedBuiltin<"vfcvt_x">;
 def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
 def vfcvt_rtz_x_f_v : RVVConvToSignedBuiltin<"vfcvt_rtz_x">;
-def vfcvt_f_xu_v : RVVConvBuiltin<"Fv", "FvUv", "sil", "vfcvt_f">;
-def vfcvt_f_x_v : RVVConvBuiltin<"Fv", "Fvv", "sil", "vfcvt_f">;
 
-// 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+// 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-  def vfwcvt_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_xu">;
-  def vfwcvt_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_x">;
   def vfwcvt_rtz_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_rtz_xu">;
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
   def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
   def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "csi", "vfwcvt_f">;
-  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "xf", "vfwcvt_f">;
+  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "f", "vfwcvt_f">;
+  let RequiredFeatures = ["Zvfhmin"] in
+    def vfwcvt_f_f_v_fp16 : RVVConvBuiltin<"w", "wv", "x", "vfwcvt_f"> {
+      let Name = "vfwcvt_f_f_v";
+      let IRName = "vfwcvt_f_f_v";
+      let MaskedIRName = "vfwcvt_f_f_v_mask";
+    }
 }
 
-// 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+// 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-  def vfncvt_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_xu">;
-  def vfncvt_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_x">;
   def vfncvt_rtz_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_rtz_xu">;
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
-  def vfncvt_f_xu_w : RVVConvBuiltin<"Fv", "FvUw", "csi", "vfncvt_f">;
-  def vfncvt_f_x_w : RVVConvBuiltin<"Fv", "Fvw", "csi", "vfncvt_f">;
-  def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_f">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
+}
+
+// Zvfbfmin - Vector convert BF16 to FP32
+let Log2LMUL = [-2, -1, 0, 1, 2] in
+def vfwcvtbf16_f_f_v : RVVConvBuiltin<"Fw", "Fwv", "y", "vfwcvtbf16_f">;
+
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, frm, vl)
+    // Masked:   (passthru, op0, mask, frm, vl, policy)
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4) :
+      (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 1]); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 1]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+    let OverloadedName = "vfcvt_x" in
+      defm :
+        RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivvu"]]>;
+    let OverloadedName = "vfcvt_xu" in
+      defm :
+        RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvvu"]]>;
+    let OverloadedName = "vfcvt_f" in {
+      defm :
+        RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvvu"]]>;
+      defm :
+        RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUvu"]]>;
+    }
+
+    // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
+    let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+      let OverloadedName = "vfwcvt_x" in
+        defm :
+          RVVConvBuiltinSet<"vfwcvt_x_f_v", "xf", [["Iw", "Iwvu"]]>;
+      let OverloadedName = "vfwcvt_xu" in
+        defm :
+          RVVConvBuiltinSet<"vfwcvt_xu_f_v", "xf", [["Uw", "Uwvu"]]>;
+    }
+    // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+    let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+      let OverloadedName = "vfncvt_x" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFwu"]]>;
+      let OverloadedName = "vfncvt_xu" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFwu"]]>;
+      let OverloadedName = "vfncvt_f" in {
+        defm :
+          RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvwu"]]>;
+        defm :
+          RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUwu"]]>;
+      }
+      let OverloadedName = "vfncvt_f" in {
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vwu"]]>;
+        let RequiredFeatures = ["Zvfhmin"] in
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "x", [["v", "vwu"]]>;
+      }
+    }
+
+    // Zvfbfmin - Vector convert FP32 to BF16
+    let Log2LMUL = [-2, -1, 0, 1, 2],
+        OverloadedName = "vfncvtbf16_f" in
+    defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFwu"]]>;
+  }
+
+  // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+  let OverloadedName = "vfcvt_x" in
+    defm :
+      RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivv"]]>;
+  let OverloadedName = "vfcvt_xu" in
+    defm :
+      RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvv"]]>;
+  let OverloadedName = "vfcvt_f" in {
+    defm :
+      RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvv"]]>;
+    defm :
+      RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUv"]]>;
+  }
+
+  // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+    let OverloadedName = "vfwcvt_x" in
+      defm :
+        RVVConvBuiltinSet<"vfwcvt_x_f_v", "xf", [["Iw", "Iwv"]]>;
+    let OverloadedName = "vfwcvt_xu" in
+      defm :
+        RVVConvBuiltinSet<"vfwcvt_xu_f_v", "xf", [["Uw", "Uwv"]]>;
+  }
+  // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+    let OverloadedName = "vfncvt_x" in
+      defm :
+        RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFw"]]>;
+    let OverloadedName = "vfncvt_xu" in
+      defm :
+        RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFw"]]>;
+    let OverloadedName = "vfncvt_f" in {
+      defm :
+        RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvw"]]>;
+      defm :
+        RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUw"]]>;
+    }
+    let OverloadedName = "vfncvt_f" in {
+      defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "f", [["v", "vw"]]>;
+      let RequiredFeatures = ["Zvfhmin"] in
+      defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "x", [["v", "vw"]]>;
+    }
+  }
+
+  // Zvfbfmin - Vector convert FP32 to BF16
+  let Log2LMUL = [-2, -1, 0, 1, 2],
+      OverloadedName = "vfncvtbf16_f" in
+  defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFw"]]>;
 }
 }
 
-// 15. Vector Reduction Operations
-// 15.1. Vector Single-Width Integer Reduction Instructions
+// 14. Vector Reduction Operations
+// 14.1. Vector Single-Width Integer Reduction Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = HasPassthruOperand,
     HasMaskPolicy = false in {
@@ -1896,7 +2093,7 @@ defm vredand : RVVIntReductionBuiltinSet;
 defm vredor : RVVIntReductionBuiltinSet;
 defm vredxor : RVVIntReductionBuiltinSet;
 
-// 15.2. Vector Widening Integer Reduction Instructions
+// 14.2. Vector Widening Integer Reduction Instructions
 // Vector Widening Integer Reduction Operations
 let HasMaskedOffOperand = true in {
   defm vwredsum : RVVOutOp0BuiltinSet<"vwredsum", "csi",
@@ -1905,19 +2102,72 @@ let HasMaskedOffOperand = true in {
                                        [["vs", "UvUSw", "USwUvUSw"]]>;
 }
 
-// 15.3. Vector Single-Width Floating-Point Reduction Instructions
+// 14.3. Vector Single-Width Floating-Point Reduction Instructions
 defm vfredmax : RVVFloatingReductionBuiltin;
 defm vfredmin : RVVFloatingReductionBuiltin;
-defm vfredusum : RVVFloatingReductionBuiltin;
-defm vfredosum : RVVFloatingReductionBuiltin;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-// 15.4. Vector Widening Floating-Point Reduction Instructions
-defm vfwredusum : RVVFloatingWidenReductionBuiltin;
-defm vfwredosum : RVVFloatingWidenReductionBuiltin;
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.3. Vector Single-Width Floating-Point Reduction Instructions
+    defm vfredusum : RVVFloatingReductionBuiltinRoundingMode;
+    defm vfredosum : RVVFloatingReductionBuiltinRoundingMode;
+
+    // 14.4. Vector Widening Floating-Point Reduction Instructions
+    defm vfwredusum : RVVFloatingWidenReductionBuiltinRoundingMode;
+    defm vfwredosum : RVVFloatingWidenReductionBuiltinRoundingMode;
+  }
+  // 14.3. Vector Single-Width Floating-Point Reduction Instructions
+  defm vfredusum : RVVFloatingReductionBuiltin;
+  defm vfredosum : RVVFloatingReductionBuiltin;
+
+  // 14.4. Vector Widening Floating-Point Reduction Instructions
+  defm vfwredusum : RVVFloatingWidenReductionBuiltin;
+  defm vfwredosum : RVVFloatingWidenReductionBuiltin;
+}
 }
 
-// 16. Vector Mask Instructions
-// 16.1. Vector Mask-Register Logical Instructions
+// 15. Vector Mask Instructions
+// 15.1. Vector Mask-Register Logical Instructions
 def vmand    : RVVMaskBinBuiltin;
 def vmnand   : RVVMaskBinBuiltin;
 def vmandn   : RVVMaskBinBuiltin;
@@ -1933,36 +2183,36 @@ defm vmmv_m : RVVPseudoMaskBuiltin<"vmand", "c">;
 defm vmnot_m : RVVPseudoMaskBuiltin<"vmnand", "c">;
 
 let MaskedPolicyScheme = NonePolicy in {
-// 16.2. Vector count population in mask vcpop.m
+// 15.2. Vector count population in mask vcpop.m
 def vcpop : RVVMaskOp0Builtin<"um">;
 
-// 16.3. vfirst find-first-set mask bit
+// 15.3. vfirst find-first-set mask bit
 def vfirst : RVVMaskOp0Builtin<"lm">;
 }
 
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
-// 16.4. vmsbf.m set-before-first mask bit
+// 15.4. vmsbf.m set-before-first mask bit
 def vmsbf : RVVMaskUnaryBuiltin;
 
-// 16.5. vmsif.m set-including-first mask bit
+// 15.5. vmsif.m set-including-first mask bit
 def vmsif : RVVMaskUnaryBuiltin;
 
-// 16.6. vmsof.m set-only-first mask bit
+// 15.6. vmsof.m set-only-first mask bit
 def vmsof : RVVMaskUnaryBuiltin;
 }
 
 let UnMaskedPolicyScheme = HasPassthruOperand, SupportOverloading = false in {
-  // 16.8. Vector Iota Instruction
+  // 15.8. Vector Iota Instruction
   defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
 
-  // 16.9. Vector Element Index Instruction
+  // 15.9. Vector Element Index Instruction
   defm vid : RVVOutBuiltinSet<"vid", "csil", [["v", "v", "v"],
                                               ["v", "Uv", "Uv"]]>;
 }
 
-// 17. Vector Permutation Instructions
-// 17.1. Integer Scalar Move Instructions
+// 16. Vector Permutation Instructions
+// 16.1. Integer Scalar Move Instructions
 let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vmv_x" in
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
@@ -1976,7 +2226,7 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
                                     ["x", "Uv", "UvUe"]]>;
 }
 
-// 17.2. Floating-Point Scalar Move Instructions
+// 16.2. Floating-Point Scalar Move Instructions
 let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
@@ -1989,22 +2239,22 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
                                       ["x", "Uv", "UvUe"]]>;
 }
 
-// 17.3. Vector Slide Instructions
-// 17.3.1. Vector Slideup Instructions
+// 16.3. Vector Slide Instructions
+// 16.3.1. Vector Slideup Instructions
 defm vslideup   : RVVSlideUpBuiltinSet;
-// 17.3.2. Vector Slidedown Instructions
+// 16.3.2. Vector Slidedown Instructions
 defm vslidedown : RVVSlideDownBuiltinSet;
 
-// 17.3.3. Vector Slide1up Instructions
+// 16.3.3. Vector Slide1up Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vslide1up : RVVSlideOneBuiltinSet;
 defm vfslide1up : RVVFloatingBinVFBuiltinSet;
 
-// 17.3.4. Vector Slide1down Instruction
+// 16.3.4. Vector Slide1down Instruction
 defm vslide1down : RVVSlideOneBuiltinSet;
 defm vfslide1down : RVVFloatingBinVFBuiltinSet;
 
-// 17.4. Vector Register Gather Instructions
+// 16.4. Vector Register Gather Instructions
 // signed and floating type
 defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilxfd",
                                  [["vv", "v", "vvUv"]]>;
@@ -2021,7 +2271,7 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
                                      [["vv", "Uv", "UvUv(Log2EEW:4)Uv"]]>;
 }
 
-// 17.5. Vector Compress Instruction
+// 16.5. Vector Compress Instruction
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
@@ -2077,11 +2327,23 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }] in {
     // Reinterpret between different type under the same SEW and LMUL
     def vreinterpret_i_u : RVVBuiltin<"Uvv", "vUv", "csil", "v">;
-    def vreinterpret_i_f : RVVBuiltin<"Fvv", "vFv", "sil", "v">;
+    def vreinterpret_i_f : RVVBuiltin<"Fvv", "vFv", "il", "v">;
     def vreinterpret_u_i : RVVBuiltin<"vUv", "Uvv", "csil", "Uv">;
-    def vreinterpret_u_f : RVVBuiltin<"FvUv", "UvFv", "sil", "Uv">;
-    def vreinterpret_f_i : RVVBuiltin<"vFv", "Fvv", "sil", "Fv">;
-    def vreinterpret_f_u : RVVBuiltin<"UvFv", "FvUv", "sil", "Fv">;
+    def vreinterpret_u_f : RVVBuiltin<"FvUv", "UvFv", "il", "Uv">;
+    def vreinterpret_f_i : RVVBuiltin<"vFv", "Fvv", "il", "Fv">;
+    def vreinterpret_f_u : RVVBuiltin<"UvFv", "FvUv", "il", "Fv">;
+    let RequiredFeatures = ["Zvfhmin"] in {
+      def vreinterpret_i_h : RVVBuiltin<"Fvv", "vFv", "s", "v">;
+      def vreinterpret_u_h : RVVBuiltin<"FvUv", "UvFv", "s", "Uv">;
+      def vreinterpret_h_i : RVVBuiltin<"vFv", "Fvv", "s", "Fv">;
+      def vreinterpret_h_u : RVVBuiltin<"UvFv", "FvUv", "s", "Fv">;
+    }
+    let RequiredFeatures = ["Zvfbfmin"] in {
+      def vreinterpret_i_bf16 : RVVBuiltin<"vIv", "Ivv", "y", "Iv">;
+      def vreinterpret_u_bf16 : RVVBuiltin<"vUv", "Uvv", "y", "Uv">;
+      def vreinterpret_bf16_i : RVVBuiltin<"Ivv", "vIv", "y", "v">;
+      def vreinterpret_bf16_u : RVVBuiltin<"Uvv", "vUv", "y", "v">;
+    }
 
     // Reinterpret between different SEW under the same LMUL
     foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",
@@ -2146,7 +2408,20 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         return llvm::PoisonValue::get(ResultType);
       }] in {
     def vundefined : RVVBuiltin<"v", "v", "csilxfd">;
+    let RequiredFeatures = ["Zvfbfmin"] in
+      def vundefined_bf16 : RVVBuiltin<"v", "v", "y">;
     def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
+
+    foreach nf = NFList in {
+      let NF = nf in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "v", T # "v", "csilxfd">;
+        let RequiredFeatures = ["Zvfbfmin"] in
+          def : RVVBuiltin<T # "v", T # "v", "y">;
+        def : RVVBuiltin<T # "Uv", T # "Uv", "csil">;
+      }
+    }
+
   }
 
   // LMUL truncation
@@ -2161,6 +2436,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
                         "(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
       def vlmul_trunc # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
                                               dst_lmul # "vv", "csilxfd", dst_lmul # "v">;
+      let RequiredFeatures = ["Zvfbfmin"] in
+        def vlmul_trunc_bf16 # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
+                                                     dst_lmul # "vv", "y", dst_lmul # "v">;
       def vlmul_trunc_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv",
                                                 dst_lmul # "UvUv", "csil", dst_lmul # "Uv">;
     }
@@ -2179,6 +2457,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
                         "(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
       def vlmul_ext # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
                                             dst_lmul # "vv", "csilxfd", dst_lmul # "v">;
+      let RequiredFeatures = ["Zvfbfmin"] in
+        def vlmul_ext_bf16 # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
+                                                   dst_lmul # "vv", "y", dst_lmul # "v">;
       def vlmul_ext_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv",
                                               dst_lmul # "UvUv", "csil", dst_lmul # "Uv">;
     }
@@ -2206,12 +2487,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
-      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfd", dst_lmul # "v">;
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfdy", dst_lmul # "v">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";
-      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilxfd", "v">;
+      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilxfdy", "v">;
       def : RVVBuiltin<T # "UvUv", "Uv" # T # "UvKz", "csil", "Uv">;
     }
   }
@@ -2237,16 +2518,182 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
       }
       }] in {
-    let Log2LMUL = [0, 1, 2] in {
-      foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
-        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
-        def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
-      }
+    foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
+      let RequiredFeatures = ["Zvfbfmin"] in
+        def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "y">;
+      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
     }
     foreach nf = NFList in {
       defvar T = "(Tuple:" # nf # ")";
       def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "csilxfd">;
+      let RequiredFeatures = ["Zvfbfmin"] in
+        def : RVVBuiltin<"v" # T # "v", T # "v" # T # "vKzv", "y">;
       def : RVVBuiltin<"Uv" # T # "Uv", T # "Uv" # T # "UvKzUv", "csil">;
     }
+  }
+
+  let Name = "vcreate_v",
+      UnMaskedPolicyScheme = NonePolicy,
+      MaskedPolicyScheme = NonePolicy,
+      SupportOverloading = false,
+      ManualCodegen = [{
+      {
+        if (isa<StructType>(ResultType)) {
+          unsigned NF = cast<StructType>(ResultType)->getNumElements();
+          llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+          for (unsigned I = 0; I < NF; ++I) {
+            ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
+          }
+          return ReturnTuple;
+        }
+        llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
+        for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
+          llvm::Value *Idx =
+            ConstantInt::get(Builder.getInt64Ty(),
+                              VecTy->getMinNumElements() * I);
+          ReturnVector =
+            Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+        }
+        return ReturnVector;
+      }
+      }] in {
+
+    // Since the vcreate_v uses LFixedLog2LMUL, setting the Log2LMUL to [-3] can
+    // avoid creating the intrinsics which contain the same name and prototype.
+    let Log2LMUL = [-3] in {
+      defm : RVVNonTupleVCreateBuiltin<1, [0]>;
+      defm : RVVNonTupleVCreateBuiltin<2, [0, 1]>;
+      defm : RVVNonTupleVCreateBuiltin<3, [0, 1, 2]>;
+    }
+
+    foreach nf = NFList in {
+      let NF = nf in {
+        defvar T = "(Tuple:" # nf # ")";
+        defvar V = VString<nf, /*signed=*/true>.S;
+        defvar UV = VString<nf, /*signed=*/false>.S;
+        def : RVVBuiltin<T # "v", T # "v" # V, "csilxfdy">;
+        let RequiredFeatures = ["Zvfbfmin"] in
+          def : RVVBuiltin<T # "v", T # "v" # V, "y">;
+        def : RVVBuiltin<T # "Uv", T # "Uv" # UV, "csil">;
+      }
+    }
+  }
+}
+
+multiclass RVVOutBuiltinSetZvbb {
+  let OverloadedName = NAME in
+    defm "" : RVVOutBuiltinSet<NAME, "csil", [["v", "v", "vv"],
+                                              ["v", "Uv", "UvUv"]]>;
+}
+
+multiclass RVVOutBuiltinSetZvk<bit HasVV = 1, bit HasVS = 1> {
+  // vaesz only has 'vs' and vgmul only has 'vv' and they do not have ambiguous
+  // prototypes like other zvkned instructions (e.g. vaesdf), so we don't
+  // need to encode the operand mnemonics into its intrinsic function name.
+  if HasVV then {
+    defvar name = NAME # !if(!eq(NAME, "vgmul"), "", "_vv");
+    let OverloadedName = name in
+      defm "" : RVVOutBuiltinSet<NAME # "_vv", "i",
+                                 [["vv", "Uv", "UvUvUv"]]>;
+  }
+
+  if HasVS then {
+    foreach vs2_lmul = ["(SEFixedLog2LMUL:-1)", "(SEFixedLog2LMUL:0)",
+                        "(SEFixedLog2LMUL:1)", "(SEFixedLog2LMUL:2)"] in {
+    defvar name = NAME # !if(!eq(NAME, "vaesz"), "", "_vs");
+    let OverloadedName = name, IRName = NAME # "_vs", Name = NAME # "_vs",
+        IntrinsicTypes = [-1, 1] in
+      def NAME # vs2_lmul
+          : RVVBuiltin<vs2_lmul # "UvUv", "UvUv" # vs2_lmul # "Uv", "i">;
+    }
+  }
+}
+
+multiclass RVVOutOp2BuiltinSetVVZvk<string type_range = "i">
+    : RVVOutOp2BuiltinSet<NAME, type_range, [["vv", "Uv", "UvUvUvUv"]]>;
+
+multiclass RVVOutOp2BuiltinSetVIZvk<string type_range = "i">
+    : RVVOutOp2BuiltinSet<NAME, type_range, [["vi", "Uv", "UvUvUvKz"]]>;
+
+multiclass RVVSignedWidenBinBuiltinSetVwsll
+    : RVVWidenBuiltinSet<NAME, "csi",
+                         [["vv", "Uw", "UwUvUv"],
+                          ["vx", "Uw", "UwUvz"]]>;
+
+let UnMaskedPolicyScheme = HasPassthruOperand in {
+  // zvkb
+  let RequiredFeatures = ["Zvkb", "Experimental"] in {
+    defm vandn   : RVVUnsignedBinBuiltinSet;
+    defm vbrev8  : RVVOutBuiltinSetZvbb;
+    defm vrev8   : RVVOutBuiltinSetZvbb;
+    defm vrol    : RVVUnsignedShiftBuiltinSet;
+    defm vror    : RVVUnsignedShiftBuiltinSet;
+  }
+
+  // zvbb
+  let RequiredFeatures = ["Zvbb", "Experimental"] in {
+    defm vbrev   : RVVOutBuiltinSetZvbb;
+    defm vclz    : RVVOutBuiltinSetZvbb;
+    defm vctz    : RVVOutBuiltinSetZvbb;
+    let IRName = "vcpopv", MaskedIRName = "vcpopv_mask" in
+    defm vcpop   : RVVOutBuiltinSetZvbb;
+    let OverloadedName = "vwsll" in
+    defm vwsll   : RVVSignedWidenBinBuiltinSetVwsll;
+  }
+
+  // zvbc
+  let RequiredFeatures = ["Zvbc", "Experimental"] in {
+    defm vclmul  : RVVInt64BinBuiltinSet;
+    defm vclmulh : RVVInt64BinBuiltinSet;
+  }
+}
+
+let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
+  // zvkg
+  let RequiredFeatures = ["Zvkg", "Experimental"] in {
+    defm vghsh   : RVVOutOp2BuiltinSetVVZvk;
+    defm vgmul   : RVVOutBuiltinSetZvk<HasVV=1, HasVS=0>;
+  }
+
+  // zvkned
+  let RequiredFeatures = ["Zvkned", "Experimental"] in {
+    defm vaesdf  : RVVOutBuiltinSetZvk;
+    defm vaesdm  : RVVOutBuiltinSetZvk;
+    defm vaesef  : RVVOutBuiltinSetZvk;
+    defm vaesem  : RVVOutBuiltinSetZvk;
+    let UnMaskedPolicyScheme = HasPassthruOperand in
+    defm vaeskf1 : RVVOutOp1BuiltinSet<"vaeskf1", "i", [["vi", "Uv", "UvUvKz"]]>;
+    defm vaeskf2 : RVVOutOp2BuiltinSetVIZvk;
+    defm vaesz   : RVVOutBuiltinSetZvk<HasVV=0>;
+  }
+
+  // zvknha
+  let RequiredFeatures = ["Zvknha", "Experimental"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
+  }
+
+  // zvknhb
+  let RequiredFeatures = ["Zvknhb", "Experimental"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
+  }
+
+  // zvksed
+  let RequiredFeatures = ["Zvksed", "Experimental"] in {
+    let UnMaskedPolicyScheme = HasPassthruOperand in
+    defm vsm4k   : RVVOutOp1BuiltinSet<"vsm4k", "i", [["vi", "Uv", "UvUvKz"]]>;
+    defm vsm4r   : RVVOutBuiltinSetZvk;
+  }
+
+  // zvksh
+  let RequiredFeatures = ["Zvksh", "Experimental"] in {
+    defm vsm3c   : RVVOutOp2BuiltinSetVIZvk;
+    let UnMaskedPolicyScheme = HasPassthruOperand in
+    defm vsm3me  : RVVOutOp1BuiltinSet<"vsm3me", "i", [["vv", "Uv", "UvUvUv"]]>;
   }
 }

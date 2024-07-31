@@ -9,10 +9,11 @@
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::bytecode::detail;
@@ -22,7 +23,10 @@ using namespace mlir::bytecode::detail;
 //===----------------------------------------------------------------------===//
 
 struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
-  NumberingDialectWriter(IRNumberingState &state) : state(state) {}
+  NumberingDialectWriter(
+      IRNumberingState &state,
+      llvm::StringMap<std::unique_ptr<DialectVersion>> &dialectVersionMap)
+      : state(state), dialectVersionMap(dialectVersionMap) {}
 
   void writeAttribute(Attribute attr) override { state.number(attr); }
   void writeOptionalAttribute(Attribute attr) override {
@@ -45,13 +49,25 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
     // file locations.
   }
   void writeOwnedBlob(ArrayRef<char> blob) override {}
+  void writeOwnedBool(bool value) override {}
 
   int64_t getBytecodeVersion() const override {
-    llvm_unreachable("unexpected querying of version in IRNumbering");
+    return state.getDesiredBytecodeVersion();
+  }
+
+  FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const override {
+    auto dialectEntry = dialectVersionMap.find(dialectName);
+    if (dialectEntry == dialectVersionMap.end())
+      return failure();
+    return dialectEntry->getValue().get();
   }
 
   /// The parent numbering state that is populated by this writer.
   IRNumberingState &state;
+
+  /// A map containing dialect version information for each dialect to emit.
+  llvm::StringMap<std::unique_ptr<DialectVersion>> &dialectVersionMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -114,19 +130,29 @@ static void groupByDialectPerByte(T range) {
 IRNumberingState::IRNumberingState(Operation *op,
                                    const BytecodeWriterConfig &config)
     : config(config) {
-  // Compute a global operation ID numbering according to the pre-order walk of
-  // the IR. This is used as reference to construct use-list orders.
-  unsigned operationID = 0;
-  op->walk<WalkOrder::PreOrder>(
-      [&](Operation *op) { operationIDs.try_emplace(op, operationID++); });
+  computeGlobalNumberingState(op);
 
   // Number the root operation.
   number(*op);
 
-  // Push all of the regions of the root operation onto the worklist.
+  // A worklist of region contexts to number and the next value id before that
+  // region.
   SmallVector<std::pair<Region *, unsigned>, 8> numberContext;
-  for (Region &region : op->getRegions())
-    numberContext.emplace_back(&region, nextValueID);
+
+  // Functor to push the regions of the given operation onto the numbering
+  // context.
+  auto addOpRegionsToNumber = [&](Operation *op) {
+    MutableArrayRef<Region> regions = op->getRegions();
+    if (regions.empty())
+      return;
+
+    // Isolated regions don't share value numbers with their parent, so we can
+    // start numbering these regions at zero.
+    unsigned opFirstValueID = isIsolatedFromAbove(op) ? 0 : nextValueID;
+    for (Region &region : regions)
+      numberContext.emplace_back(&region, opFirstValueID);
+  };
+  addOpRegionsToNumber(op);
 
   // Iteratively process each of the nested regions.
   while (!numberContext.empty()) {
@@ -135,14 +161,8 @@ IRNumberingState::IRNumberingState(Operation *op,
     number(*region);
 
     // Traverse into nested regions.
-    for (Operation &op : region->getOps()) {
-      // Isolated regions don't share value numbers with their parent, so we can
-      // start numbering these regions at zero.
-      unsigned opFirstValueID =
-          op.hasTrait<OpTrait::IsIsolatedFromAbove>() ? 0 : nextValueID;
-      for (Region &region : op.getRegions())
-        numberContext.emplace_back(&region, opFirstValueID);
-    }
+    for (Operation &op : region->getOps())
+      addOpRegionsToNumber(&op);
   }
 
   // Number each of the dialects. For now this is just in the order they were
@@ -177,6 +197,116 @@ IRNumberingState::IRNumberingState(Operation *op,
   finalizeDialectResourceNumberings(op);
 }
 
+void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
+  // A simple state struct tracking data used when walking operations.
+  struct StackState {
+    /// The operation currently being walked.
+    Operation *op;
+
+    /// The numbering of the operation.
+    OperationNumbering *numbering;
+
+    /// A flag indicating if the current state or one of its parents has
+    /// unresolved isolation status. This is tracked separately from the
+    /// isIsolatedFromAbove bit on `numbering` because we need to be able to
+    /// handle the given case:
+    ///   top.op {
+    ///     %value = ...
+    ///     middle.op {
+    ///       %value2 = ...
+    ///       inner.op {
+    ///         // Here we mark `inner.op` as not isolated. Note `middle.op`
+    ///         // isn't known not isolated yet.
+    ///         use.op %value2
+    ///
+    ///         // Here inner.op is already known to be non-isolated, but
+    ///         // `middle.op` is now also discovered to be non-isolated.
+    ///         use.op %value
+    ///       }
+    ///     }
+    ///   }
+    bool hasUnresolvedIsolation;
+  };
+
+  // Compute a global operation ID numbering according to the pre-order walk of
+  // the IR. This is used as reference to construct use-list orders.
+  unsigned operationID = 0;
+
+  // Walk each of the operations within the IR, tracking a stack of operations
+  // as we recurse into nested regions. This walk method hooks in at two stages
+  // during the walk:
+  //
+  //   BeforeAllRegions:
+  //     Here we generate a numbering for the operation and push it onto the
+  //     stack if it has regions. We also compute the isolation status of parent
+  //     regions at this stage. This is done by checking the parent regions of
+  //     operands used by the operation, and marking each region between the
+  //     the operand region and the current as not isolated. See
+  //     StackState::hasUnresolvedIsolation above for an example.
+  //
+  //   AfterAllRegions:
+  //     Here we pop the operation from the stack, and if it hasn't been marked
+  //     as non-isolated, we mark it as so. A non-isolated use would have been
+  //     found while walking the regions, so it is safe to mark the operation at
+  //     this point.
+  //
+  SmallVector<StackState> opStack;
+  rootOp->walk([&](Operation *op, const WalkStage &stage) {
+    // After visiting all nested regions, we pop the operation from the stack.
+    if (op->getNumRegions() && stage.isAfterAllRegions()) {
+      // If no non-isolated uses were found, we can safely mark this operation
+      // as isolated from above.
+      OperationNumbering *numbering = opStack.pop_back_val().numbering;
+      if (!numbering->isIsolatedFromAbove.has_value())
+        numbering->isIsolatedFromAbove = true;
+      return;
+    }
+
+    // When visiting before nested regions, we process "IsolatedFromAbove"
+    // checks and compute the number for this operation.
+    if (!stage.isBeforeAllRegions())
+      return;
+    // Update the isolation status of parent regions if any have yet to be
+    // resolved.
+    if (!opStack.empty() && opStack.back().hasUnresolvedIsolation) {
+      Region *parentRegion = op->getParentRegion();
+      for (Value operand : op->getOperands()) {
+        Region *operandRegion = operand.getParentRegion();
+        if (operandRegion == parentRegion)
+          continue;
+        // We've found a use of an operand outside of the current region,
+        // walk the operation stack searching for the parent operation,
+        // marking every region on the way as not isolated.
+        Operation *operandContainerOp = operandRegion->getParentOp();
+        auto it = std::find_if(
+            opStack.rbegin(), opStack.rend(), [=](const StackState &it) {
+              // We only need to mark up to the container region, or the first
+              // that has an unresolved status.
+              return !it.hasUnresolvedIsolation || it.op == operandContainerOp;
+            });
+        assert(it != opStack.rend() && "expected to find the container");
+        for (auto &state : llvm::make_range(opStack.rbegin(), it)) {
+          // If we stopped at a region that knows its isolation status, we can
+          // stop updating the isolation status for the parent regions.
+          state.hasUnresolvedIsolation = it->hasUnresolvedIsolation;
+          state.numbering->isIsolatedFromAbove = false;
+        }
+      }
+    }
+
+    // Compute the number for this op and push it onto the stack.
+    auto *numbering =
+        new (opAllocator.Allocate()) OperationNumbering(operationID++);
+    if (op->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      numbering->isIsolatedFromAbove = true;
+    operations.try_emplace(op, numbering);
+    if (op->getNumRegions()) {
+      opStack.emplace_back(StackState{
+          op, numbering, !numbering->isIsolatedFromAbove.has_value()});
+    }
+  });
+}
+
 void IRNumberingState::number(Attribute attr) {
   auto it = attrs.insert({attr, nullptr});
   if (!it.second) {
@@ -199,10 +329,23 @@ void IRNumberingState::number(Attribute attr) {
 
   // If this attribute will be emitted using the bytecode format, perform a
   // dummy writing to number any nested components.
-  if (const auto *interface = numbering->dialect->interface) {
-    // TODO: We don't allow custom encodings for mutable attributes right now.
-    if (!attr.hasTrait<AttributeTrait::IsMutable>()) {
-      NumberingDialectWriter writer(*this);
+  // TODO: We don't allow custom encodings for mutable attributes right now.
+  if (!attr.hasTrait<AttributeTrait::IsMutable>()) {
+    // Try overriding emission with callbacks.
+    for (const auto &callback : config.getAttributeWriterCallbacks()) {
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
+      // The client has the ability to override the group name through the
+      // callback.
+      std::optional<StringRef> groupNameOverride;
+      if (succeeded(callback->write(attr, groupNameOverride, writer))) {
+        if (groupNameOverride.has_value())
+          numbering->dialect = &numberDialect(*groupNameOverride);
+        return;
+      }
+    }
+
+    if (const auto *interface = numbering->dialect->interface) {
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       if (succeeded(interface->writeAttribute(attr, writer)))
         return;
     }
@@ -282,23 +425,27 @@ void IRNumberingState::number(Operation &op) {
     number(result.getType());
   }
 
-  // Only number the operation's dictionary if it isn't empty.
-  DictionaryAttr dictAttr = op.getDiscardableAttrDictionary();
-  // Prior to version 5 we need to number also the merged dictionnary
-  // containing both the inherent and discardable attribute.
-  if (config.getDesiredBytecodeVersion() < 5)
+  // Prior to a version with native property encoding, or when properties are
+  // not used, we need to number also the merged dictionary containing both the
+  // inherent and discardable attribute.
+  DictionaryAttr dictAttr;
+  if (config.getDesiredBytecodeVersion() >= bytecode::kNativePropertiesEncoding)
+    dictAttr = op.getRawDictionaryAttrs();
+  else
     dictAttr = op.getAttrDictionary();
+  // Only number the operation's dictionary if it isn't empty.
   if (!dictAttr.empty())
     number(dictAttr);
 
   // Visit the operation properties (if any) to make sure referenced attributes
   // are numbered.
-  if (config.getDesiredBytecodeVersion() >= 5 &&
+  if (config.getDesiredBytecodeVersion() >=
+          bytecode::kNativePropertiesEncoding &&
       op.getPropertiesStorageSize()) {
     if (op.isRegistered()) {
       // Operation that have properties *must* implement this interface.
       auto iface = cast<BytecodeOpInterface>(op);
-      NumberingDialectWriter writer(*this);
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       iface.writeProperties(writer);
     } else {
       // Unregistered op are storing properties as an optional attribute.
@@ -349,10 +496,25 @@ void IRNumberingState::number(Type type) {
 
   // If this type will be emitted using the bytecode format, perform a dummy
   // writing to number any nested components.
-  if (const auto *interface = numbering->dialect->interface) {
-    // TODO: We don't allow custom encodings for mutable types right now.
-    if (!type.hasTrait<TypeTrait::IsMutable>()) {
-      NumberingDialectWriter writer(*this);
+  // TODO: We don't allow custom encodings for mutable types right now.
+  if (!type.hasTrait<TypeTrait::IsMutable>()) {
+    // Try overriding emission with callbacks.
+    for (const auto &callback : config.getTypeWriterCallbacks()) {
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
+      // The client has the ability to override the group name through the
+      // callback.
+      std::optional<StringRef> groupNameOverride;
+      if (succeeded(callback->write(type, groupNameOverride, writer))) {
+        if (groupNameOverride.has_value())
+          numbering->dialect = &numberDialect(*groupNameOverride);
+        return;
+      }
+    }
+
+    // If this attribute will be emitted using the bytecode format, perform a
+    // dummy writing to number any nested components.
+    if (const auto *interface = numbering->dialect->interface) {
+      NumberingDialectWriter writer(*this, config.getDialectVersionMap());
       if (succeeded(interface->writeType(type, writer)))
         return;
     }
@@ -390,6 +552,10 @@ void IRNumberingState::number(Dialect *dialect,
   }
 }
 
+int64_t IRNumberingState::getDesiredBytecodeVersion() const {
+  return config.getDesiredBytecodeVersion();
+}
+
 namespace {
 /// A dummy resource builder used to number dialect resources.
 struct NumberingResourceBuilder : public AsmResourceBuilder {
@@ -410,7 +576,7 @@ struct NumberingResourceBuilder : public AsmResourceBuilder {
   void numberEntry(StringRef key) {
     // TODO: We could pre-number resource key strings here as well.
 
-    auto it = dialect->resourceMap.find(key);
+    auto *it = dialect->resourceMap.find(key);
     if (it != dialect->resourceMap.end()) {
       it->second->number = nextResourceID++;
       it->second->isDeclaration = false;

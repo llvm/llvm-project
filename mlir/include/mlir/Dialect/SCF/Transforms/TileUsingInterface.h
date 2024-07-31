@@ -12,7 +12,9 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include <deque>
 
@@ -26,7 +28,7 @@ namespace mlir {
 namespace scf {
 
 using SCFTileSizeComputationFunction =
-    std::function<SmallVector<Value>(OpBuilder &, Operation *)>;
+    std::function<SmallVector<OpFoldResult>(OpBuilder &, Operation *)>;
 
 /// Options to use to control tiling.
 struct SCFTilingOptions {
@@ -40,22 +42,34 @@ struct SCFTilingOptions {
     tileSizeComputationFunction = std::move(fun);
     return *this;
   }
-  /// Set the `tileSizeComputationFunction` to return the values `ts`. The
-  /// values must not fold away when tiling. Otherwise, use a more robust
-  /// `tileSizeComputationFunction`.
-  SCFTilingOptions &setTileSizes(const SmallVector<Value, 4> &ts) {
-    tileSizeComputationFunction = [=](OpBuilder &, Operation *) { return ts; };
-    return *this;
-  }
   /// Convenience function to set the `tileSizeComputationFunction` to a
   /// function that computes tile sizes at the point they are needed. Allows
   /// proper interaction with folding.
-  SCFTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
+  SCFTilingOptions &setTileSizes(ArrayRef<OpFoldResult> ts);
 
   /// The interchange vector to reorder the tiled loops.
   SmallVector<int64_t> interchangeVector = {};
   SCFTilingOptions &setInterchange(ArrayRef<int64_t> interchange) {
     interchangeVector = llvm::to_vector(interchange);
+    return *this;
+  }
+
+  /// Specify which loop construct to use for tile and fuse.
+  enum class LoopType { ForOp, ForallOp };
+  LoopType loopType = LoopType::ForOp;
+  SCFTilingOptions &setLoopType(LoopType type) {
+    loopType = type;
+    return *this;
+  }
+
+  /// Specify mapping of loops to devices. This is only respected when the loop
+  /// constructs support such a mapping (like `scf.forall`). Will be ignored
+  /// when using loop constructs that dont support such a mapping (like
+  /// `scf.for`)
+  SmallVector<Attribute> mappingVector = {};
+  SCFTilingOptions &setMapping(ArrayRef<DeviceMappingAttrInterface> mapping) {
+    mappingVector = llvm::map_to_vector(
+        mapping, [](auto attr) -> Attribute { return attr; });
     return *this;
   }
 };
@@ -67,7 +81,7 @@ struct SCFTilingResult {
   /// of the last op.
   SmallVector<Operation *> tiledOps;
   /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<LoopLikeOpInterface> loops;
   /// Values to use as replacements for the untiled op. Is the same size as the
   /// number of results of the untiled op.
   SmallVector<Value> replacements;
@@ -75,9 +89,9 @@ struct SCFTilingResult {
 
 /// Method to tile an op that implements the `TilingInterface` using
 /// `scf.for` for iterating over the tiles.
-FailureOr<SCFTilingResult> tileUsingSCFForOp(RewriterBase &rewriter,
-                                             TilingInterface op,
-                                             const SCFTilingOptions &options);
+FailureOr<SCFTilingResult> tileUsingSCF(RewriterBase &rewriter,
+                                        TilingInterface op,
+                                        const SCFTilingOptions &options);
 
 /// Options used to control tile + fuse.
 struct SCFTileAndFuseOptions {
@@ -85,6 +99,30 @@ struct SCFTileAndFuseOptions {
   SCFTilingOptions tilingOptions;
   SCFTileAndFuseOptions &setTilingOptions(SCFTilingOptions options) {
     tilingOptions = options;
+    return *this;
+  }
+
+  /// Control function to check if a slice needs to be fused or not,
+  /// The control function receives
+  /// 1) the slice along which fusion is to be done,
+  /// 2) the producer value that is to be fused
+  /// 3) a boolean value set to `true` if the fusion is from
+  ///    a destination operand.
+  /// It retuns two booleans
+  /// - returns `true` if the fusion should be done through the candidate slice
+  /// - returns `true` if a replacement for the fused producer needs to be
+  ///   yielded from within the tiled loop. Note that it is valid to return
+  ///   `true` only if the slice fused is disjoint across all iterations of the
+  ///   tiled loop. It is up to the caller to ensure that this is true for the
+  ///   fused producers.
+  using ControlFnTy = std::function<std::tuple<bool, bool>(
+      tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
+      bool isDestinationOperand)>;
+  ControlFnTy fusionControlFn = [](tensor::ExtractSliceOp, OpResult, bool) {
+    return std::make_tuple(true, false);
+  };
+  SCFTileAndFuseOptions &setFusionControlFn(ControlFnTy controlFn) {
+    fusionControlFn = controlFn;
     return *this;
   }
 };
@@ -101,7 +139,7 @@ struct SCFFuseProducerOfSliceResult {
 std::optional<SCFFuseProducerOfSliceResult>
 tileAndFuseProducerOfSlice(RewriterBase &rewriter,
                            tensor::ExtractSliceOp candidateSliceOp,
-                           MutableArrayRef<scf::ForOp> loops);
+                           MutableArrayRef<LoopLikeOpInterface> loops);
 
 /// Reconstruct the fused producer from within the tiled-and-fused code. Based
 /// on the slice of the producer computed in place it is possible that within
@@ -153,10 +191,14 @@ tileAndFuseProducerOfSlice(RewriterBase &rewriter,
 /// where `%0` had other uses as well. If not reconstructed from within the loop
 /// body, uses of `%0` could not be replaced, making it still live and the
 /// fusion immaterial.
-void yieldReplacementForFusedProducer(
+///
+/// The @param `yieldResultNumber` decides which result would be yield. If not
+/// given, yield all `opResult` of fused producer.
+LogicalResult yieldReplacementForFusedProducer(
     RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
     scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
-    MutableArrayRef<scf::ForOp> loops);
+    MutableArrayRef<LoopLikeOpInterface> loops,
+    ArrayRef<unsigned> yieldResultNumber = ArrayRef<unsigned>{});
 
 /// Transformation information returned after tile and fuse.
 struct SCFTileAndFuseResult {
@@ -167,7 +209,7 @@ struct SCFTileAndFuseResult {
   /// generated operation.
   llvm::SetVector<Operation *> tiledAndFusedOps;
   /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<LoopLikeOpInterface> loops;
   /// The replacement values to use for the tiled and fused operations.
   llvm::DenseMap<Value, Value> replacements;
 };
@@ -198,9 +240,22 @@ struct SCFTileAndFuseResult {
 /// }
 /// ```
 FailureOr<SCFTileAndFuseResult>
-tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
-    RewriterBase &rewriter, TilingInterface consumer,
-    const SCFTileAndFuseOptions &options);
+tileConsumerAndFuseProducersUsingSCF(RewriterBase &rewriter,
+                                     TilingInterface consumer,
+                                     const SCFTileAndFuseOptions &options);
+
+/// Fuse the consumer of the source of `candidateSliceOp` by computing the
+/// required slice of the consumer in-place.  Note that the method
+/// replaces the uses of `candidateSliceOp` with the tiled and fused consumer
+/// value but does not delete the slice operation.
+struct SCFFuseConsumerOfSliceResult {
+  OpOperand *origConsumerOperand; // Original untiled consumer's operand.
+  OpOperand
+      *tiledAndFusedConsumerOperand; // Tiled and fused consumer's operand.
+  SmallVector<Operation *> tiledOps;
+};
+FailureOr<scf::SCFFuseConsumerOfSliceResult>
+tileAndFuseConsumerOfSlice(RewriterBase &rewriter, Operation *candidateSliceOp);
 
 /// Method to lower an `op` that implements the `TilingInterface` to
 /// loops/scalars.
@@ -210,13 +265,15 @@ lowerToLoopsUsingSCFForOp(RewriterBase &rewriter, TilingInterface op);
 /// Transformation information returned after reduction tiling.
 struct SCFReductionTilingResult {
   /// The partial reduction tiled op generated.
-  Operation *parallelTiledOp;
+  SmallVector<Operation *> parallelTiledOps;
   /// The final reduction operation merging all the partial reductions.
-  Operation *mergeOp;
-  /// Initial op
-  Operation *initialOp;
-  /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<Operation *> mergeOps;
+  /// Initial values used for reduction.
+  SmallVector<Value> initialValues;
+  /// The loop operations that iterate over the tiles.
+  SmallVector<LoopLikeOpInterface> loops;
+  /// The replacements to use for the results of the tiled operation.
+  SmallVector<Value> replacements;
 };
 
 /// Method to tile a reduction and generate a parallel op within a serial loop.

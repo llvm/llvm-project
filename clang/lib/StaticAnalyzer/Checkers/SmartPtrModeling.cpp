@@ -31,7 +31,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 #include <string>
@@ -86,14 +86,14 @@ private:
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
-      {{{"reset"}}, &SmartPtrModeling::handleReset},
-      {{{"release"}}, &SmartPtrModeling::handleRelease},
-      {{{"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
-      {{{"get"}}, &SmartPtrModeling::handleGet}};
-  const CallDescription StdSwapCall{{"std", "swap"}, 2};
-  const CallDescription StdMakeUniqueCall{{"std", "make_unique"}};
-  const CallDescription StdMakeUniqueForOverwriteCall{
-      {"std", "make_unique_for_overwrite"}};
+      {{CDM::CXXMethod, {"reset"}}, &SmartPtrModeling::handleReset},
+      {{CDM::CXXMethod, {"release"}}, &SmartPtrModeling::handleRelease},
+      {{CDM::CXXMethod, {"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
+      {{CDM::CXXMethod, {"get"}}, &SmartPtrModeling::handleGet}};
+  const CallDescription StdSwapCall{CDM::SimpleFunc, {"std", "swap"}, 2};
+  const CallDescriptionSet MakeUniqueVariants{
+      {CDM::SimpleFunc, {"std", "make_unique"}},
+      {CDM::SimpleFunc, {"std", "make_unique_for_overwrite"}}};
 };
 } // end of anonymous namespace
 
@@ -201,7 +201,7 @@ static QualType getInnerPointerType(CheckerContext C, const CXXRecordDecl *RD) {
 static QualType getPointerTypeFromTemplateArg(const CallEvent &Call,
                                               CheckerContext &C) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-  if (!FD || !FD->isFunctionTemplateSpecialization())
+  if (!FD || !FD->getPrimaryTemplate())
     return {};
   const auto &TemplateArgs = FD->getTemplateSpecializationArgs()->asArray();
   if (TemplateArgs.size() == 0)
@@ -296,7 +296,7 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
     return handleSwap(State, Call.getArgSVal(0), Call.getArgSVal(1), C);
   }
 
-  if (matchesAny(Call, StdMakeUniqueCall, StdMakeUniqueForOverwriteCall)) {
+  if (MakeUniqueVariants.contains(Call)) {
     if (!ModelSmartPtrDereference)
       return false;
 
@@ -588,10 +588,9 @@ void SmartPtrModeling::checkLiveSymbols(ProgramStateRef State,
                                         SymbolReaper &SR) const {
   // Marking tracked symbols alive
   TrackedRegionMapTy TrackedRegions = State->get<TrackedRegionMap>();
-  for (auto I = TrackedRegions.begin(), E = TrackedRegions.end(); I != E; ++I) {
-    SVal Val = I->second;
-    for (auto si = Val.symbol_begin(), se = Val.symbol_end(); si != se; ++si) {
-      SR.markLive(*si);
+  for (SVal Val : llvm::make_second_range(TrackedRegions)) {
+    for (SymbolRef Sym : Val.symbols()) {
+      SR.markLive(Sym);
     }
   }
 }

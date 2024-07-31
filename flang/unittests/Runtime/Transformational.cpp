@@ -9,6 +9,7 @@
 #include "flang/Runtime/transformational.h"
 #include "gtest/gtest.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/type-code.h"
 #include <vector>
 
@@ -249,7 +250,6 @@ TEST(Transformational, Shifts) {
   auto shift2{MakeArray<TypeCategory::Integer, 1>(
       std::vector<int>{2}, std::vector<std::int8_t>{1, -1})};
   shift2->GetDimension(0).SetLowerBound(-1); // shouldn't matter
-  shift2->GetDimension(1).SetLowerBound(2);
   RTNAME(Cshift)(result, *array, *shift2, 2, __FILE__, __LINE__);
   EXPECT_EQ(result.type(), array->type());
   EXPECT_EQ(result.rank(), 2);

@@ -1,20 +1,19 @@
 // RUN: %clang_cc1 -emit-llvm -fblocks -debug-info-kind=limited  -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -x objective-c < %s -o - | FileCheck %s
 
-// rdar://problem/9279956
 // Test that we generate the proper debug location for a captured self.
 // The second half of this test is in llvm/tests/DebugInfo/debug-info-blocks.ll
 
 // CHECK: define {{.*}}_block_invoke
 // CHECK: store ptr %.block_descriptor, ptr %[[ALLOCA:block.addr]], align
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCA]], metadata ![[SELF:[0-9]+]], metadata !{{.*}})
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %d, metadata ![[D:[0-9]+]], metadata !{{.*}})
+// CHECK-NEXT: #dbg_declare(ptr %d, ![[D:[0-9]+]], !{{.*}})
+// CHECK-NEXT: #dbg_declare(ptr %[[ALLOCA]], ![[SELF:[0-9]+]], !{{.*}})
 
 // Test that we do emit scope info for the helper functions, and that the
 // parameters to these functions are marked as artificial (so the debugger
 // doesn't accidentally step into the function).
 // CHECK: define {{.*}} @__copy_helper_block_{{.*}}(ptr noundef %0, ptr noundef %1)
 // CHECK-NOT: ret
-// CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
+// CHECK: #dbg_declare({{.+}},  ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DBG_LINE]]
 // CHECK: ret {{.*}}, !dbg ![[DBG_LINE]]

@@ -215,6 +215,13 @@ enum OpenMPNumTasksClauseModifier {
   OMPC_NUMTASKS_unknown
 };
 
+/// OpenMP dependence types for 'doacross' clause.
+enum OpenMPDoacrossClauseModifier {
+#define OPENMP_DOACROSS_MODIFIER(Name) OMPC_DOACROSS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DOACROSS_unknown
+};
+
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
 struct OMPInteropInfo final {
@@ -349,6 +356,32 @@ void getOpenMPCaptureRegions(
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
 bool isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified target directive, combined or not, needs task based
+/// thread_limit
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind);
+
+/// Checks if the parameter to the fail clause in "#pragma atomic compare fail"
+/// is restricted only to memory order clauses of "OMPC_acquire",
+/// "OMPC_relaxed" and "OMPC_seq_cst".
+bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
+
+/// Checks if the specified directive is considered as "executable". This
+/// combines the OpenMP categories of "executable" and "subsidiary", plus
+/// any other directives that should be treated as executable.
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive can capture variables.
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 }
 
 #endif

@@ -32,6 +32,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTarget {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
         class modules_access(object):
             '''A helper object that will lazily hand out lldb.SBModule objects for a target when supplied an index, or by full or partial path.'''
             def __init__(self, sbtarget):
@@ -167,7 +172,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
             '''An accessor function that returns a list() that contains all watchpoints in a lldb.SBtarget object.'''
             watchpoints = []
             for idx in range(self.GetNumWatchpoints()):
-                bkpts.append(self.GetWatchpointAtIndex(idx))
+                watchpoints.append(self.GetWatchpointAtIndex(idx))
             return watchpoints
 
         modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')

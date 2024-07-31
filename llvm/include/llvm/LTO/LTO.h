@@ -75,6 +75,8 @@ void computeLTOCacheKey(
 
 namespace lto {
 
+StringLiteral getThinLTODefaultCPU(const Triple &TheTriple);
+
 /// Given the original \p Path to an output file, replace any path
 /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 /// resulting directory if it does not yet exist.
@@ -196,7 +198,7 @@ private:
 /// create a ThinBackend using one of the create*ThinBackend() functions below.
 using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
-    StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, FileCache Cache)>;
 
 /// This ThinBackend runs the individual backend jobs in-process.
@@ -255,13 +257,26 @@ class LTO {
   friend InputFile;
 
 public:
+  /// Unified LTO modes
+  enum LTOKind {
+    /// Any LTO mode without Unified LTO. The default mode.
+    LTOK_Default,
+
+    /// Regular LTO, with Unified LTO enabled.
+    LTOK_UnifiedRegular,
+
+    /// ThinLTO, with Unified LTO enabled.
+    LTOK_UnifiedThin,
+  };
+
   /// Create an LTO object. A default constructed LTO object has a reasonable
   /// production configuration, but you can customize it by passing arguments to
   /// this constructor.
   /// FIXME: We do currently require the DiagHandler field to be set in Conf.
   /// Until that is fixed, a Config argument is required.
   LTO(Config Conf, ThinBackend Backend = nullptr,
-      unsigned ParallelCodeGenParallelismLevel = 1);
+      unsigned ParallelCodeGenParallelismLevel = 1,
+      LTOKind LTOMode = LTOK_Default);
   ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
@@ -286,7 +301,7 @@ public:
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
-  static ArrayRef<const char*> getRuntimeLibcallSymbols();
+  static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);
 
 private:
   Config Conf;
@@ -391,7 +406,9 @@ private:
   };
 
   // Global mapping from mangled symbol names to resolutions.
-  StringMap<GlobalResolution> GlobalResolutions;
+  // Make this an optional to guard against accessing after it has been reset
+  // (to reduce memory after we're done with it).
+  std::optional<StringMap<GlobalResolution>> GlobalResolutions;
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
@@ -420,6 +437,9 @@ private:
   Error checkPartiallySplit();
 
   mutable bool CalledGetMaxTasks = false;
+
+  // LTO mode when using Unified LTO.
+  LTOKind LTOMode;
 
   // Use Optional to distinguish false from not yet initialized.
   std::optional<bool> EnableSplitLTOUnit;

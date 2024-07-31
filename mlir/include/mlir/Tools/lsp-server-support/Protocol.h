@@ -28,15 +28,12 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace mlir {
-struct LogicalResult;
-
 namespace lsp {
 
 enum class ErrorCode {
@@ -168,6 +165,22 @@ bool fromJSON(const llvm::json::Value &value, ClientCapabilities &result,
               llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
+// ClientInfo
+//===----------------------------------------------------------------------===//
+
+struct ClientInfo {
+  /// The name of the client as defined by the client.
+  std::string name;
+
+  /// The client's version as defined by the client.
+  std::optional<std::string> version;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, ClientInfo &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -184,6 +197,9 @@ bool fromJSON(const llvm::json::Value &value, TraceLevel &result,
 struct InitializeParams {
   /// The capabilities provided by the client (editor or tool).
   ClientCapabilities capabilities;
+
+  /// Information about the client.
+  std::optional<ClientInfo> clientInfo;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   std::optional<TraceLevel> trace;
@@ -658,6 +674,16 @@ enum class DiagnosticSeverity {
   Hint = 4
 };
 
+enum class DiagnosticTag {
+  Unnecessary = 1,
+  Deprecated = 2,
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(DiagnosticTag tag);
+bool fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
+              llvm::json::Path path);
+
 struct Diagnostic {
   /// The source range where the message applies.
   Range range;
@@ -676,6 +702,9 @@ struct Diagnostic {
   /// An array of related diagnostic information, e.g. when symbol-names within
   /// a scope collide all definitions can be marked via this property.
   std::optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
+
+  /// Additional metadata about the diagnostic.
+  std::vector<DiagnosticTag> tags;
 
   /// The diagnostic's category. Can be omitted.
   /// An LSP extension that's used to send the name of the category over to the

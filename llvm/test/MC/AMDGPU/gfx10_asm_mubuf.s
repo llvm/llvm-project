@@ -1,9 +1,24 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 //===----------------------------------------------------------------------===//
 // ENC_MUBUF.
 //===----------------------------------------------------------------------===//
+
+buffer_load_format_d16_x v1, off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x00,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_load_format_d16_xy v1, off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x04,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_load_format_d16_xyz v[1:2], off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x08,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_load_format_d16_xyzw v[1:2], off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x0c,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_load_format_d16_hi_x v1, off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x98,0xe0,0x00,0x01,0x01,0x01]
 
 buffer_load_format_x v5, off, s[8:11], s3 offset:4095
 // GFX10: encoding: [0xff,0x0f,0x00,0xe0,0x00,0x05,0x02,0x03]
@@ -220,6 +235,21 @@ buffer_load_format_xyzw v[5:8], off, s[8:11], s3 offset:4095 dlc
 
 buffer_load_format_xyzw v[5:8], off, s[8:11], s3 offset:4095 glc slc dlc
 // GFX10: encoding: [0xff,0xcf,0x0c,0xe0,0x00,0x05,0x42,0x03]
+
+buffer_store_format_d16_x v1, off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x10,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_store_format_d16_xy v1, off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x14,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_store_format_d16_xyz v[1:2], off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x18,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_store_format_d16_xyzw v[1:2], off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x1c,0xe2,0x00,0x01,0x01,0x01]
+
+buffer_store_format_d16_hi_x v1, off, s[4:7], s1
+// GFX10: encoding: [0x00,0x00,0x9c,0xe0,0x00,0x01,0x01,0x01]
 
 buffer_store_format_x v1, off, s[12:15], s4 offset:4095
 // GFX10: encoding: [0xff,0x0f,0x10,0xe0,0x00,0x01,0x03,0x04]

@@ -57,6 +57,6 @@
 // CHECK-LINKER: -bitcode_bundle
 // CHECK-NO-LINKER-NOT: -bitcode_bundle
 
-// RUN: %clang -target armv7-apple-darwin -miphoneos-version-min=5.0 %s -fembed-bitcode -### 2>&1 | \
+// RUN: not %clang -target armv7-apple-darwin -miphoneos-version-min=5.0 %s -fembed-bitcode -### 2>&1 | \
 // RUN:   FileCheck %s -check-prefix=CHECK-PLATFORM-NOTSUPPORTED
 // CHECK-PLATFORM-NOTSUPPORTED: -fembed-bitcode is not supported on versions of iOS prior to 6.0

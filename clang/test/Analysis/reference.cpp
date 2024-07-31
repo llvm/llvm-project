@@ -59,7 +59,7 @@ char t6 (char* p) {
 }
 
 
-// PR13440 / <rdar://problem/11977113>
+// PR13440
 // Test that the array-to-pointer decay works for array references as well.
 // More generally, when we want an lvalue for a reference field, we still need
 // to do one level of load.

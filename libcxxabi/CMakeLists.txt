@@ -5,6 +5,7 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc++abi")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -46,7 +47,10 @@ option(LIBCXXABI_ENABLE_EXCEPTIONS
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
-option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
+option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." ON)
+if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT "libunwind" IN_LIST LLVM_ENABLE_RUNTIMES)
+  message(FATAL_ERROR "LIBCXXABI_USE_LLVM_UNWINDER is set to ON, but libunwind is not specified in LLVM_ENABLE_RUNTIMES.")
+endif()
 option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF)
 option(LIBCXXABI_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
@@ -55,9 +59,6 @@ option(LIBCXXABI_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of wi
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
-option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
-  "Build libc++abi with an externalized threading library.
-   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON" OFF)
 option(LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST
 "Make dynamic_cast more forgiving when type_info's mistakenly have hidden \
 visibility, and thus multiple type_infos can exist for a single type. \
@@ -83,17 +84,12 @@ option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
 set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
 
-set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
+set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE STRING "Path to install the libc++abi headers at.")
 
 if(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXXABI_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
 else()
   set(LIBCXXABI_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
-endif()
-
-# TODO: Remove this after branching for LLVM 15
-if(LIBCXXABI_SYSROOT OR LIBCXXABI_TARGET_TRIPLE OR LIBCXXABI_GCC_TOOLCHAIN)
-  message(WARNING "LIBCXXABI_SYSROOT, LIBCXXABI_TARGET_TRIPLE and LIBCXXABI_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
 
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
@@ -147,9 +143,7 @@ endif()
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-gcc.cfg.in")
-elseif(MINGW)
+if(MINGW)
   set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
 elseif(WIN32) # clang-cl
   if (LIBCXXABI_ENABLE_SHARED)
@@ -185,18 +179,19 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++abi runtime libraries should be installed.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
-  set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
-      "Path where built libc++abi libraries should be installed.")
-  if(LIBCXX_LIBDIR_SUBDIR)
-    string(APPEND LIBCXXABI_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
-    string(APPEND LIBCXXABI_INSTALL_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
+  set(LIBCXXABI_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBCXXABI_LIBDIR_SUBDIR)
+    string(APPEND LIBCXXABI_TARGET_SUBDIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
+  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
+  set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXXABI_TARGET_SUBDIR})
+  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXXABI_TARGET_SUBDIR} CACHE STRING
+      "Path where built libc++abi libraries should be installed.")
+  unset(LIBCXXABI_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
@@ -205,7 +200,7 @@ else()
     set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
     set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
   endif()
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
+  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
 endif()
 
@@ -249,7 +244,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
-add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.
@@ -330,11 +324,6 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
                         " is also set to ON.")
   endif()
-  if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
-    message(FATAL_ERROR "LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY can only"
-                        " be set to ON when LIBCXXABI_ENABLE_THREADS"
-                        " is also set to ON.")
-  endif()
   add_definitions(-D_LIBCXXABI_HAS_NO_THREADS)
 endif()
 
@@ -347,11 +336,6 @@ if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
   if (LIBCXXABI_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXXABI_HAS_EXTERNAL_THREAD_API"
                         " and LIBCXXABI_HAS_WIN32_THREAD_API cannot be both"
-                        " set to ON at the same time.")
-  endif()
-  if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
-    message(FATAL_ERROR "The options LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY"
-                        " and LIBCXXABI_HAS_EXTERNAL_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
 endif()
@@ -371,9 +355,7 @@ if (LLVM_ENABLE_MODULES)
 endif()
 
 set(LIBCXXABI_HAS_UNDEFINED_SYMBOLS OFF)
-if ((NOT LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    OR (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXXABI_ENABLE_SHARED)
-    OR MINGW)
+if ((NOT LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS) OR MINGW)
   set(LIBCXXABI_HAS_UNDEFINED_SYMBOLS ON)
 endif()
 
@@ -397,10 +379,6 @@ endif()
 
 if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_EXTERNAL)
-endif()
-
-if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
-  add_definitions(-D_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 endif()
 
 if (MSVC)
@@ -464,6 +442,9 @@ endif()
 if (NOT "${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}" STREQUAL "")
   include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
 endif()
+
+add_custom_target(cxxabi-test-depends
+  COMMENT "Build dependencies required to run the libc++abi test suite.")
 
 # Add source code. This also contains all of the logic for deciding linker flags
 # soname, etc...

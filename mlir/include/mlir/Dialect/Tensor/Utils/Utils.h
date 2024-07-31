@@ -26,21 +26,30 @@ PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
 SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
                                           Value rankedTensor);
 
-// Returns the tensor extent along dimension `dim` if `rankedTensor` is of
-// `RankedTensorType`. Returns `failure()` otherwise.
-FailureOr<OpFoldResult> createDimValue(OpBuilder &b, Location loc,
-                                       Value rankedTensor, int64_t dim);
-
-// Creates dim ops or constant ops for each dimension of the ranked tensor
-// argument and returns these as values.
-SmallVector<OpFoldResult> createDimValues(OpBuilder &b, Location loc,
-                                          Value rankedTensor);
-
 /// Returns the transposed `rankedTensorType` if `transposeVector` is non-empty.
 /// Fail if `transposeVector` is not a permutation matching the tensor rank.
 FailureOr<RankedTensorType>
 computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
+
+/// Shell function to compute the Destination Permutation of PackOp
+/// This function uses the helper function `computePackUnPackPerm` to get
+/// the permutation vector. Only major difference between UnPack and Pack is
+/// that packOp uses destination rank whereas unpack Uses source rank.
+SmallVector<int64_t> getPackInverseDestPerm(tensor::PackOp packOp);
+
+/// Shell function to compute the Source Permutation of unPackOp.
+/// This function, like the getPackInverseDestPerm uses the helper function
+/// computePackUnPackPerm` to get the permutation vector.
+/// Only major difference between UnPack and Pack is that packOp uses
+/// destination rank whereas unpack Uses source rank.
+SmallVector<int64_t> getUnPackInverseSrcPerm(tensor::UnPackOp unpackOp);
+
+/// Shell function to compute the Source rank permutation for unpackOp
+/// Unpack requires some packing metadata data information, so created
+/// another function where this value is passed by reference.
+SmallVector<int64_t> getUnPackInverseSrcPerm(tensor::UnPackOp,
+                                             PackingMetadata &metadata);
 
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
 /// source tensor or inserts the source tensor into a destination tensor with
@@ -48,7 +57,7 @@ computeTransposedType(RankedTensorType rankedTensorType,
 bool isCastLikeInsertSliceOp(InsertSliceOp op);
 
 /// A tensor.extract_slice is a cast-like operation if it merely rank-reduces
-/// the source tensor or extracts the entire source tensor.
+/// unit dimensions of the source tensor or extracts the entire source tensor.
 bool isCastLikeExtractSliceOp(ExtractSliceOp op);
 
 } // namespace tensor

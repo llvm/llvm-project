@@ -14,8 +14,6 @@
 #define LLVM_SUPPORT_ERROR_H
 
 #include "llvm-c/Error.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/AlignOf.h"
@@ -56,7 +54,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     log(OS);
-    return OS.str();
+    return Msg;
   }
 
   /// Convert this error to a std::error_code.
@@ -129,7 +127,7 @@ private:
 ///
 ///   auto E = foo(<...>); // <- foo returns failure with MyErrorInfo.
 ///   auto NewE =
-///     handleErrors(E,
+///     handleErrors(std::move(E),
 ///       [](const MyErrorInfo &M) {
 ///         // Deal with the error.
 ///       },
@@ -140,9 +138,15 @@ private:
 ///         }
 ///         // Couldn't handle this error instance. Pass it up the stack.
 ///         return Error(std::move(M));
-///       );
-///   // Note - we must check or return NewE in case any of the handlers
-///   // returned a new error.
+///     });
+///   // Note - The error passed to handleErrors will be marked as checked. If
+///   // there is no matched handler, a new error with the same payload is
+///   // created and returned.
+///   // The handlers take the error checked by handleErrors as an argument,
+///   // which can be used to retrieve more information. If a new error is
+///   // created by a handler, it will be passed back to the caller of
+///   // handleErrors and needs to be checked or return up to the stack.
+///   // Otherwise, the passed-in error is considered consumed.
 ///   @endcode
 ///
 /// The handleAllErrors function is identical to handleErrors, except
@@ -162,6 +166,9 @@ class [[nodiscard]] Error {
   // handleErrors needs to be able to set the Checked flag.
   template <typename... HandlerTs>
   friend Error handleErrors(Error E, HandlerTs &&... Handlers);
+  // visitErrors needs direct access to the payload.
+  template <typename HandlerT>
+  friend void visitErrors(const Error &E, HandlerT H);
 
   // Expected<T> needs to be able to steal the payload when constructed from an
   // error.
@@ -365,6 +372,10 @@ class ErrorList final : public ErrorInfo<ErrorList> {
   // ErrorList.
   template <typename... HandlerTs>
   friend Error handleErrors(Error E, HandlerTs &&... Handlers);
+  // visitErrors needs to be able to iterate the payload list of an
+  // ErrorList.
+  template <typename HandlerT>
+  friend void visitErrors(const Error &E, HandlerT H);
 
   // joinErrors is implemented in terms of join.
   friend Error joinErrors(Error, Error);
@@ -489,7 +500,7 @@ private:
 
 public:
   /// Create an Expected<T> error value from the given Error.
-  Expected(Error Err)
+  Expected(Error &&Err)
       : HasError(true)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
@@ -750,7 +761,7 @@ inline void cantFail(Error Err, const char *Msg = nullptr) {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << Msg << "\n" << Err;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -781,7 +792,7 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
     raw_string_ostream OS(Str);
     auto E = ValOrErr.takeError();
     OS << Msg << "\n" << E;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -812,7 +823,7 @@ T& cantFail(Expected<T&> ValOrErr, const char *Msg = nullptr) {
     raw_string_ostream OS(Str);
     auto E = ValOrErr.takeError();
     OS << Msg << "\n" << E;
-    Msg = OS.str().c_str();
+    Msg = Str.c_str();
 #endif
     llvm_unreachable(Msg);
   }
@@ -973,6 +984,23 @@ inline void handleAllErrors(Error E) {
   cantFail(std::move(E));
 }
 
+/// Visit all the ErrorInfo(s) contained in E by passing them to the respective
+/// handler, without consuming the error.
+template <typename HandlerT> void visitErrors(const Error &E, HandlerT H) {
+  const ErrorInfoBase *Payload = E.getPtr();
+  if (!Payload)
+    return;
+
+  if (Payload->isA<ErrorList>()) {
+    const ErrorList &List = static_cast<const ErrorList &>(*Payload);
+    for (const auto &P : List.Payloads)
+      H(*P);
+    return;
+  }
+
+  return H(*Payload);
+}
+
 /// Handle any errors (if present) in an Expected<T>, then try a recovery path.
 ///
 /// If the incoming value is a success value it is returned unmodified. If it
@@ -1025,13 +1053,11 @@ void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
 
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.
-inline std::string toString(Error E) {
-  SmallVector<std::string, 2> Errors;
-  handleAllErrors(std::move(E), [&Errors](const ErrorInfoBase &EI) {
-    Errors.push_back(EI.message());
-  });
-  return join(Errors.begin(), Errors.end(), "\n");
-}
+std::string toString(Error E);
+
+/// Like toString(), but does not consume the error. This can be used to print
+/// a warning while retaining the original error object.
+std::string toStringWithoutConsuming(const Error &E);
 
 /// Consume a Error without doing anything. This method should be used
 /// only where an error can be considered a reasonable and expected return
@@ -1182,6 +1208,20 @@ Error errorCodeToError(std::error_code EC);
 /// will trigger a call to abort().
 std::error_code errorToErrorCode(Error Err);
 
+/// Helper to get errno as an std::error_code.
+///
+/// errno should always be represented using the generic category as that's what
+/// both libc++ and libstdc++ do. On POSIX systems you can also represent them
+/// using the system category, however this makes them compare differently for
+/// values outside of those used by `std::errc` if one is generic and the other
+/// is system.
+///
+/// See the libc++ and libstdc++ implementations of `default_error_condition` on
+/// the system category for more details on what the difference is.
+inline std::error_code errnoAsErrorCode() {
+  return std::error_code(errno, std::generic_category());
+}
+
 /// Convert an ErrorOr<T> to an Expected<T>.
 template <typename T> Expected<T> errorOrToExpected(ErrorOr<T> &&EO) {
   if (auto EC = EO.getError())
@@ -1224,10 +1264,10 @@ class StringError : public ErrorInfo<StringError> {
 public:
   static char ID;
 
-  // Prints EC + S and converts to EC
+  StringError(std::string &&S, std::error_code EC, bool PrintMsgOnly);
+  /// Prints EC + S and converts to EC.
   StringError(std::error_code EC, const Twine &S = Twine());
-
-  // Prints S and converts to EC
+  /// Prints S and converts to EC.
   StringError(const Twine &S, std::error_code EC);
 
   void log(raw_ostream &OS) const override;
@@ -1246,15 +1286,28 @@ template <typename... Ts>
 inline Error createStringError(std::error_code EC, char const *Fmt,
                                const Ts &... Vals) {
   std::string Buffer;
-  raw_string_ostream Stream(Buffer);
-  Stream << format(Fmt, Vals...);
-  return make_error<StringError>(Stream.str(), EC);
+  raw_string_ostream(Buffer) << format(Fmt, Vals...);
+  return make_error<StringError>(Buffer, EC);
 }
 
-Error createStringError(std::error_code EC, char const *Msg);
+Error createStringError(std::string &&Msg, std::error_code EC);
+
+inline Error createStringError(std::error_code EC, const char *S) {
+  return createStringError(std::string(S), EC);
+}
 
 inline Error createStringError(std::error_code EC, const Twine &S) {
-  return createStringError(EC, S.str().c_str());
+  return createStringError(S.str(), EC);
+}
+
+/// Create a StringError with an inconvertible error code.
+inline Error createStringError(const Twine &S) {
+  return createStringError(llvm::inconvertibleErrorCode(), S);
+}
+
+template <typename... Ts>
+inline Error createStringError(char const *Fmt, const Ts &...Vals) {
+  return createStringError(llvm::inconvertibleErrorCode(), Fmt, Vals...);
 }
 
 template <typename... Ts>
@@ -1285,7 +1338,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     Err->log(OS);
-    return OS.str();
+    return Msg;
   }
 
   StringRef getFileName() const { return FileName; }

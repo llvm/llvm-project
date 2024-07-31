@@ -12,8 +12,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <list>
 #include <cassert>

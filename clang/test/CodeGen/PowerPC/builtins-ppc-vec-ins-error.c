@@ -1,17 +1,17 @@
 // REQUIRES: powerpc-registered-target
 
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_SI
+// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm-only -ferror-limit 10 %s -verify -D __TEST_ELT_SI
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_F
+// RUN:   -triple powerpc64-unknown-unknown -emit-llvm-only -ferror-limit 10 %s -verify -D __TEST_ELT_F
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_SLL
+// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm-only -ferror-limit 10 %s -verify -D __TEST_ELT_SLL
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_D
+// RUN:   -triple powerpc64-unknown-unknown -emit-llvm-only -ferror-limit 10 %s -verify -D __TEST_ELT_D
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_UNALIGNED_UI
+// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm-only -ferror-limit 10 %s -verify -D __TEST_UNALIGNED_UI
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify
+// RUN:   -triple powerpc64-unknown-unknown -emit-llvm-only -ferror-limit 10 %s -verify
 
 #include <altivec.h>
 

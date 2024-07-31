@@ -52,11 +52,11 @@ using namespace llvm::object;
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 static bool isDebugSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).startswith(".debug") || Sec.Name == ".gdb_index";
+  return StringRef(Sec.Name).starts_with(".debug") || Sec.Name == ".gdb_index";
 }
 
 static bool isDWOSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).endswith(".dwo");
+  return StringRef(Sec.Name).ends_with(".dwo");
 }
 
 static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
@@ -68,7 +68,8 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
-static uint64_t getNewShfFlags(SectionFlag AllFlags) {
+static Expected<uint64_t> getNewShfFlags(SectionFlag AllFlags,
+                                         uint16_t EMachine) {
   uint64_t NewFlags = 0;
   if (AllFlags & SectionFlag::SecAlloc)
     NewFlags |= ELF::SHF_ALLOC;
@@ -82,23 +83,44 @@ static uint64_t getNewShfFlags(SectionFlag AllFlags) {
     NewFlags |= ELF::SHF_STRINGS;
   if (AllFlags & SectionFlag::SecExclude)
     NewFlags |= ELF::SHF_EXCLUDE;
+  if (AllFlags & SectionFlag::SecLarge) {
+    if (EMachine != EM_X86_64)
+      return createStringError(errc::invalid_argument,
+                               "section flag SHF_X86_64_LARGE can only be used "
+                               "with x86_64 architecture");
+    NewFlags |= ELF::SHF_X86_64_LARGE;
+  }
   return NewFlags;
 }
 
 static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
-                                            uint64_t NewFlags) {
+                                            uint64_t NewFlags,
+                                            uint16_t EMachine) {
   // Preserve some flags which should not be dropped when setting flags.
   // Also, preserve anything OS/processor dependant.
   const uint64_t PreserveMask =
       (ELF::SHF_COMPRESSED | ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
        ELF::SHF_MASKOS | ELF::SHF_MASKPROC | ELF::SHF_TLS |
        ELF::SHF_INFO_LINK) &
-      ~ELF::SHF_EXCLUDE;
+      ~ELF::SHF_EXCLUDE &
+      ~(EMachine == EM_X86_64 ? (uint64_t)ELF::SHF_X86_64_LARGE : 0UL);
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 
-static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
-  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, getNewShfFlags(Flags));
+static void setSectionType(SectionBase &Sec, uint64_t Type) {
+  // If Sec's type is changed from SHT_NOBITS due to --set-section-flags,
+  // Offset may not be aligned. Align it to max(Align, 1).
+  if (Sec.Type == ELF::SHT_NOBITS && Type != ELF::SHT_NOBITS)
+    Sec.Offset = alignTo(Sec.Offset, std::max(Sec.Align, uint64_t(1)));
+  Sec.Type = Type;
+}
+
+static Error setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags,
+                                    uint16_t EMachine) {
+  Expected<uint64_t> NewFlags = getNewShfFlags(Flags, EMachine);
+  if (!NewFlags)
+    return NewFlags.takeError();
+  Sec.Flags = getSectionFlagsPreserveMask(Sec.Flags, *NewFlags, EMachine);
 
   // In GNU objcopy, certain flags promote SHT_NOBITS to SHT_PROGBITS. This rule
   // may promote more non-ALLOC sections than GNU objcopy, but it is fine as
@@ -106,7 +128,9 @@ static void setSectionFlagsAndType(SectionBase &Sec, SectionFlag Flags) {
   if (Sec.Type == SHT_NOBITS &&
       (!(Sec.Flags & ELF::SHF_ALLOC) ||
        Flags & (SectionFlag::SecContents | SectionFlag::SecLoad)))
-    Sec.Type = SHT_PROGBITS;
+    setSectionType(Sec, ELF::SHT_PROGBITS);
+
+  return Error::success();
 }
 
 static ElfType getOutputElfType(const Binary &Bin) {
@@ -156,19 +180,14 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return std::make_unique<BinaryWriter>(Obj, Out);
+    return std::make_unique<BinaryWriter>(Obj, Out, Config);
   case FileFormat::IHex:
-    return std::make_unique<IHexWriter>(Obj, Out);
+    return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
+  case FileFormat::SREC:
+    return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
-}
-
-template <class... Ts>
-static Error makeStringError(std::error_code EC, const Twine &Msg,
-                             Ts &&...Args) {
-  std::string FullMsg = (EC.message() + ": " + Msg).str();
-  return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -195,33 +214,50 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                            SecName.str().c_str());
 }
 
-static bool isCompressable(const SectionBase &Sec) {
-  return !(Sec.Flags & ELF::SHF_COMPRESSED) &&
-         StringRef(Sec.Name).startswith(".debug");
-}
-
-static Error replaceDebugSections(
-    Object &Obj, function_ref<bool(const SectionBase &)> ShouldReplace,
-    function_ref<Expected<SectionBase *>(const SectionBase *)> AddSection) {
-  // Build a list of the debug sections we are going to replace.
-  // We can't call `AddSection` while iterating over sections,
+Error Object::compressOrDecompressSections(const CommonConfig &Config) {
+  // Build a list of sections we are going to replace.
+  // We can't call `addSection` while iterating over sections,
   // because it would mutate the sections array.
-  SmallVector<SectionBase *, 13> ToReplace;
-  for (auto &Sec : Obj.sections())
-    if (ShouldReplace(Sec))
-      ToReplace.push_back(&Sec);
+  SmallVector<std::pair<SectionBase *, std::function<SectionBase *()>>, 0>
+      ToReplace;
+  for (SectionBase &Sec : sections()) {
+    std::optional<DebugCompressionType> CType;
+    for (auto &[Matcher, T] : Config.compressSections)
+      if (Matcher.matches(Sec.Name))
+        CType = T;
+    // Handle --compress-debug-sections and --decompress-debug-sections, which
+    // apply to non-ALLOC debug sections.
+    if (!(Sec.Flags & SHF_ALLOC) && StringRef(Sec.Name).starts_with(".debug")) {
+      if (Config.CompressionType != DebugCompressionType::None)
+        CType = Config.CompressionType;
+      else if (Config.DecompressDebugSections)
+        CType = DebugCompressionType::None;
+    }
+    if (!CType)
+      continue;
 
-  // Build a mapping from original section to a new one.
-  DenseMap<SectionBase *, SectionBase *> FromTo;
-  for (SectionBase *S : ToReplace) {
-    Expected<SectionBase *> NewSection = AddSection(S);
-    if (!NewSection)
-      return NewSection.takeError();
+    if (Sec.ParentSegment)
+      return createStringError(
+          errc::invalid_argument,
+          "section '" + Sec.Name +
+              "' within a segment cannot be (de)compressed");
 
-    FromTo[S] = *NewSection;
+    if (auto *CS = dyn_cast<CompressedSection>(&Sec)) {
+      if (*CType == DebugCompressionType::None)
+        ToReplace.emplace_back(
+            &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
+    } else if (*CType != DebugCompressionType::None) {
+      ToReplace.emplace_back(&Sec, [=, S = &Sec] {
+        return &addSection<CompressedSection>(
+            CompressedSection(*S, *CType, Is64Bits));
+      });
+    }
   }
 
-  return Obj.replaceSections(FromTo);
+  DenseMap<SectionBase *, SectionBase *> FromTo;
+  for (auto [S, Func] : ToReplace)
+    FromTo[S] = Func();
+  return replaceSections(FromTo);
 }
 
 static bool isAArch64MappingSymbol(const Symbol &Sym) {
@@ -231,7 +267,7 @@ static bool isAArch64MappingSymbol(const Symbol &Sym) {
   StringRef Name = Sym.Name;
   if (!Name.consume_front("$x") && !Name.consume_front("$d"))
     return false;
-  return Name.empty() || Name.startswith(".");
+  return Name.empty() || Name.starts_with(".");
 }
 
 static bool isArmMappingSymbol(const Symbol &Sym) {
@@ -242,7 +278,7 @@ static bool isArmMappingSymbol(const Symbol &Sym) {
   if (!Name.consume_front("$a") && !Name.consume_front("$d") &&
       !Name.consume_front("$t"))
     return false;
-  return Name.empty() || Name.startswith(".");
+  return Name.empty() || Name.starts_with(".");
 }
 
 // Check if the symbol should be preserved because it is required by ABI.
@@ -273,6 +309,9 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    if (Config.SymbolsToSkip.matches(Sym.Name))
+      return;
+
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
@@ -280,6 +319,10 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
+
+    for (auto &[Matcher, Visibility] : ELFConfig.SymbolsToSetVisibility)
+      if (Matcher.matches(Sym.Name))
+        Sym.Visibility = Visibility;
 
     // Note: these two globalize flags have very similar names but different
     // meanings:
@@ -311,6 +354,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     const auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
+
+    if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
+      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
+                           Config.SymbolsPrefixRemove) == 0)
+        Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
@@ -344,7 +392,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
 
     if ((Config.DiscardMode == DiscardType::All ||
          (Config.DiscardMode == DiscardType::Locals &&
-          StringRef(Sym.Name).startswith(".L"))) &&
+          StringRef(Sym.Name).starts_with(".L"))) &&
         Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
         Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
       return true;
@@ -431,7 +479,9 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
         return true;
       if (&Sec == Obj.SectionNames)
         return false;
-      if (StringRef(Sec.Name).startswith(".gnu.warning"))
+      if (StringRef(Sec.Name).starts_with(".gnu.warning"))
+        return false;
+      if (StringRef(Sec.Name).starts_with(".gnu_debuglink"))
         return false;
       // We keep the .ARM.attribute section to maintain compatibility
       // with Debian derived distributions. This is a bug in their
@@ -504,24 +554,8 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
   if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
     return E;
 
-  if (Config.CompressionType != DebugCompressionType::None) {
-    if (Error Err = replaceDebugSections(
-            Obj, isCompressable,
-            [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
-              return &Obj.addSection<CompressedSection>(
-                  CompressedSection(*S, Config.CompressionType, Obj.Is64Bits));
-            }))
-      return Err;
-  } else if (Config.DecompressDebugSections) {
-    if (Error Err = replaceDebugSections(
-            Obj,
-            [](const SectionBase &S) { return isa<CompressedSection>(&S); },
-            [&Obj](const SectionBase *S) {
-              const CompressedSection *CS = cast<CompressedSection>(S);
-              return &Obj.addSection<DecompressedSection>(*CS);
-            }))
-      return Err;
-  }
+  if (Error E = Obj.compressOrDecompressSections(Config))
+    return E;
 
   return Error::success();
 }
@@ -589,6 +623,54 @@ handleUserSection(const NewSectionInfo &NewSection,
   return F(NewSection.SectionName, Data);
 }
 
+static Error verifyNoteSection(StringRef Name, endianness Endianness,
+                               ArrayRef<uint8_t> Data) {
+  // An ELF note has the following structure:
+  // Name Size: 4 bytes (integer)
+  // Desc Size: 4 bytes (integer)
+  // Type     : 4 bytes
+  // Name     : variable size, padded to a 4 byte boundary
+  // Desc     : variable size, padded to a 4 byte boundary
+
+  if (Data.empty())
+    return Error::success();
+
+  if (Data.size() < 12) {
+    std::string msg;
+    raw_string_ostream(msg)
+        << Name << " data must be either empty or at least 12 bytes long";
+    return createStringError(errc::invalid_argument, msg);
+  }
+  if (Data.size() % 4 != 0) {
+    std::string msg;
+    raw_string_ostream(msg)
+        << Name << " data size must be a  multiple of 4 bytes";
+    return createStringError(errc::invalid_argument, msg);
+  }
+  ArrayRef<uint8_t> NameSize = Data.slice(0, 4);
+  ArrayRef<uint8_t> DescSize = Data.slice(4, 4);
+
+  uint32_t NameSizeValue = support::endian::read32(NameSize.data(), Endianness);
+  uint32_t DescSizeValue = support::endian::read32(DescSize.data(), Endianness);
+
+  uint64_t ExpectedDataSize =
+      /*NameSize=*/4 + /*DescSize=*/4 + /*Type=*/4 +
+      /*Name=*/alignTo(NameSizeValue, 4) +
+      /*Desc=*/alignTo(DescSizeValue, 4);
+  uint64_t ActualDataSize = Data.size();
+  if (ActualDataSize != ExpectedDataSize) {
+    std::string msg;
+    raw_string_ostream(msg)
+        << Name
+        << " data size is incompatible with the content of "
+           "the name and description size fields:"
+        << " expecting " << ExpectedDataSize << ", found " << ActualDataSize;
+    return createStringError(errc::invalid_argument, msg);
+  }
+
+  return Error::success();
+}
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"
@@ -597,7 +679,7 @@ handleUserSection(const NewSectionInfo &NewSection,
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
-                        Object &Obj) {
+                        ElfType OutputElfType, Object &Obj) {
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch->EMachine;
     Obj.OSABI = Config.OutputArch->OSABI;
@@ -636,17 +718,101 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
+  if (Config.ChangeSectionLMAValAll != 0) {
+    for (Segment &Seg : Obj.segments()) {
+      if (Seg.FileSize > 0) {
+        if (Config.ChangeSectionLMAValAll > 0 &&
+            Seg.PAddr > std::numeric_limits<uint64_t>::max() -
+                            Config.ChangeSectionLMAValAll) {
+          return createStringError(
+              errc::invalid_argument,
+              "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                  " cannot be increased by 0x" +
+                  Twine::utohexstr(Config.ChangeSectionLMAValAll) +
+                  ". The result would overflow");
+        } else if (Config.ChangeSectionLMAValAll < 0 &&
+                   Seg.PAddr < std::numeric_limits<uint64_t>::min() -
+                                   Config.ChangeSectionLMAValAll) {
+          return createStringError(
+              errc::invalid_argument,
+              "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                  " cannot be decreased by 0x" +
+                  Twine::utohexstr(std::abs(Config.ChangeSectionLMAValAll)) +
+                  ". The result would underflow");
+        }
+        Seg.PAddr += Config.ChangeSectionLMAValAll;
+      }
+    }
+  }
+
+  if (!Config.ChangeSectionAddress.empty()) {
+    if (Obj.Type != ELF::ET_REL)
+      return createStringError(
+          object_error::invalid_file_type,
+          "cannot change section address in a non-relocatable file");
+
+    StringMap<AddressUpdate> SectionsToUpdateAddress;
+    for (const SectionPatternAddressUpdate &PatternUpdate :
+         make_range(Config.ChangeSectionAddress.rbegin(),
+                    Config.ChangeSectionAddress.rend())) {
+      for (SectionBase &Sec : Obj.sections()) {
+        if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
+            SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)
+                .second) {
+          if (PatternUpdate.Update.Kind == AdjustKind::Subtract &&
+              Sec.Addr < PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be decreased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would underflow");
+          }
+          if (PatternUpdate.Update.Kind == AdjustKind::Add &&
+              Sec.Addr > std::numeric_limits<uint64_t>::max() -
+                             PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be increased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would overflow");
+          }
+
+          switch (PatternUpdate.Update.Kind) {
+          case (AdjustKind::Set):
+            Sec.Addr = PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Subtract):
+            Sec.Addr -= PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Add):
+            Sec.Addr += PatternUpdate.Update.Value;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   if (Config.OnlyKeepDebug)
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
         Sec.Type = SHT_NOBITS;
 
+  endianness E = OutputElfType == ELFT_ELF32LE || OutputElfType == ELFT_ELF64LE
+                     ? endianness::little
+                     : endianness::big;
+
   for (const NewSectionInfo &AddedSection : Config.AddSection) {
-    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
+    auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) -> Error {
       OwnedDataSection &NewSection =
           Obj.addSection<OwnedDataSection>(Name, Data);
-      if (Name.startswith(".note") && Name != ".note.GNU-stack")
+      if (Name.starts_with(".note") && Name != ".note.GNU-stack") {
         NewSection.Type = SHT_NOTE;
+        if (ELFConfig.VerifyNoteSections)
+          return verifyNoteSection(Name, E, Data);
+      }
       return Error::success();
     };
     if (Error E = handleUserSection(AddedSection, AddSection))
@@ -680,11 +846,12 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       const auto Iter = Config.SetSectionFlags.find(Sec.Name);
       if (Iter != Config.SetSectionFlags.end()) {
         const SectionFlagsUpdate &SFU = Iter->second;
-        setSectionFlagsAndType(Sec, SFU.NewFlags);
+        if (Error E = setSectionFlagsAndType(Sec, SFU.NewFlags, Obj.Machine))
+          return E;
       }
       auto It2 = Config.SetSectionType.find(Sec.Name);
       if (It2 != Config.SetSectionType.end())
-        Sec.Type = It2->second;
+        setSectionType(Sec, It2->second);
     }
   }
 
@@ -697,8 +864,10 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = std::string(SR.NewName);
-        if (SR.NewFlags)
-          setSectionFlagsAndType(Sec, *SR.NewFlags);
+        if (SR.NewFlags) {
+          if (Error E = setSectionFlagsAndType(Sec, *SR.NewFlags, Obj.Machine))
+            return E;
+        }
         RenamedSections.insert(&Sec);
       } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))
         // Postpone processing relocation sections which are not specified in
@@ -776,7 +945,7 @@ Error objcopy::elf::executeObjcopyOnIHex(const CommonConfig &Config,
 
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
-  if (Error E = handleArgs(Config, ELFConfig, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
@@ -794,7 +963,7 @@ Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
   // (-B<arch>).
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
-  if (Error E = handleArgs(Config, ELFConfig, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
@@ -813,7 +982,7 @@ Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
                                     ? getOutputElfType(*Config.OutputArch)
                                     : getOutputElfType(In);
 
-  if (Error E = handleArgs(Config, ELFConfig, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))

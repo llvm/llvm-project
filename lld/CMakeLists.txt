@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "LLD")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -61,7 +62,7 @@ if(LLD_BUILT_STANDALONE)
 
     if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       # Note: path not really used, except for checking if lit was found
-      set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
+      set(LLVM_EXTERNAL_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
       if(NOT LLVM_UTILS_PROVIDED)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/FileCheck utils/FileCheck)
         add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/not utils/not)
@@ -74,13 +75,13 @@ if(LLD_BUILT_STANDALONE)
       endif()
     else()
       # Seek installed Lit.
-      find_program(LLVM_LIT
+      find_program(LLVM_EXTERNAL_LIT
                    NAMES llvm-lit lit.py lit
                    PATHS "${LLVM_MAIN_SRC_DIR}/utils/lit"
                    DOC "Path to lit.py")
     endif()
 
-    if(LLVM_LIT)
+    if(LLVM_EXTERNAL_LIT)
       # Define the default arguments to use with 'lit', and an option for the user
       # to override.
       set(LIT_ARGS_DEFAULT "-sv")
@@ -191,6 +192,11 @@ add_subdirectory(Common)
 add_subdirectory(tools/lld)
 
 if (LLVM_INCLUDE_TESTS)
+  add_custom_target(LLDUnitTests)
+  set_target_properties(LLDUnitTests PROPERTIES FOLDER "LLD/Tests")
+  if (TARGET llvm_gtest)
+    add_subdirectory(unittests)
+  endif()
   add_subdirectory(test)
 endif()
 

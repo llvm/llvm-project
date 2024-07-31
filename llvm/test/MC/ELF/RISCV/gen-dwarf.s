@@ -11,7 +11,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -g -dwarf-version=5 -mattr=+relax < %s -o %t
 # RUN: llvm-dwarfdump -eh-frame -debug-line -debug-rnglists -v %t | FileCheck %s
-# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
+# RUN: llvm-readobj -r -x .eh_frame %t | FileCheck %s --check-prefix=RELOC
 
 # CHECK:      FDE
 # CHECK-NEXT: Format:       DWARF32
@@ -26,11 +26,11 @@
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:                           is_stmt
 # CHECK-NEXT: DW_LNS_advance_line
-# CHECK-NEXT: DW_LNS_fixed_advance_pc (0x0004)
+# CHECK-NEXT: DW_LNS_fixed_advance_pc (addr += 0x0004, op-index = 0)
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:                           is_stmt
 # CHECK-NEXT: DW_LNS_advance_line
-# CHECK-NEXT: DW_LNS_fixed_advance_pc (0x0004)
+# CHECK-NEXT: DW_LNS_fixed_advance_pc (addr += 0x0004, op-index = 0)
 # CHECK-NEXT: DW_LNS_copy
 
 # CHECK:      0x00000000: range list header: length = 0x0000001d, format = DWARF32, version = 0x0005
@@ -40,32 +40,36 @@
 # CHECK-NEXT: 0x00000020: [DW_RLE_end_of_list ]
 
 # RELOC:      Section ([[#]]) .rela.eh_frame {
-# RELOC-NEXT:   0x1C R_RISCV_32_PCREL - 0x0
-# RELOC-NEXT:   0x20 R_RISCV_ADD32 - 0x0
-# RELOC-NEXT:   0x20 R_RISCV_SUB32 - 0x0
-# RELOC-NEXT:   0x25 R_RISCV_SET6 - 0x0
-# RELOC-NEXT:   0x25 R_RISCV_SUB6 - 0x0
-# RELOC-NEXT:   0x28 R_RISCV_SET6 - 0x0
-# RELOC-NEXT:   0x28 R_RISCV_SUB6 - 0x0
-# RELOC-NEXT:   0x34 R_RISCV_32_PCREL - 0x0
-# RELOC-NEXT:   0x38 R_RISCV_ADD32 - 0x0
-# RELOC-NEXT:   0x38 R_RISCV_SUB32 - 0x0
+# RELOC-NEXT:   0x1C R_RISCV_32_PCREL .L0  0x0
+# RELOC-NEXT:   0x20 R_RISCV_ADD32 .L0  0x0
+# RELOC-NEXT:   0x20 R_RISCV_SUB32 .L0  0x0
+# RELOC-NEXT:   0x25 R_RISCV_SET6 .L0  0x0
+# RELOC-NEXT:   0x25 R_RISCV_SUB6 .L0  0x0
+# RELOC-NEXT:   0x34 R_RISCV_32_PCREL .L0  0x0
 # RELOC-NEXT: }
 
-## TODO A section needs two relocations.
 # RELOC:      Section ([[#]]) .rela.debug_rnglists {
 # RELOC-NEXT:   0xD R_RISCV_64 .text.foo 0x0
+# RELOC-NEXT:   0x15 R_RISCV_SET_ULEB128 .L0  0x0
+# RELOC-NEXT:   0x15 R_RISCV_SUB_ULEB128 .text.foo 0x0
 # RELOC-NEXT:   0x17 R_RISCV_64 .text.bar 0x0
 # RELOC-NEXT: }
 
 # RELOC:      Section ([[#]]) .rela.debug_line {
-# RELOC:        R_RISCV_ADD16 - 0x0
-# RELOC-NEXT:   R_RISCV_SUB16 - 0x0
-# RELOC-NEXT:   R_RISCV_ADD16 - 0x0
-# RELOC-NEXT:   R_RISCV_SUB16 - 0x0
-# RELOC-NEXT:   R_RISCV_ADD16 - 0x0
-# RELOC-NEXT:   R_RISCV_SUB16 - 0x0
+# RELOC:        R_RISCV_ADD16 .L0  0x0
+# RELOC-NEXT:   R_RISCV_SUB16 .L0  0x0
+# RELOC-NEXT:   R_RISCV_ADD16 .L0  0x0
+# RELOC-NEXT:   R_RISCV_SUB16 .L0  0x0
+# RELOC-NEXT:   R_RISCV_ADD16 .L0  0x0
+# RELOC-NEXT:   R_RISCV_SUB16 .L0  0x0
 # RELOC:      }
+
+# RELOC:      Hex dump of section '.eh_frame':
+# RELOC-NEXT: 0x00000000
+# RELOC-NEXT: 0x00000010
+# RELOC-NEXT: 0x00000020
+# RELOC-NEXT: 0x00000030 30000000 00000000 04000000 00000000
+#                                          ^ address_range
 
 .section .text.foo,"ax"
 .globl foo

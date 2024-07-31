@@ -5,8 +5,9 @@
 ! Semantic error for correct test case
 
 program omp_simd
-  integer i, j, k
+  integer i, j, k, c, d(100)
   integer, allocatable :: a(:), b(:)
+  common /cmn/ c
 
   allocate(a(10))
   allocate(b(10))
@@ -50,5 +51,18 @@ program omp_simd
   !$omp end simd
 
   print *, a
+
+  !ERROR: 'c' is a common block name and can not appear in an ALIGNED clause
+  !$omp simd aligned(c)
+  do i = 1, 10
+    c = 5
+  end do
+  !$omp end simd
+
+  !ERROR: 'd' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
+  !$omp simd aligned(d:100)
+  do i = 1, 100
+    d(i) = i
+  end do
 
 end program omp_simd

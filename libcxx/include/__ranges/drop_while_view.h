@@ -20,8 +20,8 @@
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
-#include <__ranges/copyable_box.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/movable_box.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
@@ -37,6 +37,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -45,7 +48,7 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
 public:
   _LIBCPP_HIDE_FROM_ABI drop_while_view()
     requires default_initializable<_View> && default_initializable<_Pred>
@@ -65,9 +68,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
-    _LIBCPP_ASSERT(__pred_.__has_value(),
-                   "drop_while_view needs to have a non-empty predicate before calling begin() -- did a previous "
-                   "assignment to this drop_while_view fail?");
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __pred_.__has_value(),
+        "drop_while_view needs to have a non-empty predicate before calling begin() -- did a previous "
+        "assignment to this drop_while_view fail?");
     if constexpr (_UseCache) {
       if (!__cached_begin_.__has_value()) {
         __cached_begin_.__emplace(ranges::find_if_not(__base_, std::cref(*__pred_)));
@@ -82,7 +87,7 @@ public:
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
-  _LIBCPP_NO_UNIQUE_ADDRESS __copyable_box<_Pred> __pred_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   static constexpr bool _UseCache = forward_range<_View>;
   using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
@@ -125,5 +130,7 @@ inline constexpr auto drop_while = __drop_while::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_DROP_WHILE_VIEW_H

@@ -14,7 +14,6 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_CODEVIEWVISITOR_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_CODEVIEWVISITOR_H
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
@@ -225,6 +224,8 @@ public:
   Error visitKnownRecord(CVSymbol &Record, Thunk32Sym &Thunk) override;
   Error visitKnownRecord(CVSymbol &Record, UDTSym &UDT) override;
   Error visitKnownRecord(CVSymbol &Record, UsingNamespaceSym &UN) override;
+  Error visitKnownRecord(CVSymbol &Record, JumpTableSym &JumpTable) override;
+  Error visitKnownRecord(CVSymbol &Record, CallerSym &Caller) override;
 };
 
 // Visitor for CodeView types and symbols to populate elements.

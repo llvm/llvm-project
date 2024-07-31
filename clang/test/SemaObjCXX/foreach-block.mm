@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s
-// rdar://8295106
 
 int main() {
 id array;

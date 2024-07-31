@@ -48,6 +48,7 @@ extern "C" {
   };                                                                           \
   typedef struct name name
 
+DEFINE_C_API_STRUCT(MlirAsmState, void);
 DEFINE_C_API_STRUCT(MlirBytecodeWriterConfig, void);
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
@@ -72,7 +73,6 @@ DEFINE_C_API_STRUCT(MlirValue, const void);
 ///
 /// A named attribute is essentially a (name, attribute) pair where the name is
 /// a string.
-
 struct MlirNamedAttribute {
   MlirIdentifier name;
   MlirAttribute attribute;
@@ -84,7 +84,18 @@ typedef struct MlirNamedAttribute MlirNamedAttribute;
 //===----------------------------------------------------------------------===//
 
 /// Creates an MLIR context and transfers its ownership to the caller.
+/// This sets the default multithreading option (enabled).
 MLIR_CAPI_EXPORTED MlirContext mlirContextCreate(void);
+
+/// Creates an MLIR context with an explicit setting of the multithreading
+/// setting and transfers its ownership to the caller.
+MLIR_CAPI_EXPORTED MlirContext
+mlirContextCreateWithThreading(bool threadingEnabled);
+
+/// Creates an MLIR context, setting the multithreading setting explicitly and
+/// pre-loading the dialects from the provided DialectRegistry.
+MLIR_CAPI_EXPORTED MlirContext mlirContextCreateWithRegistry(
+    MlirDialectRegistry registry, bool threadingEnabled);
 
 /// Checks if two contexts are equal.
 MLIR_CAPI_EXPORTED bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
@@ -143,6 +154,13 @@ mlirContextLoadAllAvailableDialects(MlirContext context);
 /// dialect.
 MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
                                                          MlirStringRef name);
+
+/// Sets the thread pool of the context explicitly, enabling multithreading in
+/// the process. This API should be used to avoid re-creating thread pools in
+/// long-running applications that perform multiple compilations, see
+/// the C++ documentation for MLIRContext for details.
+MLIR_CAPI_EXPORTED void mlirContextSetThreadPool(MlirContext context,
+                                                 MlirLlvmThreadPool threadPool);
 
 //===----------------------------------------------------------------------===//
 // Dialect API.
@@ -366,6 +384,29 @@ MLIR_CAPI_EXPORTED void
 mlirOperationStateEnableResultTypeInference(MlirOperationState *state);
 
 //===----------------------------------------------------------------------===//
+// AsmState API.
+// While many of these are simple settings that could be represented in a
+// struct, they are wrapped in a heap allocated object and accessed via
+// functions to maximize the possibility of compatibility over time.
+//===----------------------------------------------------------------------===//
+
+/// Creates new AsmState, as with AsmState the IR should not be mutated
+/// in-between using this state.
+/// Must be freed with a call to mlirAsmStateDestroy().
+// TODO: This should be expanded to handle location & resouce map.
+MLIR_CAPI_EXPORTED MlirAsmState
+mlirAsmStateCreateForOperation(MlirOperation op, MlirOpPrintingFlags flags);
+
+/// Creates new AsmState from value.
+/// Must be freed with a call to mlirAsmStateDestroy().
+// TODO: This should be expanded to handle location & resouce map.
+MLIR_CAPI_EXPORTED MlirAsmState
+mlirAsmStateCreateForValue(MlirValue value, MlirOpPrintingFlags flags);
+
+/// Destroys printing flags created with mlirAsmStateCreate.
+MLIR_CAPI_EXPORTED void mlirAsmStateDestroy(MlirAsmState state);
+
+//===----------------------------------------------------------------------===//
 // Op Printing flags API.
 // While many of these are simple settings that could be represented in a
 // struct, they are wrapped in a heap allocated object and accessed via
@@ -386,6 +427,14 @@ MLIR_CAPI_EXPORTED void mlirOpPrintingFlagsDestroy(MlirOpPrintingFlags flags);
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
                                            intptr_t largeElementLimit);
+
+/// Enables the elision of large resources strings by omitting them from the
+/// `dialect_resources` section. The `largeResourceLimit` is used to configure
+/// what is considered to be a "large" resource by providing an upper limit to
+/// the string size.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsElideLargeResourceString(MlirOpPrintingFlags flags,
+                                            intptr_t largeResourceLimit);
 
 /// Enable or disable printing of debug information (based on `enable`). If
 /// 'prettyForm' is set to true, debug information is printed in a more readable
@@ -408,6 +457,10 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 /// Do not verify the operation when using custom operation printers.
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
+
+/// Skip printing regions.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags);
 
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
@@ -515,6 +568,11 @@ MLIR_CAPI_EXPORTED MlirValue mlirOperationGetOperand(MlirOperation op,
 MLIR_CAPI_EXPORTED void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
                                                 MlirValue newValue);
 
+/// Replaces the operands of the operation.
+MLIR_CAPI_EXPORTED void mlirOperationSetOperands(MlirOperation op,
+                                                 intptr_t nOperands,
+                                                 MlirValue const *operands);
+
 /// Returns the number of results of the operation.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumResults(MlirOperation op);
 
@@ -529,25 +587,81 @@ MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumSuccessors(MlirOperation op);
 MLIR_CAPI_EXPORTED MlirBlock mlirOperationGetSuccessor(MlirOperation op,
                                                        intptr_t pos);
 
+/// Set `pos`-th successor of the operation.
+MLIR_CAPI_EXPORTED void
+mlirOperationSetSuccessor(MlirOperation op, intptr_t pos, MlirBlock block);
+
+/// Returns true if this operation defines an inherent attribute with this name.
+/// Note: the attribute can be optional, so
+/// `mlirOperationGetInherentAttributeByName` can still return a null attribute.
+MLIR_CAPI_EXPORTED bool
+mlirOperationHasInherentAttributeByName(MlirOperation op, MlirStringRef name);
+
+/// Returns an inherent attribute attached to the operation given its name.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirOperationGetInherentAttributeByName(MlirOperation op, MlirStringRef name);
+
+/// Sets an inherent attribute by name, replacing the existing if it exists.
+/// This has no effect if "name" does not match an inherent attribute.
+MLIR_CAPI_EXPORTED void
+mlirOperationSetInherentAttributeByName(MlirOperation op, MlirStringRef name,
+                                        MlirAttribute attr);
+
+/// Returns the number of discardable attributes attached to the operation.
+MLIR_CAPI_EXPORTED intptr_t
+mlirOperationGetNumDiscardableAttributes(MlirOperation op);
+
+/// Return `pos`-th discardable attribute of the operation.
+MLIR_CAPI_EXPORTED MlirNamedAttribute
+mlirOperationGetDiscardableAttribute(MlirOperation op, intptr_t pos);
+
+/// Returns a discardable attribute attached to the operation given its name.
+MLIR_CAPI_EXPORTED MlirAttribute mlirOperationGetDiscardableAttributeByName(
+    MlirOperation op, MlirStringRef name);
+
+/// Sets a discardable attribute by name, replacing the existing if it exists or
+/// adding a new one otherwise. The new `attr` Attribute is not allowed to be
+/// null, use `mlirOperationRemoveDiscardableAttributeByName` to remove an
+/// Attribute instead.
+MLIR_CAPI_EXPORTED void
+mlirOperationSetDiscardableAttributeByName(MlirOperation op, MlirStringRef name,
+                                           MlirAttribute attr);
+
+/// Removes a discardable attribute by name. Returns false if the attribute was
+/// not found and true if removed.
+MLIR_CAPI_EXPORTED bool
+mlirOperationRemoveDiscardableAttributeByName(MlirOperation op,
+                                              MlirStringRef name);
+
 /// Returns the number of attributes attached to the operation.
+/// Deprecated, please use `mlirOperationGetNumInherentAttributes` or
+/// `mlirOperationGetNumDiscardableAttributes`.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumAttributes(MlirOperation op);
 
 /// Return `pos`-th attribute of the operation.
+/// Deprecated, please use `mlirOperationGetInherentAttribute` or
+/// `mlirOperationGetDiscardableAttribute`.
 MLIR_CAPI_EXPORTED MlirNamedAttribute
 mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
 /// Returns an attribute attached to the operation given its name.
+/// Deprecated, please use `mlirOperationGetInherentAttributeByName` or
+/// `mlirOperationGetDiscardableAttributeByName`.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirOperationGetAttributeByName(MlirOperation op, MlirStringRef name);
 
 /// Sets an attribute by name, replacing the existing if it exists or
 /// adding a new one otherwise.
+/// Deprecated, please use `mlirOperationSetInherentAttributeByName` or
+/// `mlirOperationSetDiscardableAttributeByName`.
 MLIR_CAPI_EXPORTED void mlirOperationSetAttributeByName(MlirOperation op,
                                                         MlirStringRef name,
                                                         MlirAttribute attr);
 
 /// Removes an attribute by name. Returns false if the attribute was not found
 /// and true if removed.
+/// Deprecated, please use `mlirOperationRemoveInherentAttributeByName` or
+/// `mlirOperationRemoveDiscardableAttributeByName`.
 MLIR_CAPI_EXPORTED bool mlirOperationRemoveAttributeByName(MlirOperation op,
                                                            MlirStringRef name);
 
@@ -562,6 +676,13 @@ MLIR_CAPI_EXPORTED void mlirOperationPrint(MlirOperation op,
 /// behavior.
 MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirOpPrintingFlags flags,
+                                                    MlirStringCallback callback,
+                                                    void *userData);
+
+/// Same as mlirOperationPrint but accepts AsmState controlling the printing
+/// behavior as well as caching computed names.
+MLIR_CAPI_EXPORTED void mlirOperationPrintWithState(MlirOperation op,
+                                                    MlirAsmState state,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
@@ -595,6 +716,32 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
 /// ownership is transferred to the block of the other operation.
 MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
                                                 MlirOperation other);
+
+/// Operation walk result.
+typedef enum MlirWalkResult {
+  MlirWalkResultAdvance,
+  MlirWalkResultInterrupt,
+  MlirWalkResultSkip
+} MlirWalkResult;
+
+/// Traversal order for operation walk.
+typedef enum MlirWalkOrder {
+  MlirWalkPreOrder,
+  MlirWalkPostOrder
+} MlirWalkOrder;
+
+/// Operation walker type. The handler is passed an (opaque) reference to an
+/// operation and a pointer to a `userData`.
+typedef MlirWalkResult (*MlirOperationWalkCallback)(MlirOperation,
+                                                    void *userData);
+
+/// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
+/// `*userData` is passed to the callback as well and can be used to tunnel some
+/// context or other data into the callback.
+MLIR_CAPI_EXPORTED
+void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
+                       void *userData, MlirWalkOrder walkOrder);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
@@ -645,6 +792,10 @@ MLIR_CAPI_EXPORTED MlirRegion mlirOperationGetFirstRegion(MlirOperation op);
 /// Returns the region immediately following the given region in its parent
 /// operation.
 MLIR_CAPI_EXPORTED MlirRegion mlirRegionGetNextInOperation(MlirRegion region);
+
+/// Moves the entire content of the source region to the target region.
+MLIR_CAPI_EXPORTED void mlirRegionTakeBody(MlirRegion target,
+                                           MlirRegion source);
 
 //===----------------------------------------------------------------------===//
 // Block API.
@@ -719,6 +870,16 @@ MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
                                                   MlirType type,
                                                   MlirLocation loc);
 
+/// Erase the argument at 'index' and remove it from the argument list.
+MLIR_CAPI_EXPORTED void mlirBlockEraseArgument(MlirBlock block, unsigned index);
+
+/// Inserts an argument of the specified type at a specified index to the block.
+/// Returns the newly added argument.
+MLIR_CAPI_EXPORTED MlirValue mlirBlockInsertArgument(MlirBlock block,
+                                                     intptr_t pos,
+                                                     MlirType type,
+                                                     MlirLocation loc);
+
 /// Returns `pos`-th argument of the block.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,
                                                   intptr_t pos);
@@ -767,6 +928,9 @@ MLIR_CAPI_EXPORTED intptr_t mlirOpResultGetResultNumber(MlirValue value);
 /// Returns the type of the value.
 MLIR_CAPI_EXPORTED MlirType mlirValueGetType(MlirValue value);
 
+/// Set the type of the value.
+MLIR_CAPI_EXPORTED void mlirValueSetType(MlirValue value, MlirType type);
+
 /// Prints the value to the standard error stream.
 MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 
@@ -778,7 +942,7 @@ mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
 
 /// Prints a value as an operand (i.e., the ValueID).
 MLIR_CAPI_EXPORTED void mlirValuePrintAsOperand(MlirValue value,
-                                                MlirOpPrintingFlags flags,
+                                                MlirAsmState state,
                                                 MlirStringCallback callback,
                                                 void *userData);
 
@@ -798,6 +962,9 @@ MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
 
 /// Returns whether the op operand is null.
 MLIR_CAPI_EXPORTED bool mlirOpOperandIsNull(MlirOpOperand opOperand);
+
+/// Returns the value of an op operand.
+MLIR_CAPI_EXPORTED MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand);
 
 /// Returns the owner operation of an op operand.
 MLIR_CAPI_EXPORTED MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand);

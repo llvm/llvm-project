@@ -74,7 +74,7 @@ public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
                        DominatorTree &DT_, ScalarEvolution &SE_,
                        TargetLibraryInfo &TLI_, const TargetMachine &TM_)
-      : F(F_), DL(F.getParent()->getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
+      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
         SE(SE_), TLI(TLI_),
         HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))) {}
 
@@ -684,33 +684,10 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
                                          Type *ValTy, int Adjust,
                                          const InstMap &CloneMap) const
     -> Value * {
-  auto remap = [&](Value *V) -> Value * {
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      for (auto [Old, New] : CloneMap)
-        I->replaceUsesOfWith(Old, New);
-      return I;
-    }
-    return V;
-  };
-  // The adjustment is in bytes, but if it's a multiple of the type size,
-  // we don't need to do pointer casts.
-  auto *PtrTy = cast<PointerType>(Ptr->getType());
-  if (!PtrTy->isOpaque()) {
-    Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
-    int ElemSize = HVC.getSizeOf(ElemTy, HVC.Alloc);
-    if (Adjust % ElemSize == 0 && Adjust != 0) {
-      Value *Tmp0 = Builder.CreateGEP(
-          ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize), "gep");
-      return Builder.CreatePointerCast(remap(Tmp0), ValTy->getPointerTo(),
-                                       "cst");
-    }
-  }
-
-  PointerType *CharPtrTy = Type::getInt8PtrTy(HVC.F.getContext());
-  Value *Tmp0 = Builder.CreatePointerCast(Ptr, CharPtrTy, "cst");
-  Value *Tmp1 = Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()),
-                                  remap(Tmp0), HVC.getConstInt(Adjust), "gep");
-  return Builder.CreatePointerCast(remap(Tmp1), ValTy->getPointerTo(), "cst");
+  if (auto *I = dyn_cast<Instruction>(Ptr))
+    if (Instruction *New = CloneMap.lookup(I))
+      Ptr = New;
+  return Builder.CreatePtrAdd(Ptr, HVC.getConstInt(Adjust), "gep");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
@@ -728,7 +705,8 @@ auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
   Value *AsInt = Builder.CreatePtrToInt(Ptr, HVC.getIntTy(), "pti");
   Value *Mask = HVC.getConstInt(-Alignment);
   Value *And = Builder.CreateAnd(remap(AsInt), Mask, "and");
-  return Builder.CreateIntToPtr(And, ValTy->getPointerTo(), "itp");
+  return Builder.CreateIntToPtr(
+      And, PointerType::getUnqual(ValTy->getContext()), "itp");
 }
 
 auto AlignVectors::createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
@@ -1355,20 +1333,32 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
     // Adjust the store offsets relative to the section start offset.
     ByteSpan VSection =
         VSpan.section(Index * ScLen, ScLen).shift(-Index * ScLen);
-    Value *AccumV = UndefValue::get(SecTy);
-    Value *AccumM = HVC.getNullValue(SecTy);
+    Value *Undef = UndefValue::get(SecTy);
+    Value *Zero = HVC.getNullValue(SecTy);
+    Value *AccumV = Undef;
+    Value *AccumM = Zero;
     for (ByteSpan::Block &S : VSection) {
       Value *Pay = getPayload(S.Seg.Val);
       Value *Mask = HVC.rescale(Builder, MakeVec(Builder, getMask(S.Seg.Val)),
                                 Pay->getType(), HVC.getByteTy());
-      AccumM = HVC.insertb(Builder, AccumM, HVC.vbytes(Builder, Mask),
-                           S.Seg.Start, S.Seg.Size, S.Pos);
-      AccumV = HVC.insertb(Builder, AccumV, HVC.vbytes(Builder, Pay),
-                           S.Seg.Start, S.Seg.Size, S.Pos);
+      Value *PartM = HVC.insertb(Builder, Zero, HVC.vbytes(Builder, Mask),
+                                 S.Seg.Start, S.Seg.Size, S.Pos);
+      AccumM = Builder.CreateOr(AccumM, PartM);
+
+      Value *PartV = HVC.insertb(Builder, Undef, HVC.vbytes(Builder, Pay),
+                                 S.Seg.Start, S.Seg.Size, S.Pos);
+
+      AccumV = Builder.CreateSelect(
+          Builder.CreateICmp(CmpInst::ICMP_NE, PartM, Zero), PartV, AccumV);
     }
     ASpanV.Blocks.emplace_back(AccumV, ScLen, Index * ScLen);
     ASpanM.Blocks.emplace_back(AccumM, ScLen, Index * ScLen);
   }
+
+  LLVM_DEBUG({
+    dbgs() << "ASpanV before vlalign:\n" << ASpanV << '\n';
+    dbgs() << "ASpanM before vlalign:\n" << ASpanM << '\n';
+  });
 
   // vlalign
   if (DoAlign) {
@@ -1380,6 +1370,11 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
       ASpanM[Index - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
     }
   }
+
+  LLVM_DEBUG({
+    dbgs() << "ASpanV after vlalign:\n" << ASpanV << '\n';
+    dbgs() << "ASpanM after vlalign:\n" << ASpanM << '\n';
+  });
 
   auto createStore = [&](IRBuilderBase &Builder, const ByteSpan &ASpanV,
                          const ByteSpan &ASpanM, int Index, bool MakePred) {
@@ -1416,9 +1411,9 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   // Return the element with the maximum alignment from Range,
   // where GetValue obtains the value to compare from an element.
   auto getMaxOf = [](auto Range, auto GetValue) {
-    return *std::max_element(
-        Range.begin(), Range.end(),
-        [&GetValue](auto &A, auto &B) { return GetValue(A) < GetValue(B); });
+    return *llvm::max_element(Range, [&GetValue](auto &A, auto &B) {
+      return GetValue(A) < GetValue(B);
+    });
   };
 
   const AddrList &BaseInfos = AddrGroups.at(Move.Base);

@@ -9,10 +9,17 @@ config.name = "Builtins"
 config.test_source_root = os.path.dirname(__file__)
 
 # Test suffixes.
-config.suffixes = [".c", ".cpp", ".m", ".mm"]
+config.suffixes = [".c", ".cpp", ".m", ".mm", ".test"]
+extra_flags = ["-Wall"]
+if config.compiler_id == "GNU":
+    # detect incorrect declarations of libgcc functions
+    extra_flags.append("-Werror=builtin-declaration-mismatch")
+
 
 # Define %clang and %clangxx substitutions to use in test RUN lines.
-config.substitutions.append(("%clang ", " " + config.clang + " "))
+config.substitutions.append(
+    ("%clang ", " " + config.clang + " " + " ".join(extra_flags) + " ")
+)
 
 if config.host_os == "Darwin":
     config.substitutions.append(

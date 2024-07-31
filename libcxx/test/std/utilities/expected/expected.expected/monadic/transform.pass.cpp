@@ -9,8 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // GCC has a issue for `Guaranteed copy elision for potentially-overlapping non-static data members`,
-// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333, but we have a workaround to
-// avoid this issue.
+// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333
+// XFAIL: gcc-14
 
 // <expected>
 
@@ -25,6 +25,8 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+
+#include "../../types.h"
 
 struct LVal {
   constexpr int operator()(int&) { return 1; }
@@ -98,15 +100,20 @@ concept has_transform =
       { std::forward<E>(e).transform(std::forward<F>(f)) };
     };
 
+// clang-format off
 // [LWG 3877] https://cplusplus.github.io/LWG/issue3877, check constraint failing but not compile error inside the function body.
 static_assert(!has_transform<const std::expected<int, std::unique_ptr<int>>&, int()>);
 static_assert(!has_transform<const std::expected<int, std::unique_ptr<int>>&&, int()>);
 
-// clang-format off
+// [LWG 3983] https://cplusplus.github.io/LWG/issue3938, check std::expected monadic ops well-formed with move-only error_type.
+// There are no effects for `&` and `const &` overload, because the constraints requires is_constructible_v<E, decltype(error())> is true.
+static_assert(has_transform<std::expected<int, MoveOnlyErrorType>&&, int(int)>);
+static_assert(has_transform<const std::expected<int, MoveOnlyErrorType>&&, int(const int)>);
+
 constexpr void test_val_types() {
   // Test & overload
   {
-    // Without &qualifier on F'soperator()
+    // Without & qualifier on F's operator()
     {
       std::expected<int, int> e(0);
       std::same_as<std::expected<int, int>> decltype(auto) val = e.transform(LVal{});
@@ -236,10 +243,27 @@ constexpr void test_sfinae() {
   std::move(ce1).transform(never_called);
 }
 
+constexpr void test_move_only_error_type() {
+  // Test &&
+  {
+      std::expected<int, MoveOnlyErrorType> e;
+      auto l = [](int) { return 0; };
+      std::move(e).transform(l);
+  }
+
+  // Test const&&
+  {
+      const std::expected<int, MoveOnlyErrorType> e;
+      auto l = [](const int) { return 0; };
+      std::move(e).transform(l);
+  }
+}
+
 constexpr bool test() {
   test_sfinae();
   test_val_types();
   test_direct_non_list_init();
+  test_move_only_error_type();
   return true;
 }
 

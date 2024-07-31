@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -530,7 +531,7 @@ static bool allowSectionTypeMismatch(const Triple &TT, StringRef SectionName,
     // MIPS .debug_* sections should have SHT_MIPS_DWARF section type to
     // distinguish among sections contain DWARF and ECOFF debug formats,
     // but in assembly files these sections have SHT_PROGBITS type.
-    return SectionName.startswith(".debug_") && Type == ELF::SHT_PROGBITS;
+    return SectionName.starts_with(".debug_") && Type == ELF::SHT_PROGBITS;
   }
   return false;
 }
@@ -615,11 +616,11 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
     if (Mergeable)
       if (parseMergeSize(Size))
         return true;
-    if (Group)
-      if (parseGroup(GroupName, IsComdat))
-        return true;
     if (Flags & ELF::SHF_LINK_ORDER)
       if (parseLinkedToSym(LinkedToSym))
+        return true;
+    if (Group)
+      if (parseGroup(GroupName, IsComdat))
         return true;
     if (maybeParseUniqueID(UniqueID))
       return true;
@@ -633,7 +634,7 @@ EndStmt:
   unsigned Type = ELF::SHT_PROGBITS;
 
   if (TypeName.empty()) {
-    if (SectionName.startswith(".note"))
+    if (SectionName.starts_with(".note"))
       Type = ELF::SHT_NOTE;
     else if (hasPrefix(SectionName, ".init_array"))
       Type = ELF::SHT_INIT_ARRAY;
@@ -674,14 +675,15 @@ EndStmt:
       Type = ELF::SHT_LLVM_BB_ADDR_MAP;
     else if (TypeName == "llvm_offloading")
       Type = ELF::SHT_LLVM_OFFLOADING;
+    else if (TypeName == "llvm_lto")
+      Type = ELF::SHT_LLVM_LTO;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
 
   if (UseLastGroup) {
-    MCSectionSubPair CurrentSection = getStreamer().getCurrentSection();
     if (const MCSectionELF *Section =
-            cast_or_null<MCSectionELF>(CurrentSection.first))
+            cast_or_null<MCSectionELF>(getStreamer().getCurrentSectionOnly()))
       if (const MCSymbol *Group = Section->getGroup()) {
         GroupName = Group->getName();
         IsComdat = Section->isComdat();
@@ -713,16 +715,8 @@ EndStmt:
       (Section->getFlags() & ELF::SHF_ALLOC) &&
       (Section->getFlags() & ELF::SHF_EXECINSTR)) {
     bool InsertResult = getContext().addGenDwarfSection(Section);
-    if (InsertResult) {
-      if (getContext().getDwarfVersion() <= 2)
-        Warning(loc, "DWARF2 only supports one section per compilation unit");
-
-      if (!Section->getBeginSymbol()) {
-        MCSymbol *SectionStartSymbol = getContext().createTempSymbol();
-        getStreamer().emitLabel(SectionStartSymbol);
-        Section->setBeginSymbol(SectionStartSymbol);
-      }
-    }
+    if (InsertResult && getContext().getDwarfVersion() <= 2)
+      Warning(loc, "DWARF2 only supports one section per compilation unit");
   }
 
   return false;
@@ -913,7 +907,7 @@ bool ELFAsmParser::ParseDirectiveWeakref(StringRef, SMLoc) {
 }
 
 bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
-  const MCExpr *Subsection = nullptr;
+  const MCExpr *Subsection = MCConstantExpr::create(0, getContext());
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     if (getParser().parseExpression(Subsection))
      return true;
@@ -924,8 +918,8 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
 
   Lex();
 
-  getStreamer().subSection(Subsection);
-  return false;
+  return getStreamer().switchSection(getStreamer().getCurrentSectionOnly(),
+                                     Subsection);
 }
 
 bool ELFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {

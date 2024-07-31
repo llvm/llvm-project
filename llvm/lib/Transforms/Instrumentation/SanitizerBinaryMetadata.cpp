@@ -14,6 +14,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -130,7 +131,7 @@ public:
                           std::unique_ptr<SpecialCaseList> Ignorelist)
       : Mod(M), Options(transformOptionsFromCl(std::move(Opts))),
         Ignorelist(std::move(Ignorelist)), TargetTriple(M.getTargetTriple()),
-        IRB(M.getContext()) {
+        VersionStr(utostr(getVersion())), IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
     assert(!(TargetTriple.isNVPTX() || TargetTriple.isAMDGPU()) &&
@@ -167,10 +168,10 @@ private:
   StringRef getSectionName(StringRef SectionSuffix);
 
   // Returns the section start marker name.
-  Twine getSectionStart(StringRef SectionSuffix);
+  StringRef getSectionStart(StringRef SectionSuffix);
 
   // Returns the section end marker name.
-  Twine getSectionEnd(StringRef SectionSuffix);
+  StringRef getSectionEnd(StringRef SectionSuffix);
 
   // Returns true if the access to the address should be considered "atomic".
   bool pretendAtomicAccess(const Value *Addr);
@@ -179,6 +180,7 @@ private:
   const SanitizerBinaryMetadataOptions Options;
   std::unique_ptr<SpecialCaseList> Ignorelist;
   const Triple TargetTriple;
+  const std::string VersionStr;
   IRBuilder<> IRB;
   BumpPtrAllocator Alloc;
   UniqueStringSaver StringPool{Alloc};
@@ -198,31 +200,36 @@ bool SanitizerBinaryMetadata::run() {
   // metadata features.
   //
 
-  auto *Int8PtrTy = IRB.getInt8PtrTy();
-  auto *Int8PtrPtrTy = PointerType::getUnqual(Int8PtrTy);
+  auto *PtrTy = IRB.getPtrTy();
   auto *Int32Ty = IRB.getInt32Ty();
-  const std::array<Type *, 3> InitTypes = {Int32Ty, Int8PtrPtrTy, Int8PtrPtrTy};
+  const std::array<Type *, 3> InitTypes = {Int32Ty, PtrTy, PtrTy};
   auto *Version = ConstantInt::get(Int32Ty, getVersion());
 
   for (const MetadataInfo *MI : MIS) {
     const std::array<Value *, InitTypes.size()> InitArgs = {
         Version,
-        getSectionMarker(getSectionStart(MI->SectionSuffix), Int8PtrTy),
-        getSectionMarker(getSectionEnd(MI->SectionSuffix), Int8PtrTy),
+        getSectionMarker(getSectionStart(MI->SectionSuffix), PtrTy),
+        getSectionMarker(getSectionEnd(MI->SectionSuffix), PtrTy),
     };
+
+    // Calls to the initialization functions with different versions cannot be
+    // merged. Give the structors unique names based on the version, which will
+    // also be used as the COMDAT key.
+    const std::string StructorPrefix = (MI->FunctionPrefix + VersionStr).str();
+
     // We declare the _add and _del functions as weak, and only call them if
     // there is a valid symbol linked. This allows building binaries with
     // semantic metadata, but without having callbacks. When a tool that wants
     // the metadata is linked which provides the callbacks, they will be called.
     Function *Ctor =
         createSanitizerCtorAndInitFunctions(
-            Mod, (MI->FunctionPrefix + ".module_ctor").str(),
+            Mod, StructorPrefix + ".module_ctor",
             (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs,
             /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
     Function *Dtor =
         createSanitizerCtorAndInitFunctions(
-            Mod, (MI->FunctionPrefix + ".module_dtor").str(),
+            Mod, StructorPrefix + ".module_dtor",
             (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
             /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
@@ -306,11 +313,11 @@ bool isUARSafeCall(CallInst *CI) {
   // It's safe to both pass pointers to local variables to them
   // and to tail-call them.
   return F && (F->isIntrinsic() || F->doesNotReturn() ||
-               F->getName().startswith("__asan_") ||
-               F->getName().startswith("__hwsan_") ||
-               F->getName().startswith("__ubsan_") ||
-               F->getName().startswith("__msan_") ||
-               F->getName().startswith("__tsan_"));
+               F->getName().starts_with("__asan_") ||
+               F->getName().starts_with("__hwsan_") ||
+               F->getName().starts_with("__ubsan_") ||
+               F->getName().starts_with("__msan_") ||
+               F->getName().starts_with("__tsan_"));
 }
 
 bool hasUseAfterReturnUnsafeUses(Value &V) {
@@ -368,11 +375,11 @@ bool SanitizerBinaryMetadata::pretendAtomicAccess(const Value *Addr) {
     const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
     const auto ProfSec =
         getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
-    if (GV->getSection().endswith(ProfSec))
+    if (GV->getSection().ends_with(ProfSec))
       return true;
   }
-  if (GV->getName().startswith("__llvm_gcov") ||
-      GV->getName().startswith("__llvm_gcda"))
+  if (GV->getName().starts_with("__llvm_gcov") ||
+      GV->getName().starts_with("__llvm_gcda"))
     return true;
 
   return false;
@@ -455,15 +462,19 @@ SanitizerBinaryMetadata::getSectionMarker(const Twine &MarkerName, Type *Ty) {
 StringRef SanitizerBinaryMetadata::getSectionName(StringRef SectionSuffix) {
   // FIXME: Other TargetTriples.
   // Request ULEB128 encoding for all integer constants.
-  return StringPool.save(SectionSuffix + "!C");
+  return StringPool.save(SectionSuffix + VersionStr + "!C");
 }
 
-Twine SanitizerBinaryMetadata::getSectionStart(StringRef SectionSuffix) {
-  return "__start_" + SectionSuffix;
+StringRef SanitizerBinaryMetadata::getSectionStart(StringRef SectionSuffix) {
+  // Twine only concatenates 2 strings; with >2 strings, concatenating them
+  // creates Twine temporaries, and returning the final Twine no longer works
+  // because we'd end up with a stack-use-after-return. So here we also use the
+  // StringPool to store the new string.
+  return StringPool.save("__start_" + SectionSuffix + VersionStr);
 }
 
-Twine SanitizerBinaryMetadata::getSectionEnd(StringRef SectionSuffix) {
-  return "__stop_" + SectionSuffix;
+StringRef SanitizerBinaryMetadata::getSectionEnd(StringRef SectionSuffix) {
+  return StringPool.save("__stop_" + SectionSuffix + VersionStr);
 }
 
 } // namespace

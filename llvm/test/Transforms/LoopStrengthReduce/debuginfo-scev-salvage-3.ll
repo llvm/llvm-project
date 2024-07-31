@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-reduce %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -loop-reduce %s -o - | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 ;; Ensure that we retain debuginfo for the induction variable and dependant
@@ -16,9 +17,9 @@
 ;;         i++;
 ;;     }
 ;; }
-; CHECK: call void @llvm.dbg.value(metadata i64 %lsr.iv, metadata ![[i:[0-9]+]], metadata !DIExpression())
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i64 %lsr.iv, i32 %multiplicand), metadata ![[comp:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value))
-; CHECK: call void @llvm.dbg.value(metadata i64 %lsr.iv, metadata ![[i]], metadata !DIExpression(DW_OP_consts, 1, DW_OP_plus, DW_OP_stack_value))
+; CHECK: #dbg_value(i64 %lsr.iv, ![[i:[0-9]+]], !DIExpression(),
+; CHECK: #dbg_value(!DIArgList(i64 %lsr.iv, i32 %multiplicand), ![[comp:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value),
+; CHECK: #dbg_value(i64 %lsr.iv, ![[i]], !DIExpression(DW_OP_consts, 1, DW_OP_plus, DW_OP_stack_value),
 ; CHECK: ![[i]] = !DILocalVariable(name: "i"
 ; CHECK: ![[comp]] = !DILocalVariable(name: "comp"
 

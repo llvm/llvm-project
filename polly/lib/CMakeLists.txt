@@ -62,6 +62,7 @@ add_llvm_pass_plugin(Polly
   CodeGen/PerfMonitor.cpp
   Exchange/JSONExporter.cpp
   Support/GICHelper.cpp
+  Support/PollyDebug.cpp
   Support/SCEVAffinator.cpp
   Support/SCEVValidator.cpp
   Support/RegisterPasses.cpp
@@ -91,8 +92,6 @@ add_llvm_pass_plugin(Polly
   LINK_COMPONENTS
   ${POLLY_COMPONENTS}
   )
-set_target_properties(obj.Polly PROPERTIES FOLDER "Polly")
-set_target_properties(Polly PROPERTIES FOLDER "Polly")
 
 if (MSVC_IDE OR XCODE)
   # Configure source groups for Polly source files. By default, in the IDE there
@@ -115,11 +114,11 @@ target_link_libraries(Polly PUBLIC
 
 # Create a loadable module Polly.so that can be loaded using
 # LLVM's/clang's "-load" option.
-if (WIN32 OR NOT LLVM_ENABLE_PIC)
+if (WIN32 OR CYGWIN OR NOT LLVM_ENABLE_PIC)
   # Add dummy target, either because loadable modules are not supported
   # as on Windows or because PIC code has been disabled
   add_custom_target(LLVMPolly)
-  set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly")
+  set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly/Loadable Modules")
 else ()
   add_polly_loadable_module(LLVMPolly
     Plugin/Polly.cpp

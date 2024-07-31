@@ -163,7 +163,7 @@ public:
     NotVisited = 0x8, /* 1000 */
     // We already reported a violation and stopped tracking calls for this
     // parameter.
-    Reported = 0x15, /* 1111 */
+    Reported = 0xF, /* 1111 */
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Reported)
   };
 
@@ -932,7 +932,8 @@ private:
     ParameterStatus &CurrentParamStatus = CurrentState.getStatusFor(Index);
 
     // Escape overrides whatever error we think happened.
-    if (CurrentParamStatus.isErrorStatus()) {
+    if (CurrentParamStatus.isErrorStatus() &&
+        CurrentParamStatus.getKind() != ParameterStatus::Kind::Reported) {
       CurrentParamStatus = ParameterStatus::Escaped;
     }
   }
@@ -973,7 +974,7 @@ private:
   /// Return true if the given name has conventional suffixes.
   static bool hasConventionalSuffix(llvm::StringRef Name) {
     return llvm::any_of(CONVENTIONAL_SUFFIXES, [Name](llvm::StringRef Suffix) {
-      return Name.endswith(Suffix);
+      return Name.ends_with(Suffix);
     });
   }
 

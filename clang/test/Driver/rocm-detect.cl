@@ -1,11 +1,9 @@
-// REQUIRES: amdgpu-registered-target
-
 // Make sure the appropriate device specific library is available.
 
 // We don't include every target in the test directory, so just pick a valid
 // target not included in the test.
 
-// RUN: %clang -### -v -target amdgcn-amd-amdhsa -mcpu=gfx902 \
+// RUN: not %clang -### -v --target=amdgcn-amd-amdhsa -mcpu=gfx902 \
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,GFX902-DEFAULTLIBS %s
 

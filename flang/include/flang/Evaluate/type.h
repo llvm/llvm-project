@@ -183,6 +183,7 @@ public:
   constexpr bool IsUnlimitedPolymorphic() const { // TYPE(*) or CLASS(*)
     return IsPolymorphic() && !derived_;
   }
+  bool IsLengthlessIntrinsicType() const;
   constexpr const semantics::DerivedTypeSpec &GetDerivedTypeSpec() const {
     return DEREF(derived_);
   }
@@ -207,6 +208,10 @@ public:
   // SAME_TYPE_AS (16.9.165); ignores type parameter values
   std::optional<bool> SameTypeAs(const DynamicType &) const;
 
+  // 7.5.2.4 type equivalence; like operator==(), but SEQUENCE/BIND(C)
+  // derived types can be structurally equivalent.
+  bool IsEquivalentTo(const DynamicType &) const;
+
   // Result will be missing when a symbol is absent or
   // has an erroneous type, e.g., REAL(KIND=666).
   static std::optional<DynamicType> From(const semantics::DeclTypeSpec &);
@@ -230,6 +235,12 @@ public:
       return std::nullopt;
     }
   }
+
+  // Get a copy of this dynamic type where charLengthParamValue_ is reset if it
+  // is not a constant expression. This avoids propagating symbol references in
+  // scopes where they do not belong. Returns the type unmodified if it is not
+  // a character or if the length is not explicit.
+  DynamicType DropNonConstantCharacterLength() const;
 
 private:
   // Special kind codes are used to distinguish the following Fortran types.
@@ -261,8 +272,6 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
-std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
-
 template <TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
   static constexpr TypeCategory category{CATEGORY};
   static constexpr int kind{KIND};
@@ -284,7 +293,10 @@ class Type<TypeCategory::Real, KIND>
 public:
   static constexpr int precision{common::PrecisionOfRealKind(KIND)};
   static constexpr int bits{common::BitsForBinaryPrecision(precision)};
-  using Scalar = value::Real<value::Integer<bits>, precision>;
+  using Scalar =
+      value::Real<std::conditional_t<precision == 64,
+                      value::X87IntegerContainer, value::Integer<bits>>,
+          precision>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.
@@ -473,7 +485,8 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(const DynamicType &,
+// Returns nullopt for deferred, assumed, and non-constant lengths.
+std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &,
     const common::LanguageFeatureControl * = nullptr,
     bool checkCharLength = true);
 bool IsCUDAIntrinsicType(const DynamicType &);

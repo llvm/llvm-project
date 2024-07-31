@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/ExecutionEngine/RunnerUtils.h"
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #ifdef _WIN32
 #define EXPORT __declspec(dllexport)

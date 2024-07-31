@@ -1,3 +1,28 @@
+if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(printf_config_copts)
+  list(PREPEND printf_config_copts "COMPILE_OPTIONS")
+endif()
+
+add_header_library(
+  printf_config
+  HDRS
+    printf_config.h
+  ${printf_config_copts}
+)
 
 add_header_library(
   core_structs
@@ -8,10 +33,8 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_object_library(
+add_header_library(
   parser
-  SRCS
-    parser.cpp
   HDRS
     parser.h
   DEPENDS
@@ -19,44 +42,12 @@ add_object_library(
     libc.src.__support.arg_list
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
-)
-
-add_object_library(
-  mock_parser
-  SRCS
-    parser.cpp
-  HDRS
-    parser.h
-  DEPENDS
-    .core_structs
-    libc.src.__support.arg_list
-    libc.src.__support.ctype_utils
-    libc.src.__support.str_to_integer
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.optional
-    libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-  COMPILE_OPTIONS
-    -DLIBC_COPT_MOCK_ARG_LIST
-)
-
-add_object_library(
-  string_writer
-  SRCS
-    string_writer.cpp
-  HDRS
-    string_writer.h
-  DEPENDS
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.memcpy_implementation
-    libc.src.string.memory_utils.memset_implementation
-    .core_structs
 )
 
 add_object_library(
@@ -66,7 +57,11 @@ add_object_library(
   HDRS
     writer.h
   DEPENDS
+    .core_structs
     libc.src.__support.CPP.string_view
+    libc.src.__support.macros.optimization
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_object_library(
@@ -85,23 +80,23 @@ add_object_library(
     float_inf_nan_converter.h
     float_hex_converter.h
     float_dec_converter.h
+    fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
   DEPENDS
-    .writer
     .core_structs
+    .printf_config
+    .writer
+    libc.src.__support.big_int
+    libc.src.__support.common
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.common
-    libc.src.__support.libc_assert
-    libc.src.__support.uint
-    libc.src.__support.uint128
-    libc.src.__support.integer_to_string
     libc.src.__support.float_to_string
-  COMPILE_OPTIONS
-    -DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.integer_to_string
+    libc.src.__support.libc_assert
+    libc.src.__support.uint128
 )
 
 
@@ -120,22 +115,10 @@ add_object_library(
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
-  # Not all platforms have a file implementation. If file is unvailable, and a 
+  # Not all platforms have a file implementation. If file is unvailable, and a
   # full build is requested, then we must skip all file based printf sections.
   return()
 endif()
-
-add_header_library(
-  file_writer
-  HDRS
-    file_writer.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.memset_implementation
-    .core_structs
-)
 
 add_header_library(
   vfprintf_internal
@@ -146,6 +129,6 @@ add_header_library(
     libc.src.__support.File.file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.file_writer
     libc.src.stdio.printf_core.writer
+  ${use_system_file}
 )

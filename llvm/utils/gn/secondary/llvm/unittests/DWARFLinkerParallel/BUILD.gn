@@ -2,13 +2,12 @@ import("//third-party/unittest/unittest.gni")
 
 unittest("DWARFLinkerParallelTests") {
   deps = [
-    "//llvm/lib/DWARFLinkerParallel",
+    "//llvm/lib/DWARFLinker/Parallel",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
     "DWARFLinkerTest.cpp",
     "StringPoolTest.cpp",
-    "StringTableTest.cpp",
   ]
 }

@@ -78,8 +78,9 @@ void test_assure_parse_is_called() {
   std::vector<parse_call_validator> arg{1};
 
   String result;
-  OutIt out             = std::back_inserter(result);
-  FormatCtxT format_ctx = test_format_context_create<OutIt, CharT>(out, std::make_format_args<FormatCtxT>(arg));
+  OutIt out = std::back_inserter(result);
+  [[maybe_unused]] FormatCtxT format_ctx =
+      test_format_context_create<OutIt, CharT>(out, std::make_format_args<FormatCtxT>(arg));
 
   { // parse not called
     [[maybe_unused]] const std::range_formatter<parse_call_validator, CharT> formatter;

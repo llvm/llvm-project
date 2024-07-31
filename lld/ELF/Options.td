@@ -36,9 +36,14 @@ multiclass B<string name, string help1, string help2> {
 
 defm auxiliary: Eq<"auxiliary", "Set DT_AUXILIARY field to the specified name">;
 
+def be8: F<"be8">, HelpText<"write a Big Endian ELF file using BE8 format (AArch32 only)">;
+
 def Bno_symbolic: F<"Bno-symbolic">, HelpText<"Don't bind default visibility defined symbols locally for -shared (default)">;
 
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind default visibility defined symbols locally for -shared">;
+
+def Bsymbolic_non_weak: F<"Bsymbolic-non-weak">,
+  HelpText<"Bind default visibility defined STB_GLOBAL symbols locally for -shared">;
 
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
   HelpText<"Bind default visibility defined function symbols locally for -shared">;
@@ -52,7 +57,7 @@ def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
 def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
-def : F<"build-id">, Alias<build_id>, AliasArgs<["fast"]>, HelpText<"Alias for --build-id=fast">;
+def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
@@ -61,6 +66,12 @@ defm check_sections: B<"check-sections",
 defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
   MetaVarName<"[none,zlib,zstd]">;
+
+defm compress_sections: EEq<"compress-sections",
+  "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
+  "The sections remain uncompressed if compressed content would be larger. "
+  "The compression level is <level> (if specified) or a default speed-focused level">,
+  MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
@@ -79,6 +90,18 @@ defm split_stack_adjust_size
       MetaVarName<"<value>">;
 
 def O: JoinedOrSeparate<["-"], "O">, HelpText<"Optimize output file size">;
+
+def cmse_implib: FF<"cmse-implib">,
+  HelpText<"Make the output library to be a CMSE secure code import library">;
+
+defm in_implib: EEq<"in-implib",
+    "Read an existing CMSE secure code import library and preserve entry function addresses in the "
+    "resulting new CMSE secure code import library (optional when creating a CMSE secure image)">,
+  MetaVarName<"<file>">;
+
+defm out_implib: EEq<"out-implib",
+    "Output the CMSE secure code import library to <file> (required when creating a CMSE secure image)">,
+  MetaVarName<"<file>">;
 
 defm Tbss: Eq<"Tbss", "Same as --section-start with .bss as the sectionname">;
 
@@ -111,9 +134,12 @@ defm as_needed: B<"as-needed",
 defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 
-defm call_graph_profile_sort: BB<"call-graph-profile-sort",
-    "Reorder sections with call graph profile (default)",
-    "Do not reorder sections with call graph profile">;
+def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
+  HelpText<"Reorder input sections with call graph profile using the specified algorithm (default: cdsort)">,
+  MetaVarName<"[none,hfsort,cdsort]">,
+  Values<"none,hfsort,cdsort">;
+def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
+  Flags<[HelpHidden]>;
 
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
@@ -128,6 +154,12 @@ def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<
 
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
+
+defm debug_names: BB<"debug-names",
+    "Generate a merged .debug_names section",
+    "Do not generate a merged .debug_names section (default)">;
+
+defm default_script: EEq<"default-script", "In the absence of --script, read this default linker script">;
 
 defm demangle: B<"demangle",
     "Demangle symbol names (default)",
@@ -165,6 +197,9 @@ def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
 
 def enable_new_dtags: F<"enable-new-dtags">,
   HelpText<"Enable new dynamic tags (default)">;
+
+def enable_non_contiguous_regions : FF<"enable-non-contiguous-regions">,
+  HelpText<"Spill input sections to later matching output sections to avoid memory region overflow">;
 
 def end_group: F<"end-group">,
   HelpText<"Ignored for compatibility with GNU unless you pass --warn-backrefs">;
@@ -218,6 +253,9 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
 
 def fix_cortex_a8: F<"fix-cortex-a8">,
   HelpText<"Apply fixes for ARM Cortex-A8 erratum 657417">;
+
+def force_group_allocation: FF<"force-group-allocation">,
+  HelpText<"Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well">;
 
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;
@@ -287,6 +325,9 @@ def no_dynamic_linker: F<"no-dynamic-linker">,
 
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
+
+def no_warn_mismatch: F<"no-warn-mismatch">,
+  HelpText<"Suppress errors for certain unknown seciton types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
@@ -524,6 +565,7 @@ HelpText<"Format diagnostics for Visual Studio compatibility">;
 def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
 
 // Aliases
+def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
 def: F<"dy">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
@@ -563,12 +605,17 @@ def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undef
 def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
 
 // LTO-related options.
+
+def lto: JJ<"lto=">, HelpText<"Set LTO backend">,
+                 MetaVarName<"[full,thin]">;
 def lto_aa_pipeline: JJ<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_emit_llvm: FF<"lto-emit-llvm">,
+  HelpText<"Emit LLVM-IR bitcode">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -584,9 +631,14 @@ def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
 defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">;
+defm lto_known_safe_vtables : EEq<"lto-known-safe-vtables",
+  "When --lto-validate-all-vtables-have-type-infos is enabled, skip validation on these vtables (_ZTV symbols)">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+defm lto_validate_all_vtables_have_type_infos: BB<"lto-validate-all-vtables-have-type-infos",
+  "Validate that all vtables have type infos for LTO link",
+  "Do not validate that all vtables have type infos for LTO link">;
 defm lto_whole_program_visibility: BB<"lto-whole-program-visibility",
   "Asserts that the LTO link has whole program visibility",
   "Asserts that the LTO link does not have whole program visibility">;
@@ -609,6 +661,9 @@ def save_temps_eq: JJ<"save-temps=">, HelpText<"Save select intermediate LTO com
   Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
+defm lto_basic_block_address_map: BB<"lto-basic-block-address-map",
+  "Emit basic block address map for LTO",
+  "Do not emit basic block address map for LTO (default)">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
@@ -630,6 +685,10 @@ def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
 
+defm fat_lto_objects: BB<"fat-lto-objects",
+    "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
+    "Ignore the .llvm.lto section in relocatable object files (default).">;
+
 def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for --lto-O">;
 def: F<"plugin-opt=debug-pass-manager">,
   Alias<lto_debug_pass_manager>, HelpText<"Alias for --lto-debug-pass-manager">;
@@ -638,7 +697,8 @@ def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
 def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
   Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
-def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">,
+  Alias<lto_emit_llvm>, HelpText<"Alias for --lto-emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
@@ -649,8 +709,6 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
-def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
-  HelpText<"Use opaque pointers in IR during LTO (default)">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;
@@ -716,7 +774,6 @@ def: FF<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
-def: F<"no-warn-mismatch">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
 def: F<"secure-plt">;

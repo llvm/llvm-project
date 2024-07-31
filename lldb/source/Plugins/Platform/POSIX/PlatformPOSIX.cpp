@@ -678,8 +678,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     loaded_image->Clear();
 
   std::string path;
-  path = remote_file.GetPath();
-  
+  path = remote_file.GetPath(false);
+
   ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
   if (!thread_sp) {
     error.SetErrorString("dlopen error: no thread available to call dlopen.");
@@ -949,7 +949,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-  if (image_addr == LLDB_INVALID_ADDRESS)
+  if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
     return Status("Invalid image token");
 
   StreamString expr;

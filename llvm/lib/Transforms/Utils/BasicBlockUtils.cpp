@@ -194,7 +194,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   // Don't break unwinding instructions or terminators with other side-effects.
   Instruction *PTI = PredBB->getTerminator();
-  if (PTI->isExceptionalTerminator() || PTI->mayHaveSideEffects())
+  if (PTI->isSpecialTerminator() || PTI->mayHaveSideEffects())
     return false;
 
   // Can't merge if there are multiple distinct successors.
@@ -300,7 +300,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     PredBB->back().eraseFromParent();
 
     // Move terminator instruction.
-    PredBB->splice(PredBB->end(), BB);
+    BB->back().moveBeforePreserving(*PredBB, PredBB->end());
 
     // Terminator may be a memory accessing instruction too.
     if (MSSAU)
@@ -382,7 +382,67 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
 /// - Check fully overlapping fragments and not only identical fragments.
 /// - Support dbg.declare. dbg.label, and possibly other meta instructions being
 ///   part of the sequence of consecutive instructions.
+static bool
+DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
+  SmallDenseSet<DebugVariable> VariableSet;
+  for (auto &I : reverse(*BB)) {
+    for (DbgRecord &DR : reverse(I.getDbgRecordRange())) {
+      if (isa<DbgLabelRecord>(DR)) {
+        // Emulate existing behaviour (see comment below for dbg.declares).
+        // FIXME: Don't do this.
+        VariableSet.clear();
+        continue;
+      }
+
+      DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+      // Skip declare-type records, as the debug intrinsic method only works
+      // on dbg.value intrinsics.
+      if (DVR.getType() == DbgVariableRecord::LocationType::Declare) {
+        // The debug intrinsic method treats dbg.declares are "non-debug"
+        // instructions (i.e., a break in a consecutive range of debug
+        // intrinsics). Emulate that to create identical outputs. See
+        // "Possible improvements" above.
+        // FIXME: Delete the line below.
+        VariableSet.clear();
+        continue;
+      }
+
+      DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                        DVR.getDebugLoc()->getInlinedAt());
+      auto R = VariableSet.insert(Key);
+      // If the same variable fragment is described more than once it is enough
+      // to keep the last one (i.e. the first found since we for reverse
+      // iteration).
+      if (R.second)
+        continue;
+
+      if (DVR.isDbgAssign()) {
+        // Don't delete dbg.assign intrinsics that are linked to instructions.
+        if (!at::getAssignmentInsts(&DVR).empty())
+          continue;
+        // Unlinked dbg.assign intrinsics can be treated like dbg.values.
+      }
+
+      ToBeRemoved.push_back(&DVR);
+      continue;
+    }
+    // Sequence with consecutive dbg.value instrs ended. Clear the map to
+    // restart identifying redundant instructions if case we find another
+    // dbg.value sequence.
+    VariableSet.clear();
+  }
+
+  for (auto &DVR : ToBeRemoved)
+    DVR->eraseFromParent();
+
+  return !ToBeRemoved.empty();
+}
+
 static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
+  if (BB->IsNewDbgInfoFormat)
+    return DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BB);
+
   SmallVector<DbgValueInst *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
@@ -440,7 +500,89 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
 ///
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
+static bool
+DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
+  DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
+      VariableMap;
+  for (auto &I : *BB) {
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
+        continue;
+      DebugVariable Key(DVR.getVariable(), std::nullopt,
+                        DVR.getDebugLoc()->getInlinedAt());
+      auto VMI = VariableMap.find(Key);
+      // A dbg.assign with no linked instructions can be treated like a
+      // dbg.value (i.e. can be deleted).
+      bool IsDbgValueKind =
+          (!DVR.isDbgAssign() || at::getAssignmentInsts(&DVR).empty());
+
+      // Update the map if we found a new value/expression describing the
+      // variable, or if the variable wasn't mapped already.
+      SmallVector<Value *, 4> Values(DVR.location_ops());
+      if (VMI == VariableMap.end() || VMI->second.first != Values ||
+          VMI->second.second != DVR.getExpression()) {
+        if (IsDbgValueKind)
+          VariableMap[Key] = {Values, DVR.getExpression()};
+        else
+          VariableMap[Key] = {Values, nullptr};
+        continue;
+      }
+      // Don't delete dbg.assign intrinsics that are linked to instructions.
+      if (!IsDbgValueKind)
+        continue;
+      // Found an identical mapping. Remember the instruction for later removal.
+      ToBeRemoved.push_back(&DVR);
+    }
+  }
+
+  for (auto *DVR : ToBeRemoved)
+    DVR->eraseFromParent();
+
+  return !ToBeRemoved.empty();
+}
+
+static bool
+DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+  assert(BB->isEntryBlock() && "expected entry block");
+  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
+  DenseSet<DebugVariable> SeenDefForAggregate;
+  // Returns the DebugVariable for DVI with no fragment info.
+  auto GetAggregateVariable = [](const DbgVariableRecord &DVR) {
+    return DebugVariable(DVR.getVariable(), std::nullopt,
+                         DVR.getDebugLoc().getInlinedAt());
+  };
+
+  // Remove undef dbg.assign intrinsics that are encountered before
+  // any non-undef intrinsics from the entry block.
+  for (auto &I : *BB) {
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (!DVR.isDbgValue() && !DVR.isDbgAssign())
+        continue;
+      bool IsDbgValueKind =
+          (DVR.isDbgValue() || at::getAssignmentInsts(&DVR).empty());
+      DebugVariable Aggregate = GetAggregateVariable(DVR);
+      if (!SeenDefForAggregate.contains(Aggregate)) {
+        bool IsKill = DVR.isKillLocation() && IsDbgValueKind;
+        if (!IsKill) {
+          SeenDefForAggregate.insert(Aggregate);
+        } else if (DVR.isDbgAssign()) {
+          ToBeRemoved.push_back(&DVR);
+        }
+      }
+    }
+  }
+
+  for (DbgVariableRecord *DVR : ToBeRemoved)
+    DVR->eraseFromParent();
+
+  return !ToBeRemoved.empty();
+}
+
 static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
+  if (BB->IsNewDbgInfoFormat)
+    return DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BB);
+
   SmallVector<DbgValueInst *, 8> ToBeRemoved;
   DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
       VariableMap;
@@ -459,7 +601,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       SmallVector<Value *, 4> Values(DVI->getValues());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
-        // Use a sentinal value (nullptr) for the DIExpression when we see a
+        // Use a sentinel value (nullptr) for the DIExpression when we see a
         // linked dbg.assign so that the next debug intrinsic will never match
         // it (i.e. always treat linked dbg.assigns as if they're unique).
         if (IsDbgValueKind)
@@ -501,7 +643,10 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
 /// then (only) the instruction marked with (*) can be removed.
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
-static bool remomveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+static bool removeUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
+  if (BB->IsNewDbgInfoFormat)
+    return DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BB);
+
   assert(BB->isEntryBlock() && "expected entry block");
   SmallVector<DbgAssignIntrinsic *, 8> ToBeRemoved;
   DenseSet<DebugVariable> SeenDefForAggregate;
@@ -552,7 +697,7 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
   if (BB->isEntryBlock() &&
       isAssignmentTrackingEnabled(*BB->getParent()->getParent()))
-    MadeChanges |= remomveUndefDbgAssignsFromEntryBlock(BB);
+    MadeChanges |= removeUndefDbgAssignsFromEntryBlock(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
 
   if (MadeChanges)
@@ -639,7 +784,7 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // If the successor only has a single pred, split the top of the successor
     // block.
     assert(SP == BB && "CFG broken");
-    SP = nullptr;
+    (void)SP;
     return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, BBName,
                       /*Before=*/true);
   }
@@ -852,9 +997,11 @@ void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
         continue;
 
     // Otherwise a new PHI is needed. Create one and populate it.
-    PHINode *NewPN = PHINode::Create(
-        PN.getType(), Preds.size(), "split",
-        SplitBB->isLandingPad() ? &SplitBB->front() : SplitBB->getTerminator());
+    PHINode *NewPN = PHINode::Create(PN.getType(), Preds.size(), "split");
+    BasicBlock::iterator InsertPos =
+        SplitBB->isLandingPad() ? SplitBB->begin()
+                                : SplitBB->getTerminator()->getIterator();
+    NewPN->insertBefore(InsertPos);
     for (BasicBlock *BB : Preds)
       NewPN->addIncoming(V, BB);
 
@@ -877,7 +1024,7 @@ llvm::SplitAllCriticalEdges(Function &F,
   return NumBroken;
 }
 
-static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
+static BasicBlock *SplitBlockImpl(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                   DomTreeUpdater *DTU, DominatorTree *DT,
                                   LoopInfo *LI, MemorySSAUpdater *MSSAU,
                                   const Twine &BBName, bool Before) {
@@ -887,7 +1034,7 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
                             DTU ? DTU : (DT ? &LocalDTU : nullptr), LI, MSSAU,
                             BBName);
   }
-  BasicBlock::iterator SplitIt = SplitPt->getIterator();
+  BasicBlock::iterator SplitIt = SplitPt;
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad()) {
     ++SplitIt;
     assert(SplitIt != SplitPt->getParent()->end());
@@ -933,14 +1080,14 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
   return New;
 }
 
-BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName,
                              bool Before) {
   return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName,
                         Before);
 }
-BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DomTreeUpdater *DTU, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName,
                              bool Before) {
@@ -948,12 +1095,12 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                         Before);
 }
 
-BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
+BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                    DomTreeUpdater *DTU, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
                                    const Twine &BBName) {
 
-  BasicBlock::iterator SplitIt = SplitPt->getIterator();
+  BasicBlock::iterator SplitIt = SplitPt;
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
     ++SplitIt;
   std::string Name = BBName.str();
@@ -994,6 +1141,7 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
 }
 
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
+/// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       ArrayRef<BasicBlock *> Preds,
                                       DomTreeUpdater *DTU, DominatorTree *DT,
@@ -1137,14 +1285,11 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
       // If all incoming values for the new PHI would be the same, just don't
       // make a new PHI.  Instead, just remove the incoming values from the old
       // PHI.
-
-      // NOTE! This loop walks backwards for a reason! First off, this minimizes
-      // the cost of removal if we end up removing a large number of values, and
-      // second off, this ensures that the indices for the incoming values
-      // aren't invalidated when we remove one.
-      for (int64_t i = PN->getNumIncomingValues() - 1; i >= 0; --i)
-        if (PredSet.count(PN->getIncomingBlock(i)))
-          PN->removeIncomingValue(i, false);
+      PN->removeIncomingValueIf(
+          [&](unsigned Idx) {
+            return PredSet.contains(PN->getIncomingBlock(Idx));
+          },
+          /* DeletePHIIfEmpty */ false);
 
       // Add an incoming value to the PHI node in the loop for the preheader
       // edge.
@@ -1156,7 +1301,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
     // PHI.
     // Create the new PHI node, insert it into NewBB at the end of the block
     PHINode *NewPHI =
-        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI);
+        PHINode::Create(PN->getType(), Preds.size(), PN->getName() + ".ph", BI->getIterator());
 
     // NOTE! This loop walks backwards for a reason! First off, this minimizes
     // the cost of removal if we end up removing a large number of values, and
@@ -1257,13 +1402,13 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
   if (OldLatch) {
     BasicBlock *NewLatch = L->getLoopLatch();
     if (NewLatch != OldLatch) {
-      MDNode *MD = OldLatch->getTerminator()->getMetadata("llvm.loop");
-      NewLatch->getTerminator()->setMetadata("llvm.loop", MD);
+      MDNode *MD = OldLatch->getTerminator()->getMetadata(LLVMContext::MD_loop);
+      NewLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, MD);
       // It's still possible that OldLatch is the latch of another inner loop,
       // in which case we do not remove the metadata.
       Loop *IL = LI->getLoopFor(OldLatch);
       if (IL && IL->getLoopLatch() != OldLatch)
-        OldLatch->getTerminator()->setMetadata("llvm.loop", nullptr);
+        OldLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
     }
   }
 
@@ -1376,7 +1521,7 @@ static void SplitLandingPadPredecessorsImpl(
       assert(!LPad->getType()->isTokenTy() &&
              "Split cannot be applied if LPad is token type. Otherwise an "
              "invalid PHINode of token type would be created.");
-      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad);
+      PHINode *PN = PHINode::Create(LPad->getType(), 2, "lpad.phi", LPad->getIterator());
       PN->addIncoming(Clone1, NewBB1);
       PN->addIncoming(Clone2, NewBB2);
       LPad->replaceAllUsesWith(PN);
@@ -1390,17 +1535,6 @@ static void SplitLandingPadPredecessorsImpl(
   }
 }
 
-void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                       ArrayRef<BasicBlock *> Preds,
-                                       const char *Suffix1, const char *Suffix2,
-                                       SmallVectorImpl<BasicBlock *> &NewBBs,
-                                       DominatorTree *DT, LoopInfo *LI,
-                                       MemorySSAUpdater *MSSAU,
-                                       bool PreserveLCSSA) {
-  return SplitLandingPadPredecessorsImpl(
-      OrigBB, Preds, Suffix1, Suffix2, NewBBs,
-      /*DTU=*/nullptr, DT, LI, MSSAU, PreserveLCSSA);
-}
 void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                        ArrayRef<BasicBlock *> Preds,
                                        const char *Suffix1, const char *Suffix2,
@@ -1472,96 +1606,124 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 }
 
 Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
-                                             Instruction *SplitBefore,
+                                             BasicBlock::iterator SplitBefore,
                                              bool Unreachable,
                                              MDNode *BranchWeights,
                                              DomTreeUpdater *DTU, LoopInfo *LI,
                                              BasicBlock *ThenBlock) {
-  SmallVector<DominatorTree::UpdateType, 8> Updates;
-  BasicBlock *Head = SplitBefore->getParent();
-  BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
-  if (DTU) {
-    SmallPtrSet<BasicBlock *, 8> UniqueSuccessorsOfHead;
-    Updates.push_back({DominatorTree::Insert, Head, Tail});
-    Updates.reserve(Updates.size() + 2 * succ_size(Tail));
-    for (BasicBlock *SuccessorOfHead : successors(Tail))
-      if (UniqueSuccessorsOfHead.insert(SuccessorOfHead).second) {
-        Updates.push_back({DominatorTree::Insert, Tail, SuccessorOfHead});
-        Updates.push_back({DominatorTree::Delete, Head, SuccessorOfHead});
-      }
-  }
-  Instruction *HeadOldTerm = Head->getTerminator();
-  LLVMContext &C = Head->getContext();
-  Instruction *CheckTerm;
-  bool CreateThenBlock = (ThenBlock == nullptr);
-  if (CreateThenBlock) {
-    ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
-    if (Unreachable)
-      CheckTerm = new UnreachableInst(C, ThenBlock);
-    else {
-      CheckTerm = BranchInst::Create(Tail, ThenBlock);
-      if (DTU)
-        Updates.push_back({DominatorTree::Insert, ThenBlock, Tail});
-    }
-    CheckTerm->setDebugLoc(SplitBefore->getDebugLoc());
-  } else
-    CheckTerm = ThenBlock->getTerminator();
-  BranchInst *HeadNewTerm =
-      BranchInst::Create(/*ifTrue*/ ThenBlock, /*ifFalse*/ Tail, Cond);
-  if (DTU)
-    Updates.push_back({DominatorTree::Insert, Head, ThenBlock});
-  HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
-  ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
-
-  if (DTU)
-    DTU->applyUpdates(Updates);
-
-  if (LI) {
-    if (Loop *L = LI->getLoopFor(Head)) {
-      L->addBasicBlockToLoop(ThenBlock, *LI);
-      L->addBasicBlockToLoop(Tail, *LI);
-    }
-  }
-
-  return CheckTerm;
+  SplitBlockAndInsertIfThenElse(
+      Cond, SplitBefore, &ThenBlock, /* ElseBlock */ nullptr,
+      /* UnreachableThen */ Unreachable,
+      /* UnreachableElse */ false, BranchWeights, DTU, LI);
+  return ThenBlock->getTerminator();
 }
 
-void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
+Instruction *llvm::SplitBlockAndInsertIfElse(Value *Cond,
+                                             BasicBlock::iterator SplitBefore,
+                                             bool Unreachable,
+                                             MDNode *BranchWeights,
+                                             DomTreeUpdater *DTU, LoopInfo *LI,
+                                             BasicBlock *ElseBlock) {
+  SplitBlockAndInsertIfThenElse(
+      Cond, SplitBefore, /* ThenBlock */ nullptr, &ElseBlock,
+      /* UnreachableThen */ false,
+      /* UnreachableElse */ Unreachable, BranchWeights, DTU, LI);
+  return ElseBlock->getTerminator();
+}
+
+void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, BasicBlock::iterator SplitBefore,
                                          Instruction **ThenTerm,
                                          Instruction **ElseTerm,
                                          MDNode *BranchWeights,
-                                         DomTreeUpdater *DTU) {
-  BasicBlock *Head = SplitBefore->getParent();
+                                         DomTreeUpdater *DTU, LoopInfo *LI) {
+  BasicBlock *ThenBlock = nullptr;
+  BasicBlock *ElseBlock = nullptr;
+  SplitBlockAndInsertIfThenElse(
+      Cond, SplitBefore, &ThenBlock, &ElseBlock, /* UnreachableThen */ false,
+      /* UnreachableElse */ false, BranchWeights, DTU, LI);
 
+  *ThenTerm = ThenBlock->getTerminator();
+  *ElseTerm = ElseBlock->getTerminator();
+}
+
+void llvm::SplitBlockAndInsertIfThenElse(
+    Value *Cond, BasicBlock::iterator SplitBefore, BasicBlock **ThenBlock,
+    BasicBlock **ElseBlock, bool UnreachableThen, bool UnreachableElse,
+    MDNode *BranchWeights, DomTreeUpdater *DTU, LoopInfo *LI) {
+  assert((ThenBlock || ElseBlock) &&
+         "At least one branch block must be created");
+  assert((!UnreachableThen || !UnreachableElse) &&
+         "Split block tail must be reachable");
+
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
   SmallPtrSet<BasicBlock *, 8> UniqueOrigSuccessors;
-  if (DTU)
+  BasicBlock *Head = SplitBefore->getParent();
+  if (DTU) {
     UniqueOrigSuccessors.insert(succ_begin(Head), succ_end(Head));
+    Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
+  }
 
-  BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
-  Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
-  BasicBlock *ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
-  BasicBlock *ElseBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
-  *ThenTerm = BranchInst::Create(Tail, ThenBlock);
-  (*ThenTerm)->setDebugLoc(SplitBefore->getDebugLoc());
-  *ElseTerm = BranchInst::Create(Tail, ElseBlock);
-  (*ElseTerm)->setDebugLoc(SplitBefore->getDebugLoc());
+  BasicBlock *Tail = Head->splitBasicBlock(SplitBefore);
+  BasicBlock *TrueBlock = Tail;
+  BasicBlock *FalseBlock = Tail;
+  bool ThenToTailEdge = false;
+  bool ElseToTailEdge = false;
+
+  // Encapsulate the logic around creation/insertion/etc of a new block.
+  auto handleBlock = [&](BasicBlock **PBB, bool Unreachable, BasicBlock *&BB,
+                         bool &ToTailEdge) {
+    if (PBB == nullptr)
+      return; // Do not create/insert a block.
+
+    if (*PBB)
+      BB = *PBB; // Caller supplied block, use it.
+    else {
+      // Create a new block.
+      BB = BasicBlock::Create(C, "", Head->getParent(), Tail);
+      if (Unreachable)
+        (void)new UnreachableInst(C, BB);
+      else {
+        (void)BranchInst::Create(Tail, BB);
+        ToTailEdge = true;
+      }
+      BB->getTerminator()->setDebugLoc(SplitBefore->getDebugLoc());
+      // Pass the new block back to the caller.
+      *PBB = BB;
+    }
+  };
+
+  handleBlock(ThenBlock, UnreachableThen, TrueBlock, ThenToTailEdge);
+  handleBlock(ElseBlock, UnreachableElse, FalseBlock, ElseToTailEdge);
+
+  Instruction *HeadOldTerm = Head->getTerminator();
   BranchInst *HeadNewTerm =
-    BranchInst::Create(/*ifTrue*/ThenBlock, /*ifFalse*/ElseBlock, Cond);
+      BranchInst::Create(/*ifTrue*/ TrueBlock, /*ifFalse*/ FalseBlock, Cond);
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
+
   if (DTU) {
-    SmallVector<DominatorTree::UpdateType, 8> Updates;
-    Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
-    for (BasicBlock *Succ : successors(Head)) {
-      Updates.push_back({DominatorTree::Insert, Head, Succ});
-      Updates.push_back({DominatorTree::Insert, Succ, Tail});
-    }
+    Updates.emplace_back(DominatorTree::Insert, Head, TrueBlock);
+    Updates.emplace_back(DominatorTree::Insert, Head, FalseBlock);
+    if (ThenToTailEdge)
+      Updates.emplace_back(DominatorTree::Insert, TrueBlock, Tail);
+    if (ElseToTailEdge)
+      Updates.emplace_back(DominatorTree::Insert, FalseBlock, Tail);
     for (BasicBlock *UniqueOrigSuccessor : UniqueOrigSuccessors)
-      Updates.push_back({DominatorTree::Insert, Tail, UniqueOrigSuccessor});
+      Updates.emplace_back(DominatorTree::Insert, Tail, UniqueOrigSuccessor);
     for (BasicBlock *UniqueOrigSuccessor : UniqueOrigSuccessors)
-      Updates.push_back({DominatorTree::Delete, Head, UniqueOrigSuccessor});
+      Updates.emplace_back(DominatorTree::Delete, Head, UniqueOrigSuccessor);
     DTU->applyUpdates(Updates);
+  }
+
+  if (LI) {
+    if (Loop *L = LI->getLoopFor(Head); L) {
+      if (ThenToTailEdge)
+        L->addBasicBlockToLoop(TrueBlock, *LI);
+      if (ElseToTailEdge)
+        L->addBasicBlockToLoop(FalseBlock, *LI);
+      L->addBasicBlockToLoop(Tail, *LI);
+    }
   }
 }
 
@@ -1572,7 +1734,7 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
 
   auto *Ty = End->getType();
-  auto &DL = SplitBefore->getModule()->getDataLayout();
+  auto &DL = SplitBefore->getDataLayout();
   const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
 
   IRBuilder<> Builder(LoopBody->getTerminator());
@@ -1746,23 +1908,30 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto Phi = cast<PHINode>(I);
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
-                        Phi->getName() + ".moved", &FirstGuardBlock->front());
+                        Phi->getName() + ".moved", FirstGuardBlock->begin());
+    bool AllUndef = true;
     for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
         V = NewPhi;
       } else if (Phi->getBasicBlockIndex(In) != -1) {
         V = Phi->removeIncomingValue(In, false);
+        AllUndef &= isa<UndefValue>(V);
       }
       NewPhi->addIncoming(V, In);
     }
     assert(NewPhi->getNumIncomingValues() == Incoming.size());
+    Value *NewV = NewPhi;
+    if (AllUndef) {
+      NewPhi->eraseFromParent();
+      NewV = UndefValue::get(Phi->getType());
+    }
     if (Phi->getNumOperands() == 0) {
-      Phi->replaceAllUsesWith(NewPhi);
+      Phi->replaceAllUsesWith(NewV);
       I = Phi->eraseFromParent();
       continue;
     }
-    Phi->addIncoming(NewPhi, GuardBlock);
+    Phi->addIncoming(NewV, GuardBlock);
     ++I;
   }
 }
@@ -1865,7 +2034,7 @@ static void calcPredicateUsingInteger(
       Value *Id1 = ConstantInt::get(Type::getInt32Ty(Context),
                                     std::distance(Outgoing.begin(), Succ1Iter));
       IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
-                                      In->getTerminator());
+                                      In->getTerminator()->getIterator());
     } else {
       // Get the index of the non-null successor.
       auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);
@@ -2048,4 +2217,26 @@ void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
 
   PBI->setCondition(NewCond);
   PBI->swapSuccessors();
+}
+
+bool llvm::hasOnlySimpleTerminator(const Function &F) {
+  for (auto &BB : F) {
+    auto *Term = BB.getTerminator();
+    if (!(isa<ReturnInst>(Term) || isa<UnreachableInst>(Term) ||
+          isa<BranchInst>(Term)))
+      return false;
+  }
+  return true;
+}
+
+bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                         const BasicBlock &Dest) {
+  assert(Src.getParent() == Dest.getParent());
+  if (!Src.getParent()->isPresplitCoroutine())
+    return false;
+  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
+    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
+      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
+             SW->getDefaultDest() == &Dest;
+  return false;
 }

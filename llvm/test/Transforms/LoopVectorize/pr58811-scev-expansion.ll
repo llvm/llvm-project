@@ -27,22 +27,12 @@ define void @test1_pr58811() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 0, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 1, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 2, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 3, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[OFFSET_IDX]], [[TMP8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_3_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_3_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
@@ -132,22 +122,12 @@ define void @test2_pr58811() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 0, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 1, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 2, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 3, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[OFFSET_IDX]], [[TMP8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
@@ -220,22 +200,12 @@ define void @test3_pr58811() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 0, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 1, [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 2, [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[OFFSET_IDX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 3, [[TMP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[TMP3]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]

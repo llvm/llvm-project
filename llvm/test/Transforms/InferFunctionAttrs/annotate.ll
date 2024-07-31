@@ -2,7 +2,7 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
-; RUN: opt < %s -mtriple=powerpc-ibm-aix-xcoff -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-AIX %s
+; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-AIX %s
 
 declare i32 @__nvvm_reflect(ptr)
 ; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(ptr noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
@@ -800,8 +800,26 @@ declare ptr @vec_realloc(ptr, i64)
 ; CHECK: declare noundef ptr @realpath(ptr nocapture noundef readonly, ptr noundef) [[NOFREE_NOUNWIND]]
 declare ptr @realpath(ptr, ptr)
 
+; CHECK: declare double @remainder(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @remainder(double, double)
+
+; CHECK: declare float @remainderf(float, float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @remainderf(float, float)
+
+; CHECK: declare x86_fp80 @remainderl(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
+
 ; CHECK: declare noundef i32 @remove(ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @remove(ptr)
+
+; CHECK: declare double @remquo(double, double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @remquo(double, double, ptr)
+
+; CHECK: declare float @remquof(float, float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @remquof(float, float, ptr)
+
+; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
 
 ; CHECK: declare noundef i32 @rename(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @rename(ptr, ptr)
@@ -1070,6 +1088,8 @@ declare i32 @vsscanf(ptr, ptr, ptr)
 ; CHECK: declare noundef i64 @write(i32 noundef, ptr nocapture noundef readonly, i64 noundef) [[NOFREE]]
 declare i64 @write(i32, ptr, i64)
 
+; CHECK: declare void @abort() [[NOFREE_COLD:#[0-9]+]]
+declare void @abort()
 
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
@@ -1096,6 +1116,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nofree nounwind memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[NOFREE_COLD]] = { cold nofree }
 
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind memory(none) }
 

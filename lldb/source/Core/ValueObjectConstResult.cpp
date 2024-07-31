@@ -216,10 +216,13 @@ std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
 
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }
 
-size_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 ConstString ValueObjectConstResult::GetTypeName() {
@@ -264,12 +267,6 @@ lldb::addr_t ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address,
   return m_impl.GetAddressOf(scalar_is_load_address, address_type);
 }
 
-ValueObject *ValueObjectConstResult::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  return m_impl.CreateChildAtIndex(idx, synthetic_array_member,
-                                   synthetic_index);
-}
-
 size_t ValueObjectConstResult::GetPointeeData(DataExtractor &data,
                                               uint32_t item_idx,
                                               uint32_t item_count) {
@@ -294,7 +291,7 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResult::Cast(const CompilerType &compiler_type) {
+ValueObjectConstResult::DoCast(const CompilerType &compiler_type) {
   return m_impl.Cast(compiler_type);
 }
 

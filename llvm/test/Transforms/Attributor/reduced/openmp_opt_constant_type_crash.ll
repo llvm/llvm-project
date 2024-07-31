@@ -66,6 +66,17 @@ cond.end:                                         ; preds = %cond.true, %entry
 !1 = !{i32 7, !"openmp-device", i32 50}
 ; CHECK-LABEL: define {{[^@]+}}@_ZN6Kokkos4ViewIPdJNS_12LayoutStrideENS_6DeviceINS_12Experimental12OpenMPTargetENS_18ScratchMemorySpaceIS5_EEEENS_12MemoryTraitsILj1EEEEEC2IPS1_JNS_11LayoutRightES7_SA_ENS_4Impl5ALL_tEJiEEERKNS0_IT_JDpT0_EEET1_DpT2_() {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @_ZN6Kokkos4Impl11ViewMappingIvJNS_10ViewTraitsIPPdJNS_11LayoutRightENS_18ScratchMemorySpaceINS_12Experimental12OpenMPTargetEEENS_12MemoryTraitsILj1EEEEEENS0_5ALL_tEiEE6assignINS2_IS3_JNS_12LayoutStrideENS_6DeviceIS8_S9_EESB_EEEEEvRNS1_IT_JvEEERKNS1_ISC_JvEEESD_i.internalized()
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK: Function Attrs: norecurse
+; CHECK-LABEL: define {{[^@]+}}@_ZN6Kokkos4Impl11ViewMappingIvJNS_10ViewTraitsIPPdJNS_11LayoutRightENS_18ScratchMemorySpaceINS_12Experimental12OpenMPTargetEEENS_12MemoryTraitsILj1EEEEEENS0_5ALL_tEiEE6assignINS2_IS3_JNS_12LayoutStrideENS_6DeviceIS8_S9_EESB_EEEEEvRNS1_IT_JvEEERKNS1_ISC_JvEEESD_i.internalized
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXTENTS11:%.*]] = alloca [0 x [0 x %"struct.Kokkos::Impl::SubviewExtents.448"]], i32 0, align 8, addrspace(5)
+; CHECK-NEXT:    [[EXTENTS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[EXTENTS11]] to ptr
+; CHECK-NEXT:    call void @_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EEC2IJLm0ELm0EEJNS0_5ALL_tEiEEERKNS0_13ViewDimensionIJXspT_EEEEDpT0_.internalized(ptr [[EXTENTS_ASCAST]])
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -75,6 +86,14 @@ cond.end:                                         ; preds = %cond.true, %entry
 ; CHECK-NEXT:    [[EXTENTS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[EXTENTS11]] to ptr
 ; CHECK-NEXT:    call void @_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EEC2IJLm0ELm0EEJNS0_5ALL_tEiEEERKNS0_13ViewDimensionIJXspT_EEEEDpT0_(ptr [[EXTENTS_ASCAST]])
 ; CHECK-NEXT:    call void @_ZN6Kokkos4Impl10ViewOffsetINS0_13ViewDimensionIJLm0EEEENS_12LayoutStrideEvEC2INS2_IJLm0ELm0EEEENS_11LayoutRightEEERKNS1_IT_T0_vEERKNS0_14SubviewExtentsIXsrS9_4rankELj1EEE(ptr [[EXTENTS_ASCAST]])
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK: Function Attrs: norecurse nosync nounwind memory(argmem: write)
+; CHECK-LABEL: define {{[^@]+}}@_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EEC2IJLm0ELm0EEJNS0_5ALL_tEiEEERKNS0_13ViewDimensionIJXspT_EEEEDpT0_.internalized
+; CHECK-SAME: (ptr [[THIS:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EE3setIJLm0ELm0EEJiEEEbjjRKNS0_13ViewDimensionIJXspT_EEEENS0_5ALL_tEDpT0_.internalized(ptr writeonly [[THIS]])
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -91,6 +110,13 @@ cond.end:                                         ; preds = %cond.true, %entry
 ; CHECK-NEXT:    [[CALL191:%.*]] = call i32 @_ZNK6Kokkos4Impl14SubviewExtentsILj2ELj1EE11range_indexIiEEjT_(ptr [[SUB]])
 ; CHECK-NEXT:    [[CALL201:%.*]] = call i64 @_ZN6Kokkos4Impl10ViewOffsetINS0_13ViewDimensionIJLm0EEEENS_12LayoutStrideEvE6strideINS2_IJLm0ELm0EEEENS_11LayoutRightEEEmjRKNS1_IT_T0_vEE(i32 [[CALL191]])
 ; CHECK-NEXT:    ret void
+;
+;
+; CHECK: Function Attrs: norecurse nosync nounwind memory(argmem: write)
+; CHECK-LABEL: define {{[^@]+}}@_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EE3setIJLm0ELm0EEJiEEEbjjRKNS0_13ViewDimensionIJXspT_EEEENS0_5ALL_tEDpT0_.internalized
+; CHECK-SAME: (ptr nocapture writeonly [[THIS:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@_ZN6Kokkos4Impl14SubviewExtentsILj2ELj1EE3setIJLm0ELm0EEJiEEEbjjRKNS0_13ViewDimensionIJXspT_EEEENS0_5ALL_tEDpT0_
@@ -119,6 +145,10 @@ cond.end:                                         ; preds = %cond.true, %entry
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP0]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
+;.
+; CHECK: attributes #[[ATTR0]] = { norecurse }
+; CHECK: attributes #[[ATTR1]] = { norecurse nosync nounwind memory(argmem: write) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

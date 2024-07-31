@@ -1,6 +1,6 @@
 ;; RUN:  opt -S -aarch64-stack-tagging %s -o - | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-unknown-eabi"
+target triple = "aarch64"
 
 define void @f() local_unnamed_addr #0  {
 S0:
@@ -27,7 +27,7 @@ S1:
 ; CHECK: call void @llvm.aarch64.settag(ptr %w, i64 48)
 ; CHECK-NOT: settag{{.*}}%v
   call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w) #1
-; CHECK: call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w.tag)
+; CHECK: call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w)
   %b1 = icmp eq i32 %t1, 0
   br i1 %b1, label %S2, label %S3
 ; CHECK-NOT: settag

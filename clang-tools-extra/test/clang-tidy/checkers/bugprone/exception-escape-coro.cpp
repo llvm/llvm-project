@@ -183,7 +183,6 @@ struct Promise<Task, void, ThrowInPromiseConstructor, ThrowInInitialSuspend,
 
 struct Evil {
   ~Evil() noexcept(false) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function '~Evil' which should not throw exceptions
     throw 42;
   }
 };

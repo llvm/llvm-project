@@ -6,18 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
+#define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 struct FileIOResult {
   size_t value;
@@ -38,15 +41,6 @@ class File {
 public:
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
 
-// Some platforms like the GPU build cannot support buffering due to extra
-// resource usage or hardware constraints. This function allows us to optimize
-// out the buffering portions of the code in the general implementation.
-#if defined(LIBC_TARGET_ARCH_IS_GPU)
-  static constexpr bool ENABLE_BUFFER = false;
-#else
-  static constexpr bool ENABLE_BUFFER = true;
-#endif
-
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
 
@@ -54,19 +48,8 @@ public:
   using ReadFunc = FileIOResult(File *, void *, size_t);
   // The SeekFunc is expected to return the current offset of the external
   // file position indicator.
-  using SeekFunc = ErrorOr<long>(File *, long, int);
+  using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
-  using FlushFunc = int(File *);
-  // CleanupFunc is a function which does the equivalent of this:
-  //
-  // void my_file_cleanup(File *f) {
-  //   MyFile *file = reinterpret_cast<MyFile *>(f);
-  //   delete file;
-  // }
-  //
-  // Essentially, it a function which calls the delete operator on the
-  // platform file object to cleanup resources held by it.
-  using CleanupFunc = void(File *);
 
   using ModeFlags = uint32_t;
 
@@ -96,15 +79,13 @@ public:
 private:
   enum class FileOp : uint8_t { NONE, READ, WRITE, SEEK };
 
-  // Platfrom specific functions which create new file objects should initialize
+  // Platform specific functions which create new file objects should initialize
   // these fields suitably via the constructor. Typically, they should be simple
   // syscall wrappers for the corresponding functionality.
   WriteFunc *platform_write;
   ReadFunc *platform_read;
   SeekFunc *platform_seek;
   CloseFunc *platform_close;
-  FlushFunc *platform_flush;
-  CleanupFunc *platform_cleanup;
 
   Mutex mutex;
 
@@ -152,26 +133,6 @@ private:
     FileLock(FileLock &&) = delete;
   };
 
-  // This is private function and is not to be called by the users of
-  // File and its derived classes. The correct way to close a file is
-  // to call the File::cleanup function.
-  int close() {
-    {
-      FileLock lock(this);
-      if (prev_op == FileOp::WRITE && pos > 0) {
-        auto buf_result = platform_write(this, buf, pos);
-        if (buf_result.has_error() || buf_result.value < pos) {
-          err = true;
-          return buf_result.error;
-        }
-      }
-      int result = platform_close(this);
-      if (result != 0)
-        return result;
-    }
-    return 0;
-  }
-
 protected:
   constexpr bool write_allowed() const {
     return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
@@ -184,15 +145,6 @@ protected:
                    static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
-  // The GPU build should not emit a destructor because we do not support global
-  // destructors in all cases and it is unneccessary without buffering.
-#if !defined(LIBC_TARGET_ARCH_IS_GPU)
-  ~File() {
-    if (own_buf)
-      delete buf;
-  }
-#endif
-
 public:
   // We want this constructor to be constexpr so that global file objects
   // like stdout do not require invocation of the constructor which can
@@ -202,28 +154,15 @@ public:
   // is zero. This way, we will not have to employ the semantics of
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 FlushFunc *ff, CleanupFunc *clf, uint8_t *buffer,
-                 size_t buffer_size, int buffer_mode, bool owned,
-                 ModeFlags modeflags)
+                 uint8_t *buffer, size_t buffer_size, int buffer_mode,
+                 bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), platform_flush(ff), platform_cleanup(clf),
-        mutex(false, false, false), ungetc_buf(0), buf(buffer),
-        bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
-        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
-        eof(false), err(false) {
-    if constexpr (ENABLE_BUFFER)
-      adjust_buf();
-  }
-
-  // Close |f| and cleanup resources held by it.
-  // Returns the non-zero error value if an error occurs when closing the
-  // file.
-  static int cleanup(File *f) {
-    int close_result = f->close();
-    if (close_result != 0)
-      return close_result;
-    f->platform_cleanup(f);
-    return 0;
+        platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
+                                  /*robust=*/false, /*pshared=*/false),
+        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
+        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
+        read_limit(0), eof(false), err(false) {
+    adjust_buf();
   }
 
   // Buffered write of |len| bytes from |data| without the file lock.
@@ -244,9 +183,9 @@ public:
     return read_unlocked(data, len);
   }
 
-  ErrorOr<int> seek(long offset, int whence);
+  ErrorOr<int> seek(off_t offset, int whence);
 
-  ErrorOr<long> tell();
+  ErrorOr<off_t> tell();
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
@@ -263,6 +202,35 @@ public:
   int ungetc(int c) {
     FileLock lock(this);
     return ungetc_unlocked(c);
+  }
+
+  // Does the following:
+  // 1. If in write mode, Write out any data present in the buffer.
+  // 2. Call platform_close.
+  // platform_close is expected to cleanup the complete file object.
+  int close() {
+    {
+      FileLock lock(this);
+      if (prev_op == FileOp::WRITE && pos > 0) {
+        auto buf_result = platform_write(this, buf, pos);
+        if (buf_result.has_error() || buf_result.value < pos) {
+          err = true;
+          return buf_result.error;
+        }
+      }
+    }
+
+    // If we own the buffer, delete it before calling the platform close
+    // implementation. The platform close should not need to access the buffer
+    // and we need to clean it up before the entire structure is removed.
+    if (own_buf)
+      delete buf;
+
+    // Platform close is expected to cleanup the file data structure which
+    // includes the file mutex. Hence, we call platform_close after releasing
+    // the file lock. Another thread doing file operations while a thread is
+    // closing the file is undefined behavior as per POSIX.
+    return platform_close(this);
   }
 
   // Sets the internal buffer to |buffer| with buffering mode |mode|.
@@ -335,16 +303,7 @@ private:
   }
 };
 
-// Platform specific file implementations can simply pass a pointer to a
-// a specialization of this function as the CleanupFunc argument to the
-// File constructor. The template type argument FileType should replaced
-// with the type of the platform specific file implementation.
-template <typename FileType> void cleanup_file(File *f) {
-  auto *file = reinterpret_cast<FileType *>(f);
-  delete file;
-}
-
-// The implementaiton of this function is provided by the platfrom_file
+// The implementaiton of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
 
@@ -356,6 +315,6 @@ extern File *stdin;
 extern File *stdout;
 extern File *stderr;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H

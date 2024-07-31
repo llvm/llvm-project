@@ -16,7 +16,7 @@
 
 // llvm-bc and llvm-ll outputs need to match regular suffixes
 // (unfortunately).
-// RUN: %clang %s -flto -save-temps -### 2> %t
+// RUN: %clang --target=x86_64-linux-gnu %s -flto -save-temps -### 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-SUFFIXES < %t %s
 //
 // CHECK-COMPILELINK-SUFFIXES: "-o" "{{.*}}lto.i" "-x" "c" "{{.*}}lto.c"
@@ -24,7 +24,7 @@
 // CHECK-COMPILELINK-SUFFIXES: "-o" "{{.*}}lto.o" {{.*}}"{{.*}}lto.bc"
 // CHECK-COMPILELINK-SUFFIXES: "{{.*}}a.{{(out|exe)}}" {{.*}}"{{.*}}lto.o"
 
-// RUN: %clang %s -flto -S -### 2> %t
+// RUN: %clang --target=x86_64-linux-gnu %s -flto -S -### 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILE-SUFFIXES < %t %s
 //
 // CHECK-COMPILE-SUFFIXES: "-o" "{{.*}}lto.s" "-x" "c" "{{.*}}lto.c"
@@ -105,3 +105,12 @@
 // FLTO-THIN: -flto=thin
 // FLTO-THIN-NOT: "-flto"
 // FLTO-THIN-NOT: -flto=full
+
+// -flto passes along an explicit GlobalISel flag.
+// RUN: %clang --target=riscv64-linux-gnu -### %s -flto -fglobal-isel 2> %t
+// RUN: FileCheck --check-prefix=CHECK-GISEL < %t %s
+// RUN: %clang --target=aarch64-linux-gnu -### %s -flto -fno-global-isel 2> %t
+// RUN: FileCheck --check-prefix=CHECK-DISABLE-GISEL < %t %s
+//
+// CHECK-GISEL:         "-plugin-opt=-global-isel=1"
+// CHECK-DISABLE-GISEL: "-plugin-opt=-global-isel=0"

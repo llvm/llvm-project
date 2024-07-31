@@ -11,9 +11,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -214,7 +214,7 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
   if (!TuneCPU.empty())
     CPUSchedModel = &getSchedModelForCPU(TuneCPU);
   else
-    CPUSchedModel = &MCSchedModel::GetDefaultSchedModel();
+    CPUSchedModel = &MCSchedModel::Default;
 }
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
@@ -319,7 +319,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
       errs() << "'" << CPU
              << "' is not a recognized processor for this target"
              << " (ignoring processor)\n";
-    return MCSchedModel::GetDefaultSchedModel();
+    return MCSchedModel::Default;
   }
   assert(CPUEntry->SchedModel && "Missing processor SchedModel value");
   return *CPUEntry->SchedModel;
@@ -334,6 +334,16 @@ MCSubtargetInfo::getInstrItineraryForCPU(StringRef CPU) const {
 void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
   InstrItins = InstrItineraryData(getSchedModel(), Stages, OperandCycles,
                                   ForwardingPaths);
+}
+
+std::vector<SubtargetFeatureKV>
+MCSubtargetInfo::getEnabledProcessorFeatures() const {
+  std::vector<SubtargetFeatureKV> EnabledFeatures;
+  auto IsEnabled = [&](const SubtargetFeatureKV &FeatureKV) {
+    return FeatureBits.test(FeatureKV.Value);
+  };
+  llvm::copy_if(ProcFeatures, std::back_inserter(EnabledFeatures), IsEnabled);
+  return EnabledFeatures;
 }
 
 std::optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {

@@ -27,12 +27,12 @@ struct rank : integral_constant<size_t, __array_rank(_Tp)> {};
 
 #else
 
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS rank
-    : public integral_constant<size_t, 0> {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS rank<_Tp[]>
-    : public integral_constant<size_t, rank<_Tp>::value + 1> {};
-template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS rank<_Tp[_Np]>
-    : public integral_constant<size_t, rank<_Tp>::value + 1> {};
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS rank : public integral_constant<size_t, 0> {};
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS rank<_Tp[]> : public integral_constant<size_t, rank<_Tp>::value + 1> {};
+template <class _Tp, size_t _Np>
+struct _LIBCPP_TEMPLATE_VIS rank<_Tp[_Np]> : public integral_constant<size_t, rank<_Tp>::value + 1> {};
 
 #endif // __has_builtin(__array_rank)
 

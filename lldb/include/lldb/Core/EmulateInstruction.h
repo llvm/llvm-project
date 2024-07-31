@@ -369,13 +369,15 @@ public:
 
   virtual bool ReadInstruction() = 0;
 
+  virtual std::optional<uint32_t> GetLastInstrSize() { return std::nullopt; }
+
   virtual bool EvaluateInstruction(uint32_t evaluate_options) = 0;
 
   virtual InstructionCondition GetInstructionCondition() {
     return UnconditionalCondition;
   }
 
-  virtual bool TestEmulation(Stream *out_stream, ArchSpec &arch,
+  virtual bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                              OptionValueDictionary *test_data) = 0;
 
   virtual std::optional<RegisterInfo>

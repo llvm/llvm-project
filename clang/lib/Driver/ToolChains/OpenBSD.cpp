@@ -30,13 +30,12 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfoList &Inputs,
                                       const ArgList &Args,
                                       const char *LinkingOutput) const {
-  const toolchains::OpenBSD &ToolChain =
-      static_cast<const toolchains::OpenBSD &>(getToolChain());
+  const auto &ToolChain = static_cast<const OpenBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
+  ArgStringList CmdArgs;
 
   claimNoWarnArgs(Args);
-  ArgStringList CmdArgs;
 
   switch (ToolChain.getArch()) {
   case llvm::Triple::x86:
@@ -45,8 +44,7 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--32");
     break;
 
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb: {
+  case llvm::Triple::arm: {
     StringRef MArch, MCPU;
     arm::getARMArchCPUFromArgs(Args, MArch, MCPU, /*FromAs*/ true);
     std::string Arch = arm::getARMTargetCPU(MCPU, MArch, Triple);
@@ -111,16 +109,17 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-  const toolchains::OpenBSD &ToolChain =
-      static_cast<const toolchains::OpenBSD &>(getToolChain());
+  const auto &ToolChain = static_cast<const OpenBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple &Triple = ToolChain.getTriple();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
+  const bool Static = Args.hasArg(options::OPT_static);
+  const bool Shared = Args.hasArg(options::OPT_shared);
+  const bool Profiling = Args.hasArg(options::OPT_pg);
+  const bool Pie = Args.hasArg(options::OPT_pie);
+  const bool Nopie = Args.hasArg(options::OPT_no_pie, options::OPT_nopie);
+  const bool Relocatable = Args.hasArg(options::OPT_r);
   ArgStringList CmdArgs;
-  bool Static = Args.hasArg(options::OPT_static);
-  bool Shared = Args.hasArg(options::OPT_shared);
-  bool Profiling = Args.hasArg(options::OPT_pg);
-  bool Pie = Args.hasArg(options::OPT_pie);
-  bool Nopie = Args.hasArg(options::OPT_nopie);
 
   // Silence warning for "clang -g foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_g_Group);
@@ -138,7 +137,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Arch == llvm::Triple::mips64el)
     CmdArgs.push_back("-EL");
 
-  if (!Args.hasArg(options::OPT_nostdlib) && !Shared) {
+  if (!Args.hasArg(options::OPT_nostdlib) && !Shared && !Relocatable) {
     CmdArgs.push_back("-e");
     CmdArgs.push_back("__start");
   }
@@ -149,10 +148,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
-    CmdArgs.push_back("-Bdynamic");
     if (Shared) {
       CmdArgs.push_back("-shared");
-    } else if (!Args.hasArg(options::OPT_r)) {
+    } else if (!Relocatable) {
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/usr/libexec/ld.so");
     }
@@ -163,14 +161,16 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
 
-  if (Arch == llvm::Triple::riscv64)
+  if (Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
@@ -196,9 +196,22 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_e,
-                            options::OPT_s, options::OPT_t,
-                            options::OPT_Z_Flag, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_T_Group, options::OPT_s, options::OPT_t});
+
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+                  D.getLTOMode() == LTOK_Thin);
+  }
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
@@ -208,7 +221,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
@@ -218,13 +231,30 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-lm");
     }
+
+    // Silence warnings when linking C code with a C++ '-stdlib' argument.
+    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
+
+    // Additional linker set-up and flags for Fortran. This is required in order
+    // to generate executables. As Fortran runtime depends on the C runtime,
+    // these dependencies need to be listed before the C runtime below (i.e.
+    // AddRunTimeLibs).
+    if (D.IsFlangMode()) {
+      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      if (Profiling)
+        CmdArgs.push_back("-lm_p");
+      else
+        CmdArgs.push_back("-lm");
+    }
+
     if (NeedsSanitizerDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
-      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     }
     if (NeedsXRayDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
-      linkXRayRuntimeDeps(ToolChain, CmdArgs);
+      linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     }
     // FIXME: For some reason GCC passes -lgcc before adding
     // the default system libraries. Just mimic this for now.
@@ -269,16 +299,15 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 SanitizerMask OpenBSD::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-
-  // For future use, only UBsan at the moment
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
-
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Vptr;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
   }
-
+  if (IsX86_64) {
+    Res |= SanitizerKind::KernelAddress;
+  }
   return Res;
 }
 
@@ -346,7 +375,8 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
   if (Component == "builtins") {
     SmallString<128> Path(getDriver().SysRoot);
     llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
-    return std::string(Path.str());
+    if (getVFS().exists(Path))
+      return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
   std::string CRTBasename =
@@ -354,7 +384,7 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
   llvm::sys::path::append(P, "lib", CRTBasename);
   // Checks if this is the base system case which uses a different location.
   if (getVFS().exists(P))
-    return std::string(P.str());
+    return std::string(P);
   return ToolChain::getCompilerRT(Args, Component, Type);
 }
 

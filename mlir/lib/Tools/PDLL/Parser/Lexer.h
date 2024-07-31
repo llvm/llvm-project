@@ -18,8 +18,6 @@ class SourceMgr;
 } // namespace llvm
 
 namespace mlir {
-struct LogicalResult;
-
 namespace pdll {
 class CodeCompleteContext;
 
@@ -57,6 +55,7 @@ public:
     kw_erase,
     kw_let,
     kw_Constraint,
+    kw_not,
     kw_Op,
     kw_OpName,
     kw_Pattern,

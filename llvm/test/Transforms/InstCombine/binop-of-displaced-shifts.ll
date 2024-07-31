@@ -4,10 +4,7 @@
 define i8 @shl_or(i8 %x) {
 ; CHECK-LABEL: define i8 @shl_or
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 22, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x
@@ -20,10 +17,7 @@ define i8 @shl_or(i8 %x) {
 define i8 @lshr_or(i8 %x) {
 ; CHECK-LABEL: define i8 @lshr_or
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i8 16, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = lshr i8 17, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = lshr i8 16, %x
@@ -36,10 +30,7 @@ define i8 @lshr_or(i8 %x) {
 define i8 @ashr_or(i8 %x) {
 ; CHECK-LABEL: define i8 @ashr_or
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i8 -64, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr i8 -128, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = ashr i8 -64, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = ashr i8 -64, %x
@@ -52,10 +43,7 @@ define i8 @ashr_or(i8 %x) {
 define i8 @shl_xor(i8 %x) {
 ; CHECK-LABEL: define i8 @shl_xor
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = xor i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 22, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x
@@ -68,10 +56,7 @@ define i8 @shl_xor(i8 %x) {
 define i8 @lshr_xor(i8 %x) {
 ; CHECK-LABEL: define i8 @lshr_xor
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i8 16, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = xor i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = lshr i8 17, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = lshr i8 16, %x
@@ -84,10 +69,7 @@ define i8 @lshr_xor(i8 %x) {
 define i8 @ashr_xor(i8 %x) {
 ; CHECK-LABEL: define i8 @ashr_xor
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i8 -128, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr i8 -64, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = xor i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = lshr i8 96, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = ashr i8 -128, %x
@@ -100,10 +82,7 @@ define i8 @ashr_xor(i8 %x) {
 define i8 @shl_and(i8 %x) {
 ; CHECK-LABEL: define i8 @shl_and
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 48, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 8, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = and i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 16, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 48, %x
@@ -116,10 +95,7 @@ define i8 @shl_and(i8 %x) {
 define i8 @lshr_and(i8 %x) {
 ; CHECK-LABEL: define i8 @lshr_and
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i8 48, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 64, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = and i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = lshr i8 32, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = lshr i8 48, %x
@@ -132,10 +108,7 @@ define i8 @lshr_and(i8 %x) {
 define i8 @ashr_and(i8 %x) {
 ; CHECK-LABEL: define i8 @ashr_and
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i8 -64, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr i8 -128, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = and i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = ashr i8 -64, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = ashr i8 -64, %x
@@ -148,10 +121,7 @@ define i8 @ashr_and(i8 %x) {
 define i8 @shl_add(i8 %x) {
 ; CHECK-LABEL: define i8 @shl_add
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 7, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = add i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 30, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x
@@ -180,9 +150,9 @@ define i8 @lshr_add_fail(i8 %x) {
 define i8 @ashr_add_fail(i8 %x) {
 ; CHECK-LABEL: define i8 @ashr_add_fail
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i8 -128, [[X]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr exact i8 -128, [[X]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr i8 -128, [[ADD]]
+; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr exact i8 -128, [[ADD]]
 ; CHECK-NEXT:    [[BINOP:%.*]] = add i8 [[SHIFT]], [[SHIFT2]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
@@ -196,10 +166,7 @@ define i8 @ashr_add_fail(i8 %x) {
 define i8 @shl_or_commuted(i8 %x) {
 ; CHECK-LABEL: define i8 @shl_or_commuted
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT2]], [[SHIFT]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 22, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x
@@ -212,10 +179,7 @@ define i8 @shl_or_commuted(i8 %x) {
 define <2 x i8> @shl_or_splat(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @shl_or_splat
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> <i8 16, i8 16>, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> <i8 3, i8 3>, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or <2 x i8> [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 22>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 16>, %x
@@ -228,10 +192,7 @@ define <2 x i8> @shl_or_splat(<2 x i8> %x) {
 define <2 x i8> @shl_or_non_splat(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @shl_or_non_splat
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> <i8 16, i8 32>, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 2>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> <i8 3, i8 7>, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or <2 x i8> [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 60>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 32>, %x
@@ -241,50 +202,41 @@ define <2 x i8> @shl_or_non_splat(<2 x i8> %x) {
   ret <2 x i8> %binop
 }
 
-define <2 x i8> @shl_or_undef_in_add(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x i8> @shl_or_undef_in_add
+define <2 x i8> @shl_or_poison_in_add(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @shl_or_poison_in_add
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> <i8 16, i8 16>, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 undef>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> <i8 3, i8 3>, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or <2 x i8> [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 poison>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 16>, %x
-  %add = add <2 x i8> %x, <i8 1, i8 undef>
+  %add = add <2 x i8> %x, <i8 1, i8 poison>
   %shift2 = shl <2 x i8> <i8 3, i8 3>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }
 
-define <2 x i8> @shl_or_undef_in_shift1(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x i8> @shl_or_undef_in_shift1
+define <2 x i8> @shl_or_poison_in_shift1(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @shl_or_poison_in_shift1
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> <i8 16, i8 undef>, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> <i8 3, i8 3>, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or <2 x i8> [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 poison>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
-  %shift = shl <2 x i8> <i8 16, i8 undef>, %x
+  %shift = shl <2 x i8> <i8 16, i8 poison>, %x
   %add = add <2 x i8> %x, <i8 1, i8 1>
   %shift2 = shl <2 x i8> <i8 3, i8 3>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }
 
-define <2 x i8> @shl_or_undef_in_shift2(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x i8> @shl_or_undef_in_shift2
+define <2 x i8> @shl_or_poison_in_shift2(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @shl_or_poison_in_shift2
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> <i8 16, i8 16>, [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> <i8 3, i8 undef>, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or <2 x i8> [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 poison>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 16>, %x
   %add = add <2 x i8> %x, <i8 1, i8 1>
-  %shift2 = shl <2 x i8> <i8 3, i8 undef>, %add
+  %shift2 = shl <2 x i8> <i8 3, i8 poison>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }
@@ -300,7 +252,7 @@ define i8 @shl_or_multiuse(i8 %x) {
 ; CHECK-NEXT:    call void @use(i8 [[SHIFT]])
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
 ; CHECK-NEXT:    call void @use(i8 [[SHIFT2]])
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 22, [[X]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x
@@ -319,7 +271,7 @@ define i8 @mismatched_shifts(i8 %x) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = or disjoint i8 [[SHIFT]], [[SHIFT2]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x
@@ -375,4 +327,33 @@ define <2 x i8> @shl_or_non_splat_out_of_range(<2 x i8> %x) {
   %shift2 = shl <2 x i8> <i8 3, i8 7>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
+}
+
+define i8 @shl_or_with_or_disjoint_instead_of_add(i8 %x) {
+; CHECK-LABEL: define i8 @shl_or_with_or_disjoint_instead_of_add
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[BINOP:%.*]] = shl i8 22, [[X]]
+; CHECK-NEXT:    ret i8 [[BINOP]]
+;
+  %shift = shl i8 16, %x
+  %add = or disjoint i8 %x, 1
+  %shift2 = shl i8 3, %add
+  %binop = or i8 %shift, %shift2
+  ret i8 %binop
+}
+
+define i8 @shl_or_with_or_instead_of_add(i8 %x) {
+; CHECK-LABEL: define i8 @shl_or_with_or_instead_of_add
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[X]], 1
+; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 3, [[ADD]]
+; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    ret i8 [[BINOP]]
+;
+  %shift = shl i8 16, %x
+  %add = or i8 %x, 1
+  %shift2 = shl i8 3, %add
+  %binop = or i8 %shift, %shift2
+  ret i8 %binop
 }

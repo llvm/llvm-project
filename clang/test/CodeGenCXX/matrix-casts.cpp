@@ -324,7 +324,7 @@ public:
 };
 
 Foo class_constructor_matrix_ty(matrix_5_5<int> m) {
-  // CHECK-LABEL: define void @_Z27class_constructor_matrix_tyu11matrix_typeILm5ELm5EiE(ptr noalias sret(%class.Foo) align 4 %agg.result, <25 x i32> noundef %m)
+  // CHECK-LABEL: define void @_Z27class_constructor_matrix_tyu11matrix_typeILm5ELm5EiE(ptr dead_on_unwind noalias writable sret(%class.Foo) align 4 %agg.result, <25 x i32> noundef %m)
   // CHECK:         [[M:%.*]]  = load <25 x i32>, ptr {{.*}}, align 4
   // CHECK-NEXT:    call void @_ZN3FooC1Eu11matrix_typeILm5ELm5EiE(ptr noundef nonnull align 4 dereferenceable(40) %agg.result, <25 x i32> noundef [[M]])
   // CHECK-NEXT:    ret void
@@ -338,7 +338,7 @@ struct Bar {
 };
 
 Bar struct_constructor_matrix_ty(matrix_4_4<float> m) {
-  // CHECK-LABEL: define void @_Z28struct_constructor_matrix_tyu11matrix_typeILm4ELm4EfE(ptr noalias sret(%struct.Bar) align 4 %agg.result, <16 x float> noundef %m)
+  // CHECK-LABEL: define void @_Z28struct_constructor_matrix_tyu11matrix_typeILm4ELm4EfE(ptr dead_on_unwind noalias writable sret(%struct.Bar) align 4 %agg.result, <16 x float> noundef %m)
   // CHECK:         [[M:%.*]] = load <16 x float>, ptr {{.*}}, align 4
   // CHECK-NEXT:    call void @_ZN3BarC1Eu11matrix_typeILm4ELm4EfE(ptr noundef nonnull align 4 dereferenceable(40) %agg.result, <16 x float> noundef [[M]])
   // CHECK-NEXT:    ret void

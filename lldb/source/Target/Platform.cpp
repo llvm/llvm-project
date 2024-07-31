@@ -19,7 +19,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -73,8 +72,8 @@ enum {
 
 } // namespace
 
-ConstString PlatformProperties::GetSettingName() {
-  static ConstString g_setting_name("platform");
+llvm::StringRef PlatformProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("platform");
   return g_setting_name;
 }
 
@@ -158,43 +157,9 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
 
 FileSpecList
 Platform::LocateExecutableScriptingResources(Target *target, Module &module,
-                                             Stream *feedback_stream) {
+                                             Stream &feedback_stream) {
   return FileSpecList();
 }
-
-// PlatformSP
-// Platform::FindPlugin (Process *process, ConstString plugin_name)
-//{
-//    PlatformCreateInstance create_callback = nullptr;
-//    if (plugin_name)
-//    {
-//        create_callback  =
-//        PluginManager::GetPlatformCreateCallbackForPluginName (plugin_name);
-//        if (create_callback)
-//        {
-//            ArchSpec arch;
-//            if (process)
-//            {
-//                arch = process->GetTarget().GetArchitecture();
-//            }
-//            PlatformSP platform_sp(create_callback(process, &arch));
-//            if (platform_sp)
-//                return platform_sp;
-//        }
-//    }
-//    else
-//    {
-//        for (uint32_t idx = 0; (create_callback =
-//        PluginManager::GetPlatformCreateCallbackAtIndex(idx)) != nullptr;
-//        ++idx)
-//        {
-//            PlatformSP platform_sp(create_callback(process, nullptr));
-//            if (platform_sp)
-//                return platform_sp;
-//        }
-//    }
-//    return PlatformSP();
-//}
 
 Status Platform::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
@@ -767,42 +732,6 @@ Status
 Platform::ResolveExecutable(const ModuleSpec &module_spec,
                             lldb::ModuleSP &exe_module_sp,
                             const FileSpecList *module_search_paths_ptr) {
-  Status error;
-
-  if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-    if (module_spec.GetArchitecture().IsValid()) {
-      error = ModuleList::GetSharedModule(module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-    } else {
-      // No valid architecture was specified, ask the platform for the
-      // architectures that we should be using (in the correct order) and see
-      // if we can find a match that way
-      ModuleSpec arch_module_spec(module_spec);
-      ArchSpec process_host_arch;
-      for (const ArchSpec &arch :
-           GetSupportedArchitectures(process_host_arch)) {
-        arch_module_spec.GetArchitecture() = arch;
-        error = ModuleList::GetSharedModule(arch_module_spec, exe_module_sp,
-                                            module_search_paths_ptr, nullptr,
-                                            nullptr);
-        // Did we find an executable using one of the
-        if (error.Success() && exe_module_sp)
-          break;
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormat(
-        "'%s' does not exist", module_spec.GetFileSpec().GetPath().c_str());
-  }
-  return error;
-}
-
-Status
-Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
-                            lldb::ModuleSP &exe_module_sp,
-                            const FileSpecList *module_search_paths_ptr) {
-  Status error;
 
   // We may connect to a process and use the provided executable (Don't use
   // local $PATH).
@@ -811,57 +740,57 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
   // Resolve any executable within a bundle on MacOSX
   Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
 
-  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
-      module_spec.GetUUID().IsValid()) {
-    if (resolved_module_spec.GetArchitecture().IsValid() ||
-        resolved_module_spec.GetUUID().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-
-      if (exe_module_sp && exe_module_sp->GetObjectFile())
-        return error;
-      exe_module_sp.reset();
-    }
-    // No valid architecture was specified or the exact arch wasn't found so
-    // ask the platform for the architectures that we should be using (in the
-    // correct order) and see if we can find a match that way
-    StreamString arch_names;
-    llvm::ListSeparator LS;
-    ArchSpec process_host_arch;
-    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
-      resolved_module_spec.GetArchitecture() = arch;
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-      // Did we find an executable using one of the
-      if (error.Success()) {
-        if (exe_module_sp && exe_module_sp->GetObjectFile())
-          break;
-        else
-          error.SetErrorToGenericError();
-      }
-
-      arch_names << LS << arch.GetArchitectureName();
-    }
-
-    if (error.Fail() || !exe_module_sp) {
-      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormatv(
-            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
-            resolved_module_spec.GetFileSpec(), GetPluginName(),
-            arch_names.GetData());
-      } else {
-        error.SetErrorStringWithFormatv("'{0}' is not readable",
-                                        resolved_module_spec.GetFileSpec());
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormatv("'{0}' does not exist",
+  if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) &&
+      !module_spec.GetUUID().IsValid())
+    return Status::createWithFormat("'{0}' does not exist",
                                     resolved_module_spec.GetFileSpec());
+
+  if (resolved_module_spec.GetArchitecture().IsValid() ||
+      resolved_module_spec.GetUUID().IsValid()) {
+    Status error =
+        ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                    module_search_paths_ptr, nullptr, nullptr);
+
+    if (exe_module_sp && exe_module_sp->GetObjectFile())
+      return error;
+    exe_module_sp.reset();
+  }
+  // No valid architecture was specified or the exact arch wasn't found.
+  // Ask the platform for the architectures that we should be using (in the
+  // correct order) and see if we can find a match that way.
+  StreamString arch_names;
+  llvm::ListSeparator LS;
+  ArchSpec process_host_arch;
+  Status error;
+  for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
+    resolved_module_spec.GetArchitecture() = arch;
+    error =
+        ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                    module_search_paths_ptr, nullptr, nullptr);
+    if (error.Success()) {
+      if (exe_module_sp && exe_module_sp->GetObjectFile())
+        break;
+      error.SetErrorToGenericError();
+    }
+
+    arch_names << LS << arch.GetArchitectureName();
   }
 
-  return error;
+  if (exe_module_sp && error.Success())
+    return {};
+
+  if (!FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec()))
+    return Status::createWithFormat("'{0}' is not readable",
+                                    resolved_module_spec.GetFileSpec());
+
+  if (!ObjectFile::IsObjectFile(resolved_module_spec.GetFileSpec()))
+    return Status::createWithFormat("'{0}' is not a valid executable",
+                                    resolved_module_spec.GetFileSpec());
+
+  return Status::createWithFormat(
+      "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+      resolved_module_spec.GetFileSpec(), GetPluginName(),
+      arch_names.GetData());
 }
 
 Status Platform::ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
@@ -990,6 +919,14 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   return match_count;
 }
 
+ProcessInstanceInfoList Platform::GetAllProcesses() {
+  ProcessInstanceInfoList processes;
+  ProcessInstanceInfoMatch match;
+  assert(match.MatchAllProcesses());
+  FindProcesses(match, processes);
+  return processes;
+}
+
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
   Log *log = GetLog(LLDBLog::Platform);
@@ -1060,7 +997,7 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
                                        Debugger &debugger, Target &target,
                                        Status &error) {
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOG(log, "target = {0})", &target);
+  LLDB_LOG(log, "target = {0}", &target);
 
   ProcessSP process_sp;
   // Make sure we stop at the entry point
@@ -1190,9 +1127,35 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   if (!source_file)
     return Status(source_file.takeError());
   Status error;
+
+  bool requires_upload = true;
+  llvm::ErrorOr<llvm::MD5::MD5Result> remote_md5 = CalculateMD5(destination);
+  if (std::error_code ec = remote_md5.getError()) {
+    LLDB_LOG(log, "[PutFile] couldn't get md5 sum of destination: {0}",
+             ec.message());
+  } else {
+    llvm::ErrorOr<llvm::MD5::MD5Result> local_md5 =
+        llvm::sys::fs::md5_contents(source.GetPath());
+    if (std::error_code ec = local_md5.getError()) {
+      LLDB_LOG(log, "[PutFile] couldn't get md5 sum of source: {0}",
+               ec.message());
+    } else {
+      LLDB_LOGF(log, "[PutFile] destination md5: %016" PRIx64 "%016" PRIx64,
+                remote_md5->high(), remote_md5->low());
+      LLDB_LOGF(log, "[PutFile]       local md5: %016" PRIx64 "%016" PRIx64,
+                local_md5->high(), local_md5->low());
+      requires_upload = *remote_md5 != *local_md5;
+    }
+  }
+
+  if (!requires_upload) {
+    LLDB_LOGF(log, "[PutFile] skipping PutFile because md5sums match");
+    return error;
+  }
+
   uint32_t permissions = source_file.get()->GetPermissions(error);
   if (permissions == 0)
-    permissions = lldb::eFilePermissionsFileDefault;
+    permissions = lldb::eFilePermissionsUserRWX;
 
   lldb::user_id_t dest_file = OpenFile(
       destination, File::eOpenOptionCanCreate | File::eOpenOptionWriteOnly |
@@ -1306,15 +1269,11 @@ lldb_private::Status Platform::RunShellCommand(
   return Status("unable to run a remote command without a platform");
 }
 
-bool Platform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                            uint64_t &high) {
+llvm::ErrorOr<llvm::MD5::MD5Result>
+Platform::CalculateMD5(const FileSpec &file_spec) {
   if (!IsHost())
-    return false;
-  auto Result = llvm::sys::fs::md5_contents(file_spec.GetPath());
-  if (!Result)
-    return false;
-  std::tie(high, low) = Result->words();
-  return true;
+    return std::make_error_code(std::errc::not_supported);
+  return llvm::sys::fs::md5_contents(file_spec.GetPath());
 }
 
 void Platform::SetLocalCacheDirectory(const char *local) {
@@ -1487,8 +1446,8 @@ Platform::GetCachedExecutable(ModuleSpec &module_spec,
   Status error = GetRemoteSharedModule(
       module_spec, nullptr, module_sp,
       [&](const ModuleSpec &spec) {
-        return ResolveRemoteExecutable(spec, module_sp,
-                                       module_search_paths_ptr);
+        return Platform::ResolveExecutable(spec, module_sp,
+                                           module_search_paths_ptr);
       },
       nullptr);
   if (error.Success()) {
@@ -1564,14 +1523,167 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     resolved_module_spec.GetUUID() = module_spec.GetUUID();
   }
 
-  // Trying to find a module by UUID on local file system.
-  const auto error = module_resolver(resolved_module_spec);
-  if (error.Fail()) {
-    if (GetCachedSharedModule(resolved_module_spec, module_sp, did_create_ptr))
-      return Status();
+  // Call locate module callback if set. This allows users to implement their
+  // own module cache system. For example, to leverage build system artifacts,
+  // to bypass pulling files from remote platform, or to search symbol files
+  // from symbol servers.
+  FileSpec symbol_file_spec;
+  CallLocateModuleCallbackIfSet(resolved_module_spec, module_sp,
+                                symbol_file_spec, did_create_ptr);
+  if (module_sp) {
+    // The module is loaded.
+    if (symbol_file_spec) {
+      // 1. module_sp:loaded, symbol_file_spec:set
+      //      The callback found a module file and a symbol file for this
+      //      resolved_module_spec. Set the symbol file to the module.
+      module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+    } else {
+      // 2. module_sp:loaded, symbol_file_spec:empty
+      //      The callback only found a module file for this
+      //      resolved_module_spec.
+    }
+    return Status();
   }
 
-  return error;
+  // The module is not loaded by CallLocateModuleCallbackIfSet.
+  // 3. module_sp:empty, symbol_file_spec:set
+  //      The callback only found a symbol file for the module. We continue to
+  //      find a module file for this resolved_module_spec. and we will call
+  //      module_sp->SetSymbolFileFileSpec with the symbol_file_spec later.
+  // 4. module_sp:empty, symbol_file_spec:empty
+  //      The callback is not set. Or the callback did not find any module
+  //      files nor any symbol files. Or the callback failed, or something
+  //      went wrong. We continue to find a module file for this
+  //      resolved_module_spec.
+
+  // Trying to find a module by UUID on local file system.
+  const Status error = module_resolver(resolved_module_spec);
+  if (error.Success()) {
+    if (module_sp && symbol_file_spec) {
+      // Set the symbol file to the module if the locate modudle callback was
+      // called and returned only a symbol file.
+      module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+    }
+    return error;
+  }
+
+  // Fallback to call GetCachedSharedModule on failure.
+  if (GetCachedSharedModule(resolved_module_spec, module_sp, did_create_ptr)) {
+    if (module_sp && symbol_file_spec) {
+      // Set the symbol file to the module if the locate modudle callback was
+      // called and returned only a symbol file.
+      module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+    }
+    return Status();
+  }
+
+  return Status("Failed to call GetCachedSharedModule");
+}
+
+void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
+                                             lldb::ModuleSP &module_sp,
+                                             FileSpec &symbol_file_spec,
+                                             bool *did_create_ptr) {
+  if (!m_locate_module_callback) {
+    // Locate module callback is not set.
+    return;
+  }
+
+  FileSpec module_file_spec;
+  Status error =
+      m_locate_module_callback(module_spec, module_file_spec, symbol_file_spec);
+
+  // Locate module callback is set and called. Check the error.
+  Log *log = GetLog(LLDBLog::Platform);
+  if (error.Fail()) {
+    LLDB_LOGF(log, "%s: locate module callback failed: %s",
+              LLVM_PRETTY_FUNCTION, error.AsCString());
+    return;
+  }
+
+  // The locate module callback was succeeded.
+  // Check the module_file_spec and symbol_file_spec values.
+  // 1. module:empty  symbol:empty  -> Failure
+  //    - The callback did not return any files.
+  // 2. module:exists symbol:exists -> Success
+  //    - The callback returned a module file and a symbol file.
+  // 3. module:exists symbol:empty  -> Success
+  //    - The callback returned only a module file.
+  // 4. module:empty  symbol:exists -> Success
+  //    - The callback returned only a symbol file.
+  //      For example, a breakpad symbol text file.
+  if (!module_file_spec && !symbol_file_spec) {
+    // This is '1. module:empty  symbol:empty  -> Failure'
+    // The callback did not return any files.
+    LLDB_LOGF(log,
+              "%s: locate module callback did not set both "
+              "module_file_spec and symbol_file_spec",
+              LLVM_PRETTY_FUNCTION);
+    return;
+  }
+
+  // If the callback returned a module file, it should exist.
+  if (module_file_spec && !FileSystem::Instance().Exists(module_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: locate module callback set a non-existent file to "
+              "module_file_spec: %s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str());
+    // Clear symbol_file_spec for the error.
+    symbol_file_spec.Clear();
+    return;
+  }
+
+  // If the callback returned a symbol file, it should exist.
+  if (symbol_file_spec && !FileSystem::Instance().Exists(symbol_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: locate module callback set a non-existent file to "
+              "symbol_file_spec: %s",
+              LLVM_PRETTY_FUNCTION, symbol_file_spec.GetPath().c_str());
+    // Clear symbol_file_spec for the error.
+    symbol_file_spec.Clear();
+    return;
+  }
+
+  if (!module_file_spec && symbol_file_spec) {
+    // This is '4. module:empty  symbol:exists -> Success'
+    // The locate module callback returned only a symbol file. For example,
+    // a breakpad symbol text file. GetRemoteSharedModule will use this returned
+    // symbol_file_spec.
+    LLDB_LOGF(log, "%s: locate module callback succeeded: symbol=%s",
+              LLVM_PRETTY_FUNCTION, symbol_file_spec.GetPath().c_str());
+    return;
+  }
+
+  // This is one of the following.
+  // - 2. module:exists symbol:exists -> Success
+  //    - The callback returned a module file and a symbol file.
+  // - 3. module:exists symbol:empty  -> Success
+  //    - The callback returned Only a module file.
+  // Load the module file.
+  auto cached_module_spec(module_spec);
+  cached_module_spec.GetUUID().Clear(); // Clear UUID since it may contain md5
+                                        // content hash instead of real UUID.
+  cached_module_spec.GetFileSpec() = module_file_spec;
+  cached_module_spec.GetPlatformFileSpec() = module_spec.GetFileSpec();
+  cached_module_spec.SetObjectOffset(0);
+
+  error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
+                                      nullptr, did_create_ptr, false);
+  if (error.Success() && module_sp) {
+    // Succeeded to load the module file.
+    LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str(),
+              symbol_file_spec.GetPath().c_str());
+  } else {
+    LLDB_LOGF(log,
+              "%s: locate module callback succeeded but failed to load: "
+              "module=%s symbol=%s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str(),
+              symbol_file_spec.GetPath().c_str());
+    // Clear module_sp and symbol_file_spec for the error.
+    module_sp.reset();
+    symbol_file_spec.Clear();
+  }
 }
 
 bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,
@@ -1630,7 +1742,7 @@ Status Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
     return error;
   }
 
-  std::vector<char> buffer(1024);
+  std::vector<char> buffer(512 * 1024);
   auto offset = src_offset;
   uint64_t total_bytes_read = 0;
   while (total_bytes_read < src_size) {
@@ -1854,7 +1966,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
     AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp) {
@@ -1969,6 +2081,14 @@ CompilerType Platform::GetSiginfoType(const llvm::Triple& triple) {
 
 Args Platform::GetExtraStartupCommands() {
   return {};
+}
+
+void Platform::SetLocateModuleCallback(LocateModuleCallback callback) {
+  m_locate_module_callback = callback;
+}
+
+Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
+  return m_locate_module_callback;
 }
 
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {

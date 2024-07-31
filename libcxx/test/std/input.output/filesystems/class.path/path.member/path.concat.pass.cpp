@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
@@ -29,8 +30,7 @@
 // template <class InputIterator>
 //   path& concat(InputIterator first, InputIterator last);
 
-
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <string>
 #include <string_view>
@@ -39,11 +39,12 @@
 // On Windows, charset conversions cause allocations in the path class in
 // cases where no allocations are done on other platforms.
 
-#include "test_macros.h"
-#include "test_iterators.h"
+#include "../path_helper.h"
 #include "count_new.h"
-#include "filesystem_test_helper.h"
-
+#include "make_string.h"
+#include "test_iterators.h"
+#include "test_macros.h"
+namespace fs = std::filesystem;
 
 struct ConcatOperatorTestcase {
   MultiStringType lhs;

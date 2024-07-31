@@ -528,7 +528,7 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
     if (OptLevel < '0' || OptLevel > '3')
       report_fatal_error("Optimization level must be between 0 and 3");
     CodeGen->setOptLevel(OptLevel - '0');
-    std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+    std::optional<CodeGenOptLevel> CGOptLevelOrNone =
         CodeGenOpt::getLevel(OptLevel - '0');
     assert(CGOptLevelOrNone);
     CodeGen->setCodeGenOptLevel(*CGOptLevelOrNone);
@@ -691,7 +691,7 @@ extern const char *lto_input_get_dependent_library(lto_input_t input,
 }
 
 extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
-  auto symbols = lto::LTO::getRuntimeLibcallSymbols();
+  auto symbols = lto::LTO::getRuntimeLibcallSymbols(Triple());
   *size = symbols.size();
   return symbols.data();
 }

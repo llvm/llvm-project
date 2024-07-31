@@ -148,16 +148,17 @@ def TestType : Test_Type<"Test", [
 }
 
 def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
-  DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["areCompatible"]>
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getIndexBitwidth",
+                                                        "areCompatible"]>
 ]> {
   let mnemonic = "test_type_with_layout";
   let parameters = (ins "unsigned":$key);
   let extraClassDeclaration = [{
-    ::mlir::LogicalResult verifyEntries(::mlir::DataLayoutEntryListRef params,
+    ::llvm::LogicalResult verifyEntries(::mlir::DataLayoutEntryListRef params,
                                 ::mlir::Location loc) const;
 
   private:
-    unsigned extractKind(::mlir::DataLayoutEntryListRef params,
+    uint64_t extractKind(::mlir::DataLayoutEntryListRef params,
                          ::llvm::StringRef expectedKind) const;
 
   public:
@@ -350,6 +351,12 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
+  let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
+  let mnemonic = "optional_type_string";
+  let assemblyFormat = [{ (`<` $str^ `>`)? }];
+}
+
 def TestTypeElseAnchor : Test_Type<"TestTypeElseAnchor"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a);
   let mnemonic = "else_anchor";
@@ -361,6 +368,28 @@ def TestTypeElseAnchorStruct : Test_Type<"TestTypeElseAnchorStruct"> {
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "else_anchor_struct";
   let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
+}
+
+def TestI32 : Test_Type<"TestI32"> {
+  let mnemonic = "i32";
+}
+
+def TestRecursiveAlias
+    : Test_Type<"TestRecursiveAlias", [NativeTypeTrait<"IsMutable">]> {
+  let mnemonic = "test_rec_alias";
+  let storageClass = "TestRecursiveTypeStorage";
+  let storageNamespace = "test";
+  let genStorageClass = 0;
+
+  let parameters = (ins "llvm::StringRef":$name);
+
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    Type getBody() const;
+
+    void setBody(Type type);
+  }];
 }
 
 #endif // TEST_TYPEDEFS

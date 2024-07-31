@@ -49,7 +49,7 @@ public:
   ~ClangASTSource() override;
 
   /// Interface stubs.
-  clang::Decl *GetExternalDecl(uint32_t) override { return nullptr; }
+  clang::Decl *GetExternalDecl(clang::GlobalDeclID) override { return nullptr; }
   clang::Stmt *GetExternalDeclStmt(uint64_t) override { return nullptr; }
   clang::Selector GetExternalSelector(uint32_t) override {
     return clang::Selector();
@@ -351,6 +351,11 @@ public:
   /// Returns the TypeSystem that uses this ClangASTSource instance as it's
   /// ExternalASTSource.
   TypeSystemClang *GetTypeSystem() const { return m_clang_ast_context; }
+
+private:
+  bool FindObjCPropertyAndIvarDeclsWithOrigin(
+      NameSearchContext &context,
+      DeclFromUser<const clang::ObjCInterfaceDecl> &origin_iface_decl);
 
 protected:
   bool FindObjCMethodDeclsWithOrigin(

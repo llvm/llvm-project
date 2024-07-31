@@ -15,6 +15,7 @@
 #define MLIR_IR_AFFINEMAP_H
 
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -33,7 +34,8 @@ struct AffineMapStorage;
 } // namespace detail
 
 class Attribute;
-struct LogicalResult;
+class Builder;
+class OpFoldResult;
 class MLIRContext;
 
 /// A multi-dimensional affine map
@@ -78,6 +80,20 @@ public:
   static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
                                        MLIRContext *context);
 
+  /// Returns an identity affine map with `numDims` input dimensions and
+  /// filtered results using `keepDimFilter`. If `keepDimFilter` returns true
+  /// for a dimension, the dimension is kept in the affine map results.
+  /// Otherwise, the dimension is dropped from the results.
+  ///
+  /// Examples:
+  ///   * getFilteredIdentityMap(4, [false, true, false, true])
+  ///       -> affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+  ///   * getFilteredIdentityMap(3, [false, false, true])
+  ///       -> affine_map<(d0, d1, d2) -> (d2)>
+  static AffineMap
+  getFilteredIdentityMap(MLIRContext *ctx, unsigned numDims,
+                         llvm::function_ref<bool(AffineDimExpr)> keepDimFilter);
+
   /// Returns an AffineMap representing a permutation.
   /// The permutation is expressed as a non-empty vector of integers.
   /// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with
@@ -86,14 +102,30 @@ public:
   /// (i.e. `[1,1,2]` is an invalid permutation).
   static AffineMap getPermutationMap(ArrayRef<unsigned> permutation,
                                      MLIRContext *context);
+  static AffineMap getPermutationMap(ArrayRef<int64_t> permutation,
+                                     MLIRContext *context);
+
+  /// Returns an affine map with `numDims` input dimensions and results
+  /// specified by `targets`.
+  ///
+  /// Examples:
+  /// * getMultiDimMapWithTargets(3, [0, 2, 1])
+  ///       -> affine_map<(d0, d1, d2) -> (d0, d2, d1)>
+  /// * getMultiDimMapWithTargets(3, [2, 1])
+  ///       -> affine_map<(d0, d1, d2) -> (d2, d1)>
+  static AffineMap getMultiDimMapWithTargets(unsigned numDims,
+                                             ArrayRef<unsigned> targets,
+                                             MLIRContext *context);
 
   /// Returns a vector of AffineMaps; each with as many results as
   /// `exprs.size()`, as many dims as the largest dim in `exprs` and as many
   /// symbols as the largest symbol in `exprs`.
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList);
+  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                    MLIRContext *context);
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList);
+  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                    MLIRContext *context);
 
   MLIRContext *getContext() const;
 
@@ -113,6 +145,14 @@ public:
   /// Returns true if this affine map is a minor identity, i.e. an identity
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
+
+  /// Returns the list of broadcast dimensions (i.e. dims indicated by value 0
+  /// in the result).
+  /// Ex:
+  ///  * (d0, d1, d2) -> (0, d1) gives [0]
+  ///  * (d0, d1, d2) -> (d2, d1) gives []
+  ///  * (d0, d1, d2, d4) -> (d0, 0, d1, 0) gives [1, 3]
+  SmallVector<unsigned> getBroadcastDims() const;
 
   /// Returns true if this affine map is a minor identity up to broadcasted
   /// dimensions which are indicated by value 0 in the result. If
@@ -281,7 +321,8 @@ public:
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,
-                             SmallVectorImpl<Attribute> &results) const;
+                             SmallVectorImpl<Attribute> &results,
+                             bool *hasPoison = nullptr) const;
 
   /// Propagates the constant operands into this affine map. Operands are
   /// allowed to be null, at which point they are treated as non-constant. This
@@ -289,9 +330,9 @@ public:
   /// which may be equal to the old map if no folding happened. If `results` is
   /// provided and if all expressions in the map were folded to constants,
   /// `results` will contain the values of these constants.
-  AffineMap
-  partialConstantFold(ArrayRef<Attribute> operandConstants,
-                      SmallVectorImpl<int64_t> *results = nullptr) const;
+  AffineMap partialConstantFold(ArrayRef<Attribute> operandConstants,
+                                SmallVectorImpl<int64_t> *results = nullptr,
+                                bool *hasPoison = nullptr) const;
 
   /// Returns the AffineMap resulting from composing `this` with `map`.
   /// The resulting AffineMap has as many AffineDimExpr as `map` and as many
@@ -432,6 +473,12 @@ AffineMap compressUnusedSymbols(AffineMap map);
 /// Asserts that all maps in `maps` are normalized to the same number of
 /// dims and symbols.
 SmallVector<AffineMap> compressUnusedSymbols(ArrayRef<AffineMap> maps);
+
+/// Fold all attributes among the given operands into the affine map. Return the
+/// folded affine map. Return all remaining values via `remainingValues`.
+AffineMap foldAttributesIntoMap(Builder &b, AffineMap map,
+                                ArrayRef<OpFoldResult> operands,
+                                SmallVector<Value> &remainingValues);
 
 /// Returns a map with the same dimension and symbol count as `map`, but whose
 /// results are the unique affine expressions of `map`.
@@ -613,9 +660,9 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   SmallVector<T> result;
   result.reserve(map.getNumResults());
   for (AffineExpr expr : map.getResults()) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       result.push_back(source[dimExpr.getPosition()]);
-    } else if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+    } else if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
       assert(constExpr.getValue() == 0 &&
              "Unexpected constant in projected permutation map");
       result.push_back(0);
@@ -634,9 +681,9 @@ static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
   for (const auto &exprs : exprsList) {
     for (auto expr : exprs) {
       expr.walk([&maxDim, &maxSym](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineDimExpr>())
+        if (auto d = dyn_cast<AffineDimExpr>(e))
           maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
-        if (auto s = e.dyn_cast<AffineSymbolExpr>())
+        if (auto s = dyn_cast<AffineSymbolExpr>(e))
           maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
       });
     }

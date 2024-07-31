@@ -27,12 +27,12 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -166,6 +166,8 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
 
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
+
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 SDValue LanaiTargetLowering::LowerOperation(SDValue Op,
@@ -278,12 +280,12 @@ LanaiTargetLowering::getSingleConstraintMatchWeight(
 // LowerAsmOperandForConstraint - Lower the specified operand into the Ops
 // vector.  If it is invalid, don't add anything to Ops.
 void LanaiTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
   SDValue Result;
 
   // Only support length 1 constraints for now.
-  if (Constraint.length() > 1)
+  if (Constraint.size() > 1)
     return;
 
   char ConstraintLetter = Constraint[0];
@@ -449,8 +451,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
     CCInfo.AnalyzeFormalArguments(Ins, CC_Lanai32);
   }
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     if (VA.isRegLoc()) {
       // Arguments passed in registers
       EVT RegVT = VA.getLocVT();
@@ -647,7 +648,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false,
-                          /*isTailCall=*/false, MachinePointerInfo(),
+                          /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
                           MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
@@ -1057,7 +1058,7 @@ SDValue LanaiTargetLowering::LowerRETURNADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   if (Depth) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     const unsigned Offset = -4;
@@ -1080,7 +1081,7 @@ SDValue LanaiTargetLowering::LowerFRAMEADDR(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, Lanai::FP, VT);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   while (Depth--) {
     const unsigned Offset = -8;
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, VT, FrameAddr,

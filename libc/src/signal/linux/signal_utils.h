@@ -9,14 +9,16 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H
 #define LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H
 
-#include "include/sys/syscall.h"          // For syscall numbers.
+#include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-#include <signal.h>
+#include <signal.h> // sigaction
 #include <stddef.h>
+#include <sys/syscall.h>          // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 // The POSIX definition of struct sigaction and the sigaction data structure
 // expected by the rt_sigaction syscall differ in their definition. So, we
@@ -27,15 +29,12 @@ namespace __llvm_libc {
 // handler taking siginfo_t * argument, one can set sa_handler to sa_sigaction
 // if SA_SIGINFO is set in sa_flags.
 struct KernelSigaction {
-  using HandlerType = void(int);
-  using SiginfoHandlerType = void(int, siginfo_t *, void *);
-
   LIBC_INLINE KernelSigaction &operator=(const struct sigaction &sa) {
     sa_flags = sa.sa_flags;
     sa_restorer = sa.sa_restorer;
     sa_mask = sa.sa_mask;
     if (sa_flags & SA_SIGINFO) {
-      sa_handler = reinterpret_cast<HandlerType *>(sa.sa_sigaction);
+      sa_sigaction = sa.sa_sigaction;
     } else {
       sa_handler = sa.sa_handler;
     }
@@ -44,17 +43,20 @@ struct KernelSigaction {
 
   LIBC_INLINE operator struct sigaction() const {
     struct sigaction sa;
-    sa.sa_flags = sa_flags;
+    sa.sa_flags = static_cast<int>(sa_flags);
     sa.sa_mask = sa_mask;
     sa.sa_restorer = sa_restorer;
     if (sa_flags & SA_SIGINFO)
-      sa.sa_sigaction = reinterpret_cast<SiginfoHandlerType *>(sa_handler);
+      sa.sa_sigaction = sa_sigaction;
     else
       sa.sa_handler = sa_handler;
     return sa;
   }
 
-  HandlerType *sa_handler;
+  union {
+    void (*sa_handler)(int);
+    void (*sa_sigaction)(int, siginfo_t *, void *);
+  };
   unsigned long sa_flags;
   void (*sa_restorer)(void);
   // Our public definition of sigset_t matches that of the kernel's definition.
@@ -96,15 +98,15 @@ LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
 
 LIBC_INLINE int block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
-  return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_BLOCK, &full, &set,
-                                   sizeof(sigset_t));
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
+                                           &set, sizeof(sigset_t));
 }
 
 LIBC_INLINE int restore_signals(const sigset_t &set) {
-  return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_SETMASK, &set,
-                                   nullptr, sizeof(sigset_t));
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK,
+                                           &set, nullptr, sizeof(sigset_t));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H

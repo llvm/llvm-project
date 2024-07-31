@@ -6,27 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/properties/architectures.h"
 #include "src/time/clock_gettime.h"
 #include "test/UnitTest/Test.h"
 
 #include <time.h>
 
 TEST(LlvmLibcClockGetTime, RealTime) {
-  struct timespec tp;
+  timespec tp;
   int result;
-  result = clock_gettime(CLOCK_REALTIME, &tp);
+  result = LIBC_NAMESPACE::clock_gettime(CLOCK_REALTIME, &tp);
+  // The GPU does not implement CLOCK_REALTIME but provides it so programs will
+  // compile.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+  ASSERT_EQ(result, -1);
+#else
   ASSERT_EQ(result, 0);
   ASSERT_GT(tp.tv_sec, time_t(0));
+#endif
 }
 
 #ifdef CLOCK_MONOTONIC
 TEST(LlvmLibcClockGetTime, MonotonicTime) {
-  struct timespec tp1, tp2;
+  timespec tp1, tp2;
   int result;
-  result = clock_gettime(CLOCK_MONOTONIC, &tp1);
+  result = LIBC_NAMESPACE::clock_gettime(CLOCK_MONOTONIC, &tp1);
   ASSERT_EQ(result, 0);
   ASSERT_GT(tp1.tv_sec, time_t(0));
-  result = clock_gettime(CLOCK_MONOTONIC, &tp2);
+  result = LIBC_NAMESPACE::clock_gettime(CLOCK_MONOTONIC, &tp2);
   ASSERT_EQ(result, 0);
   ASSERT_GE(tp2.tv_sec, tp1.tv_sec); // The monotonic clock should increase.
   if (tp2.tv_sec == tp1.tv_sec) {

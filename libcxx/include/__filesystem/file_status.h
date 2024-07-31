@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FILESYSTEM_FILE_STATUS_H
 #define _LIBCPP___FILESYSTEM_FILE_STATUS_H
 
-#include <__availability>
 #include <__config>
 #include <__filesystem/file_type.h>
 #include <__filesystem/perms.h>
@@ -19,44 +18,34 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class _LIBCPP_EXPORTED_FROM_ABI file_status {
 public:
   // constructors
-  _LIBCPP_INLINE_VISIBILITY
-  file_status() noexcept : file_status(file_type::none) {}
-  _LIBCPP_INLINE_VISIBILITY
-  explicit file_status(file_type __ft, perms __prms = perms::unknown) noexcept
-      : __ft_(__ft),
-        __prms_(__prms) {}
+  _LIBCPP_HIDE_FROM_ABI file_status() noexcept : file_status(file_type::none) {}
+  _LIBCPP_HIDE_FROM_ABI explicit file_status(file_type __ft, perms __prms = perms::unknown) noexcept
+      : __ft_(__ft), __prms_(__prms) {}
 
   _LIBCPP_HIDE_FROM_ABI file_status(const file_status&) noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI file_status(file_status&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status(file_status&&) noexcept      = default;
 
-  _LIBCPP_INLINE_VISIBILITY
-  ~file_status() {}
+  _LIBCPP_HIDE_FROM_ABI ~file_status() {}
 
   _LIBCPP_HIDE_FROM_ABI file_status& operator=(const file_status&) noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI file_status& operator=(file_status&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status& operator=(file_status&&) noexcept      = default;
 
   // observers
-  _LIBCPP_INLINE_VISIBILITY
-  file_type type() const noexcept { return __ft_; }
+  _LIBCPP_HIDE_FROM_ABI file_type type() const noexcept { return __ft_; }
 
-  _LIBCPP_INLINE_VISIBILITY
-  perms permissions() const noexcept { return __prms_; }
+  _LIBCPP_HIDE_FROM_ABI perms permissions() const noexcept { return __prms_; }
 
   // modifiers
-  _LIBCPP_INLINE_VISIBILITY
-  void type(file_type __ft) noexcept { __ft_ = __ft; }
+  _LIBCPP_HIDE_FROM_ABI void type(file_type __ft) noexcept { __ft_ = __ft; }
 
-  _LIBCPP_INLINE_VISIBILITY
-  void permissions(perms __p) noexcept { __prms_ = __p; }
+  _LIBCPP_HIDE_FROM_ABI void permissions(perms __p) noexcept { __prms_ = __p; }
 
 #  if _LIBCPP_STD_VER >= 20
 
@@ -71,10 +60,8 @@ private:
   perms __prms_;
 };
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_FILE_STATUS_H

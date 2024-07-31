@@ -9,8 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
-// XFAIL: availability-shared_mutex-missing
-
 // <shared_mutex>
 
 // class shared_timed_mutex;
@@ -21,6 +19,7 @@
 #include <thread>
 
 #include <atomic>
+#include <chrono>
 #include <cassert>
 #include <cstdlib>
 #include <shared_mutex>

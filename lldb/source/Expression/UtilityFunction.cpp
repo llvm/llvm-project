@@ -10,7 +10,6 @@
 #include <sys/types.h>
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -81,8 +80,8 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
   name.append("-caller");
 
   m_caller_up.reset(process_sp->GetTarget().GetFunctionCallerForLanguage(
-      Language(), return_type, impl_code_address, arg_value_list, name.c_str(),
-      error));
+      Language().AsLanguageType(), return_type, impl_code_address,
+      arg_value_list, name.c_str(), error));
   if (error.Fail()) {
 
     return nullptr;

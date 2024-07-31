@@ -311,12 +311,12 @@ public:
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
     const bool for_expression = true;
 
-    std::vector<clang::IdentifierInfo *> selector_components;
+    std::vector<const clang::IdentifierInfo *> selector_components;
 
     const char *name_cursor = name;
     bool is_zero_argument = true;
@@ -335,7 +335,7 @@ public:
       }
     }
 
-    clang::IdentifierInfo **identifier_infos = selector_components.data();
+    const clang::IdentifierInfo **identifier_infos = selector_components.data();
     if (!identifier_infos) {
       return nullptr;
     }
@@ -502,10 +502,10 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
     return false;
   };
 
-  LLDB_LOG(log,
-           "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
-           "interface for %s",
-           descriptor->GetClassName().AsCString());
+  LLDB_LOGF(log,
+            "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
+            "interface for %s",
+            descriptor->GetClassName().AsCString());
 
   if (!descriptor->Describe(superclass_func, instance_method_func,
                             class_method_func, ivar_func))
@@ -563,9 +563,9 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
           if (metadata)
             isa_value = metadata->GetISAPtr();
 
-          LLDB_LOG(log,
-                   "AOCTV::FT Found %s (isa 0x%" PRIx64 ") in the ASTContext",
-                   result_iface_type.getAsString(), isa_value);
+          LLDB_LOGF(log,
+                    "AOCTV::FT Found %s (isa 0x%" PRIx64 ") in the ASTContext",
+                    result_iface_type.getAsString().data(), isa_value);
         }
 
         decls.push_back(m_ast_ctx->GetCompilerDecl(result_iface_decl));

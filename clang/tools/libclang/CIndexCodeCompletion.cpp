@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIndexer.h"
 #include "CIndexDiagnostic.h"
+#include "CIndexer.h"
 #include "CLog.h"
 #include "CXCursor.h"
 #include "CXSourceLocation.h"
@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallString.h"
@@ -40,7 +41,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-
 
 #ifdef UDP_CODE_COMPLETION_LOGGER
 #include "clang/Basic/Version.h"
@@ -537,11 +537,13 @@ static unsigned long long getContextsForContextKind(
     case CodeCompletionContext::CCC_Other:
     case CodeCompletionContext::CCC_ObjCInterface:
     case CodeCompletionContext::CCC_ObjCImplementation:
+    case CodeCompletionContext::CCC_ObjCClassForwardDecl:
     case CodeCompletionContext::CCC_NewName:
     case CodeCompletionContext::CCC_MacroName:
     case CodeCompletionContext::CCC_PreprocessorExpression:
     case CodeCompletionContext::CCC_PreprocessorDirective:
     case CodeCompletionContext::CCC_Attribute:
+    case CodeCompletionContext::CCC_TopLevelOrExpression:
     case CodeCompletionContext::CCC_TypeQualifiers: {
       //Only Clang results should be accepted, so we'll set all of the other
       //context bits to 0 (i.e. the empty set)
@@ -599,15 +601,15 @@ namespace {
       AllocatedResults.Contexts = getContextsForContextKind(contextKind, S);
       
       AllocatedResults.Selector = "";
-      ArrayRef<IdentifierInfo *> SelIdents = Context.getSelIdents();
-      for (ArrayRef<IdentifierInfo *>::iterator I = SelIdents.begin(),
-                                                E = SelIdents.end();
+      ArrayRef<const IdentifierInfo *> SelIdents = Context.getSelIdents();
+      for (ArrayRef<const IdentifierInfo *>::iterator I = SelIdents.begin(),
+                                                      E = SelIdents.end();
            I != E; ++I) {
-        if (IdentifierInfo *selIdent = *I)
+        if (const IdentifierInfo *selIdent = *I)
           AllocatedResults.Selector += selIdent->getName();
         AllocatedResults.Selector += ":";
       }
-      
+
       QualType baseType = Context.getBaseType();
       NamedDecl *D = nullptr;
 
@@ -763,7 +765,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     IncludeBriefComments, Capture,
                     CXXIdx->getPCHContainerOperations(), *Results->Diag,
                     Results->LangOpts, *Results->SourceMgr, *Results->FileMgr,
-                    Results->Diagnostics, Results->TemporaryBuffers);
+                    Results->Diagnostics, Results->TemporaryBuffers,
+                    /*SyntaxOnlyAction=*/nullptr);
 
   Results->DiagnosticsWrappers.resize(Results->Diagnostics.size());
 

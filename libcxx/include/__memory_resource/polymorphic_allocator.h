@@ -11,12 +11,12 @@
 
 #include <__assert>
 #include <__config>
+#include <__fwd/pair.h>
 #include <__memory_resource/memory_resource.h>
 #include <__utility/exception_guard.h>
 #include <cstddef>
 #include <limits>
 #include <new>
-#include <stdexcept>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -39,7 +39,7 @@ template <class _ValueType
           = byte
 #  endif
           >
-class _LIBCPP_TEMPLATE_VIS polymorphic_allocator {
+class _LIBCPP_AVAILABILITY_PMR _LIBCPP_TEMPLATE_VIS polymorphic_allocator {
 
 public:
   using value_type = _ValueType;
@@ -60,7 +60,7 @@ public:
 
   // [mem.poly.allocator.mem]
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _ValueType* allocate(size_t __n) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _ValueType* allocate(size_t __n) {
     if (__n > __max_size()) {
       __throw_bad_array_new_length();
     }
@@ -68,7 +68,10 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void deallocate(_ValueType* __p, size_t __n) {
-    _LIBCPP_ASSERT(__n <= __max_size(), "deallocate called for size which exceeds max_size()");
+    _LIBCPP_ASSERT_VALID_DEALLOCATION(
+        __n <= __max_size(),
+        "deallocate() called for a size which exceeds max_size(), leading to a memory leak "
+        "(the argument will overflow and result in too few objects being deleted)");
     __res_->deallocate(__p, __n * sizeof(_ValueType), alignof(_ValueType));
   }
 
@@ -170,6 +173,17 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
+
+  friend bool operator==(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {
+    return *__lhs.resource() == *__rhs.resource();
+  }
+
+#  if _LIBCPP_STD_VER <= 17
+  // This overload is not specified, it was added due to LWG3683.
+  friend bool operator!=(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {
+    return *__lhs.resource() != *__rhs.resource();
+  }
+#  endif
 
 private:
   template <class... _Args, size_t... _Is>

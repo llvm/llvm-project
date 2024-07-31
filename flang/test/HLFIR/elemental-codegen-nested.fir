@@ -28,7 +28,7 @@
 // CHECK:             fir.do_loop %[[VAL_23:.*]] = %[[VAL_22]] to %[[VAL_2]] step %[[VAL_22]] {
 // CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<f32>
 // CHECK:               %[[VAL_25:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_23]])  : (!fir.heap<!fir.array<2xf32>>, index) -> !fir.ref<f32>
-// CHECK:               hlfir.assign %[[VAL_24]] to %[[VAL_25]] : f32, !fir.ref<f32>
+// CHECK:               hlfir.assign %[[VAL_24]] to %[[VAL_25]] temporary_lhs : f32, !fir.ref<f32>
 // CHECK:             }
 // CHECK:             %[[VAL_26:.*]] = fir.undefined tuple<!fir.heap<!fir.array<2xf32>>, i1>
 // CHECK:             %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_21]], [1 : index] : (tuple<!fir.heap<!fir.array<2xf32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<2xf32>>, i1>
@@ -41,13 +41,13 @@
 // CHECK:             %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (!fir.ref<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>>
 // CHECK:             fir.freemem %[[VAL_34]] : !fir.heap<!fir.array<2xf32>>
 // CHECK:             %[[VAL_35:.*]] = hlfir.designate %[[VAL_14]]#0 (%[[VAL_17]])  : (!fir.heap<!fir.array<2xf32>>, index) -> !fir.ref<f32>
-// CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_35]] : f32, !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_35]] temporary_lhs : f32, !fir.ref<f32>
 // CHECK:           }
 // CHECK:           %[[VAL_36:.*]] = fir.undefined tuple<!fir.heap<!fir.array<2xf32>>, i1>
 // CHECK:           %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_15]], [1 : index] : (tuple<!fir.heap<!fir.array<2xf32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<2xf32>>, i1>
 // CHECK:           %[[VAL_38:.*]] = fir.insert_value %[[VAL_37]], %[[VAL_14]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<2xf32>>, i1>, !fir.heap<!fir.array<2xf32>>) -> tuple<!fir.heap<!fir.array<2xf32>>, i1>
 // CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_4]]#0 : !fir.heap<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>
-// CHECK:           fir.freemem %[[VAL_14]]#1 : !fir.heap<!fir.array<2xf32>>
+// CHECK:           fir.freemem %[[VAL_14]]#0 : !fir.heap<!fir.array<2xf32>>
 // CHECK:           return
 // CHECK:         }
 func.func @_QPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "pi"}, %arg1: !fir.ref<!fir.array<2xf32>> {fir.bindc_name = "h1"}) {

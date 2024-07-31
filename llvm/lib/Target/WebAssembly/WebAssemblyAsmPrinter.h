@@ -22,16 +22,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
   const WebAssemblySubtarget *Subtarget;
   const MachineRegisterInfo *MRI;
   WebAssemblyFunctionInfo *MFI;
-  // TODO: Do the uniquing of Signatures here instead of ObjectFileWriter?
-  std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
-  std::vector<std::unique_ptr<std::string>> Names;
   bool signaturesEmitted = false;
-
-  StringRef storeName(StringRef Name) {
-    std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
-    Names.push_back(std::move(N));
-    return *Names.back();
-  }
 
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,
@@ -44,9 +35,6 @@ public:
   }
 
   const WebAssemblySubtarget &getSubtarget() const { return *Subtarget; }
-  void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
-    Signatures.push_back(std::move(Sig));
-  }
 
   //===------------------------------------------------------------------===//
   // MachineFunctionPass Implementation.
@@ -66,6 +54,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void EmitProducerInfo(Module &M);
   void EmitTargetFeatures(Module &M);
+  void EmitFunctionAttributes(Module &M);
   void emitSymbolType(const MCSymbolWasm *Sym);
   void emitGlobalVariable(const GlobalVariable *GV) override;
   void emitJumpTableInfo() override;

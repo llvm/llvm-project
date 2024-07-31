@@ -53,6 +53,18 @@ static bool consumeFront(std::string_view &S, std::string_view C) {
   return true;
 }
 
+static bool consumeFront(std::string_view &S, std::string_view PrefixA,
+                         std::string_view PrefixB, bool A) {
+  const std::string_view &Prefix = A ? PrefixA : PrefixB;
+  return consumeFront(S, Prefix);
+}
+
+static bool startsWith(std::string_view S, std::string_view PrefixA,
+                       std::string_view PrefixB, bool A) {
+  const std::string_view &Prefix = A ? PrefixA : PrefixB;
+  return llvm::itanium_demangle::starts_with(S, Prefix);
+}
+
 static bool isMemberPointer(std::string_view MangledName, bool &Error) {
   Error = false;
   const char F = MangledName.front();
@@ -268,7 +280,7 @@ std::string_view Demangler::copyString(std::string_view Borrowed) {
   // This is not a micro-optimization, it avoids UB, should Borrowed be an null
   // buffer.
   if (Borrowed.size())
-    std::memcpy(Stable, &*Borrowed.begin(), Borrowed.size());
+    std::memcpy(Stable, Borrowed.data(), Borrowed.size());
 
   return {Stable, Borrowed.size()};
 }
@@ -792,7 +804,7 @@ SymbolNode *Demangler::demangleMD5Name(std::string_view &MangledName) {
     Error = true;
     return nullptr;
   }
-  const char *Start = &*MangledName.begin();
+  const char *Start = MangledName.data();
   const size_t StartSize = MangledName.size();
   MangledName.remove_prefix(MD5Last + 1);
 
@@ -2256,6 +2268,18 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
 
     NodeList &TP = **Current;
 
+    // <auto-nttp> ::= $ M <type> <nttp>
+    const bool IsAutoNTTP = consumeFront(MangledName, "$M");
+    if (IsAutoNTTP) {
+      // The deduced type of the auto NTTP parameter isn't printed so
+      // we want to ignore the AST created from demangling the type.
+      //
+      // TODO: Avoid the extra allocations to the bump allocator in this case.
+      (void)demangleType(MangledName, QualifierMangleMode::Drop);
+      if (Error)
+        return nullptr;
+    }
+
     TemplateParameterReferenceNode *TPRN = nullptr;
     if (consumeFront(MangledName, "$$Y")) {
       // Template alias
@@ -2266,15 +2290,17 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
     } else if (consumeFront(MangledName, "$$C")) {
       // Type has qualifiers.
       TP.N = demangleType(MangledName, QualifierMangleMode::Mangle);
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$1") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$H") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$I") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$J")) {
+    } else if (startsWith(MangledName, "$1", "1", !IsAutoNTTP) ||
+               startsWith(MangledName, "$H", "H", !IsAutoNTTP) ||
+               startsWith(MangledName, "$I", "I", !IsAutoNTTP) ||
+               startsWith(MangledName, "$J", "J", !IsAutoNTTP)) {
       // Pointer to member
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->IsMemberPointer = true;
 
-      MangledName.remove_prefix(1);
+      if (!IsAutoNTTP)
+        MangledName.remove_prefix(1); // Remove leading '$'
+
       // 1 - single inheritance       <name>
       // H - multiple inheritance     <name> <number>
       // I - virtual inheritance      <name> <number> <number>
@@ -2317,12 +2343,13 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->Symbol = parse(MangledName);
       TPRN->Affinity = PointerAffinity::Reference;
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$F") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$G")) {
+    } else if (startsWith(MangledName, "$F", "F", !IsAutoNTTP) ||
+               startsWith(MangledName, "$G", "G", !IsAutoNTTP)) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
 
       // Data member pointer.
-      MangledName.remove_prefix(1);
+      if (!IsAutoNTTP)
+        MangledName.remove_prefix(1); // Remove leading '$'
       char InheritanceSpecifier = MangledName.front();
       MangledName.remove_prefix(1);
 
@@ -2342,7 +2369,7 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       }
       TPRN->IsMemberPointer = true;
 
-    } else if (consumeFront(MangledName, "$0")) {
+    } else if (consumeFront(MangledName, "$0", "0", !IsAutoNTTP)) {
       // Integral non-type template parameter
       bool IsNegative = false;
       uint64_t Value = 0;
@@ -2382,7 +2409,7 @@ void Demangler::dumpBackReferences() {
     T->output(OB, OF_Default);
 
     std::string_view B = OB;
-    std::printf("  [%d] - %.*s\n", (int)I, (int)B.size(), &*B.begin());
+    std::printf("  [%d] - %.*s\n", (int)I, (int)B.size(), B.data());
   }
   std::free(OB.getBuffer());
 
@@ -2391,7 +2418,7 @@ void Demangler::dumpBackReferences() {
   std::printf("%d name backreferences\n", (int)Backrefs.NamesCount);
   for (size_t I = 0; I < Backrefs.NamesCount; ++I) {
     std::printf("  [%d] - %.*s\n", (int)I, (int)Backrefs.Names[I]->Name.size(),
-                &*Backrefs.Names[I]->Name.begin());
+                Backrefs.Names[I]->Name.data());
   }
   if (Backrefs.NamesCount > 0)
     std::printf("\n");
@@ -2404,7 +2431,7 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
   std::string_view Name{MangledName};
   SymbolNode *AST = D.parse(Name);
   if (!D.Error && NMangled)
-    *NMangled = Name.empty() ? 0 : &*Name.begin() - &*MangledName.begin();
+    *NMangled = MangledName.size() - Name.size();
 
   if (Flags & MSDF_DumpBackrefs)
     D.dumpBackReferences();

@@ -9,8 +9,6 @@
 #ifndef LLDB_LLDB_PRIVATE_TYPES_H
 #define LLDB_LLDB_PRIVATE_TYPES_H
 
-#if defined(__cplusplus)
-
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -64,7 +62,11 @@ struct RegisterInfo {
   /// rax ax, ah, and al.
   uint32_t *invalidate_regs;
   /// If not nullptr, a type defined by XML descriptions.
-  const RegisterFlags *flags_type;
+  /// Register info tables are constructed as const, but this field may need to
+  /// be updated if a specific target OS has a different layout. To enable that,
+  /// this is mutable. The data pointed to is still const, so you must swap a
+  /// whole set of flags for another.
+  mutable const RegisterFlags *flags_type;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);
@@ -94,6 +96,25 @@ struct RegisterSet {
   const uint32_t *registers;
 };
 
+/// A type-erased pair of llvm::dwarf::SourceLanguageName and version.
+struct SourceLanguage {
+  SourceLanguage() = default;
+  SourceLanguage(lldb::LanguageType language_type);
+  SourceLanguage(uint16_t name, uint32_t version)
+      : name(name), version(version) {}
+  SourceLanguage(std::optional<std::pair<uint16_t, uint32_t>> name_vers)
+      : name(name_vers ? name_vers->first : 0),
+        version(name_vers ? name_vers->second : 0) {}
+  operator bool() const { return name > 0; }
+  lldb::LanguageType AsLanguageType() const;
+  llvm::StringRef GetDescription() const;
+  bool IsC() const;
+  bool IsObjC() const;
+  bool IsCPlusPlus() const;
+  uint16_t name = 0;
+  uint32_t version = 0;
+};
+
 struct OptionEnumValueElement {
   int64_t value;
   const char *string_value;
@@ -121,8 +142,8 @@ using ValueObjectProviderTy =
 
 typedef void (*DebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                         void *baton);
+typedef bool (*CommandOverrideCallbackWithResult)(
+    void *baton, const char **argv, lldb_private::CommandReturnObject &result);
 } // namespace lldb_private
-
-#endif // #if defined(__cplusplus)
 
 #endif // LLDB_LLDB_PRIVATE_TYPES_H

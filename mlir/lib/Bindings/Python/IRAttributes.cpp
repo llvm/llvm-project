@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include <optional>
+#include <string_view>
 #include <utility>
 
 #include "IRModule.h"
 
 #include "PybindUtils.h"
+
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -69,6 +73,53 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
+static const char kDenseElementsAttrGetFromListDocstring[] =
+    R"(Gets a DenseElementsAttr from a Python list of attributes.
+
+Note that it can be expensive to construct attributes individually.
+For a large number of elements, consider using a Python buffer or array instead.
+
+Args:
+  attrs: A list of attributes.
+  type: The desired shape and type of the resulting DenseElementsAttr.
+    If not provided, the element type is determined based on the type
+    of the 0th attribute and the shape is `[len(attrs)]`.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the attributes does not match the type
+    specified by `shaped_type`.
+)";
+
+static const char kDenseResourceElementsAttrGetFromBufferDocstring[] =
+    R"(Gets a DenseResourceElementsAttr from a Python buffer or array.
+
+This function does minimal validation or massaging of the data, and it is
+up to the caller to ensure that the buffer meets the characteristics
+implied by the shape.
+
+The backing buffer and any user objects will be retained for the lifetime
+of the resource blob. This is typically bounded to the context but the
+resource can have a shorter lifespan depending on how it is used in
+subsequent processing.
+
+Args:
+  buffer: The array or buffer to convert.
+  name: Name to provide to the resource (may be changed upon collision).
+  type: The explicit ShapedType to construct the attribute with.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseResourceElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the buffer or array cannot be matched to an MLIR
+    type or if the buffer does not meet expectations.
+)";
+
 namespace {
 
 static MlirStringRef toMlirStringRef(const std::string &s) {
@@ -91,6 +142,8 @@ public:
           return PyAffineMapAttribute(affineMap.getContext(), attr);
         },
         py::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
+    c.def_property_readonly("value", mlirAffineMapAttrGetValue,
+                            "Returns the value of the AffineMap attribute");
   }
 };
 
@@ -159,9 +212,7 @@ public:
     c.def_static(
         "get",
         [](const std::vector<EltTy> &values, DefaultingPyMlirContext ctx) {
-          MlirAttribute attr =
-              DerivedT::getAttribute(ctx->get(), values.size(), values.data());
-          return DerivedT(ctx->getRef(), attr);
+          return getAttribute(values, ctx->getRef());
         },
         py::arg("values"), py::arg("context") = py::none(),
         "Gets a uniqued dense array attribute");
@@ -184,16 +235,29 @@ public:
         values.push_back(arr.getItem(i));
       for (py::handle attr : extras)
         values.push_back(pyTryCast<EltTy>(attr));
-      MlirAttribute attr = DerivedT::getAttribute(arr.getContext()->get(),
-                                                  values.size(), values.data());
-      return DerivedT(arr.getContext(), attr);
+      return getAttribute(values, arr.getContext());
     });
+  }
+
+private:
+  static DerivedT getAttribute(const std::vector<EltTy> &values,
+                               PyMlirContextRef ctx) {
+    if constexpr (std::is_same_v<EltTy, bool>) {
+      std::vector<int> intValues(values.begin(), values.end());
+      MlirAttribute attr = DerivedT::getAttribute(ctx->get(), intValues.size(),
+                                                  intValues.data());
+      return DerivedT(ctx, attr);
+    } else {
+      MlirAttribute attr =
+          DerivedT::getAttribute(ctx->get(), values.size(), values.data());
+      return DerivedT(ctx, attr);
+    }
   }
 };
 
 /// Instantiate the python dense array classes.
 struct PyDenseBoolArrayAttribute
-    : public PyDenseArrayAttribute<int, PyDenseBoolArrayAttribute> {
+    : public PyDenseArrayAttribute<bool, PyDenseBoolArrayAttribute> {
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADenseBoolArray;
   static constexpr auto getAttribute = mlirDenseBoolArrayGet;
   static constexpr auto getElement = mlirDenseBoolArrayGetElement;
@@ -270,12 +334,11 @@ public:
 
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
-    PyAttribute dunderNext() {
+    MlirAttribute dunderNext() {
       // TODO: Throw is an inefficient way to stop iteration.
       if (nextIndex >= mlirArrayAttrGetNumElements(attr.get()))
         throw py::stop_iteration();
-      return PyAttribute(attr.getContext(),
-                         mlirArrayAttrGetElement(attr.get(), nextIndex++));
+      return mlirArrayAttrGetElement(attr.get(), nextIndex++);
     }
 
     static void bind(py::module &m) {
@@ -290,8 +353,8 @@ public:
     int nextIndex = 0;
   };
 
-  PyAttribute getItem(intptr_t i) {
-    return PyAttribute(getContext(), mlirArrayAttrGetElement(*this, i));
+  MlirAttribute getItem(intptr_t i) {
+    return mlirArrayAttrGetElement(*this, i);
   }
 
   static void bindDerived(ClassTy &c) {
@@ -376,12 +439,10 @@ public:
         },
         py::arg("value"), py::arg("context") = py::none(),
         "Gets an uniqued float point attribute associated to a f64 type");
-    c.def_property_readonly(
-        "value",
-        [](PyFloatAttribute &self) {
-          return mlirFloatAttrGetValueDouble(self);
-        },
-        "Returns the value of the float point attribute");
+    c.def_property_readonly("value", mlirFloatAttrGetValueDouble,
+                            "Returns the value of the float attribute");
+    c.def("__float__", mlirFloatAttrGetValueDouble,
+          "Converts the value of the float attribute to a Python float");
   }
 };
 
@@ -401,21 +462,24 @@ public:
         },
         py::arg("type"), py::arg("value"),
         "Gets an uniqued integer attribute associated to a type");
-    c.def_property_readonly(
-        "value",
-        [](PyIntegerAttribute &self) -> py::int_ {
-          MlirType type = mlirAttributeGetType(self);
-          if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
-            return mlirIntegerAttrGetValueInt(self);
-          if (mlirIntegerTypeIsSigned(type))
-            return mlirIntegerAttrGetValueSInt(self);
-          return mlirIntegerAttrGetValueUInt(self);
-        },
-        "Returns the value of the integer attribute");
+    c.def_property_readonly("value", toPyInt,
+                            "Returns the value of the integer attribute");
+    c.def("__int__", toPyInt,
+          "Converts the value of the integer attribute to a Python int");
     c.def_property_readonly_static("static_typeid",
                                    [](py::object & /*class*/) -> MlirTypeID {
                                      return mlirIntegerAttrGetTypeID();
                                    });
+  }
+
+private:
+  static py::int_ toPyInt(PyIntegerAttribute &self) {
+    MlirType type = mlirAttributeGetType(self);
+    if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
+      return mlirIntegerAttrGetValueInt(self);
+    if (mlirIntegerTypeIsSigned(type))
+      return mlirIntegerAttrGetValueSInt(self);
+    return mlirIntegerAttrGetValueUInt(self);
   }
 };
 
@@ -435,10 +499,57 @@ public:
         },
         py::arg("value"), py::arg("context") = py::none(),
         "Gets an uniqued bool attribute");
+    c.def_property_readonly("value", mlirBoolAttrGetValue,
+                            "Returns the value of the bool attribute");
+    c.def("__bool__", mlirBoolAttrGetValue,
+          "Converts the value of the bool attribute to a Python bool");
+  }
+};
+
+class PySymbolRefAttribute : public PyConcreteAttribute<PySymbolRefAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsASymbolRef;
+  static constexpr const char *pyClassName = "SymbolRefAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static MlirAttribute fromList(const std::vector<std::string> &symbols,
+                                PyMlirContext &context) {
+    if (symbols.empty())
+      throw std::runtime_error("SymbolRefAttr must be composed of at least "
+                               "one symbol.");
+    MlirStringRef rootSymbol = toMlirStringRef(symbols[0]);
+    SmallVector<MlirAttribute, 3> referenceAttrs;
+    for (size_t i = 1; i < symbols.size(); ++i) {
+      referenceAttrs.push_back(
+          mlirFlatSymbolRefAttrGet(context.get(), toMlirStringRef(symbols[i])));
+    }
+    return mlirSymbolRefAttrGet(context.get(), rootSymbol,
+                                referenceAttrs.size(), referenceAttrs.data());
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](const std::vector<std::string> &symbols,
+           DefaultingPyMlirContext context) {
+          return PySymbolRefAttribute::fromList(symbols, context.resolve());
+        },
+        py::arg("symbols"), py::arg("context") = py::none(),
+        "Gets a uniqued SymbolRef attribute from a list of symbol names");
     c.def_property_readonly(
         "value",
-        [](PyBoolAttribute &self) { return mlirBoolAttrGetValue(self); },
-        "Returns the value of the bool attribute");
+        [](PySymbolRefAttribute &self) {
+          std::vector<std::string> symbols = {
+              unwrap(mlirSymbolRefAttrGetRootReference(self)).str()};
+          for (int i = 0; i < mlirSymbolRefAttrGetNumNestedReferences(self);
+               ++i)
+            symbols.push_back(
+                unwrap(mlirSymbolRefAttrGetRootReference(
+                           mlirSymbolRefAttrGetNestedReference(self, i)))
+                    .str());
+          return symbols;
+        },
+        "Returns the value of the SymbolRef attribute as a list[str]");
   }
 };
 
@@ -448,8 +559,6 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAFlatSymbolRef;
   static constexpr const char *pyClassName = "FlatSymbolRefAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
-  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
-      mlirFlatSymbolRefAttrGetTypeID;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -563,24 +672,76 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseElementsAttribute
+  getFromList(py::list attributes, std::optional<PyType> explicitType,
+              DefaultingPyMlirContext contextWrapper) {
+
+    const size_t numAttributes = py::len(attributes);
+    if (numAttributes == 0)
+      throw py::value_error("Attributes list must be non-empty.");
+
+    MlirType shapedType;
+    if (explicitType) {
+      if ((!mlirTypeIsAShaped(*explicitType) ||
+           !mlirShapedTypeHasStaticShape(*explicitType))) {
+
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "Expected a static ShapedType for the shaped_type parameter: "
+           << py::repr(py::cast(*explicitType));
+        throw py::value_error(os.str());
+      }
+      shapedType = *explicitType;
+    } else {
+      SmallVector<int64_t> shape{static_cast<int64_t>(numAttributes)};
+      shapedType = mlirRankedTensorTypeGet(
+          shape.size(), shape.data(),
+          mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
+          mlirAttributeGetNull());
+    }
+
+    SmallVector<MlirAttribute> mlirAttributes;
+    mlirAttributes.reserve(numAttributes);
+    for (const py::handle &attribute : attributes) {
+      MlirAttribute mlirAttribute = pyTryCast<PyAttribute>(attribute);
+      MlirType attrType = mlirAttributeGetType(mlirAttribute);
+      mlirAttributes.push_back(mlirAttribute);
+
+      if (!mlirTypeEqual(mlirShapedTypeGetElementType(shapedType), attrType)) {
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "All attributes must be of the same type and match "
+           << "the type parameter: expected=" << py::repr(py::cast(shapedType))
+           << ", but got=" << py::repr(py::cast(attrType));
+        throw py::value_error(os.str());
+      }
+    }
+
+    MlirAttribute elements = mlirDenseElementsAttrGet(
+        shapedType, mlirAttributes.size(), mlirAttributes.data());
+
+    return PyDenseElementsAttribute(contextWrapper->getRef(), elements);
+  }
+
+  static PyDenseElementsAttribute
   getFromBuffer(py::buffer array, bool signless,
                 std::optional<PyType> explicitType,
                 std::optional<std::vector<int64_t>> explicitShape,
                 DefaultingPyMlirContext contextWrapper) {
     // Request a contiguous view. In exotic cases, this will cause a copy.
-    int flags = PyBUF_C_CONTIGUOUS | PyBUF_FORMAT;
-    Py_buffer *view = new Py_buffer();
-    if (PyObject_GetBuffer(array.ptr(), view, flags) != 0) {
-      delete view;
+    int flags = PyBUF_ND;
+    if (!explicitType) {
+      flags |= PyBUF_FORMAT;
+    }
+    Py_buffer view;
+    if (PyObject_GetBuffer(array.ptr(), &view, flags) != 0) {
       throw py::error_already_set();
     }
-    py::buffer_info arrayInfo(view);
+    auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
     SmallVector<int64_t> shape;
     if (explicitShape) {
       shape.append(explicitShape->begin(), explicitShape->end());
     } else {
-      shape.append(arrayInfo.shape.begin(),
-                   arrayInfo.shape.begin() + arrayInfo.ndim);
+      shape.append(view.shape, view.shape + view.ndim);
     }
 
     MlirAttribute encodingAttr = mlirAttributeGetNull();
@@ -594,85 +755,92 @@ public:
     std::optional<MlirType> bulkLoadElementType;
     if (explicitType) {
       bulkLoadElementType = *explicitType;
-    } else if (arrayInfo.format == "f") {
-      // f32
-      assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
-      bulkLoadElementType = mlirF32TypeGet(context);
-    } else if (arrayInfo.format == "d") {
-      // f64
-      assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
-      bulkLoadElementType = mlirF64TypeGet(context);
-    } else if (arrayInfo.format == "e") {
-      // f16
-      assert(arrayInfo.itemsize == 2 && "mismatched array itemsize");
-      bulkLoadElementType = mlirF16TypeGet(context);
-    } else if (isSignedIntegerFormat(arrayInfo.format)) {
-      if (arrayInfo.itemsize == 4) {
-        // i32
-        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 32)
-                                       : mlirIntegerTypeSignedGet(context, 32);
-      } else if (arrayInfo.itemsize == 8) {
-        // i64
-        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 64)
-                                       : mlirIntegerTypeSignedGet(context, 64);
-      } else if (arrayInfo.itemsize == 1) {
-        // i8
-        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
-                                       : mlirIntegerTypeSignedGet(context, 8);
-      } else if (arrayInfo.itemsize == 2) {
-        // i16
-        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 16)
-                                       : mlirIntegerTypeSignedGet(context, 16);
-      }
-    } else if (isUnsignedIntegerFormat(arrayInfo.format)) {
-      if (arrayInfo.itemsize == 4) {
-        // unsigned i32
-        bulkLoadElementType = signless
-                                  ? mlirIntegerTypeGet(context, 32)
-                                  : mlirIntegerTypeUnsignedGet(context, 32);
-      } else if (arrayInfo.itemsize == 8) {
-        // unsigned i64
-        bulkLoadElementType = signless
-                                  ? mlirIntegerTypeGet(context, 64)
-                                  : mlirIntegerTypeUnsignedGet(context, 64);
-      } else if (arrayInfo.itemsize == 1) {
-        // i8
-        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
-                                       : mlirIntegerTypeUnsignedGet(context, 8);
-      } else if (arrayInfo.itemsize == 2) {
-        // i16
-        bulkLoadElementType = signless
-                                  ? mlirIntegerTypeGet(context, 16)
-                                  : mlirIntegerTypeUnsignedGet(context, 16);
-      }
-    }
-    if (bulkLoadElementType) {
-      MlirType shapedType;
-      if (mlirTypeIsAShaped(*bulkLoadElementType)) {
-        if (explicitShape) {
-          throw std::invalid_argument("Shape can only be specified explicitly "
-                                      "when the type is not a shaped type.");
+    } else {
+      std::string_view format(view.format);
+      if (format == "f") {
+        // f32
+        assert(view.itemsize == 4 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF32TypeGet(context);
+      } else if (format == "d") {
+        // f64
+        assert(view.itemsize == 8 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF64TypeGet(context);
+      } else if (format == "e") {
+        // f16
+        assert(view.itemsize == 2 && "mismatched array itemsize");
+        bulkLoadElementType = mlirF16TypeGet(context);
+      } else if (isSignedIntegerFormat(format)) {
+        if (view.itemsize == 4) {
+          // i32
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 32)
+                                    : mlirIntegerTypeSignedGet(context, 32);
+        } else if (view.itemsize == 8) {
+          // i64
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 64)
+                                    : mlirIntegerTypeSignedGet(context, 64);
+        } else if (view.itemsize == 1) {
+          // i8
+          bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
+                                         : mlirIntegerTypeSignedGet(context, 8);
+        } else if (view.itemsize == 2) {
+          // i16
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 16)
+                                    : mlirIntegerTypeSignedGet(context, 16);
         }
-        shapedType = *bulkLoadElementType;
-      } else {
-        shapedType = mlirRankedTensorTypeGet(
-            shape.size(), shape.data(), *bulkLoadElementType, encodingAttr);
+      } else if (isUnsignedIntegerFormat(format)) {
+        if (view.itemsize == 4) {
+          // unsigned i32
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 32)
+                                    : mlirIntegerTypeUnsignedGet(context, 32);
+        } else if (view.itemsize == 8) {
+          // unsigned i64
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 64)
+                                    : mlirIntegerTypeUnsignedGet(context, 64);
+        } else if (view.itemsize == 1) {
+          // i8
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 8)
+                                    : mlirIntegerTypeUnsignedGet(context, 8);
+        } else if (view.itemsize == 2) {
+          // i16
+          bulkLoadElementType = signless
+                                    ? mlirIntegerTypeGet(context, 16)
+                                    : mlirIntegerTypeUnsignedGet(context, 16);
+        }
       }
-      size_t rawBufferSize = arrayInfo.size * arrayInfo.itemsize;
-      MlirAttribute attr = mlirDenseElementsAttrRawBufferGet(
-          shapedType, rawBufferSize, arrayInfo.ptr);
-      if (mlirAttributeIsNull(attr)) {
+      if (!bulkLoadElementType) {
         throw std::invalid_argument(
-            "DenseElementsAttr could not be constructed from the given buffer. "
-            "This may mean that the Python buffer layout does not match that "
-            "MLIR expected layout and is a bug.");
+            std::string("unimplemented array format conversion from format: ") +
+            std::string(format));
       }
-      return PyDenseElementsAttribute(contextWrapper->getRef(), attr);
     }
 
-    throw std::invalid_argument(
-        std::string("unimplemented array format conversion from format: ") +
-        arrayInfo.format);
+    MlirType shapedType;
+    if (mlirTypeIsAShaped(*bulkLoadElementType)) {
+      if (explicitShape) {
+        throw std::invalid_argument("Shape can only be specified explicitly "
+                                    "when the type is not a shaped type.");
+      }
+      shapedType = *bulkLoadElementType;
+    } else {
+      shapedType = mlirRankedTensorTypeGet(shape.size(), shape.data(),
+                                           *bulkLoadElementType, encodingAttr);
+    }
+    size_t rawBufferSize = view.len;
+    MlirAttribute attr =
+        mlirDenseElementsAttrRawBufferGet(shapedType, rawBufferSize, view.buf);
+    if (mlirAttributeIsNull(attr)) {
+      throw std::invalid_argument(
+          "DenseElementsAttr could not be constructed from the given buffer. "
+          "This may mean that the Python buffer layout does not match that "
+          "MLIR expected layout and is a bug.");
+    }
+    return PyDenseElementsAttribute(contextWrapper->getRef(), attr);
   }
 
   static PyDenseElementsAttribute getSplat(const PyType &shapedType,
@@ -790,6 +958,10 @@ public:
                     py::arg("type") = py::none(), py::arg("shape") = py::none(),
                     py::arg("context") = py::none(),
                     kDenseElementsAttrGetDocstring)
+        .def_static("get", PyDenseElementsAttribute::getFromList,
+                    py::arg("attrs"), py::arg("type") = py::none(),
+                    py::arg("context") = py::none(),
+                    kDenseElementsAttrGetFromListDocstring)
         .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                     py::arg("shaped_type"), py::arg("element_attr"),
                     "Gets a DenseElementsAttr where all values are the same")
@@ -798,19 +970,17 @@ public:
                                  return mlirDenseElementsAttrIsSplat(self);
                                })
         .def("get_splat_value",
-             [](PyDenseElementsAttribute &self) -> PyAttribute {
-               if (!mlirDenseElementsAttrIsSplat(self)) {
+             [](PyDenseElementsAttribute &self) {
+               if (!mlirDenseElementsAttrIsSplat(self))
                  throw py::value_error(
                      "get_splat_value called on a non-splat attribute");
-               }
-               return PyAttribute(self.getContext(),
-                                  mlirDenseElementsAttrGetSplatValue(self));
+               return mlirDenseElementsAttrGetSplatValue(self);
              })
         .def_buffer(&PyDenseElementsAttribute::accessBuffer);
   }
 
 private:
-  static bool isUnsignedIntegerFormat(const std::string &format) {
+  static bool isUnsignedIntegerFormat(std::string_view format) {
     if (format.empty())
       return false;
     char code = format[0];
@@ -818,7 +988,7 @@ private:
            code == 'Q';
   }
 
-  static bool isSignedIntegerFormat(const std::string &format) {
+  static bool isSignedIntegerFormat(std::string_view format) {
     if (format.empty())
       return false;
     char code = format[0];
@@ -932,6 +1102,82 @@ public:
   }
 };
 
+class PyDenseResourceElementsAttribute
+    : public PyConcreteAttribute<PyDenseResourceElementsAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction =
+      mlirAttributeIsADenseResourceElements;
+  static constexpr const char *pyClassName = "DenseResourceElementsAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static PyDenseResourceElementsAttribute
+  getFromBuffer(py::buffer buffer, const std::string &name, const PyType &type,
+                std::optional<size_t> alignment, bool isMutable,
+                DefaultingPyMlirContext contextWrapper) {
+    if (!mlirTypeIsAShaped(type)) {
+      throw std::invalid_argument(
+          "Constructing a DenseResourceElementsAttr requires a ShapedType.");
+    }
+
+    // Do not request any conversions as we must ensure to use caller
+    // managed memory.
+    int flags = PyBUF_STRIDES;
+    std::unique_ptr<Py_buffer> view = std::make_unique<Py_buffer>();
+    if (PyObject_GetBuffer(buffer.ptr(), view.get(), flags) != 0) {
+      throw py::error_already_set();
+    }
+
+    // This scope releaser will only release if we haven't yet transferred
+    // ownership.
+    auto freeBuffer = llvm::make_scope_exit([&]() {
+      if (view)
+        PyBuffer_Release(view.get());
+    });
+
+    if (!PyBuffer_IsContiguous(view.get(), 'A')) {
+      throw std::invalid_argument("Contiguous buffer is required.");
+    }
+
+    // Infer alignment to be the stride of one element if not explicit.
+    size_t inferredAlignment;
+    if (alignment)
+      inferredAlignment = *alignment;
+    else
+      inferredAlignment = view->strides[view->ndim - 1];
+
+    // The userData is a Py_buffer* that the deleter owns.
+    auto deleter = [](void *userData, const void *data, size_t size,
+                      size_t align) {
+      Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
+      PyBuffer_Release(ownedView);
+      delete ownedView;
+    };
+
+    size_t rawBufferSize = view->len;
+    MlirAttribute attr = mlirUnmanagedDenseResourceElementsAttrGet(
+        type, toMlirStringRef(name), view->buf, rawBufferSize,
+        inferredAlignment, isMutable, deleter, static_cast<void *>(view.get()));
+    if (mlirAttributeIsNull(attr)) {
+      throw std::invalid_argument(
+          "DenseResourceElementsAttr could not be constructed from the given "
+          "buffer. "
+          "This may mean that the Python buffer layout does not match that "
+          "MLIR expected layout and is a bug.");
+    }
+    view.release();
+    return PyDenseResourceElementsAttribute(contextWrapper->getRef(), attr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get_from_buffer",
+                 PyDenseResourceElementsAttribute::getFromBuffer,
+                 py::arg("array"), py::arg("name"), py::arg("type"),
+                 py::arg("alignment") = py::none(),
+                 py::arg("is_mutable") = false, py::arg("context") = py::none(),
+                 kDenseResourceElementsAttrGetFromBufferDocstring);
+  }
+};
+
 class PyDictAttribute : public PyConcreteAttribute<PyDictAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADictionary;
@@ -973,10 +1219,9 @@ public:
     c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
       MlirAttribute attr =
           mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
-      if (mlirAttributeIsNull(attr)) {
+      if (mlirAttributeIsNull(attr))
         throw py::key_error("attempt to access a non-existent attribute");
-      }
-      return PyAttribute(self.getContext(), attr);
+      return attr;
     });
     c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
       if (index < 0 || index >= self.dunderLen()) {
@@ -1167,6 +1412,16 @@ py::object integerOrBoolAttributeCaster(PyAttribute &pyAttribute) {
   throw py::cast_error(msg);
 }
 
+py::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
+  if (PyFlatSymbolRefAttribute::isaFunction(pyAttribute))
+    return py::cast(PyFlatSymbolRefAttribute(pyAttribute));
+  if (PySymbolRefAttribute::isaFunction(pyAttribute))
+    return py::cast(PySymbolRefAttribute(pyAttribute));
+  std::string msg = std::string("Can't cast unknown SymbolRef attribute (") +
+                    std::string(py::repr(py::cast(pyAttribute))) + ")";
+  throw py::cast_error(msg);
+}
+
 } // namespace
 
 void mlir::python::populateIRAttributes(py::module &m) {
@@ -1199,8 +1454,14 @@ void mlir::python::populateIRAttributes(py::module &m) {
   PyGlobals::get().registerTypeCaster(
       mlirDenseIntOrFPElementsAttrGetTypeID(),
       pybind11::cpp_function(denseIntOrFPElementsAttributeCaster));
+  PyDenseResourceElementsAttribute::bind(m);
 
   PyDictAttribute::bind(m);
+  PySymbolRefAttribute::bind(m);
+  PyGlobals::get().registerTypeCaster(
+      mlirSymbolRefAttrGetTypeID(),
+      pybind11::cpp_function(symbolRefOrFlatSymbolRefAttributeCaster));
+
   PyFlatSymbolRefAttribute::bind(m);
   PyOpaqueAttribute::bind(m);
   PyFloatAttribute::bind(m);

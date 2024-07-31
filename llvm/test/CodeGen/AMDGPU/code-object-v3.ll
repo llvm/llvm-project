@@ -9,10 +9,10 @@
 ; OSABI-AMDHSA-ASM-NOT: .amd_kernel_code_t
 
 ; OSABI-AMDHSA-ASM: s_endpgm
-; OSABI-AMDHSA-ASM: .section .rodata,#alloc
+; OSABI-AMDHSA-ASM: .section .rodata,"a"
 ; OSABI-AMDHSA-ASM: .p2align 6
 ; OSABI-AMDHSA-ASM: .amdhsa_kernel fadd
-; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 6
+; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 10
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr 3
@@ -28,10 +28,10 @@
 ; OSABI-AMDHSA-ASM-NOT: .amd_kernel_code_t
 
 ; OSABI-AMDHSA-ASM: s_endpgm
-; OSABI-AMDHSA-ASM: .section .rodata,#alloc
+; OSABI-AMDHSA-ASM: .section .rodata,"a"
 ; OSABI-AMDHSA-ASM: .p2align 6
 ; OSABI-AMDHSA-ASM: .amdhsa_kernel fsub
-; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 6
+; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 10
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; OSABI-AMDHSA-ASM:     .amdhsa_next_free_vgpr 3

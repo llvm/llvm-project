@@ -98,15 +98,15 @@ protected:
   friend SymbolTable;
   explicit Symbol(Kind k, StringRef n = "")
       : symbolKind(k), isExternal(true), isCOMDAT(false),
-        writtenToSymtab(false), pendingArchiveLoad(false), isGCRoot(false),
-        isRuntimePseudoReloc(false), deferUndefined(false), canInline(true),
-        isWeak(false), nameSize(n.size()),
-        nameData(n.empty() ? nullptr : n.data()) {
+        writtenToSymtab(false), isUsedInRegularObj(false),
+        pendingArchiveLoad(false), isGCRoot(false), isRuntimePseudoReloc(false),
+        deferUndefined(false), canInline(true), isWeak(false),
+        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {
     assert((!n.empty() || k <= LastDefinedCOFFKind) &&
            "If the name is empty, the Symbol must be a DefinedCOFF.");
   }
 
-  const unsigned symbolKind : 8;
+  unsigned symbolKind : 8;
   unsigned isExternal : 1;
 
 public:
@@ -269,8 +269,8 @@ private:
 // __safe_se_handler_table.
 class DefinedSynthetic : public Defined {
 public:
-  explicit DefinedSynthetic(StringRef name, Chunk *c)
-      : Defined(DefinedSyntheticKind, name), c(c) {}
+  explicit DefinedSynthetic(StringRef name, Chunk *c, uint32_t offset = 0)
+      : Defined(DefinedSyntheticKind, name), c(c), offset(offset) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedSyntheticKind;
@@ -278,11 +278,12 @@ public:
 
   // A null chunk indicates that this is __ImageBase. Otherwise, this is some
   // other synthesized chunk, like SEHTableChunk.
-  uint32_t getRVA() { return c ? c->getRVA() : 0; }
+  uint32_t getRVA() { return c ? c->getRVA() + offset : 0; }
   Chunk *getChunk() { return c; }
 
 private:
   Chunk *c;
+  uint32_t offset;
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -498,8 +499,10 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
   bool canInline = s->canInline;
+  bool isUsedInRegularObj = s->isUsedInRegularObj;
   new (s) T(std::forward<ArgT>(arg)...);
   s->canInline = canInline;
+  s->isUsedInRegularObj = isUsedInRegularObj;
 }
 } // namespace coff
 

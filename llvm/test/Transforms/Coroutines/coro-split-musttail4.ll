@@ -1,6 +1,6 @@
-; Tests that coro-split will convert a call before coro.suspend to a musttail call
-; while the user of the coro.suspend is a icmpinst.
+; Tests that coro-split will convert coro.await.suspend.handle to a musttail call.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define void @fakeresume1(ptr)  {
 entry:
@@ -23,7 +23,7 @@ entry:
 await.ready:
   %save2 = call token @llvm.coro.save(ptr null)
 
-  call fastcc void @fakeresume1(ptr align 8 null)
+  call void @llvm.coro.await.suspend.handle(ptr null, ptr null, ptr @await_suspend_function)
   %suspend = call i8 @llvm.coro.suspend(token %save2, i1 true)
   %switch = icmp ult i8 %suspend, 2
   br i1 %switch, label %cleanup, label %coro.end
@@ -38,12 +38,12 @@ coro.free:
   br label %coro.end
 
 coro.end:
-  call i1 @llvm.coro.end(ptr null, i1 false)
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 ; CHECK-LABEL: @f.resume(
-; CHECK:          musttail call fastcc void @fakeresume1(
+; CHECK:          musttail call fastcc void
 ; CHECK-NEXT:     ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
@@ -54,10 +54,11 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1) #2
+declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 declare void @delete(ptr nonnull) #2
+declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
 
 attributes #0 = { presplitcoroutine }
 attributes #1 = { argmemonly nounwind readonly }

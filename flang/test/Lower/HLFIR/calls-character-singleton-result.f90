@@ -14,7 +14,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %{{.*}}#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %{{.*}}  {{.*}}Ec
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}  {{.*}}Ei
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_6]]#1 : !fir.ref<i64>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> i8
 ! CHECK:  %[[VAL_9:.*]] = fir.undefined !fir.char<1>
 ! CHECK:  %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -35,7 +35,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.char<1>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %{{.*}}#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] typeparams %{{.*}}  {{.*}}Ec
-! CHECK:  %[[VAL_5:.*]] = fir.call @bar() fastmath<contract> : () -> !fir.char<1>
+! CHECK:  %[[VAL_5:.*]] = fir.call @bar() fastmath<contract> {is_bind_c} : () -> !fir.char<1>
 ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<!fir.char<1>>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant false
 ! CHECK:  %[[VAL_7:.*]] = hlfir.as_expr %[[VAL_1]] move %[[VAL_6]] : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>

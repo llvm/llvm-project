@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=aggressive}))' -split-input-file | FileCheck %s
 
 // Check the simple case of single operation blocks with a return.
 
@@ -257,7 +257,7 @@ func.func @nomerge(%arg0: i32, %i: i32) {
 func.func @mismatch_dominance() -> i32 {
   // CHECK: %[[RES:.*]] = "test.producing_br"()
   %0 = "test.producing_br"()[^bb1, ^bb2] {
-        operand_segment_sizes = array<i32: 0, 0>
+        operandSegmentSizes = array<i32: 0, 0>
 	} : () -> i32
 
 ^bb1:
@@ -274,4 +274,19 @@ func.func @mismatch_dominance() -> i32 {
 
 ^bb4(%3: i32):
   return %3 : i32
+}
+
+// CHECK-LABEL: func @dead_dealloc_fold_multi_use
+func.func @dead_dealloc_fold_multi_use(%cond : i1) {
+  // CHECK-NEXT: return
+  %a = memref.alloc() : memref<4xf32>
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb1:
+  memref.dealloc %a: memref<4xf32>
+  return
+
+^bb2:
+  memref.dealloc %a: memref<4xf32>
+  return
 }

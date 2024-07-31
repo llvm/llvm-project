@@ -31,6 +31,44 @@ class LinuxCoreThreadsTestCase(TestBase):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_tid)
 
+    @skipIf(oslist=["windows"])
+    @skipIf(triple="^mips")
+    def test_fs_gs_base(self):
+        """Tests fs_base/gs_base registers can be read from linux coredump."""
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # The fs_base/gs_base registers in linux-x86_64.core are parsed by
+        # using "eu-readelf -n linux-x86_64.core" to verify.
+        fs_base_values = [0x00007FC295017700, 0x00007FC294FFF740, 0x00007FC29501F700]
+        gs_base_values = [0, 0, 0]
+
+        for i in range(process.GetNumThreads()):
+            thread = process.GetThreadAtIndex(i)
+            self.assertTrue(thread.IsValid(), "current thread is valid")
+
+            current_frame = thread.GetFrameAtIndex(0)
+            self.assertTrue(current_frame.IsValid(), "current frame is valid")
+
+            reg_fs_base = current_frame.FindRegister("fs_base")
+            reg_gs_base = current_frame.FindRegister("gs_base")
+            self.assertTrue(reg_fs_base.IsValid(), "fs_base is not available")
+            self.assertTrue(reg_gs_base.IsValid(), "gs_base is not available")
+
+            self.assertEqual(
+                reg_fs_base.GetValueAsSigned(-1),
+                fs_base_values[i],
+                f"fs_base read is different from expected",
+            )
+
+            self.assertEqual(
+                reg_gs_base.GetValueAsSigned(-1),
+                gs_base_values[i],
+                f"gs_base read is different from expected",
+            )
+        self.dbg.DeleteTarget(target)
+
     def do_test(self, filename, pid, tid):
         target = self.dbg.CreateTarget("")
         process = target.LoadCore(filename + ".core")

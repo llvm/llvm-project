@@ -227,12 +227,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
   auto ME = getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(MemoryEffects::InaccessibleMem);
+                .getWithoutLoc(IRMemLocation::InaccessibleMem);
   if (ME.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  ModRefInfo ArgMR = ME.getModRef(MemoryEffects::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(MemoryEffects::ArgMem).getModRef();
+  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
+  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
   if ((ArgMR | OtherMR) != OtherMR) {
     // Refine the modref info for argument memory. We only bother to do this
     // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
@@ -442,15 +442,15 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (MemoryEffects::Location Loc : MemoryEffects::locations()) {
+  for (IRMemLocation Loc : MemoryEffects::locations()) {
     switch (Loc) {
-    case MemoryEffects::ArgMem:
+    case IRMemLocation::ArgMem:
       OS << "ArgMem: ";
       break;
-    case MemoryEffects::InaccessibleMem:
+    case IRMemLocation::InaccessibleMem:
       OS << "InaccessibleMem: ";
       break;
-    case MemoryEffects::Other:
+    case IRMemLocation::Other:
       OS << "Other: ";
       break;
     }
@@ -883,6 +883,11 @@ bool llvm::isEscapeSource(const Value *V) {
   if (isa<IntToPtrInst>(V))
     return true;
 
+  // Same for inttoptr constant expressions.
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      return true;
+
   return false;
 }
 
@@ -896,7 +901,7 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
 
   // Byval goes out of scope on unwind.
   if (auto *A = dyn_cast<Argument>(Object))
-    return A->hasByValAttr();
+    return A->hasByValAttr() || A->hasAttribute(Attribute::DeadOnUnwind);
 
   // A noalias return is not accessible from any other code. If the pointer
   // does not escape prior to the unwind, then the caller cannot access the
@@ -907,4 +912,29 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
   }
 
   return false;
+}
+
+// We don't consider globals as writable: While the physical memory is writable,
+// we may not have provenance to perform the write.
+bool llvm::isWritableObject(const Value *Object,
+                            bool &ExplicitlyDereferenceableOnly) {
+  ExplicitlyDereferenceableOnly = false;
+
+  // TODO: Alloca might not be writable after its lifetime ends.
+  // See https://github.com/llvm/llvm-project/issues/51838.
+  if (isa<AllocaInst>(Object))
+    return true;
+
+  if (auto *A = dyn_cast<Argument>(Object)) {
+    if (A->hasAttribute(Attribute::Writable)) {
+      ExplicitlyDereferenceableOnly = true;
+      return true;
+    }
+
+    return A->hasByValAttr();
+  }
+
+  // TODO: Noalias shouldn't imply writability, this should check for an
+  // allocator function instead.
+  return isNoAliasCall(Object);
 }

@@ -44,21 +44,20 @@ static void print_usage(void) {
   fprintf(stderr, "    Read lines of triple, hex ascii machine code from stdin "
                   "- print disassembly\n\n");
   fprintf(stderr, "  * --calc\n");
+  fprintf(
+      stderr,
+      "    Read lines of name, rpn from stdin - print generated module\n\n");
   fprintf(stderr, "  * --get-di-tag\n");
   fprintf(stderr, "    Run test for getting MDNode dwarf tag\n");
+  fprintf(stderr, "  * --di-type-get-name\n");
+  fprintf(stderr, "    Run test for getting MDNode type name\n");
   fprintf(stderr, "  * --replace-md-operand\n");
   fprintf(stderr, "    Run test for replacing MDNode operands\n");
   fprintf(stderr, "  * --is-a-value-as-metadata\n");
   fprintf(stderr,
           "    Run test for checking if LLVMValueRef is a ValueAsMetadata\n");
-  fprintf(
-      stderr,
-      "    Read lines of name, rpn from stdin - print generated module\n\n");
   fprintf(stderr, "  * --echo\n");
   fprintf(stderr, "    Read bitcode file from stdin - print it back out\n\n");
-  fprintf(stderr, "  * --echo --opaque-pointers\n");
-  fprintf(stderr, "    Read bitcode file from stdin - print it back out in "
-                  "opaque pointer mode\n\n");
   fprintf(stderr, "  * --test-diagnostic-handler\n");
   fprintf(stderr,
           "    Read bitcode file from stdin with a diagnostic handler set\n\n");
@@ -96,6 +95,8 @@ int main(int argc, char **argv) {
     return llvm_set_metadata();
   } else if (argc == 2 && !strcmp(argv[1], "--get-di-tag")) {
     return llvm_get_di_tag();
+  } else if (argc == 2 && !strcmp(argv[1], "--di-type-get-name")) {
+    return llvm_di_type_get_name();
   } else if (argc == 2 && !strcmp(argv[1], "--replace-md-operand")) {
     return llvm_replace_md_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--is-a-value-as-metadata")) {
@@ -108,7 +109,8 @@ int main(int argc, char **argv) {
     return llvm_echo();
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
     return llvm_test_diagnostic_handler();
-  } else if (argc == 2 && !strcmp(argv[1], "--test-dibuilder")) {
+  } else if (argc == 2 &&
+             !strcmp(argv[1], "--test-dibuilder-debuginfo-format")) {
     return llvm_test_dibuilder();
   } else {
     print_usage();

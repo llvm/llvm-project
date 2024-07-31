@@ -19,6 +19,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -86,7 +87,8 @@ protected:
   Triple TT;
 public:
   PPCAsmBackend(const Target &T, const Triple &TT)
-      : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
+      : MCAsmBackend(TT.isLittleEndian() ? llvm::endianness::little
+                                         : llvm::endianness::big),
         TT(TT) {}
 
   unsigned getNumFixupKinds() const override {
@@ -131,7 +133,7 @@ public:
 
     assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
            "Invalid kind!");
-    return (Endian == support::little
+    return (Endian == llvm::endianness::little
                 ? InfosLE
                 : InfosBE)[Kind - FirstTargetFixupKind];
   }
@@ -153,13 +155,15 @@ public:
     // from the fixup value. The Value has been "split up" into the appropriate
     // bitfields above.
     for (unsigned i = 0; i != NumBytes; ++i) {
-      unsigned Idx = Endian == support::little ? i : (NumBytes - 1 - i);
+      unsigned Idx =
+          Endian == llvm::endianness::little ? i : (NumBytes - 1 - i);
       Data[Offset + i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
     }
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override {
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override {
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
@@ -178,18 +182,13 @@ public:
           unsigned Other = S->getOther() << 2;
           if ((Other & ELF::STO_PPC64_LOCAL_MASK) != 0)
             return true;
-        }
+        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(&A->getSymbol())) {
+          return !Target.isAbsolute() && S->isExternal() &&
+                 S->getStorageClass() == XCOFF::C_WEAKEXT;
+       }
       }
       return false;
     }
-  }
-
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    // FIXME.
-    llvm_unreachable("relaxInstruction() unimplemented");
   }
 
   void relaxInstruction(MCInst &Inst,

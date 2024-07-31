@@ -44,6 +44,14 @@ enum ObjCKeywordKind {
   NUM_OBJC_KEYWORDS
 };
 
+/// Provides a namespace for notable identifers such as float_t and
+/// double_t.
+enum NotableIdentifierKind {
+#define NOTABLE_IDENTIFIER(X) X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_NOTABLE_IDENTIFIERS
+};
+
 /// Defines the possible values of an on-off-switch (C99 6.10.6p2).
 enum OnOffSwitch {
   OOS_ON, OOS_OFF, OOS_DEFAULT
@@ -90,7 +98,7 @@ inline bool isLiteral(TokenKind K) {
   return K == tok::numeric_constant || K == tok::char_constant ||
          K == tok::wide_char_constant || K == tok::utf8_char_constant ||
          K == tok::utf16_char_constant || K == tok::utf32_char_constant ||
-         isStringLiteral(K) || K == tok::header_name;
+         isStringLiteral(K) || K == tok::header_name || K == tok::binary_data;
 }
 
 /// Return true if this is any of tok::annot_* kinds.
@@ -101,8 +109,8 @@ bool isPragmaAnnotation(TokenKind K);
 
 inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
   return (false
-#define KEYWORD_ATTRIBUTE(X) || (K == tok::kw_##X)
-#include "clang/Basic/AttrTokenKinds.inc"
+#define KEYWORD_ATTRIBUTE(X, ...) || (K == tok::kw_##X)
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
   );
 }
 

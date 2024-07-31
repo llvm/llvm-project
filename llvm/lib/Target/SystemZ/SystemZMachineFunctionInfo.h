@@ -17,10 +17,10 @@ namespace SystemZ {
 // A struct to hold the low and high GPR registers to be saved/restored as
 // well as the offset into the register save area of the low register.
 struct GPRRegs {
-  unsigned LowGPR;
-  unsigned HighGPR;
-  unsigned GPROffset;
-  GPRRegs() : LowGPR(0), HighGPR(0), GPROffset(0) {}
+  unsigned LowGPR = 0;
+  unsigned HighGPR = 0;
+  unsigned GPROffset = 0;
+  GPRRegs() = default;
   };
 }
 
@@ -38,6 +38,8 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   unsigned RegSaveFrameIndex;
   int FramePointerSaveIndex;
   unsigned NumLocalDynamics;
+  /// z/OS XPLINK ABI: incoming ADA virtual register.
+  Register VRegADA;
 
 public:
   SystemZMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
@@ -100,6 +102,11 @@ public:
   // Count number of local-dynamic TLS symbols used.
   unsigned getNumLocalDynamicTLSAccesses() const { return NumLocalDynamics; }
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamics; }
+
+  // Get and set the function's incoming special XPLINK ABI defined ADA
+  // register.
+  Register getADAVirtualRegister() const { return VRegADA; }
+  void setADAVirtualRegister(Register Reg) { VRegADA = Reg; }
 };
 
 } // end namespace llvm

@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class CopySignTest : public __llvm_libc::testing::Test {
+template <typename T>
+class CopySignTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -33,11 +35,11 @@ public:
   }
 
   void testRange(CopySignFunc func) {
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = T(FPBits(v));
-      if (isnan(x) || isinf(x))
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = FPBits(v).get_val();
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
 
       double res1 = func(x, -x);

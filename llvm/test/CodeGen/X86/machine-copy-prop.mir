@@ -8,13 +8,14 @@
   define void @copyprop0() { ret void }
   define void @copyprop1() { ret void }
   define void @copyprop2() { ret void }
+  define void @copyprop3() { ret void }
+  define void @copyprop4() { ret void }
   define void @nocopyprop0() { ret void }
   define void @nocopyprop1() { ret void }
   define void @nocopyprop2() { ret void }
   define void @nocopyprop3() { ret void }
   define void @nocopyprop4() { ret void }
   define void @nocopyprop5() { ret void }
-  define void @nocopyprop6() { ret void }
 ...
 ---
 # The second copy is redundant and will be removed, check that we also remove
@@ -118,6 +119,44 @@ body: |
     NOOP implicit $rax, implicit $rdi
 ...
 ---
+# Check that undef is removed from the remaining copy because
+# the deleted COPY did not have it.
+# CHECK-LABEL: name: copyprop3
+# CHECK: bb.0:
+# CHECK:      $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+
+    $rax = COPY undef $rdi
+    NOOP implicit killed $rax
+    $rax = COPY $rdi
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# Check that undef is NOT removed from the remaining copy because
+# the deleted COPY also had it.
+# CHECK-LABEL: name: copyprop4
+# CHECK: bb.0:
+# CHECK:      $rax = COPY undef $rdi
+# CHECK-NEXT: NOOP implicit $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+
+    $rax = COPY undef $rdi
+    NOOP implicit killed $rax
+    $rax = COPY undef $rdi
+    NOOP implicit $rax, implicit $rdi
+...
+---
 # The second copy is not redundant if the source register ($rax) is clobbered
 # even if the dest ($rbp) is not.
 # CHECK-LABEL: name: nocopyprop0
@@ -213,25 +252,4 @@ body: |
   bb.0:
     $rip = COPY $rax
     $rip = COPY $rax
-...
----
-# The copies are obviously redundant, but the earlier COPY copies from "undef".
-# That copy may be lowered to a KILL instead and thus we cannot remove the
-# second COPY, otherwise we risk making $rax undef.
-# CHECK-LABEL: name: nocopyprop6
-# CHECK: bb.0:
-# CHECK:      $rax = COPY undef $rdi
-# CHECK-NEXT: NOOP implicit killed $rax
-# CHECK-NEXT: $rax = COPY $rdi
-# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
-name: nocopyprop6
-tracksRegLiveness: true
-body: |
-  bb.0:
-    liveins: $rdi
-
-    $rax = COPY undef $rdi
-    NOOP implicit killed $rax
-    $rax = COPY $rdi
-    NOOP implicit $rax, implicit $rdi
 ...

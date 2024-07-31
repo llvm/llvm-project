@@ -919,7 +919,6 @@ the `Func` (which is assigned the namespace `func` as a special case):
 #ifndef PYTHON_BINDINGS_FUNC_OPS
 #define PYTHON_BINDINGS_FUNC_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Func/IR/FuncOps.td"
 
 #endif // PYTHON_BINDINGS_FUNC_OPS
@@ -946,10 +945,11 @@ When the python bindings need to locate a wrapper module, they consult the
 `dialect_search_path` and use it to find an appropriately named module. For the
 main repository, this search path is hard-coded to include the `mlir.dialects`
 module, which is where wrappers are emitted by the above build rule. Out of tree
-dialects and add their modules to the search path by calling:
+dialects can add their modules to the search path by calling:
 
 ```python
-mlir._cext.append_dialect_search_prefix("myproject.mlir.dialects")
+from mlir.dialects._ods_common import _cext
+_cext.globals.append_dialect_search_prefix("myproject.mlir.dialects")
 ```
 
 ### Wrapper module code organization
@@ -1018,90 +1018,79 @@ very generic signature.
 
 #### Extending Generated Op Classes
 
-Note that this is a rather complex mechanism and this section errs on the side
-of explicitness. Users are encouraged to find an example and duplicate it if
-they don't feel the need to understand the subtlety. The `builtin` dialect
-provides some relatively simple examples.
-
 As mentioned above, the build system generates Python sources like
 `_{DIALECT_NAMESPACE}_ops_gen.py` for each dialect with Python bindings. It is
-often desirable to to use these generated classes as a starting point for
-further customization, so an extension mechanism is provided to make this easy
-(you are always free to do ad-hoc patching in your `{DIALECT_NAMESPACE}.py` file
-but we prefer a more standard mechanism that is applied uniformly).
-
-To provide extensions, add a `_{DIALECT_NAMESPACE}_ops_ext.py` file to the
-`dialects` module (i.e. adjacent to your `{DIALECT_NAMESPACE}.py` top-level and
-the `*_ops_gen.py` file). Using the `builtin` dialect and `FuncOp` as an
-example, the generated code will include an import like this:
+often desirable to use these generated classes as a starting point for
+further customization, so an extension mechanism is provided to make this easy.
+This mechanism uses conventional inheritance combined with `OpView` registration.
+For example, the default builder for `arith.constant`
 
 ```python
-try:
-  from . import _builtin_ops_ext as _ods_ext_module
-except ImportError:
-  _ods_ext_module = None
+class ConstantOp(_ods_ir.OpView):
+  OPERATION_NAME = "arith.constant"
+
+  _ODS_REGIONS = (0, True)
+
+  def __init__(self, value, *, loc=None, ip=None):
+    ...
 ```
 
-Then for each generated concrete `OpView` subclass, it will apply a decorator
-like:
+expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`). 
+Thus, a natural extension is a builder that accepts a MLIR type and a Python value and instantiates the appropriate `TypedAttr`:
 
 ```python
-@_ods_cext.register_operation(_Dialect)
-@_ods_extend_opview_class(_ods_ext_module)
-class FuncOp(_ods_ir.OpView):
+from typing import Union
+
+from mlir.ir import Type, IntegerAttr, FloatAttr
+from mlir.dialects._arith_ops_gen import _Dialect, ConstantOp
+from mlir.dialects._ods_common import _cext
+
+@_cext.register_operation(_Dialect, replace=True)
+class ConstantOpExt(ConstantOp):
+    def __init__(
+        self, result: Type, value: Union[int, float], *, loc=None, ip=None
+    ):
+        if isinstance(value, int):
+            super().__init__(IntegerAttr.get(result, value), loc=loc, ip=ip)
+        elif isinstance(value, float):
+            super().__init__(FloatAttr.get(result, value), loc=loc, ip=ip)
+        else:
+            raise NotImplementedError(f"Building `arith.constant` not supported for {result=} {value=}")
 ```
 
-See the `_ods_common.py` `extend_opview_class` function for details of the
-mechanism. At a high level:
-
-*   If the extension module exists, locate an extension class for the op (in
-    this example, `FuncOp`):
-    *   First by looking for an attribute with the exact name in the extension
-        module.
-    *   Falling back to calling a `select_opview_mixin(parent_opview_cls)`
-        function defined in the extension module.
-*   If a mixin class is found, a new subclass is dynamically created that
-    multiply inherits from `({_builtin_ops_ext.FuncOp},
-    _builtin_ops_gen.FuncOp)`.
-
-The mixin class should not inherit from anything (i.e. directly extends `object`
-only). The facility is typically used to define custom `__init__` methods,
-properties, instance methods and static methods. Due to the inheritance
-ordering, the mixin class can act as though it extends the generated `OpView`
-subclass in most contexts (i.e. `issubclass(_builtin_ops_ext.FuncOp, OpView)`
-will return `False` but usage generally allows you treat it as duck typed as an
-`OpView`).
-
-There are a couple of recommendations, given how the class hierarchy is defined:
-
-*   For static methods that need to instantiate the actual "leaf" op (which is
-    dynamically generated and would result in circular dependencies to try to
-    reference by name), prefer to use `@classmethod` and the concrete subclass
-    will be provided as your first `cls` argument. See
-    `_builtin_ops_ext.FuncOp.from_py_func` as an example.
-*   If seeking to replace the generated `__init__` method entirely, you may
-    actually want to invoke the super-super-class `mlir.ir.OpView` constructor
-    directly, as it takes an `mlir.ir.Operation`, which is likely what you are
-    constructing (i.e. the generated `__init__` method likely adds more API
-    constraints than you want to expose in a custom builder).
-
-A pattern that comes up frequently is wanting to provide a sugared `__init__`
-method which has optional or type-polymorphism/implicit conversions but to
-otherwise want to invoke the default op building logic. For such cases, it is
-recommended to use an idiom such as:
+which enables building an instance of `arith.constant` like so:
 
 ```python
-  def __init__(self, sugar, spice, *, loc=None, ip=None):
-    ... massage into result_type, operands, attributes ...
-    OpView.__init__(self, self.build_generic(
-        results=[result_type],
-        operands=operands,
-        attributes=attributes,
-        loc=loc,
-        ip=ip))
+from mlir.ir import F32Type
+
+a = ConstantOpExt(F32Type.get(), 42.42)
+b = ConstantOpExt(IntegerType.get_signless(32), 42)
 ```
 
-Refer to the documentation for `build_generic` for more information.
+Note, three key aspects of the extension mechanism in this example:
+
+1. `ConstantOpExt` directly inherits from the generated `ConstantOp`;
+2. in this, simplest, case all that's required is a call to the super class' initializer, i.e., `super().__init__(...)`;
+3. in order to register `ConstantOpExt` as the preferred `OpView` that is returned by `mlir.ir.Operation.opview` (see [Operations, Regions and Blocks](#operations-regions-and-blocks))
+   we decorate the class with `@_cext.register_operation(_Dialect, replace=True)`, **where the `replace=True` must be used**.
+
+In some more complex cases it might be necessary to explicitly build the `OpView` through `OpView.build_generic` (see [Default Builder](#default-builder)), just as is performed by the generated builders.
+I.e., we must call `OpView.build_generic` **and pass the result to `OpView.__init__`**, where the small issue becomes that the latter is already overridden by the generated builder.
+Thus, we must call a method of a super class' super class (the "grandparent"); for example:
+
+```python
+from mlir.dialects._scf_ops_gen import _Dialect, ForOp
+from mlir.dialects._ods_common import _cext
+
+@_cext.register_operation(_Dialect, replace=True)
+class ForOpExt(ForOp):
+    def __init__(self, lower_bound, upper_bound, step, iter_args, *, loc=None, ip=None):
+        ...
+        super(ForOp, self).__init__(self.build_generic(...))
+```
+
+where `OpView.__init__` is called via `super(ForOp, self).__init__`.
+Note, there are alternatives ways to implement this (e.g., explicitly writing `OpView.__init__`); see any discussion on Python inheritance.
 
 ## Providing Python bindings for a dialect
 
@@ -1125,14 +1114,10 @@ Dialect operations are provided in Python by wrapping the generic
 properties. Therefore, there is no need to implement a separate C API for them.
 For operations defined in ODS, `mlir-tblgen -gen-python-op-bindings
 -bind-dialect=<dialect-namespace>` generates the Python API from the declarative
-description. If the build API uses specific attribute types, such as
-`::mlir::IntegerAttr` or `::mlir::DenseIntElementsAttr`, for its arguments, the
-mapping to the corresponding Python types should be provided in ODS definition.
-For built-in attribute types, this mapping is available in
-[`include/mlir/Bindings/Python/Attributes.td`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/Attributes.td);
-it is sufficient to create a new `.td` file that includes this file and the
-original ODS definition and use it as source for the `mlir-tblgen` call. Such
-`.td` files reside in
+description.
+It is sufficient to create a new `.td` file that includes the original ODS
+definition and use it as source for the `mlir-tblgen` call.
+Such `.td` files reside in
 [`python/mlir/dialects/`](https://github.com/llvm/llvm-project/tree/main/mlir/python/mlir/dialects).
 The results of `mlir-tblgen` are expected to produce a file named
 `_<dialect-namespace>_ops_gen.py` by convention. The generated operation classes

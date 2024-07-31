@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 
-// rdar://problem/22155434
 namespace test0 {
   void foo() {
     try {

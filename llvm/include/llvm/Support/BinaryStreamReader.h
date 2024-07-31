@@ -31,9 +31,8 @@ public:
   BinaryStreamReader() = default;
   explicit BinaryStreamReader(BinaryStreamRef Ref);
   explicit BinaryStreamReader(BinaryStream &Stream);
-  explicit BinaryStreamReader(ArrayRef<uint8_t> Data,
-                              llvm::support::endianness Endian);
-  explicit BinaryStreamReader(StringRef Data, llvm::support::endianness Endian);
+  explicit BinaryStreamReader(ArrayRef<uint8_t> Data, llvm::endianness Endian);
+  explicit BinaryStreamReader(StringRef Data, llvm::endianness Endian);
 
   BinaryStreamReader(const BinaryStreamReader &Other) = default;
 
@@ -73,8 +72,7 @@ public:
     if (auto EC = readBytes(Bytes, sizeof(T)))
       return EC;
 
-    Dest = llvm::support::endian::read<T, llvm::support::unaligned>(
-        Bytes.data(), Stream.getEndian());
+    Dest = llvm::support::endian::read<T>(Bytes.data(), Stream.getEndian());
     return Error::success();
   }
 

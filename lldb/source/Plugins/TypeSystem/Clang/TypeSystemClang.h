@@ -22,6 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
@@ -66,11 +67,13 @@ public:
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
-  /// The Layout is as follows:
+  /// The payload is used for typedefs and ptrauth types.
+  /// For typedefs, the Layout is as follows:
   /// \verbatim
   /// bit 0..30 ... Owning Module ID.
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
+  /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
   Type::Payload m_payload = 0;
 
 public:
@@ -159,7 +162,7 @@ public:
   llvm::StringRef getDisplayName() const { return m_display_name; }
 
   /// Returns the clang::ASTContext instance managed by this TypeSystemClang.
-  clang::ASTContext &getASTContext();
+  clang::ASTContext &getASTContext() const;
 
   clang::MangleContext *getMangleContext();
 
@@ -182,8 +185,6 @@ public:
   static void DumpDeclHiearchy(clang::Decl *decl);
 
   static void DumpDeclContextHiearchy(clang::DeclContext *decl_ctx);
-
-  static bool DeclsAreEquivalent(clang::Decl *lhs_decl, clang::Decl *rhs_decl);
 
   static bool GetCompleteDecl(clang::ASTContext *ast, clang::Decl *decl);
 
@@ -219,6 +220,9 @@ public:
 
   static clang::DeclContext *GetDeclContextForType(const CompilerType &type);
 
+  CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type) override;
+
   uint32_t GetPointerByteSize() override;
 
   clang::TranslationUnitDecl *GetTranslationUnitDecl() {
@@ -250,45 +254,45 @@ public:
 
   CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
 
+  CompilerType GetTypeForDecl(clang::ValueDecl *value_decl);
+
   template <typename RecordDeclType>
   CompilerType
-  GetTypeForIdentifier(ConstString type_name,
+  GetTypeForIdentifier(llvm::StringRef type_name,
                        clang::DeclContext *decl_context = nullptr) {
     CompilerType compiler_type;
+    if (type_name.empty())
+      return compiler_type;
 
-    if (type_name.GetLength()) {
-      clang::ASTContext &ast = getASTContext();
-      if (!decl_context)
-        decl_context = ast.getTranslationUnitDecl();
+    clang::ASTContext &ast = getASTContext();
+    if (!decl_context)
+      decl_context = ast.getTranslationUnitDecl();
 
-      clang::IdentifierInfo &myIdent = ast.Idents.get(type_name.GetCString());
-      clang::DeclarationName myName =
-          ast.DeclarationNames.getIdentifier(&myIdent);
+    clang::IdentifierInfo &myIdent = ast.Idents.get(type_name);
+    clang::DeclarationName myName =
+        ast.DeclarationNames.getIdentifier(&myIdent);
+    clang::DeclContext::lookup_result result = decl_context->lookup(myName);
+    if (result.empty())
+      return compiler_type;
 
-      clang::DeclContext::lookup_result result = decl_context->lookup(myName);
-
-      if (!result.empty()) {
-        clang::NamedDecl *named_decl = *result.begin();
-        if (const RecordDeclType *record_decl =
-                llvm::dyn_cast<RecordDeclType>(named_decl))
-          compiler_type =
-              CompilerType(weak_from_this(),
-                           clang::QualType(record_decl->getTypeForDecl(), 0)
-                               .getAsOpaquePtr());
-      }
-    }
+    clang::NamedDecl *named_decl = *result.begin();
+    if (const RecordDeclType *record_decl =
+            llvm::dyn_cast<RecordDeclType>(named_decl))
+      compiler_type = CompilerType(
+          weak_from_this(),
+          clang::QualType(record_decl->getTypeForDecl(), 0).getAsOpaquePtr());
 
     return compiler_type;
   }
 
   CompilerType CreateStructForIdentifier(
-      ConstString type_name,
+      llvm::StringRef type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
 
   CompilerType GetOrCreateStructForIdentifier(
-      ConstString type_name,
+      llvm::StringRef type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
@@ -494,7 +498,8 @@ public:
   // Array Types
 
   CompilerType CreateArrayType(const CompilerType &element_type,
-                               size_t element_count, bool is_vector);
+                               std::optional<size_t> element_count,
+                               bool is_vector);
 
   // Enumeration Types
   CompilerType CreateEnumerationType(llvm::StringRef name,
@@ -516,7 +521,7 @@ public:
                                               size_t bit_size);
 
   // TypeSystem methods
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
   npdb::PdbAstBuilder *GetNativePDBParser() override;
 
@@ -557,6 +562,11 @@ public:
   CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                            size_t arg_idx) override;
 
+  std::vector<lldb_private::CompilerContext>
+  DeclGetCompilerContext(void *opaque_decl) override;
+
+  Scalar DeclGetConstantValue(void *opaque_decl) override;
+
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   // CompilerDeclContext override functions
@@ -585,6 +595,9 @@ public:
                                       void *other_opaque_decl_ctx) override;
 
   lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override;
+
+  std::vector<lldb_private::CompilerContext>
+  DeclContextGetCompilerContext(void *opaque_decl_ctx) override;
 
   // Clang specific clang::DeclContext functions
 
@@ -634,8 +647,7 @@ public:
 
   bool IsConst(lldb::opaque_compiler_type_t type) override;
 
-  bool IsCStringType(lldb::opaque_compiler_type_t type,
-                     uint32_t &length) override;
+  bool IsCStringType(lldb::opaque_compiler_type_t type, uint32_t &length);
 
   static bool IsCXXClassType(const CompilerType &type);
 
@@ -643,6 +655,10 @@ public:
 
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
+
+  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
+  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
+  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
 
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
@@ -784,6 +800,9 @@ public:
 
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                  uint32_t payload) override;
+
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
@@ -801,6 +820,10 @@ public:
 
   // Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
+
+  // Create a generic function prototype that can be used in ValuObject types
+  // to correctly display a function pointer with the right value and summary.
+  CompilerType CreateGenericFunctionPrototype() override;
 
   // Exploring the type
 
@@ -825,9 +848,10 @@ public:
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
 
-  uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                          bool omit_empty_base_classes,
-                          const ExecutionContext *exe_ctx) override;
+  llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) override;
 
   CompilerType GetBuiltinTypeByName(ConstString name) override;
 
@@ -859,9 +883,12 @@ public:
                                           size_t idx,
                                           uint32_t *bit_offset_ptr) override;
 
+  CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
+                                      llvm::StringRef name) override;
+
   static uint32_t GetNumPointeeChildren(clang::QualType type);
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,
@@ -887,6 +914,9 @@ public:
                                 llvm::StringRef name,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
+
+  CompilerType GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                                           llvm::StringRef name) override;
 
   bool IsTemplateType(lldb::opaque_compiler_type_t type) override;
 
@@ -981,8 +1011,8 @@ public:
       const char *name, // the full symbol name as seen in the symbol table
                         // (lldb::opaque_compiler_type_t type, "-[NString
                         // stringWithCString:]")
-      const CompilerType &method_compiler_type, lldb::AccessType access,
-      bool is_artificial, bool is_variadic, bool is_objc_direct_call);
+      const CompilerType &method_compiler_type, bool is_artificial,
+      bool is_variadic, bool is_objc_direct_call);
 
   static bool SetHasExternalStorage(lldb::opaque_compiler_type_t type,
                                     bool has_extern);
@@ -1031,29 +1061,18 @@ public:
   ///       The name of the symbol to dump, if it is empty dump all the symbols
   void DumpFromSymbolFile(Stream &s, llvm::StringRef symbol_name);
 
-  void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream *s, lldb::Format format, const DataExtractor &data,
-                 lldb::offset_t data_offset, size_t data_byte_size,
-                 uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                 bool show_types, bool show_summary, bool verbose,
-                 uint32_t depth) override;
-
-  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
+  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                      ExecutionContextScope *exe_scope) override;
-
-  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream *s, const DataExtractor &data,
-                   lldb::offset_t data_offset, size_t data_byte_size) override;
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
   void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, Stream *s,
+      lldb::opaque_compiler_type_t type, Stream &s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
   static void DumpTypeName(const CompilerType &type);
@@ -1147,6 +1166,15 @@ private:
 
   bool IsTypeImpl(lldb::opaque_compiler_type_t type,
                   llvm::function_ref<bool(clang::QualType)> predicate) const;
+
+  /// Emits information about this TypeSystem into the expression log.
+  ///
+  /// Helper method that is used in \ref TypeSystemClang::TypeSystemClang
+  /// on creation of a new instance.
+  void LogCreation() const;
+
+  std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                         ExecutionContextScope *exe_scope);
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
@@ -1271,12 +1299,12 @@ public:
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output) override;
 
-  UserExpression *
-  GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
-                    lldb::LanguageType language,
-                    Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options,
-                    ValueObject *ctx_obj) override;
+  UserExpression *GetUserExpression(llvm::StringRef expr,
+                                    llvm::StringRef prefix,
+                                    SourceLanguage language,
+                                    Expression::ResultType desired_type,
+                                    const EvaluateExpressionOptions &options,
+                                    ValueObject *ctx_obj) override;
 
   FunctionCaller *GetFunctionCaller(const CompilerType &return_type,
                                     const Address &function_address,

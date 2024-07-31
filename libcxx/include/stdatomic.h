@@ -103,6 +103,8 @@ using std::atomic_fetch_sub                            // see below
 using std::atomic_fetch_sub_explicit                   // see below
 using std::atomic_fetch_or                             // see below
 using std::atomic_fetch_or_explicit                    // see below
+using std::atomic_fetch_xor                            // see below
+using std::atomic_fetch_xor_explicit                   // see below
 using std::atomic_fetch_and                            // see below
 using std::atomic_fetch_and_explicit                   // see below
 using std::atomic_flag_test_and_set                    // see below
@@ -123,14 +125,14 @@ using std::atomic_signal_fence                         // see below
 
 #if defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 
-#include <atomic>
-#include <version>
+#  include <atomic>
+#  include <version>
 
-#ifdef _Atomic
-# undef _Atomic
-#endif
+#  ifdef _Atomic
+#    undef _Atomic
+#  endif
 
-#define _Atomic(_Tp) ::std::atomic<_Tp>
+#  define _Atomic(_Tp) ::std::atomic<_Tp>
 
 using std::memory_order _LIBCPP_USING_IF_EXISTS;
 using std::memory_order_relaxed _LIBCPP_USING_IF_EXISTS;
@@ -204,6 +206,8 @@ using std::atomic_fetch_add_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_and _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_and_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_or _LIBCPP_USING_IF_EXISTS;
+using std::atomic_fetch_xor_explicit _LIBCPP_USING_IF_EXISTS;
+using std::atomic_fetch_xor _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_or_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_sub _LIBCPP_USING_IF_EXISTS;
 using std::atomic_fetch_sub_explicit _LIBCPP_USING_IF_EXISTS;
@@ -226,9 +230,9 @@ using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 // the header. We do this because Clang has historically shipped a <stdatomic.h>
 // header that would be available in all Standard modes, and we don't want to
 // break that use case.
-# if __has_include_next(<stdatomic.h>)
-#   include_next <stdatomic.h>
-# endif
+#  if __has_include_next(<stdatomic.h>)
+#    include_next <stdatomic.h>
+#  endif
 
 #endif // defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 

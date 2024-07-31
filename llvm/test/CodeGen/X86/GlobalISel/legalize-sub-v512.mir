@@ -54,6 +54,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[SUB]](<16 x s8>), [[SUB1]](<16 x s8>), [[SUB2]](<16 x s8>), [[SUB3]](<16 x s8>)
     ; AVX1-NEXT: $zmm0 = COPY [[CONCAT_VECTORS]](<64 x s8>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX512F-LABEL: name: test_sub_v64i8
     ; AVX512F: liveins: $zmm0, $zmm1
     ; AVX512F-NEXT: {{  $}}
@@ -66,6 +67,7 @@ body:             |
     ; AVX512F-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[SUB]](<32 x s8>), [[SUB1]](<32 x s8>)
     ; AVX512F-NEXT: $zmm0 = COPY [[CONCAT_VECTORS]](<64 x s8>)
     ; AVX512F-NEXT: RET 0
+    ;
     ; AVX512BW-LABEL: name: test_sub_v64i8
     ; AVX512BW: liveins: $zmm0, $zmm1
     ; AVX512BW-NEXT: {{  $}}
@@ -108,6 +110,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s16>) = G_CONCAT_VECTORS [[SUB]](<8 x s16>), [[SUB1]](<8 x s16>), [[SUB2]](<8 x s16>), [[SUB3]](<8 x s16>)
     ; AVX1-NEXT: $zmm0 = COPY [[CONCAT_VECTORS]](<32 x s16>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX512F-LABEL: name: test_sub_v32i16
     ; AVX512F: liveins: $zmm0, $zmm1
     ; AVX512F-NEXT: {{  $}}
@@ -120,6 +123,7 @@ body:             |
     ; AVX512F-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s16>) = G_CONCAT_VECTORS [[SUB]](<16 x s16>), [[SUB1]](<16 x s16>)
     ; AVX512F-NEXT: $zmm0 = COPY [[CONCAT_VECTORS]](<32 x s16>)
     ; AVX512F-NEXT: RET 0
+    ;
     ; AVX512BW-LABEL: name: test_sub_v32i16
     ; AVX512BW: liveins: $zmm0, $zmm1
     ; AVX512BW-NEXT: {{  $}}
@@ -162,6 +166,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[SUB]](<4 x s32>), [[SUB1]](<4 x s32>), [[SUB2]](<4 x s32>), [[SUB3]](<4 x s32>)
     ; AVX1-NEXT: $zmm0 = COPY [[CONCAT_VECTORS]](<16 x s32>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX512F-LABEL: name: test_sub_v16i32
     ; AVX512F: liveins: $zmm0, $zmm1
     ; AVX512F-NEXT: {{  $}}
@@ -170,6 +175,7 @@ body:             |
     ; AVX512F-NEXT: [[SUB:%[0-9]+]]:_(<16 x s32>) = G_SUB [[DEF]], [[DEF1]]
     ; AVX512F-NEXT: $zmm0 = COPY [[SUB]](<16 x s32>)
     ; AVX512F-NEXT: RET 0
+    ;
     ; AVX512BW-LABEL: name: test_sub_v16i32
     ; AVX512BW: liveins: $zmm0, $zmm1
     ; AVX512BW-NEXT: {{  $}}
@@ -212,6 +218,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s64>) = G_CONCAT_VECTORS [[SUB]](<2 x s64>), [[SUB1]](<2 x s64>), [[SUB2]](<2 x s64>), [[SUB3]](<2 x s64>)
     ; AVX1-NEXT: $zmm0 = COPY [[CONCAT_VECTORS]](<8 x s64>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX512F-LABEL: name: test_sub_v8i64
     ; AVX512F: liveins: $zmm0, $zmm1
     ; AVX512F-NEXT: {{  $}}
@@ -220,6 +227,7 @@ body:             |
     ; AVX512F-NEXT: [[SUB:%[0-9]+]]:_(<8 x s64>) = G_SUB [[DEF]], [[DEF1]]
     ; AVX512F-NEXT: $zmm0 = COPY [[SUB]](<8 x s64>)
     ; AVX512F-NEXT: RET 0
+    ;
     ; AVX512BW-LABEL: name: test_sub_v8i64
     ; AVX512BW: liveins: $zmm0, $zmm1
     ; AVX512BW-NEXT: {{  $}}

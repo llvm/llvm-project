@@ -23,17 +23,16 @@ TEST(ScudoReleaseTest, RegionPageMap) {
     // Various valid counter's max values packed into one word.
     scudo::RegionPageMap PageMap2N(1U, 1U, 1UL << I);
     ASSERT_TRUE(PageMap2N.isAllocated());
-    EXPECT_EQ(sizeof(scudo::uptr), PageMap2N.getBufferSize());
+    EXPECT_EQ(1U, PageMap2N.getBufferNumElements());
     // Check the "all bit set" values too.
     scudo::RegionPageMap PageMap2N1_1(1U, 1U, ~0UL >> I);
     ASSERT_TRUE(PageMap2N1_1.isAllocated());
-    EXPECT_EQ(sizeof(scudo::uptr), PageMap2N1_1.getBufferSize());
+    EXPECT_EQ(1U, PageMap2N1_1.getBufferNumElements());
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
     scudo::RegionPageMap PageMap(1U, SCUDO_WORDSIZE, 1UL << I);
     ASSERT_TRUE(PageMap.isAllocated());
-    EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpPowerOfTwo(I + 1),
-              PageMap.getBufferSize());
+    EXPECT_EQ(scudo::roundUpPowerOfTwo(I + 1), PageMap.getBufferNumElements());
   }
 
   // Go through 1, 2, 4, 8, .. {32,64} bits per counter.
@@ -134,8 +133,9 @@ TEST(ScudoReleaseTest, FreePagesRangeTracker) {
     // Strip trailing '.'-pages before comparing the results as they are not
     // going to be reported to range_recorder anyway.
     const char *LastX = strrchr(TestCase, 'x');
-    std::string Expected(TestCase,
-                         LastX == nullptr ? 0 : (LastX - TestCase + 1));
+    std::string Expected(
+        TestCase,
+        LastX == nullptr ? 0U : static_cast<size_t>(LastX - TestCase + 1));
     EXPECT_STREQ(Expected.c_str(), Recorder.ReportedPages.c_str());
   }
 }
@@ -532,7 +532,8 @@ template <class SizeClassMap> void testReleasePartialRegion() {
                                         ReleaseBase);
       Partial.ensurePageMapAllocated();
 
-      EXPECT_GE(Full.PageMap.getBufferSize(), Partial.PageMap.getBufferSize());
+      EXPECT_GE(Full.PageMap.getBufferNumElements(),
+                Partial.PageMap.getBufferNumElements());
     }
 
     while (!FreeList.empty()) {
@@ -551,22 +552,16 @@ TEST(ScudoReleaseTest, ReleaseFreeMemoryToOSAndroid) {
   testReleaseFreeMemoryToOS<scudo::AndroidSizeClassMap>();
 }
 
-TEST(ScudoReleaseTest, ReleaseFreeMemoryToOSSvelte) {
-  testReleaseFreeMemoryToOS<scudo::SvelteSizeClassMap>();
-}
-
 TEST(ScudoReleaseTest, PageMapMarkRange) {
   testPageMapMarkRange<scudo::DefaultSizeClassMap>();
   testPageMapMarkRange<scudo::AndroidSizeClassMap>();
   testPageMapMarkRange<scudo::FuchsiaSizeClassMap>();
-  testPageMapMarkRange<scudo::SvelteSizeClassMap>();
 }
 
 TEST(ScudoReleaseTest, ReleasePartialRegion) {
   testReleasePartialRegion<scudo::DefaultSizeClassMap>();
   testReleasePartialRegion<scudo::AndroidSizeClassMap>();
   testReleasePartialRegion<scudo::FuchsiaSizeClassMap>();
-  testReleasePartialRegion<scudo::SvelteSizeClassMap>();
 }
 
 template <class SizeClassMap> void testReleaseRangeWithSingleBlock() {
@@ -629,31 +624,31 @@ TEST(ScudoReleaseTest, RangeReleaseRegionWithSingleBlock) {
   testReleaseRangeWithSingleBlock<scudo::DefaultSizeClassMap>();
   testReleaseRangeWithSingleBlock<scudo::AndroidSizeClassMap>();
   testReleaseRangeWithSingleBlock<scudo::FuchsiaSizeClassMap>();
-  testReleaseRangeWithSingleBlock<scudo::SvelteSizeClassMap>();
 }
 
 TEST(ScudoReleaseTest, BufferPool) {
   constexpr scudo::uptr StaticBufferCount = SCUDO_WORDSIZE - 1;
-  constexpr scudo::uptr StaticBufferSize = 512U;
+  constexpr scudo::uptr StaticBufferNumElements = 512U;
 
   // Allocate the buffer pool on the heap because it is quite large (slightly
-  // more than StaticBufferCount * StaticBufferSize * sizeof(uptr)) and it may
-  // not fit in the stack on some platforms.
-  using BufferPool = scudo::BufferPool<StaticBufferCount, StaticBufferSize>;
+  // more than StaticBufferCount * StaticBufferNumElements * sizeof(uptr)) and
+  // it may not fit in the stack on some platforms.
+  using BufferPool =
+      scudo::BufferPool<StaticBufferCount, StaticBufferNumElements>;
   std::unique_ptr<BufferPool> Pool(new BufferPool());
 
-  std::vector<std::pair<scudo::uptr *, scudo::uptr>> Buffers;
+  std::vector<BufferPool::Buffer> Buffers;
   for (scudo::uptr I = 0; I < StaticBufferCount; ++I) {
-    scudo::uptr *P = Pool->getBuffer(StaticBufferSize);
-    EXPECT_TRUE(Pool->isStaticBufferTestOnly(P, StaticBufferSize));
-    Buffers.emplace_back(P, StaticBufferSize);
+    BufferPool::Buffer Buffer = Pool->getBuffer(StaticBufferNumElements);
+    EXPECT_TRUE(Pool->isStaticBufferTestOnly(Buffer));
+    Buffers.push_back(Buffer);
   }
 
   // The static buffer is supposed to be used up.
-  scudo::uptr *P = Pool->getBuffer(StaticBufferSize);
-  EXPECT_FALSE(Pool->isStaticBufferTestOnly(P, StaticBufferSize));
+  BufferPool::Buffer Buffer = Pool->getBuffer(StaticBufferNumElements);
+  EXPECT_FALSE(Pool->isStaticBufferTestOnly(Buffer));
 
-  Pool->releaseBuffer(P, StaticBufferSize);
+  Pool->releaseBuffer(Buffer);
   for (auto &Buffer : Buffers)
-    Pool->releaseBuffer(Buffer.first, Buffer.second);
+    Pool->releaseBuffer(Buffer);
 }

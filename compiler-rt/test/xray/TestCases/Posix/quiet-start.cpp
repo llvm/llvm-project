@@ -7,10 +7,9 @@
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=0" %run %t 2>&1 | \
 // RUN:    FileCheck %s --check-prefix QUIET
 // RUN: XRAY_OPTIONS="" %run %t 2>&1 | FileCheck %s --check-prefix DEFAULT
-//
-// FIXME: Understand how to make this work on other platforms
+
 // REQUIRES: built-in-llvm-tree
-// REQUIRES: x86_64-target-arch
+
 #include <iostream>
 
 using namespace std;

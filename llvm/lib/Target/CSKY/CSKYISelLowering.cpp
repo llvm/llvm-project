@@ -59,7 +59,6 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
-  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
   setOperationAction(ISD::ROTR, MVT::i32, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
@@ -103,6 +102,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   if (!Subtarget.has2E3()) {
     setOperationAction(ISD::ABS, MVT::i32, Expand);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
   }
@@ -116,9 +116,9 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE,
   };
 
-  ISD::NodeType FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN,
-                                  ISD::FP16_TO_FP, ISD::FP_TO_FP16};
+  ISD::NodeType FPOpToExpand[] = {
+      ISD::FSIN, ISD::FCOS,      ISD::FSINCOS,    ISD::FPOW,
+      ISD::FREM, ISD::FCOPYSIGN, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
   if (STI.useHardFloat()) {
 
@@ -556,7 +556,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, IsTailCall,
+                          /*AlwaysInline=*/false, /*CI=*/nullptr, IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
@@ -649,8 +649,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
-    bool IsLocal =
-        getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
 
     if (isPositionIndependent() || !Subtarget.has2E3()) {
       IsRegCall = true;
@@ -662,8 +661,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
           cast<GlobalAddressSDNode>(Callee), Ty, DAG, CSKYII::MO_None));
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(
-        *MF.getFunction().getParent(), nullptr);
+    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(nullptr);
 
     if (isPositionIndependent() || !Subtarget.has2E3()) {
       IsRegCall = true;
@@ -1153,7 +1151,7 @@ SDValue CSKYTargetLowering::LowerGlobalAddress(SDValue Op,
   int64_t Offset = N->getOffset();
 
   const GlobalValue *GV = N->getGlobal();
-  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
   SDValue Addr = getAddr<GlobalAddressSDNode, false>(N, DAG, IsLocal);
 
   // In order to maximise the opportunity for common subexpression elimination,
@@ -1219,7 +1217,7 @@ SDValue CSKYTargetLowering::LowerFRAMEADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   Register FrameReg = RI.getFrameRegister(MF);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
   while (Depth--)
@@ -1240,7 +1238,7 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   if (Depth) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(4, dl, MVT::i32);
@@ -1375,4 +1373,44 @@ SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   SDValue V = LowerCallTo(CLI).first;
 
   return V;
+}
+
+bool CSKYTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                                SDValue C) const {
+  if (!VT.isScalarInteger())
+    return false;
+
+  // Omit if data size exceeds.
+  if (VT.getSizeInBits() > Subtarget.XLen)
+    return false;
+
+  if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
+    const APInt &Imm = ConstNode->getAPIntValue();
+    // Break MULT to LSLI + ADDU/SUBU.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
+        (1 - Imm).isPowerOf2())
+      return true;
+    // Only break MULT for sub targets without MULT32, since an extra
+    // instruction will be generated against the above 3 cases. We leave it
+    // unchanged on sub targets with MULT32, since not sure it is better.
+    if (!Subtarget.hasE2() && (-1 - Imm).isPowerOf2())
+      return true;
+    // Break (MULT x, imm) to ([IXH32|IXW32|IXD32] (LSLI32 x, i0), x) when
+    // imm=(1<<i0)+[2|4|8] and imm has to be composed via a MOVIH32/ORI32 pair.
+    if (Imm.ugt(0xffff) && ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2()) &&
+        Subtarget.hasE2())
+      return true;
+    if (Imm.ugt(0xffff) && (Imm - 8).isPowerOf2() && Subtarget.has2E3())
+      return true;
+  }
+
+  return false;
+}
+
+bool CSKYTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
+  return Subtarget.has2E3();
+}
+
+bool CSKYTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
+  return Subtarget.hasE2();
 }

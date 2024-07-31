@@ -568,12 +568,20 @@ bool HexagonMCInstrInfo::isConstExtended(MCInstrInfo const &MCII,
   if (isa<HexagonMCExpr>(MO.getExpr()) &&
       HexagonMCInstrInfo::mustNotExtend(*MO.getExpr()))
     return false;
+
   int64_t Value;
   if (!MO.getExpr()->evaluateAsAbsolute(Value))
     return true;
-  int MinValue = HexagonMCInstrInfo::getMinValue(MCII, MCI);
-  int MaxValue = HexagonMCInstrInfo::getMaxValue(MCII, MCI);
-  return (MinValue > Value || Value > MaxValue);
+  if (HexagonMCInstrInfo::isExtentSigned(MCII, MCI)) {
+    int32_t SValue = Value;
+    int32_t MinValue = HexagonMCInstrInfo::getMinValue(MCII, MCI);
+    int32_t MaxValue = HexagonMCInstrInfo::getMaxValue(MCII, MCI);
+    return SValue < MinValue || SValue > MaxValue;
+  }
+  uint32_t UValue = Value;
+  uint32_t MinValue = HexagonMCInstrInfo::getMinValue(MCII, MCI);
+  uint32_t MaxValue = HexagonMCInstrInfo::getMaxValue(MCII, MCI);
+  return UValue < MinValue || UValue > MaxValue;
 }
 
 bool HexagonMCInstrInfo::isCanon(MCInstrInfo const &MCII, MCInst const &MCI) {
@@ -1028,8 +1036,10 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
                                             unsigned Producer2) {
   // If we're a single vector consumer of a double producer, set subreg bit
   // based on if we're accessing the lower or upper register component
-  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer))
-    return (Consumer - Hexagon::V0) & 0x1;
+  if (IsVecRegPair(Producer) && IsVecRegSingle(Consumer)) {
+    unsigned Rev = IsReverseVecRegPair(Producer);
+    return ((Consumer - Hexagon::V0) & 0x1) ^ Rev;
+  }
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;

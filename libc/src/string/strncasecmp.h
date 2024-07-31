@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_STRCASECMP_H
-#define LLVM_LIBC_SRC_STRING_STRCASECMP_H
+#ifndef LLVM_LIBC_SRC_STRING_STRNCASECMP_H
+#define LLVM_LIBC_SRC_STRING_STRNCASECMP_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int strncasecmp(const char *left, const char *right, size_t n);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STRING_STRCASECMP_H
+#endif // LLVM_LIBC_SRC_STRING_STRNCASECMP_H

@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/DXContainerYAML.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 
@@ -21,15 +23,15 @@ namespace llvm {
 static_assert((uint64_t)dxbc::FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-DXContainerYAML::ShaderFlags::ShaderFlags(uint64_t FlagData) {
-#define SHADER_FLAG(Num, Val, Str)                                             \
+DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   Val = (FlagData & (uint64_t)dxbc::FeatureFlags::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-uint64_t DXContainerYAML::ShaderFlags::getEncodedFlags() {
+uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
   uint64_t Flag = 0;
-#define SHADER_FLAG(Num, Val, Str)                                             \
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   if (Val)                                                                     \
     Flag |= (uint64_t)dxbc::FeatureFlags::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -72,6 +74,16 @@ DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
   memcpy(&Info, P, sizeof(dxbc::PSV::v2::RuntimeInfo));
 }
 
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P,
+                                  StringRef StringTable)
+    : Version(3),
+      EntryName(StringTable.substr(P->EntryNameOffset,
+                                   StringTable.find('\0', P->EntryNameOffset) -
+                                       P->EntryNameOffset)) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v3::RuntimeInfo));
+}
+
 namespace yaml {
 
 void MappingTraits<DXContainerYAML::VersionTuple>::mapping(
@@ -101,9 +113,10 @@ void MappingTraits<DXContainerYAML::DXILProgram>::mapping(
   IO.mapOptional("DXIL", Program.DXIL);
 }
 
-void MappingTraits<DXContainerYAML::ShaderFlags>::mapping(
-    IO &IO, DXContainerYAML::ShaderFlags &Flags) {
-#define SHADER_FLAG(Num, Val, Str) IO.mapRequired(#Val, Flags.Val);
+void MappingTraits<DXContainerYAML::ShaderFeatureFlags>::mapping(
+    IO &IO, DXContainerYAML::ShaderFeatureFlags &Flags) {
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
+  IO.mapRequired(#Val, Flags.Val);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
@@ -122,15 +135,57 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   uint32_t Version = PSV.Version;
   IO.setContext(&Version);
 
+  // Restore the YAML context on function exit.
+  auto RestoreContext = make_scope_exit([&]() { IO.setContext(OldContext); });
+
   // Shader stage is only included in binaries for v1 and later, but we always
   // include it since it simplifies parsing and file construction.
   IO.mapRequired("ShaderStage", PSV.Info.ShaderStage);
   PSV.mapInfoForVersion(IO);
 
+  IO.mapRequired("ResourceStride", PSV.ResourceStride);
   IO.mapRequired("Resources", PSV.Resources);
+  if (PSV.Version == 0)
+    return;
+  IO.mapRequired("SigInputElements", PSV.SigInputElements);
+  IO.mapRequired("SigOutputElements", PSV.SigOutputElements);
+  IO.mapRequired("SigPatchOrPrimElements", PSV.SigPatchOrPrimElements);
 
-  // Restore the YAML context.
-  IO.setContext(OldContext);
+  Triple::EnvironmentType Stage = dxbc::getShaderStage(PSV.Info.ShaderStage);
+  if (PSV.Info.UsesViewID) {
+    MutableArrayRef<SmallVector<llvm::yaml::Hex32>> MutableOutMasks(
+        PSV.OutputVectorMasks);
+    IO.mapRequired("OutputVectorMasks", MutableOutMasks);
+    if (Stage == Triple::EnvironmentType::Hull)
+      IO.mapRequired("PatchOrPrimMasks", PSV.PatchOrPrimMasks);
+  }
+  MutableArrayRef<SmallVector<llvm::yaml::Hex32>> MutableIOMap(
+      PSV.InputOutputMap);
+  IO.mapRequired("InputOutputMap", MutableIOMap);
+
+  if (Stage == Triple::EnvironmentType::Hull)
+    IO.mapRequired("InputPatchMap", PSV.InputPatchMap);
+
+  if (Stage == Triple::EnvironmentType::Domain)
+    IO.mapRequired("PatchOutputMap", PSV.PatchOutputMap);
+}
+
+void MappingTraits<DXContainerYAML::SignatureParameter>::mapping(
+    IO &IO, DXContainerYAML::SignatureParameter &S) {
+  IO.mapRequired("Stream", S.Stream);
+  IO.mapRequired("Name", S.Name);
+  IO.mapRequired("Index", S.Index);
+  IO.mapRequired("SystemValue", S.SystemValue);
+  IO.mapRequired("CompType", S.CompType);
+  IO.mapRequired("Register", S.Register);
+  IO.mapRequired("Mask", S.Mask);
+  IO.mapRequired("ExclusiveMask", S.ExclusiveMask);
+  IO.mapRequired("MinPrecision", S.MinPrecision);
+}
+
+void MappingTraits<DXContainerYAML::Signature>::mapping(
+    IO &IO, DXContainerYAML::Signature &S) {
+  IO.mapRequired("Parameters", S.Parameters);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
@@ -141,6 +196,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Flags", P.Flags);
   IO.mapOptional("Hash", P.Hash);
   IO.mapOptional("PSVInfo", P.Info);
+  IO.mapOptional("Signature", P.Signature);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -163,6 +219,57 @@ void MappingTraits<DXContainerYAML::ResourceBindInfo>::mapping(
 
   IO.mapRequired("Kind", Res.Kind);
   IO.mapRequired("Flags", Res.Flags);
+}
+
+void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
+    IO &IO, DXContainerYAML::SignatureElement &El) {
+  IO.mapRequired("Name", El.Name);
+  IO.mapRequired("Indices", El.Indices);
+  IO.mapRequired("StartRow", El.StartRow);
+  IO.mapRequired("Cols", El.Cols);
+  IO.mapRequired("StartCol", El.StartCol);
+  IO.mapRequired("Allocated", El.Allocated);
+  IO.mapRequired("Kind", El.Kind);
+  IO.mapRequired("ComponentType", El.Type);
+  IO.mapRequired("Interpolation", El.Mode);
+  IO.mapRequired("DynamicMask", El.DynamicMask);
+  IO.mapRequired("Stream", El.Stream);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::SemanticKind>::enumeration(
+    IO &IO, dxbc::PSV::SemanticKind &Value) {
+  for (const auto &E : dxbc::PSV::getSemanticKinds())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
+    IO &IO, dxbc::PSV::ComponentType &Value) {
+  for (const auto &E : dxbc::PSV::getComponentTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
+    IO &IO, dxbc::PSV::InterpolationMode &Value) {
+  for (const auto &E : dxbc::PSV::getInterpolationModes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
+    IO &IO, dxbc::D3DSystemValue &Value) {
+  for (const auto &E : dxbc::getD3DSystemValues())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
+    IO &IO, dxbc::SigMinPrecision &Value) {
+  for (const auto &E : dxbc::getSigMinPrecisions())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
+    IO &IO, dxbc::SigComponentType &Value) {
+  for (const auto &E : dxbc::getSigComponentTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
 } // namespace yaml
@@ -241,10 +348,6 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
     break;
   }
 
-  IO.mapRequired("SigInputElements", Info.SigInputElements);
-  IO.mapRequired("SigOutputElements", Info.SigOutputElements);
-  IO.mapRequired("SigPatchConstOrPrimElements",
-                 Info.SigPatchConstOrPrimElements);
   IO.mapRequired("SigInputVectors", Info.SigInputVectors);
   MutableArrayRef<uint8_t> Vec(Info.SigOutputVectors);
   IO.mapRequired("SigOutputVectors", Vec);
@@ -255,6 +358,11 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   IO.mapRequired("NumThreadsX", Info.NumThreadsX);
   IO.mapRequired("NumThreadsY", Info.NumThreadsY);
   IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
+
+  if (Version == 2)
+    return;
+
+  IO.mapRequired("EntryName", EntryName);
 }
 
 } // namespace llvm

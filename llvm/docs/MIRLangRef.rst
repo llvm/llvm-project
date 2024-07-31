@@ -58,12 +58,12 @@ for the post register allocation pseudo instruction expansion pass, you can
 specify the machine copy propagation pass in the ``-stop-after`` option, as it
 runs just before the pass that we are trying to test:
 
-   ``llc -stop-after=machine-cp bug-trigger.ll > test.mir``
+   ``llc -stop-after=machine-cp bug-trigger.ll -o test.mir``
 
 If the same pass is run multiple times, a run index can be included
 after the name with a comma.
 
-   ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll > test.mir``
+   ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll -o test.mir``
 
 After generating the input MIR file, you'll have to add a run line that uses
 the ``-run-pass`` option to it. In order to test the post register allocation
@@ -168,11 +168,11 @@ Here is an example of a YAML document that contains an LLVM module:
 
 .. code-block:: llvm
 
-       define i32 @inc(i32* %x) {
+       define i32 @inc(ptr %x) {
        entry:
-         %0 = load i32, i32* %x
+         %0 = load i32, ptr %x
          %1 = add i32 %0, 1
-         store i32 %1, i32* %x
+         store i32 %1, ptr %x
          ret i32 %1
        }
 
@@ -540,41 +540,55 @@ Register Flags
 The table below shows all of the possible register flags along with the
 corresponding internal ``llvm::RegState`` representation:
 
+..
+   Keep this in sync with MachineInstrBuilder.h
+
 .. list-table::
    :header-rows: 1
 
    * - Flag
      - Internal Value
+     - Meaning
 
    * - ``implicit``
      - ``RegState::Implicit``
+     - Not emitted register (e.g. carry, or temporary result).
 
    * - ``implicit-def``
      - ``RegState::ImplicitDefine``
+     - ``implicit`` and ``def``
 
    * - ``def``
      - ``RegState::Define``
+     - Register definition.
 
    * - ``dead``
      - ``RegState::Dead``
+     - Unused definition.
 
    * - ``killed``
      - ``RegState::Kill``
+     - The last use of a register.
 
    * - ``undef``
      - ``RegState::Undef``
+     - Value of the register doesn't matter.
 
    * - ``internal``
      - ``RegState::InternalRead``
+     - Register reads a value that is defined inside the same instruction or bundle.
 
    * - ``early-clobber``
      - ``RegState::EarlyClobber``
+     - Register definition happens before uses.
 
    * - ``debug-use``
      - ``RegState::Debug``
+     - Register 'use' is for debugging purpose.
 
    * - ``renamable``
      - ``RegState::Renamable``
+     - Register that may be renamed.
 
 .. _subregister-indices:
 
@@ -869,16 +883,16 @@ Where:
 
 - ``debug-info-location`` identifies a DILocation metadata node.
 
-These metadata attributes correspond to the operands of a ``llvm.dbg.declare``
-IR intrinsic, see the :ref:`source level debugging<format_common_intrinsics>`
-documentation.
+These metadata attributes correspond to the operands of a ``#dbg_declare``
+IR debug record, see the :ref:`source level
+debugging<debug_records>` documentation.
 
 Varying variable locations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Variables that are not always on the stack or change location are specified
 with the ``DBG_VALUE``  meta machine instruction. It is synonymous with the
-``llvm.dbg.value`` IR intrinsic, and is written:
+``#dbg_value`` IR record, and is written:
 
 .. code-block:: text
 

@@ -9,6 +9,7 @@
 #include "RedundantStrcatCallsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <deque>
 
 using namespace clang::ast_matchers;
 
@@ -103,9 +104,9 @@ StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
 }  // namespace
 
 void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
-  bool IsAppend;
+  bool IsAppend = false;
 
-  const CallExpr* RootCall;
+  const CallExpr *RootCall = nullptr;
   if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat"))) 
   	IsAppend = false;
   else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend"))) 

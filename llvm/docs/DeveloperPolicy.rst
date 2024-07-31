@@ -1,3 +1,5 @@
+.. _developer_policy:
+
 =====================
 LLVM Developer Policy
 =====================
@@ -46,21 +48,33 @@ quality.
 Stay Informed
 -------------
 
-Developers should stay informed by reading the `LLVM Discourse forums`_. 
-If you are doing anything more than just casual work on LLVM, it is suggested that you also
-subscribe to the "commits" mailing list for the subproject you're interested in,
+Developers should stay informed by reading the `LLVM Discourse forums`_ and subscribing
+to the categories of interest for notifications.
+
+Paying attention to changes being made by others is a good way to see what other people
+are interested in and watching the flow of the project as a whole.
+
+Contibutions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
+You can subscribe to notification for areas of the codebase by joining
+one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
+GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
+indicates which team is associated with a particular paths in the repository.
+
+You can also subscribe to the "commits" mailing list for a subproject you're interested in,
 such as `llvm-commits
 <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_, `cfe-commits
 <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_, or `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.  Reading the
-"commits" list and paying attention to changes being made by others is a good
-way to see what other people are interested in and watching the flow of the
-project as a whole.
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.
 
-We recommend that active developers monitor incoming issues to our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_ and preferably subscribe to the `llvm-bugs
+Missing features and bugs are tracked through our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_
+and assigned labels. We recommend that active developers monitor incoming issues.
+You can subscribe for notification for specific components by joining
+one of the `issue-subscribers-* <https://github.com/orgs/llvm/teams?query=issue-subscribers>`_
+teams.
+You may also subscribe to the `llvm-bugs
 <http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
-of bugs and enhancements occurring in LLVM.  We really appreciate people who are
-proactive at catching incoming bugs in their components and dealing with them
+of bugs and enhancements occurring in the entire project.  We really appreciate people
+who are proactive at catching incoming bugs in their components and dealing with them
 promptly.
 
 Please be aware that all public LLVM mailing lists and discourse forums are public and archived, and
@@ -77,23 +91,20 @@ to read it as possible.  As such, we recommend that you:
 
 #. Make your patch against git main, not a branch, and not an old version
    of LLVM.  This makes it easy to apply the patch.  For information on how to
-   clone from git, please see the :ref:`Getting Started Guide
-   <checkout>`.
+   clone from git, please see the :ref:`Getting Started Guide <sources>`.
 
 #. Similarly, patches should be submitted soon after they are generated.  Old
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be unified diffs with "infinite context" (i.e. using something
-   like `git diff -U999999 main`).
-
 #. Once you have created your patch, create a
-   `Phabricator review <Phabricator.html#phabricator-request-review-web>`_ for
+   :ref:`GitHub Pull Request <github-reviews>` for
    it (or commit it directly if applicable).
 
 When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
+
 
 .. _code review:
 
@@ -115,6 +126,12 @@ to be removed in the future, removing an already-deprecated feature, upgrading a
 diagnostic from a warning to an error, switching important default behavior, or
 any other potentially disruptive situation thought to be worth raising
 awareness of. For such changes, the following should be done:
+
+.. warning::
+
+  Phabricator is deprecated is available in read-only mode,
+  for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
   "vendors" group to the review for their awareness. The purpose of these
@@ -201,6 +218,11 @@ features added.  Some tips for getting your testcase approved:
   entire failing program into ``llvm/test`` as this creates a *time-to-test*
   burden on all developers. Please keep them short.
 
+* Avoid adding links to resources that are not available to the entire
+  community, such as links to private bug trackers, internal corporate
+  documentation, etc. Instead, add sufficient comments to the test to provide
+  the context behind such links.
+
 Note that llvm/test and clang/test are designed for regression and small feature
 tests only. More extensive test cases (e.g., entire applications, benchmarks,
 etc) should be added to the ``llvm-test`` test suite.  The llvm-test suite is
@@ -255,6 +277,11 @@ committed to the main development branch are:
    where "reasonable" depends on the contributor's judgement and the scope of
    the change (more invasive changes require more testing). A reasonable subset
    might be something like "``llvm-test/MultiSource/Benchmarks``".
+
+#. Ensure that links in source code and test files point to publicly available
+   resources and are used primarily to add additional information rather than
+   to supply critical context. The surrounding comments should be sufficient
+   to provide the context behind such links.
 
 Additionally, the committer is responsible for addressing any problems found in
 the future that the change is responsible for.  For example:
@@ -336,8 +363,6 @@ Below are some guidelines about the format of the message itself:
   code snippets and gory details should be left to bug comments, web
   review or the mailing list.
 
-* If the patch fixes a bug in GitHub Issues, please include the PR# in the message.
-
 * Text formatting and spelling should follow the same rules as documentation
   and in-code comments, ex. capitalization, full stop, etc.
 
@@ -347,7 +372,17 @@ Below are some guidelines about the format of the message itself:
   caused PR#".
 
 * If the patch has been reviewed, add a link to its review page, as shown
-  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`_.
+  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`__.
+  If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+  the issue being closed, as described
+  `here <https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs>`__.
+
+* It is also acceptable to add other metadata to the commit message to automate
+  processes, including for downstream consumers. This metadata can include
+  links to resources that are not available to the entire community. However,
+  such links and/or metadata should not be used in place of making the commit
+  message self-explanatory. Note that such non-public links should not be
+  included in the submitted code.
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
@@ -434,6 +469,8 @@ What are the expectations around a revert?
   actively responding.
 * When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
+
+.. _obtaining_commit_access:
 
 Obtaining Commit Access
 -----------------------
@@ -601,6 +638,24 @@ attribution mechanism. The previous method was to include "Patch by John Doe."
 in a separate line of the commit message and there are automated processes that
 rely on this format.
 
+Bans
+----
+
+The goal of a ban is to protect people in the community from having to interact
+with people who are consistently not respecting the
+:ref:`LLVM Community Code of Conduct` in LLVM project spaces. Contributions of
+any variety (pull requests, issue reports, forum posts, etc.) require
+interacting with the community. Therefore, we do not accept any form of direct
+contribution from a banned individual.
+
+Indirect contributions are permissible only by someone taking full ownership of
+such a contribution and they are responsible for all related interactions with
+the community regarding that contribution.
+
+When in doubt how to act in a specific instance, please reach out to
+conduct@llvm.org for advice.
+
+
 .. _IR backwards compatibility:
 
 IR Backwards Compatibility
@@ -633,7 +688,7 @@ for llvm users and not imposing a big burden on llvm developers:
   expected, but no promises are made.
 
 C API Changes
-----------------
+-------------
 
 * Stability Guarantees: The C API is, in general, a "best effort" for stability.
   This means that we make every attempt to keep the C API stable, but that
@@ -729,7 +784,7 @@ their patch with every possible configuration.
 
 *If someone else broke the build and this blocks your work*
 
-* Comment on the code review in `Phabricator <https://reviews.llvm.org/>`_
+* Comment on the code review in `GitHub <https://github.com/llvm/llvm-project/pulls>`_
   (if available) or email the author, explain the problem and how this impacts
   you. Add a link to the broken build and the error message so folks can
   understand the problem.
@@ -1014,7 +1069,7 @@ In certain circumstances, code licensed under other licenses can be added
 to the codebase.  However, this may only be done with approval of the LLVM
 Foundation Board of Directors, and contributors should plan for the approval
 process to take at least 4-6 weeks.  If you would like to contribute code
-under a different license, please create a Phabricator review with the code
+under a different license, please create a pull request with the code
 you want to contribute and email board@llvm.org requesting a review.
 
 If you have questions or comments about these topics, please ask on the
@@ -1069,20 +1124,17 @@ To relicense LLVM, we will be seeking approval from all of the copyright holders
 of code in the repository, or potentially remove/rewrite code if we cannot.
 This is a large
 and challenging project which will take a significant amount of time to
-complete.  In the interim, **all contributions to the project will be made under
-the terms of both the new license and the legacy license scheme** (each of which
-is described below).  The exception to this is the legacy patent grant, which
-will not be required for new contributions.
+complete.
 
-When all of the code in the project has been converted to the new license or
-removed, we will drop the requirement to contribute under the legacy license.
-This will achieve the goal of having
-a single standardized license for the entire codebase.
+Starting on 2024-06-01 (first of June 2024), new contributions only need to
+be covered by the new LLVM license, i.e. Apache-2.0 WITH LLVM-exception.
+Before this date, the project required all contributions to be made under
+both the new license and the legacy license.
 
-If you are a prior contributor to LLVM and have not done so already, please do
-*TODO* to allow us to use your code. *Add a link to a separate page here, which
-is probably a click through web form or something like that.  Details to be
-determined later*.
+If you are a contributor to LLVM with contributions committed before 2019-01-19
+and have not done so already, please do follow the instructions at
+https://foundation.llvm.org/docs/relicensing/, under section "Individual
+Relicensing Agreement" to relicense your contributions under the new license.
 
 
 .. _open source licensing terms:
@@ -1151,18 +1203,6 @@ the Apache 2.0 License, please see the `Apache License FAQ
 <http://www.apache.org/foundation/license-faq.html>`_, maintained by the
 Apache Project.
 
-
-.. note::
-
-   The LLVM Project includes some really old subprojects (dragonegg,
-   llvm-gcc-4.0, and llvm-gcc-4.2), which are licensed under **GPL
-   licenses**.  This code is not actively maintained - it does not even
-   build successfully.  This code is cleanly separated into distinct SVN
-   repositories from the rest of LLVM, and the LICENSE.txt files specifically
-   indicate that they contain GPL code.  When LLVM transitions from SVN to Git,
-   we plan to drop these code bases from the new repository structure.
-
-
 .. _patent license:
 
 Patents
@@ -1221,12 +1261,11 @@ Legacy License Structure
 
 .. note::
    The code base was previously licensed under the Terms described here.
-   We are in the middle of relicensing to a new approach (described above), but
-   until this effort is complete, the code is also still available under these
-   terms.  Once we finish the relicensing project, new versions of the code will
-   not be available under these terms.  However, nothing takes away your right
-   to use old versions under the licensing terms under which they were
-   originally released.
+   We are in the middle of relicensing to a new approach (described above).
+   More than 99% of all contributions made to LLVM are covered by the Apache-2.0
+   WITH LLVM-exception license. A small portion of LLVM code remains exclusively
+   covered by the legacy license. Contributions after 2024-06-01 are covered
+   exclusively by the new license._
 
 We intend to keep LLVM perpetually open source and to use a permissive open
 source license.  The code in

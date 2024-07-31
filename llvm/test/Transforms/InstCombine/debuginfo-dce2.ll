@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; In this example, the cast from ptr to ptr becomes trivially dead. We should
 ; salvage its debug info.
@@ -25,9 +26,9 @@ entry:
 }
 
 ; CHECK-LABEL: define void @f(ptr %p)
-; CHECK: call void @llvm.dbg.value(metadata ptr %p, metadata ![[P_VAR:[0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(ptr %p, ![[P_VAR:[0-9]+]], !DIExpression(),
 ; CHECK-NOT: bitcast
-; CHECK: call void @llvm.dbg.value(metadata ptr %p, metadata ![[Q_VAR:[0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(ptr %p, ![[Q_VAR:[0-9]+]], !DIExpression(),
 ; CHECK-NOT: bitcast
 ; CHECK: ret void
 

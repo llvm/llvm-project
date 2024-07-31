@@ -1,4 +1,3 @@
-// REQUIRES: x86-registered-target
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
@@ -9,7 +8,7 @@
 // RUN: -nogpuinc -nogpulib --hipspv-pass-plugin=%S/Inputs/pass-plugin.so %s \
 // RUN: 2>&1 | FileCheck --check-prefixes=FROM-OPTION %s
 
-// RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
+// RUN: not %clang -### --target=x86_64-linux-gnu --offload=spirv64 \
 // RUN: -nogpuinc -nogpulib --hipspv-pass-plugin=foo.so %s \
 // RUN: 2>&1 | FileCheck --check-prefixes=FROM-OPTION-INVALID %s
 

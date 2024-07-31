@@ -24,6 +24,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
@@ -32,8 +33,11 @@ namespace __asan {
 
 // -------------------- User-specified callbacks ----------------- {{{1
 static void (*error_report_callback)(const char*);
-static char *error_message_buffer = nullptr;
-static uptr error_message_buffer_pos = 0;
+using ErrorMessageBuffer = InternalMmapVectorNoCtor<char, true>;
+alignas(
+    alignof(ErrorMessageBuffer)) static char error_message_buffer_placeholder
+    [sizeof(ErrorMessageBuffer)];
+static ErrorMessageBuffer *error_message_buffer = nullptr;
 static Mutex error_message_buf_mutex;
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
@@ -42,17 +46,14 @@ void AppendToErrorMessageBuffer(const char *buffer) {
   Lock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
     error_message_buffer =
-      (char*)MmapOrDieQuietly(kErrorMessageBufferSize, __func__);
-    error_message_buffer_pos = 0;
+        new (error_message_buffer_placeholder) ErrorMessageBuffer();
+    error_message_buffer->Initialize(kErrorMessageBufferSize);
   }
-  uptr length = internal_strlen(buffer);
-  RAW_CHECK(kErrorMessageBufferSize >= error_message_buffer_pos);
-  uptr remaining = kErrorMessageBufferSize - error_message_buffer_pos;
-  internal_strncpy(error_message_buffer + error_message_buffer_pos,
-                   buffer, remaining);
-  error_message_buffer[kErrorMessageBufferSize - 1] = '\0';
-  // FIXME: reallocate the buffer instead of truncating the message.
-  error_message_buffer_pos += Min(remaining, length);
+  uptr error_message_buffer_len = error_message_buffer->size();
+  uptr buffer_len = internal_strlen(buffer);
+  error_message_buffer->resize(error_message_buffer_len + buffer_len);
+  internal_memcpy(error_message_buffer->data() + error_message_buffer_len,
+                  buffer, buffer_len);
 }
 
 // ---------------------- Helper functions ----------------------- {{{1
@@ -60,9 +61,9 @@ void AppendToErrorMessageBuffer(const char *buffer) {
 void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
                      bool in_shadow, const char *after) {
   Decorator d;
-  str->append("%s%s%x%x%s%s", before,
-              in_shadow ? d.ShadowByte(byte) : d.MemoryByte(), byte >> 4,
-              byte & 15, d.Default(), after);
+  str->AppendF("%s%s%x%x%s%s", before,
+               in_shadow ? d.ShadowByte(byte) : d.MemoryByte(), byte >> 4,
+               byte & 15, d.Default(), after);
 }
 
 static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
@@ -158,14 +159,14 @@ class ScopedInErrorReport {
 
     // Copy the message buffer so that we could start logging without holding a
     // lock that gets acquired during printing.
-    InternalMmapVector<char> buffer_copy(kErrorMessageBufferSize);
+    InternalScopedString buffer_copy;
     {
       Lock l(&error_message_buf_mutex);
-      internal_memcpy(buffer_copy.data(),
-                      error_message_buffer, kErrorMessageBufferSize);
+      error_message_buffer->push_back('\0');
+      buffer_copy.Append(error_message_buffer->data());
       // Clear error_message_buffer so that if we find other errors
       // we don't re-log this error.
-      error_message_buffer_pos = 0;
+      error_message_buffer->clear();
     }
 
     LogFullErrorReport(buffer_copy.data());

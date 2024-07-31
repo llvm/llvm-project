@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Casting.h"
-#include <cassert>
 #include <cstdint>
 #include <memory>
 
@@ -44,8 +43,6 @@ class MDNode;
 enum class UnitKind { Skeleton, Full };
 
 class DwarfCompileUnit final : public DwarfUnit {
-  /// A numeric ID unique among all CUs in the module
-  unsigned UniqueID;
   bool HasRangeLists = false;
 
   /// The start of the unit line section, this is also
@@ -55,16 +52,8 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// Skeleton unit associated with this unit.
   DwarfCompileUnit *Skeleton = nullptr;
 
-  /// The start of the unit within its section.
-  MCSymbol *LabelBegin = nullptr;
-
   /// The start of the unit macro info within macro section.
   MCSymbol *MacroLabelBegin;
-
-  using ImportedEntityList = SmallVector<const MDNode *, 8>;
-  using ImportedEntityMap = DenseMap<const MDNode *, ImportedEntityList>;
-
-  ImportedEntityMap ImportedEntities;
 
   /// GlobalNames - A map of globally visible named entities for this unit.
   StringMap<const DIE *> GlobalNames;
@@ -79,7 +68,20 @@ class DwarfCompileUnit final : public DwarfUnit {
   // ranges/locs.
   const MCSymbol *BaseAddress = nullptr;
 
-  DenseMap<const MDNode *, DIE *> AbstractSPDies;
+  using MDNodeSetVector =
+      SetVector<const MDNode *, SmallVector<const MDNode *, 4>,
+                SmallPtrSet<const MDNode *, 4>>;
+
+  // List of entities (either static locals, types or imports) that
+  // belong to subprograms within this CU.
+  MDNodeSetVector DeferredLocalDecls;
+
+  // List of concrete lexical block scopes belong to subprograms within this CU.
+  DenseMap<const DILocalScope *, DIE *> LexicalBlockDIEs;
+
+  // List of abstract local scopes (either DISubprogram or DILexicalBlock).
+  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
+
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
@@ -88,16 +90,41 @@ class DwarfCompileUnit final : public DwarfUnit {
   const DIFile *LastFile = nullptr;
   unsigned LastFileID;
 
-  /// Construct a DIE for the given DbgVariable without initializing the
-  /// DbgVariable's DIE reference.
-  DIE *constructVariableDIEImpl(const DbgVariable &DV, bool Abstract);
+  /// \anchor applyConcreteDbgVariableAttribute
+  /// \name applyConcreteDbgVariableAttribute
+  /// Overload set which applies attributes to \c VariableDie based on
+  /// the active variant of \c DV, which is passed as the first argument.
+  ///@{
+
+  /// See \ref applyConcreteDbgVariableAttribute
+  void applyConcreteDbgVariableAttributes(const Loc::Single &Single,
+                                          const DbgVariable &DV,
+                                          DIE &VariableDie);
+  /// See \ref applyConcreteDbgVariableAttribute
+  void applyConcreteDbgVariableAttributes(const Loc::Multi &Multi,
+                                          const DbgVariable &DV,
+                                          DIE &VariableDie);
+  /// See \ref applyConcreteDbgVariableAttribute
+  void applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
+                                          const DbgVariable &DV,
+                                          DIE &VariableDie);
+  /// See \ref applyConcreteDbgVariableAttribute
+  void applyConcreteDbgVariableAttributes(const Loc::EntryValue &EntryValue,
+                                          const DbgVariable &DV,
+                                          DIE &VariableDie);
+  /// See \ref applyConcreteDbgVariableAttribute
+  void applyConcreteDbgVariableAttributes(const std::monostate &,
+                                          const DbgVariable &DV,
+                                          DIE &VariableDie);
+
+  ///@}
 
   bool isDwoUnit() const override;
 
-  DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
+  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
     if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractSPDies;
-    return DU->getAbstractSPDies();
+      return AbstractLocalScopeDIEs;
+    return DU->getAbstractScopeDIEs();
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
@@ -118,7 +145,6 @@ public:
                    UnitKind Kind = UnitKind::Full);
 
   bool hasRangeLists() const { return HasRangeLists; }
-  unsigned getUniqueID() const { return UniqueID; }
 
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
@@ -175,17 +201,6 @@ public:
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
 
-  void addImportedEntity(const DIImportedEntity* IE) {
-    DIScope *Scope = IE->getScope();
-    assert(Scope && "Invalid Scope encoding!");
-    if (!isa<DILocalScope>(Scope))
-      // No need to add imported enities that are not local declaration.
-      return;
-
-    auto *LocalScope = cast<DILocalScope>(Scope)->getNonLexicalBlockFileScope();
-    ImportedEntities[LocalScope].push_back(IE);
-  }
-
   /// addRange - Add an address range to the list of ranges for this unit.
   void addRange(RangeSpan Range);
 
@@ -196,7 +211,6 @@ public:
   /// variables in this scope then create and insert DIEs for these
   /// variables.
   DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
-  DIE &updateSubprogramScopeDIEImpl(const DISubprogram *SP, DIE *SPDie);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
@@ -217,9 +231,16 @@ public:
   /// attach DW_AT_low_pc/DW_AT_high_pc labels.
   DIE *constructLexicalScopeDIE(LexicalScope *Scope);
 
-  /// constructVariableDIE - Construct a DIE for the given DbgVariable.
+  /// Get a DIE for the given DILexicalBlock.
+  /// Note that this function assumes that the DIE has been already created
+  /// and it's an error, if it hasn't.
+  DIE *getLexicalBlockDIE(const DILexicalBlock *LB);
+
+  /// Construct a DIE for the given DbgVariable.
   DIE *constructVariableDIE(DbgVariable &DV, bool Abstract = false);
 
+  /// Convenience overload which writes the DIE pointer into an out variable
+  /// ObjectPointer in addition to returning it.
   DIE *constructVariableDIE(DbgVariable &DV, const LexicalScope &Scope,
                             DIE *&ObjectPointer);
 
@@ -227,6 +248,10 @@ public:
   DIE *constructLabelDIE(DbgLabel &DL, const LexicalScope &Scope);
 
   void createBaseTypeDIEs();
+
+  /// Construct a DIE for a given scope.
+  /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
+  DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
   /// Construct a DIE for this subprogram scope.
   DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
@@ -266,8 +291,9 @@ public:
   void constructCallSiteParmEntryDIEs(DIE &CallSiteDIE,
                                       SmallVector<DbgCallSiteParam, 4> &Params);
 
-  /// Construct import_module DIE.
-  DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
+  /// Get or create a DIE for an imported entity.
+  DIE *getOrCreateImportedEntityDIE(const DIImportedEntity *IE);
+  DIE *constructImportedEntityDIE(const DIImportedEntity *IE);
 
   void finishSubprogramDefinition(const DISubprogram *SP);
   void finishEntityDefinition(const DbgEntity *Entity);
@@ -297,11 +323,6 @@ public:
   /// Add the DW_AT_addr_base attribute to the unit DIE.
   void addAddrTableBase();
 
-  MCSymbol *getLabelBegin() const {
-    assert(LabelBegin && "LabelBegin is not initialized");
-    return LabelBegin;
-  }
-
   MCSymbol *getMacroLabelBegin() const {
     return MacroLabelBegin;
   }
@@ -314,8 +335,8 @@ public:
   void addGlobalNameForTypeUnit(StringRef Name, const DIScope *Context);
 
   /// Add a new global type to the compile unit.
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
+  void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                         const DIScope *Context) override;
 
   /// Add a new global type present in a type unit to this compile unit.
   void addGlobalTypeUnitType(const DIType *Ty, const DIScope *Context);
@@ -335,13 +356,17 @@ public:
   /// DWARF information necessary to find the actual variable (navigating the
   /// extra location information encoded in the type) based on the starting
   /// location.  Add the DWARF information to the die.
-  void addComplexAddress(const DbgVariable &DV, DIE &Die,
+  void addComplexAddress(const DIExpression *DIExpr, DIE &Die,
                          dwarf::Attribute Attribute,
                          const MachineLocation &Location);
 
   /// Add a Dwarf loclistptr attribute data and value.
   void addLocationList(DIE &Die, dwarf::Attribute Attribute, unsigned Index);
-  void applyVariableAttributes(const DbgVariable &Var, DIE &VariableDie);
+
+  /// Add attributes to \p Var which reflect the common attributes of \p
+  /// VariableDie, namely those which are not dependant on the active variant.
+  void applyCommonDbgVariableAttributes(const DbgVariable &Var,
+                                        DIE &VariableDie);
 
   /// Add a Dwarf expression attribute data and value.
   void addExpr(DIELoc &Die, dwarf::Form Form, const MCExpr *Expr);
@@ -364,6 +389,8 @@ public:
   bool hasDwarfPubSections() const;
 
   void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
+
+  MDNodeSetVector &getDeferredLocalDecls() { return DeferredLocalDecls; }
 };
 
 } // end namespace llvm

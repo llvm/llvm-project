@@ -1,4 +1,4 @@
-# RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,simple-register-coalescing,greedy -verify-regalloc 2>&1 | FileCheck %s
+# RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,register-coalescer,greedy -verify-regalloc 2>&1 | FileCheck %s
 
 # The test checks no verification errors happen in the case of
 # statepoint invoke instruction with tied-defs.
@@ -172,7 +172,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    4
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295

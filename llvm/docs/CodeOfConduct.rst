@@ -2,6 +2,8 @@
    This work is licensed under a Creative Commons Attribution 3.0 Unported License.
    SPDX-License-Identifier: CC-BY-3.0
 
+.. _LLVM Community Code of Conduct:
+
 ==============================
 LLVM Community Code of Conduct
 ==============================
@@ -133,6 +135,17 @@ events as part of each events' information. In person reports will still be
 kept confidential exactly as above, but also feel free to (anonymously if
 needed) email conduct@llvm.org.
 
+Bans
+====
+
+The code of conduct committee may decide to ban an individual from the
+community for violating the code of conduct. The goal of a ban is to protect
+community members from having to interact with people who are consistently not
+respecting the code of conduct. Please refer to the
+:doc:`Developer Policy<DeveloperPolicy>` section on Bans for how to handle
+interactions with former community members. If you need further guidance,
+please contact conduct@llvm.org.
+
 Code of Conduct Committee
 =========================
 
@@ -148,18 +161,18 @@ The current committee members are:
 
 * Kit Barton (kbarton\@llvm.org)
 * Kristof Beyls (kristof.beyls\@llvm.org)
+* Stella Stamenova (sstamenova\@llvm.org)
+* David Blaikie (dblaikie\@llvm.org)
 * Mike Edwards (medwards\@llvm.org)
-* Hal Finkel (hfinkel\@llvm.org)
 * Cyndy Ishida (cishida\@llvm.org)
-* Anton Korobeynikov (anton.korobeynikov\@llvm.org)
 * Tanya Lattner (tanyalattner\@llvm.org)
-* Chris Lattner (clattner\@llvm.org)
-* Tom Stellard (tstellar\@llvm.org)
 
 
 Transparency Reports
 ====================
 
+* `July 15, 2023 <https://llvm.org/coc-reports/2023-07-15-report.html>`_
+* `July 15, 2022 <https://llvm.org/coc-reports/2022-07-15-report.html>`_
 * `April 28, 2022 <https://llvm.org/coc-reports/2022-04-28-report.html>`_
 
 For details about what a Transparency Report is and what it contains, please see the :doc:`Response Guide<ResponseGuide>`.

@@ -30,6 +30,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
 #include "gtest/gtest.h"
@@ -42,14 +43,10 @@
 using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::ElementsAreArray;
-using testing::Eq;
 using testing::Field;
-using testing::HasSubstr;
 using testing::IsEmpty;
 using testing::Matcher;
 using testing::MatchesRegex;
-using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
@@ -87,7 +84,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   // introduced by the patch is parsed and nothing else.
   // We don't run PP directly over the patch cotents to test production
   // behaviour.
-  auto Bounds = Lexer::ComputePreamble(ModifiedContents, *CI->getLangOpts());
+  auto Bounds = Lexer::ComputePreamble(ModifiedContents, CI->getLangOpts());
   auto Clang =
       prepareCompilerInstance(std::move(CI), &BaselinePreamble->Preamble,
                               llvm::MemoryBuffer::getMemBufferCopy(
@@ -322,16 +319,16 @@ TEST(PreamblePatchTest, Define) {
 
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Contents);
-    Annotations Modified(Case.Contents);
+    llvm::Annotations Modified(Case.Contents);
     EXPECT_THAT(getPreamblePatch("", Modified.code()),
                 MatchesRegex(Case.ExpectedPatch));
 
     auto AST = createPatchedAST("", Modified.code());
     ASSERT_TRUE(AST);
-    std::vector<Range> MacroRefRanges;
+    std::vector<llvm::Annotations::Range> MacroRefRanges;
     for (auto &M : AST->getMacros().MacroRefs) {
       for (auto &O : M.getSecond())
-        MacroRefRanges.push_back(O.Rng);
+        MacroRefRanges.push_back({O.StartOffset, O.EndOffset});
     }
     EXPECT_THAT(MacroRefRanges, Contains(Modified.range()));
   }
@@ -420,7 +417,7 @@ TEST(PreamblePatchTest, LocateMacroAtWorks) {
     ASSERT_TRUE(AST);
 
     const auto &SM = AST->getSourceManager();
-    auto *MacroTok = AST->getTokens().spelledTokenAt(
+    auto *MacroTok = AST->getTokens().spelledTokenContaining(
         SM.getComposedLoc(SM.getMainFileID(), Modified.point("use")));
     ASSERT_TRUE(MacroTok);
 
@@ -444,7 +441,7 @@ TEST(PreamblePatchTest, LocateMacroAtDeletion) {
     ASSERT_TRUE(AST);
 
     const auto &SM = AST->getSourceManager();
-    auto *MacroTok = AST->getTokens().spelledTokenAt(
+    auto *MacroTok = AST->getTokens().spelledTokenContaining(
         SM.getComposedLoc(SM.getMainFileID(), Modified.point()));
     ASSERT_TRUE(MacroTok);
 
@@ -515,9 +512,10 @@ TEST(PreamblePatchTest, RefsToMacros) {
       ExpectedLocations.push_back(referenceRangeIs(R));
 
     for (const auto &P : Modified.points()) {
-      auto *MacroTok = AST->getTokens().spelledTokenAt(SM.getComposedLoc(
-          SM.getMainFileID(),
-          llvm::cantFail(positionToOffset(Modified.code(), P))));
+      auto *MacroTok =
+          AST->getTokens().spelledTokenContaining(SM.getComposedLoc(
+              SM.getMainFileID(),
+              llvm::cantFail(positionToOffset(Modified.code(), P))));
       ASSERT_TRUE(MacroTok);
       EXPECT_THAT(findReferences(*AST, P, 0).References,
                   testing::ElementsAreArray(ExpectedLocations));
@@ -587,20 +585,11 @@ TEST(PreamblePatch, ModifiedBounds) {
     ASSERT_TRUE(CI);
 
     const auto ExpectedBounds =
-        Lexer::ComputePreamble(Case.Modified, *CI->getLangOpts());
+        Lexer::ComputePreamble(Case.Modified, CI->getLangOpts());
     EXPECT_EQ(PP.modifiedBounds().Size, ExpectedBounds.Size);
     EXPECT_EQ(PP.modifiedBounds().PreambleEndsAtStartOfLine,
               ExpectedBounds.PreambleEndsAtStartOfLine);
   }
-}
-
-TEST(PreamblePatch, DropsDiagnostics) {
-  llvm::StringLiteral Code = "#define FOO\nx;/* error-ok */";
-  // First check that this code generates diagnostics.
-  EXPECT_THAT(*TestTU::withCode(Code).build().getDiagnostics(),
-              testing::Not(testing::IsEmpty()));
-  // Ensure they are dropeed when a patched preamble is used.
-  EXPECT_FALSE(createPatchedAST("", Code)->getDiagnostics());
 }
 
 TEST(PreamblePatch, MacroLoc) {
@@ -637,16 +626,12 @@ MATCHER_P2(Diag, Range, Name,
 }
 
 TEST(PreamblePatch, DiagnosticsFromMainASTAreInRightPlace) {
-  Config Cfg;
-  Cfg.Diagnostics.AllowStalePreamble = true;
-  WithContextValue WithCfg(Config::Key, std::move(Cfg));
-
   {
     Annotations Code("#define FOO");
     // Check with removals from preamble.
     Annotations NewCode("[[x]];/* error-ok */");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "missing_type_specifier")));
   }
   {
@@ -657,14 +642,13 @@ TEST(PreamblePatch, DiagnosticsFromMainASTAreInRightPlace) {
 #define BAR
 [[x]];/* error-ok */)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "missing_type_specifier")));
   }
 }
 
 TEST(PreamblePatch, DiagnosticsToPreamble) {
   Config Cfg;
-  Cfg.Diagnostics.AllowStalePreamble = true;
   Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
   Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
@@ -679,7 +663,7 @@ TEST(PreamblePatch, DiagnosticsToPreamble) {
     // Check with removals from preamble.
     Annotations NewCode(R"([[#  include "foo.h"]])");
     auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "unused-includes")));
   }
   {
@@ -693,7 +677,7 @@ $bar[[#include "bar.h"]]
 $foo[[#include "foo.h"]])");
     auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
     EXPECT_THAT(
-        *AST->getDiagnostics(),
+        AST->getDiagnostics(),
         UnorderedElementsAre(Diag(NewCode.range("bar"), "unused-includes"),
                              Diag(NewCode.range("foo"), "unused-includes")));
   }
@@ -708,17 +692,13 @@ void foo();
 #define $foo2[[FOO]] 2)");
     auto AST = createPatchedAST(Code.code(), NewCode.code(), AdditionalFiles);
     EXPECT_THAT(
-        *AST->getDiagnostics(),
+        AST->getDiagnostics(),
         ElementsAre(AllOf(Diag(NewCode.range("foo2"), "-Wmacro-redefined"),
                           withNote(Diag(NewCode.range("foo1"))))));
   }
 }
 
 TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
-  Config Cfg;
-  Cfg.Diagnostics.AllowStalePreamble = true;
-  WithContextValue WithCfg(Config::Key, std::move(Cfg));
-
   {
     // Check with additions to preamble.
     Annotations Code("#include [[<foo>]]");
@@ -726,7 +706,7 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
 #define BAR
 #include [[<foo>]])");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
@@ -736,7 +716,7 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
 #include [[<foo>]])");
     Annotations NewCode("#include [[<foo>]]");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
@@ -744,7 +724,7 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
     Annotations Code("#include [[<foo>]]");
     Annotations NewCode("#define BAR\n#define BAZ\n");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+    EXPECT_THAT(AST->getDiagnostics(), IsEmpty());
   }
   {
     // Picks closest line in case of multiple alternatives.
@@ -755,7 +735,7 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
 #define BAR
 #include <foo>)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
@@ -763,7 +743,7 @@ TEST(PreamblePatch, TranslatesDiagnosticsInPreamble) {
     Annotations Code("#include [[<foo>]]");
     Annotations NewCode(" # include <foo>");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+    EXPECT_THAT(AST->getDiagnostics(), IsEmpty());
   }
   {
     // Multiple lines.
@@ -774,7 +754,7 @@ o>]])");
     Annotations NewCode(R"(#include [[<fo\
 o>]])");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(),
+    EXPECT_THAT(AST->getDiagnostics(),
                 ElementsAre(Diag(NewCode.range(), "pp_file_not_found")));
   }
   {
@@ -787,7 +767,7 @@ o>]])");
     Annotations NewCode(R"(#include <fo\
 x>)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+    EXPECT_THAT(AST->getDiagnostics(), IsEmpty());
   }
   {
     // Preserves notes.
@@ -801,7 +781,7 @@ x>)");
 #define $main[[BAR]] 2)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
     EXPECT_THAT(
-        *AST->getDiagnostics(),
+        AST->getDiagnostics(),
         ElementsAre(AllOf(Diag(NewCode.range("main"), "-Wmacro-redefined"),
                           withNote(Diag(NewCode.range("note"))))));
   }
@@ -814,7 +794,7 @@ x>)");
 #define $main[[BAR]] 2)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
     EXPECT_THAT(
-        *AST->getDiagnostics(),
+        AST->getDiagnostics(),
         ElementsAre(AllOf(Diag(NewCode.range("main"), "-Wmacro-redefined"),
                           Field(&Diag::Notes, IsEmpty()))));
   }
@@ -827,7 +807,7 @@ x>)");
 #define BAZ 0
 #define BAR 1)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+    EXPECT_THAT(AST->getDiagnostics(), IsEmpty());
   }
   {
     Annotations Code(R"(
@@ -840,7 +820,7 @@ void foo();
     // We shouldn't emit any diagnotiscs (and shouldn't crash).
     Annotations NewCode("");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+    EXPECT_THAT(AST->getDiagnostics(), IsEmpty());
   }
   {
     Annotations Code(R"(
@@ -857,7 +837,7 @@ i[[nt]] xyz;
     )");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
     EXPECT_THAT(
-        *AST->getDiagnostics(),
+        AST->getDiagnostics(),
         ElementsAre(Diag(NewCode.range(), "pp_unterminated_conditional")));
   }
 }
@@ -867,10 +847,6 @@ MATCHER_P2(Mark, Range, Text, "") {
 }
 
 TEST(PreamblePatch, MacroAndMarkHandling) {
-  Config Cfg;
-  Cfg.Diagnostics.AllowStalePreamble = true;
-  WithContextValue WithCfg(Config::Key, std::move(Cfg));
-
   {
     Annotations Code(R"cpp(
 #ifndef FOO
@@ -913,9 +889,9 @@ TEST(PreamblePatch, PatchFileEntry) {
   }
   {
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    auto *FE =
+    auto FE =
         PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager());
-    ASSERT_NE(FE, nullptr);
+    ASSERT_NE(FE, std::nullopt);
     EXPECT_THAT(FE->getName().str(),
                 testing::EndsWith(PreamblePatch::HeaderName.str()));
   }

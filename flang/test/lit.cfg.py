@@ -118,10 +118,24 @@ if config.flang_standalone_build:
                 "PATH", config.flang_llvm_tools_dir, append_path=True
             )
 
+# On MacOS, -isysroot is needed to build binaries.
+isysroot_flag = []
+if config.osx_sysroot:
+    isysroot_flag = ["-isysroot", config.osx_sysroot]
+
+# Check for DEFAULT_SYSROOT, because when it is set -isysroot has no effect.
+if config.default_sysroot:
+    config.available_features.add("default_sysroot")
+
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
-    ToolSubst("%flang", command=FindTool("flang-new"), unresolved="fatal"),
+    ToolSubst(
+        "%flang",
+        command=FindTool("flang-new"),
+        extra_args=isysroot_flag,
+        unresolved="fatal",
+    ),
     ToolSubst(
         "%flang_fc1",
         command=FindTool("flang-new"),
@@ -163,7 +177,11 @@ if config.cc:
         and os.path.isdir(include)
     ):
         config.available_features.add("c-compiler")
-        tools.append(ToolSubst("%cc", command=config.cc, unresolved="fatal"))
+        tools.append(
+            ToolSubst(
+                "%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"
+            )
+        )
         tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
         tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
         tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
@@ -181,3 +199,30 @@ else:
 result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
+
+# Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
+if config.have_openmp_rtl:
+    config.available_features.add("openmp_runtime")
+    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+    # project or runtime.
+    if config.openmp_module_dir:
+        config.substitutions.append(
+            ("%openmp_flags", f"-fopenmp -J {config.openmp_module_dir}")
+        )
+    else:
+        config.substitutions.append(("%openmp_flags", "-fopenmp"))
+
+# Add features and substitutions to test F128 math support.
+# %f128-lib substitution may be used to generate check prefixes
+# for LIT tests checking for F128 library support.
+if config.flang_runtime_f128_math_lib:
+    config.available_features.add("flang-supports-f128-math")
+    config.available_features.add(
+        "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib
+    )
+    config.substitutions.append(
+        ("%f128-lib", config.flang_runtime_f128_math_lib.upper())
+    )
+else:
+    config.substitutions.append(("%f128-lib", "NONE"))

@@ -3,6 +3,17 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
 %extend lldb::SBFrame {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
+
+        def __int__(self):
+            return self.GetFrameID()
+
+        def __hex__(self):
+            return self.GetPC()
+
         def get_all_variables(self):
             return self.GetVariables(True,True,True,True)
 
@@ -33,6 +44,16 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
                 def __init__(self, regs):
                     self.regs = regs
 
+                def __iter__(self):
+                    return self.get_registers()
+
+                def get_registers(self):
+                    for i in range(0,len(self.regs)):
+                        rs = self.regs[i]
+                        for j in range (0,rs.num_children):
+                            reg = rs.GetChildAtIndex(j)
+                            yield reg
+                          
                 def __getitem__(self, key):
                     if type(key) is str:
                         for i in range(0,len(self.regs)):
@@ -41,7 +62,7 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
                                 reg = rs.GetChildAtIndex(j)
                                 if reg.name == key: return reg
                     else:
-                        return lldb.SBValue()
+                        return SBValue()
 
             return registers_access(self.registers)
 

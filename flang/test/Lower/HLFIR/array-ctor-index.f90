@@ -8,7 +8,7 @@ function test1(k)
 end function test1
 ! CHECK-LABEL:   func.func @_QPtest1(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i8> {fir.bindc_name = "k"}) -> !fir.array<4xi8> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest1Ek"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest1Ek"} : (!fir.ref<i8>, !fir.dscope) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi8> {bindc_name = "test1", uniq_name = "_QFtest1Etest1"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -20,7 +20,7 @@ end function test1
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -31,13 +31,13 @@ end function test1
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_23:.*]]: index):
 ! CHECK:             %[[VAL_24:.*]] = hlfir.apply %[[VAL_25:.*]], %[[VAL_23]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_26:.*]] = hlfir.no_reassoc %[[VAL_24]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_26]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi8> {
+! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi8> {
 ! CHECK:           ^bb0(%[[VAL_28:.*]]: index):
 ! CHECK:             %[[VAL_29:.*]] = hlfir.apply %[[VAL_30:.*]], %[[VAL_28]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> i8
@@ -58,7 +58,7 @@ function test2(k)
 end function test2
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i16> {fir.bindc_name = "k"}) -> !fir.array<4xi16> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest2Ek"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest2Ek"} : (!fir.ref<i16>, !fir.dscope) -> (!fir.ref<i16>, !fir.ref<i16>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi16> {bindc_name = "test2", uniq_name = "_QFtest2Etest2"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -70,7 +70,7 @@ end function test2
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -81,13 +81,13 @@ end function test2
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_23:.*]]: index):
 ! CHECK:             %[[VAL_24:.*]] = hlfir.apply %[[VAL_25:.*]], %[[VAL_23]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_26:.*]] = hlfir.no_reassoc %[[VAL_24]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_26]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi16> {
+! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi16> {
 ! CHECK:           ^bb0(%[[VAL_28:.*]]: index):
 ! CHECK:             %[[VAL_29:.*]] = hlfir.apply %[[VAL_30:.*]], %[[VAL_28]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> i16
@@ -108,7 +108,7 @@ function test3(k)
 end function test3
 ! CHECK-LABEL:   func.func @_QPtest3(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "k"}) -> !fir.array<4xi32> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest3Ek"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi32> {bindc_name = "test3", uniq_name = "_QFtest3Etest3"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -120,7 +120,7 @@ end function test3
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -131,13 +131,13 @@ end function test3
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_23:.*]]: index):
 ! CHECK:             %[[VAL_24:.*]] = hlfir.apply %[[VAL_25:.*]], %[[VAL_23]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_26:.*]] = hlfir.no_reassoc %[[VAL_24]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_26]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi32> {
+! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi32> {
 ! CHECK:           ^bb0(%[[VAL_28:.*]]: index):
 ! CHECK:             %[[VAL_29:.*]] = hlfir.apply %[[VAL_30:.*]], %[[VAL_28]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> i32
@@ -158,7 +158,7 @@ function test4(k)
 end function test4
 ! CHECK-LABEL:   func.func @_QPtest4(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "k"}) -> !fir.array<4xi64> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest4Ek"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest4Ek"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi64> {bindc_name = "test4", uniq_name = "_QFtest4Etest4"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -170,7 +170,7 @@ end function test4
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -180,7 +180,7 @@ end function test4
 ! CHECK:             %[[VAL_20:.*]] = arith.muli %[[VAL_18]], %[[VAL_19]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_20]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_22:.*]]: index):
 ! CHECK:             %[[VAL_23:.*]] = hlfir.apply %[[VAL_24:.*]], %[[VAL_22]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_25:.*]] = hlfir.no_reassoc %[[VAL_23]] : i64

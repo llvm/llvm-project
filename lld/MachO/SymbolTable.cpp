@@ -80,14 +80,14 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
       // iterator. However, that is typically the case for files that have
       // .subsections_via_symbols set.
       insertIt = toIsec->symbols.insert(insertIt, d);
-      d->isec = toIsec;
+      d->originalIsec = toIsec;
       d->value = toOff;
       // We don't want to have more than one unwindEntry at a given address, so
       // drop the redundant ones. We We can safely drop the unwindEntries of
       // the symbols in fromIsec since we will be adding another unwindEntry as
       // we finish parsing toIsec's file. (We can assume that toIsec has its
       // own unwindEntry because of the ODR.)
-      d->unwindEntry = nullptr;
+      d->originalUnwindEntry = nullptr;
     }
     return true;
   });
@@ -121,8 +121,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           // in ObjFile::parseSymbols() such that extern weak symbols appear
           // last, so we don't need to worry about subsequent symbols being
           // added to an already-coalesced section.
-          if (defined->isec)
-            transplantSymbolsAtOffset(concatIsec, defined->isec,
+          if (defined->isec())
+            transplantSymbolsAtOffset(concatIsec, defined->isec(),
                                       /*skip=*/nullptr, value, defined->value);
         }
         return defined;
@@ -130,7 +130,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 
       if (defined->isWeakDef()) {
         if (auto concatIsec =
-                dyn_cast_or_null<ConcatInputSection>(defined->isec)) {
+                dyn_cast_or_null<ConcatInputSection>(defined->isec())) {
           concatIsec->wasCoalesced = true;
           if (isec)
             transplantSymbolsAtOffset(concatIsec, isec, defined, defined->value,
@@ -150,10 +150,48 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
     } else if (auto *undef = dyn_cast<Undefined>(s)) {
-      // Preserve the original bitcode file name (instead of using the object
-      // file name).
-      if (undef->wasBitcodeSymbol)
-        file = undef->getFile();
+      if (undef->wasBitcodeSymbol) {
+        auto objFile = dyn_cast<ObjFile>(file);
+        if (!objFile) {
+          // The file must be a native object file, as opposed to potentially
+          // being another bitcode file. A situation arises when some symbols
+          // are defined thru `module asm` and thus they are not present in the
+          // bitcode's symbol table. Consider bitcode modules `A`, `B`, and `C`.
+          // LTO compiles only `A` and `C`, since there's no explicit symbol
+          // reference to `B` other than a symbol from `A` via `module asm`.
+          // After LTO is finished, the missing symbol now appears in the
+          // resulting object file for `A`, which  prematurely resolves another
+          // prevailing symbol with `B` that hasn't been compiled, instead of
+          // the resulting object for `C`. Consequently, an incorrect
+          // relocation is generated for the prevailing symbol.
+          assert(isa<BitcodeFile>(file) && "Bitcode file is expected.");
+          std::string message =
+              "The pending prevailing symbol(" + name.str() +
+              ") in the bitcode file(" + toString(undef->getFile()) +
+              ") is overridden by a non-native object (from bitcode): " +
+              toString(file);
+          error(message);
+        } else if (!objFile->builtFromBitcode) {
+          // Ideally, this should be an object file compiled from a bitcode
+          // file. However, this might not hold true if a LC linker option is
+          // used. In case LTO internalizes a prevailing hidden weak symbol,
+          // there's a situation where an unresolved prevailing symbol might be
+          // linked with the corresponding one from a native library, which is
+          // loaded later after LTO. Although this could potentially result in
+          // an ODR violation, we choose to permit this scenario as a warning.
+          std::string message = "The pending prevailing symbol(" + name.str() +
+                                ") in the bitcode file(" +
+                                toString(undef->getFile()) +
+                                ") is overridden by a post-processed native "
+                                "object (from native archive): " +
+                                toString(file);
+          warn(message);
+        } else {
+          // Preserve the original bitcode file name (instead of using the
+          // object file name).
+          file = undef->getFile();
+        }
+      }
     }
     // Defined symbols take priority over other types of symbols, so in case
     // of a name conflict, we fall through to the replaceSymbol() call below.
@@ -174,7 +212,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
                                    InputFile *newFile, bool makePrivateExtern) {
   bool isPrivateExtern = makePrivateExtern || src->privateExtern;
-  return addDefined(target, newFile, src->isec, src->value, src->size,
+  return addDefined(target, newFile, src->isec(), src->value, src->size,
                     src->isWeakDef(), isPrivateExtern,
                     src->referencedDynamically, src->noDeadStrip,
                     src->weakDefCanBeHidden);
@@ -339,7 +377,7 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     // live. Marking the isec live ensures an OutputSection is created that the
     // start/end symbol can refer to.
     assert(sym.isLive());
-    isec->live = true;
+    assert(isec->live);
 
     // This runs after gatherInputSections(), so need to explicitly set parent
     // and add to inputSections.

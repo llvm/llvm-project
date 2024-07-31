@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_ABORT_H
-#define LLVM_LIBC_SRC_ABORT_H
+#ifndef LLVM_LIBC_SRC_STDLIB_ABORT_H
+#define LLVM_LIBC_SRC_STDLIB_ABORT_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 [[noreturn]] void abort();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_ABORT_H
+#endif // LLVM_LIBC_SRC_STDLIB_ABORT_H

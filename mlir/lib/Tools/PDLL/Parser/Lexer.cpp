@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lexer.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/PDLL/AST/Diagnostic.h"
 #include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "llvm/ADT/StringExtras.h"
@@ -315,6 +314,7 @@ Token Lexer::lexIdentifier(const char *tokStart) {
                          .Case("erase", Token::kw_erase)
                          .Case("let", Token::kw_let)
                          .Case("Constraint", Token::kw_Constraint)
+                         .Case("not", Token::kw_not)
                          .Case("op", Token::kw_op)
                          .Case("Op", Token::kw_Op)
                          .Case("OpName", Token::kw_OpName)

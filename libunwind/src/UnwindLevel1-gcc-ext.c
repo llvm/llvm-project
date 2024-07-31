@@ -143,7 +143,7 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
   // Create a mock exception object for force unwinding.
   _Unwind_Exception ex;
   memset(&ex, '\0', sizeof(ex));
-  strcpy((char *)&ex.exception_class, "CLNGUNW");
+  memcpy(&ex.exception_class, "CLNGUNW", sizeof(ex.exception_class));
 #endif
 
   // walk each frame
@@ -167,7 +167,7 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
     }
 
     // Update the pr_cache in the mock exception object.
-    const uint32_t* unwindInfo = (uint32_t *) frameInfo.unwind_info;
+    uint32_t *unwindInfo = (uint32_t *)frameInfo.unwind_info;
     ex.pr_cache.fnstart = frameInfo.start_ip;
     ex.pr_cache.ehtp = (_Unwind_EHT_Header *) unwindInfo;
     ex.pr_cache.additional= frameInfo.flags;

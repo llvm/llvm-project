@@ -1,8 +1,8 @@
 // Check the basic reporting/warning and the application of constraints.
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -11,8 +11,8 @@
 // Check the bugpath related to the reports.
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -35,8 +35,7 @@ void test_alnum_concrete(int v) {
 }
 
 void test_alnum_symbolic(int x) {
-  int ret = isalnum(x); // \
-  // bugpath-note{{Assuming the character is non-alphanumeric}}
+  int ret = isalnum(x);
   (void)ret;
 
   clang_analyzer_eval(EOF <= x && x <= 255); // \
@@ -185,6 +184,44 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
     // bugpath-warning{{The 1st argument to 'fread' is NULL but should not be NULL}} \
     // bugpath-note{{The 1st argument to 'fread' is NULL but should not be NULL}}
 }
+
+int __not_null_buffer(void *, int, int);
+
+void test_notnull_buffer_1(void *buf) {
+  __not_null_buffer(buf, 0, 1);
+  clang_analyzer_eval(buf != 0); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // report-warning{{FALSE}} \
+  // bugpath-warning{{FALSE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{FALSE}} \
+  // bugpath-note{{Assuming 'buf' is equal to null}} \
+  // bugpath-note{{Assuming 'buf' is not equal to null}}
+}
+
+void test_notnull_buffer_2(void *buf) {
+  __not_null_buffer(buf, 1, 0);
+  clang_analyzer_eval(buf != 0); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // report-warning{{FALSE}} \
+  // bugpath-warning{{FALSE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{FALSE}} \
+  // bugpath-note{{Assuming 'buf' is equal to null}} \
+  // bugpath-note{{Assuming 'buf' is not equal to null}}
+}
+
+void test_notnull_buffer_3(void *buf) {
+  __not_null_buffer(buf, 1, 1);
+  clang_analyzer_eval(buf != 0); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}} \
+  // bugpath-note{{'buf' is not equal to null}}
+}
+
 void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
   if (fp) // \
   // bugpath-note{{Assuming 'fp' is null}} \
@@ -317,6 +354,7 @@ void test_file_fd_at_functions() {
   // bugpath-note{{The 1st argument to 'linkat' is -22 but should be a valid file descriptor or AT_FDCWD}}
 
   // no warning for these functions if the AT_FDCWD value is used
+  (void)openat(AT_FDCWD, "path", 0);
   (void)linkat(AT_FDCWD, "from", AT_FDCWD, "to", 0);
   (void)faccessat(AT_FDCWD, "path", 0, 0);
   (void)symlinkat("oldpath", AT_FDCWD, "newpath");

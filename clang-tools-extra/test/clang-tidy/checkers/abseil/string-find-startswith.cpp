@@ -1,27 +1,14 @@
-// RUN: %check_clang_tidy %s abseil-string-find-startswith %t -- \
-// RUN:   -config="{CheckOptions: [{key: 'abseil-string-find-startswith.StringLikeClasses', value: '::std::basic_string;::basic_string'}]}"
+// RUN: %check_clang_tidy -std=c++17 %s abseil-string-find-startswith %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:     {abseil-string-find-startswith.StringLikeClasses: \
+// RUN:       '::std::basic_string;::std::basic_string_view;::basic_string'}}" \
+// RUN:   -- -isystem %clang_tidy_headers
+
+#include <string>
 
 using size_t = decltype(sizeof(int));
 
 namespace std {
-template <typename T> class allocator {};
-template <typename T> class char_traits {};
-template <typename C, typename T = std::char_traits<C>,
-          typename A = std::allocator<C>>
-struct basic_string {
-  basic_string();
-  basic_string(const basic_string &);
-  basic_string(const C *, const A &a = A());
-  ~basic_string();
-  int find(basic_string<C> s, int pos = 0);
-  int find(const char *s, int pos = 0);
-  int rfind(basic_string<C> s, int pos = npos);
-  int rfind(const char *s, int pos = npos);
-  static constexpr size_t npos = -1;
-};
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
-
 struct cxx_string {
   int find(const char *s, int pos = 0);
   int rfind(const char *s, int pos = npos);
@@ -39,7 +26,7 @@ std::string bar();
 
 #define A_MACRO(x, y) ((x) == (y))
 
-void tests(std::string s, global_string s2) {
+void tests(std::string s, global_string s2, std::string_view sv) {
   s.find("a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StartsWith instead of find() == 0 [abseil-string-find-startswith]
   // CHECK-FIXES: {{^[[:space:]]*}}absl::StartsWith(s, "a");{{$}}
@@ -95,6 +82,14 @@ void tests(std::string s, global_string s2) {
   s2.rfind("a", 0) == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StartsWith
   // CHECK-FIXES: {{^[[:space:]]*}}absl::StartsWith(s2, "a");{{$}}
+
+  sv.find("a") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StartsWith
+  // CHECK-FIXES: {{^[[:space:]]*}}absl::StartsWith(sv, "a");{{$}}
+
+  sv.rfind("a", 0) != 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StartsWith
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StartsWith(sv, "a");{{$}}
 
   // expressions that don't trigger the check are here.
   A_MACRO(s.find("a"), 0);

@@ -13,6 +13,11 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
+if (COMPILER_RT_BUILD_CRT)
+  list(APPEND BUILTINS_TEST_DEPS crt)
+endif()
+pythonize_bool(COMPILER_RT_BUILD_CRT)
+
 # Indicate if this is an MSVC environment.
 pythonize_bool(MSVC)
 
@@ -108,4 +113,3 @@ endforeach()
 add_lit_testsuite(check-builtins "Running the Builtins tests"
   ${BUILTINS_TESTSUITES}
   DEPENDS ${BUILTINS_TEST_DEPS})
-set_target_properties(check-builtins PROPERTIES FOLDER "Compiler-RT Misc")

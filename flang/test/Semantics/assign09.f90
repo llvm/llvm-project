@@ -41,6 +41,10 @@ program test
   !ERROR: Actual procedure argument has interface incompatible with dummy argument 'p=': incompatible dummy argument #1: incompatible dummy data object types: REAL(4) vs INTEGER(4)
   call sub3(sqrt)
 
+  print *, implicitExtFunc()
+  call implicitExtSubr
+  noInterfaceProcPtr => implicitExtFunc ! ok
+  noInterfaceProcPtr => implicitExtSubr ! ok
   noInterfaceProcPtr => noInterfaceExternal ! ok
   realToRealProcPtr => noInterfaceExternal ! ok
   intToRealProcPtr => noInterfaceExternal !ok

@@ -236,7 +236,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -365,7 +365,8 @@ void RegDefsUses::setCallerSaved(const MachineInstr &MI) {
   // Add RA/RA_64 to Defs to prevent users of RA/RA_64 from going into
   // the delay slot. The reason is that RA/RA_64 must not be changed
   // in the delay slot so that the callee can return to the caller.
-  if (MI.definesRegister(Mips::RA) || MI.definesRegister(Mips::RA_64)) {
+  if (MI.definesRegister(Mips::RA, /*TRI=*/nullptr) ||
+      MI.definesRegister(Mips::RA_64, /*TRI=*/nullptr)) {
     Defs.set(Mips::RA);
     Defs.set(Mips::RA_64);
   }
@@ -610,7 +611,8 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       continue;
 
     // Delay slot filling is disabled at -O0, or in microMIPS32R6.
-    if (!DisableDelaySlotFiller && (TM->getOptLevel() != CodeGenOpt::None) &&
+    if (!DisableDelaySlotFiller &&
+        (TM->getOptLevel() != CodeGenOptLevel::None) &&
         !(InMicroMipsMode && STI.hasMips32r6())) {
 
       bool Filled = false;
@@ -870,7 +872,7 @@ MipsDelaySlotFiller::selectSuccBB(MachineBasicBlock &B) const {
     return nullptr;
 
   // Select the successor with the larget edge weight.
-  auto &Prob = getAnalysis<MachineBranchProbabilityInfo>();
+  auto &Prob = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MachineBasicBlock *S = *std::max_element(
       B.succ_begin(), B.succ_end(),
       [&](const MachineBasicBlock *Dst0, const MachineBasicBlock *Dst1) {

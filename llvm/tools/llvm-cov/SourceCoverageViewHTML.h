@@ -36,12 +36,31 @@ public:
   CoveragePrinterHTML(const CoverageViewOptions &Opts)
       : CoveragePrinter(Opts) {}
 
+protected:
+  Error emitStyleSheet();
+  Error emitJavaScript();
+  void emitReportHeader(raw_ostream &OSRef, const std::string &Title);
+
 private:
   void emitFileSummary(raw_ostream &OS, StringRef SF,
                        const FileCoverageSummary &FCS,
                        bool IsTotals = false) const;
   std::string buildLinkToFile(StringRef SF,
                               const FileCoverageSummary &FCS) const;
+};
+
+/// A coverage printer for html output, but generates index files in every
+/// subdirectory to show a hierarchical view.
+class CoveragePrinterHTMLDirectory : public CoveragePrinterHTML {
+public:
+  using CoveragePrinterHTML::CoveragePrinterHTML;
+
+  Error createIndexFile(ArrayRef<std::string> SourceFiles,
+                        const coverage::CoverageMapping &Coverage,
+                        const CoverageFiltersMatchAll &Filters) override;
+
+private:
+  struct Reporter;
 };
 
 /// A code coverage view which supports html-based rendering.
@@ -71,6 +90,9 @@ class SourceCoverageViewHTML : public SourceCoverageView {
   void renderBranchView(raw_ostream &OS, BranchView &BRV,
                         unsigned ViewDepth) override;
 
+  void renderMCDCView(raw_ostream &OS, MCDCView &BRV,
+                      unsigned ViewDepth) override;
+
   void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
                                unsigned ViewDepth) override;
 
@@ -84,8 +106,7 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderTitle(raw_ostream &OS, StringRef Title) override;
 
-  void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
-                         unsigned IndentLevel) override;
+  void renderTableHeader(raw_ostream &OS, unsigned IndentLevel) override;
 
 public:
   SourceCoverageViewHTML(StringRef SourceName, const MemoryBuffer &File,

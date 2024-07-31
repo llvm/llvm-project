@@ -23,14 +23,14 @@ class TestCase(TestBase):
         # for them and just treats them as normal variables (which will lead
         # to linker errors as they are not defined anywhere).
         self.expect(
-            "expr A::int128_max", error=True, substrs=["Couldn't lookup symbols:"]
+            "expr A::int128_max", error=True, substrs=["Couldn't look up symbols:"]
         )
         self.expect(
-            "expr A::uint128_max", error=True, substrs=["Couldn't lookup symbols:"]
+            "expr A::uint128_max", error=True, substrs=["Couldn't look up symbols:"]
         )
         self.expect(
-            "expr A::int128_min", error=True, substrs=["Couldn't lookup symbols:"]
+            "expr A::int128_min", error=True, substrs=["Couldn't look up symbols:"]
         )
         self.expect(
-            "expr A::uint128_min", error=True, substrs=["Couldn't lookup symbols:"]
+            "expr A::uint128_min", error=True, substrs=["Couldn't look up symbols:"]
         )

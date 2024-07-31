@@ -9,6 +9,7 @@
 #include "src/stdio/printf_core/printf_main.h"
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/parser.h"
@@ -16,12 +17,12 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 int printf_main(Writer *writer, const char *__restrict str,
                 internal::ArgList &args) {
-  Parser parser(str, args);
+  Parser<internal::ArgList> parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
@@ -39,4 +40,4 @@ int printf_main(Writer *writer, const char *__restrict str,
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -26,54 +26,6 @@ using namespace llvm;
 
 namespace {
 
-unsigned getOpcode(Intrinsic::ID ID) {
-  switch (ID) {
-  case Intrinsic::vector_reduce_fadd:
-    return Instruction::FAdd;
-  case Intrinsic::vector_reduce_fmul:
-    return Instruction::FMul;
-  case Intrinsic::vector_reduce_add:
-    return Instruction::Add;
-  case Intrinsic::vector_reduce_mul:
-    return Instruction::Mul;
-  case Intrinsic::vector_reduce_and:
-    return Instruction::And;
-  case Intrinsic::vector_reduce_or:
-    return Instruction::Or;
-  case Intrinsic::vector_reduce_xor:
-    return Instruction::Xor;
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_umax:
-  case Intrinsic::vector_reduce_umin:
-    return Instruction::ICmp;
-  case Intrinsic::vector_reduce_fmax:
-  case Intrinsic::vector_reduce_fmin:
-    return Instruction::FCmp;
-  default:
-    llvm_unreachable("Unexpected ID");
-  }
-}
-
-RecurKind getRK(Intrinsic::ID ID) {
-  switch (ID) {
-  case Intrinsic::vector_reduce_smax:
-    return RecurKind::SMax;
-  case Intrinsic::vector_reduce_smin:
-    return RecurKind::SMin;
-  case Intrinsic::vector_reduce_umax:
-    return RecurKind::UMax;
-  case Intrinsic::vector_reduce_umin:
-    return RecurKind::UMin;
-  case Intrinsic::vector_reduce_fmax:
-    return RecurKind::FMax;
-  case Intrinsic::vector_reduce_fmin:
-    return RecurKind::FMin;
-  default:
-    return RecurKind::None;
-  }
-}
-
 bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
   bool Changed = false;
   SmallVector<IntrinsicInst *, 4> Worklist;
@@ -106,7 +58,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     FastMathFlags FMF =
         isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
     Intrinsic::ID ID = II->getIntrinsicID();
-    RecurKind RK = getRK(ID);
+    RecurKind RK = getMinMaxReductionRecurKind(ID);
+    TargetTransformInfo::ReductionShuffle RS =
+        TTI->getPreferredExpandedReductionShuffle(II);
 
     Value *Rdx = nullptr;
     IRBuilder<> Builder(II);
@@ -120,16 +74,16 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       // and it can't be handled by generating a shuffle sequence.
       Value *Acc = II->getArgOperand(0);
       Value *Vec = II->getArgOperand(1);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
       if (!FMF.allowReassoc())
-        Rdx = getOrderedReduction(Builder, Acc, Vec, getOpcode(ID), RK);
+        Rdx = getOrderedReduction(Builder, Acc, Vec, RdxOpcode, RK);
       else {
         if (!isPowerOf2_32(
                 cast<FixedVectorType>(Vec->getType())->getNumElements()))
           continue;
-
-        Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
-        Rdx = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(ID),
-                                  Acc, Rdx, "bin.rdx");
+        Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
+        Rdx = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, Acc, Rdx,
+                                  "bin.rdx");
       }
       break;
     }
@@ -159,8 +113,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         }
         break;
       }
-
-      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
     case Intrinsic::vector_reduce_add:
@@ -174,8 +128,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       if (!isPowerOf2_32(
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
-
-      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -187,8 +141,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
               cast<FixedVectorType>(Vec->getType())->getNumElements()) ||
           !FMF.noNaNs())
         continue;
-
-      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
+      unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
     }

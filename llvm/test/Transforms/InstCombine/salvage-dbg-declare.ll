@@ -1,11 +1,12 @@
 ; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 declare dso_local i32 @bar(ptr)
 
 ; Function Attrs: nounwind
 define internal i32 @foo() #0 !dbg !1 {
 ; CHECK:  %[[VLA:.*]] = alloca [2 x i32]
-; CHECK:  call void @llvm.dbg.declare(metadata ptr %[[VLA]], {{.*}}, metadata !DIExpression())
+; CHECK:  #dbg_declare(ptr %[[VLA]], {{.*}}, !DIExpression(),
 
 entry:
   %vla = alloca i32, i64 2, align 4, !dbg !16

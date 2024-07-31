@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// XFAIL: libcpp-has-debug-mode
 
 #include <algorithm>
 #include <vector>

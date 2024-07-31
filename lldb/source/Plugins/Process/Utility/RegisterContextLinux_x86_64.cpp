@@ -75,10 +75,10 @@ struct UserArea {
   (LLVM_EXTENSION offsetof(UserArea, dbg) +                                    \
    LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
-// Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64
+// Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64_with_base
 // structure.
 #define DECLARE_REGISTER_INFOS_X86_64_STRUCT
-#include "RegisterInfos_x86_64.h"
+#include "RegisterInfos_x86_64_with_base.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 
 static std::vector<lldb_private::RegisterInfo> &GetPrivateRegisterInfoVector() {
@@ -103,7 +103,7 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.
 #define UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
-#include "RegisterInfos_x86_64.h"
+#include "RegisterInfos_x86_64_with_base.h"
 #undef UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
   }
 
@@ -115,7 +115,7 @@ static const RegisterInfo *GetRegisterInfoPtr(const ArchSpec &target_arch) {
   case llvm::Triple::x86:
     return GetRegisterInfo_i386(target_arch);
   case llvm::Triple::x86_64:
-    return g_register_infos_x86_64;
+    return g_register_infos_x86_64_with_base;
   default:
     assert(false && "Unhandled target architecture.");
     return nullptr;
@@ -130,8 +130,8 @@ static uint32_t GetRegisterInfoCount(const ArchSpec &target_arch) {
     return static_cast<uint32_t>(GetPrivateRegisterInfoVector().size());
   }
   case llvm::Triple::x86_64:
-    return static_cast<uint32_t>(sizeof(g_register_infos_x86_64) /
-                                 sizeof(g_register_infos_x86_64[0]));
+    return static_cast<uint32_t>(sizeof(g_register_infos_x86_64_with_base) /
+                                 sizeof(g_register_infos_x86_64_with_base[0]));
   default:
     assert(false && "Unhandled target architecture.");
     return 0;
@@ -143,7 +143,7 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   case llvm::Triple::x86:
     return static_cast<uint32_t>(k_num_user_registers_i386);
   case llvm::Triple::x86_64:
-    return static_cast<uint32_t>(k_num_user_registers_x86_64);
+    return static_cast<uint32_t>(x86_64_with_base::k_num_user_registers);
   default:
     assert(false && "Unhandled target architecture.");
     return 0;

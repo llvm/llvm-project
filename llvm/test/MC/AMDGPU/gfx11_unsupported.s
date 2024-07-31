@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 buffer_atomic_add_f64 v[2:3], off, s[12:15], s4 offset:4095
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -20,6 +20,9 @@ buffer_atomic_min_f64 v[2:3], off, s[12:15], s4 offset:4095
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:8388607
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_inv
@@ -169,7 +172,13 @@ flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc
 flat_atomic_pk_add_bf16 a4, v[2:3], a1 sc0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+flat_atomic_pk_add_bf16 v1, v[2:3], v2 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 flat_atomic_pk_add_f16 a4, v[2:3], a1 sc0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_pk_add_f16 v1, v[2:3], v2 th:TH_ATOMIC_RETURN
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off glc
@@ -196,6 +205,9 @@ global_atomic_pk_add_bf16 a4, v[2:3], a1, off sc0
 global_atomic_pk_add_f16 v0, v[0:1], v2, off glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+global_atomic_pk_add_f16 v1, v0, v2, s[0:1] offset:-64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 global_load_lds_dword v2, s[4:5] offset:4
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -211,6 +223,12 @@ global_load_lds_ubyte v[2:3], off
 global_load_lds_ushort v[2:3], off
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+global_load_tr_b128 v[1:4], v5, s[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_tr_b64 v[1:2], v[3:4], off
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -218,6 +236,12 @@ image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_atomic_pk_add_f16 v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_atomic_pk_add_bf16 v4, [v4, v5, v6], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_3D
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 image_gather4_b_cl_o v[252:255], v[1:8], s[8:15], s[12:15] dmask:0x1
@@ -1585,6 +1609,12 @@ v_mov_b64_e64 v[10:11], v[2:3]
 v_mul_lo_i32 v0, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+v_permlane16_var_b32 v0, v0, v1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_permlanex16_var_b32 v0, v0, v1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 v_pk_add_f32 v[10:11], v[2:3], v[4:5]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -1805,4 +1835,232 @@ v_subrev_u16_e64 v255, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_subrev_u16_sdwa v255, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_f32_i32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_f32_u32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_u32_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_i32_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_f16_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_f32_f16 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_hi_f32_f16 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_trunc_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_ceil_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_rndne_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_floor_f32 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_floor_f16 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_ceil_f16 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_trunc_f16 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_rndne_f16 s5, s1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_add_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_sub_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_mul_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_min_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_max_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_fmac_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_fmamk_f32 s5, s1, 0x11213141, s3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_fmaak_f32 s5, s1, s2, 0x11213141
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cvt_pk_rtz_f16_f32 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_add_f16 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_sub_f16 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_mul_f16 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_fmac_f16 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_max_f16 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_min_f16 s5, s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_lt_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_eq_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_le_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_gt_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_lg_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_ge_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_o_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_u_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nge_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nlg_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_ngt_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nle_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_neq_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nlt_f32 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_lt_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_eq_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_le_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_gt_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_lg_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_ge_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_o_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_u_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nge_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nlg_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_ngt_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nle_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_neq_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_cmp_nlt_f16 s1, s2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_singleuse_vdst 0x1234
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_max_num_f32 v5, off, s[8:11], s3 offset:4095
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_min_num_f32 v5, off, s[8:11], s3 offset:4095
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_sub_clamp_u32 v5, v[1:2], v2, off glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_csub_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_sub_clamp_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cond_sub_rtn_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cond_sub_u32 v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_sub_clamp_rtn_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_sub_clamp_u32 v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_cond_sub_u32 v[0:1], v2 offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_cond_sub_u32 v0, v2, s[0:1] offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_ordered_add_b64 v0, v[2:3], s[0:1] offset:64
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_subrev_u32 v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_subrev_rtn_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_subrev_u64 v1, v[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_subrev_rtn_u64 v[5:6], v1, v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

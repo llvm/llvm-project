@@ -38,6 +38,7 @@ int llvm_disassemble(void);
 // debuginfo.c
 int llvm_test_dibuilder(void);
 int llvm_get_di_tag(void);
+int llvm_di_type_get_name(void);
 
 // metadata.c
 int llvm_add_named_metadata_operand(void);

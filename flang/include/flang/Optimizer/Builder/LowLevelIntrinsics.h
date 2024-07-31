@@ -36,6 +36,12 @@ mlir::func::FuncOp getLlvmMemset(FirOpBuilder &builder);
 /// Get the C standard library `realloc` function.
 mlir::func::FuncOp getRealloc(FirOpBuilder &builder);
 
+/// Get the `llvm.get.rounding` intrinsic.
+mlir::func::FuncOp getLlvmGetRounding(FirOpBuilder &builder);
+
+/// Get the `llvm.set.rounding` intrinsic.
+mlir::func::FuncOp getLlvmSetRounding(FirOpBuilder &builder);
+
 /// Get the `llvm.stacksave` intrinsic.
 mlir::func::FuncOp getLlvmStackSave(FirOpBuilder &builder);
 
@@ -47,6 +53,24 @@ mlir::func::FuncOp getLlvmInitTrampoline(FirOpBuilder &builder);
 
 /// Get the `llvm.adjust.trampoline` intrinsic.
 mlir::func::FuncOp getLlvmAdjustTrampoline(FirOpBuilder &builder);
+
+/// Get the libm (fenv.h) `feclearexcept` function.
+mlir::func::FuncOp getFeclearexcept(FirOpBuilder &builder);
+
+/// Get the libm (fenv.h) `fedisableexcept` function.
+mlir::func::FuncOp getFedisableexcept(FirOpBuilder &builder);
+
+/// Get the libm (fenv.h) `feenableexcept` function.
+mlir::func::FuncOp getFeenableexcept(FirOpBuilder &builder);
+
+/// Get the libm (fenv.h) `fegetexcept` function.
+mlir::func::FuncOp getFegetexcept(FirOpBuilder &builder);
+
+/// Get the libm (fenv.h) `feraiseexcept` function.
+mlir::func::FuncOp getFeraiseexcept(FirOpBuilder &builder);
+
+/// Get the libm (fenv.h) `fetestexcept` function.
+mlir::func::FuncOp getFetestexcept(FirOpBuilder &builder);
 
 } // namespace fir::factory
 

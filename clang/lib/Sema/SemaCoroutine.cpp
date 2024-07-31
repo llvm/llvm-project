@@ -16,10 +16,12 @@
 #include "CoroutineStmtBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
@@ -70,7 +72,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
   // If the function is a non-static member function, add the type
   // of the implicit object parameter before the formal parameters.
   if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       // [over.match.funcs]4
       // For non-static member functions, the type of the implicit object
       // parameter is
@@ -78,7 +80,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
       //      ref-qualifier or with the & ref-qualifier
       //  -- "rvalue reference to cv X" for functions declared with the &&
       //      ref-qualifier
-      QualType T = MD->getThisType()->castAs<PointerType>()->getPointeeType();
+      QualType T = MD->getFunctionObjectParameterType();
       T = FnType->getRefQualifier() == RQ_RValue
               ? S.Context.getRValueReferenceType(T)
               : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
@@ -118,7 +120,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
     NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
                                       CoroTrait.getTypePtr());
-    return S.Context.getElaboratedType(ETK_None, NNS, PromiseType);
+    return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
+                                       PromiseType);
   };
 
   if (!PromiseType->getAsCXXRecordDecl()) {
@@ -318,7 +321,8 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
-  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
+  auto EndLoc = Args.empty() ? Loc : Args.back()->getEndLoc();
+  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, EndLoc, nullptr);
 }
 
 // See if return type is coroutine-handle and if so, invoke builtin coro-resume
@@ -349,14 +353,9 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
            diag::warn_coroutine_handle_address_invalid_return_type)
         << JustAddress->getType();
 
-  // Clean up temporary objects so that they don't live across suspension points
-  // unnecessarily. We choose to clean up before the call to
-  // __builtin_coro_resume so that the cleanup code are not inserted in-between
-  // the resume call and return instruction, which would interfere with the
-  // musttail call contract.
-  JustAddress = S.MaybeCreateExprWithCleanups(JustAddress);
-  return S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_resume,
-                                JustAddress);
+  // Clean up temporary objects, because the resulting expression
+  // will become the body of await_suspend wrapper.
+  return S.MaybeCreateExprWithCleanups(JustAddress);
 }
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
@@ -480,10 +479,10 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
   auto *FD = cast<FunctionDecl>(CurContext);
   bool IsThisDependentType = [&] {
-    if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD))
-      return MD->isInstance() && MD->getThisType()->isDependentType();
-    else
-      return false;
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD))
+      return MD->isImplicitObjectMemberFunction() &&
+             MD->getThisType()->isDependentType();
+    return false;
   }();
 
   QualType T = FD->getType()->isDependentType() || IsThisDependentType
@@ -508,7 +507,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
 
   // Add implicit object parameter.
   if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (MD->isInstance() && !isLambdaCallOperator(MD)) {
+    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
       ExprResult ThisExpr = ActOnCXXThis(Loc);
       if (ThisExpr.isInvalid())
         return nullptr;
@@ -687,6 +686,9 @@ bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
 
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
+  // Ignore previous expr evaluation contexts.
+  EnterExpressionEvaluationContext PotentiallyEvaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
   auto *ScopeInfo = getCurFunction();
@@ -815,13 +817,10 @@ ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
 
   assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
   const auto &Functions = Operators.asUnresolvedSet();
-  bool IsOverloaded =
-      Functions.size() > 1 ||
-      (Functions.size() == 1 && isa<FunctionTemplateDecl>(*Functions.begin()));
   Expr *CoawaitOp = UnresolvedLookupExpr::Create(
       Context, /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
-      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, IsOverloaded,
-      Functions.begin(), Functions.end());
+      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, Functions.begin(),
+      Functions.end(), /*KnownDependent=*/false);
   assert(CoawaitOp);
   return CoawaitOp;
 }
@@ -1114,6 +1113,11 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   if (FD->hasAttr<AlwaysInlineAttr>())
     Diag(FD->getLocation(), diag::warn_always_inline_coroutine);
 
+  // The design of coroutines means we cannot allow use of VLAs within one, so
+  // diagnose if we've seen a VLA in the body of this function.
+  if (Fn->FirstVLALoc.isValid())
+    Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
+
   // [stmt.return.coroutine]p1:
   //   A coroutine shall not enclose a return statement ([stmt.return]).
   if (Fn->FirstReturnLoc.isValid()) {
@@ -1283,7 +1287,7 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
 static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
                                  SmallVectorImpl<Expr *> &PlacementArgs) {
   if (auto *MD = dyn_cast<CXXMethodDecl>(&FD)) {
-    if (MD->isInstance() && !isLambdaCallOperator(MD)) {
+    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
       ExprResult ThisExpr = S.ActOnCXXThis(Loc);
       if (ThisExpr.isInvalid())
         return false;
@@ -1653,7 +1657,7 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
       return false;
   } else if (HasRVoid) {
     Fallthrough = S.BuildCoreturnStmt(FD.getLocation(), nullptr,
-                                      /*IsImplicit*/false);
+                                      /*IsImplicit=*/true);
     Fallthrough = S.ActOnFinishFullStmt(Fallthrough.get());
     if (Fallthrough.isInvalid())
       return false;
@@ -1875,9 +1879,15 @@ bool Sema::buildCoroutineParameterMoves(SourceLocation Loc) {
     if (PD->getType()->isDependentType())
       continue;
 
+    // Preserve the referenced state for unused parameter diagnostics.
+    bool DeclReferenced = PD->isReferenced();
+
     ExprResult PDRefExpr =
         BuildDeclRefExpr(PD, PD->getType().getNonReferenceType(),
                          ExprValueKind::VK_LValue, Loc); // FIXME: scope?
+
+    PD->setReferenced(DeclReferenced);
+
     if (PDRefExpr.isInvalid())
       return false;
 

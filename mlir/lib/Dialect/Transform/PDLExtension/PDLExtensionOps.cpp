@@ -138,7 +138,8 @@ transform::PDLMatchHooks::getPDLConstraintHooks() const {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::PDLMatchOp::apply(transform::TransformResults &results,
+transform::PDLMatchOp::apply(transform::TransformRewriter &rewriter,
+                             transform::TransformResults &results,
                              transform::TransformState &state) {
   auto *extension = state.getExtension<PatternApplicatorExtension>();
   assert(extension &&
@@ -157,8 +158,8 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
 
 void transform::PDLMatchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getRoot(), effects);
-  producesHandle(getMatched(), effects);
+  onlyReadsHandle(getRootMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   onlyReadsPayload(effects);
 }
 
@@ -167,7 +168,8 @@ void transform::PDLMatchOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
+transform::WithPDLPatternsOp::apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
                                     transform::TransformState &state) {
   TransformOpInterface transformOp = nullptr;
   for (Operation &nested : getBody().front()) {

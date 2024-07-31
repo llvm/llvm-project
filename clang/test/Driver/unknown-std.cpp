@@ -4,7 +4,10 @@
 
 // RUN: not %clang %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
 // RUN: not %clang -x objective-c++ %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
-// RUN: not %clang -x cuda -nocudainc -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s -std=foobar -c 2>&1 | FileCheck --match-full-lines --check-prefix=CHECK --check-prefix=CUDA %s
+// RUN: not %clang -x cuda -nocudainc -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
+// RUN: not %clang -x hip -nocudainc -nocudalib %s -std=foobar -c 2>&1 \
+// RUN:   | FileCheck --match-full-lines %s
 
 // CHECK: error: invalid value 'foobar' in '-std=foobar'
 // CHECK-NEXT: note: use 'c++98' or 'c++03' for 'ISO C++ 1998 with amendments' standard
@@ -21,7 +24,6 @@
 // CHECK-NEXT: note: use 'gnu++23' for 'ISO C++ 2023 DIS with GNU extensions' standard
 // CHECK-NEXT: note: use 'c++2c' or 'c++26' for 'Working draft for C++2c' standard
 // CHECK-NEXT: note: use 'gnu++2c' or 'gnu++26' for 'Working draft for C++2c with GNU extensions' standard
-// CUDA-NEXT: note: use 'cuda' for 'NVIDIA CUDA(tm)' standard
 
 // Make sure that no other output is present.
 // CHECK-NOT: {{^.+$}}

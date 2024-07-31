@@ -106,9 +106,8 @@ define <2 x i1> @sub_XY_and_bit0_is_zero_fail(<2 x i8> %x, <2 x i8> %C) nounwind
 
 define i1 @sub_XY_xor_bit0_is_one_fail(i8 %x, i8 %C) nounwind {
 ; CHECK-LABEL: @sub_XY_xor_bit0_is_one_fail(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[C:%.*]], -2
-; CHECK-NEXT:    [[C1_NEG:%.*]] = add i8 [[TMP1]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i8 [[C1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = xor i8 [[C:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = sub i8 [[X:%.*]], [[C1]]
 ; CHECK-NEXT:    [[W:%.*]] = xor i8 [[Y]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[W]], 10
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -148,10 +147,9 @@ define i1 @sub_YX_and_bit0_is_zero_fail(i8 %x, i8 %C) nounwind {
 
 define <2 x i1> @sub_YX_xor_bit0_is_one_fail(<2 x i8> %x, <2 x i8> %C) nounwind {
 ; CHECK-LABEL: @sub_YX_xor_bit0_is_one_fail(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[Y:%.*]] = add <2 x i8> [[TMP1]], [[C:%.*]]
-; CHECK-NEXT:    [[W:%.*]] = xor <2 x i8> [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[W]], <i8 12, i8 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP2]], <i8 -13, i8 -13>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %C1 = sub <2 x i8> %C, <i8 1, i8 1>

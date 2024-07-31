@@ -40,7 +40,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <bitset>
 #include <cassert>
 #include <iterator>
 #include <vector>
@@ -81,8 +80,9 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
     MachineFunction &MF = *MBB.getParent();
     const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
     if (ST.genExecuteOnly()) {
-      BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ScratchReg)
-        .addImm(NumBytes).setMIFlags(MIFlags);
+      unsigned XOInstr = ST.useMovt() ? ARM::t2MOVi32imm : ARM::tMOVi32imm;
+      BuildMI(MBB, MBBI, dl, TII.get(XOInstr), ScratchReg)
+          .addImm(NumBytes).setMIFlags(MIFlags);
     } else {
       MRI.emitLoadConstPool(MBB, MBBI, dl, ScratchReg, 0, NumBytes, ARMCC::AL,
                             0, MIFlags);
@@ -149,8 +149,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const ThumbRegisterInfo *RegInfo =
       static_cast<const ThumbRegisterInfo *>(STI.getRegisterInfo());
   const Thumb1InstrInfo &TII =
@@ -537,18 +536,30 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
                  AFI->getDPRCalleeSavedAreaSize() +
                  ArgRegsSaveSize);
 
+    // We are likely to need a scratch register and we know all callee-save
+    // registers are free at this point in the epilogue, so pick one.
+    unsigned ScratchRegister = ARM::NoRegister;
+    bool HasFP = hasFP(MF);
+    for (auto &I : MFI.getCalleeSavedInfo()) {
+      Register Reg = I.getReg();
+      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
+        ScratchRegister = Reg;
+        break;
+      }
+    }
+
     if (AFI->shouldRestoreSPFromFP()) {
       NumBytes = AFI->getFramePtrSpillOffset() - NumBytes;
       // Reset SP based on frame pointer only if the stack frame extends beyond
       // frame pointer stack slot, the target is ELF and the function has FP, or
       // the target uses var sized objects.
       if (NumBytes) {
-        assert(!MFI.getPristineRegs(MF).test(ARM::R4) &&
+        assert(ScratchRegister != ARM::NoRegister &&
                "No scratch register to restore SP from FP!");
-        emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::R4, FramePtr, -NumBytes,
+        emitThumbRegPlusImmediate(MBB, MBBI, dl, ScratchRegister, FramePtr, -NumBytes,
                                   TII, *RegInfo, MachineInstr::FrameDestroy);
         BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
-            .addReg(ARM::R4)
+            .addReg(ScratchRegister)
             .add(predOps(ARMCC::AL))
             .setMIFlag(MachineInstr::FrameDestroy);
       } else
@@ -557,18 +568,6 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
             .add(predOps(ARMCC::AL))
             .setMIFlag(MachineInstr::FrameDestroy);
     } else {
-      // For a large stack frame, we might need a scratch register to store
-      // the size of the frame.  We know all callee-save registers are free
-      // at this point in the epilogue, so pick one.
-      unsigned ScratchRegister = ARM::NoRegister;
-      bool HasFP = hasFP(MF);
-      for (auto &I : MFI.getCalleeSavedInfo()) {
-        Register Reg = I.getReg();
-        if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
-          ScratchRegister = Reg;
-          break;
-        }
-      }
       if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tBX_RET &&
           &MBB.front() != &*MBBI && std::prev(MBBI)->getOpcode() == ARM::tPOP) {
         MachineBasicBlock::iterator PMBBI = std::prev(MBBI);
@@ -612,11 +611,11 @@ bool Thumb1FrameLowering::needPopSpecialFixUp(const MachineFunction &MF) const {
 
 static void findTemporariesForLR(const BitVector &GPRsNoLRSP,
                                  const BitVector &PopFriendly,
-                                 const LivePhysRegs &UsedRegs, unsigned &PopReg,
+                                 const LiveRegUnits &UsedRegs, unsigned &PopReg,
                                  unsigned &TmpReg, MachineRegisterInfo &MRI) {
   PopReg = TmpReg = 0;
   for (auto Reg : GPRsNoLRSP.set_bits()) {
-    if (UsedRegs.available(MRI, Reg)) {
+    if (UsedRegs.available(Reg)) {
       // Remember the first pop-friendly register and exit.
       if (PopFriendly.test(Reg)) {
         PopReg = Reg;
@@ -684,7 +683,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   // Look for a temporary register to use.
   // First, compute the liveness information.
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  LivePhysRegs UsedRegs(TRI);
+  LiveRegUnits UsedRegs(TRI);
   UsedRegs.addLiveOuts(MBB);
   // The semantic of pristines changed recently and now,
   // the callee-saved registers that are touched in the function
@@ -710,11 +709,6 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   unsigned TemporaryReg = 0;
   BitVector PopFriendly =
       TRI.getAllocatableSet(MF, TRI.getRegClass(ARM::tGPRRegClassID));
-  // R7 may be used as a frame pointer, hence marked as not generally
-  // allocatable, however there's no reason to not use it as a temporary for
-  // restoring LR.
-  if (STI.getFramePointerReg() == ARM::R7)
-    PopFriendly.set(ARM::R7);
 
   assert(PopFriendly.any() && "No allocatable pop-friendly register?!");
   // Rebuild the GPRs from the high registers because they are removed
@@ -1049,9 +1043,9 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
         continue;
 
       if (Reg == ARM::LR) {
-        if (!MBB.succ_empty() ||
-            MI->getOpcode() == ARM::TCRETURNdi ||
-            MI->getOpcode() == ARM::TCRETURNri)
+        if (!MBB.succ_empty() || MI->getOpcode() == ARM::TCRETURNdi ||
+            MI->getOpcode() == ARM::TCRETURNri ||
+            MI->getOpcode() == ARM::TCRETURNrinotr12)
           // LR may only be popped into PC, as part of return sequence.
           // If this isn't the return sequence, we'll need emitPopSpecialFixUp
           // to restore LR the hard way.

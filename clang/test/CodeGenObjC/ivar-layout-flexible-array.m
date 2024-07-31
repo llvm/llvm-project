@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -Wno-objc-root-class -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
-// rdar://problem/21054495
 @interface FlexibleArrayMember {
   char flexible_array[][4][2];
 }

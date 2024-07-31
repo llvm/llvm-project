@@ -4,10 +4,10 @@
 
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host-amd.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-target-debug -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host-amd.bc -o - | FileCheck %s --check-prefix=CHECK-AMD
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-target-debug -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-amd.bc -o - | FileCheck %s --check-prefix=CHECK-AMD
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host-nvidia.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-unknown-unknown -emit-llvm %s -fopenmp-target-debug -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host-nvidia.bc -o - | FileCheck %s --check-prefix=CHECK-NVIDIA
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-unknown-unknown -emit-llvm %s -fopenmp-target-debug -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-nvidia.bc -o - | FileCheck %s --check-prefix=CHECK-NVIDIA
 
 // expected-no-diagnostics
 
@@ -27,11 +27,6 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
 } omp_allocator_handle_t;
 
-//.
-// CHECK-AMD: @local_a = internal addrspace(3) global [10 x i32] poison, align 4
-//.
-// CHECK-NVIDIA: @local_a = internal addrspace(3) global [10 x i32] poison, align 4
-//.
 int main()
 {
 	int N = 10000;

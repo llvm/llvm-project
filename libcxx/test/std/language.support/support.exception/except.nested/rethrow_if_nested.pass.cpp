@@ -18,8 +18,10 @@
 // template <class E> void rethrow_if_nested(const E& e);
 
 #include <exception>
+#include <cstddef>
 #include <cstdlib>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -28,6 +30,8 @@ class A
     int data_;
 public:
     explicit A(int data) : data_(data) {}
+    A(const A&) = default;
+    A& operator=(const A&) = default;
     virtual ~A() TEST_NOEXCEPT {}
 
     friend bool operator==(const A& x, const A& y) {return x.data_ == y.data_;}
@@ -55,6 +59,31 @@ class D : private std::nested_exception {};
 class E1 : public std::nested_exception {};
 class E2 : public std::nested_exception {};
 class E : public E1, public E2 {};
+
+#if TEST_STD_VER >= 11
+template <class, class...>
+struct can_rethrow_if_nested_impl {
+  static constexpr bool value = false;
+};
+
+template <class... Args>
+struct can_rethrow_if_nested_impl<decltype((void)std::rethrow_if_nested(std::declval<Args>()...)), Args...> {
+  static constexpr bool value = true;
+};
+
+template <class... Args>
+struct can_rethrow_if_nested : can_rethrow_if_nested_impl<void, Args...> {};
+
+static_assert(!can_rethrow_if_nested<>::value, "");
+static_assert(can_rethrow_if_nested<A>::value, "");
+static_assert(can_rethrow_if_nested<const A&>::value, "");
+static_assert(can_rethrow_if_nested<B>::value, "");
+static_assert(can_rethrow_if_nested<const B&>::value, "");
+static_assert(!can_rethrow_if_nested<A, int*>::value, "");
+static_assert(!can_rethrow_if_nested<B, int*>::value, "");
+static_assert(!can_rethrow_if_nested<A, std::nullptr_t>::value, "");
+static_assert(!can_rethrow_if_nested<B, std::nullptr_t>::value, "");
+#endif
 
 int main(int, char**)
 {

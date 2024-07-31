@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/ProcessInfo.h"
@@ -198,6 +199,8 @@ public:
 
   std::optional<bool> GetWatchpointReportedAfter();
 
+  WatchpointHardwareFeature GetSupportedWatchpointTypes();
+
   const ArchSpec &GetHostArchitecture();
 
   std::chrono::seconds GetHostDefaultPacketTimeout();
@@ -237,7 +240,7 @@ public:
 
   ArchSpec GetSystemArchitecture();
 
-  uint32_t GetAddressingBits();
+  lldb_private::AddressableBits GetAddressableBits();
 
   bool GetHostname(std::string &s);
 
@@ -389,7 +392,7 @@ public:
           *command_output, // Pass nullptr if you don't want the command output
       const Timeout<std::micro> &timeout);
 
-  bool CalculateMD5(const FileSpec &file_spec, uint64_t &high, uint64_t &low);
+  llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);
 
   lldb::DataBufferSP ReadRegister(
       lldb::tid_t tid,
@@ -492,7 +495,7 @@ public:
   ///
   /// \see \b Process::ConfigureStructuredData(...) for details.
   Status
-  ConfigureRemoteStructuredData(ConstString type_name,
+  ConfigureRemoteStructuredData(llvm::StringRef type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
   llvm::Expected<TraceSupportedResponse>
@@ -580,7 +583,10 @@ protected:
   lldb::tid_t m_curr_tid_run = LLDB_INVALID_THREAD_ID;
 
   uint32_t m_num_supported_hardware_watchpoints = 0;
-  uint32_t m_addressing_bits = 0;
+  WatchpointHardwareFeature m_watchpoint_types =
+      eWatchpointHardwareFeatureUnknown;
+  uint32_t m_low_mem_addressing_bits = 0;
+  uint32_t m_high_mem_addressing_bits = 0;
 
   ArchSpec m_host_arch;
   std::string m_host_distribution_id;

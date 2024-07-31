@@ -214,8 +214,9 @@ public:
     assert(!elementalOp && "expected only one implied-do");
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    elementalOp =
-        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams);
+    elementalOp = builder.create<hlfir::ElementalOp>(
+        loc, exprType, shape,
+        /*mold=*/nullptr, lengthParams, /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
     mlir::Value diff = builder.create<mlir::arith::SubIOp>(
@@ -239,6 +240,26 @@ public:
     // must be initiated before the YieldElementOp, so we have to pop the scope
     // right now.
     stmtCtx.finalizeAndPop();
+
+    // This is a hacky way to get rid of the DestroyOp clean-up
+    // associated with the final ac-value result if it is hlfir.expr.
+    // Example:
+    //   ... = (/(REPEAT(REPEAT(CHAR(i),2),2),i=1,n)/)
+    // Each intrinsic call lowering will produce hlfir.expr result
+    // with the associated clean-up, but only the last of them
+    // is wrong. It is wrong because the value is used in hlfir.yield_element,
+    // so it cannot be destroyed.
+    mlir::Operation *destroyOp = nullptr;
+    for (mlir::Operation *useOp : elementResult.getUsers())
+      if (mlir::isa<hlfir::DestroyOp>(useOp)) {
+        if (destroyOp)
+          fir::emitFatalError(loc,
+                              "multiple DestroyOp's for ac-value expression");
+        destroyOp = useOp;
+      }
+
+    if (destroyOp)
+      destroyOp->erase();
 
     builder.create<hlfir::YieldElementOp>(loc, elementResult);
   }
@@ -297,7 +318,7 @@ public:
       mlir::Value shape = builder.genShape(loc, extents);
       declare = builder.create<hlfir::DeclareOp>(
           loc, tempStorage, tempName, shape, lengths,
-          fir::FortranVariableFlagsAttr{});
+          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
                             /*slice=*/mlir::Value{}, lengths, /*tdesc=*/{});
@@ -315,7 +336,7 @@ public:
       if (!extent)
         extent = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
       if (missingLengthParameters) {
-        if (declaredType.getEleTy().isa<fir::CharacterType>())
+        if (mlir::isa<fir::CharacterType>(declaredType.getEleTy()))
           emboxLengths.push_back(builder.createIntegerConstant(
               loc, builder.getCharacterLengthType(), 0));
         else
@@ -336,7 +357,7 @@ public:
 
   bool useSimplePushRuntime(hlfir::Entity value) {
     return value.isScalar() &&
-           !arrayConstructorElementType.isa<fir::CharacterType>() &&
+           !mlir::isa<fir::CharacterType>(arrayConstructorElementType) &&
            !fir::isRecordWithAllocatableMember(arrayConstructorElementType) &&
            !fir::isRecordWithTypeParameters(arrayConstructorElementType);
   }
@@ -349,7 +370,7 @@ public:
       auto [addrExv, cleanUp] = hlfir::convertToAddress(
           loc, builder, value, arrayConstructorElementType);
       mlir::Value addr = fir::getBase(addrExv);
-      if (addr.getType().isa<fir::BaseBoxType>())
+      if (mlir::isa<fir::BaseBoxType>(addr.getType()))
         addr = builder.create<fir::BoxAddrOp>(loc, addr);
       fir::runtime::genPushArrayConstructorSimpleScalar(
           loc, builder, arrayConstructorVector, addr);
@@ -417,7 +438,7 @@ public:
 
   void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
                  hlfir::Entity value) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](auto &impl) { return impl.pushValue(loc, builder, value); },
         implVariant);
   }
@@ -425,7 +446,7 @@ public:
   mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lower, mlir::Value upper,
                              mlir::Value stride) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](auto &impl) {
           return impl.startImpliedDo(loc, builder, lower, upper, stride);
         },
@@ -434,13 +455,13 @@ public:
 
   hlfir::Entity finishArrayCtorLowering(mlir::Location loc,
                                         fir::FirOpBuilder &builder) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](auto &impl) { return impl.finishArrayCtorLowering(loc, builder); },
         implVariant);
   }
 
   void startImpliedDoScope(llvm::StringRef doName, mlir::Value indexValue) {
-    std::visit(
+    Fortran::common::visit(
         [&](auto &impl) {
           return impl.startImpliedDoScope(doName, indexValue);
         },
@@ -448,8 +469,8 @@ public:
   }
 
   void endImpliedDoScope() {
-    std::visit([&](auto &impl) { return impl.endImpliedDoScope(); },
-               implVariant);
+    Fortran::common::visit([&](auto &impl) { return impl.endImpliedDoScope(); },
+                           implVariant);
   }
 
 private:
@@ -543,7 +564,7 @@ struct LengthAndTypeCollector<Character<Kind>> {
 /// lowering an ac-value and must be delayed?
 static bool missingLengthParameters(mlir::Type elementType,
                                     llvm::ArrayRef<mlir::Value> lengths) {
-  return (elementType.isa<fir::CharacterType>() ||
+  return (mlir::isa<fir::CharacterType>(elementType) ||
           fir::isRecordWithTypeParameters(elementType)) &&
          lengths.empty();
 }
@@ -591,16 +612,17 @@ ArrayCtorAnalysis::ArrayCtorAnalysis(
         arrayValueListStack.pop_back_val();
     for (const Fortran::evaluate::ArrayConstructorValue<T> &acValue :
          *currentArrayValueList)
-      std::visit(Fortran::common::visitors{
-                     [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
-                       arrayValueListStack.push_back(&impledDo.values());
-                       localNumberOfImpliedDo++;
-                     },
-                     [&](const Fortran::evaluate::Expr<T> &expr) {
-                       localNumberOfExpr++;
-                       anyArrayExpr = anyArrayExpr || expr.Rank() > 0;
-                     }},
-                 acValue.u);
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
+                arrayValueListStack.push_back(&impledDo.values());
+                localNumberOfImpliedDo++;
+              },
+              [&](const Fortran::evaluate::Expr<T> &expr) {
+                localNumberOfExpr++;
+                anyArrayExpr = anyArrayExpr || expr.Rank() > 0;
+              }},
+          acValue.u);
     anyImpliedDo = anyImpliedDo || localNumberOfImpliedDo > 0;
 
     if (localNumberOfImpliedDo == 0) {
@@ -681,14 +703,16 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
   // Based on what was gathered and the result of the analysis, select and
   // instantiate the right lowering strategy for the array constructor.
   if (!extent || needToEvaluateOneExprToGetLengthParameters ||
-      analysis.anyArrayExpr || declaredType.getEleTy().isa<fir::RecordType>())
+      analysis.anyArrayExpr ||
+      mlir::isa<fir::RecordType>(declaredType.getEleTy()))
     return RuntimeTempStrategy(
         loc, builder, stmtCtx, symMap, declaredType,
         extent ? std::optional<mlir::Value>(extent) : std::nullopt, lengths,
         needToEvaluateOneExprToGetLengthParameters);
-  // Note: array constructors containing impure ac-value expr are currently not
-  // rewritten to hlfir.elemental because impure expressions should be evaluated
-  // in order, and hlfir.elemental currently misses a way to indicate that.
+  // Note: the generated hlfir.elemental is always unordered, thus,
+  // AsElementalStrategy can only be used for array constructors without
+  // impure ac-value expressions. If/when this changes, make sure
+  // the 'unordered' attribute is set accordingly for the hlfir.elemental.
   if (analysis.isSingleImpliedDoWithOneScalarPureExpr())
     return AsElementalStrategy(loc, builder, stmtCtx, symMap, declaredType,
                                extent, lengths);
@@ -742,7 +766,7 @@ static void genAcValue(mlir::Location loc,
                                    impliedDoIndexValue);
 
   for (const auto &acValue : impledDo.values())
-    std::visit(
+    Fortran::common::visit(
         [&](const auto &x) {
           genAcValue(loc, converter, x, symMap, stmtCtx, arrayBuilder);
         },
@@ -764,7 +788,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
       loc, converter, arrayCtorExpr, symMap, stmtCtx);
   // Run the array lowering strategy through the ac-values.
   for (const auto &acValue : arrayCtorExpr)
-    std::visit(
+    Fortran::common::visit(
         [&](const auto &x) {
           genAcValue(loc, converter, x, symMap, stmtCtx, arrayBuilder);
         },

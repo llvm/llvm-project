@@ -27,13 +27,11 @@ namespace {
 
 using testing::AnyOf;
 using testing::ElementsAre;
-using testing::Ge;
 using testing::Gt;
 using testing::HasSubstr;
 using testing::IsEmpty;
 using testing::Not;
 using testing::SizeIs;
-using testing::UnorderedElementsAre;
 
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }
@@ -184,8 +182,9 @@ TEST_F(X86SerialSnippetGeneratorTest,
     EXPECT_THAT(IT.getOpcode(), Opcode);
     ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
     for (const auto &Var : IT.getVariableValues()) {
-      if (Var.isReg())
+      if (Var.isReg()) {
         EXPECT_FALSE(ForbiddenRegisters[Var.getReg()]);
+      }
     }
   }
 }

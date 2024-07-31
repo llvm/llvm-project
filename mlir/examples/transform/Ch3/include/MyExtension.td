@@ -16,7 +16,7 @@
 
 include "MyExtensionTypes.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -60,6 +60,7 @@ def ChangeCallTargetOp : Op<Transform_Dialect, "my.change_call_target",
   // Declare the function implementing the interface for a single payload operation.
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::func::CallOp call,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
@@ -89,6 +90,7 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
   // Declare the function implementing the interface for a single payload operation.
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::CallOpInterface call,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);

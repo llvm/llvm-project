@@ -14,10 +14,11 @@
 #ifndef BOLT_CORE_RELOCATION_H
 #define BOLT_CORE_RELOCATION_H
 
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
-class MCStreamer;
 class MCSymbol;
 class raw_ostream;
 
@@ -60,7 +61,7 @@ struct Relocation {
 
   /// Handle special cases when relocation should not be processed by BOLT or
   /// change relocation \p Type to proper one before continuing if \p Contents
-  /// and \P Type mismatch occured.
+  /// and \P Type mismatch occurred.
   static bool skipRelocationProcess(uint64_t &Type, uint64_t Contents);
 
   // Adjust value depending on relocation type (make it PC relative or not)
@@ -83,6 +84,7 @@ struct Relocation {
 
   /// Special relocation type that allows the linker to modify the instruction.
   static bool isX86GOTPCRELX(uint64_t Type);
+  static bool isX86GOTPC64(uint64_t Type);
 
   /// Return true if relocation type is NONE
   static bool isNone(uint64_t Type);
@@ -95,6 +97,10 @@ struct Relocation {
 
   /// Return true if relocation type is for thread local storage.
   static bool isTLS(uint64_t Type);
+
+  /// Return true of relocation type is for referencing a specific instruction
+  /// (as opposed to a function, basic block, etc).
+  static bool isInstructionReference(uint64_t Type);
 
   /// Return code for a NONE relocation
   static uint64_t getNone();
@@ -118,12 +124,44 @@ struct Relocation {
   /// otherwise.
   bool isRelative() const { return isRelative(Type); }
 
+  /// Return true if this relocation is R_*_IRELATIVE type. Return false
+  /// otherwise.
+  bool isIRelative() const { return isIRelative(Type); }
+
   /// Emit relocation at a current \p Streamer' position. The caller is
   /// responsible for setting the position correctly.
   size_t emit(MCStreamer *Streamer) const;
 
+  /// Emit a group of composed relocations. All relocations must have the same
+  /// offset. If std::distance(Begin, End) == 1, this is equivalent to
+  /// Begin->emit(Streamer).
+  template <typename RelocIt>
+  static size_t emit(RelocIt Begin, RelocIt End, MCStreamer *Streamer) {
+    if (Begin == End)
+      return 0;
+
+    const MCExpr *Value = nullptr;
+
+    for (auto RI = Begin; RI != End; ++RI) {
+      assert(RI->Offset == Begin->Offset &&
+             "emitting composed relocations with different offsets");
+      Value = RI->createExpr(Streamer, Value);
+    }
+
+    assert(Value && "failed to create relocation value");
+    auto Size = std::prev(End)->getSize();
+    Streamer->emitValue(Value, Size);
+    return Size;
+  }
+
   /// Print a relocation to \p OS.
   void print(raw_ostream &OS) const;
+
+private:
+  const MCExpr *createExpr(MCStreamer *Streamer) const;
+  const MCExpr *createExpr(MCStreamer *Streamer,
+                           const MCExpr *RetainedValue) const;
+  static MCBinaryExpr::Opcode getComposeOpcodeFor(uint64_t Type);
 };
 
 /// Relocation ordering by offset.

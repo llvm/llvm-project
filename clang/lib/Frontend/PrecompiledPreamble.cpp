@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -98,7 +99,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     // File is std::nullopt if it wasn't found.
     // (We have some false negatives if PP recovered e.g. <foo> -> "foo")
@@ -289,8 +291,7 @@ private:
 
 class PrecompilePreambleConsumer : public PCHGenerator {
 public:
-  PrecompilePreambleConsumer(PrecompilePreambleAction &Action,
-                             const Preprocessor &PP,
+  PrecompilePreambleConsumer(PrecompilePreambleAction &Action, Preprocessor &PP,
                              InMemoryModuleCache &ModuleCache,
                              StringRef isysroot,
                              std::shared_ptr<PCHBuffer> Buffer)
@@ -550,19 +551,19 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   SourceManager &SourceMgr = Clang->getSourceManager();
   for (auto &Filename : PreambleDepCollector->getDependencies()) {
-    auto FileOrErr = Clang->getFileManager().getFile(Filename);
-    if (!FileOrErr ||
-        *FileOrErr == SourceMgr.getFileEntryForID(SourceMgr.getMainFileID()))
+    auto MaybeFile = Clang->getFileManager().getOptionalFileRef(Filename);
+    if (!MaybeFile ||
+        MaybeFile == SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID()))
       continue;
-    auto File = *FileOrErr;
-    if (time_t ModTime = File->getModificationTime()) {
-      FilesInPreamble[File->getName()] =
-          PrecompiledPreamble::PreambleFileHash::createForFile(File->getSize(),
+    auto File = *MaybeFile;
+    if (time_t ModTime = File.getModificationTime()) {
+      FilesInPreamble[File.getName()] =
+          PrecompiledPreamble::PreambleFileHash::createForFile(File.getSize(),
                                                                ModTime);
     } else {
       llvm::MemoryBufferRef Buffer =
           SourceMgr.getMemoryBufferForFileOrFake(File);
-      FilesInPreamble[File->getName()] =
+      FilesInPreamble[File.getName()] =
           PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(Buffer);
     }
   }
@@ -719,7 +720,7 @@ void PrecompiledPreamble::AddImplicitPreamble(
 void PrecompiledPreamble::OverridePreamble(
     CompilerInvocation &CI, IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS,
     llvm::MemoryBuffer *MainFileBuffer) const {
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *MainFileBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *MainFileBuffer, 0);
   configurePreamble(Bounds, CI, VFS, MainFileBuffer);
 }
 

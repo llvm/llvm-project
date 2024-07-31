@@ -24,13 +24,18 @@ class OneShotAnalysisState;
 
 /// Options for analysis-enabled bufferization.
 struct OneShotBufferizationOptions : public BufferizationOptions {
-  enum class AnalysisHeuristic { BottomUp, TopDown };
+  enum class AnalysisHeuristic {
+    BottomUp,
+    TopDown,
+    BottomUpFromTerminators,
+    Fuzzer
+  };
 
   OneShotBufferizationOptions() = default;
 
-  /// Specifies whether returning newly allocated memrefs should be allowed.
-  /// Otherwise, a pass failure is triggered.
-  bool allowReturnAllocs = false;
+  /// Specifies whether returning newly allocated memrefs from loops should be
+  /// allowed.  Otherwise, a pass failure is triggered.
+  bool allowReturnAllocsFromLoops = false;
 
   /// Specifies whether the tensor IR should be annotated with alias sets.
   bool dumpAliasSets = false;
@@ -42,6 +47,11 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// Specify the functions that should not be analyzed. copyBeforeWrite will be
   /// set to true when bufferizing them.
   llvm::ArrayRef<std::string> noAnalysisFuncFilter;
+
+  /// Seed for the analysis fuzzer. Used only if the heuristic is set to
+  /// `AnalysisHeuristic::Fuzzer`. The fuzzer should be used only with
+  /// `testAnalysisOnly = true`.
+  unsigned analysisFuzzerSeed = 0;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
@@ -101,10 +111,6 @@ public:
   /// and store them in `undefinedTensorUses`.
   void gatherUndefinedTensorUses(Operation *op);
 
-  /// Find all tensors that are yielded/returned from a block and store them in
-  /// `yieldedTensors`. Also include all aliasing tensors in the same block.
-  void gatherYieldedTensors(Operation *op);
-
   int64_t getStatNumTensorOutOfPlace() const { return statNumTensorOutOfPlace; }
   int64_t getStatNumTensorInPlace() const { return statNumTensorInPlace; }
 
@@ -113,10 +119,6 @@ public:
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpOperand &opOperand) const override;
-
-  /// Return true if the given tensor (or an aliasing tensor) is yielded from
-  /// the containing block. Also include all aliasing tensors in the same block.
-  bool isTensorYielded(Value tensor) const override;
 
   /// Return true if the buffer of the given tensor value is written to. Must
   /// not be called for values inside not yet analyzed functions.
@@ -130,7 +132,7 @@ public:
   const SetVector<Value> &findDefinitionsCached(Value value);
 
   /// Reset cached data structures.
-  void resetCache();
+  void resetCache() override;
 
   /// Union the alias sets of `v1` and `v2`.
   void unionAliasSets(Value v1, Value v2);
@@ -260,10 +262,6 @@ private:
   // Bufferization statistics.
   int64_t statNumTensorOutOfPlace = 0;
   int64_t statNumTensorInPlace = 0;
-
-  /// A set of all tensors (and maybe aliasing tensors) that yielded from a
-  /// block.
-  DenseSet<Value> yieldedTensors;
 
   /// A set of uses of tensors that have undefined contents.
   DenseSet<OpOperand *> undefinedTensorUses;

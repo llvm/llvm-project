@@ -24,6 +24,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -35,32 +38,27 @@ using for_each_n_result = in_fun_result<_Iter, _Func>;
 
 namespace __for_each_n {
 struct __fn {
-
-  template <input_iterator _Iter,
-            class _Proj = identity,
-            indirectly_unary_invocable<projected<_Iter, _Proj>> _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  for_each_n_result<_Iter, _Func> operator()(_Iter __first,
-                                             iter_difference_t<_Iter> __count,
-                                             _Func __func,
-                                             _Proj __proj = {}) const {
+  template <input_iterator _Iter, class _Proj = identity, indirectly_unary_invocable<projected<_Iter, _Proj>> _Func>
+  _LIBCPP_HIDE_FROM_ABI constexpr for_each_n_result<_Iter, _Func>
+  operator()(_Iter __first, iter_difference_t<_Iter> __count, _Func __func, _Proj __proj = {}) const {
     while (__count-- > 0) {
       std::invoke(__func, std::invoke(__proj, *__first));
       ++__first;
     }
     return {std::move(__first), std::move(__func)};
   }
-
 };
 } // namespace __for_each_n
 
 inline namespace __cpo {
-  inline constexpr auto for_each_n = __for_each_n::__fn{};
+inline constexpr auto for_each_n = __for_each_n::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_FOR_EACH_N_H

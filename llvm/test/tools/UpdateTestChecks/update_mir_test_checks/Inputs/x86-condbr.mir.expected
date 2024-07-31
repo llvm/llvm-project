@@ -33,7 +33,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $edi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
   ; CHECK-NEXT:   TEST8ri [[COPY1]], 1, implicit-def $eflags

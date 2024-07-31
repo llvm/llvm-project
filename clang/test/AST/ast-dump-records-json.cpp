@@ -3266,7 +3266,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "access": "public",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base1",
 // CHECK-NEXT:     "qualType": "Base1"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "none"
@@ -3378,7 +3377,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "access": "private",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base1",
 // CHECK-NEXT:     "qualType": "Base1"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "private"
@@ -3479,7 +3477,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "access": "public",
 // CHECK-NEXT:    "isVirtual": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base1",
 // CHECK-NEXT:     "qualType": "Base1"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "none"
@@ -3718,7 +3715,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "access": "public",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base1",
 // CHECK-NEXT:     "qualType": "Base1"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "none"
@@ -3727,7 +3723,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "access": "public",
 // CHECK-NEXT:    "isVirtual": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base2",
 // CHECK-NEXT:     "qualType": "Base2"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "none"
@@ -3735,7 +3730,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "access": "protected",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base3",
 // CHECK-NEXT:     "qualType": "Base3"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "protected"
@@ -3975,7 +3969,6 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "access": "protected",
 // CHECK-NEXT:    "isVirtual": true,
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "Base1",
 // CHECK-NEXT:     "qualType": "Base1"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "writtenAccess": "protected"

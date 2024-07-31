@@ -24,7 +24,8 @@ using namespace mlir::tblgen;
 
 /// Generate a unique label based on the current file name to prevent name
 /// collisions if multiple generated files are included at once.
-static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records) {
+static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records,
+                                        StringRef tag) {
   // Use the input file name when generating a unique name.
   std::string inputFilename = records.getInputFilename();
 
@@ -33,7 +34,7 @@ static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records) {
   nameRef.consume_back(".td");
 
   // Sanitize any invalid characters.
-  std::string uniqueName;
+  std::string uniqueName(tag);
   for (char c : nameRef) {
     if (llvm::isAlnum(c) || c == '_')
       uniqueName.push_back(c);
@@ -44,15 +45,11 @@ static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records) {
 }
 
 StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
-    raw_ostream &os, const llvm::RecordKeeper &records)
-    : os(os), uniqueOutputLabel(getUniqueOutputLabel(records)) {}
+    raw_ostream &os, const llvm::RecordKeeper &records, StringRef tag)
+    : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<llvm::Record *> opDefs, bool emitDecl) {
-  collectOpConstraints(opDefs);
-  if (emitDecl)
-    return;
-
+    ArrayRef<llvm::Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
@@ -71,7 +68,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints(
 
 StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
     const Constraint &constraint) const {
-  auto it = typeConstraints.find(constraint);
+  const auto *it = typeConstraints.find(constraint);
   assert(it != typeConstraints.end() && "expected to find a type constraint");
   return it->second;
 }
@@ -80,14 +77,14 @@ StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
 // be uniqued, return std::nullopt if one was not found.
 std::optional<StringRef> StaticVerifierFunctionEmitter::getAttrConstraintFn(
     const Constraint &constraint) const {
-  auto it = attrConstraints.find(constraint);
+  const auto *it = attrConstraints.find(constraint);
   return it == attrConstraints.end() ? std::optional<StringRef>()
                                      : StringRef(it->second);
 }
 
 StringRef StaticVerifierFunctionEmitter::getSuccessorConstraintFn(
     const Constraint &constraint) const {
-  auto it = successorConstraints.find(constraint);
+  const auto *it = successorConstraints.find(constraint);
   assert(it != successorConstraints.end() &&
          "expected to find a sucessor constraint");
   return it->second;
@@ -95,7 +92,7 @@ StringRef StaticVerifierFunctionEmitter::getSuccessorConstraintFn(
 
 StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
     const Constraint &constraint) const {
-  auto it = regionConstraints.find(constraint);
+  const auto *it = regionConstraints.find(constraint);
   assert(it != regionConstraints.end() &&
          "expected to find a region constraint");
   return it->second;
@@ -114,7 +111,7 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 /// Code for a type constraint. These may be called on the type of either
 /// operands or results.
 static const char *const typeConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Type type, ::llvm::StringRef valueKind,
     unsigned valueIndex) {
   if (!({1})) {
@@ -132,14 +129,14 @@ static ::mlir::LogicalResult {0}(
 /// TODO: Unique constraints for adaptors. However, most Adaptor::verify
 /// functions are stripped anyways.
 static const char *const attrConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
-    ::mlir::Attribute attr, ::llvm::StringRef attrName, llvm::function_ref<::mlir::InFlightDiagnostic()> getDiag) {{
+static ::llvm::LogicalResult {0}(
+    ::mlir::Attribute attr, ::llvm::StringRef attrName, llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
   if (attr && !({1}))
-    return getDiag() << "attribute '" << attrName
+    return emitError() << "attribute '" << attrName
         << "' failed to satisfy constraint: {2}";
   return ::mlir::success();
 }
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {{
   return {0}(attr, attrName, [op]() {{
     return op->emitOpError();
@@ -149,7 +146,7 @@ static ::mlir::LogicalResult {0}(
 
 /// Code for a successor constraint.
 static const char *const successorConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Block *successor,
     ::llvm::StringRef successorName, unsigned successorIndex) {
   if (!({1})) {
@@ -163,7 +160,7 @@ static ::mlir::LogicalResult {0}(
 /// Code for a region constraint. Callers will need to pass in the region's name
 /// for emitting an error message.
 static const char *const regionConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Region &region, ::llvm::StringRef regionName,
     unsigned regionIndex) {
   if (!({1})) {
@@ -179,7 +176,7 @@ static ::mlir::LogicalResult {0}(
 ///
 /// {3}: "Type type" or "Attribute attr".
 static const char *const patternAttrOrTypeConstraintCode = R"(
-static ::mlir::LogicalResult {0}(
+static ::llvm::LogicalResult {0}(
     ::mlir::PatternRewriter &rewriter, ::mlir::Operation *op, ::mlir::{3},
     ::llvm::StringRef failureStr) {
   if (!({1})) {
@@ -261,7 +258,7 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
 void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
                                                       StringRef kind,
                                                       Constraint constraint) {
-  auto it = map.find(constraint);
+  auto *it = map.find(constraint);
   if (it == map.end())
     map.insert({constraint, getUniqueName(kind, map.size())});
 }

@@ -159,9 +159,9 @@ public:
 #endif
 
     // Check if we have enough space.
-    if (Adjustment + SizeToAllocate <= size_t(End - CurPtr)
-        // We can't return nullptr even for a zero-sized allocation!
-        && CurPtr != nullptr) {
+    if (LLVM_LIKELY(Adjustment + SizeToAllocate <= size_t(End - CurPtr)
+                    // We can't return nullptr even for a zero-sized allocation!
+                    && CurPtr != nullptr)) {
       char *AlignedPtr = CurPtr + Adjustment;
       CurPtr = AlignedPtr + SizeToAllocate;
       // Update the allocation point of this memory block in MemorySanitizer.
@@ -173,6 +173,11 @@ public:
       return AlignedPtr;
     }
 
+    return AllocateSlow(Size, SizeToAllocate, Alignment);
+  }
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_NOINLINE void *
+  AllocateSlow(size_t Size, size_t SizeToAllocate, Align Alignment) {
     // If Size is really big, allocate a separate slab for it.
     size_t PaddedSize = SizeToAllocate + Alignment.value() - 1;
     if (PaddedSize > SizeThreshold) {
@@ -430,6 +435,13 @@ public:
 
   /// Allocate space for an array of objects without constructing them.
   T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
+
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  /// Returns an empty optional if the pointer is not found in the allocator.
+  std::optional<int64_t> identifyObject(const void *Ptr) {
+    return Allocator.identifyObject(Ptr);
+  }
 };
 
 } // end namespace llvm

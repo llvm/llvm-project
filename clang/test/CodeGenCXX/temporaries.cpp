@@ -414,13 +414,13 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[I]])
     A i = (foo(), A());
 
-    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr sret([[A]]) align 8 [[T0]])
+    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr dead_on_unwind writable sret([[A]]) align 8 [[T0]])
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[J]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[T0]])
     A j = (fooA(), A());
 
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[T1]])
-    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr sret([[A]]) align 8 [[K]])
+    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr dead_on_unwind writable sret([[A]]) align 8 [[K]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[T1]])
     A k = (A(), fooA());
 
@@ -447,7 +447,7 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[I]])
   }
 
-  // CHECK: define{{.*}} void @_ZN7Elision5test2Ev(ptr noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test2Ev(ptr dead_on_unwind noalias writable sret([[A]]) align 8
   A test2() {
     // CHECK:      call void @_ZN7Elision3fooEv()
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[RET:%.*]])
@@ -455,7 +455,7 @@ namespace Elision {
     return (foo(), A());
   }
 
-  // CHECK: define{{.*}} void @_ZN7Elision5test3EiNS_1AE(ptr noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test3EiNS_1AE(ptr dead_on_unwind noalias writable sret([[A]]) align 8
   A test3(int v, A x) {
     if (v < 5)
     // CHECK:      call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[RET:%.*]])
@@ -477,9 +477,8 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[X]])
     A x;
 
-    // CHECK-NEXT: [[XS0:%.*]] = getelementptr inbounds [2 x [[A]]], ptr [[XS]], i64 0, i64 0
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[XS0]])
-    // CHECK-NEXT: [[XS1:%.*]] = getelementptr inbounds [[A]], ptr [[XS0]], i64 1
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[XS]])
+    // CHECK-NEXT: [[XS1:%.*]] = getelementptr inbounds [[A]], ptr [[XS]], i64 1
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[XS1]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
     A xs[] = { A(), x };
 
@@ -495,8 +494,7 @@ namespace Elision {
     // CHECK:      call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[X]])
   }
 
-  // rdar://problem/8433352
-  // CHECK: define{{.*}} void @_ZN7Elision5test5Ev(ptr noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test5Ev(ptr dead_on_unwind noalias writable sret([[A]]) align 8
   struct B { A a; B(); };
   A test5() {
     // CHECK:      [[AT0:%.*]] = alloca [[A]], align 8
@@ -534,7 +532,7 @@ namespace Elision {
   void test6(const C *x) {
     // CHECK:      [[T0:%.*]] = alloca [[A]], align 8
     // CHECK:      [[X:%.*]] = load ptr, ptr {{%.*}}, align 8
-    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv(ptr sret([[A]]) align 8 [[T0]], ptr {{[^,]*}} [[X]])
+    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv(ptr dead_on_unwind writable sret([[A]]) align 8 [[T0]], ptr {{[^,]*}} [[X]])
     // CHECK-NEXT: call void @_ZNK7Elision1A3fooEv(ptr {{[^,]*}} [[T0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[T0]])
     // CHECK-NEXT: ret void
@@ -685,8 +683,7 @@ namespace Vector {
   // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1sE_
   // CHECK: store ptr @_ZGRN6Vector1sE_, ptr @_ZN6Vector1sE,
   int &&s = S().w[1];
-  // FIXME PR16204: The following code leads to an assertion in Sema.
-  //int &&s = S().w.y;
+  int &&ss = S().w.y;
 }
 
 namespace ImplicitTemporaryCleanup {
@@ -718,7 +715,7 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[TEMPE:_ZGRN17MultipleExtension2e1E.*]],
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i32 0, i32 1))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i64 8))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e1E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
@@ -732,7 +729,7 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[E:_ZN17MultipleExtension2e2E]]
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[E]], i32 0, i32 1))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[E]], i64 8))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e2E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
@@ -747,11 +744,11 @@ namespace MultipleExtension {
     // CHECK: %[[TEMPE1_A:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1:.*]], i32 0, i32 0
     // CHECK: call void @[[NS]]1AC1Ev({{.*}} %[[TEMPA1:.*]])
     // CHECK: store {{.*}} %[[TEMPA1]], {{.*}} %[[TEMPE1_A]]
-    // CHECK: %[[TEMPE1_B:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1]], i32 0, i32 1
+    // CHECK: %[[TEMPE1_B:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1]], i64 8
     // CHECK: call void @[[NS]]1BC1Ev({{.*}} %[[TEMPE1_B]])
     // CHECK: %[[TEMPE1_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1]], i32 0, i32 2
     // CHECK: call void @[[NS]]1DC1Ev({{.*}} %[[TEMPD1:.*]])
-    // CHECK: %[[TEMPD1_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD1]], i32 0, i32 1
+    // CHECK: %[[TEMPD1_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD1]], i64 4
     // CHECK: store {{.*}} %[[TEMPD1_C]], {{.*}} %[[TEMPE1_C]]
     // CHECK: store {{.*}} %[[TEMPE1]], {{.*}} %[[E1:.*]]
 
@@ -762,11 +759,11 @@ namespace MultipleExtension {
     // CHECK: %[[TEMPE2_A:.*]] = getelementptr inbounds {{.*}} %[[E2:.*]], i32 0, i32 0
     // CHECK: call void @[[NS]]1AC1Ev({{.*}} %[[TEMPA2:.*]])
     // CHECK: store {{.*}} %[[TEMPA2]], {{.*}} %[[TEMPE2_A]]
-    // CHECK: %[[TEMPE2_B:.*]] = getelementptr inbounds {{.*}} %[[E2]], i32 0, i32 1
+    // CHECK: %[[TEMPE2_B:.*]] = getelementptr inbounds {{.*}} %[[E2]], i64 8
     // CHECK: call void @[[NS]]1BC1Ev({{.*}} %[[TEMPE2_B]])
     // CHECK: %[[TEMPE2_C:.*]] = getelementptr inbounds {{.*}} %[[E2]], i32 0, i32 2
     // CHECK: call void @[[NS]]1DC1Ev({{.*}} %[[TEMPD2:.*]])
-    // CHECK: %[[TEMPD2_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD2]], i32 0, i32 1
+    // CHECK: %[[TEMPD2_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD2]], i64 4
     // CHECK: store {{.*}} %[[TEMPD2_C]], ptr %[[TEMPE2_C]]
 
     g();

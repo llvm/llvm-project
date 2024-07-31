@@ -40,8 +40,8 @@ the nested regions and print them individually:
     if (!op->getAttrs().empty()) {
       printIndent() << op->getAttrs().size() << " attributes:\n";
       for (NamedAttribute attr : op->getAttrs())
-        printIndent() << " - '" << attr.first << "' : '" << attr.second
-                      << "'\n";
+        printIndent() << " - '" << attr.getName() << "' : '"
+                      << attr.getValue() << "'\n";
     }
 
     // Recurse into each of the regions attached to the operation.
@@ -119,7 +119,7 @@ And will yield the following output:
 visiting op: 'builtin.module' with 0 operands and 0 results
  1 nested regions:
   Region with 1 blocks:
-    Block with 0 arguments, 0 successors, and 3 operations
+    Block with 0 arguments, 0 successors, and 2 operations
       visiting op: 'dialect.op1' with 0 operands and 4 results
       1 attributes:
        - 'attribute name' : '42 : i32'
@@ -149,7 +149,7 @@ visiting op: 'builtin.module' with 0 operands and 0 results
        0 nested regions:
 ```
 
-## Other IR Traversal Methods.
+## Other IR Traversal Methods
 
 In many cases, unwrapping the recursive structure of the IR is cumbersome and
 you may be interested in using other helpers.

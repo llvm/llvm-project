@@ -23,6 +23,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   /***** Test the type specific part *****/
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
   check(SV("0"), SV("{}"), input);
+  check(SV("0^42"), SV("{}^42"), input);
+  check(SV("0^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("    0"), SV("{:5}"), input);
@@ -36,6 +38,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(SV("####0"), SV("{:#>{}}"), input, 5);
 #else  // !defined(__APPLE__) && !defined(__FreeBSD__)
   check(SV("0x0"), SV("{}"), input);
+  check(SV("0x0^42"), SV("{}^42"), input);
+  check(SV("0x0^42"), SV("{:}^42"), input);
 
   // *** align-fill & width ***
   check(SV("    0x0"), SV("{:7}"), input);
@@ -50,8 +54,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 #endif // !defined(__APPLE__) && !defined(__FreeBSD__)
 
   /***** Test the type generic part *****/
-  check_exception("The format-spec fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec fill field contains an invalid character", SV("{:{<}"), input);
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
 
   // *** sign ***
   check_exception("The replacement field misses a terminating '}'", SV("{:-}"), input);
@@ -62,7 +66,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check_exception("The replacement field misses a terminating '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
   check_exception("The replacement field misses a terminating '}'", SV("{:.}"), input);

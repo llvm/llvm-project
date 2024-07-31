@@ -165,3 +165,18 @@ namespace BindingInStmtExpr {
   using U = decltype(num_bindings<T>()); // expected-note {{previous}}
   using U = N<3>; // expected-error-re {{type alias redefinition with different types ('N<3>' vs {{.*}}N<2>}}
 }
+
+namespace PR65153 {
+struct A{};
+
+template <const A& T>
+const A JoinStringViews = T;
+
+template <int V>
+class Builder {
+public:
+    static constexpr A Equal{};
+    // no crash here
+    static constexpr auto Val = JoinStringViews<Equal>;
+};
+} // namespace PR65153

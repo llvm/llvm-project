@@ -21,10 +21,12 @@ using namespace llvm;
 namespace {
   class SparcELFObjectWriter : public MCELFObjectTargetWriter {
   public:
-    SparcELFObjectWriter(bool Is64Bit, uint8_t OSABI)
-      : MCELFObjectTargetWriter(Is64Bit, OSABI,
-                                Is64Bit ?  ELF::EM_SPARCV9 : ELF::EM_SPARC,
-                                /*HasRelocationAddend*/ true) {}
+    SparcELFObjectWriter(bool Is64Bit, bool HasV9, uint8_t OSABI)
+        : MCELFObjectTargetWriter(
+              Is64Bit, OSABI,
+              Is64Bit ? ELF::EM_SPARCV9
+                      : (HasV9 ? ELF::EM_SPARC32PLUS : ELF::EM_SPARC),
+              /*HasRelocationAddend*/ true) {}
 
     ~SparcELFObjectWriter() override = default;
 
@@ -32,9 +34,8 @@ namespace {
     unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                           const MCFixup &Fixup, bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCSymbol &Sym,
+    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                  unsigned Type) const override;
-
   };
 }
 
@@ -124,8 +125,9 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   return ELF::R_SPARC_NONE;
 }
 
-bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
-                                                 unsigned Type) const {
+bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
+                                                   const MCSymbol &,
+                                                   unsigned Type) const {
   switch (Type) {
     default:
       return false;
@@ -146,6 +148,6 @@ bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createSparcELFObjectWriter(bool Is64Bit, uint8_t OSABI) {
-  return std::make_unique<SparcELFObjectWriter>(Is64Bit, OSABI);
+llvm::createSparcELFObjectWriter(bool Is64Bit, bool HasV9, uint8_t OSABI) {
+  return std::make_unique<SparcELFObjectWriter>(Is64Bit, HasV9, OSABI);
 }

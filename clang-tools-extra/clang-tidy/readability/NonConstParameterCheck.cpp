@@ -103,7 +103,7 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
     if ((T->isPointerType() && !T->getPointeeType().isConstQualified()) ||
-        T->isArrayType())
+        T->isArrayType() || T->isRecordType())
       markCanNotBeConst(VD->getInit(), true);
     else if (T->isLValueReferenceType() &&
              !T->getPointeeType().isConstQualified())
@@ -157,9 +157,12 @@ void NonConstParameterCheck::diagnoseNonConstParameters() {
     if (!Function)
       continue;
     unsigned Index = Par->getFunctionScopeIndex();
-    for (FunctionDecl *FnDecl : Function->redecls())
+    for (FunctionDecl *FnDecl : Function->redecls()) {
+      if (FnDecl->getNumParams() <= Index)
+        continue;
       Fixes.push_back(FixItHint::CreateInsertion(
           FnDecl->getParamDecl(Index)->getBeginLoc(), "const "));
+    }
 
     diag(Par->getLocation(), "pointer parameter '%0' can be pointer to const")
         << Par->getName() << Fixes;

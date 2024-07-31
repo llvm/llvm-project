@@ -14,7 +14,6 @@
 #ifndef PYTHON_BINDINGS_TRANSFORM_PDL_EXTENSION_OPS
 #define PYTHON_BINDINGS_TRANSFORM_PDL_EXTENSION_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Transform/PDLExtension/PDLExtensionOps.td"
 
 #endif // PYTHON_BINDINGS_TRANSFORM_PDL_EXTENSION_OPS

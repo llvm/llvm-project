@@ -1,13 +1,10 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: rm -rf %t && mkdir %t
 // RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -nogpuinc \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,LINK %s
@@ -17,7 +14,7 @@
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -nogpuinc -c \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc -c \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
@@ -27,7 +24,7 @@
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -nogpuinc --offload-new-driver -c \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc --offload-new-driver -c \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
@@ -35,7 +32,7 @@
 // RUN: touch %t/a.o %t/b.o
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --hip-link --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -fuse-ld=lld -nogpuinc \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc \
 // RUN:   %t/a.o %t/b.o \
 // RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 

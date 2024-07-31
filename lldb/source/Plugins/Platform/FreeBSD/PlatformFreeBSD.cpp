@@ -206,7 +206,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   CompilerType sigval_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_sigval_t",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigval_type);
   ast->AddFieldToRecordType(sigval_type, "sival_int", int_type,
                             lldb::eAccessPublic, 0);
@@ -217,7 +217,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
   // siginfo_t
   CompilerType siginfo_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
-      clang::TTK_Struct, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(siginfo_type);
   ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type,
                             lldb::eAccessPublic, 0);
@@ -239,12 +239,12 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
   // union used to hold the signal data
   CompilerType union_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(union_type);
 
   ast->AddFieldToRecordType(
       union_type, "_fault",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_trapno", int_type},
                                      }),
@@ -252,7 +252,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_timer",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_timerid", int_type},
                                          {"_overrun", int_type},
@@ -261,7 +261,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_mesgq",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_mqd", int_type},
                                      }),
@@ -269,7 +269,7 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->AddFieldToRecordType(
       union_type, "_poll",
-      ast->CreateStructForIdentifier(ConstString(),
+      ast->CreateStructForIdentifier(llvm::StringRef(),
                                      {
                                          {"_band", long_type},
                                      }),

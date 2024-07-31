@@ -56,9 +56,9 @@ class TestGetVariables(TestBase):
         breakpoint2 = target.BreakpointCreateByLocation(self.source, line2)
         breakpoint3 = target.BreakpointCreateByLocation(self.source, line3)
 
-        self.assertTrue(breakpoint1.GetNumLocations() >= 1, PROCESS_IS_VALID)
-        self.assertTrue(breakpoint2.GetNumLocations() >= 1, PROCESS_IS_VALID)
-        self.assertTrue(breakpoint3.GetNumLocations() >= 1, PROCESS_IS_VALID)
+        self.assertGreaterEqual(breakpoint1.GetNumLocations(), 1, PROCESS_IS_VALID)
+        self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
+        self.assertGreaterEqual(breakpoint3.GetNumLocations(), 1, PROCESS_IS_VALID)
 
         # Register our shared libraries for remote targets so they get
         # automatically uploaded

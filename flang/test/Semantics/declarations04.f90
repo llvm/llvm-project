@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! test global name conflicts
 
 subroutine ext1
@@ -22,4 +22,10 @@ end
 block data ext3
   !PORTABILITY: Global name 'ext4' conflicts with a module
   common /ext4/ x
+end
+
+subroutine s
+  !ERROR: Two entities have the same global name 'foo'
+  common /foo/n
+  call foo
 end

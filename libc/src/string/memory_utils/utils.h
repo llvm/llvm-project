@@ -6,67 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
-#define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/endian.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 
-namespace __llvm_libc {
-
-// Allows compile time error reporting in `if constexpr` branches.
-template <bool flag = false>
-static void deferred_static_assert(const char *msg) {
-  static_assert(flag, "compilation error");
-  (void)msg;
-}
-
-// Return whether `value` is zero or a power of two.
-static constexpr bool is_power2_or_zero(size_t value) {
-  return (value & (value - 1U)) == 0;
-}
-
-// Return whether `value` is a power of two.
-static constexpr bool is_power2(size_t value) {
-  return value && is_power2_or_zero(value);
-}
-
-// Compile time version of log2 that handles 0.
-static constexpr size_t log2s(size_t value) {
-  return (value == 0 || value == 1) ? 0 : 1 + log2s(value / 2);
-}
-
-// Returns the first power of two preceding value or value if it is already a
-// power of two (or 0 when value is 0).
-static constexpr size_t le_power2(size_t value) {
-  return value == 0 ? value : 1ULL << log2s(value);
-}
-
-// Returns the first power of two following value or value if it is already a
-// power of two (or 0 when value is 0).
-static constexpr size_t ge_power2(size_t value) {
-  return is_power2_or_zero(value) ? value : 1ULL << (log2s(value) + 1);
-}
+namespace LIBC_NAMESPACE_DECL {
 
 // Returns the number of bytes to substract from ptr to get to the previous
 // multiple of alignment. If ptr is already aligned returns 0.
-template <size_t alignment> uintptr_t distance_to_align_down(const void *ptr) {
-  static_assert(is_power2(alignment), "alignment must be a power of 2");
+template <size_t alignment>
+LIBC_INLINE uintptr_t distance_to_align_down(const void *ptr) {
+  static_assert(cpp::has_single_bit(alignment),
+                "alignment must be a power of 2");
   return reinterpret_cast<uintptr_t>(ptr) & (alignment - 1U);
 }
 
 // Returns the number of bytes to add to ptr to get to the next multiple of
 // alignment. If ptr is already aligned returns 0.
-template <size_t alignment> uintptr_t distance_to_align_up(const void *ptr) {
-  static_assert(is_power2(alignment), "alignment must be a power of 2");
+template <size_t alignment>
+LIBC_INLINE uintptr_t distance_to_align_up(const void *ptr) {
+  static_assert(cpp::has_single_bit(alignment),
+                "alignment must be a power of 2");
   // The logic is not straightforward and involves unsigned modulo arithmetic
   // but the generated code is as fast as it can be.
   return -reinterpret_cast<uintptr_t>(ptr) & (alignment - 1U);
@@ -75,35 +45,37 @@ template <size_t alignment> uintptr_t distance_to_align_up(const void *ptr) {
 // Returns the number of bytes to add to ptr to get to the next multiple of
 // alignment. If ptr is already aligned returns alignment.
 template <size_t alignment>
-uintptr_t distance_to_next_aligned(const void *ptr) {
+LIBC_INLINE uintptr_t distance_to_next_aligned(const void *ptr) {
   return alignment - distance_to_align_down<alignment>(ptr);
 }
 
 // Returns the same pointer but notifies the compiler that it is aligned.
-template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
+template <size_t alignment, typename T> LIBC_INLINE T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
 }
 
 // Returns true iff memory regions [p1, p1 + size] and [p2, p2 + size] are
 // disjoint.
 LIBC_INLINE bool is_disjoint(const void *p1, const void *p2, size_t size) {
-  const char *a = static_cast<const char *>(p1);
-  const char *b = static_cast<const char *>(p2);
-  if (a > b) {
-    // Swap a and b, this compiles down to conditionnal move for aarch64, x86
-    // and RISCV with zbb extension.
-    const char *tmp = a;
-    a = b;
-    b = tmp;
-  }
-  return a + size <= b;
+  const ptrdiff_t sdiff =
+      static_cast<const char *>(p1) - static_cast<const char *>(p2);
+  // We use bit_cast to make sure that we don't run into accidental integer
+  // promotion. Notably the unary minus operator goes through integer promotion
+  // at the expression level. We assume arithmetic to be two's complement (i.e.,
+  // bit_cast has the same behavior as a regular signed to unsigned cast).
+  static_assert(-1 == ~0, "not 2's complement");
+  const size_t udiff = cpp::bit_cast<size_t>(sdiff);
+  // Integer promition would be caught here.
+  const size_t neg_udiff = cpp::bit_cast<size_t>(-sdiff);
+  // This is expected to compile a conditional move.
+  return sdiff >= 0 ? size <= udiff : size <= neg_udiff;
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-#if LIBC_HAS_BUILTIN(__builtin_memset_inline)
+#if __has_builtin(__builtin_memset_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
 #endif
 
@@ -114,12 +86,14 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
   __builtin_memcpy_inline(dst, src, Size);
 #else
-// In memory functions `memcpy_inline` is instantiated several times with
-// different value of the Size parameter. This doesn't play well with GCC's
-// Value Range Analysis that wrongly detects out of bounds accesses. We disable
-// the 'array-bounds' warning for the purpose of this function.
+  // In memory functions `memcpy_inline` is instantiated several times with
+  // different value of the Size parameter. This doesn't play well with GCC's
+  // Value Range Analysis that wrongly detects out of bounds accesses. We
+  // disable these warnings for the purpose of this function.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
   for (size_t i = 0; i < Size; ++i)
     static_cast<char *>(dst)[i] = static_cast<const char *>(src)[i];
 #pragma GCC diagnostic pop
@@ -136,27 +110,28 @@ template <typename T> struct StrictIntegralType {
 
   // Can only be constructed from a T.
   template <typename U, cpp::enable_if_t<cpp::is_same_v<U, T>, bool> = 0>
-  StrictIntegralType(U value) : value(value) {}
+  LIBC_INLINE StrictIntegralType(U value) : value(value) {}
 
   // Allows using the type in an if statement.
-  explicit operator bool() const { return value; }
+  LIBC_INLINE explicit operator bool() const { return value; }
 
   // If type is unsigned (bcmp) we allow bitwise OR operations.
-  StrictIntegralType operator|(const StrictIntegralType &Rhs) const {
+  LIBC_INLINE StrictIntegralType
+  operator|(const StrictIntegralType &Rhs) const {
     static_assert(!cpp::is_signed_v<T>);
     return value | Rhs.value;
   }
 
   // For interation with the C API we allow explicit conversion back to the
   // `int` type.
-  explicit operator int() const {
+  LIBC_INLINE explicit operator int() const {
     // bit_cast makes sure that T and int have the same size.
     return cpp::bit_cast<int>(value);
   }
 
   // Helper to get the zero value.
-  LIBC_INLINE static constexpr StrictIntegralType ZERO() { return {T(0)}; }
-  LIBC_INLINE static constexpr StrictIntegralType NONZERO() { return {T(1)}; }
+  LIBC_INLINE static constexpr StrictIntegralType zero() { return {T(0)}; }
+  LIBC_INLINE static constexpr StrictIntegralType nonzero() { return {T(1)}; }
 
 private:
   T value;
@@ -196,14 +171,26 @@ LIBC_INLINE MemcmpReturnType cmp_uint32_t(uint32_t a, uint32_t b) {
 // otherwise. This implements the semantic of 'memcmp' when we know that 'a' and
 // 'b' differ.
 LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
-  // On x86, we choose the returned values so that they are just one unit appart
-  // as this allows for better code generation.
-  static constexpr int32_t POSITIVE = INT32_MAX;
-  static constexpr int32_t NEGATIVE = INT32_MIN;
-  static_assert(cpp::bit_cast<uint32_t>(NEGATIVE) -
-                    cpp::bit_cast<uint32_t>(POSITIVE) ==
-                1);
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+  // On x86, the best strategy would be to use 'INT32_MAX' and 'INT32_MIN' for
+  // positive and negative value respectively as they are one value apart:
+  //   xor     eax, eax         <- free
+  //   cmp     rdi, rsi         <- serializing
+  //   adc     eax, 2147483647  <- serializing
+
+  // Unfortunately we found instances of client code that negate the result of
+  // 'memcmp' to reverse ordering. Because signed integers are not symmetric
+  // (e.g., int8_t ∈ [-128, 127]) returning 'INT_MIN' would break such code as
+  // `-INT_MIN` is not representable as an int32_t.
+
+  // As a consequence, we use 5 and -5 which is still OK nice in terms of
+  // latency.
+  //   cmp     rdi, rsi         <- serializing
+  //   mov     ecx, -5          <- can be done in parallel
+  //   mov     eax, 5           <- can be done in parallel
+  //   cmovb   eax, ecx         <- serializing
+  static constexpr int32_t POSITIVE = 5;
+  static constexpr int32_t NEGATIVE = -5;
 #else
   // On RISC-V we simply use '1' and '-1' as it leads to branchless code.
   // On ARMv8, both strategies lead to the same performance.
@@ -218,9 +205,9 @@ LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
 template <typename T> LIBC_INLINE T load(CPtr ptr) {
-  T Out;
-  memcpy_inline<sizeof(T)>(&Out, ptr);
-  return Out;
+  T out;
+  memcpy_inline<sizeof(T)>(&out, ptr);
+  return out;
 }
 
 // Stores a value of type T in memory (possibly unaligned).
@@ -237,18 +224,18 @@ template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
 // be aligned.
 // e.g. load_aligned<uint32_t, uint16_t, uint16_t>(ptr);
 template <typename ValueType, typename T, typename... TS>
-ValueType load_aligned(CPtr src) {
+LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
   if constexpr (sizeof...(TS) > 0) {
-    constexpr size_t shift = sizeof(T) * 8;
+    constexpr size_t SHIFT = sizeof(T) * 8;
     const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
     if constexpr (Endian::IS_LITTLE)
-      return value | (next << shift);
+      return value | (next << SHIFT);
     else if constexpr (Endian::IS_BIG)
-      return (value << shift) | next;
+      return (value << SHIFT) | next;
     else
-      deferred_static_assert("Invalid endianness");
+      static_assert(cpp::always_false<T>, "Invalid endianness");
   } else {
     return value;
   }
@@ -256,14 +243,14 @@ ValueType load_aligned(CPtr src) {
 
 // Alias for loading a 'uint32_t'.
 template <typename T, typename... TS>
-auto load32_aligned(CPtr src, size_t offset) {
+LIBC_INLINE auto load32_aligned(CPtr src, size_t offset) {
   static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint32_t));
   return load_aligned<uint32_t, T, TS...>(src + offset);
 }
 
 // Alias for loading a 'uint64_t'.
 template <typename T, typename... TS>
-auto load64_aligned(CPtr src, size_t offset) {
+LIBC_INLINE auto load64_aligned(CPtr src, size_t offset) {
   static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint64_t));
   return load_aligned<uint64_t, T, TS...>(src + offset);
 }
@@ -272,33 +259,33 @@ auto load64_aligned(CPtr src, size_t offset) {
 // to be aligned.
 // e.g. store_aligned<uint32_t, uint16_t, uint16_t>(value, ptr);
 template <typename ValueType, typename T, typename... TS>
-void store_aligned(ValueType value, Ptr dst) {
+LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
-  constexpr size_t shift = sizeof(T) * 8;
+  constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
     store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
     if constexpr (sizeof...(TS) > 0)
-      store_aligned<ValueType, TS...>(value >> shift, dst + sizeof(T));
+      store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
     constexpr size_t OFFSET = (0 + ... + sizeof(TS));
     store<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
     if constexpr (sizeof...(TS) > 0)
-      store_aligned<ValueType, TS...>(value >> shift, dst);
+      store_aligned<ValueType, TS...>(value >> SHIFT, dst);
   } else {
-    deferred_static_assert("Invalid endianness");
+    static_assert(cpp::always_false<T>, "Invalid endianness");
   }
 }
 
 // Alias for storing a 'uint32_t'.
 template <typename T, typename... TS>
-void store32_aligned(uint32_t value, Ptr dst, size_t offset) {
+LIBC_INLINE void store32_aligned(uint32_t value, Ptr dst, size_t offset) {
   static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint32_t));
   store_aligned<uint32_t, T, TS...>(value, dst + offset);
 }
 
 // Alias for storing a 'uint64_t'.
 template <typename T, typename... TS>
-void store64_aligned(uint64_t value, Ptr dst, size_t offset) {
+LIBC_INLINE void store64_aligned(uint64_t value, Ptr dst, size_t offset) {
   static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint64_t));
   store_aligned<uint64_t, T, TS...>(value, dst + offset);
 }
@@ -324,9 +311,9 @@ void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
 }
 
 // Same as align_p1_to_next_boundary above but with a single pointer instead.
-template <size_t SIZE, typename T1>
-void align_to_next_boundary(T1 *&p1, size_t &count) {
-  CPtr dummy;
+template <size_t SIZE, typename T>
+LIBC_INLINE void align_to_next_boundary(T *&p1, size_t &count) {
+  const T *dummy = p1;
   align_p1_to_next_boundary<SIZE>(p1, dummy, count);
 }
 
@@ -336,26 +323,33 @@ enum class Arg { P1, P2, Dst = P1, Src = P2 };
 // Same as align_p1_to_next_boundary but allows for aligning p2 instead of p1.
 // Precondition: &p1 != &p2
 template <size_t SIZE, Arg AlignOn, typename T1, typename T2>
-void align_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
-                            size_t &count) {
+LIBC_INLINE void align_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
+                                        size_t &count) {
   if constexpr (AlignOn == Arg::P1)
     align_p1_to_next_boundary<SIZE>(p1, p2, count);
   else if constexpr (AlignOn == Arg::P2)
     align_p1_to_next_boundary<SIZE>(p2, p1, count); // swapping p1 and p2.
   else
-    deferred_static_assert("AlignOn must be either Arg::P1 or Arg::P2");
+    static_assert(cpp::always_false<T1>,
+                  "AlignOn must be either Arg::P1 or Arg::P2");
 }
 
 template <size_t SIZE> struct AlignHelper {
-  AlignHelper(CPtr ptr) : offset_(distance_to_next_aligned<SIZE>(ptr)) {}
+  LIBC_INLINE AlignHelper(CPtr ptr)
+      : offset(distance_to_next_aligned<SIZE>(ptr)) {}
 
-  LIBC_INLINE bool not_aligned() const { return offset_ != SIZE; }
-  LIBC_INLINE uintptr_t offset() const { return offset_; }
-
-private:
-  uintptr_t offset_;
+  LIBC_INLINE bool not_aligned() const { return offset != SIZE; }
+  uintptr_t offset;
 };
 
-} // namespace __llvm_libc
+LIBC_INLINE void prefetch_for_write(CPtr dst) {
+  __builtin_prefetch(dst, /*write*/ 1, /*max locality*/ 3);
+}
 
-#endif // LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+LIBC_INLINE void prefetch_to_local_cache(CPtr dst) {
+  __builtin_prefetch(dst, /*read*/ 0, /*max locality*/ 3);
+}
+
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H

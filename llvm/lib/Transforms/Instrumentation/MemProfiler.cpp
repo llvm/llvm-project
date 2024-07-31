@@ -18,9 +18,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
@@ -30,20 +33,36 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <map>
+#include <set>
 
 using namespace llvm;
+using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memprof"
+
+namespace llvm {
+extern cl::opt<bool> PGOWarnMissing;
+extern cl::opt<bool> NoPGOWarnMismatch;
+extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
+} // namespace llvm
 
 constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
-constexpr uint64_t DefaultShadowGranularity = 64;
+constexpr uint64_t DefaultMemGranularity = 64;
+
+// Size of memory mapped to a single histogram bucket.
+constexpr uint64_t HistogramGranularity = 8;
 
 // Scale from granularity down to shadow size.
 constexpr uint64_t DefaultShadowScale = 3;
@@ -60,6 +79,8 @@ constexpr char MemProfShadowMemoryDynamicAddress[] =
     "__memprof_shadow_memory_dynamic_address";
 
 constexpr char MemProfFilenameVar[] = "__memprof_profile_filename";
+
+constexpr char MemProfHistogramFlagVar[] = "__memprof_histogram";
 
 // Command-line flags.
 
@@ -104,7 +125,7 @@ static cl::opt<int> ClMappingScale("memprof-mapping-scale",
 static cl::opt<int>
     ClMappingGranularity("memprof-mapping-granularity",
                          cl::desc("granularity of memprof shadow mapping"),
-                         cl::Hidden, cl::init(DefaultShadowGranularity));
+                         cl::Hidden, cl::init(DefaultMemGranularity));
 
 static cl::opt<bool> ClStack("memprof-instrument-stack",
                              cl::desc("Instrument scalar stack variables"),
@@ -124,10 +145,48 @@ static cl::opt<int> ClDebugMin("memprof-debug-min", cl::desc("Debug min inst"),
 static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
 
+// By default disable matching of allocation profiles onto operator new that
+// already explicitly pass a hot/cold hint, since we don't currently
+// override these hints anyway.
+static cl::opt<bool> ClMemProfMatchHotColdNew(
+    "memprof-match-hot-cold-new",
+ cl::desc(
+        "Match allocation profiles onto existing hot/cold operator new calls"),
+    cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClHistogram("memprof-histogram",
+                                 cl::desc("Collect access count histograms"),
+                                 cl::Hidden, cl::init(false));
+
+static cl::opt<bool>
+    ClPrintMemProfMatchInfo("memprof-print-match-info",
+                            cl::desc("Print matching stats for each allocation "
+                                     "context in this module's profiles"),
+                            cl::Hidden, cl::init(false));
+
+extern cl::opt<bool> MemProfReportHintedSizes;
+
+// Instrumentation statistics
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumSkippedStackReads, "Number of non-instrumented stack reads");
 STATISTIC(NumSkippedStackWrites, "Number of non-instrumented stack writes");
+
+// Matching statistics
+STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
+STATISTIC(NumOfMemProfMismatch,
+          "Number of functions having mismatched memory profile hash.");
+STATISTIC(NumOfMemProfFunc, "Number of functions having valid memory profile.");
+STATISTIC(NumOfMemProfAllocContextProfiles,
+          "Number of alloc contexts in memory profile.");
+STATISTIC(NumOfMemProfCallSiteProfiles,
+          "Number of callsites in memory profile.");
+STATISTIC(NumOfMemProfMatchedAllocContexts,
+          "Number of matched memory profile alloc contexts.");
+STATISTIC(NumOfMemProfMatchedAllocs,
+          "Number of matched memory profile allocs.");
+STATISTIC(NumOfMemProfMatchedCallSites,
+          "Number of matched memory profile callsites.");
 
 namespace {
 
@@ -136,7 +195,7 @@ namespace {
 struct ShadowMapping {
   ShadowMapping() {
     Scale = ClMappingScale;
-    Granularity = ClMappingGranularity;
+    Granularity = ClHistogram ? HistogramGranularity : ClMappingGranularity;
     Mask = ~(Granularity - 1);
   }
 
@@ -154,7 +213,6 @@ struct InterestingMemoryAccess {
   Value *Addr = nullptr;
   bool IsWrite;
   Type *AccessTy;
-  uint64_t TypeSize;
   Value *MaybeMask = nullptr;
 };
 
@@ -165,6 +223,7 @@ public:
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
+    PtrTy = PointerType::getUnqual(*C);
   }
 
   /// If it is an interesting memory access, populate information
@@ -176,7 +235,7 @@ public:
   void instrumentMop(Instruction *I, const DataLayout &DL,
                      InterestingMemoryAccess &Access);
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
-                         Value *Addr, uint32_t TypeSize, bool IsWrite);
+                         Value *Addr, bool IsWrite);
   void instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                    Instruction *I, Value *Addr, Type *AccessTy,
                                    bool IsWrite);
@@ -192,11 +251,11 @@ private:
   LLVMContext *C;
   int LongSize;
   Type *IntptrTy;
+  PointerType *PtrTy;
   ShadowMapping Mapping;
 
   // These arrays is indexed by AccessIsWrite
   FunctionCallee MemProfMemoryAccessCallback[2];
-  FunctionCallee MemProfMemoryAccessCallbackSized[2];
 
   FunctionCallee MemProfMemmove, MemProfMemcpy, MemProfMemset;
   Value *DynamicShadowOffset = nullptr;
@@ -220,6 +279,8 @@ MemProfilerPass::MemProfilerPass() = default;
 
 PreservedAnalyses MemProfilerPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
+  assert((!ClHistogram || ClMappingGranularity == DefaultMemGranularity) &&
+         "Memprof with histogram only supports default mapping granularity");
   Module &M = *F.getParent();
   MemProfiler Profiler(M);
   if (Profiler.instrumentFunction(F))
@@ -231,6 +292,7 @@ ModuleMemProfilerPass::ModuleMemProfilerPass() = default;
 
 PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
                                              AnalysisManager<Module> &AM) {
+
   ModuleMemProfiler Profiler(M);
   if (Profiler.instrumentModule(M))
     return PreservedAnalyses::none();
@@ -250,15 +312,13 @@ Value *MemProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
 void MemProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
-    IRB.CreateCall(
-        isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    IRB.CreateCall(isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
+                   {MI->getOperand(0), MI->getOperand(1),
+                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
         MemProfMemset,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        {MI->getOperand(0),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   }
@@ -347,18 +407,16 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
       auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
-      if (SectionName.endswith(
+      if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return std::nullopt;
     }
 
     // Do not instrument accesses to LLVM internal variables.
-    if (GV->getName().startswith("__llvm"))
+    if (GV->getName().starts_with("__llvm"))
       return std::nullopt;
   }
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
-  Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
   return Access;
 }
 
@@ -366,7 +424,6 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
                                               Type *AccessTy, bool IsWrite) {
   auto *VTy = cast<FixedVectorType>(AccessTy);
-  uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);
   for (unsigned Idx = 0; Idx < Num; ++Idx) {
@@ -391,8 +448,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
     IRBuilder<> IRB(InsertBefore);
     InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-    instrumentAddress(I, InsertBefore, InstrumentedAddress, ElemTypeSize,
-                      IsWrite);
+    instrumentAddress(I, InsertBefore, InstrumentedAddress, IsWrite);
   }
 }
 
@@ -419,13 +475,13 @@ void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
     // Since the access counts will be accumulated across the entire allocation,
     // we only update the shadow access count for the first location and thus
     // don't need to worry about alignment and type size.
-    instrumentAddress(I, I, Access.Addr, Access.TypeSize, Access.IsWrite);
+    instrumentAddress(I, I, Access.Addr, Access.IsWrite);
   }
 }
 
 void MemProfiler::instrumentAddress(Instruction *OrigIns,
                                     Instruction *InsertBefore, Value *Addr,
-                                    uint32_t TypeSize, bool IsWrite) {
+                                    bool IsWrite) {
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
@@ -434,14 +490,21 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
     return;
   }
 
-  // Create an inline sequence to compute shadow location, and increment the
-  // value by one.
-  Type *ShadowTy = Type::getInt64Ty(*C);
+  Type *ShadowTy = ClHistogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
   Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *ShadowAddr = IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy);
   Value *ShadowValue = IRB.CreateLoad(ShadowTy, ShadowAddr);
-  Value *Inc = ConstantInt::get(Type::getInt64Ty(*C), 1);
+  // If we are profiling with histograms, add overflow protection at 255.
+  if (ClHistogram) {
+    Value *MaxCount = ConstantInt::get(Type::getInt8Ty(*C), 255);
+    Value *Cmp = IRB.CreateICmpULT(ShadowValue, MaxCount);
+    Instruction *IncBlock =
+        SplitBlockAndInsertIfThen(Cmp, InsertBefore, /*Unreachable=*/false);
+    IRB.SetInsertPoint(IncBlock);
+  }
+  Value *Inc = ConstantInt::get(ShadowTy, 1);
   ShadowValue = IRB.CreateAdd(ShadowValue, Inc);
   IRB.CreateStore(ShadowValue, ShadowAddr);
 }
@@ -466,7 +529,24 @@ void createProfileFileNameVar(Module &M) {
   }
 }
 
+// Set MemprofHistogramFlag as a Global veriable in IR. This makes it accessible
+// to the runtime, changing shadow count behavior.
+void createMemprofHistogramFlagVar(Module &M) {
+  const StringRef VarName(MemProfHistogramFlagVar);
+  Type *IntTy1 = Type::getInt1Ty(M.getContext());
+  auto MemprofHistogramFlag = new GlobalVariable(
+      M, IntTy1, true, GlobalValue::WeakAnyLinkage,
+      Constant::getIntegerValue(IntTy1, APInt(1, ClHistogram)), VarName);
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    MemprofHistogramFlag->setLinkage(GlobalValue::ExternalLinkage);
+    MemprofHistogramFlag->setComdat(M.getOrInsertComdat(VarName));
+  }
+  appendToCompilerUsed(M, MemprofHistogramFlag);
+}
+
 bool ModuleMemProfiler::instrumentModule(Module &M) {
+
   // Create a module constructor.
   std::string MemProfVersion = std::to_string(LLVM_MEM_PROFILER_VERSION);
   std::string VersionCheckName =
@@ -482,6 +562,8 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   createProfileFileNameVar(M);
 
+  createMemprofHistogramFlagVar(M);
+
   return true;
 }
 
@@ -490,26 +572,20 @@ void MemProfiler::initializeCallbacks(Module &M) {
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
+    const std::string HistPrefix = ClHistogram ? "hist_" : "";
 
-    SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
     SmallVector<Type *, 2> Args1{1, IntptrTy};
-    MemProfMemoryAccessCallbackSized[AccessIsWrite] =
-        M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr + "N",
-                              FunctionType::get(IRB.getVoidTy(), Args2, false));
-
-    MemProfMemoryAccessCallback[AccessIsWrite] =
-        M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr,
-                              FunctionType::get(IRB.getVoidTy(), Args1, false));
+    MemProfMemoryAccessCallback[AccessIsWrite] = M.getOrInsertFunction(
+        ClMemoryAccessCallbackPrefix + HistPrefix + TypeStr,
+        FunctionType::get(IRB.getVoidTy(), Args1, false));
   }
   MemProfMemmove = M.getOrInsertFunction(
-      ClMemoryAccessCallbackPrefix + "memmove", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
+      ClMemoryAccessCallbackPrefix + "memmove", PtrTy, PtrTy, PtrTy, IntptrTy);
   MemProfMemcpy = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memcpy",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt8PtrTy(), IntptrTy);
-  MemProfMemset = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt32Ty(), IntptrTy);
+                                        PtrTy, PtrTy, PtrTy, IntptrTy);
+  MemProfMemset =
+      M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset", PtrTy,
+                            PtrTy, IRB.getInt32Ty(), IntptrTy);
 }
 
 bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
@@ -520,7 +596,7 @@ bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
   // the shadow memory.
   // We cannot just ignore these methods, because they may call other
   // instrumented functions.
-  if (F.getName().find(" load]") != std::string::npos) {
+  if (F.getName().contains(" load]")) {
     FunctionCallee MemProfInitFunction =
         declareSanitizerInitFunction(*F.getParent(), MemProfInitName, {});
     IRBuilder<> IRB(&F.front(), F.front().begin());
@@ -545,7 +621,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
     return false;
   if (ClDebugFunc == F.getName())
     return false;
-  if (F.getName().startswith("__memprof_"))
+  if (F.getName().starts_with("__memprof_"))
     return false;
 
   bool FunctionModified = false;
@@ -586,7 +662,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
       std::optional<InterestingMemoryAccess> Access =
           isInterestingMemoryAccess(Inst);
       if (Access)
-        instrumentMop(Inst, F.getParent()->getDataLayout(), *Access);
+        instrumentMop(Inst, F.getDataLayout(), *Access);
       else
         instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
     }
@@ -600,4 +676,398 @@ bool MemProfiler::instrumentFunction(Function &F) {
                     << F << "\n");
 
   return FunctionModified;
+}
+
+static void addCallsiteMetadata(Instruction &I,
+                                std::vector<uint64_t> &InlinedCallStack,
+                                LLVMContext &Ctx) {
+  I.setMetadata(LLVMContext::MD_callsite,
+                buildCallstackMetadata(InlinedCallStack, Ctx));
+}
+
+static uint64_t computeStackId(GlobalValue::GUID Function, uint32_t LineOffset,
+                               uint32_t Column) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+      HashBuilder;
+  HashBuilder.add(Function, LineOffset, Column);
+  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+  uint64_t Id;
+  std::memcpy(&Id, Hash.data(), sizeof(Hash));
+  return Id;
+}
+
+static uint64_t computeStackId(const memprof::Frame &Frame) {
+  return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
+}
+
+// Helper to generate a single hash id for a given callstack, used for emitting
+// matching statistics and useful for uniquing such statistics across modules.
+static uint64_t
+computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+      HashBuilder;
+  for (auto &F : CallStack)
+    HashBuilder.add(F.Function, F.LineOffset, F.Column);
+  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+  uint64_t Id;
+  std::memcpy(&Id, Hash.data(), sizeof(Hash));
+  return Id;
+}
+
+static AllocationType addCallStack(CallStackTrie &AllocTrie,
+                                   const AllocationInfo *AllocInfo) {
+  SmallVector<uint64_t> StackIds;
+  for (const auto &StackFrame : AllocInfo->CallStack)
+    StackIds.push_back(computeStackId(StackFrame));
+  auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
+                                AllocInfo->Info.getAllocCount(),
+                                AllocInfo->Info.getTotalLifetime());
+  uint64_t TotalSize = 0;
+  if (MemProfReportHintedSizes) {
+    TotalSize = AllocInfo->Info.getTotalSize();
+    assert(TotalSize);
+  }
+  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
+  return AllocType;
+}
+
+// Helper to compare the InlinedCallStack computed from an instruction's debug
+// info to a list of Frames from profile data (either the allocation data or a
+// callsite). For callsites, the StartIndex to use in the Frame array may be
+// non-zero.
+static bool
+stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
+                                   ArrayRef<uint64_t> InlinedCallStack,
+                                   unsigned StartIndex = 0) {
+  auto StackFrame = ProfileCallStack.begin() + StartIndex;
+  auto InlCallStackIter = InlinedCallStack.begin();
+  for (; StackFrame != ProfileCallStack.end() &&
+         InlCallStackIter != InlinedCallStack.end();
+       ++StackFrame, ++InlCallStackIter) {
+    uint64_t StackId = computeStackId(*StackFrame);
+    if (StackId != *InlCallStackIter)
+      return false;
+  }
+  // Return true if we found and matched all stack ids from the call
+  // instruction.
+  return InlCallStackIter == InlinedCallStack.end();
+}
+
+static bool isNewWithHotColdVariant(Function *Callee,
+                                    const TargetLibraryInfo &TLI) {
+  if (!Callee)
+    return false;
+  LibFunc Func;
+  if (!TLI.getLibFunc(*Callee, Func))
+    return false;
+  switch (Func) {
+  case LibFunc_Znwm:
+  case LibFunc_ZnwmRKSt9nothrow_t:
+  case LibFunc_ZnwmSt11align_val_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_Znam:
+  case LibFunc_ZnamRKSt9nothrow_t:
+  case LibFunc_ZnamSt11align_val_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+    return true;
+  case LibFunc_Znwm12__hot_cold_t:
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_Znam12__hot_cold_t:
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    return ClMemProfMatchHotColdNew;
+  default:
+    return false;
+  }
+}
+
+struct AllocMatchInfo {
+  uint64_t TotalSize = 0;
+  AllocationType AllocType = AllocationType::None;
+  bool Matched = false;
+};
+
+static void
+readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
+            const TargetLibraryInfo &TLI,
+            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo) {
+  auto &Ctx = M.getContext();
+  // Previously we used getIRPGOFuncName() here. If F is local linkage,
+  // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
+  // llvm-profdata uses FuncName in dwarf to create GUID which doesn't
+  // contain FileName's prefix. It caused local linkage function can't
+  // find MemProfRecord. So we use getName() now.
+  // 'unique-internal-linkage-names' can make MemProf work better for local
+  // linkage function.
+  auto FuncName = F.getName();
+  auto FuncGUID = Function::getGUID(FuncName);
+  std::optional<memprof::MemProfRecord> MemProfRec;
+  auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
+  if (Err) {
+    handleAllErrors(std::move(Err), [&](const InstrProfError &IPE) {
+      auto Err = IPE.get();
+      bool SkipWarning = false;
+      LLVM_DEBUG(dbgs() << "Error in reading profile for Func " << FuncName
+                        << ": ");
+      if (Err == instrprof_error::unknown_function) {
+        NumOfMemProfMissing++;
+        SkipWarning = !PGOWarnMissing;
+        LLVM_DEBUG(dbgs() << "unknown function");
+      } else if (Err == instrprof_error::hash_mismatch) {
+        NumOfMemProfMismatch++;
+        SkipWarning =
+            NoPGOWarnMismatch ||
+            (NoPGOWarnMismatchComdatWeak &&
+             (F.hasComdat() ||
+              F.getLinkage() == GlobalValue::AvailableExternallyLinkage));
+        LLVM_DEBUG(dbgs() << "hash mismatch (skip=" << SkipWarning << ")");
+      }
+
+      if (SkipWarning)
+        return;
+
+      std::string Msg = (IPE.message() + Twine(" ") + F.getName().str() +
+                         Twine(" Hash = ") + std::to_string(FuncGUID))
+                            .str();
+
+      Ctx.diagnose(
+          DiagnosticInfoPGOProfile(M.getName().data(), Msg, DS_Warning));
+    });
+    return;
+  }
+
+  NumOfMemProfFunc++;
+
+  // Detect if there are non-zero column numbers in the profile. If not,
+  // treat all column numbers as 0 when matching (i.e. ignore any non-zero
+  // columns in the IR). The profiled binary might have been built with
+  // column numbers disabled, for example.
+  bool ProfileHasColumns = false;
+
+  // Build maps of the location hash to all profile data with that leaf location
+  // (allocation info and the callsites).
+  std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
+  // For the callsites we need to record the index of the associated frame in
+  // the frame array (see comments below where the map entries are added).
+  std::map<uint64_t, std::set<std::pair<const std::vector<Frame> *, unsigned>>>
+      LocHashToCallSites;
+  for (auto &AI : MemProfRec->AllocSites) {
+    NumOfMemProfAllocContextProfiles++;
+    // Associate the allocation info with the leaf frame. The later matching
+    // code will match any inlined call sequences in the IR with a longer prefix
+    // of call stack frames.
+    uint64_t StackId = computeStackId(AI.CallStack[0]);
+    LocHashToAllocInfo[StackId].insert(&AI);
+    ProfileHasColumns |= AI.CallStack[0].Column;
+  }
+  for (auto &CS : MemProfRec->CallSites) {
+    NumOfMemProfCallSiteProfiles++;
+    // Need to record all frames from leaf up to and including this function,
+    // as any of these may or may not have been inlined at this point.
+    unsigned Idx = 0;
+    for (auto &StackFrame : CS) {
+      uint64_t StackId = computeStackId(StackFrame);
+      LocHashToCallSites[StackId].insert(std::make_pair(&CS, Idx++));
+      ProfileHasColumns |= StackFrame.Column;
+      // Once we find this function, we can stop recording.
+      if (StackFrame.Function == FuncGUID)
+        break;
+    }
+    assert(Idx <= CS.size() && CS[Idx - 1].Function == FuncGUID);
+  }
+
+  auto GetOffset = [](const DILocation *DIL) {
+    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+           0xffff;
+  };
+
+  // Now walk the instructions, looking up the associated profile data using
+  // debug locations.
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      if (I.isDebugOrPseudoInst())
+        continue;
+      // We are only interested in calls (allocation or interior call stack
+      // context calls).
+      auto *CI = dyn_cast<CallBase>(&I);
+      if (!CI)
+        continue;
+      auto *CalledFunction = CI->getCalledFunction();
+      if (CalledFunction && CalledFunction->isIntrinsic())
+        continue;
+      // List of call stack ids computed from the location hashes on debug
+      // locations (leaf to inlined at root).
+      std::vector<uint64_t> InlinedCallStack;
+      // Was the leaf location found in one of the profile maps?
+      bool LeafFound = false;
+      // If leaf was found in a map, iterators pointing to its location in both
+      // of the maps. It might exist in neither, one, or both (the latter case
+      // can happen because we don't currently have discriminators to
+      // distinguish the case when a single line/col maps to both an allocation
+      // and another callsite).
+      std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
+          AllocInfoIter;
+      std::map<uint64_t, std::set<std::pair<const std::vector<Frame> *,
+                                            unsigned>>>::iterator CallSitesIter;
+      for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
+           DIL = DIL->getInlinedAt()) {
+        // Use C++ linkage name if possible. Need to compile with
+        // -fdebug-info-for-profiling to get linkage name.
+        StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+        if (Name.empty())
+          Name = DIL->getScope()->getSubprogram()->getName();
+        auto CalleeGUID = Function::getGUID(Name);
+        auto StackId = computeStackId(CalleeGUID, GetOffset(DIL),
+                                      ProfileHasColumns ? DIL->getColumn() : 0);
+        // Check if we have found the profile's leaf frame. If yes, collect
+        // the rest of the call's inlined context starting here. If not, see if
+        // we find a match further up the inlined context (in case the profile
+        // was missing debug frames at the leaf).
+        if (!LeafFound) {
+          AllocInfoIter = LocHashToAllocInfo.find(StackId);
+          CallSitesIter = LocHashToCallSites.find(StackId);
+          if (AllocInfoIter != LocHashToAllocInfo.end() ||
+              CallSitesIter != LocHashToCallSites.end())
+            LeafFound = true;
+        }
+        if (LeafFound)
+          InlinedCallStack.push_back(StackId);
+      }
+      // If leaf not in either of the maps, skip inst.
+      if (!LeafFound)
+        continue;
+
+      // First add !memprof metadata from allocation info, if we found the
+      // instruction's leaf location in that map, and if the rest of the
+      // instruction's locations match the prefix Frame locations on an
+      // allocation context with the same leaf.
+      if (AllocInfoIter != LocHashToAllocInfo.end()) {
+        // Only consider allocations via new, to reduce unnecessary metadata,
+        // since those are the only allocations that will be targeted initially.
+        if (!isNewWithHotColdVariant(CI->getCalledFunction(), TLI))
+          continue;
+        // We may match this instruction's location list to multiple MIB
+        // contexts. Add them to a Trie specialized for trimming the contexts to
+        // the minimal needed to disambiguate contexts with unique behavior.
+        CallStackTrie AllocTrie;
+        for (auto *AllocInfo : AllocInfoIter->second) {
+          // Check the full inlined call stack against this one.
+          // If we found and thus matched all frames on the call, include
+          // this MIB.
+          if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
+                                                 InlinedCallStack)) {
+            NumOfMemProfMatchedAllocContexts++;
+            auto AllocType = addCallStack(AllocTrie, AllocInfo);
+            // Record information about the allocation if match info printing
+            // was requested.
+            if (ClPrintMemProfMatchInfo) {
+              auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+              FullStackIdToAllocMatchInfo[FullStackId] = {
+                  AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
+            }
+          }
+        }
+        // We might not have matched any to the full inlined call stack.
+        // But if we did, create and attach metadata, or a function attribute if
+        // all contexts have identical profiled behavior.
+        if (!AllocTrie.empty()) {
+          NumOfMemProfMatchedAllocs++;
+          // MemprofMDAttached will be false if a function attribute was
+          // attached.
+          bool MemprofMDAttached = AllocTrie.buildAndAttachMIBMetadata(CI);
+          assert(MemprofMDAttached == I.hasMetadata(LLVMContext::MD_memprof));
+          if (MemprofMDAttached) {
+            // Add callsite metadata for the instruction's location list so that
+            // it simpler later on to identify which part of the MIB contexts
+            // are from this particular instruction (including during inlining,
+            // when the callsite metadata will be updated appropriately).
+            // FIXME: can this be changed to strip out the matching stack
+            // context ids from the MIB contexts and not add any callsite
+            // metadata here to save space?
+            addCallsiteMetadata(I, InlinedCallStack, Ctx);
+          }
+        }
+        continue;
+      }
+
+      // Otherwise, add callsite metadata. If we reach here then we found the
+      // instruction's leaf location in the callsites map and not the allocation
+      // map.
+      assert(CallSitesIter != LocHashToCallSites.end());
+      for (auto CallStackIdx : CallSitesIter->second) {
+        // If we found and thus matched all frames on the call, create and
+        // attach call stack metadata.
+        if (stackFrameIncludesInlinedCallStack(
+                *CallStackIdx.first, InlinedCallStack, CallStackIdx.second)) {
+          NumOfMemProfMatchedCallSites++;
+          addCallsiteMetadata(I, InlinedCallStack, Ctx);
+          // Only need to find one with a matching call stack and add a single
+          // callsite metadata.
+          break;
+        }
+      }
+    }
+  }
+}
+
+MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
+                               IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : MemoryProfileFileName(MemoryProfileFile), FS(FS) {
+  if (!FS)
+    this->FS = vfs::getRealFileSystem();
+}
+
+PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
+  LLVM_DEBUG(dbgs() << "Read in memory profile:");
+  auto &Ctx = M.getContext();
+  auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);
+  if (Error E = ReaderOrErr.takeError()) {
+    handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+      Ctx.diagnose(
+          DiagnosticInfoPGOProfile(MemoryProfileFileName.data(), EI.message()));
+    });
+    return PreservedAnalyses::all();
+  }
+
+  std::unique_ptr<IndexedInstrProfReader> MemProfReader =
+      std::move(ReaderOrErr.get());
+  if (!MemProfReader) {
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        MemoryProfileFileName.data(), StringRef("Cannot get MemProfReader")));
+    return PreservedAnalyses::all();
+  }
+
+  if (!MemProfReader->hasMemoryProfile()) {
+    Ctx.diagnose(DiagnosticInfoPGOProfile(MemoryProfileFileName.data(),
+                                          "Not a memory profile"));
+    return PreservedAnalyses::all();
+  }
+
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  // Map from the stack has of each allocation context in the function profiles
+  // to the total profiled size (bytes), allocation type, and whether we matched
+  // it to an allocation in the IR.
+  std::map<uint64_t, AllocMatchInfo> FullStackIdToAllocMatchInfo;
+
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo);
+  }
+
+  if (ClPrintMemProfMatchInfo) {
+    for (const auto &[Id, Info] : FullStackIdToAllocMatchInfo)
+      errs() << "MemProf " << getAllocTypeAttributeString(Info.AllocType)
+             << " context with id " << Id << " has total profiled size "
+             << Info.TotalSize << (Info.Matched ? " is" : " not")
+             << " matched\n";
+  }
+
+  return PreservedAnalyses::none();
 }

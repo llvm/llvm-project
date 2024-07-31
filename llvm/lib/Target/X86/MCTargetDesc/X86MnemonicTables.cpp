@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86InstrInfo.h"
+#include "X86BaseInfo.h"
 
 #define GET_X86_MNEMONIC_TABLES_CPP
 #include "X86GenMnemonicTables.inc"

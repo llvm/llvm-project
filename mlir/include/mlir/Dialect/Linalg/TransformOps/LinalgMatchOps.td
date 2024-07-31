@@ -10,7 +10,7 @@
 #define LINALG_MATCH_OPS
 
 include "mlir/Dialect/Linalg/TransformOps/LinalgTransformEnums.td"
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
@@ -106,6 +106,15 @@ def MatchStructuredBodyOp : Op<Transform_Dialect, "match.structured.body", [
       * `passthrough`: the body of the structured payload op only forwards
         inputs to the outputs (copy or broadcast).
 
+      * `elementwise`: the body of the structured payload op represents an
+        elementwise operation.
+
+      * `contraction`: the body of the structured payload op is a contraction
+        of the form `<red>(<elem>(bbarg0, bbarg1), bbarg2)` where `<elem>` and
+        `<red>` are binary operations whose names are specified in the attribute
+        and operands can be permuted and optionally forwarded through a chain of
+        unary side effect-free operations.
+
   }], StructuredPredicate.extraDescription, [{
 
     #### Return modes
@@ -116,10 +125,104 @@ def MatchStructuredBodyOp : Op<Transform_Dialect, "match.structured.body", [
   }]);
   let arguments = (ins TransformHandleTypeInterface:$operand_handle,
                        OptionalAttr<I64Attr>:$reduction_position,
-                       UnitAttr:$passthrough);
+                       UnitAttr:$passthrough,
+                       UnitAttr:$elementwise,
+                       OptionalAttr<StrArrayAttr>:$contraction);
   let assemblyFormat = "$operand_handle attr-dict `:` type($operand_handle)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
   let hasVerifier = 1;
+}
+
+def MatchStructuredClassifyContractionDimsOp
+    : Op<Transform_Dialect, "match.structured.classify_contraction_dims", [
+    SingleOpMatcher,
+    StructuredPredicate,
+    MatchOpInterface,
+    MemoryEffectsOpInterface]> {
+  let summary =
+      "Checks if an operation has contraction-like dimensions and returns them";
+  let description = !strconcat([{
+    Checks if the structured payload op has contraction-like dimensions as
+    follows:
+
+      C(batch, m, n) += A(batch, m, k) * B(batch, k, n)
+
+    That is:
+    
+      - 'batch' are parallel dimensions used in inputs and result;
+      - 'm' are parallel dimensions used in the LHS and result;
+      - 'n' are parallel dimensions used in rhe RHS and result;
+      - 'k' are reduction dimensions present only in LHS and RHS.
+
+    Note that this doesn't check the operation in the body.
+
+  }], StructuredPredicate.extraDescription, [{
+
+    #### Return modes
+
+    Succeeds if the operation has the contraction-like dimensions, produces a
+    silenceable failure otherwise.
+  }]);
+
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle);
+  let results = (outs TransformParamTypeInterface:$batch,
+                      TransformParamTypeInterface:$m,
+                      TransformParamTypeInterface:$n,
+                      TransformParamTypeInterface:$k);
+  let assemblyFormat =
+    "$operand_handle attr-dict `:` functional-type(operands, results)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
+}
+
+def MatchStructuredClassifyConvolutionDimsOp
+    : Op<Transform_Dialect, "match.structured.classify_convolution_dims", [
+    SingleOpMatcher,
+    StructuredPredicate,
+    MatchOpInterface,
+    MemoryEffectsOpInterface]> {
+  let summary =
+      "Checks if an operation has convolution-like dimensions and returns them";
+  let description = !strconcat([{
+    Checks if the structured payload op has convolution-like dimensions as
+    follows:
+
+      C(batch, depth, oi, oc) += A(batch, depth, oi, ic) * B(fl, depth, ic, oc)
+
+    That is:
+
+      - 'batch' are parallel dimensions used in the input and result;
+      - 'output_image' ('oi') are parallel dimensions used in the input and result;
+      - 'output_channel' ('oc') are parallel dimensions used in the filter and result;
+      - 'filter_loop' ('fl') are reduction dimensions representing the dimensions of the sliding window;
+      - 'input_channel' ('ic') are reduction dimensions present only in the input and filter.
+      - 'depth' ('ic') are parallel dimensions present in the input, filter, and output.
+
+    Additionally this will match stride and dilation information for the convolution:
+      - 'strides' are the static strides per convolution window dimension;
+      - 'dilations' are the static dilations per convolution window dimension.
+
+    Note that this doesn't check the operation in the body.
+
+  }], StructuredPredicate.extraDescription, [{
+
+    #### Return modes
+
+    Succeeds if the operation has the convolution-like dimensions, produces a
+    silenceable failure otherwise.
+  }]);
+
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle);
+  let results = (outs TransformParamTypeInterface:$batch,
+                      TransformParamTypeInterface:$output_image,
+                      TransformParamTypeInterface:$output_channel,
+                      TransformParamTypeInterface:$filter_loop,
+                      TransformParamTypeInterface:$input_channel,
+                      TransformParamTypeInterface:$depth,
+                      TransformParamTypeInterface:$strides,
+                      TransformParamTypeInterface:$dilations);
+  let assemblyFormat =
+    "$operand_handle attr-dict `:` functional-type(operands, results)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }
 
 class StructuredDimDescription<string kind> {
@@ -189,7 +292,7 @@ def MatchStructuredDimOp : Op<Transform_Dialect, "match.structured.dim", [
   let results = (outs Optional<TransformParamTypeInterface>:$result);
   let assemblyFormat =
       "$operand_handle `[`"
-      "custom<StructuredTransformDims>($raw_dim_list, $is_inverted, $is_all)"
+      "custom<TransformMatchDims>($raw_dim_list, $is_inverted, $is_all)"
       "`]` attr-dict `:` "
       "custom<SemiFunctionType>(type($operand_handle), type($result))";
 
@@ -244,10 +347,11 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
 
   // TODO: allow this to bind multiple inputs simultaneously after checking that
   // `transform.foreach` works well in matches.
-  let results = (outs Optional<TransformAnyHandle>:$result);
+  let results =
+      (outs Optional<AnyTypeOf<[TransformAnyHandle,Transform_AffineMapParamType]>>:$result);
   let assemblyFormat =
       "$operand_handle `[`"
-      "custom<StructuredTransformDims>($raw_position_list, $is_inverted, $is_all)"
+      "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
       "`]` attr-dict "
       "`:` custom<SemiFunctionType>(type($operand_handle), type($result))";
 
@@ -262,12 +366,36 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
 
 def MatchStructuredInputOp : MatchStructuredOperandOp<"match.structured.input"> {
   let summary =
-    "Captures input operand(s) of a structured operation in an op or value handle";
+    "Captures input operand(s) of a structured operation";
   let description = !strconcat([{
-    Produces a transform dialect value handle associated with the payload value
-    supplied as input operand to the given structured payload operation, or an
-    operation handle to the structured payload operation producing said payload
-    value depending on the result type.
+    Produces a transform dialect value depending on the result type:
+    
+      - If the result type is a value handle, it will be associated with the input
+        operand(s) of the payload operation associated with the operand handle.
+      - If the result type is an operation handle, it will be associated with the
+        operation defining the input operand(s) of the payload operation associated
+        with the operand handle.
+      - If the result type is an affine map parameter type, it will be associated
+        with the indexing map that corresponds to the input operand(s) of the
+        payload operation associated with the operand handle.
+
+    For example, given the following operation:
+
+    ```mlir
+    %arg1 = some.op
+    linalg.matmul ins(%arg1, %arg2 : ...) outs(%arg3 : ...)
+    ```
+
+    in case of a successful match for operand 0 this operation will return, for
+    each of the respective cases above:
+
+      - A handle to `%arg1` if the result is a value handle.
+      - A handle to `some.op` if the result is an operation handle.
+      - A parameter containing the LHS map of the matrix multiplication, i.e.
+        `affine_map<(d0, d1, d2) -> (d0, d2)>` if the result is an affine
+        map parameter.
+
+    The match succeeds if the conditions specified as attributes succeed.
 
     }], 
     StructuredDimDescription<"input">.description,
@@ -288,12 +416,35 @@ def MatchStructuredInputOp : MatchStructuredOperandOp<"match.structured.input"> 
 
 def MatchStructuredInitOp : MatchStructuredOperandOp<"match.structured.init"> {
   let summary =
-    "Captures init operand(s) of a structured operation in an op or value handle";
+    "Captures init operand(s) of a structured operation";
   let description = !strconcat([{
-    Produces a transform dialect value handle associated with the payload value
-    supplied as init(outs) operand to the given structured payload operation,
-    or an operation handle to the structured payload operation producing said
-    payload value depending on the result type.
+    Produces a transform dialect value depending on the result type:
+      - If the result type is a value handle, it will be associated with the init
+        operand(s) of the payload operation associated with the operand handle.
+      - If the result type is an operation handle, it will be associated with the
+        operation defining the init operand(s) of the payload operation associated
+        with the operand handle.
+      - If the result type is an affine map parameter type, it will be associated
+        with the indexing map that corresponds to the init operand(s) of the
+        payload operation associated with the operand handle.
+
+    For example, given the following operation:
+
+    ```mlir
+    %arg3 = linalg.fill
+    linalg.matmul ins(%arg1, %arg2 : ...) outs(%arg3 : ...)
+    ```
+
+    in case of a successful match for init operand 0 this operation will return,
+    for each of the respective cases above:
+
+      - A handle to `%arg3` if the result is a value handle.
+      - A handle to `linalg.fill` if the result is an operation handle.
+      - A parameter containing the result map of the matrix multiplication, i.e.
+        `affine_map<(d0, d1, d2) -> (d0, d1)>` if the result is an affine
+        map parameter.
+
+    The match succeeds if the conditions specified as attributes succeed.
 
     }], 
     StructuredDimDescription<"init">.description,

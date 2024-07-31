@@ -11,6 +11,7 @@ add_flang_library(FIRBuilder
   IntrinsicCall.cpp
   LowLevelIntrinsics.cpp
   MutableBox.cpp
+  PPCIntrinsicCall.cpp
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
   Runtime/Assign.cpp
@@ -18,12 +19,17 @@ add_flang_library(FIRBuilder
   Runtime/Command.cpp
   Runtime/Derived.cpp
   Runtime/EnvironmentDefaults.cpp
+  Runtime/Exceptions.cpp
+  Runtime/Execute.cpp
   Runtime/Inquiry.cpp
   Runtime/Intrinsics.cpp
+  Runtime/Main.cpp
   Runtime/Numeric.cpp
+  Runtime/Pointer.cpp
   Runtime/Ragged.cpp
   Runtime/Reduction.cpp
   Runtime/Stop.cpp
+  Runtime/Support.cpp
   Runtime/TemporaryStack.cpp
   Runtime/Transformational.cpp
   TemporaryStorage.cpp

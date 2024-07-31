@@ -388,9 +388,14 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedTo.SetBuffered();
   TiedTo << "a";
 
-  std::string Buffer;
-  raw_string_ostream TiedStream(Buffer);
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("tietest", "", FD, Path));
+  FileRemover Cleanup(Path);
+  raw_fd_ostream TiedStream(FD, /*ShouldClose=*/false);
+  TiedStream.SetUnbuffered();
   TiedStream.tie(&TiedTo);
+
   // Sanity check that the stream hasn't already been flushed.
   EXPECT_EQ("", TiedToBuffer);
 
@@ -435,30 +440,60 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedStream << "pq";
   EXPECT_EQ("acego", TiedToBuffer);
 
-  // Streams can be tied to each other safely.
-  TiedStream.flush();
-  Buffer = "";
-  TiedTo.tie(&TiedStream);
-  TiedTo.SetBufferSize(2);
-  TiedStream << "r";
-  TiedTo << "s";
-  EXPECT_EQ("", Buffer);
-  EXPECT_EQ("acego", TiedToBuffer);
-  TiedTo << "tuv";
-  EXPECT_EQ("r", Buffer);
-  TiedStream << "wxy";
-  EXPECT_EQ("acegostuv", TiedToBuffer);
-  // The x remains in the buffer, since it was written after the flush of
-  // TiedTo.
-  EXPECT_EQ("rwx", Buffer);
-  TiedTo.tie(nullptr);
-
   // Calling tie with nullptr unties stream.
   TiedStream.SetUnbuffered();
   TiedStream.tie(nullptr);
   TiedTo << "y";
   TiedStream << "0";
-  EXPECT_EQ("acegostuv", TiedToBuffer);
+  EXPECT_EQ("acego", TiedToBuffer);
+
+  TiedTo.flush();
+  TiedStream.flush();
+}
+
+static void checkFileData(StringRef FileName, StringRef GoldenData) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(FileName);
+  EXPECT_FALSE(BufOrErr.getError());
+
+  EXPECT_EQ((*BufOrErr)->getBufferSize(), GoldenData.size());
+  EXPECT_EQ(memcmp((*BufOrErr)->getBufferStart(), GoldenData.data(),
+                   GoldenData.size()),
+            0);
+}
+
+TEST(raw_ostreamTest, raw_fd_ostream_mutual_ties) {
+  SmallString<64> PathTiedTo;
+  int FDTiedTo;
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("tietest1", "", FDTiedTo, PathTiedTo));
+  FileRemover CleanupTiedTo(PathTiedTo);
+  raw_fd_ostream TiedTo(FDTiedTo, /*ShouldClose=*/false);
+
+  SmallString<64> PathTiedStream;
+  int FDTiedStream;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("tietest2", "", FDTiedStream,
+                                            PathTiedStream));
+  FileRemover CleanupTiedStream(PathTiedStream);
+  raw_fd_ostream TiedStream(FDTiedStream, /*ShouldClose=*/false);
+
+  // Streams can be tied to each other safely.
+  TiedStream.tie(&TiedTo);
+  TiedStream.SetBuffered();
+  TiedStream.SetBufferSize(2);
+  TiedTo.tie(&TiedStream);
+  TiedTo.SetBufferSize(2);
+  TiedStream << "r";
+  TiedTo << "s";
+  checkFileData(PathTiedStream.str(), "");
+  checkFileData(PathTiedTo.str(), "");
+  TiedTo << "tuv";
+  checkFileData(PathTiedStream.str(), "r");
+  TiedStream << "wxy";
+  checkFileData(PathTiedTo.str(), "stuv");
+  // The y remains in the buffer, since it was written after the flush of
+  // TiedTo.
+  checkFileData(PathTiedStream.str(), "rwx");
 
   TiedTo.flush();
   TiedStream.flush();
@@ -478,17 +513,6 @@ TEST(raw_ostreamTest, reserve_stream) {
   EXPECT_EQ("11111111111111111111hello1world", Str);
 }
 
-static void checkFileData(StringRef FileName, StringRef GoldenData) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileName);
-  EXPECT_FALSE(BufOrErr.getError());
-
-  EXPECT_EQ((*BufOrErr)->getBufferSize(), GoldenData.size());
-  EXPECT_EQ(memcmp((*BufOrErr)->getBufferStart(), GoldenData.data(),
-                   GoldenData.size()),
-            0);
-}
-
 TEST(raw_ostreamTest, writeToOutputFile) {
   SmallString<64> Path;
   int FD;
@@ -503,6 +527,31 @@ TEST(raw_ostreamTest, writeToOutputFile) {
                     Succeeded());
   checkFileData(Path, "HelloWorld");
 }
+
+#ifndef _WIN32
+TEST(raw_ostreamTest, filePermissions) {
+  // Set umask to be permissive of all permissions.
+  unsigned OldMask = ::umask(0);
+
+  llvm::unittest::TempDir RootTestDirectory("writToOutput", /*Unique*/ true);
+  SmallString<128> Path(RootTestDirectory.path());
+  sys::path::append(Path, "test.txt");
+
+  ASSERT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "HelloWorld";
+                                    return Error::success();
+                                  }),
+                    Succeeded());
+
+  ErrorOr<llvm::sys::fs::perms> Perms = llvm::sys::fs::getPermissions(Path);
+  ASSERT_TRUE(Perms) << "should be able to get permissions";
+  // Verify the permission bits set by writeToOutput are read and write only.
+  EXPECT_EQ(Perms.get(), llvm::sys::fs::all_read | llvm::sys::fs::all_write);
+
+  ::umask(OldMask);
+}
+#endif
 
 TEST(raw_ostreamTest, writeToNonexistingPath) {
   StringRef FileName = "/_bad/_path";

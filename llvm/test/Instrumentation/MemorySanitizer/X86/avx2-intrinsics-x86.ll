@@ -816,8 +816,8 @@ define <16 x i16> @test_x86_avx2_mpsadbw_load_op0(ptr %ptr, <32 x i8> %a1) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
@@ -828,10 +828,10 @@ define <16 x i16> @test_x86_avx2_mpsadbw_load_op0(ptr %ptr, <32 x i8> %a1) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i8>, ptr [[TMP7]], align 32
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <32 x i8> [[_MSLD]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP8]], 0
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <32 x i8> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP9]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP9]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
 ; CHECK:       10:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
@@ -881,14 +881,21 @@ define <16 x i16> @test_x86_avx2_packusdw_fold() #0 {
 
 define <32 x i8> @test_x86_avx2_pblendvb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2) #0 {
 ; CHECK-LABEL: @test_x86_avx2_pblendvb(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <32 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <32 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i8> [[_MSPROP]], [[TMP3]]
-; CHECK-NEXT:    [[RES:%.*]] = call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A0:%.*]], <32 x i8> [[A1:%.*]], <32 x i8> [[A2:%.*]])
-; CHECK-NEXT:    store <32 x i8> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr <32 x i8> [[A2:%.*]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <32 x i8> [[TMP4]] to <32 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <32 x i8> [[TMP1]], <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <32 x i8> [[TMP6]] to <32 x i1>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <32 x i1> [[TMP5]], <32 x i8> [[TMP2]], <32 x i8> [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = xor <32 x i8> [[A1:%.*]], [[A0:%.*]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or <32 x i8> [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <32 x i8> [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP7]], <32 x i8> [[TMP11]], <32 x i8> [[TMP8]]
+; CHECK-NEXT:    [[RES:%.*]] = call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A0]], <32 x i8> [[A1]], <32 x i8> [[A2]])
+; CHECK-NEXT:    store <32 x i8> [[_MSPROP_SELECT]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x i8> [[RES]]
 ;
   %res = call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2) ; <<32 x i8>> [#uses=1]

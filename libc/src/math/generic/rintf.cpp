@@ -9,11 +9,16 @@
 #include "src/math/rintf.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, rintf, (float x)) {
+#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
+  return __builtin_rintf(x);
+#else
   return fputil::round_using_current_rounding_mode(x);
+#endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -60,6 +60,12 @@ class GenericTable {
   // derives from that class.
   string FilterClass;
 
+  // A field of FilterClass to filter out entries. This is an optional field
+  // of ``FilterClass`` which should be `bit` type. If specified, only those
+  // records with this field being true will have corresponding entries in the
+  // table.
+  string FilterClassField = ?;
+
   // Name of the C++ struct/class type that holds table entries. The
   // declaration of this type is not generated automatically.
   string CppTypeName = FilterClass;
@@ -108,6 +114,11 @@ class GenericTable {
 
   // See SearchIndex.EarlyOut
   bit PrimaryKeyEarlyOut = false;
+
+  // If true, will generate a different function signature which will return an
+  // iterator range of pointers giving the starting and end value of the range.
+  // e.g. lookupSysRegByEncoding returns multiple CSRs for same encoding.
+  bit PrimaryKeyReturnRange = false;
 }
 
 // Define a record derived from this class to generate an additional search

@@ -18,6 +18,7 @@
 #include "kmp_itt.h"
 #include "kmp_lock.h"
 #include "kmp_stats.h"
+#include "kmp_utils.h"
 #include "ompt-specific.h"
 
 #define MAX_MESSAGE 512
@@ -236,6 +237,50 @@ void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
   __kmp_push_num_threads(loc, global_tid, num_threads);
 }
 
+void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32 global_tid,
+                                    kmp_int32 num_threads, int severity,
+                                    const char *message) {
+  __kmp_push_num_threads(loc, global_tid, num_threads);
+  __kmp_set_strict_num_threads(loc, global_tid, severity, message);
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param list_length number of entries in the num_threads_list array
+@param num_threads_list array of numbers of threads requested for this parallel
+construct and subsequent nested parallel constructs
+
+Set the number of threads to be used by the next fork spawned by this thread,
+and some nested forks as well.
+This call is only required if the parallel construct has a `num_threads` clause
+that has a list of integers as the argument.
+*/
+void __kmpc_push_num_threads_list(ident_t *loc, kmp_int32 global_tid,
+                                  kmp_uint32 list_length,
+                                  kmp_int32 *num_threads_list) {
+  KA_TRACE(20, ("__kmpc_push_num_threads_list: enter T#%d num_threads_list=",
+                global_tid));
+  KA_TRACE(20, ("%d", num_threads_list[0]));
+#ifdef KMP_DEBUG
+  for (kmp_uint32 i = 1; i < list_length; ++i)
+    KA_TRACE(20, (", %d", num_threads_list[i]));
+#endif
+  KA_TRACE(20, ("/n"));
+
+  __kmp_assert_valid_gtid(global_tid);
+  __kmp_push_num_threads_list(loc, global_tid, list_length, num_threads_list);
+}
+
+void __kmpc_push_num_threads_list_strict(ident_t *loc, kmp_int32 global_tid,
+                                         kmp_uint32 list_length,
+                                         kmp_int32 *num_threads_list,
+                                         int severity, const char *message) {
+  __kmp_push_num_threads_list(loc, global_tid, list_length, num_threads_list);
+  __kmp_set_strict_num_threads(loc, global_tid, severity, message);
+}
+
 void __kmpc_pop_num_threads(ident_t *loc, kmp_int32 global_tid) {
   KA_TRACE(20, ("__kmpc_pop_num_threads: enter\n"));
   /* the num_threads are automatically popped */
@@ -343,7 +388,6 @@ Perform a fork only if the condition is true.
 void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
                          kmp_int32 cond, void *args) {
   int gtid = __kmp_entry_gtid();
-  int zero = 0;
   if (cond) {
     if (args)
       __kmpc_fork_call(loc, argc, microtask, args);
@@ -352,10 +396,29 @@ void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   } else {
     __kmpc_serialized_parallel(loc, gtid);
 
+#if OMPT_SUPPORT
+    void *exit_frame_ptr;
+#endif
+
     if (args)
-      microtask(&gtid, &zero, args);
+      __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
+                             /*npr=*/0,
+                             /*argc=*/1, &args
+#if OMPT_SUPPORT
+                             ,
+                             &exit_frame_ptr
+#endif
+      );
     else
-      microtask(&gtid, &zero);
+      __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
+                             /*npr=*/0,
+                             /*argc=*/0,
+                             /*args=*/nullptr
+#if OMPT_SUPPORT
+                             ,
+                             &exit_frame_ptr
+#endif
+      );
 
     __kmpc_end_serialized_parallel(loc, gtid);
   }
@@ -379,6 +442,24 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
             global_tid, num_teams, num_threads));
   __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_teams(loc, global_tid, num_teams, num_threads);
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param thread_limit limit on number of threads which can be created within the
+current task
+
+Set the thread_limit for the current task
+This call is there to support `thread_limit` clause on the `target` construct
+*/
+void __kmpc_set_thread_limit(ident_t *loc, kmp_int32 global_tid,
+                             kmp_int32 thread_limit) {
+  __kmp_assert_valid_gtid(global_tid);
+  kmp_info_t *thread = __kmp_threads[global_tid];
+  if (thread_limit > 0)
+    thread->th.th_current_task->td_icvs.task_thread_limit = thread_limit;
 }
 
 /*!
@@ -617,6 +698,12 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
         serial_team->t.t_dispatch->th_disp_buffer->next;
     __kmp_free(disp_buffer);
   }
+
+  /* pop the task team stack */
+  if (serial_team->t.t_serialized > 1) {
+    __kmp_pop_task_team_node(this_thr, serial_team);
+  }
+
   this_thr->th.th_def_allocator = serial_team->t.t_def_allocator; // restore
 
   --serial_team->t.t_serialized;
@@ -655,6 +742,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     this_thr->th.th_current_task->td_flags.executing = 1;
 
     if (__kmp_tasking_mode != tskm_immediate_exec) {
+      // Restore task state from serial team structure
+      KMP_DEBUG_ASSERT(serial_team->t.t_primary_task_state == 0 ||
+                       serial_team->t.t_primary_task_state == 1);
+      this_thr->th.th_task_state =
+          (kmp_uint8)serial_team->t.t_primary_task_state;
       // Copy the task team from the new child / old parent team to the thread.
       this_thr->th.th_task_team =
           this_thr->th.th_team->t.t_task_team[this_thr->th.th_task_state];
@@ -1497,8 +1589,9 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
   kmp_dyna_lockseq_t lockseq = __kmp_map_hint_to_lock(hint);
   if (*lk == 0) {
     if (KMP_IS_D_LOCK(lockseq)) {
-      KMP_COMPARE_AND_STORE_ACQ32((volatile kmp_int32 *)crit, 0,
-                                  KMP_GET_D_TAG(lockseq));
+      KMP_COMPARE_AND_STORE_ACQ32(
+          (volatile kmp_int32 *)&((kmp_base_tas_lock_t *)crit)->poll, 0,
+          KMP_GET_D_TAG(lockseq));
     } else {
       __kmp_init_indirect_csptr(crit, loc, global_tid, KMP_GET_I_TAG(lockseq));
     }
@@ -1913,13 +2006,13 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.ompt_callback_work) {
-    ompt_work_t ompt_work_type = ompt_work_loop;
+    ompt_work_t ompt_work_type = ompt_work_loop_static;
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
     ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
     // Determine workshare type
     if (loc != NULL) {
       if ((loc->flags & KMP_IDENT_WORK_LOOP) != 0) {
-        ompt_work_type = ompt_work_loop;
+        ompt_work_type = ompt_work_loop_static;
       } else if ((loc->flags & KMP_IDENT_WORK_SECTIONS) != 0) {
         ompt_work_type = ompt_work_sections;
       } else if ((loc->flags & KMP_IDENT_WORK_DISTRIBUTE) != 0) {
@@ -2065,14 +2158,15 @@ void kmpc_set_stacksize_s(size_t arg) {
 }
 
 void kmpc_set_blocktime(int arg) {
-  int gtid, tid;
+  int gtid, tid, bt = arg;
   kmp_info_t *thread;
 
   gtid = __kmp_entry_gtid();
   tid = __kmp_tid_from_gtid(gtid);
   thread = __kmp_thread_from_gtid(gtid);
 
-  __kmp_aux_set_blocktime(arg, thread, tid);
+  __kmp_aux_convert_blocktime(&bt);
+  __kmp_aux_set_blocktime(bt, thread, tid);
 }
 
 void kmpc_set_library(int arg) {
@@ -3150,7 +3244,7 @@ int __kmpc_test_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
     codeptr = OMPT_GET_RETURN_ADDRESS(0);
   if (ompt_enabled.ompt_callback_mutex_acquire) {
     ompt_callbacks.ompt_callback(ompt_callback_mutex_acquire)(
-        ompt_mutex_lock, omp_lock_hint_none,
+        ompt_mutex_test_lock, omp_lock_hint_none,
         __ompt_get_mutex_impl_type(user_lock),
         (ompt_wait_id_t)(uintptr_t)user_lock, codeptr);
   }
@@ -3174,7 +3268,7 @@ int __kmpc_test_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
     if (ompt_enabled.ompt_callback_mutex_acquired) {
       ompt_callbacks.ompt_callback(ompt_callback_mutex_acquired)(
-          ompt_mutex_lock, (ompt_wait_id_t)(uintptr_t)user_lock, codeptr);
+          ompt_mutex_test_lock, (ompt_wait_id_t)(uintptr_t)user_lock, codeptr);
     }
 #endif
     return FTN_TRUE;
@@ -3214,7 +3308,7 @@ int __kmpc_test_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
     codeptr = OMPT_GET_RETURN_ADDRESS(0);
   if (ompt_enabled.ompt_callback_mutex_acquire) {
     ompt_callbacks.ompt_callback(ompt_callback_mutex_acquire)(
-        ompt_mutex_lock, omp_lock_hint_none, __ompt_get_mutex_impl_type(),
+        ompt_mutex_test_lock, omp_lock_hint_none, __ompt_get_mutex_impl_type(),
         (ompt_wait_id_t)(uintptr_t)lck, codeptr);
   }
 #endif
@@ -3230,7 +3324,7 @@ int __kmpc_test_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (rc && ompt_enabled.ompt_callback_mutex_acquired) {
     ompt_callbacks.ompt_callback(ompt_callback_mutex_acquired)(
-        ompt_mutex_lock, (ompt_wait_id_t)(uintptr_t)lck, codeptr);
+        ompt_mutex_test_lock, (ompt_wait_id_t)(uintptr_t)lck, codeptr);
   }
 #endif
 
@@ -3255,7 +3349,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
     codeptr = OMPT_GET_RETURN_ADDRESS(0);
   if (ompt_enabled.ompt_callback_mutex_acquire) {
     ompt_callbacks.ompt_callback(ompt_callback_mutex_acquire)(
-        ompt_mutex_nest_lock, omp_lock_hint_none,
+        ompt_mutex_test_nest_lock, omp_lock_hint_none,
         __ompt_get_mutex_impl_type(user_lock),
         (ompt_wait_id_t)(uintptr_t)user_lock, codeptr);
   }
@@ -3274,7 +3368,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
       if (ompt_enabled.ompt_callback_mutex_acquired) {
         // lock_first
         ompt_callbacks.ompt_callback(ompt_callback_mutex_acquired)(
-            ompt_mutex_nest_lock, (ompt_wait_id_t)(uintptr_t)user_lock,
+            ompt_mutex_test_nest_lock, (ompt_wait_id_t)(uintptr_t)user_lock,
             codeptr);
       }
     } else {
@@ -3321,7 +3415,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
   if (ompt_enabled.enabled) &&
         ompt_enabled.ompt_callback_mutex_acquire) {
       ompt_callbacks.ompt_callback(ompt_callback_mutex_acquire)(
-          ompt_mutex_nest_lock, omp_lock_hint_none,
+          ompt_mutex_test_nest_lock, omp_lock_hint_none,
           __ompt_get_mutex_impl_type(), (ompt_wait_id_t)(uintptr_t)lck,
           codeptr);
     }
@@ -3341,7 +3435,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
       if (ompt_enabled.ompt_callback_mutex_acquired) {
         // lock_first
         ompt_callbacks.ompt_callback(ompt_callback_mutex_acquired)(
-            ompt_mutex_nest_lock, (ompt_wait_id_t)(uintptr_t)lck, codeptr);
+            ompt_mutex_test_nest_lock, (ompt_wait_id_t)(uintptr_t)lck, codeptr);
       }
     } else {
       if (ompt_enabled.ompt_callback_nest_lock) {
@@ -4195,7 +4289,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
   up = pr_buf->th_doacross_info[3];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     if (vec[0] < lo || vec[0] > up) {
@@ -4307,7 +4401,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
   lo = pr_buf->th_doacross_info[2];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     iter_number = vec[0] - lo;

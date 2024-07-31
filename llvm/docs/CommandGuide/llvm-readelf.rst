@@ -38,6 +38,11 @@ OPTIONS
  Display the contents of the basic block address map section(s), which contain the
  address of each function, along with the relative offset of each basic block.
 
+.. option:: --decompress, -z
+
+  Dump decompressed section content when used with ``-x`` or ``-p``.
+  If the section(s) are not compressed, they are displayed as is.
+
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.
@@ -76,6 +81,10 @@ OPTIONS
  ``GNU``, and ``JSON``. ``LLVM`` output is an expanded and structured format.
  ``GNU`` (the default) output mimics the equivalent GNU :program:`readelf`
  output. ``JSON`` is JSON formatted output intended for machine consumption.
+
+.. option:: --extra-sym-info
+
+ Display extra information (section name) when showing symbols.
 
 .. option:: --section-groups, -g
 
@@ -142,10 +151,6 @@ OPTIONS
 .. option:: --program-headers, --segments, -l
 
  Display the program headers.
-
-.. option:: --raw-relr
-
- Do not decode relocations in RELR relocation sections when displaying them.
 
 .. option:: --relocations, --relocs, -r
 

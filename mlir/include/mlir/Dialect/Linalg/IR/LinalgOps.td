@@ -14,10 +14,13 @@
 #define LINALG_OPS
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
@@ -84,6 +87,187 @@ def Linalg_IndexOp : Linalg_Op<"index", [Pure]>,
   }];
 
   let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
+  let hasVerifier = 1;
+}
+
+def Linalg_SoftmaxOp : Linalg_Op<"softmax",
+    [DestinationStyleOpInterface,
+     PredOpTrait<"input and output have same element type", TCopVTEtIsSameAs<0, 1>>,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+     DeclareOpInterfaceMethods<AggregatedOpInterface, ["decomposeOperation"]>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
+  let summary = "Softmax operator";
+  let description = [{
+    linalg.softmax computes a numerically stable version of softmax.
+
+    For a given input tensor and a specified dimension `d`, compute:
+      1. the max `m` along that dimension `d`
+      2. f(x) = exp(x - m)
+      3. sum f(x) along dimension d to get l(x).
+      4. compute the final result f(x) / l(x).
+
+    This is an aggregate linalg operation that further reduces to a small DAG of
+    structured operations.
+
+    Warning: Regarding the tiling capabilities, the implementation doesn't
+    check that the provided dimensions make sense. This is the responsability
+    of the transformation calling the tiling to ensure that the provided
+    sizes for each dimension make sense with respect to the semantic of
+    softmax.
+  }];
+
+  let arguments = (ins AnyShaped:$input,
+                       AnyShaped:$output,
+                       I64Attr:$dimension
+  );
+
+  let results = (outs Variadic<AnyRankedTensor>:$result);
+  let hasFolder = 1;
+  let assemblyFormat = [{
+    attr-dict
+    `dimension` `(` $dimension `)`
+    `ins` `(` $input `:` type($input) `)`
+    `outs` `(` $output `:` type($output) `)`
+    (`->` type($result)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    ShapedType getInputOperandType() {
+      return cast<ShapedType>(getInput().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getInputOperandRank() {
+      return getInputOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    MutableOperandRange getDpsInitsMutable() { return getOutputMutable(); }
+  }];
+  let hasVerifier = 1;
+}
+
+def Linalg_WinogradFilterTransformOp :
+    Linalg_Op<"winograd_filter_transform", [AllElementTypesMatch<["filter", "output"]>]> {
+  let summary = "Winograd filter transform operator";
+  let description = [{
+    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    matrix multiply. Before the matrix multiply, it will convert filter and
+    input into a format suitable for batched matrix multiply. After the matrix
+    multiply, it will convert output to the final result tensor.
+
+    The algorithm F(m x m, r x r) is
+
+    Y = A^T x [(G x g x G^T) @ (B^T x d x B)] x A
+
+    The size of output Y is m x m. The size of filter g is r x r. The size of
+    input d is (m + r - 1) x (m + r - 1). A^T, A, G^T, G, B^T, and B are
+    transformation matrices.
+
+    This operator is defined to represent the high level concept of filter
+    transformation (G x g x G^T) in the Winograd Conv2D algorithm.
+  }];
+
+  let arguments = (ins TensorRankOf<[AnyType], [4]>:$filter,
+                       TensorRankOf<[AnyType], [4]>:$output,
+                       I64Attr:$m,
+                       I64Attr:$r
+  );
+
+  let results = (outs TensorRankOf<[AnyType], [4]>:$result);
+  let assemblyFormat = [{
+    attr-dict
+    `m` `(` $m `)`
+    `r` `(` $r `)`
+    `ins` `(` $filter `:` type($filter) `)`
+    `outs` `(` $output `:` type($output) `)`
+    `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+def Linalg_WinogradInputTransformOp :
+    Linalg_Op<"winograd_input_transform", [AllElementTypesMatch<["input", "output"]>]> {
+  let summary = "Winograd input transform operator";
+  let description = [{
+    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    matrix multiply. Before the matrix multiply, it will convert filter and
+    input into a format suitable for batched matrix multiply. After the matrix
+    multiply, it will convert output to the final result tensor.
+
+    The algorithm F(m x m, r x r) is
+
+    Y = A^T x [(G x g x G^T) @ (B^T x d x B)] x A
+
+    The size of output Y is m x m. The size of filter g is r x r. The size of
+    input d is (m + r - 1) x (m + r - 1). A^T, A, G^T, G, B^T, and B are
+    transformation matrices.
+
+    This operator is defined to represent the high level concept of input
+    transformation (B^T x d x B) in the Winograd Conv2D algorithm.
+  }];
+
+  let arguments = (ins TensorRankOf<[AnyType], [4]>:$input,
+                       TensorRankOf<[AnyType], [6]>:$output,
+                       I64Attr:$m,
+                       I64Attr:$r
+  );
+
+  let results = (outs TensorRankOf<[AnyType], [6]>:$result);
+  let assemblyFormat = [{
+    attr-dict
+    `m` `(` $m `)`
+    `r` `(` $r `)`
+    `ins` `(` $input `:` type($input) `)`
+    `outs` `(` $output `:` type($output) `)`
+    `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+def Linalg_WinogradOutputTransformOp :
+    Linalg_Op<"winograd_output_transform", [AllElementTypesMatch<["value", "output"]>]> {
+  let summary = "Winograd output transform operator";
+  let description = [{
+    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    matrix multiply. Before the matrix multiply, it will convert filter and
+    input into a format suitable for batched matrix multiply. After the matrix
+    multiply, it will convert output to the final result tensor.
+
+    The algorithm F(m x m, r x r) is
+
+    Y = A^T x [(G x g x G^T) @ (B^T x d x B)] x A
+
+    The size of output Y is m x m. The size of filter g is r x r. The size of
+    input d is (m + r - 1) x (m + r - 1). A^T, A, G^T, G, B^T, and B are
+    transformation matrices.
+
+    This operator is defined to represent the high level concept of output
+    transformation (A^T x y x A) in the Winograd Conv2D algorithm.
+  }];
+
+  let arguments = (ins TensorRankOf<[AnyType], [6]>:$value,
+                       TensorRankOf<[AnyType], [4]>:$output,
+                       I64Attr:$m,
+                       I64Attr:$r
+  );
+
+  let results = (outs TensorRankOf<[AnyType], [4]>:$result);
+  let assemblyFormat = [{
+    attr-dict
+    `m` `(` $m `)`
+    `r` `(` $r `)`
+    `ins` `(` $value `:` type($value) `)`
+    `outs` `(` $output `:` type($output) `)`
+    `->` type($result)
+  }];
   let hasVerifier = 1;
 }
 

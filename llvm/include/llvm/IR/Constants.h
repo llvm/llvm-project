@@ -26,7 +26,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -77,12 +80,19 @@ public:
 /// Class for constant integers.
 class ConstantInt final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APInt Val;
 
-  ConstantInt(IntegerType *Ty, const APInt &V);
+  ConstantInt(Type *Ty, const APInt &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the vector type whose integer element type corresponds to the bit
+  /// width of the value.
+  static ConstantInt *get(LLVMContext &Context, ElementCount EC,
+                          const APInt &V);
 
 public:
   ConstantInt(const ConstantInt &) = delete;
@@ -135,7 +145,7 @@ public:
   /// Return the constant's value.
   inline const APInt &getValue() const { return Val; }
 
-  /// getBitWidth - Return the bitwidth of this constant.
+  /// getBitWidth - Return the scalar bitwidth of this constant.
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
   /// Return the constant as a 64-bit unsigned integer value after it
@@ -170,10 +180,9 @@ public:
   /// Determine if this constant's value is same as an unsigned char.
   bool equalsInt(uint64_t V) const { return Val == V; }
 
-  /// getType - Specialize the getType() method to always return an IntegerType,
-  /// which reduces the amount of casting needed in parts of the compiler.
-  ///
-  inline IntegerType *getType() const {
+  /// Variant of the getType() method to always return an IntegerType, which
+  /// reduces the amount of casting needed in parts of the compiler.
+  inline IntegerType *getIntegerType() const {
     return cast<IntegerType>(Value::getType());
   }
 
@@ -259,12 +268,19 @@ public:
 ///
 class ConstantFP final : public ConstantData {
   friend class Constant;
+  friend class ConstantVector;
 
   APFloat Val;
 
   ConstantFP(Type *Ty, const APFloat &V);
 
   void destroyConstantImpl();
+
+  /// Return a ConstantFP with the specified value and an implied Type. The
+  /// type is the vector type whose element type has the same floating point
+  /// semantics as the value.
+  static ConstantFP *get(LLVMContext &Context, ElementCount EC,
+                         const APFloat &V);
 
 public:
   ConstantFP(const ConstantFP &) = delete;
@@ -517,9 +533,9 @@ public:
   }
 
   /// If all elements of the vector constant have the same value, return that
-  /// value. Otherwise, return nullptr. Ignore undefined elements by setting
-  /// AllowUndefs to true.
-  Constant *getSplatValue(bool AllowUndefs = false) const;
+  /// value. Otherwise, return nullptr. Ignore poison elements by setting
+  /// AllowPoison to true.
+  Constant *getSplatValue(bool AllowPoison = false) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
@@ -975,6 +991,11 @@ public:
     return cast<GlobalValue>(Op<0>().get());
   }
 
+  /// NoCFIValue is always a pointer.
+  PointerType *getType() const {
+    return cast<PointerType>(Value::getType());
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == NoCFIValueVal;
@@ -986,6 +1007,72 @@ struct OperandTraits<NoCFIValue> : public FixedNumOperandTraits<NoCFIValue, 1> {
 };
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(NoCFIValue, Value)
+
+/// A signed pointer, in the ptrauth sense.
+class ConstantPtrAuth final : public Constant {
+  friend struct ConstantPtrAuthKeyType;
+  friend class Constant;
+
+  ConstantPtrAuth(Constant *Ptr, ConstantInt *Key, ConstantInt *Disc,
+                  Constant *AddrDisc);
+
+  void *operator new(size_t s) { return User::operator new(s, 4); }
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
+
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const { return cast<Constant>(Op<0>().get()); }
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const { return cast<ConstantInt>(Op<1>().get()); }
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const {
+    return cast<ConstantInt>(Op<2>().get());
+  }
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const {
+    return cast<Constant>(Op<3>().get());
+  }
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return !getAddrDiscriminator()->isNullValue();
+  }
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantPtrAuthVal;
+  }
+};
+
+template <>
+struct OperandTraits<ConstantPtrAuth>
+    : public FixedNumOperandTraits<ConstantPtrAuth, 4> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPtrAuth, Constant)
 
 //===----------------------------------------------------------------------===//
 /// A constant value that is initialized with an expression using
@@ -1026,8 +1113,7 @@ public:
   ///
   static Constant *getSizeOf(Type *Ty);
 
-  static Constant *getNeg(Constant *C, bool HasNUW = false,
-                          bool HasNSW = false);
+  static Constant *getNeg(Constant *C, bool HasNSW = false);
   static Constant *getNot(Constant *C);
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
@@ -1035,24 +1121,8 @@ public:
                           bool HasNSW = false);
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getAnd(Constant *C1, Constant *C2);
-  static Constant *getOr(Constant *C1, Constant *C2);
   static Constant *getXor(Constant *C1, Constant *C2);
-  static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
-  static Constant *getLShr(Constant *C1, Constant *C2, bool isExact = false);
-  static Constant *getAShr(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getSExt(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getZExt(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPTrunc(Constant *C, Type *Ty,
-                              bool OnlyIfReduced = false);
-  static Constant *getFPExtend(Constant *C, Type *Ty,
-                               bool OnlyIfReduced = false);
-  static Constant *getUIToFP(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getSIToFP(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPToUI(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPToSI(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
                                bool OnlyIfReduced = false);
   static Constant *getIntToPtr(Constant *C, Type *Ty,
@@ -1062,8 +1132,7 @@ public:
   static Constant *getAddrSpaceCast(Constant *C, Type *Ty,
                                     bool OnlyIfReduced = false);
 
-  static Constant *getNSWNeg(Constant *C) { return getNeg(C, false, true); }
-  static Constant *getNUWNeg(Constant *C) { return getNeg(C, true, false); }
+  static Constant *getNSWNeg(Constant *C) { return getNeg(C, /*HasNSW=*/true); }
 
   static Constant *getNSWAdd(Constant *C1, Constant *C2) {
     return getAdd(C1, C2, false, true);
@@ -1089,22 +1158,6 @@ public:
     return getMul(C1, C2, true, false);
   }
 
-  static Constant *getNSWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, false, true);
-  }
-
-  static Constant *getNUWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, true, false);
-  }
-
-  static Constant *getExactAShr(Constant *C1, Constant *C2) {
-    return getAShr(C1, C2, true);
-  }
-
-  static Constant *getExactLShr(Constant *C1, Constant *C2) {
-    return getLShr(C1, C2, true);
-  }
-
   /// If C is a scalar/fixed width vector of known powers of 2, then this
   /// function returns a new scalar/fixed width vector obtained from logBase2
   /// of C. Undef vector elements are set to zero.
@@ -1112,17 +1165,23 @@ public:
   static Constant *getExactLogBase2(Constant *C);
 
   /// Return the identity constant for a binary opcode.
-  /// The identity constant C is defined as X op C = X and C op X = X for every
-  /// X when the binary operation is commutative. If the binop is not
-  /// commutative, callers can acquire the operand 1 identity constant by
-  /// setting AllowRHSConstant to true. For example, any shift has a zero
-  /// identity constant for operand 1: X shift 0 = X.
-  /// If this is a fadd/fsub operation and we don't care about signed zeros,
-  /// then setting NSZ to true returns the identity +0.0 instead of -0.0.
-  /// Return nullptr if the operator does not have an identity constant.
+  /// If the binop is not commutative, callers can acquire the operand 1
+  /// identity constant by setting AllowRHSConstant to true. For example, any
+  /// shift has a zero identity constant for operand 1: X shift 0 = X. If this
+  /// is a fadd/fsub operation and we don't care about signed zeros, then
+  /// setting NSZ to true returns the identity +0.0 instead of -0.0. Return
+  /// nullptr if the operator does not have an identity constant.
   static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty,
                                     bool AllowRHSConstant = false,
                                     bool NSZ = false);
+
+  static Constant *getIntrinsicIdentity(Intrinsic::ID, Type *Ty);
+
+  /// Return the identity constant for a binary or intrinsic Instruction.
+  /// The identity constant C is defined as X op C = X and C op X = X where C
+  /// and X are the first two operands, and the operation is commutative.
+  static Constant *getIdentity(Instruction *I, Type *Ty,
+                               bool AllowRHSConstant = false, bool NSZ = false);
 
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
@@ -1142,28 +1201,11 @@ public:
   static Constant *getCast(unsigned ops, Constant *C, Type *Ty,
                            bool OnlyIfReduced = false);
 
-  // Create a ZExt or BitCast cast constant expression
-  static Constant *
-  getZExtOrBitCast(Constant *C, ///< The constant to zext or bitcast
-                   Type *Ty     ///< The type to zext or bitcast C to
-  );
-
-  // Create a SExt or BitCast cast constant expression
-  static Constant *
-  getSExtOrBitCast(Constant *C, ///< The constant to sext or bitcast
-                   Type *Ty     ///< The type to sext or bitcast C to
-  );
-
   // Create a Trunc or BitCast cast constant expression
   static Constant *
   getTruncOrBitCast(Constant *C, ///< The constant to trunc or bitcast
                     Type *Ty     ///< The type to trunc or bitcast C to
   );
-
-  /// Create either an sext, trunc or nothing, depending on whether Ty is
-  /// wider, narrower or the same as C->getType(). This only works with
-  /// integer or vector of integer types.
-  static Constant *getSExtOrTrunc(Constant *C, Type *Ty);
 
   /// Create a BitCast, AddrSpaceCast, or a PtrToInt cast constant
   /// expression.
@@ -1179,23 +1221,8 @@ public:
       Type *Ty     ///< The type to bitcast or addrspacecast C to
   );
 
-  /// Create a ZExt, Bitcast or Trunc for integer -> integer casts
-  static Constant *
-  getIntegerCast(Constant *C,  ///< The integer constant to be casted
-                 Type *Ty,     ///< The integer type to cast to
-                 bool IsSigned ///< Whether C should be treated as signed or not
-  );
-
-  /// Create a FPExt, Bitcast or FPTrunc for fp -> fp casts
-  static Constant *getFPCast(Constant *C, ///< The integer constant to be casted
-                             Type *Ty     ///< The integer type to cast to
-  );
-
   /// Return true if this is a convert constant expression
   bool isCast() const;
-
-  /// Return true if this is a compare constant expression
-  bool isCompare() const;
 
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
@@ -1204,66 +1231,53 @@ public:
   static Constant *get(unsigned Opcode, Constant *C1, Constant *C2,
                        unsigned Flags = 0, Type *OnlyIfReducedTy = nullptr);
 
-  /// Return an ICmp or FCmp comparison operator constant expression.
-  ///
-  /// \param OnlyIfReduced see \a getWithOperands() docs.
-  static Constant *getCompare(unsigned short pred, Constant *C1, Constant *C2,
-                              bool OnlyIfReduced = false);
-
-  /// get* - Return some common constants without having to
-  /// specify the full Instruction::OPCODE identifier.
-  ///
-  static Constant *getICmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
-  static Constant *getFCmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
-
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
   ///
-  /// \param InRangeIndex the inrange index if present or std::nullopt.
+  /// \param InRange the inrange range if present or std::nullopt.
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
-                   bool InBounds = false,
-                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     return getGetElementPtr(
-        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()),
-        InBounds, InRangeIndex, OnlyIfReducedTy);
+        Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()), NW,
+        InRange, OnlyIfReducedTy);
   }
   static Constant *
-  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx, bool InBounds = false,
-                   std::optional<unsigned> InRangeIndex = std::nullopt,
+  getGetElementPtr(Type *Ty, Constant *C, Constant *Idx,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, cast<Value>(Idx), InBounds, InRangeIndex,
+    return getGetElementPtr(Ty, C, cast<Value>(Idx), NW, InRange,
                             OnlyIfReducedTy);
   }
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
-                   bool InBounds = false,
-                   std::optional<unsigned> InRangeIndex = std::nullopt,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Constant *> IdxList) {
-    return getGetElementPtr(Ty, C, IdxList, true);
+    return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             Constant *Idx) {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
-    return getGetElementPtr(Ty, C, Idx, true);
+    return getGetElementPtr(Ty, C, Idx, GEPNoWrapFlags::inBounds());
   }
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
-    return getGetElementPtr(Ty, C, IdxList, true);
+    return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
 
   static Constant *getExtractElement(Constant *Vec, Constant *Idx,
@@ -1276,10 +1290,6 @@ public:
 
   /// Return the opcode at the root of this constant expression
   unsigned getOpcode() const { return getSubclassDataFromValue(); }
-
-  /// Return the ICMP or FCMP predicate value. Assert if this is not an ICMP or
-  /// FCMP constant expression.
-  unsigned getPredicate() const;
 
   /// Assert that this is a shufflevector and return the mask. See class
   /// ShuffleVectorInst for a description of the mask representation.
@@ -1315,14 +1325,13 @@ public:
                             Type *SrcTy = nullptr) const;
 
   /// Returns an Instruction which implements the same operation as this
-  /// ConstantExpr. If \p InsertBefore is not null, the new instruction is
-  /// inserted before it, otherwise it is not inserted into any basic block.
+  /// ConstantExpr. It is not inserted into any basic block.
   ///
   /// A better approach to this could be to have a constructor for Instruction
   /// which would take a ConstantExpr parameter, but that would have spread
   /// implementation details of ConstantExpr outside of Constants.cpp, which
   /// would make it harder to remove ConstantExprs altogether.
-  Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
+  Instruction *getAsInstruction() const;
 
   /// Whether creating a constant expression for this binary operator is
   /// desirable.
@@ -1331,6 +1340,12 @@ public:
   /// Whether creating a constant expression for this binary operator is
   /// supported.
   static bool isSupportedBinOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this cast is desirable.
+  static bool isDesirableCastOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this cast is supported.
+  static bool isSupportedCastOp(unsigned Opcode);
 
   /// Whether creating a constant expression for this getelementptr type is
   /// supported.

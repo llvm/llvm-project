@@ -10,6 +10,7 @@
 #include "AST.h"
 #include "HeuristicResolver.h"
 #include "support/Logger.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -257,7 +258,7 @@ public:
         Outer.add(CE->getCalleeDecl(), Flags);
       }
       void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
-        Outer.add(E->getNamedConcept(), Flags);
+        Outer.add(E->getConceptReference(), Flags);
       }
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         const Decl *D = DRE->getDecl();
@@ -346,6 +347,10 @@ public:
       }
       void VisitCXXDeleteExpr(const CXXDeleteExpr *CDE) {
         Outer.add(CDE->getOperatorDelete(), Flags);
+      }
+      void
+      VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+        Outer.add(RBO->getDecomposedForm().InnerBinOp, Flags);
       }
     };
     Visitor(*this, Flags).Visit(S);
@@ -438,9 +443,16 @@ public:
           Outer.add(TST->getAliasedType(), Flags | Rel::Underlying);
           // Don't *traverse* the alias, which would result in traversing the
           // template of the underlying type.
-          Outer.report(
-              TST->getTemplateName().getAsTemplateDecl()->getTemplatedDecl(),
-              Flags | Rel::Alias | Rel::TemplatePattern);
+
+          TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
+          // Builtin templates e.g. __make_integer_seq, __type_pack_element
+          // are such that they don't have alias *decls*. Even then, we still
+          // traverse their desugared *types* so that instantiated decls are
+          // collected.
+          if (llvm::isa<BuiltinTemplateDecl>(TD))
+            return;
+          Outer.report(TD->getTemplatedDecl(),
+                       Flags | Rel::Alias | Rel::TemplatePattern);
         }
         // specializations of template template parameters aren't instantiated
         // into decls, so they must refer to the parameter itself.
@@ -528,6 +540,10 @@ public:
         add(USD, Flags);
     }
   }
+
+  void add(const ConceptReference *CR, RelSet Flags) {
+    add(CR->getNamedConcept(), Flags);
+  }
 };
 
 } // namespace
@@ -557,6 +573,8 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(CBS->getTypeSourceInfo()->getType(), Flags);
   else if (const ObjCProtocolLoc *PL = N.get<ObjCProtocolLoc>())
     Finder.add(PL->getProtocol(), Flags);
+  else if (const ConceptReference *CR = N.get<ConceptReference>())
+    Finder.add(CR, Flags);
   return Finder.takeDecls();
 }
 
@@ -704,8 +722,23 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   {OCID->getClassInterface()}});
       Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                   OCID->getCategoryNameLoc(),
-                                  /*IsDecl=*/true,
+                                  /*IsDecl=*/false,
                                   {OCID->getCategoryDecl()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OCID->getCategoryNameLoc(),
+                                  /*IsDecl=*/true,
+                                  {OCID}});
+    }
+
+    void VisitObjCImplementationDecl(const ObjCImplementationDecl *OIMD) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OIMD->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OIMD->getClassInterface()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OIMD->getLocation(),
+                                  /*IsDecl=*/true,
+                                  {OIMD}});
     }
   };
 
@@ -722,13 +755,6 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
     const HeuristicResolver *Resolver;
     // FIXME: handle more complicated cases: more ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc> Refs;
-
-    void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
-      Refs.push_back(ReferenceLoc{E->getNestedNameSpecifierLoc(),
-                                  E->getConceptNameLoc(),
-                                  /*IsDecl=*/false,
-                                  {E->getNamedConcept()}});
-    }
 
     void VisitDeclRefExpr(const DeclRefExpr *E) {
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
@@ -1013,6 +1039,7 @@ public:
     case TemplateArgument::Pack:
     case TemplateArgument::Type:
     case TemplateArgument::Expression:
+    case TemplateArgument::StructuralValue:
       break; // Handled by VisitType and VisitExpression.
     };
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(A);
@@ -1044,15 +1071,9 @@ public:
     return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
   }
 
-  bool TraverseTypeConstraint(const TypeConstraint *TC) {
-    // We want to handle all ConceptReferences but RAV is missing a
-    // polymorphic Visit or Traverse method for it, so we handle
-    // TypeConstraints specially here.
-    Out(ReferenceLoc{TC->getNestedNameSpecifierLoc(),
-                     TC->getConceptNameLoc(),
-                     /*IsDecl=*/false,
-                     {TC->getNamedConcept()}});
-    return RecursiveASTVisitor::TraverseTypeConstraint(TC);
+  bool VisitConceptReference(const ConceptReference *CR) {
+    visitNode(DynTypedNode::create(*CR));
+    return true;
   }
 
 private:
@@ -1100,6 +1121,11 @@ private:
                            PL->getLocation(),
                            /*IsDecl=*/false,
                            {PL->getProtocol()}}};
+    if (const ConceptReference *CR = N.get<ConceptReference>())
+      return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
+                           CR->getConceptNameLoc(),
+                           /*IsDecl=*/false,
+                           {CR->getNamedConcept()}}};
 
     // We do not have location information for other nodes (QualType, etc)
     return {};
@@ -1113,7 +1139,7 @@ private:
   void reportReference(ReferenceLoc &&Ref, DynTypedNode N) {
     // Strip null targets that can arise from invalid code.
     // (This avoids having to check for null everywhere we insert)
-    llvm::erase_value(Ref.Targets, nullptr);
+    llvm::erase(Ref.Targets, nullptr);
     // Our promise is to return only references from the source code. If we lack
     // location information, skip these nodes.
     // Normally this should not happen in practice, unless there are bugs in the

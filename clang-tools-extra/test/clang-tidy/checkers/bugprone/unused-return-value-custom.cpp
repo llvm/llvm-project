@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-unused-return-value %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: bugprone-unused-return-value.CheckedFunctions, \
-// RUN:    value: "::fun;::ns::Outer::Inner::memFun;::ns::Type::staticFun;::ns::ClassTemplate::memFun;::ns::ClassTemplate::staticFun"}]}' \
+// RUN:  {bugprone-unused-return-value.CheckedFunctions: \
+// RUN:    "::fun;::ns::Outer::Inner::memFun;::ns::Type::staticFun;::ns::ClassTemplate::(mem|static)Fun"}}' \
 // RUN: --
 
 namespace std {
@@ -47,40 +47,35 @@ void fun(int);
 
 void warning() {
   fun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value returned by this function should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   (fun());
-  // CHECK-NOTES: [[@LINE-1]]:4: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:4: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:4: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
+
+  (void)fun();
+  // CHECK-MESSAGES: [[@LINE-1]]:9: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::Outer::Inner ObjA1;
   ObjA1.memFun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::AliasName::Inner ObjA2;
   ObjA2.memFun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::Derived ObjA3;
   ObjA3.memFun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::Type::staticFun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::ClassTemplate<int> ObjA4;
   ObjA4.memFun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::ClassTemplate<int>::staticFun();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
-  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 }
 
 void noWarning() {

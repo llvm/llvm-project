@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
+// UNSUPPORTED: libcpp-has-no-experimental-stop_token
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: availability-synchronization_library-missing
 
@@ -163,4 +164,6 @@ int main(int, char**) {
     ss.request_stop(); // the callbacks deletes itself. if the destructor blocks, it would be deadlock
     assert(holder.callback_ == nullptr);
   }
+
+  return 0;
 }

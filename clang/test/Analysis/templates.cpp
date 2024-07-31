@@ -31,8 +31,6 @@ int main(){
   m.I();
 }
 
-
-// <rdar://problem/11949235>
 template<class T, unsigned N>
 inline unsigned array_lengthof(T (&)[N]) {
   return N;
@@ -69,4 +67,17 @@ namespace rdar13954714 {
 
   // force instantiation
   template void blockWithStatic<true>();
+}
+
+namespace structural_value_crash {
+  constexpr char abc[] = "abc";
+
+  template <const char* in>
+  void use_template_param() {
+    const char *p = in;
+  }
+
+  void force_instantiate() {
+    use_template_param<abc>();
+  }
 }

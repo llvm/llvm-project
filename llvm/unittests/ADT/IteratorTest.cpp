@@ -274,7 +274,7 @@ TEST(FilterIteratorTest, Enumerate) {
   int A[] = {0, 1, 2, 3, 4, 5, 6};
   auto Enumerate = llvm::enumerate(A);
   SmallVector<int> Actual;
-  for (auto IndexedValue : make_filter_range(Enumerate, IsOdd))
+  for (const auto &IndexedValue : make_filter_range(Enumerate, IsOdd))
     Actual.push_back(IndexedValue.value());
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
 }
@@ -393,6 +393,21 @@ TEST(PointerIterator, Range) {
   int I = 0;
   for (int *P : make_pointer_range(A))
     EXPECT_EQ(A + I++, P);
+}
+
+namespace rbegin_detail {
+struct WithFreeRBegin {
+  int data[3] = {42, 43, 44};
+};
+
+auto rbegin(const WithFreeRBegin &X) { return std::rbegin(X.data); }
+auto rend(const WithFreeRBegin &X) { return std::rend(X.data); }
+} // namespace rbegin_detail
+
+TEST(ReverseTest, ADL) {
+  // Check that we can find the rbegin/rend functions via ADL.
+  rbegin_detail::WithFreeRBegin Foo;
+  EXPECT_THAT(reverse(Foo), ElementsAre(44, 43, 42));
 }
 
 TEST(ZipIteratorTest, Basic) {

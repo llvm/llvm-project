@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
@@ -20,17 +18,17 @@
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=RDC %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address -fgpu-sanitize \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm-invalid \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=FAIL %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
 // RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fgpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=XNACK %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
 // RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fgpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=XNACKNEG %s
@@ -39,12 +37,12 @@
 // Sanitizer should be disabled for all GPU's and there should be no warnings about unsupported
 // GPU.
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
 // RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fno-gpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NOGPU %s
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
 // RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fno-gpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NOGPUNEG %s

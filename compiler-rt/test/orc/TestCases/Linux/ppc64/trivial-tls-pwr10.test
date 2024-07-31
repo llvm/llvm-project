@@ -1,0 +1,9 @@
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: %clangxx -fPIC -c -o %t/main.o %S/Inputs/trivial-tls-main.cpp
+// RUN: %clangxx -fPIC -c -o %t/pwr10.o %S/Inputs/trivial-tls-pwr10.cpp
+// RUN: %llvm_jitlink %t/main.o %t/pwr10.o
+// FIXME: We separate pwr10 code from main object file due to currrent
+// implementation only supports one PLT stub for the same symbol.
+// For example, `bl __tls_get_addr` in one object file has only one PLT stub,
+// however we need another different PLT stub for `bl __tls_get_addr@notoc`
+// whose target symbol is also `__tls_get_addr`.

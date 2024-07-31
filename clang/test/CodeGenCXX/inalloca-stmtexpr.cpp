@@ -47,5 +47,5 @@ out:;
 // CHECK: br i1
 // CHECK: br label %out
 // CHECK: call void @"?inalloca@@YAXUFoo@@0@Z"(ptr inalloca(<{ %struct.Foo, %struct.Foo }>) %{{.*}})
-// CHECK: call void @llvm.stackrestore(ptr %inalloca.save)
+// CHECK: call void @llvm.stackrestore.p0(ptr %inalloca.save)
 // CHECK: out:

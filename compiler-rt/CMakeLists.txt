@@ -4,8 +4,11 @@
 # based on the ability of the host toolchain to target various platforms.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
 
-set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
@@ -34,15 +37,12 @@ include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 include(CMakeDependentOption)
+include(GetDarwinLinkerVersion)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)
 mark_as_advanced(COMPILER_RT_DISABLE_AARCH64_FMV)
-option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON)
-mark_as_advanced(COMPILER_RT_BUILD_CRT)
-option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" ON)
-mark_as_advanced(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY)
 option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
@@ -51,6 +51,8 @@ option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
 mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
 option(COMPILER_RT_BUILD_PROFILE "Build profile runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_PROFILE)
+option(COMPILER_RT_BUILD_CTX_PROFILE "Build ctx profile runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_CTX_PROFILE)
 option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
@@ -89,7 +91,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
     # under the appropriate folder in an IDE.
-    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "LLVM/Tablegenning")
   endif()
 
   find_package(Python3 COMPONENTS Interpreter)
@@ -126,20 +128,6 @@ if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
   if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^arm")
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")
     CHECK_SYMBOL_EXISTS (__thumb__ "" COMPILER_RT_ARM_THUMB)
-  endif()
-endif()
-if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^mips")
-  CHECK_SYMBOL_EXISTS (_MIPS_ARCH_MIPS32R6 "" COMPILER_RT_MIPS32R6)
-  CHECK_SYMBOL_EXISTS (_MIPS_ARCH_MIPS64R6 "" COMPILER_RT_MIPS64R6)
-  CHECK_SYMBOL_EXISTS (__mips64 "" COMPILER_RT_MIPS_64)
-  CHECK_SYMBOL_EXISTS (__MIPSEL__ "" COMPILER_RT_MIPS_EL)
-  if ("${COMPILER_RT_MIPS_64}")
-    set(COMPILER_RT_DEFAULT_TARGET_ARCH "mips64")
-  else()
-    set(COMPILER_RT_DEFAULT_TARGET_ARCH "mips")
-  endif()
-  if ("${COMPILER_RT_MIPS_EL}")
-    set(COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}el")
   endif()
 endif()
 if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*android.*")
@@ -391,20 +379,27 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-  # Replace the /M[DT][d] flags with /MT, and strip any definitions of _DEBUG,
-  # which cause definition mismatches at link time.
   # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
-  if(COMPILER_RT_HAS_MT_FLAG)
-    foreach(flag_var
-      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-      CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-      string(REGEX REPLACE "/M[DT]d" "/MT" ${flag_var} "${${flag_var}}")
-      string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-      string(REGEX REPLACE "/D_DEBUG" "" ${flag_var} "${${flag_var}}")
-    endforeach()
-  endif()
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+
+  # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
+  # Since we're using CMAKE_MSVC_RUNTIME_LIBRARY (CMP0091 set to NEW),
+  # these options shouldn't be included in these flags variables. However,
+  # package managers that don't know which mechanism is used for passing
+  # CRT choice flags might be passing them both ways - which leads to
+  # duplicate CRT choice options. Thus make sure to strip out these flags
+  # from these variables, when we're forcing a CRT choice other than what
+  # the user requested here.
+  foreach(flag_var
+    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+    CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+    CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REGEX REPLACE "[/-]M[DT]d" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]MD" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]D_DEBUG" "" ${flag_var} "${${flag_var}}")
+  endforeach()
+
   append_list_if(COMPILER_RT_HAS_Oy_FLAG /Oy- SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_GS_FLAG /GS- SANITIZER_COMMON_CFLAGS)
 
@@ -451,6 +446,15 @@ if(FUCHSIA OR UNIX)
   set(SANITIZER_USE_SYMBOLS TRUE)
 else()
   set(SANITIZER_USE_SYMBOLS FALSE)
+endif()
+
+# Get the linker version while configuring compiler-rt and explicitly pass it
+# in cflags during testing. This fixes the compiler/linker version mismatch
+# issue when running a clang built with a newer Xcode in an older Xcode
+set(COMPILER_RT_DARWIN_LINKER_VERSION)
+if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+  get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
+  message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
 endif()
 
 # Build sanitizer runtimes with debug info.
@@ -511,7 +515,10 @@ append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 #
 # Note that this type of issue was discovered with lsan, but can apply to other
 # sanitizers.
-append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+# Disable PowerPC because of https://github.com/llvm/llvm-project/issues/84654.
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
+  append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
+endif()
 
 # Set common link flags.
 # TODO: We should consider using the same model as libc++, that is use either
@@ -579,6 +586,25 @@ string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
 # and linking of unittests.
 string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
 set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
+
+option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
+  "When set to ON and testing in a standalone build, test the runtime \
+  libraries built by this standalone build rather than the runtime libraries \
+  shipped with the compiler (used for testing). When set to OFF and testing \
+  in a standalone build, test the runtime libraries shipped with the compiler \
+  (used for testing). This option has no effect if the compiler and this \
+  build are configured to use the same runtime library path."
+  ON)
+if (COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
+  # Ensure that the unit tests can find the sanitizer headers prior to installation.
+  list(APPEND COMPILER_RT_UNITTEST_CFLAGS "-I${CMAKE_CURRENT_LIST_DIR}/include")
+  # Ensure that unit tests link against the just-built runtime libraries instead
+  # of the ones bundled with the compiler by overriding the resource directory.
+  #
+  if ("${COMPILER_RT_TEST_COMPILER_ID}" MATCHES "Clang")
+    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${COMPILER_RT_OUTPUT_DIR}")
+  endif()
+endif()
 
 if(COMPILER_RT_USE_LLVM_UNWINDER)
   # We're linking directly against the libunwind that we're building so don't
@@ -687,9 +713,24 @@ endif()
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WSUGGEST_OVERRIDE_FLAG -Wno-suggest-override COMPILER_RT_UNITTEST_CFLAGS)
-
-if(MSVC)
-  # gtest use a lot of stuff marked as deprecated on Windows.
+# Detect if the compiler toolchain includes gcc-toolset-12.
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+                  RESULT_VARIABLE compiler_info_rc
+                  OUTPUT_VARIABLE compiler_info
+                  ERROR_VARIABLE compiler_info)
+  if(compiler_info MATCHES ".*gcc-toolset-12.*")
+    set(USING_GCC_TOOLSET_12 TRUE)
+  endif()
+endif()
+if(MSVC OR (LINUX AND DEFINED USING_GCC_TOOLSET_12 AND
+            CMAKE_CXX_STANDARD EQUAL 17))
+  # gtest use a lot of stuff marked as deprecated on Windows or if using
+  # gcc-toolset-12 in the compiler toolchain on Linux; all of the
+  # deprecated declarations in gcc-toolset-12 used in Google Tests have been
+  # observed to be _GLIBCXX17_DEPRECATED and should go away once
+  # CMAKE_CXX_STANDARD is greater than 17.
   list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
 endif()
 
@@ -738,13 +779,15 @@ if(COMPILER_RT_USE_LIBCXX)
   endif()
 endif()
 
-set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
-if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
-  set(COMPILER_RT_HAS_LLD TRUE)
-else()
-  set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/../lld)
-  if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
+if (LINKER_IS_LLD OR LLVM_TOOL_LLD_BUILD)
+  set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
+  if(EXISTS ${COMPILER_RT_LLD_PATH}/)
     set(COMPILER_RT_HAS_LLD TRUE)
+  else()
+    set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/../lld)
+    if(EXISTS ${COMPILER_RT_LLD_PATH}/)
+      set(COMPILER_RT_HAS_LLD TRUE)
+    endif()
   endif()
 endif()
 
@@ -754,14 +797,19 @@ if(ANDROID)
   append_list_if(COMPILER_RT_HAS_FUSE_LD_LLD_FLAG -fuse-ld=lld SANITIZER_COMMON_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LLD -fuse-ld=lld COMPILER_RT_UNITTEST_LINK_FLAGS)
 endif()
+if(${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES sparc)
+  # lld has several bugs/limitations on SPARC, so disable (Issue #100320).
+  set(COMPILER_RT_HAS_LLD FALSE)
+endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)
+
+option(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER "Build Compiler RT linked with in LLVM symbolizer" OFF)
+mark_as_advanced(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
 
 add_subdirectory(lib)
 
 if(COMPILER_RT_INCLUDE_TESTS)
-  add_subdirectory(unittests)
-  add_subdirectory(test)
   # Don't build llvm-lit for runtimes-build, it will clean up map_config.
   if (COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
     # If we have a valid source tree, generate llvm-lit into the bin directory.
@@ -771,11 +819,17 @@ if(COMPILER_RT_INCLUDE_TESTS)
       # Needed for lit support in standalone builds.
       include(AddLLVM)
       add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+      # Ensure that the testsuite uses the local lit rather than
+      # LLVM_INSTALL_DIR/bin/llvm-lit (which probably does not exist).
+      get_llvm_lit_path(_base_dir _file_name)
+      set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
     elseif(NOT EXISTS ${LLVM_EXTERNAL_LIT})
       message(WARNING "Could not find LLVM source directory and LLVM_EXTERNAL_LIT does not"
                        "point to a valid file.  You will not be able to run tests.")
     endif()
   endif()
+  add_subdirectory(unittests)
+  add_subdirectory(test)
 endif()
 
 add_subdirectory(tools)

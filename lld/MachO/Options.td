@@ -1,5 +1,10 @@
 include "llvm/Option/OptParser.td"
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 // Flags that lld/MachO understands but ld64 doesn't. These take
 // '--' instead of '-' and use dashes instead of underscores, so
 // they don't collide with the ld64 compat options.
@@ -80,6 +85,9 @@ def icf_eq: Joined<["--"], "icf=">,
     HelpText<"Set level for identical code folding (default: none)">,
     MetaVarName<"[none,safe,all]">,
     Group<grp_lld>;
+def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
+    HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
+    Group<grp_lld>;
 def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
@@ -103,6 +111,12 @@ def no_warn_dylib_install_name: Flag<["--"], "no-warn-dylib-install-name">,
 def warn_dylib_install_name: Flag<["--"], "warn-dylib-install-name">,
     HelpText<"Warn on -install_name if -dylib is not passed">,
     Group<grp_lld>;
+def warn_duplicate_rpath: Flag<["--"], "warn-duplicate-rpath">,
+    HelpText<"Warn if the same -rpath is specified multiple times (default)">,
+    Group<grp_lld>;
+def no_warn_duplicate_rpath: Flag<["--"], "no-warn-duplicate-rpath">,
+    HelpText<"Do not warn if the same -rpath is specified multiple times">,
+    Group<grp_lld>;
 def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
     HelpText<"Reorder sections with call graph profile (default)">,
     Group<grp_lld>;
@@ -111,6 +125,16 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
     Group<grp_lld>;
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
+    Group<grp_lld>;
+def irpgo_profile_sort: Joined<["--"], "irpgo-profile-sort=">,
+    MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
+    Group<grp_lld>;
+def compression_sort: Joined<["--"], "compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
+    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
     Group<grp_lld>;
 def ignore_auto_link_option : Separate<["--"], "ignore-auto-link-option">,
     Group<grp_lld>;
@@ -124,12 +148,24 @@ def strict_auto_link : Flag<["--"], "strict-auto-link">,
 def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
     HelpText<"Check for conflicts between category & class methods">,
     Group<grp_lld>;
+def objc_category_merging : Flag<["-"], "objc_category_merging">,
+    HelpText<"Merge Objective-C categories that share the same base class">,
+    Group<grp_lld>;
+def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
+    HelpText<"Do not merge Objective-C categories">,
+    Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
-    HelpText<"Perform context senstive PGO instrumentation">, Group<grp_lld>;
+    HelpText<"Perform context sensitive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
     HelpText<"Context sensitive profile file path">, Group<grp_lld>;
+defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
+  "turn on warnings about profile cfg mismatch (default)",
+  "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
+defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
+  "Warn on missing object files referenced by thin archives (default)",
+  "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -369,7 +405,7 @@ def grp_version : OptionGroup<"version">, HelpText<"VERSION TARGETING">;
 
 def platform_version : MultiArg<["-"], "platform_version", 3>,
     MetaVarName<"<platform> <min_version> <sdk_version>">,
-    HelpText<"Platform (e.g., macos, ios, tvos, watchos, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, driverkit) and version numbers">,
+    HelpText<"Platform (e.g., macos, ios, tvos, watchos, xros, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, xros-sim, driverkit) and version numbers">,
     Group<grp_version>;
 def sdk_version : Separate<["-"], "sdk_version">,
     HelpText<"This option is undocumented in ld64">,
@@ -791,7 +827,6 @@ def allow_sub_type_mismatches : Flag<["-"], "allow_sub_type_mismatches">,
     Group<grp_rare>;
 def no_uuid : Flag<["-"], "no_uuid">,
     HelpText<"Do not generate the LC_UUID load command">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def root_safe : Flag<["-"], "root_safe">,
     HelpText<"Set the MH_ROOT_SAFE bit in the mach-o header">,
@@ -958,10 +993,6 @@ def interposable_list : Separate<["-"], "interposable_list">,
     Group<grp_rare>;
 def no_function_starts : Flag<["-"], "no_function_starts">,
     HelpText<"Do not create table of function start addresses">,
-    Group<grp_rare>;
-def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
-    HelpText<"Do not merge Objective-C categories into their classes">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def object_path_lto : Separate<["-"], "object_path_lto">,
     MetaVarName<"<path>">,
@@ -1275,6 +1306,12 @@ def fixup_chains_section : Flag<["-"], "fixup_chains_section">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
+def objc_relative_method_lists : Flag<["-"], "objc_relative_method_lists">,
+    HelpText<"Emit relative method lists (more compact representation)">,
+    Group<grp_undocumented>;
+def no_objc_relative_method_lists : Flag<["-"], "no_objc_relative_method_lists">,
+    HelpText<"Don't emit relative method lists (use traditional representation)">,
+    Group<grp_undocumented>;
 def flto_codegen_only : Flag<["-"], "flto-codegen-only">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
@@ -1396,5 +1433,11 @@ def objc_abi_version : Separate<["-"], "objc_abi_version">,
     Group<grp_ignored_silently>;
 def debug_variant : Flag<["-"], "debug_variant">,
     HelpText<"Do not warn about issues that are only problems for binaries shipping to customers.">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;
+
+// NOTE: This flag should be respected if -warn_duplicate_libraries is ever implemented.
+def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
+    HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;

@@ -33,12 +33,12 @@ from UpdateTestChecks import common
 MIR_FUNC_NAME_RE = re.compile(r" *name: *(?P<func>[A-Za-z0-9_.-]+)")
 MIR_BODY_BEGIN_RE = re.compile(r" *body: *\|")
 MIR_BASIC_BLOCK_RE = re.compile(r" *bb\.[0-9]+.*:$")
-VREG_RE = re.compile(r"(%[0-9]+)(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?")
+VREG_RE = re.compile(r"(%[0-9]+)(?:\.[a-z0-9_]+)?(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?")
 MI_FLAGS_STR = (
     r"(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn "
     r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge )*"
 )
-VREG_DEF_FLAGS_STR = r"(?:dead )*"
+VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
 VREG_DEF_RE = re.compile(
     r"^ *(?P<vregs>{2}{0}(?:, {2}{0})*) = "
     r"{1}(?P<opcode>[A-Zt][A-Za-z0-9_]+)".format(
@@ -204,8 +204,11 @@ def build_function_info_dictionary(
             m = VREG_DEF_RE.match(func_line)
             if m:
                 for vreg in VREG_RE.finditer(m.group("vregs")):
-                    name = mangle_vreg(m.group("opcode"), vreg_map.values())
-                    vreg_map[vreg.group(1)] = name
+                    if vreg.group(1) in vreg_map:
+                        name = vreg_map[vreg.group(1)]
+                    else:
+                        name = mangle_vreg(m.group("opcode"), vreg_map.values())
+                        vreg_map[vreg.group(1)] = name
                     func_line = func_line.replace(
                         vreg.group(1), "[[{}:%[0-9]+]]".format(name), 1
                     )
@@ -235,9 +238,10 @@ def add_checks_for_function(
                 break
             if not func_dict[prefix][func_name]:
                 continue
-            # if printed_prefixes:
-            #     # Add some space between different check prefixes.
-            #     output_lines.append('')
+            if printed_prefixes:
+                # Add some space between different check prefixes.
+                indent = len(output_lines[-1]) - len(output_lines[-1].lstrip(" "))
+                output_lines.append(" "*indent + ";")
             printed_prefixes.add(prefix)
             log("Adding {} lines for {}".format(prefix, func_name), args.verbose)
             add_check_lines(
@@ -333,9 +337,9 @@ def mangle_vreg(opcode, current_names):
 
 
 def should_add_line_to_output(input_line, prefix_set):
-    # Skip any check lines that we're handling.
+    # Skip any check lines that we're handling as well as comments
     m = common.CHECK_RE.match(input_line)
-    if m and m.group(1) in prefix_set:
+    if (m and m.group(1) in prefix_set) or re.search("^[ \t]*;", input_line):
         return False
     return True
 

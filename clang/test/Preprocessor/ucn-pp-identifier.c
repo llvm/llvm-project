@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -verify=expected,ext -Wundef -DTRIGRAPHS=1
+// RUN: %clang_cc1 %s -fsyntax-only -std=c23 -pedantic -verify=expected,ext -Wundef -ftrigraphs -DTRIGRAPHS=1
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -fno-trigraphs
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++23 -pedantic -ftrigraphs -DTRIGRAPHS=1 -verify=expected,cxx23 -Wundef -Wpre-c++23-compat
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -ftrigraphs -DTRIGRAPHS=1
@@ -40,7 +41,8 @@
                    // ext-warning {{extension}} cxx23-warning {{before C++23}}
 #define \N{WASTEBASKET} // expected-error {{macro name must be an identifier}} \
                         // ext-warning {{extension}} cxx23-warning {{before C++23}}
-#define a\u0024
+#define a\u0024a  // expected-error {{character '$' cannot be specified by a universal character name}} \
+                  // expected-warning {{requires whitespace after the macro name}}
 
 #if \u0110 // expected-warning {{is not defined, evaluates to 0}}
 #endif
@@ -112,7 +114,7 @@ C 1
 #define capital_u_\U00FC
 // expected-warning@-1 {{incomplete universal character name}} expected-note@-1 {{did you mean to use '\u'?}} expected-warning@-1 {{whitespace}}
 // CHECK: note: did you mean to use '\u'?
-// CHECK-NEXT: {{^  112 | #define capital_u_\U00FC}}
+// CHECK-NEXT: {{^  .* | #define capital_u_\U00FC}}
 // CHECK-NEXT: {{^      |                    \^}}
 // CHECK-NEXT: {{^      |                    u}}
 
@@ -155,5 +157,8 @@ int a\N{LATIN CAPITAL LETTER A WITH GRAVE??>; // expected-warning {{trigraph con
 int a\N{LATIN CAPITAL LETTER A WITH GRAVE??>;
 // expected-warning@-1 {{trigraph ignored}}\
 // expected-warning@-1 {{incomplete}}\
-// expected-error@-1 {{expected ';' after top level declarator}}
+// expected-error@-1 {{expected unqualified-id}}
 #endif
+
+// GH64161
+int A\N{LEFT-TO-RIGHT OVERRIDE}; // expected-error {{character <U+202D> not allowed in an identifier}}

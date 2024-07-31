@@ -1,18 +1,21 @@
 #include "test/UnitTest/TestLogger.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h" // write_to_stderr
-#include "src/__support/UInt128.h"
+#include "src/__support/OSUtil/io.h"               // write_to_stderr
+#include "src/__support/big_int.h"                 // is_big_int
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/uint128.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // cpp::string_view specialization
 template <>
 TestLogger &TestLogger::operator<< <cpp::string_view>(cpp::string_view str) {
-  __llvm_libc::write_to_stderr(str);
+  LIBC_NAMESPACE::write_to_stderr(str);
   return *this;
 }
 
@@ -47,12 +50,12 @@ template <> TestLogger &TestLogger::operator<<(void *addr) {
 }
 
 template <typename T> TestLogger &TestLogger::operator<<(T t) {
-  if constexpr (cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
-                sizeof(T) > sizeof(uint64_t)) {
+  if constexpr (is_big_int_v<T> ||
+                (cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
+                 (sizeof(T) > sizeof(uint64_t)))) {
     static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
-    char buf[IntegerToString::hex_bufsize<T>()];
-    IntegerToString::hex(t, buf, false);
-    return *this << "0x" << cpp::string_view(buf, sizeof(buf));
+    const IntegerToString<T, radix::Hex::WithPrefix> buffer(t);
+    return *this << buffer.view();
   } else {
     return *this << cpp::to_string(t);
   }
@@ -69,19 +72,19 @@ template TestLogger &TestLogger::operator<< <unsigned short>(unsigned short);
 template TestLogger &TestLogger::operator<< <unsigned int>(unsigned int);
 template TestLogger &TestLogger::operator<< <unsigned long>(unsigned long);
 template TestLogger &
-TestLogger::operator<< <unsigned long long>(unsigned long long);
+    TestLogger::operator<< <unsigned long long>(unsigned long long);
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <__uint128_t>(__uint128_t);
-#endif
-template TestLogger &TestLogger::operator<< <cpp::UInt<128>>(cpp::UInt<128>);
-template TestLogger &TestLogger::operator<< <cpp::UInt<192>>(cpp::UInt<192>);
-template TestLogger &TestLogger::operator<< <cpp::UInt<256>>(cpp::UInt<256>);
-template TestLogger &TestLogger::operator<< <cpp::UInt<320>>(cpp::UInt<320>);
+#endif // LIBC_TYPES_HAS_INT128
+template TestLogger &TestLogger::operator<< <UInt<128>>(UInt<128>);
+template TestLogger &TestLogger::operator<< <UInt<192>>(UInt<192>);
+template TestLogger &TestLogger::operator<< <UInt<256>>(UInt<256>);
+template TestLogger &TestLogger::operator<< <UInt<320>>(UInt<320>);
 
 // TODO: Add floating point formatting once it's supported by StringStream.
 
 TestLogger tlog;
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

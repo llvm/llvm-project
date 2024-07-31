@@ -1,4 +1,5 @@
-add_mlir_library(
+# Outside examples, this should be `add_mlir_library`.
+add_mlir_example_library(
   # Library called MyExtension.
   MyExtensionCh3
 
@@ -14,7 +15,7 @@ add_mlir_library(
   MyExtensionCh3IncGen
 
   # Link in the transform dialect, an all generated dialects.
-  LINK_LIBS PUBLIC
+  LINK_LIBS PRIVATE
   MLIRTransformDialect
   MLIRFuncDialect
   MLIRSCFDialect

@@ -33,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
-#include <list>
 #include <map>
 #include <set>
 #include <sstream>
@@ -220,11 +219,19 @@ class ProfiledBinary {
   // A map of mapping function name to BinaryFunction info.
   std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
 
+  // Lookup BinaryFunctions using the function name's MD5 hash. Needed if the
+  // profile is using MD5.
+  std::unordered_map<uint64_t, BinaryFunction *> HashBinaryFunctions;
+
   // A list of binary functions that have samples.
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
   // GUID to Elf symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // These maps are for temporary use of warning diagnosis.
+  DenseSet<int64_t> AddrsWithMultipleSymbols;
+  DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
 
   // Start address to Elf symbol GUID map
   std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
@@ -284,16 +291,23 @@ class ProfiledBinary {
   // Whether we need to symbolize all instructions to get function context size.
   bool TrackFuncContextSize = false;
 
+  // Whether this is a kernel image;
+  bool IsKernel = false;
+
   // Indicate if the base loading address is parsed from the mmap event or uses
   // the preferred address
   bool IsLoadedByMMap = false;
   // Use to avoid redundant warning.
   bool MissingMMapWarned = false;
 
-  void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
+  bool IsCOFF = false;
+
+  void setPreferredTextSegmentAddresses(const ObjectFile *O);
 
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+                                        StringRef FileName);
+  void setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
                                         StringRef FileName);
 
   void checkPseudoProbe(const ELFObjectFileBase *Obj);
@@ -301,11 +315,11 @@ class ProfiledBinary {
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
   void
-  checkUseFSDiscriminator(const ELFObjectFileBase *Obj,
+  checkUseFSDiscriminator(const ObjectFile *Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols);
 
   // Set up disassembler and related components.
-  void setUpDisassembler(const ELFObjectFileBase *Obj);
+  void setUpDisassembler(const ObjectFile *Obj);
   symbolize::LLVMSymbolizer::Options getSymbolizerOpts() const;
 
   // Load debug info of subprograms from DWARF section.
@@ -326,7 +340,7 @@ class ProfiledBinary {
   void warnNoFuncEntry();
 
   /// Dissassemble the text section and build various address maps.
-  void disassemble(const ELFObjectFileBase *O);
+  void disassemble(const ObjectFile *O);
 
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
@@ -354,6 +368,8 @@ public:
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
+
+  bool isCOFF() const { return IsCOFF; }
 
   // Canonicalize to use preferred load address as base address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {
@@ -415,6 +431,14 @@ public:
 
   bool usePseudoProbes() const { return UsePseudoProbes; }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
+  bool isKernel() const { return IsKernel; }
+
+  static bool isKernelImageName(StringRef BinaryName) {
+    return BinaryName == "[kernel.kallsyms]" ||
+           BinaryName == "[kernel.kallsyms]_stext" ||
+           BinaryName == "[kernel.kallsyms]_text";
+  }
+
   // Get the index in CodeAddressVec for the address
   // As we might get an address which is not the code
   // here it would round to the next valid code address by
@@ -476,12 +500,18 @@ public:
   void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
     ProfiledFunctions = Funcs;
   }
-
-  BinaryFunction *getBinaryFunction(StringRef FName) {
-    auto I = BinaryFunctions.find(FName.str());
-    if (I == BinaryFunctions.end())
+  
+  BinaryFunction *getBinaryFunction(FunctionId FName) {
+    if (FName.isStringRef()) {
+      auto I = BinaryFunctions.find(FName.str());
+      if (I == BinaryFunctions.end())
+        return nullptr;
+      return &I->second;
+    }
+    auto I = HashBinaryFunctions.find(FName.getHashCode());
+    if (I == HashBinaryFunctions.end())
       return nullptr;
-    return &I->second;
+    return I->second;
   }
 
   uint32_t getFuncSizeForContext(const ContextTrieNode *ContextNode) {
@@ -519,7 +549,7 @@ public:
 
   void flushSymbolizer() { Symbolizer.reset(); }
 
-  MissingFrameInferrer* getMissingContextInferrer() {
+  MissingFrameInferrer *getMissingContextInferrer() {
     return MissingContextInferrer.get();
   }
 
@@ -546,7 +576,7 @@ public:
   void getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
                                 SampleContextFrameVector &InlineContextStack,
                                 bool IncludeLeaf = false) const {
-    SmallVector<MCPseduoProbeFrameLocation, 16> ProbeInlineContext;
+    SmallVector<MCPseudoProbeFrameLocation, 16> ProbeInlineContext;
     ProbeDecoder.getInlineContextForProbe(Probe, ProbeInlineContext,
                                           IncludeLeaf);
     for (uint32_t I = 0; I < ProbeInlineContext.size(); I++) {
@@ -556,7 +586,7 @@ public:
         InlineContextStack.clear();
         continue;
       }
-      InlineContextStack.emplace_back(Callsite.first,
+      InlineContextStack.emplace_back(FunctionId(Callsite.first),
                                       LineLocation(Callsite.second, 0));
     }
   }

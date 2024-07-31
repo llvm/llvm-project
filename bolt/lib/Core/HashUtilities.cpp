@@ -12,20 +12,11 @@
 
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/BinaryContext.h"
-#include "bolt/Core/BinaryFunction.h"
+#include "bolt/Utils/NameResolver.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 namespace bolt {
-
-/// Hashing a 64-bit integer to a 16-bit one.
-uint16_t hash_64_to_16(const uint64_t Hash) {
-  uint16_t Res = (uint16_t)(Hash & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 16) & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 32) & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 48) & 0xFFFF);
-  return Res;
-}
 
 std::string hashInteger(uint64_t Value) {
   std::string HashString;
@@ -127,6 +118,86 @@ std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
     for (const MCOperand &Op : MCPlus::primeOperands(Inst))
       HashString.append(OperandHashFunc(Op));
   }
+  return HashString;
+}
+
+/// A "loose" hash of a basic block to use with the stale profile matching. The
+/// computed value will be the same for blocks with minor changes (such as
+/// reordering of instructions or using different operands) but may result in
+/// collisions that need to be resolved by a stronger hashing.
+std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
+  // The hash is computed by creating a string of all lexicographically ordered
+  // instruction opcodes, which is then hashed with std::hash.
+  std::set<std::string> Opcodes;
+  for (const MCInst &Inst : BB) {
+    // Skip pseudo instructions and nops.
+    if (BC.MIB->isPseudo(Inst) || BC.MIB->isNoop(Inst))
+      continue;
+
+    // Ignore unconditional jumps, as they can be added / removed as a result
+    // of basic block reordering.
+    if (BC.MIB->isUnconditionalBranch(Inst))
+      continue;
+
+    // Do not distinguish different types of conditional jumps.
+    if (BC.MIB->isConditionalBranch(Inst)) {
+      Opcodes.insert("JMP");
+      continue;
+    }
+
+    std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
+    llvm::erase_if(Mnemonic, [](unsigned char ch) { return std::isspace(ch); });
+    Opcodes.insert(Mnemonic);
+  }
+
+  std::string HashString;
+  for (const std::string &Opcode : Opcodes)
+    HashString.append(Opcode);
+  return HashString;
+}
+
+/// An even looser hash level relative to $ hashBlockLoose to use with stale
+/// profile matching, composed of the names of a block's called functions in
+/// lexicographic order.
+std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
+  // The hash is computed by creating a string of all lexicographically ordered
+  // called function names.
+  std::vector<std::string> FunctionNames;
+  for (const MCInst &Instr : BB) {
+    // Skip non-call instructions.
+    if (!BC.MIB->isCall(Instr))
+      continue;
+    const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+    if (!CallSymbol)
+      continue;
+    FunctionNames.push_back(std::string(CallSymbol->getName()));
+  }
+  std::sort(FunctionNames.begin(), FunctionNames.end());
+  std::string HashString;
+  for (const std::string &FunctionName : FunctionNames)
+    HashString.append(FunctionName);
+
+  return HashString;
+}
+
+/// The same as the $hashBlockCalls function, but for profiled functions.
+std::string
+hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>
+                   &IdToYamlFunction,
+               const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+  std::vector<std::string> FunctionNames;
+  for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
+    auto It = IdToYamlFunction.find(CallSiteInfo.DestId);
+    if (It == IdToYamlFunction.end())
+      continue;
+    StringRef Name = NameResolver::dropNumNames(It->second->Name);
+    FunctionNames.push_back(std::string(Name));
+  }
+  std::sort(FunctionNames.begin(), FunctionNames.end());
+  std::string HashString;
+  for (const std::string &FunctionName : FunctionNames)
+    HashString.append(FunctionName);
+
   return HashString;
 }
 

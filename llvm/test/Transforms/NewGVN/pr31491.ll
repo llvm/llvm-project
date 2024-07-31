@@ -7,13 +7,13 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define internal i32 @pr31491() {
 ; CHECK-LABEL: @pr31491(
 ; CHECK-NEXT:  bb5:
-; CHECK-NEXT:    br label %bb7
+; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[TMP:%.*]]11, %bb10 ], [ undef, %bb5 ]
-; CHECK-NEXT:    br label %bb10
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[TMP11:%.*]], [[BB10:%.*]] ], [ undef, [[BB5:%.*]] ]
+; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call ptr @patatino(ptr [[TMP]])
-; CHECK-NEXT:    br label %bb7
+; CHECK-NEXT:    [[TMP11]] = tail call ptr @patatino(ptr [[TMP]])
+; CHECK-NEXT:    br label [[BB7]]
 ;
 bb5:
   br label %bb7

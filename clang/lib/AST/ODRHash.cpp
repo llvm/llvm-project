@@ -146,10 +146,17 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::Template:
     AddDecl(Name.getAsTemplateDecl());
     break;
+  case TemplateName::QualifiedTemplate: {
+    QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
+    if (NestedNameSpecifier *NNS = QTN->getQualifier())
+      AddNestedNameSpecifier(NNS);
+    AddBoolean(QTN->hasTemplateKeyword());
+    AddTemplateName(QTN->getUnderlyingTemplate());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
@@ -180,6 +187,10 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       TA.getAsIntegral().Profile(ID);
       break;
     }
+    case TemplateArgument::StructuralValue:
+      AddQualType(TA.getStructuralValueType());
+      AddStructuralValue(TA.getAsStructuralValue());
+      break;
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       AddTemplateName(TA.getAsTemplateOrTemplatePattern());
@@ -240,7 +251,7 @@ unsigned ODRHash::CalculateHash() {
 
   assert(I == Bools.rend());
   Bools.clear();
-  return ID.ComputeHash();
+  return ID.computeStableHash();
 }
 
 namespace {
@@ -295,9 +306,9 @@ public:
   }
 
   void VisitValueDecl(const ValueDecl *D) {
-    if (!isa<FunctionDecl>(D)) {
-      AddQualType(D->getType());
-    }
+    if (auto *DD = dyn_cast<DeclaratorDecl>(D); DD && DD->getTypeSourceInfo())
+      AddQualType(DD->getTypeSourceInfo()->getType());
+
     Inherited::VisitValueDecl(D);
   }
 
@@ -351,7 +362,7 @@ public:
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     ID.AddInteger(D->getPropertyAttributes());
     ID.AddInteger(D->getPropertyImplementation());
-    AddQualType(D->getType());
+    AddQualType(D->getTypeSourceInfo()->getType());
     AddDecl(D);
 
     Inherited::VisitObjCPropertyDecl(D);
@@ -373,30 +384,30 @@ public:
   void VisitObjCMethodDecl(const ObjCMethodDecl *Method) {
     ID.AddInteger(Method->getDeclKind());
     Hash.AddBoolean(Method->isInstanceMethod()); // false if class method
-    Hash.AddBoolean(Method->isPropertyAccessor());
     Hash.AddBoolean(Method->isVariadic());
     Hash.AddBoolean(Method->isSynthesizedAccessorStub());
     Hash.AddBoolean(Method->isDefined());
-    Hash.AddBoolean(Method->isOverriding());
     Hash.AddBoolean(Method->isDirectMethod());
     Hash.AddBoolean(Method->isThisDeclarationADesignatedInitializer());
     Hash.AddBoolean(Method->hasSkippedBody());
 
-    ID.AddInteger(Method->getImplementationControl());
+    ID.AddInteger(llvm::to_underlying(Method->getImplementationControl()));
     ID.AddInteger(Method->getMethodFamily());
     ImplicitParamDecl *Cmd = Method->getCmdDecl();
     Hash.AddBoolean(Cmd);
     if (Cmd)
-      ID.AddInteger(Cmd->getParameterKind());
+      ID.AddInteger(llvm::to_underlying(Cmd->getParameterKind()));
 
     ImplicitParamDecl *Self = Method->getSelfDecl();
     Hash.AddBoolean(Self);
     if (Self)
-      ID.AddInteger(Self->getParameterKind());
+      ID.AddInteger(llvm::to_underlying(Self->getParameterKind()));
 
     AddDecl(Method);
 
-    AddQualType(Method->getReturnType());
+    if (Method->getReturnTypeSourceInfo())
+      AddQualType(Method->getReturnTypeSourceInfo()->getType());
+
     ID.AddInteger(Method->param_size());
     for (auto Param : Method->parameters())
       Hash.AddSubDecl(Param);
@@ -458,7 +469,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddTemplateArgument(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -476,7 +487,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddStmt(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -595,7 +606,7 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   ID.AddInteger(Record->getNumBases());
   auto Bases = Record->bases();
   for (const auto &Base : Bases) {
-    AddQualType(Base.getType());
+    AddQualType(Base.getTypeSourceInfo()->getType());
     ID.AddInteger(Base.isVirtual());
     ID.AddInteger(Base.getAccessSpecifierAsWritten());
   }
@@ -658,6 +669,10 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
       if (F->isFunctionTemplateSpecialization()) {
         if (!isa<CXXMethodDecl>(DC)) return;
         if (DC->getLexicalParent()->isFileContext()) return;
+        // Skip class scope explicit function template specializations,
+        // as they have not yet been instantiated.
+        if (F->getDependentSpecializationInfo())
+          return;
         // Inline method specializations are the only supported
         // specialization for now.
       }
@@ -684,9 +699,15 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
   AddBoolean(Function->isVirtualAsWritten());
-  AddBoolean(Function->isPure());
+  AddBoolean(Function->isPureVirtual());
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
+
+  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  AddBoolean(DeletedMessage);
+
+  if (DeletedMessage)
+    ID.AddString(DeletedMessage->getBytes());
 
   AddDecl(Function);
 
@@ -738,7 +759,7 @@ void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
     AddBoolean(Enum->isScopedUsingClassTag());
 
   if (Enum->getIntegerTypeSourceInfo())
-    AddQualType(Enum->getIntegerType());
+    AddQualType(Enum->getIntegerType().getCanonicalType());
 
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.
@@ -914,29 +935,7 @@ public:
   void VisitType(const Type *T) {}
 
   void VisitAdjustedType(const AdjustedType *T) {
-    QualType Original = T->getOriginalType();
-    QualType Adjusted = T->getAdjustedType();
-
-    // The original type and pointee type can be the same, as in the case of
-    // function pointers decaying to themselves.  Set a bool and only process
-    // the type once, to prevent doubling the work.
-    SplitQualType split = Adjusted.split();
-    if (auto Pointer = dyn_cast<PointerType>(split.Ty)) {
-      if (Pointer->getPointeeType() == Original) {
-        Hash.AddBoolean(true);
-        ID.AddInteger(split.Quals.getAsOpaqueValue());
-        AddQualType(Original);
-        VisitType(T);
-        return;
-      }
-    }
-
-    // The original type and pointee type are different, such as in the case
-    // of a array decaying to an element pointer.  Set a bool to false and
-    // process both types.
-    Hash.AddBoolean(false);
-    AddQualType(Original);
-    AddQualType(Adjusted);
+    AddQualType(T->getOriginalType());
 
     VisitType(T);
   }
@@ -949,13 +948,17 @@ public:
 
   void VisitArrayType(const ArrayType *T) {
     AddQualType(T->getElementType());
-    ID.AddInteger(T->getSizeModifier());
+    ID.AddInteger(llvm::to_underlying(T->getSizeModifier()));
     VisitQualifiers(T->getIndexTypeQualifiers());
     VisitType(T);
   }
   void VisitConstantArrayType(const ConstantArrayType *T) {
     T->getSize().Profile(ID);
     VisitArrayType(T);
+  }
+
+  void VisitArrayParameterType(const ArrayParameterType *T) {
+    VisitConstantArrayType(T);
   }
 
   void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
@@ -975,7 +978,6 @@ public:
   void VisitAttributedType(const AttributedType *T) {
     ID.AddInteger(T->getAttrKind());
     AddQualType(T->getModifiedType());
-    AddQualType(T->getEquivalentType());
 
     VisitType(T);
   }
@@ -997,7 +999,6 @@ public:
 
   void VisitDecltypeType(const DecltypeType *T) {
     AddStmt(T->getUnderlyingExpr());
-    AddQualType(T->getUnderlyingType());
     VisitType(T);
   }
 
@@ -1186,31 +1187,12 @@ public:
 
   void VisitTypedefType(const TypedefType *T) {
     AddDecl(T->getDecl());
-    QualType UnderlyingType = T->getDecl()->getUnderlyingType();
-    VisitQualifiers(UnderlyingType.getQualifiers());
-    while (true) {
-      if (const TypedefType *Underlying =
-              dyn_cast<TypedefType>(UnderlyingType.getTypePtr())) {
-        UnderlyingType = Underlying->getDecl()->getUnderlyingType();
-        continue;
-      }
-      if (const ElaboratedType *Underlying =
-              dyn_cast<ElaboratedType>(UnderlyingType.getTypePtr())) {
-        UnderlyingType = Underlying->getNamedType();
-        continue;
-      }
-
-      break;
-    }
-    AddType(UnderlyingType.getTypePtr());
     VisitType(T);
   }
 
   void VisitTypeOfExprType(const TypeOfExprType *T) {
     AddStmt(T->getUnderlyingExpr());
     Hash.AddBoolean(T->isSugared());
-    if (T->isSugared())
-      AddQualType(T->desugar());
 
     VisitType(T);
   }
@@ -1220,7 +1202,7 @@ public:
   }
 
   void VisitTypeWithKeyword(const TypeWithKeyword *T) {
-    ID.AddInteger(T->getKeyword());
+    ID.AddInteger(llvm::to_underlying(T->getKeyword()));
     VisitType(T);
   };
 
@@ -1261,7 +1243,7 @@ public:
   void VisitVectorType(const VectorType *T) {
     AddQualType(T->getElementType());
     ID.AddInteger(T->getNumElements());
-    ID.AddInteger(T->getVectorKind());
+    ID.AddInteger(llvm::to_underlying(T->getVectorKind()));
     VisitType(T);
   }
 
@@ -1287,4 +1269,67 @@ void ODRHash::AddQualType(QualType T) {
 
 void ODRHash::AddBoolean(bool Value) {
   Bools.push_back(Value);
+}
+
+void ODRHash::AddStructuralValue(const APValue &Value) {
+  ID.AddInteger(Value.getKind());
+
+  // 'APValue::Profile' uses pointer values to make hash for LValue and
+  // MemberPointer, but they differ from one compiler invocation to another.
+  // So, handle them explicitly here.
+
+  switch (Value.getKind()) {
+  case APValue::LValue: {
+    const APValue::LValueBase &Base = Value.getLValueBase();
+    if (!Base) {
+      ID.AddInteger(Value.getLValueOffset().getQuantity());
+      break;
+    }
+
+    assert(Base.is<const ValueDecl *>());
+    AddDecl(Base.get<const ValueDecl *>());
+    ID.AddInteger(Value.getLValueOffset().getQuantity());
+
+    bool OnePastTheEnd = Value.isLValueOnePastTheEnd();
+    if (Value.hasLValuePath()) {
+      QualType TypeSoFar = Base.getType();
+      for (APValue::LValuePathEntry E : Value.getLValuePath()) {
+        if (const auto *AT = TypeSoFar->getAsArrayTypeUnsafe()) {
+          if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+            OnePastTheEnd |= CAT->getSize() == E.getAsArrayIndex();
+          TypeSoFar = AT->getElementType();
+        } else {
+          const Decl *D = E.getAsBaseOrMember().getPointer();
+          if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+            if (FD->getParent()->isUnion())
+              ID.AddInteger(FD->getFieldIndex());
+            TypeSoFar = FD->getType();
+          } else {
+            TypeSoFar =
+                D->getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+          }
+        }
+      }
+    }
+    unsigned Val = 0;
+    if (Value.isNullPointer())
+      Val |= 1 << 0;
+    if (OnePastTheEnd)
+      Val |= 1 << 1;
+    if (Value.hasLValuePath())
+      Val |= 1 << 2;
+    ID.AddInteger(Val);
+    break;
+  }
+  case APValue::MemberPointer: {
+    const ValueDecl *D = Value.getMemberPointerDecl();
+    assert(D);
+    AddDecl(D);
+    ID.AddInteger(
+        D->getASTContext().getMemberPointerPathAdjustment(Value).getQuantity());
+    break;
+  }
+  default:
+    Value.Profile(ID);
+  }
 }

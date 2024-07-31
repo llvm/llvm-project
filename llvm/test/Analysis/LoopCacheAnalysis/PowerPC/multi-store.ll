@@ -1,11 +1,11 @@
-; RUN: opt < %s  -opaque-pointers -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s  -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 ; CHECK: Loop 'for.j' has cost = 201000000
 ; CHECK-NEXT: Loop 'for.i' has cost = 102000000
-; CHECK-NEXT: Loop 'for.k' has cost = 90000
+; CHECK-NEXT: Loop 'for.k' has cost = 120000
 
 ;; Test to make sure when we have multiple conflicting access patterns, the 
 ;; chosen loop configuration favours the majority of those accesses. 

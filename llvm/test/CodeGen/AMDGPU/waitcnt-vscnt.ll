@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx802  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9PLUS,GFX8_9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx802  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9PLUS,GFX8_9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
 
 ; GCN-LABEL: barrier_vmcnt_global:
 ; GFX8:         flat_load_dword
@@ -222,7 +222,6 @@ bb:
 ; GCN-LABEL: store_vscnt_private:
 ; GCN:         {{buffer|scratch}}_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0)
-; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_private(ptr addrspace(5) %p) {
   store i32 0, ptr addrspace(5) %p
@@ -233,7 +232,6 @@ define void @store_vscnt_private(ptr addrspace(5) %p) {
 ; GFX8:        flat_store_dword
 ; GFX9PLUS:    global_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0)
-; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_global(ptr addrspace(1) %p) {
   store i32 0, ptr addrspace(1) %p
@@ -244,7 +242,6 @@ define void @store_vscnt_global(ptr addrspace(1) %p) {
 ; GCN:         flat_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX10PLUS:   s_waitcnt lgkmcnt(0){{$}}
-; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_flat(ptr %p) {
   store i32 0, ptr %p
@@ -253,7 +250,6 @@ define void @store_vscnt_flat(ptr %p) {
 
 ; GCN-LABEL: function_prologue:
 ; GCN:        s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0){{$}}
-; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_setpc_b64
 define void @function_prologue() {
   ret void

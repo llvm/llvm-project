@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -32,6 +35,7 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/Z3CrosscheckVisitor.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
@@ -82,6 +86,14 @@ STATISTIC(MaxBugClassSize,
 STATISTIC(MaxValidBugClassSize,
           "The maximum number of bug reports in the same equivalence class "
           "where at least one report is valid (not suppressed)");
+
+STATISTIC(NumTimesReportPassesZ3, "Number of reports passed Z3");
+STATISTIC(NumTimesReportRefuted, "Number of reports refuted by Z3");
+STATISTIC(NumTimesReportEQClassAborted,
+          "Number of times a report equivalence class was aborted by the Z3 "
+          "oracle heuristic");
+STATISTIC(NumTimesReportEQClassWasExhausted,
+          "Number of times all reports of an equivalence class was refuted");
 
 BugReporterVisitor::~BugReporterVisitor() = default;
 
@@ -135,7 +147,8 @@ public:
 public:
   PathDiagnosticConstruct(const PathDiagnosticConsumer *PDC,
                           const ExplodedNode *ErrorNode,
-                          const PathSensitiveBugReport *R);
+                          const PathSensitiveBugReport *R,
+                          const Decl *AnalysisEntryPoint);
 
   /// \returns the location context associated with the current position in the
   /// bug path.
@@ -296,26 +309,24 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
     return {};
 
   // Check if one of the parameters are set to the interesting symbol.
-  unsigned ArgIndex = 0;
-  for (CallExpr::const_arg_iterator I = CE->arg_begin(),
-                                    E = CE->arg_end(); I != E; ++I, ++ArgIndex){
-    SVal SV = N->getSVal(*I);
+  for (auto [Idx, ArgExpr] : llvm::enumerate(CE->arguments())) {
+    SVal SV = N->getSVal(ArgExpr);
 
     // Check if the variable corresponding to the symbol is passed by value.
     SymbolRef AS = SV.getAsLocSymbol();
     if (AS == Sym) {
-      return getMessageForArg(*I, ArgIndex);
+      return getMessageForArg(ArgExpr, Idx);
     }
 
     // Check if the parameter is a pointer to the symbol.
     if (std::optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
       // Do not attempt to dereference void*.
-      if ((*I)->getType()->isVoidPointerType())
+      if (ArgExpr->getType()->isVoidPointerType())
         continue;
       SVal PSV = N->getState()->getSVal(Reg->getRegion());
       SymbolRef AS = PSV.getAsLocSymbol();
       if (AS == Sym) {
-        return getMessageForArg(*I, ArgIndex);
+        return getMessageForArg(ArgExpr, Idx);
       }
     }
   }
@@ -1322,24 +1333,26 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 }
 
 static std::unique_ptr<PathDiagnostic>
-generateDiagnosticForBasicReport(const BasicBugReport *R) {
+generateDiagnosticForBasicReport(const BasicBugReport *R,
+                                 const Decl *AnalysisEntryPoint) {
   const BugType &BT = R->getBugType();
   return std::make_unique<PathDiagnostic>(
       BT.getCheckerName(), R->getDeclWithIssue(), BT.getDescription(),
       R->getDescription(), R->getShortDescription(/*UseFallback=*/false),
       BT.getCategory(), R->getUniqueingLocation(), R->getUniqueingDecl(),
-      std::make_unique<FilesToLineNumsMap>());
+      AnalysisEntryPoint, std::make_unique<FilesToLineNumsMap>());
 }
 
 static std::unique_ptr<PathDiagnostic>
 generateEmptyDiagnosticForReport(const PathSensitiveBugReport *R,
-                                 const SourceManager &SM) {
+                                 const SourceManager &SM,
+                                 const Decl *AnalysisEntryPoint) {
   const BugType &BT = R->getBugType();
   return std::make_unique<PathDiagnostic>(
       BT.getCheckerName(), R->getDeclWithIssue(), BT.getDescription(),
       R->getDescription(), R->getShortDescription(/*UseFallback=*/false),
       BT.getCategory(), R->getUniqueingLocation(), R->getUniqueingDecl(),
-      findExecutedLines(SM, R->getErrorNode()));
+      AnalysisEntryPoint, findExecutedLines(SM, R->getErrorNode()));
 }
 
 static const Stmt *getStmtParent(const Stmt *S, const ParentMap &PM) {
@@ -1975,10 +1988,11 @@ static void updateExecutedLinesWithDiagnosticPieces(PathDiagnostic &PD) {
 
 PathDiagnosticConstruct::PathDiagnosticConstruct(
     const PathDiagnosticConsumer *PDC, const ExplodedNode *ErrorNode,
-    const PathSensitiveBugReport *R)
+    const PathSensitiveBugReport *R, const Decl *AnalysisEntryPoint)
     : Consumer(PDC), CurrentNode(ErrorNode),
       SM(CurrentNode->getCodeDecl().getASTContext().getSourceManager()),
-      PD(generateEmptyDiagnosticForReport(R, getSourceManager())) {
+      PD(generateEmptyDiagnosticForReport(R, getSourceManager(),
+                                          AnalysisEntryPoint)) {
   LCM[&PD->getActivePath()] = ErrorNode->getLocationContext();
 }
 
@@ -1992,13 +2006,14 @@ PathDiagnosticBuilder::PathDiagnosticBuilder(
 
 std::unique_ptr<PathDiagnostic>
 PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
-  PathDiagnosticConstruct Construct(PDC, ErrorNode, R);
+  const Decl *EntryPoint = getBugReporter().getAnalysisEntryPoint();
+  PathDiagnosticConstruct Construct(PDC, ErrorNode, R, EntryPoint);
 
   const SourceManager &SM = getSourceManager();
   const AnalyzerOptions &Opts = getAnalyzerOptions();
 
   if (!PDC->shouldGenerateDiagnostics())
-    return generateEmptyDiagnosticForReport(R, getSourceManager());
+    return generateEmptyDiagnosticForReport(R, getSourceManager(), EntryPoint);
 
   // Construct the final (warning) event for the bug report.
   auto EndNotes = VisitorsDiagnostics->find(ErrorNode);
@@ -2101,8 +2116,6 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
 void BugType::anchor() {}
 
-void BuiltinBug::anchor() {}
-
 //===----------------------------------------------------------------------===//
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//
@@ -2143,15 +2156,14 @@ PathSensitiveBugReport::PathSensitiveBugReport(
          "checkers to emit warnings, because checkers should depend on "
          "*modeling*, not *diagnostics*.");
 
-  assert(
-      (bt.getCheckerName().startswith("debug") ||
-       !isHidden(ErrorNode->getState()
-                     ->getAnalysisManager()
-                     .getCheckerManager()
-                     ->getCheckerRegistryData(),
-                 bt.getCheckerName())) &&
-          "Hidden checkers musn't emit diagnostics as they are by definition "
-          "non-user facing!");
+  assert((bt.getCheckerName().starts_with("debug") ||
+          !isHidden(ErrorNode->getState()
+                        ->getAnalysisManager()
+                        .getCheckerManager()
+                        ->getCheckerRegistryData(),
+                    bt.getCheckerName())) &&
+         "Hidden checkers musn't emit diagnostics as they are by definition "
+         "non-user facing!");
 }
 
 void PathSensitiveBugReport::addVisitor(
@@ -2186,7 +2198,7 @@ const Decl *PathSensitiveBugReport::getDeclWithIssue() const {
 void BasicBugReport::Profile(llvm::FoldingSetNodeID& hash) const {
   hash.AddInteger(static_cast<int>(getKind()));
   hash.AddPointer(&BT);
-  hash.AddString(Description);
+  hash.AddString(getShortDescription());
   assert(Location.isValid());
   Location.Profile(hash);
 
@@ -2201,7 +2213,7 @@ void BasicBugReport::Profile(llvm::FoldingSetNodeID& hash) const {
 void PathSensitiveBugReport::Profile(llvm::FoldingSetNodeID &hash) const {
   hash.AddInteger(static_cast<int>(getKind()));
   hash.AddPointer(&BT);
-  hash.AddString(Description);
+  hash.AddString(getShortDescription());
   PathDiagnosticLocation UL = getUniqueingLocation();
   if (UL.isValid()) {
     UL.Profile(hash);
@@ -2429,6 +2441,12 @@ PathSensitiveBugReport::getLocation() const {
   }
 
   if (S) {
+    // Attributed statements usually have corrupted begin locations,
+    // it's OK to ignore attributes for our purposes and deal with
+    // the actual annotated statement.
+    if (const auto *AS = dyn_cast<AttributedStmt>(S))
+      S = AS->getSubStmt();
+
     // For member expressions, return the location of the '.' or '->'.
     if (const auto *ME = dyn_cast<MemberExpr>(S))
       return PathDiagnosticLocation::createMemberLoc(ME, SM);
@@ -2463,7 +2481,9 @@ ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
   return Eng.getStateManager();
 }
 
-BugReporter::BugReporter(BugReporterData &d) : D(d) {}
+BugReporter::BugReporter(BugReporterData &D)
+    : D(D), UserSuppressions(D.getASTContext()) {}
+
 BugReporter::~BugReporter() {
   // Make sure reports are flushed.
   assert(StrBugTypes.empty() &&
@@ -2823,6 +2843,7 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
 std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
     ArrayRef<PathSensitiveBugReport *> &bugReports,
     PathSensitiveBugReporter &Reporter) {
+  Z3CrosscheckOracle Z3Oracle(Reporter.getAnalyzerOptions());
 
   BugPathGetter BugGraph(&Reporter.getGraph(), bugReports);
 
@@ -2853,21 +2874,35 @@ std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
-        R->addVisitor<FalsePositiveRefutationBRVisitor>();
+        Z3CrosscheckVisitor::Z3Result CrosscheckResult;
+        R->addVisitor<Z3CrosscheckVisitor>(CrosscheckResult,
+                                           Reporter.getAnalyzerOptions());
 
         // We don't overwrite the notes inserted by other visitors because the
         // refutation manager does not add any new note to the path
         generateVisitorsDiagnostics(R, BugPath->ErrorNode, BRC);
+        switch (Z3Oracle.interpretQueryResult(CrosscheckResult)) {
+        case Z3CrosscheckOracle::RejectReport:
+          ++NumTimesReportRefuted;
+          R->markInvalid("Infeasible constraints", /*Data=*/nullptr);
+          continue;
+        case Z3CrosscheckOracle::RejectEQClass:
+          ++NumTimesReportEQClassAborted;
+          return {};
+        case Z3CrosscheckOracle::AcceptReport:
+          ++NumTimesReportPassesZ3;
+          break;
+        }
       }
 
-      // Check if the bug is still valid
-      if (R->isValid())
-        return PathDiagnosticBuilder(
-            std::move(BRC), std::move(BugPath->BugPath), BugPath->Report,
-            BugPath->ErrorNode, std::move(visitorNotes));
+      assert(R->isValid());
+      return PathDiagnosticBuilder(std::move(BRC), std::move(BugPath->BugPath),
+                                   BugPath->Report, BugPath->ErrorNode,
+                                   std::move(visitorNotes));
     }
   }
 
+  ++NumTimesReportEQClassWasExhausted;
   return {};
 }
 
@@ -2899,6 +2934,10 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   // If we mess up in a release build, we'd still prefer to just drop the bug
   // instead of trying to go on.
   if (!ValidSourceLoc)
+    return;
+
+  // If the user asked to suppress this report, we should skip it.
+  if (UserSuppressions.isSuppressed(*R))
     return;
 
   // Compute the bug report's hash to determine its equivalence class.
@@ -3068,8 +3107,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   // See whether we need to silence the checker/package.
   for (const std::string &CheckerOrPackage :
        getAnalyzerOptions().SilencedCheckersAndPackages) {
-    if (report->getBugType().getCheckerName().startswith(
-            CheckerOrPackage))
+    if (report->getBugType().getCheckerName().starts_with(CheckerOrPackage))
       return;
   }
 
@@ -3114,6 +3152,16 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
       Pieces.back()->addFixit(I);
 
     updateExecutedLinesWithDiagnosticPieces(*PD);
+
+    // If we are debugging, let's have the entry point as the first note.
+    if (getAnalyzerOptions().AnalyzerDisplayProgress ||
+        getAnalyzerOptions().AnalyzerNoteAnalysisEntryPoints) {
+      const Decl *EntryPoint = getAnalysisEntryPoint();
+      Pieces.push_front(std::make_shared<PathDiagnosticEventPiece>(
+          PathDiagnosticLocation{EntryPoint->getLocation(), getSourceManager()},
+          "[debug] analyzing from " +
+              AnalysisDeclContext::getFunctionName(EntryPoint)));
+    }
     Consumer->HandlePathDiagnostic(std::move(PD));
   }
 }
@@ -3202,7 +3250,8 @@ BugReporter::generateDiagnosticForConsumerMap(
   auto *basicReport = cast<BasicBugReport>(exampleReport);
   auto Out = std::make_unique<DiagnosticForConsumerMapTy>();
   for (auto *Consumer : consumers)
-    (*Out)[Consumer] = generateDiagnosticForBasicReport(basicReport);
+    (*Out)[Consumer] =
+        generateDiagnosticForBasicReport(basicReport, AnalysisEntryPoint);
   return Out;
 }
 

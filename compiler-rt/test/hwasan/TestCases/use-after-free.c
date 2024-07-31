@@ -5,8 +5,6 @@
 
 // RUN: %clang_hwasan -O0 -DISREAD=0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
 
-// REQUIRES: stable-runtime
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
@@ -40,6 +38,6 @@ int main() {
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-24]]
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
   // CHECK: =>{{.*}}[[MEM_TAG]]
-  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch
+  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
   return r;
 }

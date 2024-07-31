@@ -180,7 +180,7 @@ While direct usage of pointer element types is immediately apparent in code,
 there is a more subtle issue that opaque pointers need to contend with: A lot
 of code assumes that pointer equality also implies that the used load/store
 type or GEP source element type is the same. Consider the following examples
-with typed an opaque pointers:
+with typed and opaque pointers:
 
 .. code-block:: llvm
 
@@ -276,27 +276,19 @@ supported.
 Transition State
 ================
 
-As of January 2023:
+As of July 2023:
 
-Typed pointers are **not** supported on the ``main`` branch as a matter of
-policy. Fixes for typed pointer support are not accepted. Typed pointer
-support code may be removed without notice at any time.
+Typed pointers are **not** supported on the ``main`` branch.
 
-However, tests are still in the process of being converted to opaque pointers.
-As such, care must be taken when actively removing typed pointer support, to
-avoid breaking remaining tests.
-
-The following typed pointer functionality has already been removed:
+The following typed pointer functionality has been removed:
 
 * The ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake flag is no longer supported.
 * The ``-no-opaque-pointers`` cc1 clang flag is no longer supported.
+* The ``-opaque-pointers`` opt flag is no longer supported.
 * The ``-plugin-opt=no-opaque-pointers`` LTO flag is no longer supported.
 * C APIs that do not support opaque pointers (like ``LLVMBuildLoad``) are no
   longer supported.
-* Typed pointer IR and bitcode is implicitly upgraded to use opaque pointers,
-  unless ``-opaque-pointers=0`` is passed.
 
 The following typed pointer functionality is still to be removed:
 
-* The ``-opaque-pointers=0`` opt flag.
-* Support for typed pointers in LLVM libraries.
+* Various APIs that are no longer relevant with opaque pointers.

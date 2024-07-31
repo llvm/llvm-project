@@ -33,19 +33,18 @@ mlir::tosa::condenseValues(const SmallVector<Value> &values) {
 
 Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
                                    Value max, OpBuilder &rewriter) {
-  Value minValue = rewriter.create<arith::MinFOp>(loc, arg, max);
-  return rewriter.create<arith::MaxFOp>(loc, minValue, min);
+  Value minValue = rewriter.create<arith::MinimumFOp>(loc, arg, max);
+  return rewriter.create<arith::MaximumFOp>(loc, minValue, min);
 }
 
 Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
-                                 OpBuilder &rewriter) {
-  auto smallerThanMin =
-      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, arg, min);
-  auto minOrArg =
-      rewriter.create<arith::SelectOp>(loc, smallerThanMin, min, arg);
-  auto largerThanMax =
-      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, max, arg);
-  return rewriter.create<arith::SelectOp>(loc, largerThanMax, max, minOrArg);
+                                 OpBuilder &rewriter, bool isUnsigned) {
+  if (isUnsigned) {
+    auto minOrArg = rewriter.create<arith::MaxUIOp>(loc, min, arg);
+    return rewriter.create<arith::MinUIOp>(loc, max, minOrArg);
+  }
+  auto minOrArg = rewriter.create<arith::MaxSIOp>(loc, min, arg);
+  return rewriter.create<arith::MinSIOp>(loc, max, minOrArg);
 }
 
 bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {

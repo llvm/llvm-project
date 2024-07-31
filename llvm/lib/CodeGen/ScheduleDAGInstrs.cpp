@@ -211,7 +211,8 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
     for (const MachineOperand &MO : ExitMI->all_uses()) {
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
-        Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));
+        for (MCRegUnit Unit : TRI->regunits(Reg))
+          Uses.insert(PhysRegSUOper(&ExitSU, -1, Unit));
       } else if (Reg.isVirtual() && MO.readsReg()) {
         addVRegUseDeps(&ExitSU, MO.getOperandNo());
       }
@@ -222,8 +223,11 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
     // uses all the registers that are livein to the successor blocks.
     for (const MachineBasicBlock *Succ : BB->successors()) {
       for (const auto &LI : Succ->liveins()) {
-        if (!Uses.contains(LI.PhysReg))
-          Uses.insert(PhysRegSUOper(&ExitSU, -1, LI.PhysReg));
+        for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+          auto [Unit, Mask] = *U;
+          if ((Mask & LI.LaneMask).any() && !Uses.contains(Unit))
+            Uses.insert(PhysRegSUOper(&ExitSU, -1, Unit));
+        }
       }
     }
   }
@@ -234,48 +238,51 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
 void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   const MachineOperand &MO = SU->getInstr()->getOperand(OperIdx);
   assert(MO.isDef() && "expect physreg def");
+  Register Reg = MO.getReg();
 
   // Ask the target if address-backscheduling is desirable, and if so how much.
   const TargetSubtargetInfo &ST = MF.getSubtarget();
 
   // Only use any non-zero latency for real defs/uses, in contrast to
   // "fake" operands added by regalloc.
-  const MCInstrDesc *DefMIDesc = &SU->getInstr()->getDesc();
-  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc->getNumOperands() &&
-                            !DefMIDesc->hasImplicitDefOfPhysReg(MO.getReg()));
-  for (MCRegAliasIterator Alias(MO.getReg(), TRI, true);
-       Alias.isValid(); ++Alias) {
-    for (Reg2SUnitsMap::iterator I = Uses.find(*Alias); I != Uses.end(); ++I) {
+  const MCInstrDesc &DefMIDesc = SU->getInstr()->getDesc();
+  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
+                            !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
+  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+    for (RegUnit2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end();
+         ++I) {
       SUnit *UseSU = I->SU;
       if (UseSU == SU)
         continue;
 
       // Adjust the dependence latency using operand def/use information,
       // then allow the target to perform its own adjustments.
-      int UseOp = I->OpIdx;
-      MachineInstr *RegUse = nullptr;
+      MachineInstr *UseInstr = nullptr;
+      int UseOpIdx = I->OpIdx;
+      bool ImplicitPseudoUse = false;
       SDep Dep;
-      if (UseOp < 0)
+      if (UseOpIdx < 0) {
         Dep = SDep(SU, SDep::Artificial);
-      else {
+      } else {
         // Set the hasPhysRegDefs only for physreg defs that have a use within
         // the scheduling region.
         SU->hasPhysRegDefs = true;
-        Dep = SDep(SU, SDep::Data, *Alias);
-        RegUse = UseSU->getInstr();
+
+        UseInstr = UseSU->getInstr();
+        Register UseReg = UseInstr->getOperand(UseOpIdx).getReg();
+        const MCInstrDesc &UseMIDesc = UseInstr->getDesc();
+        ImplicitPseudoUse = UseOpIdx >= ((int)UseMIDesc.getNumOperands()) &&
+                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg);
+
+        Dep = SDep(SU, SDep::Data, UseReg);
       }
-      const MCInstrDesc *UseMIDesc =
-          (RegUse ? &UseSU->getInstr()->getDesc() : nullptr);
-      bool ImplicitPseudoUse =
-          (UseMIDesc && UseOp >= ((int)UseMIDesc->getNumOperands()) &&
-           !UseMIDesc->hasImplicitUseOfPhysReg(*Alias));
       if (!ImplicitPseudoDef && !ImplicitPseudoUse) {
         Dep.setLatency(SchedModel.computeOperandLatency(SU->getInstr(), OperIdx,
-                                                        RegUse, UseOp));
+                                                        UseInstr, UseOpIdx));
       } else {
         Dep.setLatency(0);
       }
-      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOp, Dep);
+      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOpIdx, Dep, &SchedModel);
       UseSU->addPred(Dep);
     }
   }
@@ -301,63 +308,69 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   // TODO: Using a latency of 1 here for output dependencies assumes
   //       there's no cost for reusing registers.
   SDep::Kind Kind = MO.isUse() ? SDep::Anti : SDep::Output;
-  for (MCRegAliasIterator Alias(Reg, TRI, true); Alias.isValid(); ++Alias) {
-    if (!Defs.contains(*Alias))
-      continue;
-    for (Reg2SUnitsMap::iterator I = Defs.find(*Alias); I != Defs.end(); ++I) {
+  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+    for (RegUnit2SUnitsMap::iterator I = Defs.find(Unit); I != Defs.end();
+         ++I) {
       SUnit *DefSU = I->SU;
       if (DefSU == &ExitSU)
         continue;
+      MachineInstr *DefInstr = DefSU->getInstr();
+      MachineOperand &DefMO = DefInstr->getOperand(I->OpIdx);
       if (DefSU != SU &&
-          (Kind != SDep::Output || !MO.isDead() ||
-           !DefSU->getInstr()->registerDefIsDead(*Alias))) {
-        SDep Dep(SU, Kind, /*Reg=*/*Alias);
-        if (Kind != SDep::Anti)
+          (Kind != SDep::Output || !MO.isDead() || !DefMO.isDead())) {
+        SDep Dep(SU, Kind, DefMO.getReg());
+        if (Kind != SDep::Anti) {
           Dep.setLatency(
-            SchedModel.computeOutputLatency(MI, OperIdx, DefSU->getInstr()));
-        ST.adjustSchedDependency(SU, OperIdx, DefSU, I->OpIdx, Dep);
+              SchedModel.computeOutputLatency(MI, OperIdx, DefInstr));
+        }
+        ST.adjustSchedDependency(SU, OperIdx, DefSU, I->OpIdx, Dep,
+                                 &SchedModel);
         DefSU->addPred(Dep);
       }
     }
   }
 
-  if (!MO.isDef()) {
+  if (MO.isUse()) {
     SU->hasPhysRegUses = true;
     // Either insert a new Reg2SUnits entry with an empty SUnits list, or
     // retrieve the existing SUnits list for this register's uses.
     // Push this SUnit on the use list.
-    Uses.insert(PhysRegSUOper(SU, OperIdx, Reg));
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Uses.insert(PhysRegSUOper(SU, OperIdx, Unit));
     if (RemoveKillFlags)
       MO.setIsKill(false);
   } else {
     addPhysRegDataDeps(SU, OperIdx);
 
-    // Clear previous uses and defs of this register and its subergisters.
-    for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
-      if (Uses.contains(SubReg))
-        Uses.eraseAll(SubReg);
+    // Clear previous uses and defs of this register and its subregisters.
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      Uses.eraseAll(Unit);
       if (!MO.isDead())
-        Defs.eraseAll(SubReg);
+        Defs.eraseAll(Unit);
     }
+
     if (MO.isDead() && SU->isCall) {
       // Calls will not be reordered because of chain dependencies (see
       // below). Since call operands are dead, calls may continue to be added
       // to the DefList making dependence checking quadratic in the size of
       // the block. Instead, we leave only one call at the back of the
       // DefList.
-      Reg2SUnitsMap::RangePair P = Defs.equal_range(Reg);
-      Reg2SUnitsMap::iterator B = P.first;
-      Reg2SUnitsMap::iterator I = P.second;
-      for (bool isBegin = I == B; !isBegin; /* empty */) {
-        isBegin = (--I) == B;
-        if (!I->SU->isCall)
-          break;
-        I = Defs.erase(I);
+      for (MCRegUnit Unit : TRI->regunits(Reg)) {
+        RegUnit2SUnitsMap::RangePair P = Defs.equal_range(Unit);
+        RegUnit2SUnitsMap::iterator B = P.first;
+        RegUnit2SUnitsMap::iterator I = P.second;
+        for (bool isBegin = I == B; !isBegin; /* empty */) {
+          isBegin = (--I) == B;
+          if (!I->SU->isCall)
+            break;
+          I = Defs.erase(I);
+        }
       }
     }
 
     // Defs are pushed in the order they are visited and never reordered.
-    Defs.insert(PhysRegSUOper(SU, OperIdx, Reg));
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Defs.insert(PhysRegSUOper(SU, OperIdx, Unit));
   }
 }
 
@@ -441,7 +454,8 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
         SDep Dep(SU, SDep::Data, Reg);
         Dep.setLatency(SchedModel.computeOperandLatency(MI, OperIdx, Use,
                                                         I->OperandIndex));
-        ST.adjustSchedDependency(SU, OperIdx, UseSU, I->OperandIndex, Dep);
+        ST.adjustSchedDependency(SU, OperIdx, UseSU, I->OperandIndex, Dep,
+                                 &SchedModel);
         UseSU->addPred(Dep);
       }
 
@@ -1091,7 +1105,7 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
              dbgs() << "Loading SUnits:\n"; loads.dump());
 }
 
-static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
+static void toggleKills(const MachineRegisterInfo &MRI, LiveRegUnits &LiveRegs,
                         MachineInstr &MI, bool addToLiveRegs) {
   for (MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.readsReg())
@@ -1101,8 +1115,10 @@ static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
       continue;
 
     // Things that are available after the instruction are killed by it.
-    bool IsKill = LiveRegs.available(MRI, Reg);
-    MO.setIsKill(IsKill);
+    bool IsKill = LiveRegs.available(Reg);
+
+    // Exception: Do not kill reserved registers
+    MO.setIsKill(IsKill && !MRI.isReserved(Reg));
     if (addToLiveRegs)
       LiveRegs.addReg(Reg);
   }
@@ -1132,7 +1148,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
           continue;
         LiveRegs.removeReg(Reg);
       } else if (MO.isRegMask()) {
-        LiveRegs.removeRegsInMask(MO);
+        LiveRegs.removeRegsNotPreserved(MO.getRegMask());
       }
     }
 
@@ -1190,7 +1206,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
     oss << "<exit>";
   else
     SU->getInstr()->print(oss, /*IsStandalone=*/true);
-  return oss.str();
+  return s;
 }
 
 /// Return the basic block label. It is not necessarilly unique because a block

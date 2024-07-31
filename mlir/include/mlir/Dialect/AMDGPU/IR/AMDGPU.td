@@ -29,7 +29,6 @@ def AMDGPU_Dialect : Dialect {
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -38,6 +37,85 @@ def AMDGPU_Dialect : Dialect {
 
 class AMDGPU_Op<string mnemonic, list<Trait> traits = []> :
   Op<AMDGPU_Dialect, mnemonic, traits> {}
+
+def AMDGPU_ExtPackedFp8Op :
+    AMDGPU_Op<"ext_packed_fp8", [Pure]>,
+    Arguments<(ins AnyTypeOf<[F8E5M2FNUZ, F8E4M3FNUZ,
+        VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2FNUZ, F8E4M3FNUZ]>]>:$source,
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$index)>,
+    Results<(outs F32:$res)> {
+  let summary = "Extend one of a vector of packed fp8 values to a float";
+  let description = [{
+    Extend the value `source[index]` to a 32-bit float and return it.
+
+    This rather unusual signature arises from the fact that AMD GPUs cannot
+    easily work with sub 32-bit quantities, so the compiler intrinsics for
+    extending 8-bit floats (which are, currently, the only way to work with
+    this operation) take packed vectors of 4 such floats.
+
+    If the passed-in vector has fewer than four elements, or the input is scalar,
+    the remaining values in the <4 x i8> will be filled with with
+    undefined values as needed.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `[` $index `]` `:` type($source) `to` type($res)
+  }];
+}
+
+def AMDGPU_PackedTrunc2xFp8Op :
+    AMDGPU_Op<"packed_trunc_2xfp8", [Pure, AttrSizedOperandSegments]>,
+    Arguments<(ins F32:$sourceA,
+      Optional<F32>:$sourceB,
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<1>]>:$wordIndex,
+      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>>:$existing)>,
+    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>:$res)> {
+  let summary = "Round two floats into a packed vector of 8-bit floats";
+  let description = [{
+    Round the inputs `sourceA` and `sourceB` (which is undefined if not
+    specified) into the low or high word (bottom two or top two) elements
+    of the returned vector, keeping the other two elements of `existing`
+    unchanged if present (or undefined if it was not passed in).
+
+    The reason for this odd signature is that AMD GPUs cannot easily work with
+    sub-registers, and so the conversion intrinsics (which are currently the
+    only way to work with 8-bit float types) take packed vectors of 4 8-bit
+    values.
+  }];
+  let assemblyFormat = [{
+    attr-dict $sourceA `,` ($sourceB^):(`undef`)?
+    `into` ($existing^):(`undef`)? `[` `word` $wordIndex `]`
+    `:` type($sourceA) `to` type($res) (`into` type($existing)^)?
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_PackedStochRoundFp8Op :
+    AMDGPU_Op<"packed_stoch_round_fp8", [Pure]>,
+    Arguments<(ins F32:$source,
+      I32:$stochiasticParam,
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$storeIndex,
+      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>>:$existing)>,
+    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>:$res)> {
+  let summary = "Round float stochiastically into a packed vector of 8-bit floats";
+  let description = [{
+    Round the input `source`, adding in `stochiasticParam`, and place it into
+    the `storeIndex`th element of `res`.
+
+    If `existing` is passed in, elements of `res` other than the one at `storeIndex`
+    are copied from `existing`.
+
+    The reason for this odd signature is that AMD GPUs cannot easily work with
+    sub-registers, and so the conversion intrinsics (which are currently the
+    only way to work with 8-bit float types) take packed vectors of 4 8-bit
+    values.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `+` $stochiasticParam
+    `into` ($existing^):(`undef`)? `[` $storeIndex `]`
+    `:` type($source) `to` type($res) (`into` type($existing)^)?
+  }];
+  let hasVerifier = 1;
+}
 
 /// Raw buffer load
 def AMDGPU_RawBufferLoadOp :
@@ -346,8 +424,53 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     to complete before execution continues. Therefore, it should be used when
     operations on global memory can be issued far in advance of when their results
     are used (for example, by writing them to LDS).
+
+    WARNING: On architectures that do not support the BackOffBarrier feature,
+    (those which will implement this barrier by emitting inline assembly),
+    use of this operation will impede the usabiliity of memory watches (including
+    breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
+    "The possible options for scheduling barriers",
+    [
+      I32BitEnumAttrCaseNone<"none">,
+      I32BitEnumAttrCaseBit<"non_mem_non_sideffect", 0>,
+      I32BitEnumAttrCaseBit<"valu", 1>,
+      I32BitEnumAttrCaseBit<"salu", 2>,
+      I32BitEnumAttrCaseBit<"mfma_wmma",  3>,
+      I32BitEnumAttrCaseBit<"all_vmem",  4>,
+      I32BitEnumAttrCaseBit<"vmem_read",  5>,
+      I32BitEnumAttrCaseBit<"vmem_write", 6>,
+      I32BitEnumAttrCaseBit<"all_ds", 7>,
+      I32BitEnumAttrCaseBit<"ds_read", 8>,
+      I32BitEnumAttrCaseBit<"ds_write", 9>,
+      I32BitEnumAttrCaseBit<"transcendental", 10>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierOpOpt,
+  "sched_barrier_opt">{
+   let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_SchedBarrierOp :
+  AMDGPU_Op<"sched_barrier">,
+  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  {
+  let summary = "Barrier that limits the backend scheduler of instruction movement";
+  let description = [{
+    `amdgpu.sched_barrier` serves as a barrier that could be
+    configured to restrict movements of instructions through it as
+    defined by sched_barrier_opts.
+  }];
+  let assemblyFormat = [{
+    `allow` `=` $opts attr-dict
+  }];
 }
 
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
@@ -380,6 +503,10 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
+// wmma
+def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[16], [F16, BF16, I8, SI8, UI8]>]>;
+def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
+                              VectorOfLengthAndType<[8, 16], [F16, BF16]>]>;
 
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
@@ -433,6 +560,43 @@ def AMDGPU_MFMAOp :
     $sourceA `*` $sourceB `+` $destC
     attr-dict
     `blgp` `=` $blgp
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_WMMAOp :
+    AMDGPU_Op<"wmma", [AllTypesMatch<["destC", "destD"]>,
+                       AllTypesMatch<["sourceA", "sourceB"]>,
+                        Pure]>,
+    Arguments<(ins
+                   WMMAInTypes:$sourceA,
+                   WMMAInTypes:$sourceB,
+                   WMMAOutTypes:$destC,
+                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>, "0">:$subwordOffset,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$clamp)>,
+    Results<(outs WMMAOutTypes: $destD)> {
+  let summary = "MLIR wrapper for RDNA3 wmma instructions";
+  let description = [{
+    The `amdgpu.wmma` op is an MLIR wrapper around intrinsics
+    for various `wmma` instructions in the RDNA3 architecture, which perform
+    a 16x16 matrix multiplication for different data types.
+
+    When emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16 (or 16xbf16) vector
+    containing only 8 valid values:
+      - If `subwordOffset` is 0, then the output is stored at indices 0, 2, 4, ..., 14.
+      - If `subwordOffset` is 1, then the output is stored at indices 1, 3, 5, ..., 15.
+
+    `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
+
+    The `clamp` flag is used to saturate the output of type T to numeric_limits<T>::max()
+    in case of overflow.
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC
+    attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
   let hasVerifier = 1;

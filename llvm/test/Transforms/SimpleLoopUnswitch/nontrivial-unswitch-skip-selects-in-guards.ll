@@ -7,9 +7,6 @@ declare ptr @pluto()
 declare void @llvm.experimental.guard(i1, ...)
 declare void @widget()
 
-; XFAIL: *
-; REQUIRES: asserts
-
 define void @foo(ptr addrspace(1) %arg, i64 %arg1) personality ptr @pluto {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:

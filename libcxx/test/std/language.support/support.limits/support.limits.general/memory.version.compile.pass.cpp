@@ -17,7 +17,7 @@
 
 /*  Constant                                      Value
     __cpp_lib_addressof_constexpr                 201603L [C++17]
-    __cpp_lib_allocate_at_least                   202106L [C++23]
+    __cpp_lib_allocate_at_least                   202302L [C++23]
     __cpp_lib_allocator_traits_is_always_equal    201411L [C++17]
     __cpp_lib_assume_aligned                      201811L [C++20]
     __cpp_lib_atomic_value_initialization         201911L [C++20]
@@ -27,12 +27,14 @@
     __cpp_lib_enable_shared_from_this             201603L [C++17]
     __cpp_lib_make_unique                         201304L [C++14]
     __cpp_lib_out_ptr                             202106L [C++23]
-    __cpp_lib_ranges                              202106L [C++20]
+                                                  202311L [C++26]
+    __cpp_lib_ranges                              202207L [C++20]
     __cpp_lib_raw_memory_algorithms               201606L [C++17]
     __cpp_lib_shared_ptr_arrays                   201611L [C++17]
                                                   201707L [C++20]
     __cpp_lib_shared_ptr_weak_type                201606L [C++17]
     __cpp_lib_smart_ptr_for_overwrite             202002L [C++20]
+    __cpp_lib_smart_ptr_owner_equality            202306L [C++26]
     __cpp_lib_to_address                          201711L [C++20]
     __cpp_lib_transparent_operators               201210L [C++14]
                                                   201510L [C++17]
@@ -101,6 +103,10 @@
 
 # ifdef __cpp_lib_smart_ptr_for_overwrite
 #   error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_address
@@ -174,6 +180,10 @@
 
 # ifdef __cpp_lib_smart_ptr_for_overwrite
 #   error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_address
@@ -270,6 +280,10 @@
 #   error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_to_address
 #   error "__cpp_lib_to_address should not be defined before c++20"
 # endif
@@ -350,8 +364,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++20"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++20"
 # endif
 
 # ifndef __cpp_lib_raw_memory_algorithms
@@ -388,6 +402,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_to_address
 #   error "__cpp_lib_to_address should be defined in c++20"
 # endif
@@ -414,8 +432,8 @@
 # ifndef __cpp_lib_allocate_at_least
 #   error "__cpp_lib_allocate_at_least should be defined in c++23"
 # endif
-# if __cpp_lib_allocate_at_least != 202106L
-#   error "__cpp_lib_allocate_at_least should have the value 202106L in c++23"
+# if __cpp_lib_allocate_at_least != 202302L
+#   error "__cpp_lib_allocate_at_least should have the value 202302L in c++23"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -467,24 +485,18 @@
 #   error "__cpp_lib_make_unique should have the value 201304L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++23"
-#   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++23"
+# endif
+# if __cpp_lib_out_ptr != 202106L
+#   error "__cpp_lib_out_ptr should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++23"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_raw_memory_algorithms
@@ -521,6 +533,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_to_address
 #   error "__cpp_lib_to_address should be defined in c++23"
 # endif
@@ -547,8 +563,8 @@
 # ifndef __cpp_lib_allocate_at_least
 #   error "__cpp_lib_allocate_at_least should be defined in c++26"
 # endif
-# if __cpp_lib_allocate_at_least != 202106L
-#   error "__cpp_lib_allocate_at_least should have the value 202106L in c++26"
+# if __cpp_lib_allocate_at_least != 202302L
+#   error "__cpp_lib_allocate_at_least should have the value 202302L in c++26"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -600,24 +616,18 @@
 #   error "__cpp_lib_make_unique should have the value 201304L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++26"
-#   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++26"
+# endif
+# if __cpp_lib_out_ptr != 202311L
+#   error "__cpp_lib_out_ptr should have the value 202311L in c++26"
 # endif
 
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++26"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_raw_memory_algorithms
@@ -651,6 +661,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_smart_ptr_for_overwrite
 #     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_smart_ptr_owner_equality
+#     error "__cpp_lib_smart_ptr_owner_equality should be defined in c++26"
+#   endif
+#   if __cpp_lib_smart_ptr_owner_equality != 202306L
+#     error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_smart_ptr_owner_equality
+#     error "__cpp_lib_smart_ptr_owner_equality should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

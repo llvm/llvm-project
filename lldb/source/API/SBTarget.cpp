@@ -37,6 +37,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -146,7 +147,7 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Target::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Target::GetStaticBroadcasterClass()).AsCString();
 }
 
 bool SBTarget::IsValid() const {
@@ -198,15 +199,22 @@ SBDebugger SBTarget::GetDebugger() const {
 
 SBStructuredData SBTarget::GetStatistics() {
   LLDB_INSTRUMENT_VA(this);
+  SBStatisticsOptions options;
+  return GetStatistics(options);
+}
+
+SBStructuredData SBTarget::GetStatistics(SBStatisticsOptions options) {
+  LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData data;
   TargetSP target_sp(GetSP());
   if (!target_sp)
     return data;
   std::string json_str =
-      llvm::formatv("{0:2}",
-          DebuggerStats::ReportStatistics(target_sp->GetDebugger(),
-                                          target_sp.get())).str();
+      llvm::formatv("{0:2}", DebuggerStats::ReportStatistics(
+                                 target_sp->GetDebugger(), target_sp.get(),
+                                 options.ref()))
+          .str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
   return data;
 }
@@ -1117,8 +1125,8 @@ bool SBTarget::FindBreakpointsByName(const char *name,
     llvm::Expected<std::vector<BreakpointSP>> expected_vector =
         target_sp->GetBreakpointList().FindBreakpointsByName(name);
     if (!expected_vector) {
-      LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
-               llvm::toString(expected_vector.takeError()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), expected_vector.takeError(),
+                     "invalid breakpoint name: {0}");
       return false;
     }
     for (BreakpointSP bkpt_sp : *expected_vector) {
@@ -1139,7 +1147,7 @@ void SBTarget::GetBreakpointNames(SBStringList &names) {
 
     std::vector<std::string> name_vec;
     target_sp->GetBreakpointNames(name_vec);
-    for (auto name : name_vec)
+    for (const auto &name : name_vec)
       names.AppendString(name.c_str());
   }
 }
@@ -1321,27 +1329,39 @@ SBWatchpoint SBTarget::FindWatchpointByID(lldb::watch_id_t wp_id) {
 }
 
 lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
-                                          bool read, bool write,
+                                          bool read, bool modify,
                                           SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, size, read, write, error);
+
+  SBWatchpointOptions options;
+  options.SetWatchpointTypeRead(read);
+  options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
+  return WatchpointCreateByAddress(addr, size, options, error);
+}
+
+lldb::SBWatchpoint
+SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
+                                    SBWatchpointOptions options,
+                                    SBError &error) {
+  LLDB_INSTRUMENT_VA(this, addr, size, options, error);
 
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
   TargetSP target_sp(GetSP());
-  if (target_sp && (read || write) && addr != LLDB_INVALID_ADDRESS &&
-      size > 0) {
+  uint32_t watch_type = 0;
+  if (options.GetWatchpointTypeRead())
+    watch_type |= LLDB_WATCH_TYPE_READ;
+  if (options.GetWatchpointTypeWrite() == eWatchpointWriteTypeAlways)
+    watch_type |= LLDB_WATCH_TYPE_WRITE;
+  if (options.GetWatchpointTypeWrite() == eWatchpointWriteTypeOnModify)
+    watch_type |= LLDB_WATCH_TYPE_MODIFY;
+  if (watch_type == 0) {
+    error.SetErrorString("Can't create a watchpoint that is neither read nor "
+                         "write nor modify.");
+    return sb_watchpoint;
+  }
+  if (target_sp && addr != LLDB_INVALID_ADDRESS && size > 0) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    uint32_t watch_type = 0;
-    if (read)
-      watch_type |= LLDB_WATCH_TYPE_READ;
-    if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
-    if (watch_type == 0) {
-      error.SetErrorString(
-          "Can't create a watchpoint that is neither read nor write.");
-      return sb_watchpoint;
-    }
-
     // Target::CreateWatchpoint() is thread safe.
     Status cw_error;
     // This API doesn't take in a type, so we can't figure out what it is.
@@ -1477,28 +1497,29 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
                                    const char *uuid_cstr, const char *symfile) {
   LLDB_INSTRUMENT_VA(this, path, triple, uuid_cstr, symfile);
 
-  lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
-  if (target_sp) {
-    ModuleSpec module_spec;
-    if (path)
-      module_spec.GetFileSpec().SetFile(path, FileSpec::Style::native);
+  if (!target_sp)
+    return {};
 
-    if (uuid_cstr)
-      module_spec.GetUUID().SetFromStringRef(uuid_cstr);
+  ModuleSpec module_spec;
+  if (path)
+    module_spec.GetFileSpec().SetFile(path, FileSpec::Style::native);
 
-    if (triple)
-      module_spec.GetArchitecture() = Platform::GetAugmentedArchSpec(
-          target_sp->GetPlatform().get(), triple);
-    else
-      module_spec.GetArchitecture() = target_sp->GetArchitecture();
+  if (uuid_cstr)
+    module_spec.GetUUID().SetFromStringRef(uuid_cstr);
 
-    if (symfile)
-      module_spec.GetSymbolFileSpec().SetFile(symfile, FileSpec::Style::native);
+  if (triple)
+    module_spec.GetArchitecture() =
+        Platform::GetAugmentedArchSpec(target_sp->GetPlatform().get(), triple);
+  else
+    module_spec.GetArchitecture() = target_sp->GetArchitecture();
 
-    sb_module.SetSP(target_sp->GetOrCreateModule(module_spec, true /* notify */));
-  }
-  return sb_module;
+  if (symfile)
+    module_spec.GetSymbolFileSpec().SetFile(symfile, FileSpec::Style::native);
+
+  SBModuleSpec sb_modulespec(module_spec);
+
+  return AddModule(sb_modulespec);
 }
 
 lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
@@ -1506,9 +1527,27 @@ lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
 
   lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
-  if (target_sp)
+  if (target_sp) {
     sb_module.SetSP(target_sp->GetOrCreateModule(*module_spec.m_opaque_up,
                                                  true /* notify */));
+    if (!sb_module.IsValid() && module_spec.m_opaque_up->GetUUID().IsValid()) {
+      Status error;
+      if (PluginManager::DownloadObjectAndSymbolFile(*module_spec.m_opaque_up,
+                                                     error,
+                                                     /* force_lookup */ true)) {
+        if (FileSystem::Instance().Exists(
+                module_spec.m_opaque_up->GetFileSpec())) {
+          sb_module.SetSP(target_sp->GetOrCreateModule(*module_spec.m_opaque_up,
+                                                       true /* notify */));
+        }
+      }
+    }
+  }
+  // If the target hasn't initialized any architecture yet, use the
+  // binary's architecture.
+  if (sb_module.IsValid() && !target_sp->GetArchitecture().IsValid() &&
+      sb_module.GetSP()->GetArchitecture().IsValid())
+    target_sp->SetArchitecture(sb_module.GetSP()->GetArchitecture());
   return sb_module;
 }
 
@@ -1591,7 +1630,7 @@ const char *SBTarget::GetTriple() {
 
 const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   TargetSP target_sp(GetSP());
   if (!target_sp)
     return nullptr;
@@ -1750,6 +1789,11 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
         target_sp->GetImages().FindFunctions(RegularExpression(name_ref),
                                              function_options, *sb_sc_list);
         break;
+      case eMatchTypeRegexInsensitive:
+        target_sp->GetImages().FindFunctions(
+            RegularExpression(name_ref, llvm::Regex::RegexFlags::IgnoreCase),
+            function_options, *sb_sc_list);
+        break;
       case eMatchTypeStartsWith:
         regexstr = llvm::Regex::escape(name) + ".*";
         target_sp->GetImages().FindFunctions(RegularExpression(regexstr),
@@ -1772,21 +1816,13 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
   TargetSP target_sp(GetSP());
   if (typename_cstr && typename_cstr[0] && target_sp) {
     ConstString const_typename(typename_cstr);
-    SymbolContext sc;
-    const bool exact_match = false;
-
-    const ModuleList &module_list = target_sp->GetImages();
-    size_t count = module_list.GetSize();
-    for (size_t idx = 0; idx < count; idx++) {
-      ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
-      if (module_sp) {
-        TypeSP type_sp(
-            module_sp->FindFirstType(sc, const_typename, exact_match));
-        if (type_sp)
-          return SBType(type_sp);
-      }
-    }
-
+    TypeQuery query(const_typename.GetStringRef(),
+                    TypeQueryOptions::e_find_one);
+    TypeResults results;
+    target_sp->GetImages().FindTypes(/*search_first=*/nullptr, query, results);
+    TypeSP type_sp = results.GetFirstType();
+    if (type_sp)
+      return SBType(type_sp);
     // Didn't find the type in the symbols; Try the loaded language runtimes.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
@@ -1827,17 +1863,11 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
   if (typename_cstr && typename_cstr[0] && target_sp) {
     ModuleList &images = target_sp->GetImages();
     ConstString const_typename(typename_cstr);
-    bool exact_match = false;
-    TypeList type_list;
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    images.FindTypes(nullptr, const_typename, exact_match, UINT32_MAX,
-                     searched_symbol_files, type_list);
-
-    for (size_t idx = 0; idx < type_list.GetSize(); idx++) {
-      TypeSP type_sp(type_list.GetTypeAtIndex(idx));
-      if (type_sp)
-        sb_type_list.Append(SBType(type_sp));
-    }
+    TypeQuery query(typename_cstr);
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    for (const TypeSP &type_sp : results.GetTypeMap().Types())
+      sb_type_list.Append(SBType(type_sp));
 
     // Try the loaded language runtimes
     if (auto process_sp = target_sp->GetProcessSP()) {
@@ -1911,6 +1941,11 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
       target_sp->GetImages().FindGlobalVariables(RegularExpression(name_ref),
                                                  max_matches, variable_list);
       break;
+    case eMatchTypeRegexInsensitive:
+      target_sp->GetImages().FindGlobalVariables(
+          RegularExpression(name_ref, llvm::Regex::IgnoreCase), max_matches,
+          variable_list);
+      break;
     case eMatchTypeStartsWith:
       regexstr = "^" + llvm::Regex::escape(name) + ".*";
       target_sp->GetImages().FindGlobalVariables(RegularExpression(regexstr),
@@ -1983,6 +2018,30 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
     }
   }
 
+  return sb_instructions;
+}
+
+lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress start_addr,
+                                                   lldb::SBAddress end_addr,
+                                                   const char *flavor_string) {
+  LLDB_INSTRUMENT_VA(this, start_addr, end_addr, flavor_string);
+
+  SBInstructionList sb_instructions;
+
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    lldb::addr_t start_load_addr = start_addr.GetLoadAddress(*this);
+    lldb::addr_t end_load_addr = end_addr.GetLoadAddress(*this);
+    if (end_load_addr > start_load_addr) {
+      lldb::addr_t size = end_load_addr - start_load_addr;
+
+      AddressRange range(start_load_addr, size);
+      const bool force_live_memory = true;
+      sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
+          target_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
+          range, force_live_memory));
+    }
+  }
   return sb_instructions;
 }
 

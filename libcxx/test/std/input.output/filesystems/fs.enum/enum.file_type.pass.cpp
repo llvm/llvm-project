@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // enum class file_type;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 
 constexpr fs::file_type ME(int val) { return static_cast<fs::file_type>(val); }
 
@@ -29,7 +29,7 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  LIBCPP_ONLY(static_assert(std::is_same<UT, signed char>::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<UT, signed char>::value, ""); // Implementation detail
 
   // The standard doesn't specify the numeric values of the enum.
   LIBCPP_STATIC_ASSERT(

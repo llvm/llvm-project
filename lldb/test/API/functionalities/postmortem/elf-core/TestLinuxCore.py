@@ -21,12 +21,14 @@ class LinuxCoreTestCase(TestBase):
     _x86_64_pid = 32259
     _s390x_pid = 1045
     _ppc64le_pid = 28147
+    _riscv64_pid = 89328
 
     _aarch64_regions = 4
     _i386_regions = 4
     _x86_64_regions = 5
     _s390x_regions = 2
     _ppc64le_regions = 2
+    _riscv64_regions = 4
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64(self):
@@ -57,6 +59,11 @@ class LinuxCoreTestCase(TestBase):
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
         self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions, "a.out")
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64(self):
+        """Test that lldb can read the process information from an riscv64 linux core file."""
+        self.do_test("linux-riscv64", self._riscv64_pid, self._riscv64_regions, "a.out")
 
     @skipIfLLVMTargetMissing("X86")
     def test_same_pid_running(self):
@@ -292,9 +299,7 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("AArch64")
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49415"
-    )
+    # This test fails on FreeBSD 12 and earlier, see llvm.org/pr49415 for details.
     def test_aarch64_regs(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -304,10 +309,10 @@ class LinuxCoreTestCase(TestBase):
         values = {}
         values["x1"] = "0x000000000000002f"
         values["w1"] = "0x0000002f"
-        values["fp"] = "0x0000007fc5dd7f20"
-        values["lr"] = "0x0000000000400180"
-        values["sp"] = "0x0000007fc5dd7f00"
-        values["pc"] = "0x000000000040014c"
+        values["fp"] = "0x0000ffffdab7c770"
+        values["lr"] = "0x000000000040019c"
+        values["sp"] = "0x0000ffffdab7c750"
+        values["pc"] = "0x0000000000400168"
         values[
             "v0"
         ] = "{0x00 0x00 0x00 0x00 0x00 0x00 0xe0 0x3f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
@@ -366,6 +371,7 @@ class LinuxCoreTestCase(TestBase):
         values["d31"] = "1.3980432860952889E-76"
         values["fpsr"] = "0x00000000"
         values["fpcr"] = "0x00000000"
+        values["tpidr"] = "0x1122334455667788"
 
         for regname, value in values.items():
             self.expect(
@@ -376,9 +382,7 @@ class LinuxCoreTestCase(TestBase):
         self.expect("register read --all")
 
     @skipIfLLVMTargetMissing("AArch64")
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49415"
-    )
+    # This test fails on FreeBSD 12 and earlier, see llvm.org/pr49415 for details.
     def test_aarch64_sve_regs_fpsimd(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -573,6 +577,20 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+        # Register field information should work with core files as it does a live process.
+        # The N/Z/C/V bits are always present so just check for those.
+        self.expect("register read cpsr", substrs=["= (N = 0, Z = 0, C = 0, V = 0"])
+        self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
+        # AHP/DN/FZ/RMode always present, others may vary.
+        self.expect(
+            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = RN"]
+        )
+        # RMode should have enumerator descriptions.
+        self.expect(
+            "register info fpcr",
+            substrs=["RMode: 0 = RN, 1 = RP, 2 = RM, 3 = RZ"],
+        )
+
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_pac_regs(self):
         # Test AArch64/Linux Pointer Authentication register read
@@ -622,6 +640,110 @@ class LinuxCoreTestCase(TestBase):
             )
 
         self.expect("register read --all")
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_regs(self):
+        # check basic registers using 64 bit RISC-V core file
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-riscv64.core")
+
+        values = {}
+        values["pc"] = "0x000000000001015e"
+        values["ra"] = "0x000000000001018c"
+        values["sp"] = "0x0000003fffd132a0"
+        values["gp"] = "0x0000002ae919af50"
+        values["tp"] = "0x0000003fdceae3e0"
+        values["t0"] = "0x0"
+        values["t1"] = "0x0000002ae9187b1c"
+        values["t2"] = "0x0000000000000021"
+        values["fp"] = "0x0000003fffd132d0"
+        values["s1"] = "0x0000002ae919cd98"
+        values["a0"] = "0x0"
+        values["a1"] = "0x0000000000010144"
+        values["a2"] = "0x0000002ae919cdb0"
+        values["a3"] = "0x000000000000002f"
+        values["a4"] = "0x000000000000002f"
+        values["a5"] = "0x0"
+        values["a6"] = "0x7efefefefefefeff"
+        values["a7"] = "0x00000000000000dd"
+        values["s2"] = "0x0000002ae9196860"
+        values["s3"] = "0x0000002ae919cdb0"
+        values["s4"] = "0x0000003fffc63be8"
+        values["s5"] = "0x0000002ae919cb78"
+        values["s6"] = "0x0000002ae9196860"
+        values["s7"] = "0x0000002ae9196860"
+        values["s8"] = "0x0"
+        values["s9"] = "0x000000000000000f"
+        values["s10"] = "0x0000002ae919a8d0"
+        values["s11"] = "0x0000000000000008"
+        values["t3"] = "0x0000003fdce07df4"
+        values["t4"] = "0x0"
+        values["t5"] = "0x0000000000000020"
+        values["t6"] = "0x0000002ae919f1b0"
+        values["zero"] = "0x0"
+        values["fcsr"] = "0x00000000"
+
+        fpr_names = {
+            "ft0",
+            "ft1",
+            "ft2",
+            "ft3",
+            "ft4",
+            "ft5",
+            "ft6",
+            "ft7",
+            "ft8",
+            "ft9",
+            "ft10",
+            "ft11",
+            "fa0",
+            "fa1",
+            "fa2",
+            "fa3",
+            "fa4",
+            "fa5",
+            "fa6",
+            "fa7",
+            "fs0",
+            "fs1",
+            "fs2",
+            "fs3",
+            "fs4",
+            "fs5",
+            "fs6",
+            "fs7",
+            "fs8",
+            "fs9",
+            "fs10",
+            "fs11",
+        }
+        fpr_value = "0x0000000000000000"
+
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        for regname in fpr_names:
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, fpr_value)],
+            )
+
+        self.expect("register read --all")
+
+    def test_get_core_file_api(self):
+        """
+        Test SBProcess::GetCoreFile() API can successfully get the core file.
+        """
+        core_file_name = "linux-x86_64.core"
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore(core_file_name)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
+        self.dbg.DeleteTarget(target)
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

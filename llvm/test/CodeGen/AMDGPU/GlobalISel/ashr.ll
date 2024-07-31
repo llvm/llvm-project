@@ -30,7 +30,6 @@ define i8 @v_ashr_i8(i8 %value, i8 %amount) {
 ; GFX10PLUS-LABEL: v_ashr_i8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX10PLUS-NEXT:    v_ashrrev_i16 v0, v1, v0
@@ -64,7 +63,6 @@ define i8 @v_ashr_i8_7(i8 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i8_7:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX10PLUS-NEXT:    v_ashrrev_i16 v0, 7, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -132,7 +130,6 @@ define i24 @v_ashr_i24(i24 %value, i24 %amount) {
 ; GFX10PLUS-LABEL: v_ashr_i24:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v1, 0xffffff, v1
 ; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v1, v0
@@ -152,7 +149,6 @@ define i24 @v_ashr_i24_7(i24 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i24_7:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, 7, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -202,7 +198,6 @@ define i32 @v_ashr_i32(i32 %value, i32 %amount) {
 ; GFX10PLUS-LABEL: v_ashr_i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v1, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i32 %value, %amount
@@ -219,7 +214,6 @@ define i32 @v_ashr_i32_31(i32 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i32_31:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i32 %value, 31
@@ -305,7 +299,6 @@ define <2 x i32> @v_ashr_v2i32(<2 x i32> %value, <2 x i32> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v2i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v2, v0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, v3, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -324,7 +317,6 @@ define <2 x i32> @v_ashr_v2i32_31(<2 x i32> %value) {
 ; GFX10PLUS-LABEL: v_ashr_v2i32_31:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -360,7 +352,6 @@ define <3 x i32> @v_ashr_v3i32(<3 x i32> %value, <3 x i32> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v3i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v3, v0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, v4, v1
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v2, v5, v2
@@ -400,7 +391,6 @@ define <4 x i32> @v_ashr_v4i32(<4 x i32> %value, <4 x i32> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v4i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v4, v0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, v5, v1
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v2, v6, v2
@@ -444,7 +434,6 @@ define <5 x i32> @v_ashr_v5i32(<5 x i32> %value, <5 x i32> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v5i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v5, v0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, v6, v1
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v2, v7, v2
@@ -504,7 +493,6 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ; GFX10-LABEL: v_ashr_v16i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v0, v16, v0
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, v17, v1
@@ -528,7 +516,6 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ; GFX11-LABEL: v_ashr_v16i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v0, v16, v0
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v1, v17, v1
@@ -620,7 +607,6 @@ define i16 @v_ashr_i16(i16 %value, i16 %amount) {
 ; GFX10PLUS-LABEL: v_ashr_i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i16 v0, v1, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i16 %value, %amount
@@ -650,7 +636,6 @@ define i16 @v_ashr_i16_15(i16 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i16_15:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i16 v0, 15, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i16 %value, 15
@@ -787,7 +772,6 @@ define <2 x i16> @v_ashr_v2i16(<2 x i16> %value, <2 x i16> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v2i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, v1, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr <2 x i16> %value, %amount
@@ -822,7 +806,6 @@ define <2 x i16> @v_ashr_v2i16_15(<2 x i16> %value) {
 ; GFX10PLUS-LABEL: v_ashr_v2i16_15:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr <2 x i16> %value, <i16 15, i16 15>
@@ -1015,7 +998,6 @@ define <2 x float> @v_ashr_v4i16(<4 x i16> %value, <4 x i16> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v4i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, v2, v0
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v1, v3, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -1205,7 +1187,6 @@ define <4 x float> @v_ashr_v8i16(<8 x i16> %value, <8 x i16> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v8i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v0, v4, v0
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v1, v5, v1
 ; GFX10PLUS-NEXT:    v_pk_ashrrev_i16 v2, v6, v2
@@ -1383,7 +1364,6 @@ define i64 @v_ashr_i64(i64 %value, i64 %amount) {
 ; GFX10PLUS-LABEL: v_ashr_i64:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i64 v[0:1], v2, v[0:1]
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i64 %value, %amount
@@ -1401,7 +1381,6 @@ define i64 @v_ashr_i64_63(i64 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i64_63:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -1421,7 +1400,6 @@ define i64 @v_ashr_i64_33(i64 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i64_33:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, 1, v1
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -1440,7 +1418,6 @@ define i64 @v_ashr_i64_32(i64 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i64_32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -1470,7 +1447,6 @@ define i64 @v_ashr_i64_31(i64 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i64_31:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i64 v[0:1], 31, v[0:1]
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i64 %value, 31
@@ -1629,7 +1605,6 @@ define <2 x i64> @v_ashr_v2i64(<2 x i64> %value, <2 x i64> %amount) {
 ; GFX10PLUS-LABEL: v_ashr_v2i64:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
 ; GFX10PLUS-NEXT:    v_ashrrev_i64 v[2:3], v6, v[2:3]
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -1662,7 +1637,6 @@ define <2 x i64> @v_ashr_v2i64_31(<2 x i64> %value) {
 ; GFX10PLUS-LABEL: v_ashr_v2i64_31:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_ashrrev_i64 v[0:1], 31, v[0:1]
 ; GFX10PLUS-NEXT:    v_ashrrev_i64 v[2:3], 31, v[2:3]
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -1759,7 +1733,6 @@ define i65 @v_ashr_i65(i65 %value, i65 %amount) {
 ; GFX10-LABEL: v_ashr_i65:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfe_i32 v4, v2, 0, 1
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v2, 64, v3
 ; GFX10-NEXT:    v_subrev_nc_u32_e32 v10, 64, v3
@@ -1783,7 +1756,6 @@ define i65 @v_ashr_i65(i65 %value, i65 %amount) {
 ; GFX11-LABEL: v_ashr_i65:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfe_i32 v4, v2, 0, 1
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v2, 64, v3
 ; GFX11-NEXT:    v_subrev_nc_u32_e32 v10, 64, v3
@@ -1847,7 +1819,6 @@ define i65 @v_ashr_i65_33(i65 %value) {
 ; GFX10PLUS-LABEL: v_ashr_i65_33:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX10PLUS-NEXT:    v_bfe_i32 v1, v2, 0, 1
 ; GFX10PLUS-NEXT:    v_lshrrev_b32_e32 v3, 1, v3
@@ -1874,39 +1845,37 @@ define amdgpu_ps i65 @s_ashr_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-NEXT:    s_lshr_b64 s[2:3], s[0:1], s3
 ; GCN-NEXT:    s_lshl_b64 s[8:9], s[4:5], s8
 ; GCN-NEXT:    s_or_b64 s[2:3], s[2:3], s[8:9]
-; GCN-NEXT:    s_ashr_i32 s8, s5, 31
+; GCN-NEXT:    s_ashr_i32 s7, s5, 31
 ; GCN-NEXT:    s_ashr_i64 s[4:5], s[4:5], s10
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
 ; GCN-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; GCN-NEXT:    s_cmp_lg_u32 s12, 0
-; GCN-NEXT:    s_mov_b32 s9, s8
 ; GCN-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
-; GCN-NEXT:    s_cselect_b64 s[2:3], s[6:7], s[8:9]
+; GCN-NEXT:    s_cselect_b32 s2, s6, s7
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_ashr_i65:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_bfe_i64 s[4:5], s[2:3], 0x10000
-; GFX10PLUS-NEXT:    s_sub_i32 s12, s3, 64
-; GFX10PLUS-NEXT:    s_sub_i32 s8, 64, s3
+; GFX10PLUS-NEXT:    s_sub_i32 s10, s3, 64
+; GFX10PLUS-NEXT:    s_sub_i32 s2, 64, s3
 ; GFX10PLUS-NEXT:    s_cmp_lt_u32 s3, 64
-; GFX10PLUS-NEXT:    s_cselect_b32 s13, 1, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX10PLUS-NEXT:    s_cmp_eq_u32 s3, 0
-; GFX10PLUS-NEXT:    s_cselect_b32 s14, 1, 0
-; GFX10PLUS-NEXT:    s_ashr_i64 s[6:7], s[4:5], s3
-; GFX10PLUS-NEXT:    s_lshr_b64 s[2:3], s[0:1], s3
-; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[4:5], s8
-; GFX10PLUS-NEXT:    s_ashr_i32 s10, s5, 31
-; GFX10PLUS-NEXT:    s_or_b64 s[2:3], s[2:3], s[8:9]
-; GFX10PLUS-NEXT:    s_ashr_i64 s[4:5], s[4:5], s12
-; GFX10PLUS-NEXT:    s_cmp_lg_u32 s13, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s10
-; GFX10PLUS-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
-; GFX10PLUS-NEXT:    s_cmp_lg_u32 s14, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
-; GFX10PLUS-NEXT:    s_cmp_lg_u32 s13, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[2:3], s[6:7], s[10:11]
+; GFX10PLUS-NEXT:    s_cselect_b32 s12, 1, 0
+; GFX10PLUS-NEXT:    s_lshr_b64 s[6:7], s[0:1], s3
+; GFX10PLUS-NEXT:    s_lshl_b64 s[8:9], s[4:5], s2
+; GFX10PLUS-NEXT:    s_ashr_i64 s[2:3], s[4:5], s3
+; GFX10PLUS-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
+; GFX10PLUS-NEXT:    s_ashr_i32 s3, s5, 31
+; GFX10PLUS-NEXT:    s_ashr_i64 s[4:5], s[4:5], s10
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
+; GFX10PLUS-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
+; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
+; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = ashr i65 %value, %amount
   ret i65 %result

@@ -119,7 +119,7 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
     // Choose the *vector* with the smallest bitwidth as the canonical resource,
     // so that we can still keep vectorized load/store and avoid partial updates
     // to large vectors.
-    auto *minVal = std::min_element(vectorNumBits.begin(), vectorNumBits.end());
+    auto *minVal = llvm::min_element(vectorNumBits);
     // Make sure that the canonical resource's bitwidth is divisible by others.
     // With out this, we cannot properly adjust the index later.
     if (llvm::any_of(vectorNumBits,
@@ -139,7 +139,7 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
 
   // All element types are scalars. Then choose the smallest bitwidth as the
   // cannonical resource to avoid subcomponent load/store.
-  auto *minVal = std::min_element(scalarNumBits.begin(), scalarNumBits.end());
+  auto *minVal = llvm::min_element(scalarNumBits);
   if (llvm::any_of(scalarNumBits,
                    [minVal](int64_t bit) { return bit % *minVal != 0; }))
     return std::nullopt;
@@ -506,9 +506,14 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
               dstElemVecType.getElementType()) {
             int64_t count =
                 dstNumBytes / (srcElemVecType.getElementTypeBitWidth() / 8);
-            auto castType =
-                VectorType::get({count}, srcElemVecType.getElementType());
-            for (auto &c : components)
+
+            // Make sure not to create 1-element vectors, which are illegal in
+            // SPIR-V.
+            Type castType = srcElemVecType.getElementType();
+            if (count > 1)
+              castType = VectorType::get({count}, castType);
+
+            for (Value &c : components)
               c = rewriter.create<spirv::BitcastOp>(loc, castType, c);
           }
         }

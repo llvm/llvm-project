@@ -33,7 +33,7 @@ void test_locals(void) {
   __SVFloat32_t f32;
   __SVFloat64_t f64;
 
-  __SVBFloat16_t bf16;
+  __SVBfloat16_t bf16;
 
   __SVBool_t b8;
 }

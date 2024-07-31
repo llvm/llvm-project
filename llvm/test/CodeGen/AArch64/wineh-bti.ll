@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=aarch64-windows | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 | FileCheck %s
 
-define dso_local i32 @func(i32 %in) {
+define dso_local i32 @func(i32 %in) "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "branch-target-enforcement" {
 entry:
   call void asm sideeffect "", "~{x19}"()
   switch i32 %in, label %def [
@@ -27,11 +27,6 @@ lbl4:
   ret i32 8
 }
 
-!llvm.module.flags = !{!0, !1}
-
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}
-!1 = !{i32 8, !"sign-return-address", i32 1}
-
 ; CHECK-LABEL: func:
 ; CHECK-NEXT: .seh_proc func
 ; CHECK-NEXT: // %bb.0:
@@ -43,15 +38,15 @@ lbl4:
 
 ; CHECK:      .LBB0_2:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #1
+; CHECK: mov w0, #1
 
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #2
+; CHECK-NEXT: mov w0, #4
 
 ; CHECK:      .LBB0_4:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #4
+; CHECK-NEXT: mov w0, #2
 
 ; CHECK:      .LBB0_5:
 ; CHECK-NEXT: hint #36

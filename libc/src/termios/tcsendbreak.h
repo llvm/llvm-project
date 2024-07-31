@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_TCSENDBREAK_H
-#define LLVM_LIBC_SRC_UNISTD_TCSENDBREAK_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_TCSENDBREAK_H
+#define LLVM_LIBC_SRC_TERMIOS_TCSENDBREAK_H
 
+#include "src/__support/macros/config.h"
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int tcsendbreak(int fd, int duration);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UNISTD_TCSENDBREAK_H
+#endif // LLVM_LIBC_SRC_TERMIOS_TCSENDBREAK_H

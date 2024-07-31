@@ -40,11 +40,14 @@ enum RelExpr {
   R_GOTPLT,
   R_GOTPLTREL,
   R_GOTREL,
+  R_GOTPLT_GOTREL,
+  R_GOTPLT_PC,
   R_NONE,
   R_PC,
   R_PLT,
   R_PLT_PC,
   R_PLT_GOTPLT,
+  R_PLT_GOTREL,
   R_RELAX_HINT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
@@ -84,6 +87,7 @@ enum RelExpr {
   R_AARCH64_PAGE_PC,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
+  R_AARCH64_AUTH,
   R_ARM_PCA,
   R_ARM_SBREL,
   R_MIPS_GOTREL,
@@ -101,7 +105,18 @@ enum RelExpr {
   R_PPC64_TOCBASE,
   R_PPC64_RELAX_GOT_PC,
   R_RISCV_ADD,
+  R_RISCV_LEB128,
   R_RISCV_PC_INDIRECT,
+  // Same as R_PC but with page-aligned semantics.
+  R_LOONGARCH_PAGE_PC,
+  // Same as R_PLT_PC but with page-aligned semantics.
+  R_LOONGARCH_PLT_PAGE_PC,
+  // In addition to having page-aligned semantics, LoongArch GOT relocs are
+  // also reused for TLS, making the semantics differ from other architectures.
+  R_LOONGARCH_GOT,
+  R_LOONGARCH_GOT_PAGE_PC,
+  R_LOONGARCH_TLSGD_PAGE_PC,
+  R_LOONGARCH_TLSDESC_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -126,8 +141,10 @@ struct JumpInstrMod {
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations();
+template <class ELFT> void checkNoCrossRefs();
 void reportUndefinedSymbols();
 void postScanRelocations();
+void addGotEntry(Symbol &sym);
 
 void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
@@ -188,6 +205,11 @@ private:
   uint32_t pass = 0;
 };
 
+template <class RelTy> struct Relocs : ArrayRef<RelTy> {
+  Relocs() = default;
+  Relocs(ArrayRef<RelTy> a) : ArrayRef<RelTy>(a) {}
+};
+
 // Return a int64_t to make sure we get the sign extension out of the way as
 // early as possible.
 template <class ELFT>
@@ -200,17 +222,23 @@ static inline int64_t getAddend(const typename ELFT::Rela &rel) {
 }
 
 template <typename RelTy>
-ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
+inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
+                              SmallVector<RelTy, 0> &storage) {
   auto cmp = [](const RelTy &a, const RelTy &b) {
     return a.r_offset < b.r_offset;
   };
   if (!llvm::is_sorted(rels, cmp)) {
     storage.assign(rels.begin(), rels.end());
     llvm::stable_sort(storage, cmp);
-    rels = storage;
+    rels = Relocs<RelTy>(storage);
   }
   return rels;
 }
+
+// Returns true if Expr refers a GOT entry. Note that this function returns
+// false for TLS variables even though they need GOT, because TLS variables uses
+// GOT differently than the regular variables.
+bool needsGot(RelExpr expr);
 } // namespace lld::elf
 
 #endif

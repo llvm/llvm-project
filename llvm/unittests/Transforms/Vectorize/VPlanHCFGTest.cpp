@@ -21,15 +21,15 @@ class VPlanHCFGTest : public VPlanTestBase {};
 
 TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   const char *ModuleString =
-      "define void @f(i32* %A, i64 %N) {\n"
+      "define void @f(ptr %A, i64 %N) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
       "  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\n"
-      "  %arr.idx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv\n"
-      "  %l1 = load i32, i32* %arr.idx, align 4\n"
+      "  %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\n"
+      "  %l1 = load i32, ptr %arr.idx, align 4\n"
       "  %res = add i32 %l1, 10\n"
-      "  store i32 %res, i32* %arr.idx, align 4\n"
+      "  store i32 %res, ptr %arr.idx, align 4\n"
       "  %indvars.iv.next = add i64 %indvars.iv, 1\n"
       "  %exitcond = icmp ne i64 %indvars.iv.next, %N\n"
       "  br i1 %exitcond, label %for.body, label %for.end\n"
@@ -96,44 +96,56 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
-  Plan->getVPValueOrAddLiveIn(&*F->arg_begin());
+  Plan->getOrAddLiveIn(&*F->arg_begin());
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in vp\<%0\> = vector-trip-count\nvp\<%1\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
-    "ph:\l" +
+    "ir-bb\<entry\>:\l" +
     "  EMIT vp\<%1\> = EXPAND SCEV (-1 + %N)\l" +
     "No successors\l"
   ]
   N1 [label =
     "vector.ph:\l" +
-    "Successor(s): for.body\l"
+    "Successor(s): vector loop\l"
   ]
   N1 -> N2 [ label="" lhead=cluster_N3]
   subgraph cluster_N3 {
     fontname=Courier
-    label="\<x1\> for.body"
+    label="\<x1\> vector loop"
     N2 [label =
       "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\> ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%res\> = add ir\<%l1\> ir\<10\>\l" +
-      "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
+      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT branch-on-cond ir\<%exitcond\>\l" +
       "No successors\l"
     ]
   }
   N2 -> N4 [ label="" ltail=cluster_N3]
   N4 [label =
-    "for.end:\l" +
+    "middle.block:\l" +
+    "  EMIT vp\<%2\> = icmp eq vp\<%1\>, vp\<%0\>\l" +
+    "  EMIT branch-on-cond vp\<%2\>\l" +
+    "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
+  ]
+  N4 -> N5 [ label="T"]
+  N4 -> N6 [ label="F"]
+  N5 [label =
+    "ir-bb\<for.end\>:\l" +
+    "No successors\l"
+  ]
+  N6 [label =
+    "scalar.ph:\l" +
     "No successors\l"
   ]
 }
@@ -148,15 +160,15 @@ compound=true
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   const char *ModuleString =
-      "define void @f(i32* %A, i64 %N) {\n"
+      "define void @f(ptr %A, i64 %N) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
       "  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\n"
-      "  %arr.idx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv\n"
-      "  %l1 = load i32, i32* %arr.idx, align 4\n"
+      "  %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\n"
+      "  %l1 = load i32, ptr %arr.idx, align 4\n"
       "  %res = add i32 %l1, 10\n"
-      "  store i32 %res, i32* %arr.idx, align 4\n"
+      "  store i32 %res, ptr %arr.idx, align 4\n"
       "  %indvars.iv.next = add i64 %indvars.iv, 1\n"
       "  %exitcond = icmp ne i64 %indvars.iv.next, %N\n"
       "  br i1 %exitcond, label %for.body, label %for.end\n"
@@ -192,9 +204,9 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   auto Iter = VecBB->begin();
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));

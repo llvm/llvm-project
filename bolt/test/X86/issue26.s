@@ -1,13 +1,13 @@
-# This reproduces issue 26 from our github repo
-#  BOLT fails with the following assertion:
-#    llvm/tools/llvm-bolt/src/BinaryFunction.cpp:2950: void llvm::bolt::BinaryFunction::postProcessBranches(): Assertion `validateCFG() && "invalid CFG"' failed.
+## This reproduces issue 26 from our github repo
+##  BOLT fails with the following assertion:
+##    llvm/tools/llvm-bolt/src/BinaryFunction.cpp:2950: void llvm::bolt::BinaryFunction::postProcessBranches(): Assertion `validateCFG() && "invalid CFG"' failed.
 
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe --relocs --print-cfg -o %t.out \
+# RUN: llvm-bolt %t.exe --relocs --print-cfg -o %t.out 2>&1 \
 # RUN:    | FileCheck %s
 
 # CHECK-NOT: BOLT-WARNING: CFG invalid in XYZ @ .LBB0

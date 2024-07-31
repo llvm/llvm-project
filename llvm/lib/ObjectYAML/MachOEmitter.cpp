@@ -19,6 +19,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -426,7 +427,7 @@ void MachOWriter::writeRelocations(raw_ostream &OS) {
 void MachOWriter::writeBindOpcodes(
     raw_ostream &OS, std::vector<MachOYAML::BindOpcode> &BindOpcodes) {
 
-  for (auto &Opcode : BindOpcodes) {
+  for (const auto &Opcode : BindOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
     OS.write(reinterpret_cast<char *>(&OpByte), 1);
     for (auto Data : Opcode.ULEBExtraData) {
@@ -458,7 +459,7 @@ void MachOWriter::dumpExportEntry(raw_ostream &OS,
     }
   }
   OS.write(static_cast<uint8_t>(Entry.Children.size()));
-  for (auto EE : Entry.Children) {
+  for (const auto &EE : Entry.Children) {
     OS << EE.Name;
     OS.write('\0');
     encodeULEB128(EE.NodeOffset, OS);
@@ -559,7 +560,7 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
 void MachOWriter::writeRebaseOpcodes(raw_ostream &OS) {
   MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
 
-  for (auto Opcode : LinkEdit.RebaseOpcodes) {
+  for (const auto &Opcode : LinkEdit.RebaseOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
     OS.write(reinterpret_cast<char *>(&OpByte), 1);
     for (auto Data : Opcode.ExtraData)

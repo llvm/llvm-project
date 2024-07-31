@@ -271,11 +271,11 @@ _Bool test_6(void) {
 // CHECK-RECORD: *** Dumping IRgen Record Layout
 // CHECK-RECORD: Record: RecordDecl{{.*}}s7
 // CHECK-RECORD: Layout: <CGRecordLayout
-// CHECK-RECORD:   LLVMType:%struct.s7 = type { i32, i32, i32, i8, i32, [12 x i8] }
+// CHECK-RECORD:   LLVMType:%struct.s7 = type <{ i32, i32, i32, i64, [12 x i8] }>
 // CHECK-RECORD:   IsZeroInitializable:1
 // CHECK-RECORD:   BitFields:[
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:5 IsSigned:1 StorageSize:8 StorageOffset:12
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:29 IsSigned:1 StorageSize:32 StorageOffset:16
+// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:5 IsSigned:1 StorageSize:64 StorageOffset:12
+// CHECK-RECORD:     <CGBitFieldInfo Offset:32 Size:29 IsSigned:1 StorageSize:64 StorageOffset:12
 
 struct __attribute__((aligned(16))) s7 {
   int a, b, c;
@@ -325,9 +325,6 @@ unsigned test_8(void) {
 /***/
 
 // This is another case where we narrow the access width immediately.
-//
-// <rdar://problem/7893760>
-
 struct __attribute__((packed)) s9 {
   unsigned f0 : 7;
   unsigned f1 : 7;

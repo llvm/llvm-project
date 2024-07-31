@@ -43,6 +43,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXLowerAggrCopies.cpp",
     "NVPTXLowerAlloca.cpp",
     "NVPTXLowerArgs.cpp",
+    "NVPTXLowerUnreachable.cpp",
     "NVPTXMCExpr.cpp",
     "NVPTXPeephole.cpp",
     "NVPTXPrologEpilogPass.cpp",

@@ -9,12 +9,17 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
-extern LIBC_THREAD_LOCAL unsigned long rand_next;
+// The ISO C standard does not explicitly require thread-safe behavior for the
+// generic `rand()` function. Some implementations expect it however, so we
+// provide it here.
+extern cpp::Atomic<unsigned long> rand_next;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H

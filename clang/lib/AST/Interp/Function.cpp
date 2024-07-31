@@ -7,21 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
-#include "Program.h"
 #include "Opcode.h"
+#include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;
 
 Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
-                   llvm::SmallVector<PrimType, 8> &&ParamTypes,
+                   llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-                   bool HasThisPointer, bool HasRVO)
+                   llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
+                   bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      HasThisPointer(HasThisPointer), HasRVO(HasRVO) {}
+      ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
+      HasRVO(HasRVO), Variadic(F->isVariadic()),
+      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -36,12 +40,13 @@ SourceInfo Function::getSource(CodePtr PC) const {
   unsigned Offset = PC - getCodeBegin();
   using Elem = std::pair<unsigned, SourceInfo>;
   auto It = llvm::lower_bound(SrcMap, Elem{Offset, {}}, llvm::less_first());
-  assert(It != SrcMap.end());
+  if (It == SrcMap.end())
+    return SrcMap.back().second;
   return It->second;
 }
 
 bool Function::isVirtual() const {
-  if (auto *M = dyn_cast<CXXMethodDecl>(F))
+  if (const auto *M = dyn_cast<CXXMethodDecl>(F))
     return M->isVirtual();
   return false;
 }

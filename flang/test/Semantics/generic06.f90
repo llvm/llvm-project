@@ -1,11 +1,11 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
-  !ERROR: Specific procedure 'sin' of generic interface 'yintercept' may not be INTRINSIC
+  !PORTABILITY: Specific procedure 'sin' of generic interface 'yintercept' should not be INTRINSIC
   intrinsic sin
   interface yIntercept
     procedure sin
   end interface
-  !ERROR: Specific procedure 'cos' of generic interface 'xintercept' may not be INTRINSIC
+  !PORTABILITY: Specific procedure 'cos' of generic interface 'xintercept' should not be INTRINSIC
   intrinsic cos
   generic :: xIntercept => cos
 end module

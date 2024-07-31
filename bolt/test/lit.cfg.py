@@ -72,6 +72,9 @@ if config.bolt_enable_runtime:
 if config.gnu_ld:
     config.available_features.add("gnu_ld")
 
+if lit.util.which("fuser"):
+    config.available_features.add("fuser")
+
 llvm_config.use_default_substitutions()
 
 llvm_config.config.environment["CLANG"] = config.bolt_clang
@@ -89,10 +92,22 @@ link_fdata_cmd = os.path.join(config.test_source_root, "link_fdata.py")
 
 tool_dirs = [config.llvm_tools_dir, config.test_source_root]
 
+llvm_bolt_args = []
+
+if config.libbolt_rt_instr:
+    llvm_bolt_args.append(f"--runtime-instrumentation-lib={config.libbolt_rt_instr}")
+
+if config.libbolt_rt_hugify:
+    llvm_bolt_args.append(f"--runtime-hugify-lib={config.libbolt_rt_hugify}")
+
 tools = [
     ToolSubst("llc", unresolved="fatal"),
     ToolSubst("llvm-dwarfdump", unresolved="fatal"),
-    ToolSubst("llvm-bolt", unresolved="fatal"),
+    ToolSubst(
+        "llvm-bolt",
+        unresolved="fatal",
+        extra_args=llvm_bolt_args,
+    ),
     ToolSubst("llvm-boltdiff", unresolved="fatal"),
     ToolSubst("llvm-bolt-heatmap", unresolved="fatal"),
     ToolSubst("llvm-bat-dump", unresolved="fatal"),

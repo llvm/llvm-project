@@ -1,0 +1,22 @@
+# Try to instrument a very fast test. Input bin will not execute any code during
+# runtime besides returning zero in main, so it is a good trivial case.
+REQUIRES: system-linux,bolt-runtime
+
+RUN: %clang %p/Inputs/basic-instrumentation.s -Wl,-q -o %t.exe
+RUN: llvm-bolt %t.exe -o %t --instrument \
+RUN:   --instrumentation-file=%t \
+RUN:   --instrumentation-file-append-pid
+
+# Execute program to collect profile
+RUN: rm %t.*.fdata || echo Nothing to remove
+RUN: %t
+
+# Profile should be written to %t.PID.fdata, check it
+RUN: mv %t.*.fdata %t.fdata
+RUN: cat %t.fdata | FileCheck -check-prefix=CHECK %s
+
+# Check BOLT works with this profile
+RUN: llvm-bolt %t.exe --data %t.fdata -o %t.2 --reorder-blocks=cache
+
+# The instrumented profile should at least say main was called once
+CHECK: main 0 0 1{{$}}

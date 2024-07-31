@@ -42,7 +42,6 @@ define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-NEXT: bb.4.bb17.i.i.i (machine-block-address-taken, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.kmem_cache_has_cpu_partial.exit:
   ; CHECK-NEXT:   $rax = COPY [[PHI]]
   ; CHECK-NEXT:   RET 0, $rax

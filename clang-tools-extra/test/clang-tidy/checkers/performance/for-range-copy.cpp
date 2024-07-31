@@ -47,6 +47,11 @@ struct S {
   S &operator=(const S &);
 };
 
+struct Point {
+  ~Point() {}
+  int x, y;
+};
+
 struct Convertible {
   operator S() const {
     return S();
@@ -87,6 +92,10 @@ void instantiated() {
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is {{.*}}
   // CHECK-FIXES: {{^}}  for (const S& S2 : View<Iterator<S>>()) {}
 
+  for (const auto [X, Y] : View<Iterator<Point>>()) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: the loop variable's type is
+  // CHECK-FIXES: {{^}}  for (const auto& [X, Y] : View<Iterator<Point>>()) {}
+
   for (const T T2 : View<Iterator<T>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is {{.*}}
   // CHECK-FIXES: {{^}}  for (const T& T2 : View<Iterator<T>>()) {}
@@ -123,11 +132,6 @@ struct Mutable {
   ~Mutable() {}
 };
 
-struct Point {
-  ~Point() {}
-  int x, y;
-};
-
 Mutable& operator<<(Mutable &Out, bool B) {
   Out.setBool(B);
   return Out;
@@ -144,6 +148,7 @@ void useByValue(Mutable M);
 void useByConstValue(const Mutable M);
 void mutate(Mutable *M);
 void mutate(Mutable &M);
+void mutate(int &);
 void onceConstOnceMutated(const Mutable &M1, Mutable &M2);
 
 void negativeVariableIsMutated() {
@@ -234,6 +239,22 @@ void positiveOnlyAccessedFieldAsConst() {
   }
 }
 
+void positiveOnlyUsedAsConstBinding() {
+  for (auto [X, Y] : View<Iterator<Point>>()) {
+    // CHECK-MESSAGES: [[@LINE-1]]:13: warning: loop variable is copied but
+    // CHECK-FIXES: for (const auto& [X, Y] : View<Iterator<Point>>()) {
+    use(X);
+    use(Y);
+  }
+}
+
+void negativeMutatedBinding() {
+  for (auto [X, Y] : View<Iterator<Point>>()) {
+    use(X);
+    mutate(Y);
+  }
+}
+
 void positiveOnlyUsedInCopyConstructor() {
   for (auto A : View<Iterator<Mutable>>()) {
     // CHECK-MESSAGES: [[@LINE-1]]:13: warning: loop variable is copied but only used as const reference; consider making it a const reference [performance-for-range-copy]
@@ -296,3 +317,38 @@ void positiveValueIteratorUsedElseWhere() {
     // SS : createView(*ValueReturningIterator<S>())) {
   }
 }
+
+void positiveConstMemberExpr() {
+  struct Struct {
+    Mutable Member;
+  };
+  for (Struct SS : View<Iterator<Struct>>()) {
+    // CHECK-MESSAGES: [[@LINE-1]]:15: warning: loop variable is copied
+    // CHECK-FIXES: for (const Struct& SS : View<Iterator<Struct>>()) {
+    auto MemberCopy = SS.Member;
+    const auto &ConstRef = SS.Member;
+    bool b = SS.Member.constMethod();
+    use(SS.Member);
+    useByConstValue(SS.Member);
+    useByValue(SS.Member);
+  }
+}
+
+void negativeNonConstMemberExpr() {
+  struct Struct {
+    Mutable Member;
+  };
+  for (Struct SS : View<Iterator<Struct>>()) {
+    SS.Member.setBool(true);
+  }
+  for (Struct SS : View<Iterator<Struct>>()) {
+    SS.Member[1];
+  }
+  for (Struct SS : View<Iterator<Struct>>()) {
+    mutate(SS.Member);
+  }
+  for (Struct SS : View<Iterator<Struct>>()) {
+    mutate(&SS.Member);
+  }
+}
+

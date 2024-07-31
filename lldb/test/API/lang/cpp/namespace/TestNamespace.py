@@ -32,8 +32,9 @@ class NamespaceBreakpointTestCase(TestBase):
         )
         for bp_loc in bp:
             name = bp_loc.GetAddress().GetFunction().GetName()
-            self.assertTrue(
-                name in names,
+            self.assertIn(
+                name,
+                names,
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeAuto",
             )
 
@@ -61,8 +62,9 @@ class NamespaceBreakpointTestCase(TestBase):
         )
         for bp_loc in bp:
             name = bp_loc.GetAddress().GetFunction().GetName()
-            self.assertTrue(
-                name in names,
+            self.assertIn(
+                name,
+                names,
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeFull",
             )
 
@@ -88,8 +90,9 @@ class NamespaceBreakpointTestCase(TestBase):
         )
         for bp_loc in bp:
             name = bp_loc.GetAddress().GetFunction().GetName()
-            self.assertTrue(
-                name in names,
+            self.assertIn(
+                name,
+                names,
                 "make sure breakpoint locations are correct for 'A::func' with eFunctionNameTypeFull",
             )
 
@@ -249,4 +252,17 @@ class NamespaceTestCase(TestBase):
         )
         self.expect_expr(
             "((::B::Bar*)&::B::bar)->x()", result_type="int", result_value="42"
+        )
+
+        self.expect_expr("InAnon1::var_in_anon", result_type="int", result_value="10")
+        self.expect_expr(
+            "InAnon1::InAnon2::var_in_anon", result_type="int", result_value="5"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::var_in_anon", result_type="int", result_value="15"
+        )
+        self.expect_expr(
+            "InAnon1::inline_ns::InAnon2::var_in_anon",
+            result_type="int",
+            result_value="5",
         )

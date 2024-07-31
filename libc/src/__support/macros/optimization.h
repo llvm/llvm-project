@@ -7,23 +7,26 @@
 //===----------------------------------------------------------------------===//
 // This header file defines portable macros for performance optimization.
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_OPTIMIZATION_H
-#define LLVM_LIBC_SRC_SUPPORT_MACROS_OPTIMIZATION_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
-#include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 
 // We use a template to implement likely/unlikely to make sure that we don't
 // accidentally pass an integer.
-namespace __llvm_libc::details {
+namespace LIBC_NAMESPACE_DECL {
+namespace details {
 template <typename T>
 LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
   return __builtin_expect(value, expected);
 }
-} // namespace __llvm_libc::details
-#define LIBC_LIKELY(x) __llvm_libc::details::expects_bool_condition(x, true)
-#define LIBC_UNLIKELY(x) __llvm_libc::details::expects_bool_condition(x, false)
+} // namespace details
+} // namespace LIBC_NAMESPACE_DECL
+#define LIBC_LIKELY(x) LIBC_NAMESPACE::details::expects_bool_condition(x, true)
+#define LIBC_UNLIKELY(x)                                                       \
+  LIBC_NAMESPACE::details::expects_bool_condition(x, false)
 
 #if defined(LIBC_COMPILER_IS_CLANG)
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
@@ -33,4 +36,18 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #error "Unhandled compiler"
 #endif
 
-#endif /* LLVM_LIBC_SRC_SUPPORT_MACROS_OPTIMIZATION_H */
+// Defining optimization options for math functions.
+// TODO: Exporting this to public generated headers?
+#define LIBC_MATH_SKIP_ACCURATE_PASS 0x01
+#define LIBC_MATH_SMALL_TABLES 0x02
+#define LIBC_MATH_NO_ERRNO 0x04
+#define LIBC_MATH_NO_EXCEPT 0x08
+#define LIBC_MATH_FAST                                                         \
+  (LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES |                     \
+   LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+
+#ifndef LIBC_MATH
+#define LIBC_MATH 0
+#endif // LIBC_MATH
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

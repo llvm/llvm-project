@@ -80,36 +80,24 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__m68k__");
 
-  Builder.defineMacro("mc68000");
-  Builder.defineMacro("__mc68000");
-  Builder.defineMacro("__mc68000__");
+  DefineStd(Builder, "mc68000", Opts);
 
   // For sub-architecture
   switch (CPU) {
   case CK_68010:
-    Builder.defineMacro("mc68010");
-    Builder.defineMacro("__mc68010");
-    Builder.defineMacro("__mc68010__");
+    DefineStd(Builder, "mc68010", Opts);
     break;
   case CK_68020:
-    Builder.defineMacro("mc68020");
-    Builder.defineMacro("__mc68020");
-    Builder.defineMacro("__mc68020__");
+    DefineStd(Builder, "mc68020", Opts);
     break;
   case CK_68030:
-    Builder.defineMacro("mc68030");
-    Builder.defineMacro("__mc68030");
-    Builder.defineMacro("__mc68030__");
+    DefineStd(Builder, "mc68030", Opts);
     break;
   case CK_68040:
-    Builder.defineMacro("mc68040");
-    Builder.defineMacro("__mc68040");
-    Builder.defineMacro("__mc68040__");
+    DefineStd(Builder, "mc68040", Opts);
     break;
   case CK_68060:
-    Builder.defineMacro("mc68060");
-    Builder.defineMacro("__mc68060");
-    Builder.defineMacro("__mc68060__");
+    DefineStd(Builder, "mc68060", Opts);
     break;
   default:
     break;
@@ -139,16 +127,21 @@ bool M68kTargetInfo::hasFeature(StringRef Feature) const {
 
 const char *const M68kTargetInfo::GCCRegNames[] = {
     "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7",
-    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "sp",
     "pc"};
 
 ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
 
+const TargetInfo::GCCRegAlias M68kTargetInfo::GCCRegAliases[] = {
+    {{"bp"}, "a5"},
+    {{"fp"}, "a6"},
+    {{"usp", "ssp", "isp", "a7"}, "sp"},
+};
+
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
-  // No aliases.
-  return std::nullopt;
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool M68kTargetInfo::validateAsmConstraint(
@@ -250,5 +243,15 @@ TargetInfo::BuiltinVaListKind M68kTargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::VoidPtrBuiltinVaList;
 }
 
+TargetInfo::CallingConvCheckResult
+M68kTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_C:
+  case CC_M68kRTD:
+    return CCCR_OK;
+  default:
+    return TargetInfo::checkCallingConvention(CC);
+  }
+}
 } // namespace targets
 } // namespace clang

@@ -177,16 +177,28 @@ void justAtAvailable(void) {
 
 #ifdef OBJCPP
 
-int f(char) AVAILABLE_10_12;
+int f(char) AVAILABLE_10_12; // #f_char_def
 int f(int);
 
 template <class T> int use_f() {
-  // FIXME: We should warn here!
-  return f(T());
+  if (@available(macos 10.12, *)) {
+    return f(T()); // no warning expected
+  } else {
+  // expected-warning@#f_call {{'f' is only available on macOS 10.12 or newer}}
+  // expected-note@#f_char_inst {{in instantiation of function template specialization 'use_f<char>' requested here}}
+  // expected-note@#f_char_def {{'f' has been marked as being introduced in macOS 10.12 here, but the deployment target is macOS 10.9}}
+  // expected-note@#f_call {{enclose 'f' in an @available check to silence this warning}}
+    return f(T()); // #f_call
+  }
 }
 
 int a = use_f<int>();
-int b = use_f<char>();
+int b = use_f<char>(); // #f_char_inst
+
+int use_f2() AVAILABLE_10_12 {
+  int c = use_f<int>();
+  int d = use_f<char>(); // no warning expected
+}
 
 template <class> int use_at_available() {
   if (@available(macos 10.12, *))
@@ -307,7 +319,6 @@ void with_local_struct(void) {
   }
 }
 
-// rdar://33156429:
 // Avoid the warning on protocol requirements.
 
 AVAILABLE_10_12

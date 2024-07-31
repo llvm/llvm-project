@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -69,7 +70,7 @@ static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
                                           cl::init(true));
 
 static cl::opt<bool> EnableSeparateStorageAnalysis("basic-aa-separate-storage",
-                                                   cl::Hidden, cl::init(false));
+                                                   cl::Hidden, cl::init(true));
 
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
@@ -89,7 +90,7 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // may be created without handles to some analyses and in that case don't
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
-      (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
+      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -101,22 +102,23 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 //===----------------------------------------------------------------------===//
 
 /// Returns the size of the object specified by V or UnknownSize if unknown.
-static uint64_t getObjectSize(const Value *V, const DataLayout &DL,
-                              const TargetLibraryInfo &TLI,
-                              bool NullIsValidLoc,
-                              bool RoundToAlign = false) {
+static std::optional<TypeSize> getObjectSize(const Value *V,
+                                             const DataLayout &DL,
+                                             const TargetLibraryInfo &TLI,
+                                             bool NullIsValidLoc,
+                                             bool RoundToAlign = false) {
   uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return Size;
-  return MemoryLocation::UnknownSize;
+    return TypeSize::getFixed(Size);
+  return std::nullopt;
 }
 
 /// Returns true if we can prove that the object specified by V is smaller than
 /// Size.
-static bool isObjectSmallerThan(const Value *V, uint64_t Size,
+static bool isObjectSmallerThan(const Value *V, TypeSize Size,
                                 const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
                                 bool NullIsValidLoc) {
@@ -151,16 +153,16 @@ static bool isObjectSmallerThan(const Value *V, uint64_t Size,
 
   // This function needs to use the aligned object size because we allow
   // reads a bit past the end given sufficient alignment.
-  uint64_t ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
-                                      /*RoundToAlign*/ true);
+  std::optional<TypeSize> ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
+                                                     /*RoundToAlign*/ true);
 
-  return ObjectSize != MemoryLocation::UnknownSize && ObjectSize < Size;
+  return ObjectSize && TypeSize::isKnownLT(*ObjectSize, Size);
 }
 
 /// Return the minimal extent from \p V to the end of the underlying object,
 /// assuming the result is used in an aliasing query. E.g., we do use the query
 /// location size and the fact that null pointers cannot alias here.
-static uint64_t getMinimalExtentFrom(const Value &V,
+static TypeSize getMinimalExtentFrom(const Value &V,
                                      const LocationSize &LocSize,
                                      const DataLayout &DL,
                                      bool NullIsValidLoc) {
@@ -175,15 +177,22 @@ static uint64_t getMinimalExtentFrom(const Value &V,
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
   if (LocSize.isPrecise())
-    DerefBytes = std::max(DerefBytes, LocSize.getValue());
-  return DerefBytes;
+    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
+  return TypeSize::getFixed(DerefBytes);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
-static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
+static bool isObjectSize(const Value *V, TypeSize Size, const DataLayout &DL,
                          const TargetLibraryInfo &TLI, bool NullIsValidLoc) {
-  uint64_t ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc);
-  return ObjectSize != MemoryLocation::UnknownSize && ObjectSize == Size;
+  std::optional<TypeSize> ObjectSize =
+      getObjectSize(V, DL, TLI, NullIsValidLoc);
+  return ObjectSize && *ObjectSize == Size;
+}
+
+/// Return true if both V1 and V2 are VScale
+static bool areBothVScale(const Value *V1, const Value *V2) {
+  return PatternMatch::match(V1, PatternMatch::m_VScale()) &&
+         PatternMatch::match(V2, PatternMatch::m_VScale());
 }
 
 //===----------------------------------------------------------------------===//
@@ -192,21 +201,29 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 
 CaptureInfo::~CaptureInfo() = default;
 
-bool SimpleCaptureInfo::isNotCapturedBeforeOrAt(const Value *Object,
-                                                const Instruction *I) {
+bool SimpleCaptureInfo::isNotCapturedBefore(const Value *Object,
+                                            const Instruction *I, bool OrAt) {
   return isNonEscapingLocalObject(Object, &IsCapturedCache);
 }
 
-bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
-                                                 const Instruction *I) {
+static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
+                         const LoopInfo *LI) {
+  BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
+  SmallVector<BasicBlock *> Succs(successors(BB));
+  return Succs.empty() ||
+         !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
+}
+
+bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
+                                             const Instruction *I, bool OrAt) {
   if (!isIdentifiedFunctionLocal(Object))
     return false;
 
   auto Iter = EarliestEscapes.insert({Object, nullptr});
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
-        Object, *const_cast<Function *>(I->getFunction()),
-        /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT, EphValues);
+        Object, *const_cast<Function *>(DT.getRoot()->getParent()),
+        /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
     if (EarliestCapture) {
       auto Ins = Inst2Obj.insert({EarliestCapture, {}});
       Ins.first->second.push_back(Object);
@@ -218,8 +235,17 @@ bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
   if (!Iter.first->second)
     return true;
 
-  return I != Iter.first->second &&
-         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, &LI);
+  // No context instruction means any use is capturing.
+  if (!I)
+    return false;
+
+  if (I == Iter.first->second) {
+    if (OrAt)
+      return false;
+    return isNotInCycle(I, &DT, LI);
+  }
+
+  return !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
 }
 
 void EarliestEscapeInfo::removeInstruction(Instruction *I) {
@@ -242,31 +268,43 @@ struct CastedValue {
   unsigned ZExtBits = 0;
   unsigned SExtBits = 0;
   unsigned TruncBits = 0;
+  /// Whether trunc(V) is non-negative.
+  bool IsNonNegative = false;
 
   explicit CastedValue(const Value *V) : V(V) {}
   explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits,
-                       unsigned TruncBits)
-      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits) {}
+                       unsigned TruncBits, bool IsNonNegative)
+      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits),
+        IsNonNegative(IsNonNegative) {}
 
   unsigned getBitWidth() const {
     return V->getType()->getPrimitiveSizeInBits() - TruncBits + ZExtBits +
            SExtBits;
   }
 
-  CastedValue withValue(const Value *NewV) const {
-    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits);
+  CastedValue withValue(const Value *NewV, bool PreserveNonNeg) const {
+    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits,
+                       IsNonNegative && PreserveNonNeg);
   }
 
   /// Replace V with zext(NewV)
-  CastedValue withZExtOfValue(const Value *NewV) const {
+  CastedValue withZExtOfValue(const Value *NewV, bool ZExtNonNegative) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
-      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+      // zext<nneg>(trunc(zext(NewV))) == zext<nneg>(trunc(NewV))
+      // The nneg can be preserved on the outer zext here.
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
+                         IsNonNegative);
 
     // zext(sext(zext(NewV))) == zext(zext(zext(NewV)))
     ExtendBy -= TruncBits;
-    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0);
+    // zext<nneg>(zext(NewV)) == zext(NewV)
+    // zext(zext<nneg>(NewV)) == zext<nneg>(NewV)
+    // The nneg can be preserved from the inner zext here but must be dropped
+    // from the outer.
+    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0,
+                       ZExtNonNegative);
   }
 
   /// Replace V with sext(NewV)
@@ -274,11 +312,16 @@ struct CastedValue {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
-      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+      // zext<nneg>(trunc(sext(NewV))) == zext<nneg>(trunc(NewV))
+      // The nneg can be preserved on the outer zext here
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
+                         IsNonNegative);
 
     // zext(sext(sext(NewV)))
     ExtendBy -= TruncBits;
-    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0);
+    // zext<nneg>(sext(sext(NewV))) = zext<nneg>(sext(NewV))
+    // The nneg can be preserved on the outer zext here
+    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0, IsNonNegative);
   }
 
   APInt evaluateWith(APInt N) const {
@@ -307,8 +350,15 @@ struct CastedValue {
   }
 
   bool hasSameCastsAs(const CastedValue &Other) const {
-    return ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
-           TruncBits == Other.TruncBits;
+    if (ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
+        TruncBits == Other.TruncBits)
+      return true;
+    // If either CastedValue has a nneg zext then the sext/zext bits are
+    // interchangable for that value.
+    if (IsNonNegative || Other.IsNonNegative)
+      return (ZExtBits + SExtBits == Other.ZExtBits + Other.SExtBits &&
+              TruncBits == Other.TruncBits);
+    return false;
   }
 };
 
@@ -378,29 +428,27 @@ static LinearExpression GetLinearExpression(
         // further.
         return Val;
       case Instruction::Or:
-        // X|C == X+C if all the bits in C are unset in X.  Otherwise we can't
-        // analyze it.
-        if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(), DL, 0, AC,
-                               BOp, DT))
+        // X|C == X+C if it is disjoint.  Otherwise we can't analyze it.
+        if (!cast<PossiblyDisjointInst>(BOp)->isDisjoint())
           return Val;
 
         [[fallthrough]];
       case Instruction::Add: {
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset += RHS;
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Sub: {
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset -= RHS;
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Mul:
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT)
                 .mul(RHS, NSW);
         break;
@@ -413,7 +461,7 @@ static LinearExpression GetLinearExpression(
         if (RHS.getLimitedValue() > Val.getBitWidth())
           return Val;
 
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
                                 Depth + 1, AC, DT);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
@@ -424,10 +472,10 @@ static LinearExpression GetLinearExpression(
     }
   }
 
-  if (isa<ZExtInst>(Val.V))
+  if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
-        Val.withZExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
-        DL, Depth + 1, AC, DT);
+        Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
+        Depth + 1, AC, DT);
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
@@ -442,10 +490,13 @@ static LinearExpression GetLinearExpression(
 /// an issue, for example, in particular for 32b pointers with negative indices
 /// that rely on two's complement wrap-arounds for precise alias information
 /// where the maximum index size is 64b.
-static APInt adjustToIndexSize(const APInt &Offset, unsigned IndexSize) {
+static void adjustToIndexSize(APInt &Offset, unsigned IndexSize) {
   assert(IndexSize <= Offset.getBitWidth() && "Invalid IndexSize!");
   unsigned ShiftBits = Offset.getBitWidth() - IndexSize;
-  return (Offset << ShiftBits).ashr(ShiftBits);
+  if (ShiftBits != 0) {
+    Offset <<= ShiftBits;
+    Offset.ashrInPlace(ShiftBits);
+  }
 }
 
 namespace {
@@ -461,6 +512,17 @@ struct VariableGEPIndex {
   /// True if all operations in this expression are NSW.
   bool IsNSW;
 
+  /// True if the index should be subtracted rather than added. We don't simply
+  /// negate the Scale, to avoid losing the NSW flag: X - INT_MIN*1 may be
+  /// non-wrapping, while X + INT_MIN*(-1) wraps.
+  bool IsNegated;
+
+  bool hasNegatedScaleOf(const VariableGEPIndex &Other) const {
+    if (IsNegated == Other.IsNegated)
+      return Scale == -Other.Scale;
+    return Scale == Other.Scale;
+  }
+
   void dump() const {
     print(dbgs());
     dbgs() << "\n";
@@ -470,7 +532,9 @@ struct VariableGEPIndex {
        << ", zextbits=" << Val.ZExtBits
        << ", sextbits=" << Val.SExtBits
        << ", truncbits=" << Val.TruncBits
-       << ", scale=" << Scale << ")";
+       << ", scale=" << Scale
+       << ", nsw=" << IsNSW
+       << ", negated=" << IsNegated << ")";
   }
 };
 }
@@ -608,7 +672,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           continue;
 
         // Don't attempt to analyze GEPs if the scalable index is not zero.
-        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
         if (AllocTypeSize.isScalable()) {
           Decomposed.Base = V;
           return Decomposed;
@@ -619,7 +683,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         continue;
       }
 
-      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
       if (AllocTypeSize.isScalable()) {
         Decomposed.Base = V;
         return Decomposed;
@@ -633,7 +697,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
       unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
       LinearExpression LE = GetLinearExpression(
-          CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
+          CastedValue(Index, 0, SExtBits, TruncBits, false), DL, 0, AC, DT);
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getFixedValue();
@@ -646,9 +710,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       //   A[x][x] -> x*16 + x*4 -> x*20
       // This also ensures that 'x' only appears in the index list once.
       for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
-        if (Decomposed.VarIndices[i].Val.V == LE.Val.V &&
+        if ((Decomposed.VarIndices[i].Val.V == LE.Val.V ||
+             areBothVScale(Decomposed.VarIndices[i].Val.V, LE.Val.V)) &&
             Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val)) {
           Scale += Decomposed.VarIndices[i].Scale;
+          LE.IsNSW = false; // We cannot guarantee nsw for the merge.
           Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
         }
@@ -656,17 +722,18 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // Make sure that we have a scale that makes sense for this target's
       // index size.
-      Scale = adjustToIndexSize(Scale, IndexSize);
+      adjustToIndexSize(Scale, IndexSize);
 
       if (!!Scale) {
-        VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW};
+        VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW,
+                                  /* IsNegated */ false};
         Decomposed.VarIndices.push_back(Entry);
       }
     }
 
     // Take care of wrap-arounds
     if (GepHasConstantOffset)
-      Decomposed.Offset = adjustToIndexSize(Decomposed.Offset, IndexSize);
+      adjustToIndexSize(Decomposed.Offset, IndexSize);
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
@@ -717,7 +784,7 @@ ModRefInfo BasicAAResult::getModRefInfoMask(const MemoryLocation &Loc,
       // global to be marked constant in some modules and non-constant in
       // others.  GV may even be a declaration, not a definition.
       if (!GV->isConstant())
-        return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+        return ModRefInfo::ModRef;
       continue;
     }
 
@@ -733,18 +800,18 @@ ModRefInfo BasicAAResult::getModRefInfoMask(const MemoryLocation &Loc,
     if (const PHINode *PN = dyn_cast<PHINode>(V)) {
       // Don't bother inspecting phi nodes with many operands.
       if (PN->getNumIncomingValues() > MaxLookup)
-        return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+        return ModRefInfo::ModRef;
       append_range(Worklist, PN->incoming_values());
       continue;
     }
 
     // Otherwise be conservative.
-    return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+    return ModRefInfo::ModRef;
   } while (!Worklist.empty() && --MaxLookup);
 
   // If we hit the maximum number of instructions to examine, be conservative.
   if (!Worklist.empty())
-    return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+    return ModRefInfo::ModRef;
 
   return Result;
 }
@@ -799,7 +866,7 @@ ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,
   if (Call->paramHasAttr(ArgIdx, Attribute::ReadNone))
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getArgModRefInfo(Call, ArgIdx);
+  return ModRefInfo::ModRef;
 }
 
 #ifndef NDEBUG
@@ -864,11 +931,13 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     if (!AI->isStaticAlloca() && isIntrinsicCall(Call, Intrinsic::stackrestore))
       return ModRefInfo::Mod;
 
-  // If the pointer is to a locally allocated object that does not escape,
-  // then the call can not mod/ref the pointer unless the call takes the pointer
-  // as an argument, and itself doesn't capture it.
+  // A call can access a locally allocated object either because it is passed as
+  // an argument to the call, or because it has escaped prior to the call.
+  //
+  // Make sure the object has not escaped here, and then check that none of the
+  // call arguments alias the object below.
   if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CI->isNotCapturedBeforeOrAt(Object, Call)) {
+      AAQI.CI->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
@@ -877,12 +946,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     unsigned OperandNo = 0;
     for (auto CI = Call->data_operands_begin(), CE = Call->data_operands_end();
          CI != CE; ++CI, ++OperandNo) {
-      // Only look at the no-capture or byval pointer arguments.  If this
-      // pointer were passed to arguments that were neither of these, then it
-      // couldn't be no-capture.
-      if (!(*CI)->getType()->isPointerTy() ||
-          (!Call->doesNotCapture(OperandNo) && OperandNo < Call->arg_size() &&
-           !Call->isByValArgument(OperandNo)))
+      if (!(*CI)->getType()->isPointerTy())
         continue;
 
       // Call doesn't access memory through this operand, so we don't care
@@ -961,8 +1025,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   if (isIntrinsicCall(Call, Intrinsic::invariant_start))
     return ModRefInfo::Ref;
 
-  // The AAResultBase base class has some smarts, lets use them.
-  return AAResultBase::getModRefInfo(Call, Loc, AAQI);
+  // Be conservative.
+  return ModRefInfo::ModRef;
 }
 
 ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
@@ -989,8 +1053,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 
-  // The AAResultBase base class has some smarts, lets use them.
-  return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
+  // Be conservative.
+  return ModRefInfo::ModRef;
 }
 
 /// Return true if we know V to the base address of the corresponding memory
@@ -1031,6 +1095,7 @@ AliasResult BasicAAResult::aliasGEP(
                                              : AliasResult::MayAlias;
   }
 
+  DominatorTree *DT = getDT(AAQI);
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1044,15 +1109,19 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If an inbounds GEP would have to start from an out of bounds address
   // for the two to alias, then we can assume noalias.
+  // TODO: Remove !isScalable() once BasicAA fully support scalable location
+  // size
   if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
-      V2Size.hasValue() && DecompGEP1.Offset.sge(V2Size.getValue()) &&
+      V2Size.hasValue() && !V2Size.isScalable() &&
+      DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
   if (isa<GEPOperator>(V2)) {
     // Symmetric case to above.
     if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
-        V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+        V1Size.hasValue() && !V1Size.isScalable() &&
+        DecompGEP1.Offset.sle(-V1Size.getValue()) &&
         isBaseOfObject(DecompGEP1.Base))
       return AliasResult::NoAlias;
   }
@@ -1105,23 +1174,68 @@ AliasResult BasicAAResult::aliasGEP(
     if (!VLeftSize.hasValue())
       return AliasResult::MayAlias;
 
-    const uint64_t LSize = VLeftSize.getValue();
-    if (Off.ult(LSize)) {
-      // Conservatively drop processing if a phi was visited and/or offset is
-      // too big.
-      AliasResult AR = AliasResult::PartialAlias;
-      if (VRightSize.hasValue() && Off.ule(INT32_MAX) &&
-          (Off + VRightSize.getValue()).ule(LSize)) {
-        // Memory referenced by right pointer is nested. Save the offset in
-        // cache. Note that originally offset estimated as GEP1-V2, but
-        // AliasResult contains the shift that represents GEP1+Offset=V2.
-        AR.setOffset(-Off.getSExtValue());
-        AR.swap(Swapped);
+    const TypeSize LSize = VLeftSize.getValue();
+    if (!LSize.isScalable()) {
+      if (Off.ult(LSize)) {
+        // Conservatively drop processing if a phi was visited and/or offset is
+        // too big.
+        AliasResult AR = AliasResult::PartialAlias;
+        if (VRightSize.hasValue() && !VRightSize.isScalable() &&
+            Off.ule(INT32_MAX) && (Off + VRightSize.getValue()).ule(LSize)) {
+          // Memory referenced by right pointer is nested. Save the offset in
+          // cache. Note that originally offset estimated as GEP1-V2, but
+          // AliasResult contains the shift that represents GEP1+Offset=V2.
+          AR.setOffset(-Off.getSExtValue());
+          AR.swap(Swapped);
+        }
+        return AR;
       }
-      return AR;
+      return AliasResult::NoAlias;
+    } else {
+      // We can use the getVScaleRange to prove that Off >= (CR.upper * LSize).
+      ConstantRange CR = getVScaleRange(&F, Off.getBitWidth());
+      bool Overflow;
+      APInt UpperRange = CR.getUnsignedMax().umul_ov(
+          APInt(Off.getBitWidth(), LSize.getKnownMinValue()), Overflow);
+      if (!Overflow && Off.uge(UpperRange))
+        return AliasResult::NoAlias;
     }
-    return AliasResult::NoAlias;
   }
+
+  // VScale Alias Analysis - Given one scalable offset between accesses and a
+  // scalable typesize, we can divide each side by vscale, treating both values
+  // as a constant. We prove that Offset/vscale >= TypeSize/vscale.
+  if (DecompGEP1.VarIndices.size() == 1 &&
+      DecompGEP1.VarIndices[0].Val.TruncBits == 0 &&
+      DecompGEP1.Offset.isZero() &&
+      PatternMatch::match(DecompGEP1.VarIndices[0].Val.V,
+                          PatternMatch::m_VScale())) {
+    const VariableGEPIndex &ScalableVar = DecompGEP1.VarIndices[0];
+    APInt Scale =
+        ScalableVar.IsNegated ? -ScalableVar.Scale : ScalableVar.Scale;
+    LocationSize VLeftSize = Scale.isNegative() ? V1Size : V2Size;
+
+    // Check if the offset is known to not overflow, if it does then attempt to
+    // prove it with the known values of vscale_range.
+    bool Overflows = !DecompGEP1.VarIndices[0].IsNSW;
+    if (Overflows) {
+      ConstantRange CR = getVScaleRange(&F, Scale.getBitWidth());
+      (void)CR.getSignedMax().smul_ov(Scale, Overflows);
+    }
+
+    if (!Overflows) {
+      // Note that we do not check that the typesize is scalable, as vscale >= 1
+      // so noalias still holds so long as the dependency distance is at least
+      // as big as the typesize.
+      if (VLeftSize.hasValue() &&
+          Scale.abs().uge(VLeftSize.getValue().getKnownMinValue()))
+        return AliasResult::NoAlias;
+    }
+  }
+
+  // Bail on analysing scalable LocationSize
+  if (V1Size.isScalable() || V2Size.isScalable())
+    return AliasResult::MayAlias;
 
   // We need to know both acess sizes for all the following heuristics.
   if (!V1Size.hasValue() || !V2Size.hasValue())
@@ -1154,9 +1268,14 @@ AliasResult BasicAAResult::aliasGEP(
     assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
            "Bit widths are normalized to MaxIndexSize");
     if (Index.IsNSW)
-      OffsetRange = OffsetRange.add(CR.smul_sat(ConstantRange(Scale)));
+      CR = CR.smul_sat(ConstantRange(Scale));
     else
-      OffsetRange = OffsetRange.add(CR.smul_fast(ConstantRange(Scale)));
+      CR = CR.smul_fast(ConstantRange(Scale));
+
+    if (Index.IsNegated)
+      OffsetRange = OffsetRange.sub(CR);
+    else
+      OffsetRange = OffsetRange.add(CR);
   }
 
   // We now have accesses at two offsets from the same base:
@@ -1189,10 +1308,7 @@ AliasResult BasicAAResult::aliasGEP(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-      // If V != 0, then abs(VarIndex) > 0.
-      MinAbsVarIndex = APInt(Var.Scale.getBitWidth(), 1);
-
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
       auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
@@ -1223,7 +1339,7 @@ AliasResult BasicAAResult::aliasGEP(
     // inequality of values across loop iterations.
     const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
     const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
-    if (Var0.Scale == -Var1.Scale && Var0.Val.TruncBits == 0 &&
+    if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
         Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
         isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
                         DT))
@@ -1464,11 +1580,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     if (isIdentifiedObject(O1) && isIdentifiedObject(O2))
       return AliasResult::NoAlias;
 
-    // Constant pointers can't alias with non-const isIdentifiedObject objects.
-    if ((isa<Constant>(O1) && isIdentifiedObject(O2) && !isa<Constant>(O2)) ||
-        (isa<Constant>(O2) && isIdentifiedObject(O1) && !isa<Constant>(O1)))
-      return AliasResult::NoAlias;
-
     // Function arguments can't alias with things that are known to be
     // unambigously identified at the function level.
     if ((isa<Argument>(O1) && isIdentifiedFunctionLocal(O2)) ||
@@ -1484,11 +1595,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) &&
-        AAQI.CI->isNotCapturedBeforeOrAt(O2, cast<Instruction>(O1)))
+    if (isEscapeSource(O1) && AAQI.CI->isNotCapturedBefore(
+                                  O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) &&
-        AAQI.CI->isNotCapturedBeforeOrAt(O1, cast<Instruction>(O2)))
+    if (isEscapeSource(O2) && AAQI.CI->isNotCapturedBefore(
+                                  O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }
 
@@ -1503,28 +1614,46 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           TLI, NullIsValidLocation)))
     return AliasResult::NoAlias;
 
-  if (CtxI && EnableSeparateStorageAnalysis) {
-    for (auto &AssumeVH : AC.assumptions()) {
-      if (!AssumeVH)
+  if (EnableSeparateStorageAnalysis) {
+    for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
+      if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
 
-      AssumeInst *Assume = cast<AssumeInst>(AssumeVH);
+      AssumeInst *Assume = cast<AssumeInst>(Elem);
+      OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
+      if (OBU.getTagName() == "separate_storage") {
+        assert(OBU.Inputs.size() == 2);
+        const Value *Hint1 = OBU.Inputs[0].get();
+        const Value *Hint2 = OBU.Inputs[1].get();
+        // This is often a no-op; instcombine rewrites this for us. No-op
+        // getUnderlyingObject calls are fast, though.
+        const Value *HintO1 = getUnderlyingObject(Hint1);
+        const Value *HintO2 = getUnderlyingObject(Hint2);
 
-      for (unsigned Idx = 0; Idx < Assume->getNumOperandBundles(); Idx++) {
-        OperandBundleUse OBU = Assume->getOperandBundleAt(Idx);
-        if (OBU.getTagName() == "separate_storage") {
-          assert(OBU.Inputs.size() == 2);
-          const Value *Hint1 = OBU.Inputs[0].get();
-          const Value *Hint2 = OBU.Inputs[1].get();
-          // This is often a no-op; instcombine rewrites this for us. No-op
-          // getUnderlyingObject calls are fast, though.
-          const Value *HintO1 = getUnderlyingObject(Hint1);
-          const Value *HintO2 = getUnderlyingObject(Hint2);
+        DominatorTree *DT = getDT(AAQI);
+        auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
+          if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+            return isValidAssumeForContext(Assume, PtrI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          if (const Argument *PtrA = dyn_cast<Argument>(Ptr)) {
+            const Instruction *FirstI =
+                &*PtrA->getParent()->getEntryBlock().begin();
+            return isValidAssumeForContext(Assume, FirstI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          return false;
+        };
 
-          if (((O1 == HintO1 && O2 == HintO2) ||
-               (O1 == HintO2 && O2 == HintO1)) &&
-              isValidAssumeForContext(Assume, CtxI, DT))
+        if ((O1 == HintO1 && O2 == HintO2) || (O1 == HintO2 && O2 == HintO1)) {
+          // Note that we go back to V1 and V2 for the
+          // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
+          // so strictly more assumptions are valid for them.
+          if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
+                                               /* AllowEphemerals */ true)) ||
+              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
             return AliasResult::NoAlias;
+          }
         }
       }
     }
@@ -1563,9 +1692,12 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (!Pair.second) {
     auto &Entry = Pair.first->second;
     if (!Entry.isDefinitive()) {
-      // Remember that we used an assumption.
-      ++Entry.NumAssumptionUses;
+      // Remember that we used an assumption. This may either be a direct use
+      // of an assumption, or a use of an entry that may itself be based on an
+      // assumption.
       ++AAQI.NumAssumptionUses;
+      if (Entry.isAssumption())
+        ++Entry.NumAssumptionUses;
     }
     // Cache contains sorted {V1,V2} pairs but we should return original order.
     auto Result = Entry.Result;
@@ -1593,7 +1725,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   Entry.Result = Result;
   // Cache contains sorted {V1,V2} pairs.
   Entry.Result.swap(Swapped);
-  Entry.NumAssumptionUses = -1;
 
   // If the assumption has been disproven, remove any results that may have
   // been based on this assumption. Do this after the Entry updates above to
@@ -1605,8 +1736,26 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // The result may still be based on assumptions higher up in the chain.
   // Remember it, so it can be purged from the cache later.
   if (OrigNumAssumptionUses != AAQI.NumAssumptionUses &&
-      Result != AliasResult::MayAlias)
+      Result != AliasResult::MayAlias) {
     AAQI.AssumptionBasedResults.push_back(Locs);
+    Entry.NumAssumptionUses = AAQueryInfo::CacheEntry::AssumptionBased;
+  } else {
+    Entry.NumAssumptionUses = AAQueryInfo::CacheEntry::Definitive;
+  }
+
+  // Depth is incremented before this function is called, so Depth==1 indicates
+  // a root query.
+  if (AAQI.Depth == 1) {
+    // Any remaining assumption based results must be based on proven
+    // assumptions, so convert them to definitive results.
+    for (const auto &Loc : AAQI.AssumptionBasedResults) {
+      auto It = AAQI.AliasCache.find(Loc);
+      if (It != AAQI.AliasCache.end())
+        It->second.NumAssumptionUses = AAQueryInfo::CacheEntry::Definitive;
+    }
+    AAQI.AssumptionBasedResults.clear();
+    AAQI.NumAssumptionUses = 0;
+  }
   return Result;
 }
 
@@ -1681,12 +1830,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  // Check whether the instruction is part of a cycle, by checking whether the
-  // block can (non-trivially) reach itself.
-  BasicBlock *BB = const_cast<BasicBlock *>(Inst->getParent());
-  SmallVector<BasicBlock *> Succs(successors(BB));
-  return !Succs.empty() &&
-         !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.
@@ -1700,9 +1844,17 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
     bool Found = false;
     for (auto I : enumerate(DestGEP.VarIndices)) {
       VariableGEPIndex &Dest = I.value();
-      if (!isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI) ||
+      if ((!isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI) &&
+           !areBothVScale(Dest.Val.V, Src.Val.V)) ||
           !Dest.Val.hasSameCastsAs(Src.Val))
         continue;
+
+      // Normalize IsNegated if we're going to lose the NSW flag anyway.
+      if (Dest.IsNegated) {
+        Dest.Scale = -Dest.Scale;
+        Dest.IsNegated = false;
+        Dest.IsNSW = false;
+      }
 
       // If we found it, subtract off Scale V's from the entry in Dest.  If it
       // goes to zero, remove the entry.
@@ -1718,7 +1870,8 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
 
     // If we didn't consume this entry, add it to the end of the Dest list.
     if (!Found) {
-      VariableGEPIndex Entry = {Src.Val, -Src.Scale, Src.CxtI, Src.IsNSW};
+      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CxtI, Src.IsNSW,
+                                /* IsNegated */ true};
       DestGEP.VarIndices.push_back(Entry);
     }
   }
@@ -1740,7 +1893,7 @@ bool BasicAAResult::constantOffsetHeuristic(const DecomposedGEP &GEP,
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
   if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
-      Var0.Scale != -Var1.Scale ||
+      !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
@@ -1786,7 +1939,7 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT);
+  return BasicAAResult(F.getDataLayout(), F, TLI, AC, DT);
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1814,7 +1967,7 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
 
-  Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), F,
+  Result.reset(new BasicAAResult(F.getDataLayout(), F,
                                  TLIWP.getTLI(F), ACT.getAssumptionCache(F),
                                  &DTWP.getDomTree()));
 

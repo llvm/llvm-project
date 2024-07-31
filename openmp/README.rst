@@ -119,6 +119,10 @@ Options for all Libraries
   Compiler to use for testing. Defaults to the compiler that was also used for
   building.
 
+**OPENMP_TEST_Fortran_COMPILER** = ``${CMAKE_Fortran_COMPILER}``
+  Compiler to use for testing. Defaults to the compiler that was also used for
+  building. Will default to flang if build is in-tree.
+
 **OPENMP_LLVM_TOOLS_DIR** = ``/path/to/built/llvm/tools``
   Additional path to search for LLVM tools needed by tests.
 
@@ -137,7 +141,7 @@ Options for all Libraries
 Options for ``libomp``
 ----------------------
 
-**LIBOMP_ARCH** = ``aarch64|arm|i386|loongarch64|mic|mips|mips64|ppc64|ppc64le|x86_64|riscv64``
+**LIBOMP_ARCH** = ``aarch64|aarch64_32|arm|i386|loongarch64|mic|mips|mips64|ppc64|ppc64le|x86_64|riscv64|s390x``
   The default value for this option is chosen based on probing the compiler for
   architecture macros (e.g., is ``__x86_64__`` predefined by compiler?).
 
@@ -194,7 +198,7 @@ Optional Features
 **LIBOMP_OMPT_SUPPORT** = ``ON|OFF``
   Include support for the OpenMP Tools Interface (OMPT).
   This option is supported and ``ON`` by default for x86, x86_64, AArch64,
-  PPC64, RISCV64 and LoongArch64 on Linux* and macOS*.
+  PPC64, RISCV64, LoongArch64, and s390x on Linux* and macOS*.
   This option is ``OFF`` if this feature is not supported for the platform.
 
 **LIBOMP_OMPT_OPTIONAL** = ``ON|OFF``
@@ -357,3 +361,35 @@ Advanced Builds with Various Options
 **Footnotes**
 
 .. [*] Other names and brands may be claimed as the property of others.
+
+How to Run Tests
+================
+
+There are following check-* make targets for tests.
+
+- ``check-ompt`` (ompt tests under runtime/test/ompt)
+- ``check-ompt-multiplex`` (ompt multiplex tests under tools/multiplex/tests)
+- ``check-libarcher`` (libarcher tests under tools/archer/tests)
+- ``check-libomp`` (libomp tests under runtime/test. This includes check-ompt tests too)
+- ``check-libomptarget-*`` (libomptarget tests for specific target under libomptarget/test)
+- ``check-libomptarget`` (all check-libomptarget-* tests)
+- ``check-openmp`` (combination of all above tests excluding duplicates)
+
+For example, to run all available tests, use ``make check-openmp``.
+
+Options for Tests
+------------------
+Tests use lit framework.
+See `lit documentation <https://llvm.org/docs/CommandGuide/lit.html>`_ for lit options.
+
+**CHECK_OPENMP_ENV** = ``""``
+  Default environment variables which test process uses for ``check-openmp``
+  separated by space.  This can be used for individual targets (``check-ompt``,
+  ``check-ompt-multiplex``, ``check-libarcher``, ``check-libomp`` and
+  ``check-libomptarget-*``) too.  Note that each test still overrides
+  environment variables if needed.  For example, to change barrier pattern to be
+  used from default hyper barrier to hierarchical barrier, run:
+
+.. code-block:: console
+
+  $ CHECK_OPENMP_ENV="KMP_PLAIN_BARRIER_PATTERN=hier,hier KMP_FORKJOIN_BARRIER_PATTERN=hier,hier KMP_REDUCTION_BARRIER_PATTERN=hier,hier" make check-openmp

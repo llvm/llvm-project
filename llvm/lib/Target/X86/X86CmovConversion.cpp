@@ -159,7 +159,7 @@ char X86CmovConverterPass::ID = 0;
 
 void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
 }
 
 bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
@@ -176,7 +176,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
                     << "**********\n");
 
   bool Changed = false;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   MRI = &MF.getRegInfo();
   TII = STI.getInstrInfo();
@@ -355,7 +355,7 @@ bool X86CmovConverterPass::collectCmovCandidates(
       FoundNonCMOVInst = true;
       // Check if this instruction define EFLAGS, to determine end of processed
       // range, as there would be no more instructions using current EFLAGS def.
-      if (I.definesRegister(X86::EFLAGS)) {
+      if (I.definesRegister(X86::EFLAGS, /*TRI=*/nullptr)) {
         // Check if current processed CMOV-group should not be skipped and add
         // it as a CMOV-group-candidate.
         if (!SkipGroup)
@@ -582,7 +582,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
 }
 
 static bool checkEFLAGSLive(MachineInstr *MI) {
-  if (MI->killsRegister(X86::EFLAGS))
+  if (MI->killsRegister(X86::EFLAGS, /*TRI=*/nullptr))
     return false;
 
   // The EFLAGS operand of MI might be missing a kill marker.
@@ -592,9 +592,9 @@ static bool checkEFLAGSLive(MachineInstr *MI) {
 
   // Scan forward through BB for a use/def of EFLAGS.
   for (auto I = std::next(ItrMI), E = BB->end(); I != E; ++I) {
-    if (I->readsRegister(X86::EFLAGS))
+    if (I->readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
       return true;
-    if (I->definesRegister(X86::EFLAGS))
+    if (I->definesRegister(X86::EFLAGS, /*TRI=*/nullptr))
       return false;
   }
 
@@ -774,6 +774,8 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     const TargetRegisterClass *RC = MRI->getRegClass(MI.getOperand(0).getReg());
     Register TmpReg = MRI->createVirtualRegister(RC);
 
+    // Retain debug instr number when unfolded.
+    unsigned OldDebugInstrNum = MI.peekDebugInstrNum();
     SmallVector<MachineInstr *, 4> NewMIs;
     bool Unfolded = TII->unfoldMemoryOperand(*MBB->getParent(), MI, TmpReg,
                                              /*UnfoldLoad*/ true,
@@ -790,6 +792,9 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     MBB->insert(MachineBasicBlock::iterator(MI), NewCMOV);
     if (&*MIItBegin == &MI)
       MIItBegin = MachineBasicBlock::iterator(NewCMOV);
+
+    if (OldDebugInstrNum)
+      NewCMOV->setDebugInstrNum(OldDebugInstrNum);
 
     // Sink whatever instructions were needed to produce the unfolded operand
     // into the false block.
@@ -858,23 +863,33 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     LLVM_DEBUG(dbgs() << "\tFrom: "; MIIt->dump());
     LLVM_DEBUG(dbgs() << "\tTo: "; MIB->dump());
 
+    // debug-info: we can just copy the instr-ref number from one instruction
+    // to the other, seeing how it's a one-for-one substitution.
+    if (unsigned InstrNum = MIIt->peekDebugInstrNum())
+      MIB->setDebugInstrNum(InstrNum);
+
     // Add this PHI to the rewrite table.
     RegRewriteTable[DestReg] = std::make_pair(Op1Reg, Op2Reg);
   }
+
+  // Reset the NoPHIs property if a PHI was inserted to prevent a conflict with
+  // the MachineVerifier during testing.
+  if (MIItBegin != MIItEnd)
+    F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 
   // Now remove the CMOV(s).
   MBB->erase(MIItBegin, MIItEnd);
 
   // Add new basic blocks to MachineLoopInfo.
   if (MachineLoop *L = MLI->getLoopFor(MBB)) {
-    L->addBasicBlockToLoop(FalseMBB, MLI->getBase());
-    L->addBasicBlockToLoop(SinkMBB, MLI->getBase());
+    L->addBasicBlockToLoop(FalseMBB, *MLI);
+    L->addBasicBlockToLoop(SinkMBB, *MLI);
   }
 }
 
 INITIALIZE_PASS_BEGIN(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                     false, false)
 

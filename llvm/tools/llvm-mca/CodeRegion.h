@@ -59,6 +59,7 @@
 #define LLVM_TOOLS_LLVM_MCA_CODEREGION_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -95,6 +96,18 @@ public:
 
   void addInstruction(const llvm::MCInst &Instruction) {
     Instructions.emplace_back(Instruction);
+  }
+
+  // Remove the given instructions from the set, for unsupported instructions
+  // being skipped. Returns an ArrayRef for the updated vector of Instructions.
+  [[nodiscard]] llvm::ArrayRef<llvm::MCInst>
+  dropInstructions(const llvm::SmallPtrSetImpl<const llvm::MCInst *> &Insts) {
+    if (Insts.empty())
+      return Instructions;
+    llvm::erase_if(Instructions, [&Insts](const llvm::MCInst &Inst) {
+      return Insts.contains(&Inst);
+    });
+    return Instructions;
   }
 
   llvm::SMLoc startLoc() const { return RangeStart; }
@@ -172,22 +185,30 @@ public:
   bool isRegionActive(llvm::StringRef Description) const {
     return ActiveRegions.contains(Description);
   }
+
+  virtual void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) = 0;
+  virtual void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
+                           UniqueInstrument Instrument) = 0;
+  virtual void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) = 0;
 };
 
 struct AnalysisRegions : public CodeRegions {
   AnalysisRegions(llvm::SourceMgr &S);
 
-  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
+                   UniqueInstrument Instrument) override {}
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 };
 
 struct InstrumentRegions : public CodeRegions {
 
   InstrumentRegions(llvm::SourceMgr &S);
 
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override{};
   void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
-                   UniqueInstrument Instrument);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+                   UniqueInstrument Instrument) override;
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 
   const SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
 };

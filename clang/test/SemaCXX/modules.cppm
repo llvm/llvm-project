@@ -34,11 +34,11 @@ int use_a = a; // expected-error {{use of undeclared identifier 'a'}}
 import foo; // expected-error {{imports must immediately follow the module declaration}}
 
 export {}
-export {  // expected-note {{begins here}}
-  ;       // expected-warning {{ISO C++20 does not permit an empty declaration to appear in an export block}}
+export {
+  ;       // No diagnostic after P2615R1 DR
 }
-export {               // expected-note {{begins here}}
-  static_assert(true); // expected-warning {{ISO C++20 does not permit a static_assert declaration to appear in an export block}}
+export {
+  static_assert(true); // No diagnostic after P2615R1 DR
 }
 
 int use_b = b; // expected-error{{use of undeclared identifier 'b'}}
@@ -62,10 +62,10 @@ struct S {
 // language rules right now, but (per personal correspondence between zygoloid
 // and gdr) is the intent.
 #if TEST == 1
-export {
+export { // expected-note {{export block begins here}}
   extern "C++" {
   namespace NestedExport {
-  export { // expected-error {{export declaration can only be used within a module purview}}
+  export { // expected-error {{export declaration appears within another export declaration}}
     int q;
   }
   } // namespace NestedExport

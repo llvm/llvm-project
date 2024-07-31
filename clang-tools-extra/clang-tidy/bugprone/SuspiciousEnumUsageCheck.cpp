@@ -60,7 +60,7 @@ static bool hasDisjointValueRange(const EnumDecl *Enum1,
 }
 
 static bool isNonPowerOf2NorNullLiteral(const EnumConstantDecl *EnumConst) {
-  llvm::APSInt Val = EnumConst->getInitVal();
+  const llvm::APSInt &Val = EnumConst->getInitVal();
   if (Val.isPowerOf2() || !Val.getBoolValue())
     return false;
   const Expr *InitExpr = EnumConst->getInitExpr();
@@ -171,8 +171,7 @@ void SuspiciousEnumUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Skip when one of the parameters is an empty enum. The
     // hasDisjointValueRange function could not decide the values properly in
     // case of an empty enum.
-    if (EnumDec->enumerator_begin() == EnumDec->enumerator_end() ||
-        OtherEnumDec->enumerator_begin() == OtherEnumDec->enumerator_end())
+    if (EnumDec->enumerators().empty() || OtherEnumDec->enumerators().empty())
       return;
 
     if (!hasDisjointValueRange(EnumDec, OtherEnumDec))

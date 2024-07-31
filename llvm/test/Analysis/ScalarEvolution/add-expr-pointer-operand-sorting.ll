@@ -49,7 +49,6 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:  Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.cond: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.cond: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.cond: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %e = alloca [1 x [1 x i8]], align 1

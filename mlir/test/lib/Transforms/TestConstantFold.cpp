@@ -27,11 +27,12 @@ struct TestConstantFold : public PassWrapper<TestConstantFold, OperationPass<>>,
   void foldOperation(Operation *op, OperationFolder &helper);
   void runOnOperation() override;
 
-  void notifyOperationInserted(Operation *op) override {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
     existingConstants.push_back(op);
   }
-  void notifyOperationRemoved(Operation *op) override {
-    auto it = llvm::find(existingConstants, op);
+  void notifyOperationErased(Operation *op) override {
+    auto *it = llvm::find(existingConstants, op);
     if (it != existingConstants.end())
       existingConstants.erase(it);
   }
@@ -49,7 +50,7 @@ void TestConstantFold::runOnOperation() {
 
   // Collect and fold the operations within the operation.
   SmallVector<Operation *, 8> ops;
-  getOperation()->walk([&](Operation *op) { ops.push_back(op); });
+  getOperation()->walk<mlir::WalkOrder::PreOrder>([&](Operation *op) { ops.push_back(op); });
 
   // Fold the constants in reverse so that the last generated constants from
   // folding are at the beginning. This creates somewhat of a linear ordering to

@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -23,8 +24,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -51,11 +54,14 @@ enum ELFKind : uint8_t {
 };
 
 // For -Bno-symbolic, -Bsymbolic-non-weak-functions, -Bsymbolic-functions,
-// -Bsymbolic.
-enum class BsymbolicKind { None, NonWeakFunctions, Functions, All };
+// -Bsymbolic-non-weak, -Bsymbolic.
+enum class BsymbolicKind { None, NonWeakFunctions, Functions, NonWeak, All };
 
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
+
+// For --call-graph-profile-sort={none,hfsort,cdsort}.
+enum class CGProfileSortKind { None, Hfsort, Cdsort };
 
 // For --discard-{all,locals,none}.
 enum class DiscardPolicy { Default, All, Locals, None };
@@ -94,6 +100,12 @@ enum class SeparateSegmentKind { None, Code, Loadable };
 // For -z *stack
 enum class GnuStackKind { None, Exec, NoExec };
 
+// For --lto=
+enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
+
+// For -z gcs=
+enum class GcsPolicy { Implicit, Never, Always };
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -118,9 +130,10 @@ public:
 private:
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
-  void link(llvm::opt::InputArgList &args);
+  template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
-
+  bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
+                        uint64_t offsetInArchive, bool lazy);
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
 
@@ -129,6 +142,7 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
+  InputFile *armCmseImpLib = nullptr;
 
 public:
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
@@ -173,8 +187,13 @@ struct Config {
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
   llvm::StringRef whyExtract;
+  llvm::StringRef cmseInputLib;
+  llvm::StringRef cmseOutputLib;
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
+  StringRef zPauthReport = "none";
+  StringRef zGcsReport = "none";
+  bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   llvm::StringRef thinLTOPrefixReplaceOld;
@@ -195,20 +214,29 @@ struct Config {
   llvm::MapVector<std::pair<const InputSectionBase *, const InputSectionBase *>,
                   uint64_t>
       callGraphProfile;
+  bool cmseImplib = false;
   bool allowMultipleDefinition;
+  bool fatLTOObjects;
   bool androidPackDynRelocs = false;
+  bool armThumbPLTs = false;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
+  bool armCMSESupport = false;
   bool asNeeded = false;
+  bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
-  bool callGraphProfileSort;
+  CGProfileSortKind callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
-  llvm::DebugCompressionType compressDebugSections;
+  std::optional<llvm::DebugCompressionType> compressDebugSections;
+  llvm::SmallVector<
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
+      compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
+  bool debugNames;
   bool demangle = true;
   bool dependentLibraries;
   bool disableVerify;
@@ -216,6 +244,7 @@ struct Config {
   bool emitLLVM;
   bool emitRelocs;
   bool enableNewDtags;
+  bool enableNonContiguousRegions;
   bool executeOnly;
   bool exportDynamic;
   bool fixCortexA53Errata843419;
@@ -234,6 +263,7 @@ struct Config {
   bool ltoDebugPassManager;
   bool ltoEmitAsm;
   bool ltoUniqueBasicBlockSectionNames;
+  bool ltoValidateAllVtablesHaveTypeInfos;
   bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
@@ -253,9 +283,11 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  bool rejectMismatch;
   bool relax;
   bool relaxGP;
   bool relocatable;
+  bool resolveGroups;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
@@ -292,6 +324,7 @@ struct Config {
   bool zInitfirst;
   bool zInterpose;
   bool zKeepTextSectionPrefix;
+  bool zLrodataAfterBss;
   bool zNodefaultlib;
   bool zNodelete;
   bool zNodlopen;
@@ -315,6 +348,7 @@ struct Config {
   UnresolvedPolicy unresolvedSymbols;
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
+  GcsPolicy zGcs;
   bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
@@ -328,7 +362,7 @@ struct Config {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
-  llvm::CodeGenOpt::Level ltoCgo;
+  llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
@@ -349,7 +383,7 @@ struct Config {
   bool isLE;
 
   // endianness::little if isLE is true. endianness::big otherwise.
-  llvm::support::endianness endianness;
+  llvm::endianness endianness;
 
   // True if the target is the little-endian MIPS64.
   //
@@ -407,6 +441,9 @@ struct Config {
   // not supported on Android 11 & 12.
   bool androidMemtagStack;
 
+  // When using a unified pre-link LTO pipeline, specify the backend LTO mode.
+  LtoKind ltoKind = LtoKind::Default;
+
   unsigned threadCount;
 
   // If an input file equals a key, remap it to the value.
@@ -421,6 +458,15 @@ struct ConfigWrapper {
 };
 
 LLVM_LIBRARY_VISIBILITY extern ConfigWrapper config;
+
+// Some index properties of a symbol are stored separately in this auxiliary
+// struct to decrease sizeof(SymbolUnion) in the majority of cases.
+struct SymbolAux {
+  uint32_t gotIdx = -1;
+  uint32_t pltIdx = -1;
+  uint32_t tlsDescIdx = -1;
+  uint32_t tlsGdIdx = -1;
+};
 
 struct DuplicateSymbol {
   const Symbol *sym;
@@ -439,6 +485,8 @@ struct Ctx {
   SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
   SmallVector<InputSectionBase *, 0> inputSections;
   SmallVector<EhInputSection *, 0> ehInputSections;
+
+  SmallVector<SymbolAux, 0> symAux;
   // Duplicate symbol candidates.
   SmallVector<DuplicateSymbol, 0> duplicates;
   // Symbols in a non-prevailing COMDAT group which should be changed to an
@@ -452,14 +500,33 @@ struct Ctx {
   llvm::DenseMap<const Symbol *,
                  std::pair<const InputFile *, const InputFile *>>
       backwardReferences;
+  llvm::SmallSet<llvm::StringRef, 0> auxiliaryFiles;
+  // If --reproduce is specified, all input files are written to this tar
+  // archive.
+  std::unique_ptr<llvm::TarWriter> tar;
+  // InputFile for linker created symbols with no source location.
+  InputFile *internalFile;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
   std::atomic<bool> hasTlsIe{false};
   // True if we need to reserve two .got entries for local-dynamic TLS model.
   std::atomic<bool> needsTlsLd{false};
+  // True if all native vtable symbols have corresponding type info symbols
+  // during LTO.
+  bool ltoAllVtablesHaveTypeInfos;
+
+  // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
+  // order. Each DEFINED(sym) evaluation checks whether the reference happens
+  // before a possible `sym = expr;`.
+  unsigned scriptSymOrderCounter = 1;
+  llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
 
   void reset();
+
+  llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
+
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

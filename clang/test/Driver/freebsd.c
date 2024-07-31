@@ -73,9 +73,6 @@
 //
 // Check that RISC-V passes the correct linker emulation.
 //
-// RUN: %clang --target=riscv32-freebsd -### %s %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-RV32I-LD %s
-// CHECK-RV32I-LD: ld{{.*}}" {{.*}} "-m" "elf32lriscv"
 // RUN: %clang --target=riscv64-freebsd -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64I-LD %s
 // CHECK-RV64I-LD: ld{{.*}}" {{.*}} "-m" "elf64lriscv"
@@ -128,6 +125,7 @@
 // RUN: %clang --target=x86_64-pc-freebsd -shared %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED %s
+// CHECK-SHARED: ld{{.*}}" "--eh-frame-hdr" "-shared"
 // CHECK-SHARED: crti.o
 // CHECK-SHARED: crtbeginS.o
 
@@ -165,9 +163,9 @@
 // CHECK-ARM-EABIHF-NOT: as{{.*}}" "-mfpu=softvfp"
 // CHECK-ARM-EABIHF-NOT: as{{.*}}" "-matpcs"
 
-// RUN: %clang --target=sparc-unknown-freebsd -### %s -fpic -no-integrated-as 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-SPARC-PIE %s
-// CHECK-SPARC-PIE: as{{.*}}" "-KPIC
+// RUN: %clang --target=sparc64-unknown-freebsd -### %s -fpic -no-integrated-as 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-SPARC-PIC %s
+// CHECK-SPARC-PIC: as{{.*}}" "-KPIC
 
 // RUN: %clang -mcpu=ultrasparc --target=sparc64-unknown-freebsd -### %s -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-CPU %s
@@ -193,11 +191,6 @@
 // RUN:   | FileCheck -check-prefix=CHECK-MIPS64-CPU %s
 // CHECK-MIPS64-CPU: "-target-cpu" "mips3"
 
-// Check that the integrated assembler is enabled for SPARC64
-// RUN: %clang --target=sparc64-unknown-freebsd -### -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-IAS %s
-// CHECK-IAS-NOT: "-no-integrated-as"
-
 // RUN: %clang --target=ppc64-unknown-freebsd13.0 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=PPC64-MUNWIND %s
 // PPC64-MUNWIND: "-funwind-tables=2"
@@ -210,3 +203,7 @@
 // RELOCATABLE-NOT: "-l
 // RELOCATABLE-NOT: crt{{[^./\\]+}}.o
 
+// Check that the -X and --no-relax flags are passed to the linker on riscv64
+// RUN: %clang --target=riscv64-unknown-freebsd -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
+// RISCV64-FLAGS: "-X" "--no-relax"

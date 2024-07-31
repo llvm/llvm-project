@@ -212,13 +212,8 @@ define i64 @as_cast(i1 %c) {
 ; CHECK-LABEL: define i64 @as_cast
 ; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], [[DOTNEG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C]], i64 64, i64 0
+; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
   %p0 = tail call ptr @malloc(i64 64)
@@ -233,13 +228,8 @@ define i64 @constexpr_as_cast(i1 %c) {
 ; CHECK-LABEL: define i64 @constexpr_as_cast
 ; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], [[DOTNEG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C]], i64 64, i64 0
+; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
   %p0 = tail call ptr @malloc(i64 64)

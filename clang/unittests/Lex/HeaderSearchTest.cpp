@@ -19,6 +19,8 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <string>
 
 namespace clang {
 namespace {
@@ -47,14 +49,18 @@ protected:
     Search.AddSearchPath(DL, /*isAngled=*/false);
   }
 
-  void addSystemFrameworkSearchDir(llvm::StringRef Dir) {
+  void addFrameworkSearchDir(llvm::StringRef Dir, bool IsSystem = true) {
     VFS->addFile(
         Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
         /*Group=*/std::nullopt, llvm::sys::fs::file_type::directory_file);
     auto DE = FileMgr.getOptionalDirectoryRef(Dir);
     assert(DE);
-    auto DL = DirectoryLookup(*DE, SrcMgr::C_System, /*isFramework=*/true);
-    Search.AddSystemSearchPath(DL);
+    auto DL = DirectoryLookup(*DE, IsSystem ? SrcMgr::C_System : SrcMgr::C_User,
+                              /*isFramework=*/true);
+    if (IsSystem)
+      Search.AddSystemSearchPath(DL);
+    else
+      Search.AddSearchPath(DL, /*isAngled=*/true);
   }
 
   void addHeaderMap(llvm::StringRef Filename,
@@ -63,7 +69,7 @@ protected:
     VFS->addFile(Filename, 0, std::move(Buf), /*User=*/std::nullopt,
                  /*Group=*/std::nullopt,
                  llvm::sys::fs::file_type::regular_file);
-    auto FE = FileMgr.getFile(Filename, true);
+    auto FE = FileMgr.getOptionalFileRef(Filename, true);
     assert(FE);
 
     // Test class supports only one HMap at a time.
@@ -127,6 +133,21 @@ TEST_F(HeaderSearchTest, Dots) {
             "z");
 }
 
+TEST_F(HeaderSearchTest, RelativeDirs) {
+  ASSERT_FALSE(VFS->setCurrentWorkingDirectory("/root/some/dir"));
+  addSearchDir("..");
+  EXPECT_EQ(
+      Search.suggestPathToFileForDiagnostics("/root/some/foo.h",
+                                             /*WorkingDir=*/"/root/some/dir",
+                                             /*MainFile=*/""),
+      "foo.h");
+  EXPECT_EQ(
+      Search.suggestPathToFileForDiagnostics("../foo.h",
+                                             /*WorkingDir=*/"/root/some/dir",
+                                             /*MainFile=*/""),
+      "foo.h");
+}
+
 #ifdef _WIN32
 TEST_F(HeaderSearchTest, BackSlash) {
   addSearchDir("C:\\x\\y\\");
@@ -175,20 +196,32 @@ TEST_F(HeaderSearchTest, IncludeFromSameDirectory) {
 }
 
 TEST_F(HeaderSearchTest, SdkFramework) {
-  addSystemFrameworkSearchDir(
+  addFrameworkSearchDir(
       "/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk/Frameworks/");
-  bool IsSystem = false;
+  bool IsAngled = false;
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics(
                 "/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/"
                 "Frameworks/AppKit.framework/Headers/NSView.h",
                 /*WorkingDir=*/"",
-                /*MainFile=*/"", &IsSystem),
+                /*MainFile=*/"", &IsAngled),
             "AppKit/NSView.h");
-  EXPECT_TRUE(IsSystem);
+  EXPECT_TRUE(IsAngled);
+
+  addFrameworkSearchDir("/System/Developer/Library/Framworks/",
+                        /*IsSystem*/ false);
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics(
+                "/System/Developer/Library/Framworks/"
+                "Foo.framework/Headers/Foo.h",
+                /*WorkingDir=*/"",
+                /*MainFile=*/"", &IsAngled),
+            "Foo/Foo.h");
+  // Expect to be true even though we passed false to IsSystem earlier since
+  // all frameworks should be treated as <>.
+  EXPECT_TRUE(IsAngled);
 }
 
 TEST_F(HeaderSearchTest, NestedFramework) {
-  addSystemFrameworkSearchDir("/Platforms/MacOSX/Frameworks");
+  addFrameworkSearchDir("/Platforms/MacOSX/Frameworks");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics(
                 "/Platforms/MacOSX/Frameworks/AppKit.framework/Frameworks/"
                 "Sub.framework/Headers/Sub.h",
@@ -199,7 +232,7 @@ TEST_F(HeaderSearchTest, NestedFramework) {
 
 TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
   std::string HeaderPath = "/tmp/Frameworks/Foo.framework/Headers/Foo.h";
-  addSystemFrameworkSearchDir("/tmp/Frameworks");
+  addFrameworkSearchDir("/tmp/Frameworks");
   VFS->addFile(HeaderPath, 0,
                llvm::MemoryBuffer::getMemBufferCopy("", HeaderPath),
                /*User=*/std::nullopt, /*Group=*/std::nullopt,
@@ -290,6 +323,74 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
   EXPECT_TRUE(FI->IsValid);
   EXPECT_EQ(FI->Framework.str(), "Foo");
   EXPECT_EQ(Search.getIncludeNameForHeader(FE), "Foo/Foo.h");
+}
+
+TEST_F(HeaderSearchTest, HeaderFileInfoMerge) {
+  auto AddHeader = [&](std::string HeaderPath) -> FileEntryRef {
+    VFS->addFile(HeaderPath, 0,
+                 llvm::MemoryBuffer::getMemBufferCopy("", HeaderPath),
+                 /*User=*/std::nullopt, /*Group=*/std::nullopt,
+                 llvm::sys::fs::file_type::regular_file);
+    return *FileMgr.getOptionalFileRef(HeaderPath);
+  };
+
+  class MockExternalHeaderFileInfoSource : public ExternalHeaderFileInfoSource {
+    HeaderFileInfo GetHeaderFileInfo(FileEntryRef FE) {
+      HeaderFileInfo HFI;
+      auto FileName = FE.getName();
+      if (FileName == ModularPath)
+        HFI.mergeModuleMembership(ModuleMap::NormalHeader);
+      else if (FileName == TextualPath)
+        HFI.mergeModuleMembership(ModuleMap::TextualHeader);
+      HFI.External = true;
+      HFI.IsValid = true;
+      return HFI;
+    }
+
+  public:
+    std::string ModularPath = "/modular.h";
+    std::string TextualPath = "/textual.h";
+  };
+
+  auto ExternalSource = std::make_unique<MockExternalHeaderFileInfoSource>();
+  Search.SetExternalSource(ExternalSource.get());
+
+  // Everything should start out external.
+  auto ModularFE = AddHeader(ExternalSource->ModularPath);
+  auto TextualFE = AddHeader(ExternalSource->TextualPath);
+  EXPECT_TRUE(Search.getExistingFileInfo(ModularFE)->External);
+  EXPECT_TRUE(Search.getExistingFileInfo(TextualFE)->External);
+
+  // Marking the same role should keep it external
+  Search.MarkFileModuleHeader(ModularFE, ModuleMap::NormalHeader,
+                              /*isCompilingModuleHeader=*/false);
+  Search.MarkFileModuleHeader(TextualFE, ModuleMap::TextualHeader,
+                              /*isCompilingModuleHeader=*/false);
+  EXPECT_TRUE(Search.getExistingFileInfo(ModularFE)->External);
+  EXPECT_TRUE(Search.getExistingFileInfo(TextualFE)->External);
+
+  // textual -> modular should update the HFI, but modular -> textual should be
+  // a no-op.
+  Search.MarkFileModuleHeader(ModularFE, ModuleMap::TextualHeader,
+                              /*isCompilingModuleHeader=*/false);
+  Search.MarkFileModuleHeader(TextualFE, ModuleMap::NormalHeader,
+                              /*isCompilingModuleHeader=*/false);
+  auto ModularFI = Search.getExistingFileInfo(ModularFE);
+  auto TextualFI = Search.getExistingFileInfo(TextualFE);
+  EXPECT_TRUE(ModularFI->External);
+  EXPECT_TRUE(ModularFI->isModuleHeader);
+  EXPECT_FALSE(ModularFI->isTextualModuleHeader);
+  EXPECT_FALSE(TextualFI->External);
+  EXPECT_TRUE(TextualFI->isModuleHeader);
+  EXPECT_FALSE(TextualFI->isTextualModuleHeader);
+
+  // Compiling the module should make the HFI local.
+  Search.MarkFileModuleHeader(ModularFE, ModuleMap::NormalHeader,
+                              /*isCompilingModuleHeader=*/true);
+  Search.MarkFileModuleHeader(TextualFE, ModuleMap::NormalHeader,
+                              /*isCompilingModuleHeader=*/true);
+  EXPECT_FALSE(Search.getExistingFileInfo(ModularFE)->External);
+  EXPECT_FALSE(Search.getExistingFileInfo(TextualFE)->External);
 }
 
 } // namespace

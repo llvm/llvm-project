@@ -67,7 +67,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[func.wrap.func] <https://wg21.link/func.wrap.func>`_
 | `[func.wrap.func.nullptr] <https://wg21.link/func.wrap.func.nullptr>`_",| remove ops `function <https://reviews.llvm.org/D152704>`_,None,Hristo Hristov,|Complete|
 | `[meta.unary.prop] <https://wg21.link/meta.unary.prop>`_,| replaced by `issue LWG3354 <https://wg21.link/LWG3354>`_,None,Unassigned,|Nothing To Do|
-| `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,|,None,Unassigned,|Not Started|
+| `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,| removed by `issue LWG3380 <https://wg21.link/LWG3380>`_,None,Unassigned,|Nothing To Do|
 "| `[type.index.overview] <https://wg21.link/type.index.overview>`_
 | `[type.index.members] <https://wg21.link/type.index.members>`_",| `type_index <https://reviews.llvm.org/D131357>`_,None,Adrian Vogelsgesang,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| `to_chars_result <https://reviews.llvm.org/D112366>`_,None,Mark de Wever,|Complete|
@@ -83,7 +83,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[string.view.synop] <https://wg21.link/string.view.synop>`_
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_",| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
 - `5.7 Clause 22: Containers library <https://wg21.link/p1614r2#clause-22-containers-library>`_,,,,
-| `[container.requirements.general] <https://wg21.link/container.requirements.general>`_,|,None,Unassigned,|Not Started|
+| `[container.requirements.general] <https://wg21.link/container.requirements.general>`_,|,None,Mark de Wever,|Complete|
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],"| Adrian Vogelsgesang
 | Hristo Hristov",|Complete|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `deque <https://reviews.llvm.org/D144821>`_,[expos.only.func],Hristo Hristov,|Complete|
@@ -121,16 +121,16 @@ Section,Description,Dependencies,Assignee,Complete
 | `[istreambuf.iterator.ops] <https://wg21.link/istreambuf.iterator.ops>`_",| remove ops `istreambuf_iterator <https://reviews.llvm.org/D119620>`_,None,Konstantin Varlamov,|Complete|
 - `5.9 Clause 24: Ranges library <https://wg21.link/p1614r2#clause-24-ranges-library>`_,,,,
 | `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| `ranges::iota_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
-| `[range.iota.sentinel] <https://wg21.link/range.iota.sentinel>`_,| remove ops `iota_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.filter.iterator] <https://wg21.link/range.filter.iterator>`_,| remove ops `filter_view::iterator`,None,Unassigned,|Not Started|
-| `[range.filter.sentinel] <https://wg21.link/range.filter.sentinel>`_,| remove ops `filter_view::sentinel`,None,Unassigned,|Not Started|
+| `[range.iota.sentinel] <https://wg21.link/range.iota.sentinel>`_,| remove ops `iota_view::sentinel <https://reviews.llvm.org/D107396>`_,None,Zoe Carver,|Complete|
+| `[range.filter.iterator] <https://wg21.link/range.filter.iterator>`_,| remove ops `filter_view::iterator <https://reviews.llvm.org/D109086>`_,None,Louis Dionne,|Complete|
+| `[range.filter.sentinel] <https://wg21.link/range.filter.sentinel>`_,| remove ops `filter_view::sentinel <https://reviews.llvm.org/D109086>`_,None,Louis Dionne,|Complete|
 | `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| `ranges::transform_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
-| `[range.transform.sentinel] <https://wg21.link/range.transform.sentinel>`_,| remove ops `transform_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.take.sentinel] <https://wg21.link/range.take.sentinel>`_,| remove ops `take_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.join.iterator] <https://wg21.link/range.join.iterator>`_,| remove ops `join_view::iterator`,None,Unassigned,|Not Started|
-| `[range.join.sentinel] <https://wg21.link/range.join.sentinel>`_,| remove ops `join_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.split.outer] <https://wg21.link/range.split.outer>`_,| remove ops `split_view::outer_iterator`,None,Unassigned,|Not Started|
-| `[range.split.inner] <https://wg21.link/range.split.inner>`_,| remove ops `split_view::inner_iterator`,None,Unassigned,|Not Started|
+| `[range.transform.sentinel] <https://wg21.link/range.transform.sentinel>`_,| remove ops `transform_view::sentinel <https://reviews.llvm.org/D103056>`_,None,Zoe Carver,|Complete|
+| `[range.take.sentinel] <https://wg21.link/range.take.sentinel>`_,| remove ops `take_view::sentinel <https://reviews.llvm.org/D123600>`_,None,Konstantin Varlamov,|Complete|
+| `[range.join.iterator] <https://wg21.link/range.join.iterator>`_,| remove ops `join_view::iterator <https://reviews.llvm.org/D107671>`_,None,Zoe Carver,|Complete|
+| `[range.join.sentinel] <https://wg21.link/range.join.sentinel>`_,| remove ops `join_view::sentinel <https://reviews.llvm.org/D107671>`_,None,Zoe Carver,|Complete|
+| `[range.split.outer] <https://wg21.link/range.split.outer>`_,| remove ops `split_view::outer_iterator <https://reviews.llvm.org/D142063>`_,None,Hui Xie,|Complete|
+| `[range.split.inner] <https://wg21.link/range.split.inner>`_,| remove ops `split_view::inner_iterator <https://reviews.llvm.org/D142063>`_,None,Hui Xie,|Complete|
 - `5.10 Clause 25: Algorithms library <https://wg21.link/p1614r2#clause-25-algorithms-library>`_,,,,
 "| `[algorithm.syn] <https://wg21.link/algorithm.syn>`_
 | `[alg.three.way] <https://wg21.link/alg.three.way>`_",| `lexicographical_compare_three_way <https://reviews.llvm.org/D131395>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
@@ -140,7 +140,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[class.slice.overview] <https://wg21.link/class.slice.overview>`_
 | `[slice.ops] <https://wg21.link/slice.ops>`_",| `slice <https://reviews.llvm.org/D152617>`_,None,Hristo Hristov,|Complete|
 - `5.12 Clause 27: Time library <https://wg21.link/p1614r2#clause-27-time-library>`_,,,,
-| `[time.syn] <https://wg21.link/time.syn>`_,|,None,Unassigned,|Not Started|
+| `[time.syn] <https://wg21.link/time.syn>`_,|,None,Mark de Wever,|Complete|
 | `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_, `chrono::duration <https://reviews.llvm.org/D145881>`_, None, Hristo Hristov, |Complete|
 | `[time.point.comparisons] <https://wg21.link/time.point.comparisons>`_, `chrono::time_point <https://reviews.llvm.org/D146250>`_, None, Hristo Hristov, |Complete|
 "| `[time.cal.day.nonmembers] <https://wg21.link/time.cal.day.nonmembers>`_
@@ -171,12 +171,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `month_weekday_last <https://reviews.llvm.org/D152699>`_
 | `year_month_weekday <https://reviews.llvm.org/D152699>`_
 | `year_month_weekday_last <https://reviews.llvm.org/D152699>`_",None,Hristo Hristov,|Complete|
-"| `[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_
-| `[time.zone.zonedtime.nonmembers] <https://wg21.link/time.zone.zonedtime.nonmembers>`_
-| `[time.zone.leap.nonmembers] <https://wg21.link/time.zone.leap.nonmembers>`_
-| `[time.zone.link.nonmembers] <https://wg21.link/time.zone.link.nonmembers>`_","| chrono::time_zone
-| chrono::leap_second
-| chrono::time_zone_link",A ``<chrono>`` implementation,Unassigned,|Not Started|
+`[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_,"`chrono::time_zone`",,Mark de Wever,|Complete|
+`[time.zone.zonedtime.nonmembers] <https://wg21.link/time.zone.zonedtime.nonmembers>`_,"`chrono::zoned_time`",,Mark de Wever,|Complete|
+`[time.zone.leap.nonmembers] <https://wg21.link/time.zone.leap.nonmembers>`_,"`chrono::time_leap_seconds`",,Mark de Wever,|Complete|
+`[time.zone.link.nonmembers] <https://wg21.link/time.zone.link.nonmembers>`_,"`chrono::time_zone_link`",,Mark de Wever,|Complete|
 - `5.13 Clause 28: Localization library <https://wg21.link/p1614r2#clause-28-localization-library>`_,,,,
 "| `[locale] <https://wg21.link/locale>`_
 | `[locale.operators] <https://wg21.link/locale.operators>`_",| remove ops `locale <https://reviews.llvm.org/D152654>`_,None,Hristo Hristov,|Complete|
@@ -188,13 +186,13 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[fs.class.directory.entry] <https://wg21.link/fs.class.directory.entry>`_
 | `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_",| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|Complete|
 - `5.15 Clause 30: Regular expressions library <https://wg21.link/p1614r2#clause-30-regular-expressions-library>`_,,,,
-| `[re.syn] <https://wg21.link/re.syn>`_,|,None,Mark de Wever,|In Progress|
+| `[re.syn] <https://wg21.link/re.syn>`_,|,None,Mark de Wever,|Complete|
 | `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| `sub_match <https://reviews.llvm.org/D132310>`_,None,Mark de Wever,|Complete|
-| `[re.results.nonmember] <https://wg21.link/re.results.nonmember>`_,| remove ops `match_results`,None,Mark de Wever,|In Progress|
+| `[re.results.nonmember] <https://wg21.link/re.results.nonmember>`_,| remove ops `match_results`,None,Mark de Wever,|Complete|
 "| `[re.regiter] <https://wg21.link/re.regiter>`_,
-| `[re.regiter.comp] <https://wg21.link/re.regiter.comp>`_",| remove ops `regex_iterator`,None,Mark de Wever,|In Progress|
+| `[re.regiter.comp] <https://wg21.link/re.regiter.comp>`_",| remove ops `regex_iterator`,None,Mark de Wever,|Complete|
 "| `[re.tokiter] <https://wg21.link/re.tokiter>`_
-| `[re.tokiter.comp] <https://wg21.link/re.tokiter.comp>`_",| remove ops `regex_token_iterator`,None,Mark de Wever,|In Progress|
+| `[re.tokiter.comp] <https://wg21.link/re.tokiter.comp>`_",| remove ops `regex_token_iterator`,None,Mark de Wever,|Complete|
 - `5.16 Clause 31: Atomic operations library <https://wg21.link/p1614r2#clause-31-atomic-operations-library>`_,,,,
 - `5.17 Clause 32: Thread support library <https://wg21.link/p1614r2#clause-32-thread-support-library>`_,,,,
 | `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|Complete|

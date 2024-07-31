@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-exception-escape %t -- \
-// RUN:     -config="{CheckOptions: [ \
-// RUN:         {key: bugprone-exception-escape.IgnoredExceptions, value: 'ignored1,ignored2'}, \
-// RUN:         {key: bugprone-exception-escape.FunctionsThatShouldNotThrow, value: 'enabled1,enabled2,enabled3'} \
-// RUN:     ]}" \
+// RUN:     -config="{CheckOptions: { \
+// RUN:         bugprone-exception-escape.IgnoredExceptions: 'ignored1,ignored2', \
+// RUN:         bugprone-exception-escape.FunctionsThatShouldNotThrow: 'enabled1,enabled2,enabled3' \
+// RUN:     }}" \
 // RUN:     -- -fexceptions
 // FIXME: Fix the checker to work in C++17 or later mode.
 
@@ -152,7 +152,7 @@ void throw_catch_multi_ptr_4() noexcept {
 }
 
 // FIXME: In this case 'a' is convertible to the handler and should be caught
-// but in reality it's thrown. Note that clang doesn't report a warning for 
+// but in reality it's thrown. Note that clang doesn't report a warning for
 // this either.
 void throw_catch_multi_ptr_5() noexcept {
   try {
@@ -249,7 +249,7 @@ void throw_derived_catch_base_alias() noexcept {
 void throw_derived_catch_base_ptr_c() noexcept {
   try {
     derived d;
-    throw &d; 
+    throw &d;
   } catch(const base *) {
   }
 }
@@ -259,7 +259,7 @@ void throw_derived_catch_base_ptr() noexcept {
   try {
     derived d;
     const derived *p = &d;
-    throw p; 
+    throw p;
   } catch(base *) {
   }
 }
@@ -282,7 +282,7 @@ void throw_derived_catch_base_private() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_private' which should not throw exceptions
   try {
     B b;
-    throw b; 
+    throw b;
   } catch(A) {
   }
 }
@@ -291,7 +291,7 @@ void throw_derived_catch_base_private_ptr() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_private_ptr' which should not throw exceptions
   try {
     B b;
-    throw &b; 
+    throw &b;
   } catch(A *) {
   }
 }
@@ -300,7 +300,7 @@ void throw_derived_catch_base_protected() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_protected' which should not throw exceptions
   try {
     C c;
-    throw c; 
+    throw c;
   } catch(A) {
   }
 }
@@ -309,7 +309,7 @@ void throw_derived_catch_base_protected_ptr() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_protected_ptr' which should not throw exceptions
   try {
     C c;
-    throw &c; 
+    throw &c;
   } catch(A *) {
   }
 }
@@ -318,7 +318,7 @@ void throw_derived_catch_base_ambiguous() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_ambiguous' which should not throw exceptions
   try {
     E e;
-    throw e; 
+    throw e;
   } catch(A) {
   }
 }
@@ -327,7 +327,7 @@ void throw_derived_catch_base_ambiguous_ptr() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_ambiguous_ptr' which should not throw exceptions
   try {
     E e;
-    throw e; 
+    throw e;
   } catch(A) {
   }
 }
@@ -586,6 +586,16 @@ void swap(int&, int&) {
   throw 1;
 }
 
+void iter_swap(int&, int&) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'iter_swap' which should not throw exceptions
+  throw 1;
+}
+
+void iter_move(int&) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'iter_move' which should not throw exceptions
+  throw 1;
+}
+
 namespace std {
 class bad_alloc {};
 }
@@ -702,4 +712,65 @@ int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'main' which should not throw exceptions
   throw 1;
   return 0;
+}
+
+// The following function all incorrectly throw exceptions, *but* calling them
+// should not yield a warning because they are marked as noexcept.
+
+void test_basic_no_throw() noexcept { throw 42; }
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'test_basic_no_throw' which should not throw exceptions
+
+void test_basic_throw() noexcept(false) { throw 42; }
+
+void only_calls_non_throwing() noexcept {
+  test_basic_no_throw();
+}
+
+void calls_non_and_throwing() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_non_and_throwing' which should not throw exceptions
+  test_basic_no_throw();
+  test_basic_throw();
+}
+
+namespace PR55143 { namespace PR40583 {
+
+struct test_explicit_throw {
+    test_explicit_throw() throw(int) { throw 42; }
+    test_explicit_throw(const test_explicit_throw&) throw(int) { throw 42; }
+    test_explicit_throw(test_explicit_throw&&) throw(int) { throw 42; }
+    test_explicit_throw& operator=(const test_explicit_throw&) throw(int) { throw 42; }
+    test_explicit_throw& operator=(test_explicit_throw&&) throw(int) { throw 42; }
+    ~test_explicit_throw() throw(int) { throw 42; }
+};
+
+struct test_implicit_throw {
+    test_implicit_throw() { throw 42; }
+    test_implicit_throw(const test_implicit_throw&) { throw 42; }
+    test_implicit_throw(test_implicit_throw&&) { throw 42; }
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'test_implicit_throw' which should not throw exceptions
+    test_implicit_throw& operator=(const test_implicit_throw&) { throw 42; }
+    test_implicit_throw& operator=(test_implicit_throw&&) { throw 42; }
+    // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: an exception may be thrown in function 'operator=' which should not throw exceptions
+    ~test_implicit_throw() { throw 42; }
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function '~test_implicit_throw' which should not throw exceptions
+};
+
+}}
+
+void pointer_exception_can_not_escape_with_const_void_handler() noexcept {
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'pointer_exception_can_not_escape_with_const_void_handler' which should not throw exceptions
+  const int value = 42;
+  try {
+    throw &value;
+  } catch (const void *) {
+  }
+}
+
+void pointer_exception_can_not_escape_with_void_handler() noexcept {
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'pointer_exception_can_not_escape_with_void_handler' which should not throw exceptions
+  int value = 42;
+  try {
+    throw &value;
+  } catch (void *) {
+  }
 }

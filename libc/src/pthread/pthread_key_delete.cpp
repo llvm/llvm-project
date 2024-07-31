@@ -9,18 +9,19 @@
 #include "pthread_key_delete.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_key_delete, (pthread_key_t key)) {
-  if (__llvm_libc::tss_key_delete(key))
+  if (LIBC_NAMESPACE::tss_key_delete(key))
     return 0;
   else
     return EINVAL;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

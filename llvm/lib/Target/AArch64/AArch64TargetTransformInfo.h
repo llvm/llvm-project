@@ -58,8 +58,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   };
 
   bool isWideningInstruction(Type *DstTy, unsigned Opcode,
-                             ArrayRef<Type *> SrcTys,
-                             ArrayRef<const Value *> Args);
+                             ArrayRef<const Value *> Args,
+                             Type *SrcOverrideTy = nullptr);
 
   // A helper function called by 'getVectorInstrCost'.
   //
@@ -71,11 +71,17 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
 
 public:
   explicit AArch64TTIImpl(const AArch64TargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
+
+  bool areTypesABICompatible(const Function *Caller, const Function *Callee,
+                             const ArrayRef<Type *> &Types) const;
+
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const;
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -99,6 +105,8 @@ public:
   /// @{
 
   bool enableInterleavedAccessVectorization() { return true; }
+
+  bool enableMaskedInterleavedAccessVectorization() { return ST->hasSVE(); }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const {
     bool Vector = (ClassID == 1);
@@ -161,6 +169,8 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr);
 
+  bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst, Type *Src);
+
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
@@ -179,8 +189,8 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index);
 
-  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsUnsigned, FastMathFlags FMF,
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCostSVE(unsigned Opcode,
@@ -193,7 +203,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr);
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
@@ -238,7 +248,7 @@ public:
     if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
-    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+    if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
         Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
       return true;
 
@@ -250,7 +260,8 @@ public:
       return false;
 
     // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors())
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
+        DataType->getPrimitiveSizeInBits() != 128)
       return false; // Fall back to scalarization of masked operations.
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
@@ -265,7 +276,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (!ST->hasSVE() || ST->forceStreamingCompatibleSVE())
+    if (!ST->isSVEAvailable())
       return false;
 
     // For fixed vectors, scalarize if not using SVE for them.
@@ -280,6 +291,7 @@ public:
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
+
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
@@ -359,11 +371,17 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
+  bool preferFixedOverScalableIfEqualCost() const {
+    return ST->useFixedOverScalableIfEqualCost();
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
-  bool supportsScalableVectors() const { return ST->hasSVE(); }
+  bool supportsScalableVectors() const {
+    return ST->isSVEorStreamingSVEAvailable();
+  }
 
-  bool enableScalableVectorization() const { return ST->hasSVE(); }
+  bool enableScalableVectorization() const { return ST->isSVEAvailable(); }
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
@@ -381,7 +399,13 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr);
+
+  InstructionCost getScalarizationOverhead(VectorType *Ty,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind);
 
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
@@ -389,11 +413,13 @@ public:
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, it returns a negative value.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
   /// @}
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
+
+  bool shouldTreatInstructionLikeSelect(const Instruction *I);
 
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
@@ -403,6 +429,11 @@ public:
 
     return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
   }
+
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
 };
 
 } // end namespace llvm

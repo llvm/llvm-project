@@ -37,6 +37,9 @@ using namespace llvm;
 static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
                                   cl::desc("Use one trap block per function"));
 
+static cl::opt<bool> DebugTrapBB("bounds-checking-unique-traps",
+                                 cl::desc("Always use one trap per check"));
+
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
@@ -58,15 +61,15 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
 
-  SizeOffsetEvalType SizeOffset = ObjSizeEval.compute(Ptr);
+  SizeOffsetValue SizeOffset = ObjSizeEval.compute(Ptr);
 
-  if (!ObjSizeEval.bothKnown(SizeOffset)) {
+  if (!SizeOffset.bothKnown()) {
     ++ChecksUnable;
     return nullptr;
   }
 
-  Value *Size   = SizeOffset.first;
-  Value *Offset = SizeOffset.second;
+  Value *Size = SizeOffset.Size;
+  Value *Offset = SizeOffset.Offset;
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
   Type *IndexTy = DL.getIndexType(Ptr->getType());
@@ -141,7 +144,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
@@ -180,19 +183,27 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   // will create a fresh block every time it is called.
   BasicBlock *TrapBB = nullptr;
   auto GetTrapBB = [&TrapBB](BuilderTy &IRB) {
-    if (TrapBB && SingleTrapBB)
-      return TrapBB;
-
     Function *Fn = IRB.GetInsertBlock()->getParent();
-    // FIXME: This debug location doesn't make a lot of sense in the
-    // `SingleTrapBB` case.
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
+
+    if (TrapBB && SingleTrapBB && !DebugTrapBB)
+      return TrapBB;
+
     TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
     IRB.SetInsertPoint(TrapBB);
 
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), Intrinsic::trap);
-    CallInst *TrapCall = IRB.CreateCall(F, {});
+    Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
+    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
+
+    CallInst *TrapCall;
+    if (DebugTrapBB) {
+      TrapCall =
+          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+    } else {
+      TrapCall = IRB.CreateCall(F, {});
+    }
+
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);

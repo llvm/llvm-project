@@ -227,6 +227,40 @@ func.func @func_with_block_args_location_callee2(%arg0 : i32) {
   return
 }
 
+func.func @func_with_multiple_blocks(%arg0 : i32) {
+  cf.br ^bb1(%arg0 : i32)
+^bb1(%x : i32):
+  "test.foo" (%x) : (i32) -> () loc("bar")
+  return
+}
+
+// CHECK-LABEL: func @func_with_multiple_blocks_callee1
+func.func @func_with_multiple_blocks_callee1(%arg0 : i32) {
+  "test.dummy_op"() ({
+    // Call cannot be inlined because "test.dummy" may not support unstructured
+    // control flow in its body.
+    // CHECK: call @func_with_multiple_blocks
+    call @func_with_multiple_blocks(%arg0) : (i32) -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK-LABEL: func @func_with_multiple_blocks_callee2
+func.func @func_with_multiple_blocks_callee2(%arg0 : i32, %c : i1) {
+  %0 = scf.while (%arg1 = %arg0) : (i32) -> (i32) {
+    // Call cannot be inlined because scf.while does not support unstructured
+    // control flow in its body.
+    // CHECK: call @func_with_multiple_blocks
+    func.call @func_with_multiple_blocks(%arg0) : (i32) -> ()
+    scf.condition(%c) %arg1 : i32
+  } do {
+  ^bb0(%arg1: i32):
+    scf.yield %arg1 : i32
+  }
+  return
+}
+
 // Check that we can handle argument and result attributes.
 test.conversion_func_op @handle_attr_callee_fn_multi_arg(%arg0 : i16, %arg1 : i16 {"test.handle_argument"}) -> (i16 {"test.handle_result"}, i16) {
   %0 = arith.addi %arg0, %arg1 : i16
@@ -262,4 +296,24 @@ func.func @inline_convert_and_handle_attr_call(%arg0 : i16) -> (i16) {
   // CHECK: return %[[CAST_RESULT]]
   %res = "test.conversion_call_op"(%arg0) { callee=@handle_attr_callee_fn } : (i16) -> (i16)
   return %res : i16
+}
+
+// Check a function with complex ops is inlined.
+func.func @double_square_complex(%cplx: complex<f32>) -> complex<f32> {
+  %double = complex.add %cplx, %cplx : complex<f32>
+  %square = complex.mul %double, %double : complex<f32>
+  return %square : complex<f32>
+}
+
+// CHECK-LABEL: func @inline_with_complex_ops
+func.func @inline_with_complex_ops() -> complex<f32> {
+  %c1 = arith.constant 1.0 : f32
+  %c2 = arith.constant 2.0 : f32
+  %c = complex.create %c1, %c2 : complex<f32>
+
+  // CHECK: complex.add
+  // CHECK: complex.mul
+  // CHECK-NOT: call
+  %r = call @double_square_complex(%c) : (complex<f32>) -> (complex<f32>)
+  return %r : complex<f32>
 }

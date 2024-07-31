@@ -28,12 +28,6 @@ enum DiagnosticOrigin {
   eDiagnosticOriginLLVM
 };
 
-enum DiagnosticSeverity {
-  eDiagnosticSeverityError,
-  eDiagnosticSeverityWarning,
-  eDiagnosticSeverityRemark
-};
-
 const uint32_t LLDB_INVALID_COMPILER_ID = UINT32_MAX;
 
 class Diagnostic {
@@ -55,7 +49,7 @@ public:
     }
   }
 
-  Diagnostic(llvm::StringRef message, DiagnosticSeverity severity,
+  Diagnostic(llvm::StringRef message, lldb::Severity severity,
              DiagnosticOrigin origin, uint32_t compiler_id)
       : m_message(message), m_severity(severity), m_origin(origin),
         m_compiler_id(compiler_id) {}
@@ -68,7 +62,7 @@ public:
 
   virtual bool HasFixIts() const { return false; }
 
-  DiagnosticSeverity GetSeverity() const { return m_severity; }
+  lldb::Severity GetSeverity() const { return m_severity; }
 
   uint32_t GetCompilerID() const { return m_compiler_id; }
 
@@ -83,7 +77,7 @@ public:
 
 protected:
   std::string m_message;
-  DiagnosticSeverity m_severity;
+  lldb::Severity m_severity;
   DiagnosticOrigin m_origin;
   uint32_t m_compiler_id; // Compiler-specific diagnostic ID
 };
@@ -106,7 +100,7 @@ public:
                         });
   }
 
-  void AddDiagnostic(llvm::StringRef message, DiagnosticSeverity severity,
+  void AddDiagnostic(llvm::StringRef message, lldb::Severity severity,
                      DiagnosticOrigin origin,
                      uint32_t compiler_id = LLDB_INVALID_COMPILER_ID) {
     m_diagnostics.emplace_back(
@@ -118,9 +112,18 @@ public:
       m_diagnostics.push_back(std::move(diagnostic));
   }
 
-  size_t Printf(DiagnosticSeverity severity, const char *format, ...)
+  /// Moves over the contents of a second diagnostic manager over. Leaves other
+  /// diagnostic manager in an empty state.
+  void Consume(DiagnosticManager &&other) {
+    std::move(other.m_diagnostics.begin(), other.m_diagnostics.end(),
+              std::back_inserter(m_diagnostics));
+    m_fixed_expression = std::move(other.m_fixed_expression);
+    other.Clear();
+  }
+
+  size_t Printf(lldb::Severity severity, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
-  void PutString(DiagnosticSeverity severity, llvm::StringRef str);
+  void PutString(lldb::Severity severity, llvm::StringRef str);
 
   void AppendMessageToDiagnostic(llvm::StringRef str) {
     if (!m_diagnostics.empty())

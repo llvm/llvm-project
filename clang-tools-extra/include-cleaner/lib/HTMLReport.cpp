@@ -170,10 +170,10 @@ class Reporter {
   std::string spellHeader(const Header &H) {
     switch (H.kind()) {
     case Header::Physical: {
-      bool IsSystem = false;
+      bool IsAngled = false;
       std::string Path = HS.suggestPathToFileForDiagnostics(
-          H.physical(), MainFE->tryGetRealPathName(), &IsSystem);
-      return IsSystem ? "<" + Path + ">" : "\"" + Path + "\"";
+          H.physical(), MainFE->tryGetRealPathName(), &IsAngled);
+      return IsAngled ? "<" + Path + ">" : "\"" + Path + "\"";
     }
     case Header::Standard:
       return H.standard().name().str();
@@ -390,7 +390,7 @@ private:
       OS << "<tr><th>Header</th><td>";
       switch (H.kind()) {
       case Header::Physical:
-        printFilename(H.physical()->getName());
+        printFilename(H.physical().getName());
         break;
       case Header::Standard:
         OS << "stdlib " << H.standard().name();
@@ -521,7 +521,7 @@ void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
       if(!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
         return;
-      R.addRef(SymbolReference{Loc, D, T});
+      R.addRef(SymbolReference{D, Loc, T});
     });
   for (const SymbolReference &Ref : MacroRefs) {
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Ref.RefLocation)))

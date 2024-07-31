@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! !DIR$ IGNORE_TKR tests
 
 !ERROR: !DIR$ IGNORE_TKR directive must appear in a subroutine or function
@@ -92,6 +92,11 @@ module m
       real x(:)
     end
 
+    module subroutine t24(x)
+!dir$ ignore_tkr(t) x
+      real x(:)
+    end
+
   end interface
 
  contains
@@ -138,12 +143,6 @@ module m
     end block
   end
 
-  subroutine t21(x)
-!dir$ ignore_tkr(c) x
-!ERROR: !DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array
-    real x(1)
-  end
-
   subroutine t22(x)
 !dir$ ignore_tkr(r) x
 !WARNING: !DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array
@@ -162,6 +161,14 @@ subroutine bad1(x)
 !dir$ ignore_tkr x
 !ERROR: !DIR$ IGNORE_TKR may apply only in an interface or a module procedure
   real, intent(in) :: x
+end
+
+submodule(m) subm
+ contains
+  module subroutine t24(x)
+!dir$ ignore_tkr(t) x
+    real x(:)
+  end
 end
 
 program test
@@ -201,6 +208,7 @@ program test
   call t4(x)
   call t4(m)
   call t5(x)
+  !WARNING: Actual argument array has fewer elements (2) than dummy argument 'm=' array (4)
   call t5(a)
 
   call t6(1)

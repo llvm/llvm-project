@@ -473,7 +473,7 @@ func.func @xor() -> index {
 }
 
 // CHECK-LABEL: @cmp
-func.func @cmp() -> (i1, i1, i1, i1) {
+func.func @cmp(%arg0: index) -> (i1, i1, i1, i1, i1, i1) {
   %a = index.constant 0
   %b = index.constant -1
   %c = index.constant -2
@@ -484,10 +484,39 @@ func.func @cmp() -> (i1, i1, i1, i1) {
   %2 = index.cmp ne(%d, %a)
   %3 = index.cmp sgt(%b, %a)
 
+  %4 = index.sub %a, %arg0
+  %5 = index.cmp sgt(%4, %a)
+
+  %6 = index.sub %a, %arg0
+  %7 = index.cmp sgt(%a, %6)
+
   // CHECK-DAG: %[[TRUE:.*]] = index.bool.constant true
   // CHECK-DAG: %[[FALSE:.*]] = index.bool.constant false
+  // CHECK-DAG: [[IDX0:%.*]] = index.constant 0
+  // CHECK-DAG: [[V4:%.*]] = index.cmp sgt([[IDX0]], %arg0)
+  // CHECK-DAG: [[V5:%.*]] = index.cmp sgt(%arg0, [[IDX0]])
   // CHECK: return %[[FALSE]], %[[TRUE]], %[[TRUE]], %[[FALSE]]
-  return %0, %1, %2, %3 : i1, i1, i1, i1
+  return %0, %1, %2, %3, %5, %7 : i1, i1, i1, i1, i1, i1
+}
+
+// CHECK-LABEL: @cmp_same_args
+func.func @cmp_same_args(%a: index) -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+  %0 = index.cmp eq(%a, %a)
+  %1 = index.cmp sge(%a, %a)
+  %2 = index.cmp sle(%a, %a)
+  %3 = index.cmp uge(%a, %a)
+  %4 = index.cmp ule(%a, %a)
+  %5 = index.cmp ne(%a, %a)
+  %6 = index.cmp sgt(%a, %a)
+  %7 = index.cmp slt(%a, %a)
+  %8 = index.cmp ugt(%a, %a)
+  %9 = index.cmp ult(%a, %a)
+
+  // CHECK-DAG: %[[TRUE:.*]] = index.bool.constant true
+  // CHECK-DAG: %[[FALSE:.*]] = index.bool.constant false
+  // CHECK-NEXT: return %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]],
+  // CHECK-SAME: %[[FALSE]], %[[FALSE]], %[[FALSE]], %[[FALSE]], %[[FALSE]]
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 
 // CHECK-LABEL: @cmp_nofold
@@ -509,4 +538,57 @@ func.func @cmp_edge() -> i1 {
   %0 = index.cmp slt(%lhs, %rhs)
   // CHECK: return %[[TRUE]]
   return %0 : i1
+}
+
+// CHECK-LABEL: @cmp_maxs
+func.func @cmp_maxs(%arg0: index) -> (i1, i1) {
+  %idx0 = index.constant 0
+  %idx1 = index.constant 1
+  %0 = index.maxs %arg0, %idx1
+  %1 = index.cmp sgt(%0, %idx0)
+  %2 = index.cmp eq(%0, %idx0)
+  // CHECK: return %true, %false
+  return %1, %2 : i1, i1
+}
+
+// CHECK-LABEL: @mul_identity
+func.func @mul_identity(%arg0: index) -> (index, index) {
+  %idx0 = index.constant 0
+  %idx1 = index.constant 1
+  %0 = index.mul %arg0, %idx0
+  %1 = index.mul %arg0, %idx1
+  // CHECK: return %idx0, %arg0
+  return %0, %1 : index, index
+}
+
+// CHECK-LABEL: @add_identity
+func.func @add_identity(%arg0: index) -> index {
+  %idx0 = index.constant 0
+  %0 = index.add %arg0, %idx0
+  // CHECK-NEXT: return %arg0
+  return %0 : index
+}
+
+// CHECK-LABEL: @sub_identity
+func.func @sub_identity(%arg0: index) -> index {
+  %idx0 = index.constant 0
+  %0 = index.sub %arg0, %idx0
+  // CHECK-NEXT: return %arg0
+  return %0 : index
+}
+
+// CHECK-LABEL: @castu_to_index
+func.func @castu_to_index() -> index {
+  // CHECK: index.constant 8000000000000
+  %0 = arith.constant 8000000000000 : i48
+  %1 = index.castu %0 : i48 to index
+  return %1 : index
+}
+
+// CHECK-LABEL: @casts_to_index
+func.func @casts_to_index() -> index {
+  // CHECK: index.constant -1000
+  %0 = arith.constant -1000 : i48
+  %1 = index.casts %0 : i48 to index
+  return %1 : index
 }

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify
 // expected-no-diagnostics
-// rdar://5967199
 
 typedef signed char BOOL;
 @class NSInvocation, NSMethodSignature, NSCoder, NSString, NSEnumerator;

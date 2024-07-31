@@ -86,7 +86,6 @@ class T { // expected-error{{declaration of 'T' shadows template parameter}}
 template<int Size> // expected-note{{template parameter is declared here}}
 void shadow3(int Size); // expected-error{{declaration of 'Size' shadows template parameter}}
 
-// <rdar://problem/6952203>
 template<typename T> // expected-note{{here}}
 struct shadow4 {
   int T; // expected-error{{shadows}}
@@ -297,4 +296,8 @@ namespace PR46231 {
   template int; // expected-error {{declaration does not declare anything}}
   template<> int; // expected-error {{declaration does not declare anything}}
   template<int> int; // expected-error {{declaration does not declare anything}}
+}
+
+namespace PR99933 {
+  void foo() { template <typename> int i; } // expected-error {{templates can only be declared in namespace or class scope}}
 }

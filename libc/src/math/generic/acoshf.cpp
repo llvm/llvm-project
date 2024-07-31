@@ -12,31 +12,30 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();
 
-  if (LIBC_UNLIKELY(x < 1.0f)) {
+  if (LIBC_UNLIKELY(x <= 1.0f)) {
+    if (x == 1.0f)
+      return 0.0f;
     // x < 1.
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
-    return FPBits_t::build_quiet_nan(0);
+    return FPBits_t::quiet_nan().get_val();
   }
 
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
-    // Check for exceptional values.
-    uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
-    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
-      // x is +inf or NaN.
+    if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
       return x;
-    }
 
     // Helper functions to set results for exceptional cases.
     auto round_result_slightly_down = [](float r) -> float {
@@ -68,8 +67,8 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
 
   double x_d = static_cast<double>(x);
   // acosh(x) = log(x + sqrt(x^2 - 1))
-  return static_cast<float>(
-      log_eval(x_d + fputil::sqrt(fputil::multiply_add(x_d, x_d, -1.0))));
+  return static_cast<float>(log_eval(
+      x_d + fputil::sqrt<double>(fputil::multiply_add(x_d, x_d, -1.0))));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

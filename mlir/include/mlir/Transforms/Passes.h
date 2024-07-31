@@ -15,10 +15,12 @@
 #define MLIR_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/ViewOpGraph.h"
 #include "llvm/Support/Debug.h"
 #include <limits>
+#include <memory>
 
 namespace mlir {
 
@@ -42,6 +44,7 @@ class GreedyRewriteConfig;
 #define GEN_PASS_DECL_SYMBOLDCE
 #define GEN_PASS_DECL_SYMBOLPRIVATIZE
 #define GEN_PASS_DECL_TOPOLOGICALSORT
+#define GEN_PASS_DECL_COMPOSITEFIXEDPOINTPASS
 #include "mlir/Transforms/Passes.h.inc"
 
 /// Creates an instance of the Canonicalizer pass, configured with default
@@ -77,6 +80,9 @@ std::unique_ptr<Pass> createGenerateRuntimeVerificationPass();
 /// instructions out of the loop.
 std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
 
+/// Creates a pass that hoists loop-invariant subset ops.
+std::unique_ptr<Pass> createLoopInvariantSubsetHoistingPass();
+
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
 
@@ -105,6 +111,9 @@ std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
 
+/// Creates an optimization pass to remove dead values.
+std::unique_ptr<Pass> createRemoveDeadValuesPass();
+
 /// Creates a pass which performs sparse conditional constant propagation over
 /// nested operations.
 std::unique_ptr<Pass> createSCCPPass();
@@ -122,6 +131,12 @@ createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
 /// topologically such that, as much as possible, users of values appear after
 /// their producers.
 std::unique_ptr<Pass> createTopologicalSortPass();
+
+/// Create composite pass, which runs provided set of passes until fixed point
+/// or maximum number of iterations reached.
+std::unique_ptr<Pass> createCompositeFixedPointPass(
+    std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
+    int maxIterations = 10);
 
 //===----------------------------------------------------------------------===//
 // Registration

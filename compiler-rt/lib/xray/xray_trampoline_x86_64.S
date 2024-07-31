@@ -40,7 +40,7 @@
 	CFI_ADJUST_CFA_OFFSET(-8)
 .endm
 
-// This macro should keep the stack aligned to 16 bytes.
+// This macro should lower the stack pointer by an odd multiple of 8.
 .macro SAVE_REGISTERS
 	pushfq
 	CFI_ADJUST_CFA_OFFSET(8)
@@ -70,7 +70,6 @@
 	movq  %r15, 0(%rsp)
 .endm
 
-// This macro should keep the stack aligned to 16 bytes.
 .macro RESTORE_REGISTERS
 	movq  232(%rsp), %rbp
 	movupd	216(%rsp), %xmm0
@@ -117,23 +116,23 @@
 # LLVM-MCA-BEGIN __xray_FunctionEntry
 ASM_SYMBOL(__xray_FunctionEntry):
 	CFI_STARTPROC
-	ALIGN_STACK_16B
 	SAVE_REGISTERS
+	ALIGN_STACK_16B
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
 	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
 	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq	%rax, %rax
-	je	.Ltmp0
+	je	LOCAL_LABEL(tmp0)
 
 	// The patched function prologue puts its xray_instr_map index into %r10d.
 	movl	%r10d, %edi
 	xor	%esi,%esi
 	callq	*%rax
 
-.Ltmp0:
-	RESTORE_REGISTERS
+LOCAL_LABEL(tmp0):
 	RESTORE_STACK_ALIGNMENT
+	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionEntry)
@@ -162,13 +161,13 @@ ASM_SYMBOL(__xray_FunctionExit):
 	movq	%rdx, 0(%rsp)
 	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq %rax,%rax
-	je	.Ltmp2
+	je	LOCAL_LABEL(tmp2)
 
 	movl	%r10d, %edi
 	movl	$1, %esi
 	callq	*%rax
 
-.Ltmp2:
+LOCAL_LABEL(tmp2):
 	// Restore the important registers.
 	movq  48(%rsp), %rbp
 	movupd	32(%rsp), %xmm0
@@ -193,20 +192,20 @@ ASM_SYMBOL(__xray_FunctionExit):
 # LLVM-MCA-BEGIN __xray_FunctionTailExit
 ASM_SYMBOL(__xray_FunctionTailExit):
 	CFI_STARTPROC
-	ALIGN_STACK_16B
 	SAVE_REGISTERS
+	ALIGN_STACK_16B
 
 	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq %rax,%rax
-	je	.Ltmp4
+	je	LOCAL_LABEL(tmp4)
 
 	movl	%r10d, %edi
 	movl	$2, %esi
 	callq	*%rax
 
-.Ltmp4:
-	RESTORE_REGISTERS
+LOCAL_LABEL(tmp4):
 	RESTORE_STACK_ALIGNMENT
+	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_FunctionTailExit)
@@ -221,20 +220,20 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 # LLVM-MCA-BEGIN __xray_ArgLoggerEntry
 ASM_SYMBOL(__xray_ArgLoggerEntry):
 	CFI_STARTPROC
-	ALIGN_STACK_16B
 	SAVE_REGISTERS
+	ALIGN_STACK_16B
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
 	movq	ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)(%rip), %rax
 	testq	%rax, %rax
-	jne	.Larg1entryLog
+	jne	LOCAL_LABEL(arg1entryLog)
 
 	// If [arg1 logging handler] not set, defer to no-arg logging.
 	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq	%rax, %rax
-	je	.Larg1entryFail
+	je	LOCAL_LABEL(arg1entryFail)
 
-.Larg1entryLog:
+LOCAL_LABEL(arg1entryLog):
 
 	// First argument will become the third
 	movq	%rdi, %rdx
@@ -247,9 +246,9 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
 
 	callq	*%rax
 
-.Larg1entryFail:
-	RESTORE_REGISTERS
+LOCAL_LABEL(arg1entryFail):
 	RESTORE_STACK_ALIGNMENT
+	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
 	ASM_SIZE(__xray_ArgLoggerEntry)
@@ -257,8 +256,9 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
 
 //===----------------------------------------------------------------------===//
 
+// __xray_*Event have default visibility so that they can be referenced by user
+// DSOs that do not link against the runtime.
 	.global ASM_SYMBOL(__xray_CustomEvent)
-	ASM_HIDDEN(__xray_CustomEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_CustomEvent)
 # LLVM-MCA-BEGIN __xray_CustomEvent
@@ -270,11 +270,11 @@ ASM_SYMBOL(__xray_CustomEvent):
 	// already.
 	movq ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)(%rip), %rax
 	testq %rax,%rax
-	je .LcustomEventCleanup
+	je LOCAL_LABEL(customEventCleanup)
 
 	callq	*%rax
 
-.LcustomEventCleanup:
+LOCAL_LABEL(customEventCleanup):
 	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END
@@ -284,7 +284,6 @@ ASM_SYMBOL(__xray_CustomEvent):
 //===----------------------------------------------------------------------===//
 
 	.global ASM_SYMBOL(__xray_TypedEvent)
-	ASM_HIDDEN(__xray_TypedEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_TypedEvent)
 # LLVM-MCA-BEGIN __xray_TypedEvent
@@ -296,11 +295,11 @@ ASM_SYMBOL(__xray_TypedEvent):
 	// and rdx without our intervention.
 	movq ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)(%rip), %rax
 	testq %rax,%rax
-	je .LtypedEventCleanup
+	je LOCAL_LABEL(typedEventCleanup)
 
 	callq	*%rax
 
-.LtypedEventCleanup:
+LOCAL_LABEL(typedEventCleanup):
 	RESTORE_REGISTERS
 	retq
 # LLVM-MCA-END

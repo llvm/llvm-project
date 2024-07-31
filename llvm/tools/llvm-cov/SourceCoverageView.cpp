@@ -48,7 +48,7 @@ std::string CoveragePrinter::getOutputPath(StringRef Path, StringRef Extension,
   sys::path::append(FullPath, PathFilename);
   sys::path::native(FullPath);
 
-  return std::string(FullPath.str());
+  return std::string(FullPath);
 }
 
 Expected<CoveragePrinter::OwnedStream>
@@ -76,8 +76,12 @@ std::unique_ptr<CoveragePrinter>
 CoveragePrinter::create(const CoverageViewOptions &Opts) {
   switch (Opts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
+    if (Opts.ShowDirectoryCoverage)
+      return std::make_unique<CoveragePrinterTextDirectory>(Opts);
     return std::make_unique<CoveragePrinterText>(Opts);
   case CoverageViewOptions::OutputFormat::HTML:
+    if (Opts.ShowDirectoryCoverage)
+      return std::make_unique<CoveragePrinterHTMLDirectory>(Opts);
     return std::make_unique<CoveragePrinterHTML>(Opts);
   case CoverageViewOptions::OutputFormat::Lcov:
     // Unreachable because CodeCoverage.cpp should terminate with an error
@@ -126,6 +130,8 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
     const auto *CurSeg = Segments[I];
     if (!CurSeg->IsRegionEntry || CurSeg->Count == LCS.getExecutionCount())
       continue;
+    if (!CurSeg->HasCount) // don't show tooltips for SkippedRegions
+      continue;
     return true;
   }
   return false;
@@ -133,7 +139,7 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
 
 bool SourceCoverageView::hasSubViews() const {
   return !ExpansionSubViews.empty() || !InstantiationSubViews.empty() ||
-         !BranchSubViews.empty();
+         !BranchSubViews.empty() || !MCDCSubViews.empty();
 }
 
 std::unique_ptr<SourceCoverageView>
@@ -159,7 +165,7 @@ std::string SourceCoverageView::getSourceName() const {
   SmallString<128> SourceText(SourceName);
   sys::path::remove_dots(SourceText, /*remove_dot_dot=*/true);
   sys::path::native(SourceText);
-  return std::string(SourceText.str());
+  return std::string(SourceText);
 }
 
 void SourceCoverageView::addExpansion(
@@ -169,9 +175,13 @@ void SourceCoverageView::addExpansion(
 }
 
 void SourceCoverageView::addBranch(unsigned Line,
-                                   ArrayRef<CountedRegion> Regions,
-                                   std::unique_ptr<SourceCoverageView> View) {
-  BranchSubViews.emplace_back(Line, Regions, std::move(View));
+                                   SmallVector<CountedRegion, 0> Regions) {
+  BranchSubViews.emplace_back(Line, std::move(Regions));
+}
+
+void SourceCoverageView::addMCDCRecord(unsigned Line,
+                                       SmallVector<MCDCRecord, 0> Records) {
+  MCDCSubViews.emplace_back(Line, std::move(Records));
 }
 
 void SourceCoverageView::addInstantiation(
@@ -191,20 +201,22 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   if (ShowSourceName)
     renderSourceName(OS, WholeFile);
 
-  renderTableHeader(OS, (ViewDepth > 0) ? 0 : getFirstUncoveredLineNo(),
-                    ViewDepth);
+  renderTableHeader(OS, ViewDepth);
 
   // We need the expansions, instantiations, and branches sorted so we can go
   // through them while we iterate lines.
   llvm::stable_sort(ExpansionSubViews);
   llvm::stable_sort(InstantiationSubViews);
   llvm::stable_sort(BranchSubViews);
+  llvm::stable_sort(MCDCSubViews);
   auto NextESV = ExpansionSubViews.begin();
   auto EndESV = ExpansionSubViews.end();
   auto NextISV = InstantiationSubViews.begin();
   auto EndISV = InstantiationSubViews.end();
   auto NextBRV = BranchSubViews.begin();
   auto EndBRV = BranchSubViews.end();
+  auto NextMSV = MCDCSubViews.begin();
+  auto EndMSV = MCDCSubViews.end();
 
   // Get the coverage information for the file.
   auto StartSegment = CoverageInfo.begin();
@@ -270,6 +282,11 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
     for (; NextBRV != EndBRV && NextBRV->Line == LI.line_number(); ++NextBRV) {
       renderViewDivider(OS, ViewDepth + 1);
       renderBranchView(OS, *NextBRV, ViewDepth + 1);
+      RenderedSubView = true;
+    }
+    for (; NextMSV != EndMSV && NextMSV->Line == LI.line_number(); ++NextMSV) {
+      renderViewDivider(OS, ViewDepth + 1);
+      renderMCDCView(OS, *NextMSV, ViewDepth + 1);
       RenderedSubView = true;
     }
     if (RenderedSubView)

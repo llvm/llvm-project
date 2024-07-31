@@ -11,13 +11,16 @@
 
 #include <__assert>
 #include <__config>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -93,8 +96,8 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_exceptions);
 template <class _Rollback>
 struct __exception_guard_noexceptions {
   __exception_guard_noexceptions() = delete;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-      _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG
   __exception_guard_noexceptions(__exception_guard_noexceptions&& __other)
@@ -112,7 +115,7 @@ struct __exception_guard_noexceptions {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG ~__exception_guard_noexceptions() {
-    _LIBCPP_ASSERT(__completed_, "__exception_guard not completed with exceptions disabled");
+    _LIBCPP_ASSERT_INTERNAL(__completed_, "__exception_guard not completed with exceptions disabled");
   }
 
 private:
@@ -135,5 +138,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exce
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___UTILITY_TRANSACTION_H

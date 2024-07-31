@@ -15,6 +15,7 @@
 #include "PlatformRemoteAppleBridge.h"
 #include "PlatformRemoteAppleTV.h"
 #include "PlatformRemoteAppleWatch.h"
+#include "PlatformRemoteAppleXR.h"
 #endif
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
@@ -53,6 +54,7 @@ void PlatformMacOSX::Initialize() {
   PlatformRemoteAppleTV::Initialize();
   PlatformRemoteAppleWatch::Initialize();
   PlatformRemoteAppleBridge::Initialize();
+  PlatformRemoteAppleXR::Initialize();
 #endif
 
   if (g_initialize_count++ == 0) {
@@ -75,6 +77,7 @@ void PlatformMacOSX::Terminate() {
   }
 
 #if defined(__APPLE__)
+  PlatformRemoteAppleXR::Terminate();
   PlatformRemoteAppleBridge::Terminate();
   PlatformRemoteAppleWatch::Terminate();
   PlatformRemoteAppleTV::Terminate();

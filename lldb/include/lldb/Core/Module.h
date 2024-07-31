@@ -124,8 +124,7 @@ public:
   ///     multiple architectures).
   Module(
       const FileSpec &file_spec, const ArchSpec &arch,
-      const ConstString *object_name = nullptr,
-      lldb::offset_t object_offset = 0,
+      ConstString object_name = ConstString(), lldb::offset_t object_offset = 0,
       const llvm::sys::TimePoint<> &object_mod_time = llvm::sys::TimePoint<>());
 
   Module(const ModuleSpec &module_spec);
@@ -338,6 +337,12 @@ public:
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
 
+  /// Find functions by compiler context.
+  void FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
+                     lldb::FunctionNameType name_type_mask,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
+
   /// Find functions by name.
   ///
   /// If the function is an inlined function, it will have a block,
@@ -416,70 +421,19 @@ public:
   void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                            VariableList &variable_list);
 
-  /// Find types by name.
+  /// Find types using a type-matching object that contains all search
+  /// parameters.
   ///
-  /// Type lookups in modules go through the SymbolFile. The SymbolFile needs to
-  /// be able to lookup types by basename and not the fully qualified typename.
-  /// This allows the type accelerator tables to stay small, even with heavily
-  /// templatized C++. The type search will then narrow down the search
-  /// results. If "exact_match" is true, then the type search will only match
-  /// exact type name matches. If "exact_match" is false, the type will match
-  /// as long as the base typename matches and as long as any immediate
-  /// containing namespaces/class scopes that are specified match. So to
-  /// search for a type "d" in "b::c", the name "b::c::d" can be specified and
-  /// it will match any class/namespace "b" which contains a class/namespace
-  /// "c" which contains type "d". We do this to allow users to not always
-  /// have to specify complete scoping on all expressions, but it also allows
-  /// for exact matching when required.
+  /// \see lldb_private::TypeQuery
   ///
-  /// \param[in] type_name
-  ///     The name of the type we are looking for that is a fully
-  ///     or partially qualified type name.
+  /// \param[in] query
+  ///     A type matching object that contains all of the details of the type
+  ///     search.
   ///
-  /// \param[in] exact_match
-  ///     If \b true, \a type_name is fully qualified and must match
-  ///     exactly. If \b false, \a type_name is a partially qualified
-  ///     name where the leading namespaces or classes can be
-  ///     omitted to make finding types that a user may type
-  ///     easier.
-  ///
-  /// \param[out] types
-  ///     A type list gets populated with any matches.
-  ///
-  void
-  FindTypes(ConstString type_name, bool exact_match, size_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeList &types);
-
-  /// Find types by name.
-  ///
-  /// This behaves like the other FindTypes method but allows to
-  /// specify a DeclContext and a language for the type being searched
-  /// for.
-  ///
-  /// \param searched_symbol_files
-  ///     Prevents one file from being visited multiple times.
-  void
-  FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeMap &types);
-
-  lldb::TypeSP FindFirstType(const SymbolContext &sc, ConstString type_name,
-                             bool exact_match);
-
-  /// Find types by name that are in a namespace. This function is used by the
-  /// expression parser when searches need to happen in an exact namespace
-  /// scope.
-  ///
-  /// \param[in] type_name
-  ///     The name of a type within a namespace that should not include
-  ///     any qualifying namespaces (just a type basename).
-  ///
-  /// \param[out] type_list
-  ///     A type list gets populated with any matches.
-  void FindTypesInNamespace(ConstString type_name,
-                            const CompilerDeclContext &parent_decl_ctx,
-                            size_t max_matches, TypeList &type_list);
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object using
+  ///     TypeMap::InsertUnique(...).
+  void FindTypes(const TypeQuery &query, TypeResults &results);
 
   /// Get const accessor for the module architecture.
   ///
@@ -563,7 +517,7 @@ public:
   bool IsLoadedInTarget(Target *target);
 
   bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream *feedback_stream = nullptr);
+                                     Stream &feedback_stream);
 
   /// Get the number of compile units for this module.
   ///
@@ -1085,7 +1039,7 @@ protected:
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
-                                     /// is used by the ObjectFile and and
+                                     /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};
@@ -1122,12 +1076,6 @@ protected:
 
 private:
   Module(); // Only used internally by CreateJITModule ()
-
-  void FindTypes_Impl(
-      ConstString name, const CompilerDeclContext &parent_decl_ctx,
-      size_t max_matches,
-      llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-      TypeMap &types);
 
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;

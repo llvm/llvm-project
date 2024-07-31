@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRDUP_H
 #define LLVM_LIBC_SRC_STRING_STRDUP_H
 
+#include "src/__support/macros/config.h"
 #include <string.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 char *strdup(const char *src);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRDUP_H

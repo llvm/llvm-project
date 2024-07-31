@@ -1,4 +1,4 @@
-# REQUIRES: system-linux
+# UNSUPPORTED: system-linux
 ; RUN: rm -rf %t
 ; RUN: mkdir %t
 ; RUN: cd %t
@@ -11,8 +11,8 @@
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.dwo.dwo | FileCheck -check-prefix=BOLT %s
 
-; Test input into bolt a DWP file with TU Index.
-; Make sure output in the .dwo files has type information.
+;; Test input into bolt a DWP file with TU Index.
+;; Make sure output in the .dwo files has type information.
 
 ; PRE-BOLT: DW_TAG_type_unit
 ; PRE-BOLT: DW_TAG_type_unit

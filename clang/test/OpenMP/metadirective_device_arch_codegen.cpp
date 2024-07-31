@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -fopenmp -x c++ -w -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -w -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -target-cpu gfx906 -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -w -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -target-cpu gfx906 -o - | FileCheck %s
 // expected-no-diagnostics
 
 
@@ -60,6 +60,6 @@ int metadirective1() {
 // CHECK: omp.inner.for.body:
 // CHECK: store atomic {{.*}} monotonic
 // CHECK: omp.loop.exit:
-// CHECK-NEXT: call void @__kmpc_distribute_static_fini
+// CHECK-NEXT: call void @__kmpc_for_static_fini
 // CHECK-NEXT: ret void
 

@@ -14,7 +14,9 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 using namespace tensor;
@@ -83,6 +85,11 @@ void tensor::registerFindPayloadReplacementOpInterfaceExternalModels(
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 
+void transform::ApplyDecomposeTensorConcatPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateDecomposeTensorConcatPatterns(patterns);
+}
+
 void transform::ApplyDropRedundantInsertSliceRankExpansionPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
   tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
@@ -103,6 +110,11 @@ void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
 }
 
+void transform::ApplyFoldTensorSubsetOpsIntoVectorTransfersPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
+}
+
 void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
   tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
@@ -115,7 +127,58 @@ void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
 
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  tensor::populateRewriteAsConstantPatterns(patterns);
+  ControlFoldFn defaultControlFn = [](OpOperand *fusedOperand) {
+    Operation *producer = fusedOperand->get().getDefiningOp();
+    return producer && producer->hasOneUse();
+  };
+
+  ControlFoldFn aggressiveControlFn = [](OpOperand *fusedOperand) {
+    return true;
+  };
+
+  // Add folding with reshape by expansion patterns.
+  if (getAggressive())
+    tensor::populateRewriteAsConstantPatterns(patterns, aggressiveControlFn);
+  else
+    tensor::populateRewriteAsConstantPatterns(patterns, defaultControlFn);
+}
+
+//===----------------------------------------------------------------------===//
+// TypeConversionCastTensorShapeOp
+//===----------------------------------------------------------------------===//
+
+void transform::TypeConversionCastShapeDynamicDimsOp::
+    populateTypeMaterializations(TypeConverter &converter) {
+  bool ignoreDynamicInfo = getIgnoreDynamicInfo();
+  converter.addSourceMaterialization([ignoreDynamicInfo](
+                                         OpBuilder &builder, Type resultType,
+                                         ValueRange inputs,
+                                         Location loc) -> std::optional<Value> {
+    if (inputs.size() != 1) {
+      return std::nullopt;
+    }
+    Value input = inputs[0];
+    if (!ignoreDynamicInfo &&
+        !tensor::preservesStaticInformation(resultType, input.getType())) {
+      return std::nullopt;
+    }
+    if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
+      return std::nullopt;
+    }
+    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+  });
+  converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
+                                        ValueRange inputs,
+                                        Location loc) -> std::optional<Value> {
+    if (inputs.size() != 1) {
+      return std::nullopt;
+    }
+    Value input = inputs[0];
+    if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
+      return std::nullopt;
+    }
+    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -123,7 +186,8 @@ void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MakeLoopIndependentOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   // Gather IVs.
   SmallVector<Value> ivs;
@@ -141,7 +205,6 @@ DiagnosedSilenceableFailure transform::MakeLoopIndependentOp::applyToOne(
   }
 
   // Rewrite IR.
-  IRRewriter rewriter(target->getContext());
   FailureOr<Value> replacement = failure();
   if (auto padOp = dyn_cast<tensor::PadOp>(target)) {
     replacement = tensor::buildIndependentOp(rewriter, padOp, ivs);

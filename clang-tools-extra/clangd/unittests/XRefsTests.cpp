@@ -33,12 +33,10 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
-using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Matcher;
-using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 using ::testing::UnorderedPointwise;
@@ -125,6 +123,13 @@ TEST(HighlightsTest, All) {
         @end
         void go() {
           [Foo [[x]]:2 [[^y]]:4];
+        }
+      )cpp",
+      R"cpp( // Label
+        int main() {
+          goto [[^theLabel]];
+          [[theLabel]]:
+            return 1;
         }
       )cpp",
   };
@@ -766,7 +771,7 @@ TEST(LocateSymbol, All) {
         namespace std
         {
           template<class _E>
-          class [[initializer_list]] {};
+          class [[initializer_list]] { const _E *a, *b; };
         }
 
         ^auto i = {1,2};
@@ -1004,7 +1009,17 @@ TEST(LocateSymbol, All) {
         void play(Dog *dog) {
           [dog ho^wl];
         }
-      )objc"};
+      )objc",
+      R"cpp(
+        struct PointerIntPairInfo {
+          static void *getPointer(void *Value);
+        };
+
+        template <typename Info = PointerIntPairInfo> struct PointerIntPair {
+          void *Value;
+          void *getPointer() const { return Info::get^Pointer(Value); }
+        };
+    )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     std::optional<Range> WantDecl;
@@ -1879,7 +1894,7 @@ TEST(FindType, All) {
 
     ASSERT_GT(A.points().size(), 0u) << Case;
     for (auto Pos : A.points())
-      EXPECT_THAT(findType(AST, Pos),
+      EXPECT_THAT(findType(AST, Pos, nullptr),
                   ElementsAre(
                     sym("Target", HeaderA.range("Target"), HeaderA.range("Target"))))
           << Case;
@@ -1892,13 +1907,46 @@ TEST(FindType, All) {
     TU.Code = A.code().str();
     ParsedAST AST = TU.build();
 
-    EXPECT_THAT(findType(AST, A.point()),
+    EXPECT_THAT(findType(AST, A.point(), nullptr),
                 UnorderedElementsAre(
                   sym("Target", HeaderA.range("Target"), HeaderA.range("Target")),
                   sym("smart_ptr", HeaderA.range("smart_ptr"), HeaderA.range("smart_ptr"))
                 ))
         << Case;
   }
+}
+
+TEST(FindType, Definition) {
+  Annotations A(R"cpp(
+    class $decl[[X]];
+    X *^x;
+    class $def[[X]] {};
+  )cpp");
+  auto TU = TestTU::withCode(A.code().str());
+  ParsedAST AST = TU.build();
+
+  EXPECT_THAT(findType(AST, A.point(), nullptr),
+              ElementsAre(sym("X", A.range("decl"), A.range("def"))));
+}
+
+TEST(FindType, Index) {
+  Annotations Def(R"cpp(
+    // This definition is only available through the index.
+    class [[X]] {};
+  )cpp");
+  TestTU DefTU = TestTU::withHeaderCode(Def.code());
+  DefTU.HeaderFilename = "def.h";
+  auto DefIdx = DefTU.index();
+
+  Annotations A(R"cpp(
+    class [[X]];
+    X *^x;
+  )cpp");
+  auto TU = TestTU::withCode(A.code().str());
+  ParsedAST AST = TU.build();
+
+  EXPECT_THAT(findType(AST, A.point(), DefIdx.get()),
+              ElementsAre(sym("X", A.range(), Def.range())));
 }
 
 void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
@@ -2125,6 +2173,11 @@ TEST(FindReferences, WithinAST) {
         using $def[[MyTypeD^ef]] = int;
         enum MyEnum : $(MyEnum)[[MyTy^peDef]] { };
       )cpp",
+      // UDL
+      R"cpp(
+        bool $decl[[operator]]"" _u^dl(unsigned long long value);
+        bool x = $(x)[[1_udl]];
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
@@ -2299,7 +2352,7 @@ TEST(FindReferences, ExplicitSymbols) {
 
 TEST(FindReferences, UsedSymbolsFromInclude) {
   const char *Tests[] = {
-      R"cpp([[#include ^"bar.h"]]
+      R"cpp(   [[#include   ^"bar.h"]]
         #include <vector>
         int fstBar = [[bar1]]();
         int sndBar = [[bar2]]();
@@ -2310,7 +2363,13 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
 
       R"cpp([[#in^clude <vector>]]
         std::[[vector]]<int> vec;
-      )cpp"};
+      )cpp",
+
+      R"cpp(
+        [[#include ^"udl_header.h"]]
+        auto x = [[1_b]];
+      )cpp",
+  };
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto TU = TestTU::withCode(T.code());
@@ -2326,6 +2385,9 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
         template<typename>
         class vector{};
       }
+    )cpp");
+    TU.AdditionalFiles["udl_header.h"] = guard(R"cpp(
+      bool operator"" _b(unsigned long long value);
     )cpp");
     TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 

@@ -9,6 +9,7 @@
 #include "flang/Semantics/semantics.h"
 #include "assignment.h"
 #include "canonicalize-acc.h"
+#include "canonicalize-directives.h"
 #include "canonicalize-do.h"
 #include "canonicalize-omp.h"
 #include "check-acc-structure.h"
@@ -159,6 +160,41 @@ private:
   SemanticsContext &context_;
 };
 
+static void WarnUndefinedFunctionResult(
+    SemanticsContext &context, const Scope &scope) {
+  auto WasDefined{[&context](const Symbol &symbol) {
+    return context.IsSymbolDefined(symbol) ||
+        IsInitialized(symbol, /*ignoreDataStatements=*/true,
+            /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
+  }};
+  if (const Symbol * symbol{scope.symbol()}) {
+    if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
+      if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
+        bool wasDefined{WasDefined(subp->result())};
+        if (!wasDefined) {
+          // Definitions of ENTRY result variables also count.
+          for (const auto &pair : scope) {
+            const Symbol &local{*pair.second};
+            if (IsFunctionResult(local) && WasDefined(local)) {
+              wasDefined = true;
+              break;
+            }
+          }
+          if (!wasDefined) {
+            context.Say(
+                symbol->name(), "Function result is never defined"_warn_en_US);
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUndefinedFunctionResult(context, child);
+    }
+  }
+}
+
 using StatementSemanticsPass1 = ExprChecker;
 using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
@@ -166,8 +202,6 @@ using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     MiscChecker, NamelistChecker, NullifyChecker, PurityChecker,
     ReturnStmtChecker, SelectRankConstructChecker, SelectTypeChecker,
     StopChecker>;
-using StatementSemanticsPass3 =
-    SemanticsVisitor<AccStructureChecker, OmpStructureChecker, CUDAChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
@@ -178,12 +212,19 @@ static bool PerformStatementSemantics(
   StatementSemanticsPass1{context}.Walk(program);
   StatementSemanticsPass2 pass2{context};
   pass2.Walk(program);
-  if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC) ||
-      context.languageFeatures().IsEnabled(common::LanguageFeature::OpenMP) ||
-      context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
-    StatementSemanticsPass3{context}.Walk(program);
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
+    SemanticsVisitor<AccStructureChecker>{context}.Walk(program);
+  }
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenMP)) {
+    SemanticsVisitor<OmpStructureChecker>{context}.Walk(program);
+  }
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+    SemanticsVisitor<CUDAChecker>{context}.Walk(program);
   }
   if (!context.AnyFatalError()) {
+    if (context.ShouldWarn(common::UsageWarning::UndefinedFunctionResult)) {
+      WarnUndefinedFunctionResult(context, context.globalScope());
+    }
     pass2.CompileDataInitializationsIntoInitializers();
   }
   return !context.AnyFatalError();
@@ -210,7 +251,14 @@ public:
   void MapCommonBlockAndCheckConflicts(
       SemanticsContext &context, const Symbol &common) {
     const Symbol *isInitialized{CommonBlockIsInitialized(common)};
-    auto [it, firstAppearance] = commonBlocks_.insert({common.name(),
+    // Merge common according to the name they will have in the object files.
+    // This allows merging BIND(C) and non BIND(C) common block instead of
+    // later crashing. This "merge" matches what ifort/gfortran/nvfortran are
+    // doing and what a linker would do if the definition were in distinct
+    // files.
+    std::string commonName{
+        GetCommonBlockObjectName(common, context.underscoring())};
+    auto [it, firstAppearance] = commonBlocks_.insert({commonName,
         isInitialized ? CommonBlockInfo{common, common}
                       : CommonBlockInfo{common, std::nullopt}});
     if (!firstAppearance) {
@@ -234,7 +282,8 @@ public:
           info.initialization = common;
         }
       }
-      if (common.size() != info.biggestSize->size() && !common.name().empty()) {
+      if (common.size() != info.biggestSize->size() && !common.name().empty() &&
+          context.ShouldWarn(common::LanguageFeature::DistinctCommonSizes)) {
         context
             .Say(common.name(),
                 "A named COMMON block should have the same size everywhere it appears (%zd bytes here)"_port_en_US,
@@ -289,7 +338,8 @@ private:
     }
     return nullptr;
   }
-  std::map<SourceName, CommonBlockInfo> commonBlocks_;
+
+  std::map<std::string, CommonBlockInfo> commonBlocks_;
 };
 
 SemanticsContext::SemanticsContext(
@@ -302,7 +352,7 @@ SemanticsContext::SemanticsContext(
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
-          intrinsics_, targetCharacteristics_} {}
+          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -353,17 +403,54 @@ void SemanticsContext::CheckError(const Symbol &symbol) {
   }
 }
 
+bool SemanticsContext::ScopeIndexComparator::operator()(
+    parser::CharBlock x, parser::CharBlock y) const {
+  return x.begin() < y.begin() ||
+      (x.begin() == y.begin() && x.size() > y.size());
+}
+
+auto SemanticsContext::SearchScopeIndex(parser::CharBlock source)
+    -> ScopeIndex::iterator {
+  if (!scopeIndex_.empty()) {
+    auto iter{scopeIndex_.upper_bound(source)};
+    auto begin{scopeIndex_.begin()};
+    do {
+      --iter;
+      if (iter->first.Contains(source)) {
+        return iter;
+      }
+    } while (iter != begin);
+  }
+  return scopeIndex_.end();
+}
+
 const Scope &SemanticsContext::FindScope(parser::CharBlock source) const {
   return const_cast<SemanticsContext *>(this)->FindScope(source);
 }
 
 Scope &SemanticsContext::FindScope(parser::CharBlock source) {
-  if (auto *scope{globalScope_.FindScope(source)}) {
-    return *scope;
+  if (auto iter{SearchScopeIndex(source)}; iter != scopeIndex_.end()) {
+    return iter->second;
   } else {
     common::die(
         "SemanticsContext::FindScope(): invalid source location for '%s'",
         source.ToString().c_str());
+  }
+}
+
+void SemanticsContext::UpdateScopeIndex(
+    Scope &scope, parser::CharBlock newSource) {
+  if (scope.sourceRange().empty()) {
+    scopeIndex_.emplace(newSource, scope);
+  } else if (!scope.sourceRange().Contains(newSource)) {
+    auto iter{SearchScopeIndex(scope.sourceRange())};
+    CHECK(iter != scopeIndex_.end());
+    while (&iter->second != &scope) {
+      CHECK(iter != scopeIndex_.begin());
+      --iter;
+    }
+    scopeIndex_.erase(iter);
+    scopeIndex_.emplace(newSource, scope);
   }
 }
 
@@ -395,8 +482,10 @@ void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
 
 void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
-  CheckIndexVarRedefine(location, variable,
-      "Possible redefinition of %s variable '%s'"_warn_en_US);
+  if (ShouldWarn(common::UsageWarning::IndexVarRedefinition)) {
+    CheckIndexVarRedefine(location, variable,
+        "Possible redefinition of %s variable '%s'"_warn_en_US);
+  }
 }
 
 void SemanticsContext::CheckIndexVarRedefine(
@@ -467,7 +556,7 @@ bool SemanticsContext::IsTempName(const std::string &name) {
 
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {
   return ModFileReader{*this}.Read(SourceName{name, std::strlen(name)},
-      true /*intrinsic*/, nullptr, true /*silence errors*/);
+      true /*intrinsic*/, nullptr, /*silent=*/true);
 }
 
 void SemanticsContext::UseFortranBuiltinsModule() {
@@ -491,6 +580,14 @@ const Scope &SemanticsContext::GetCUDABuiltinsScope() {
     CHECK(cudaBuiltinsScope_.value() != nullptr);
   }
   return **cudaBuiltinsScope_;
+}
+
+const Scope &SemanticsContext::GetCUDADeviceScope() {
+  if (!cudaDeviceScope_) {
+    cudaDeviceScope_ = GetBuiltinModule("cudadevice");
+    CHECK(cudaDeviceScope_.value() != nullptr);
+  }
+  return **cudaDeviceScope_;
 }
 
 void SemanticsContext::UsePPCBuiltinsModule() {
@@ -518,8 +615,11 @@ bool Semantics::Perform() {
                     .statement.v.source == "__ppc_types")) {
       // Don't try to read the builtins module when we're actually building it.
     } else if (frontModule &&
-        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                .statement.v.source == "__fortran_ppc_intrinsics") {
+        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                    .statement.v.source == "__ppc_intrinsics" ||
+            std::get<parser::Statement<parser::ModuleStmt>>(
+                frontModule->value().t)
+                    .statement.v.source == "mma")) {
       // The derived type definition for the vectors is needed.
       context_.UsePPCBuiltinTypesModule();
     } else {
@@ -538,11 +638,17 @@ bool Semantics::Perform() {
       CanonicalizeAcc(context_.messages(), program_) &&
       CanonicalizeOmp(context_.messages(), program_) &&
       CanonicalizeCUDA(program_) &&
+      CanonicalizeDirectives(context_.messages(), program_) &&
       PerformStatementSemantics(context_, program_) &&
-      ModFileWriter{context_}.WriteAll();
+      ModFileWriter{context_}
+          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+          .WriteAll();
 }
 
-void Semantics::EmitMessages(llvm::raw_ostream &os) const {
+void Semantics::EmitMessages(llvm::raw_ostream &os) {
+  // Resolve the CharBlock locations of the Messages to ProvenanceRanges
+  // so messages from parsing and semantics are intermixed in source order.
+  context_.messages().ResolveProvenances(context_.allCookedSources());
   context_.messages().Emit(os, context_.allCookedSources());
 }
 
@@ -557,9 +663,9 @@ void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   for (const auto &pair : symbols) {
     const Symbol &symbol{pair.second};
     if (auto sourceInfo{allCooked.GetSourcePositionRange(symbol.name())}) {
-      os << symbol.name().ToString() << ": " << sourceInfo->first.file.path()
-         << ", " << sourceInfo->first.line << ", " << sourceInfo->first.column
-         << "-" << sourceInfo->second.column << "\n";
+      os << symbol.name().ToString() << ": " << sourceInfo->first.path << ", "
+         << sourceInfo->first.line << ", " << sourceInfo->first.column << "-"
+         << sourceInfo->second.column << "\n";
     } else if (symbol.has<semantics::UseDetails>()) {
       os << symbol.name().ToString() << ": "
          << symbol.GetUltimate().owner().symbol()->name().ToString() << "\n";
@@ -642,6 +748,14 @@ CommonBlockList SemanticsContext::GetCommonBlocks() const {
     return commonBlockMap_->GetCommonBlocks();
   }
   return {};
+}
+
+void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {
+  isDefined_.insert(symbol);
+}
+
+bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
+  return isDefined_.find(symbol) != isDefined_.end();
 }
 
 } // namespace Fortran::semantics

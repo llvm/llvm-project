@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_ASSERT_ASSERT_FAIL_H
-#define LLVM_LIBC_SRC_ASSERT_ASSERT_FAIL_H
+#ifndef LLVM_LIBC_SRC_ASSERT___ASSERT_FAIL_H
+#define LLVM_LIBC_SRC_ASSERT___ASSERT_FAIL_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 [[noreturn]] void __assert_fail(const char *assertion, const char *file,
                                 unsigned line, const char *function);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_ASSERT_ASSERT_FAIL_H
+#endif // LLVM_LIBC_SRC_ASSERT___ASSERT_FAIL_H

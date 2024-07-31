@@ -457,3 +457,25 @@ int test_macros(bool b) {
   // CHECK-FIXES-NEXT: }
 
 }
+
+template <bool A>
+auto constexpr_lambda_1 = [] {
+  if constexpr (A) {
+    1;
+  }
+};
+
+template <bool A>
+auto constexpr_lambda_2 = [] {
+  // CHECK-MESSAGES: :[[@LINE+1]]:19: warning: statement should be inside braces
+  if constexpr (A)
+    1;
+  // CHECK-FIXES:if constexpr (A) {
+  // CHECK-FIXES-NEXT:1;
+  // CHECK-FIXES-NEXT:}
+};
+
+void test_constexpr() {
+  constexpr_lambda_1<false>();
+  constexpr_lambda_2<false>();
+}

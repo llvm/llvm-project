@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='use-opaque-pointers=1' | FileCheck %s --check-prefixes=CHECK,ROCDL
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm='use-opaque-pointers=1' | FileCheck %s --check-prefixes=CHECK,NVVM
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl | FileCheck %s --check-prefixes=CHECK,ROCDL
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm | FileCheck %s --check-prefixes=CHECK,NVVM
 
 gpu.module @kernel {
   gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32, #gpu.address_space<private>>) {
@@ -46,3 +46,40 @@ gpu.module @kernel {
 //       CHECK: [[value:%.+]] = llvm.load
 //  CHECK-SAME:   : !llvm.ptr<1> -> f32
 //       CHECK: llvm.return [[value]]
+
+// -----
+
+gpu.module @kernel {
+  gpu.func @dynamic_shmem_with_vector(%arg1: memref<1xf32>) {
+    %0 = arith.constant 0 : index
+    %1 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
+    %2 = memref.view %1[%0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<1xf32, #gpu.address_space<workgroup>>
+    %3 = vector.load %2[%0] : memref<1xf32, #gpu.address_space<workgroup>>, vector<1xf32>
+    vector.store %3, %arg1[%0] : memref<1xf32>, vector<1xf32>
+    gpu.return
+  }
+}
+
+// ROCDL: llvm.mlir.global internal @__dynamic_shmem__0() {addr_space = 3 : i32} : !llvm.array<0 x i8>
+// NVVM: llvm.mlir.global internal @__dynamic_shmem__0() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<0 x i8>
+// CHECK-LABEL:  llvm.func @dynamic_shmem_with_vector
+// CHECK: llvm.mlir.addressof @__dynamic_shmem__0 : !llvm.ptr<3>
+// CHECK: llvm.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr<3> -> vector<1xf32>
+// CHECK: llvm.store
+
+// -----
+
+gpu.module @kernel {
+  gpu.func @dynamic_shmem(%arg0: f32)  {
+    %0 = arith.constant 0 : index
+    %1 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
+    %2 = memref.view %1[%0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<4xf32, #gpu.address_space<workgroup>>
+    memref.store %arg0, %2[%0] : memref<4xf32, #gpu.address_space<workgroup>>
+    gpu.return
+  }
+}
+
+// CHECK-LABEL:  llvm.func @dynamic_shmem
+//       CHECK:  llvm.store
+//  CHECK-SAME:   : f32, !llvm.ptr<3>
+

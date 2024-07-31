@@ -3,6 +3,7 @@
 @_ZTIi = external dso_local constant ptr
 @_ZTIii= external dso_local constant ptr
 declare void @foo(ptr)
+declare void @vararg_foo(ptr, ...)
 declare ptr @bar(ptr)
 declare i32 @__gxx_personality_v0(...)
 
@@ -11,26 +12,35 @@ define i32 @invokeLandingpad() personality ptr @__gxx_personality_v0 {
   ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.addressof @_ZTIii : !llvm.ptr
   ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x i8 {alignment = 1 : i64} : (i32) -> !llvm.ptr
   %1 = alloca i8
-  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr) -> ()
-  invoke void @foo(ptr %1) to label %4 unwind label %2
+  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^[[bb1:.*]] unwind ^[[bb4:.*]] : (!llvm.ptr) -> ()
+  invoke void @foo(ptr %1) to label %bb1 unwind label %bb4
 
-; CHECK: ^bb1:
+; CHECK: ^[[bb1]]:
+bb1:
+  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^[[bb2:.*]] unwind ^[[bb4]] : (!llvm.ptr) -> !llvm.ptr
+  %2 = invoke ptr @bar(ptr %1) to label %bb2 unwind label %bb4
+
+; CHECK: ^[[bb2]]:
+bb2:
+  ; CHECK: llvm.invoke @vararg_foo(%[[a3]], %{{.*}}) to ^[[bb3:.*]] unwind ^[[bb4]] vararg(!llvm.func<void (ptr, ...)>) : (!llvm.ptr, i32) -> ()
+  invoke void (ptr, ...) @vararg_foo(ptr %1, i32 0) to label %bb3 unwind label %bb4
+
+; CHECK: ^[[bb3]]:
+bb3:
+  ; CHECK: llvm.invoke %{{.*}}(%[[a3]], %{{.*}}) to ^[[bb5:.*]] unwind ^[[bb4]] vararg(!llvm.func<void (ptr, ...)>) : !llvm.ptr, (!llvm.ptr, i32) -> ()
+  invoke void (ptr, ...) undef(ptr %1, i32 0) to label %bb5 unwind label %bb4
+
+; CHECK: ^[[bb4]]:
+bb4:
   ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm.ptr) (catch %[[a1]] : !llvm.ptr) (filter %{{[0-9]+}} : !llvm.array<1 x i1>) : !llvm.struct<(ptr, i32)>
   %3 = landingpad { ptr, i32 } catch ptr @_ZTIi catch ptr @_ZTIii
           filter [1 x i1] [i1 1]
   resume { ptr, i32 } %3
 
-; CHECK: ^bb2:
+; CHECK: ^[[bb5]]:
+bb5:
   ; CHECK: llvm.return %{{[0-9]+}} : i32
   ret i32 1
-
-; CHECK: ^bb3:
-  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr) -> !llvm.ptr
-  %6 = invoke ptr @bar(ptr %1) to label %4 unwind label %2
-
-; CHECK: ^bb4:
-  ; CHECK: llvm.return %{{[0-9]+}} : i32
-  ret i32 0
 }
 
 declare i32 @foo2()
@@ -72,7 +82,7 @@ entry:
   ; CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
   ; CHECK: %[[c1:.*]] = llvm.mlir.constant(1 : i32) : i32
   ; CHECK: %[[c2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  ; CHECK: %[[c20:.*]] = llvm.mlir.constant(20 : i32) : i32  
+  ; CHECK: %[[c20:.*]] = llvm.mlir.constant(20 : i32) : i32
   ; CHECK: llvm.cond_br %[[cond]], ^[[bb1:.*]], ^[[bb2:.*]]
   br i1 %cond, label %call, label %nocall
 ; CHECK: ^[[bb1]]:
@@ -111,7 +121,7 @@ declare void @f2({ptr, i32})
 ; CHECK-LABEL: @landingpad_dominance
 define void @landingpad_dominance() personality ptr @__gxx_personality_v0 {
 entry:
-  ; CHECK:    %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:    %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:    %[[c1:.*]] = llvm.mlir.constant(0 : i32) : i32
   ; CHECK:    %[[undef:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i32)>
   ; CHECK:    %[[tmpstruct:.*]] = llvm.insertvalue %[[null]], %[[undef]][0] : !llvm.struct<(ptr, i32)>

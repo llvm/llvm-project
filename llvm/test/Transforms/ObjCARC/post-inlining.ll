@@ -92,9 +92,9 @@ declare void @llvm.stackrestore(ptr)
 
 ; CHECK-LABEL: define ptr @testStack(
 ; CHECK: entry:
-; CHECK-NEXT: %save = tail call ptr @llvm.stacksave()
+; CHECK-NEXT: %save = tail call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT: %obj = alloca i8, i8 %arg
-; CHECK-NEXT: call void @llvm.stackrestore(ptr %save)
+; CHECK-NEXT: call void @llvm.stackrestore.p0(ptr %save)
 ; CHECK-NEXT: ret ptr %call.i
 ; CHECK-NEXT: }
 define ptr @testStack(ptr %call.i, i8 %arg) {

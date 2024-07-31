@@ -30,7 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
 
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCSKYConstantIslandsPass(*Registry);
-  initializeCSKYDAGToDAGISelPass(*Registry);
+  initializeCSKYDAGToDAGISelLegacyPass(*Registry);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -53,7 +53,7 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
                                      const TargetOptions &Options,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
-                                     CodeGenOpt::Level OL, bool JIT)
+                                     CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         RM.value_or(Reloc::Static),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -118,7 +118,7 @@ TargetPassConfig *CSKYTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void CSKYPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   TargetPassConfig::addIRPasses();
 }
 

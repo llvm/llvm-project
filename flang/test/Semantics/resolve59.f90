@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Testing 15.6.2.2 point 4 (What function-name refers to depending on the
 ! presence of RESULT).
 
@@ -114,6 +114,7 @@ contains
   end function
   function f5(x) result(r)
     real :: x
+    !PORTABILITY: Procedure pointer 'r' should not have an ELEMENTAL intrinsic as its interface
     procedure(acos), pointer :: r
     r => acos
     !ERROR: Actual argument for 'x=' may not be a procedure

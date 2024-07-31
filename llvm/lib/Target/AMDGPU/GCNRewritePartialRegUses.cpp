@@ -57,8 +57,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -88,7 +88,7 @@ private:
   };
 
   /// Map OldSubReg -> { RC, NewSubReg }. Used as in/out container.
-  typedef SmallDenseMap<unsigned, SubRegInfo> SubRegMap;
+  using SubRegMap = SmallDenseMap<unsigned, SubRegInfo>;
 
   /// Given register class RC and the set of used subregs as keys in the SubRegs
   /// map return new register class and indexes of right-shifted subregs as
@@ -97,14 +97,24 @@ private:
   const TargetRegisterClass *getMinSizeReg(const TargetRegisterClass *RC,
                                            SubRegMap &SubRegs) const;
 
-  /// Try to find register class containing registers of minimal size for a
-  /// given register class RC and used subregs as keys in SubRegs by shifting
-  /// offsets of the subregs by RShift value to the right. If found return the
-  /// resulting regclass and new shifted subregs as values in SubRegs map.
-  /// If CoverSubregIdx isn't null it specifies covering subreg.
+  /// Given regclass RC and pairs of [OldSubReg, SubRegRC] in SubRegs try to
+  /// find new regclass such that:
+  ///   1. It has subregs obtained by shifting each OldSubReg by RShift number
+  ///      of bits to the right. Every "shifted" subreg should have the same
+  ///      SubRegRC. If CoverSubregIdx is not zero it's a subreg that "covers"
+  ///      all other subregs in pairs. Basically such subreg becomes a whole
+  ///      register.
+  ///   2. Resulting register class contains registers of minimal size but not
+  ///      less than RegNumBits.
+  ///
+  /// SubRegs is map of OldSubReg -> [SubRegRC, NewSubReg] and is used as in/out
+  /// parameter:
+  ///   OldSubReg - input parameter,
+  ///   SubRegRC  - input parameter (cannot be null),
+  ///   NewSubReg - output, contains shifted subregs on return.
   const TargetRegisterClass *
   getRegClassWithShiftedSubregs(const TargetRegisterClass *RC, unsigned RShift,
-                                unsigned CoverSubregIdx,
+                                unsigned RegNumBits, unsigned CoverSubregIdx,
                                 SubRegMap &SubRegs) const;
 
   /// Update live intervals after rewriting OldReg to NewReg with SubRegs map
@@ -207,8 +217,8 @@ const BitVector &GCNRewritePartialRegUses::getAllocatableAndAlignedRegClassMask(
 
 const TargetRegisterClass *
 GCNRewritePartialRegUses::getRegClassWithShiftedSubregs(
-    const TargetRegisterClass *RC, unsigned RShift, unsigned CoverSubregIdx,
-    SubRegMap &SubRegs) const {
+    const TargetRegisterClass *RC, unsigned RShift, unsigned RegNumBits,
+    unsigned CoverSubregIdx, SubRegMap &SubRegs) const {
 
   unsigned RCAlign = TRI->getRegClassAlignmentNumBits(RC);
   LLVM_DEBUG(dbgs() << "  Shift " << RShift << ", reg align " << RCAlign
@@ -217,13 +227,7 @@ GCNRewritePartialRegUses::getRegClassWithShiftedSubregs(
   BitVector ClassMask(getAllocatableAndAlignedRegClassMask(RCAlign));
   for (auto &[OldSubReg, SRI] : SubRegs) {
     auto &[SubRegRC, NewSubReg] = SRI;
-
-    // Instruction operand may not specify required register class (ex. COPY).
-    if (!SubRegRC)
-      SubRegRC = TRI->getSubRegisterClass(RC, OldSubReg);
-
-    if (!SubRegRC)
-      return nullptr;
+    assert(SubRegRC);
 
     LLVM_DEBUG(dbgs() << "  " << TRI->getSubRegIndexName(OldSubReg) << ':'
                       << TRI->getRegClassName(SubRegRC)
@@ -231,6 +235,8 @@ GCNRewritePartialRegUses::getRegClassWithShiftedSubregs(
                       << " -> ");
 
     if (OldSubReg == CoverSubregIdx) {
+      // Covering subreg will become a full register, RC should be allocatable.
+      assert(SubRegRC->isAllocatable());
       NewSubReg = AMDGPU::NoSubRegister;
       LLVM_DEBUG(dbgs() << "whole reg");
     } else {
@@ -256,21 +262,26 @@ GCNRewritePartialRegUses::getRegClassWithShiftedSubregs(
   // ClassMask is the set of all register classes such that each class is
   // allocatable, aligned, has all shifted subregs and each subreg has required
   // register class (see SubRegRC above). Now select first (that is largest)
-  // register class with registers of minimal size.
+  // register class with registers of minimal but not less than RegNumBits size.
+  // We have to check register size because we may encounter classes of smaller
+  // registers like VReg_1 in some situations.
   const TargetRegisterClass *MinRC = nullptr;
   unsigned MinNumBits = std::numeric_limits<unsigned>::max();
   for (unsigned ClassID : ClassMask.set_bits()) {
     auto *RC = TRI->getRegClass(ClassID);
     unsigned NumBits = TRI->getRegSizeInBits(*RC);
-    if (NumBits < MinNumBits) {
+    if (NumBits < MinNumBits && NumBits >= RegNumBits) {
       MinNumBits = NumBits;
       MinRC = RC;
     }
+    if (MinNumBits == RegNumBits)
+      break;
   }
 #ifndef NDEBUG
   if (MinRC) {
     assert(MinRC->isAllocatable() && TRI->isRegClassAligned(MinRC, RCAlign));
     for (auto [SubReg, SRI] : SubRegs)
+      // Check that all registers in MinRC support SRI.SubReg subregister.
       assert(MinRC == TRI->getSubClassWithSubReg(MinRC, SRI.SubReg));
   }
 #endif
@@ -302,7 +313,8 @@ GCNRewritePartialRegUses::getMinSizeReg(const TargetRegisterClass *RC,
   // If covering subreg is found shift everything so the covering subreg would
   // be in the rightmost position.
   if (CoverSubreg != AMDGPU::NoSubRegister)
-    return getRegClassWithShiftedSubregs(RC, Offset, CoverSubreg, SubRegs);
+    return getRegClassWithShiftedSubregs(RC, Offset, End - Offset, CoverSubreg,
+                                         SubRegs);
 
   // Otherwise find subreg with maximum required alignment and shift it and all
   // other subregs to the rightmost possible position with respect to the
@@ -328,7 +340,7 @@ GCNRewritePartialRegUses::getMinSizeReg(const TargetRegisterClass *RC,
     llvm_unreachable("misaligned subreg");
 
   unsigned RShift = FirstMaxAlignedSubRegOffset - NewOffsetOfMaxAlignedSubReg;
-  return getRegClassWithShiftedSubregs(RC, RShift, 0, SubRegs);
+  return getRegClassWithShiftedSubregs(RC, RShift, End - RShift, 0, SubRegs);
 }
 
 // Only the subrange's lanemasks of the original interval need to be modified.
@@ -398,29 +410,43 @@ GCNRewritePartialRegUses::getOperandRegClass(MachineOperand &MO) const {
 
 bool GCNRewritePartialRegUses::rewriteReg(Register Reg) const {
   auto Range = MRI->reg_nodbg_operands(Reg);
-  if (Range.begin() == Range.end())
+  if (Range.empty() || any_of(Range, [](MachineOperand &MO) {
+        return MO.getSubReg() == AMDGPU::NoSubRegister; // Whole reg used. [1]
+      }))
     return false;
 
-  for (MachineOperand &MO : Range) {
-    if (MO.getSubReg() == AMDGPU::NoSubRegister) // Whole reg used, quit.
-      return false;
-  }
-
-  // Collect used subregs and constrained reg classes infered from instruction
-  // operands.
-  SubRegMap SubRegs;
-  for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
-    assert(MO.getSubReg() != AMDGPU::NoSubRegister);
-    auto *OpDescRC = getOperandRegClass(MO);
-    const auto [I, Inserted] = SubRegs.try_emplace(MO.getSubReg(), OpDescRC);
-    if (!Inserted) {
-      SubRegInfo &SRI = I->second;
-      SRI.RC = TRI->getCommonSubClass(SRI.RC, OpDescRC);
-    }
-  }
   auto *RC = MRI->getRegClass(Reg);
   LLVM_DEBUG(dbgs() << "Try to rewrite partial reg " << printReg(Reg, TRI)
                     << ':' << TRI->getRegClassName(RC) << '\n');
+
+  // Collect used subregs and their reg classes infered from instruction
+  // operands.
+  SubRegMap SubRegs;
+  for (MachineOperand &MO : Range) {
+    const unsigned SubReg = MO.getSubReg();
+    assert(SubReg != AMDGPU::NoSubRegister); // Due to [1].
+    LLVM_DEBUG(dbgs() << "  " << TRI->getSubRegIndexName(SubReg) << ':');
+
+    const auto [I, Inserted] = SubRegs.try_emplace(SubReg);
+    const TargetRegisterClass *&SubRegRC = I->second.RC;
+
+    if (Inserted)
+      SubRegRC = TRI->getSubRegisterClass(RC, SubReg);
+
+    if (SubRegRC) {
+      if (const TargetRegisterClass *OpDescRC = getOperandRegClass(MO)) {
+        LLVM_DEBUG(dbgs() << TRI->getRegClassName(SubRegRC) << " & "
+                          << TRI->getRegClassName(OpDescRC) << " = ");
+        SubRegRC = TRI->getCommonSubClass(SubRegRC, OpDescRC);
+      }
+    }
+
+    if (!SubRegRC) {
+      LLVM_DEBUG(dbgs() << "couldn't find target regclass\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << TRI->getRegClassName(SubRegRC) << '\n');
+  }
 
   auto *NewRC = getMinSizeReg(RC, SubRegs);
   if (!NewRC) {
@@ -456,7 +482,8 @@ bool GCNRewritePartialRegUses::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   TII = MF.getSubtarget().getInstrInfo();
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
     Changed |= rewriteReg(Register::index2VirtReg(I));

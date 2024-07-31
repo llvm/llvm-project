@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 class A {
 public:
@@ -16,12 +16,14 @@ public:
 
 bool bar();
 [[clang::nomerge]] void f(bool, bool);
+[[clang::nomerge]] void (*fptr)(void);
 
 void foo(int i, A *ap, B *bp) {
   [[clang::nomerge]] bar();
   [[clang::nomerge]] (i = 4, bar());
   [[clang::nomerge]] (void)(bar());
   f(bar(), bar());
+  fptr();
   [[clang::nomerge]] [] { bar(); bar(); }(); // nomerge only applies to the anonymous function call
   [[clang::nomerge]] for (bar(); bar(); bar()) {}
   [[clang::nomerge]] { asm("nop"); }
@@ -66,6 +68,8 @@ void something_else_again() {
 // CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
 // CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
 // CHECK: call void @_Z1fbb({{.*}}) #[[ATTR0]]
+// CHECK: %[[FPTR:.*]] = load ptr, ptr @fptr
+// CHECK-NEXT: call void %[[FPTR]]() #[[ATTR0]]
 // CHECK: call void @"_ZZ3fooiP1AP1BENK3$_0clEv"{{.*}} #[[ATTR0]]
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.cond:

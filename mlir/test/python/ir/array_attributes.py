@@ -5,6 +5,7 @@
 import gc
 from mlir.ir import *
 import numpy as np
+import weakref
 
 
 def run(f):
@@ -30,6 +31,105 @@ def testGetDenseElementsUnsupported():
             # CHECK: unimplemented array format conversion from format:
             print(e)
 
+# CHECK-LABEL: TEST: testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided
+@run
+def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
+    with Context():
+        array = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+        # datetime64 specifically isn't important: it's just a 64-bit type that
+        # doesn't have a format under the Python buffer protocol. A more
+        # realistic example would be a NumPy extension type like the bfloat16
+        # type from the ml_dtypes package, which isn't a dependency of this
+        # test.
+        attr = DenseElementsAttr.get(array.view(np.datetime64),
+                                     type=IntegerType.get_signless(64))
+        # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi64>
+        print(attr)
+        # CHECK: {{\[}}[1 2 3]
+        # CHECK: {{\[}}4 5 6]]
+        print(np.array(attr))
+
+
+################################################################################
+# Tests of the list of attributes .get() factory method
+################################################################################
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromList
+@run
+def testGetDenseElementsFromList():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        attr = DenseElementsAttr.get(attrs)
+
+        # CHECK: dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+        print(attr)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListWithExplicitType
+@run
+def testGetDenseElementsFromListWithExplicitType():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        shaped_type = ShapedType(Type.parse("tensor<2xf64>"))
+        attr = DenseElementsAttr.get(attrs, shaped_type)
+
+        # CHECK: dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+        print(attr)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListEmptyList
+@run
+def testGetDenseElementsFromListEmptyList():
+    with Context(), Location.unknown():
+        attrs = []
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except ValueError as e:
+            # CHECK: Attributes list must be non-empty
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListNonAttributeType
+@run
+def testGetDenseElementsFromListNonAttributeType():
+    with Context(), Location.unknown():
+        attrs = [1.0]
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except RuntimeError as e:
+            # CHECK: Invalid attribute when attempting to create an ArrayAttribute
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListMismatchedType
+@run
+def testGetDenseElementsFromListMismatchedType():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        shaped_type = ShapedType(Type.parse("tensor<2xf32>"))
+
+        try:
+            attr = DenseElementsAttr.get(attrs, shaped_type)
+        except ValueError as e:
+            # CHECK: All attributes must be of the same type and match the type parameter
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListMixedTypes
+@run
+def testGetDenseElementsFromListMixedTypes():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F32Type.get(), 2.0)]
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except ValueError as e:
+            # CHECK: All attributes must be of the same type and match the type parameter
+            print(e)
+
 
 ################################################################################
 # Splats.
@@ -47,7 +147,11 @@ def testGetDenseElementsSplatInt():
         print(attr)
         # CHECK: is_splat: True
         print("is_splat:", attr.is_splat)
-        assert attr.get_splat_value() == element
+
+        # CHECK: splat_value: IntegerAttr(555 : i32)
+        splat_value = attr.get_splat_value()
+        print("splat_value:", repr(splat_value))
+        assert splat_value == element
 
 
 # CHECK-LABEL: TEST: testGetDenseElementsSplatFloat
@@ -140,7 +244,7 @@ def testGetDenseElementsBF16():
 @run
 def testGetDenseElementsInteger4():
     with Context():
-        array = np.array([[2, 4, 7], [-2, -4, -8]], dtype=np.uint8)
+        array = np.array([[2, 4, 7], [-2, -4, -8]], dtype=np.int8)
         attr = DenseElementsAttr.get(array, type=IntegerType.get_signless(4))
         # Note: These values don't mean much since just bit-casting. But they
         # shouldn't change.
@@ -181,6 +285,7 @@ def testGetDenseElementsBoolSplat():
 
 
 ### float and double arrays.
+
 
 # CHECK-LABEL: TEST: testGetDenseElementsF16
 @run
@@ -395,3 +500,44 @@ def testGetDenseElementsIndex():
         print(arr)
         # CHECK: True
         print(arr.dtype == np.int64)
+
+
+# CHECK-LABEL: TEST: testGetDenseResourceElementsAttr
+@run
+def testGetDenseResourceElementsAttr():
+    def on_delete(_):
+        print("BACKING MEMORY DELETED")
+
+    context = Context()
+    mview = memoryview(np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32))
+    ref = weakref.ref(mview, on_delete)
+
+    def test_attribute(context, mview):
+        with context, Location.unknown():
+            element_type = IntegerType.get_signless(32)
+            tensor_type = RankedTensorType.get((2, 3), element_type)
+            resource = DenseResourceElementsAttr.get_from_buffer(
+                mview, "from_py", tensor_type
+            )
+            module = Module.parse("module {}")
+            module.operation.attributes["test.resource"] = resource
+            # CHECK: test.resource = dense_resource<from_py> : tensor<2x3xi32>
+            # CHECK: from_py: "0x04000000010000000200000003000000040000000500000006000000"
+            print(module)
+
+            # Verifies type casting.
+            # CHECK: dense_resource<from_py> : tensor<2x3xi32>
+            print(
+                DenseResourceElementsAttr(module.operation.attributes["test.resource"])
+            )
+
+    test_attribute(context, mview)
+    mview = None
+    gc.collect()
+    # CHECK: FREEING CONTEXT
+    print("FREEING CONTEXT")
+    context = None
+    gc.collect()
+    # CHECK: BACKING MEMORY DELETED
+    # CHECK: EXIT FUNCTION
+    print("EXIT FUNCTION")

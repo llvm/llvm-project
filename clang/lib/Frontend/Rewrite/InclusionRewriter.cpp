@@ -75,7 +75,8 @@ private:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override;
@@ -90,8 +91,10 @@ private:
                          bool EnsureNewline);
   void CommentOutDirective(Lexer &DirectivesLex, const Token &StartToken,
                            const MemoryBufferRef &FromFile, StringRef EOL,
-                           unsigned &NextToWrite, int &Lines);
+                           unsigned &NextToWrite, int &Lines,
+                           const IncludedFile *Inc = nullptr);
   const IncludedFile *FindIncludeAtLocation(SourceLocation Loc) const;
+  StringRef getIncludedFileName(const IncludedFile *Inc) const;
   const Module *FindModuleAtLocation(SourceLocation Loc) const;
   const Module *FindEnteredModule(SourceLocation Loc) const;
   bool IsIfAtLocationTrue(SourceLocation Loc) const;
@@ -187,9 +190,10 @@ void InclusionRewriter::InclusionDirective(
     StringRef /*FileName*/, bool /*IsAngled*/,
     CharSourceRange /*FilenameRange*/, OptionalFileEntryRef /*File*/,
     StringRef /*SearchPath*/, StringRef /*RelativePath*/,
-    const Module *Imported, SrcMgr::CharacteristicKind FileType) {
-  if (Imported) {
-    auto P = ModuleIncludes.insert(std::make_pair(HashLoc, Imported));
+    const Module *SuggestedModule, bool ModuleImported,
+    SrcMgr::CharacteristicKind FileType) {
+  if (ModuleImported) {
+    auto P = ModuleIncludes.insert(std::make_pair(HashLoc, SuggestedModule));
     (void)P;
     assert(P.second && "Unexpected revisitation of the same include directive");
   } else
@@ -305,10 +309,21 @@ void InclusionRewriter::OutputContentUpTo(const MemoryBufferRef &FromFile,
       Rest = Rest.substr(Idx);
     }
   }
-  if (EnsureNewline && !TextToWrite.endswith(LocalEOL))
+  if (EnsureNewline && !TextToWrite.ends_with(LocalEOL))
     OS << MainEOL;
 
   WriteFrom = WriteTo;
+}
+
+StringRef
+InclusionRewriter::getIncludedFileName(const IncludedFile *Inc) const {
+  if (Inc) {
+    auto B = SM.getBufferOrNone(Inc->Id);
+    assert(B && "Attempting to process invalid inclusion");
+    if (B)
+      return llvm::sys::path::filename(B->getBufferIdentifier());
+  }
+  return StringRef();
 }
 
 /// Print characters from \p FromFile starting at \p NextToWrite up until the
@@ -320,7 +335,8 @@ void InclusionRewriter::CommentOutDirective(Lexer &DirectiveLex,
                                             const Token &StartToken,
                                             const MemoryBufferRef &FromFile,
                                             StringRef LocalEOL,
-                                            unsigned &NextToWrite, int &Line) {
+                                            unsigned &NextToWrite, int &Line,
+                                            const IncludedFile *Inc) {
   OutputContentUpTo(FromFile, NextToWrite,
                     SM.getFileOffset(StartToken.getLocation()), LocalEOL, Line,
                     false);
@@ -332,12 +348,21 @@ void InclusionRewriter::CommentOutDirective(Lexer &DirectiveLex,
     // OutputContentUpTo() would not output anything anyway.
     return;
   }
-  OS << "#if 0 /* expanded by -frewrite-includes */" << MainEOL;
+  if (Inc) {
+    OS << "#if defined(__CLANG_REWRITTEN_INCLUDES) ";
+    if (isSystem(Inc->FileType))
+      OS << "|| defined(__CLANG_REWRITTEN_SYSTEM_INCLUDES) ";
+    OS << "/* " << getIncludedFileName(Inc);
+  } else {
+    OS << "#if 0 /*";
+  }
+  OS << " expanded by -frewrite-includes */" << MainEOL;
   OutputContentUpTo(FromFile, NextToWrite,
                     SM.getFileOffset(DirectiveToken.getLocation()) +
                         DirectiveToken.getLength(),
                     LocalEOL, Line, true);
-  OS << "#endif /* expanded by -frewrite-includes */" << MainEOL;
+  OS << (Inc ? "#else /* " : "#endif /*") << getIncludedFileName(Inc)
+     << " expanded by -frewrite-includes */" << MainEOL;
 }
 
 /// Find the next identifier in the pragma directive specified by \p RawToken.
@@ -400,15 +425,16 @@ void InclusionRewriter::Process(FileID FileId,
           case tok::pp_include:
           case tok::pp_include_next:
           case tok::pp_import: {
-            CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL, NextToWrite,
-              Line);
+            SourceLocation Loc = HashToken.getLocation();
+            const IncludedFile *Inc = FindIncludeAtLocation(Loc);
+            CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
+                                NextToWrite, Line, Inc);
             if (FileId != PP.getPredefinesFileID())
               WriteLineInfo(FileName, Line - 1, FileType, "");
             StringRef LineInfoExtra;
-            SourceLocation Loc = HashToken.getLocation();
             if (const Module *Mod = FindModuleAtLocation(Loc))
               WriteImplicitModuleImport(Mod);
-            else if (const IncludedFile *Inc = FindIncludeAtLocation(Loc)) {
+            else if (Inc) {
               const Module *Mod = FindEnteredModule(Loc);
               if (Mod)
                 OS << "#pragma clang module begin "
@@ -420,6 +446,11 @@ void InclusionRewriter::Process(FileID FileId,
               if (Mod)
                 OS << "#pragma clang module end /*"
                    << Mod->getFullModuleName(true) << "*/\n";
+              // There's no #include, therefore no #if, for -include files.
+              if (FromFile != PredefinesBuffer) {
+                OS << "#endif /* " << getIncludedFileName(Inc)
+                   << " expanded by -frewrite-includes */" << LocalEOL;
+              }
 
               // Add line marker to indicate we're returning from an included
               // file.

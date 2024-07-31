@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "PPC.h"
+#include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -31,22 +33,21 @@ using namespace llvm;
 
 static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
                                       AsmPrinter &AP) {
-  const TargetMachine &TM = AP.TM;
-  Mangler &Mang = TM.getObjFileLowering()->getMangler();
-  const DataLayout &DL = AP.getDataLayout();
-  MCContext &Ctx = AP.OutContext;
-
-  SmallString<128> Name;
-  if (!MO.isGlobal()) {
-    assert(MO.isSymbol() && "Isn't a symbol reference");
-    Mangler::getNameWithPrefix(Name, MO.getSymbolName(), DL);
-  } else {
+  if (MO.isGlobal()) {
+    // Get the symbol from the global, accounting for XCOFF-specific
+    // intricacies (see TargetLoweringObjectFileXCOFF::getTargetSymbol).
     const GlobalValue *GV = MO.getGlobal();
-    TM.getNameWithPrefix(Name, GV, Mang);
+    return AP.getSymbol(GV);
   }
 
-  MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
+  assert(MO.isSymbol() && "Isn't a symbol reference");
 
+  SmallString<128> Name;
+  const DataLayout &DL = AP.getDataLayout();
+  Mangler::getNameWithPrefix(Name, MO.getSymbolName(), DL);
+
+  MCContext &Ctx = AP.OutContext;
+  MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
   return Sym;
 }
 
@@ -55,7 +56,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   MCContext &Ctx = Printer.OutContext;
   MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
 
-  unsigned access = MO.getTargetFlags() & PPCII::MO_ACCESS_MASK;
+  unsigned access = MO.getTargetFlags();
 
   switch (access) {
     case PPCII::MO_TPREL_LO:
@@ -74,19 +75,24 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
       RefKind = MCSymbolRefExpr::VK_PPC_TOC_LO;
       break;
     case PPCII::MO_TLS:
-      bool IsPCRel = (MO.getTargetFlags() & ~access) == PPCII::MO_PCREL_FLAG;
-      RefKind = IsPCRel ? MCSymbolRefExpr::VK_PPC_TLS_PCREL
-                        : MCSymbolRefExpr::VK_PPC_TLS;
+      RefKind = MCSymbolRefExpr::VK_PPC_TLS;
+      break;
+    case PPCII::MO_TLS_PCREL_FLAG:
+      RefKind = MCSymbolRefExpr::VK_PPC_TLS_PCREL;
       break;
   }
+
+  const TargetMachine &TM = Printer.TM;
+  const MachineInstr *MI = MO.getParent();
+  const MachineFunction *MF = MI->getMF();
 
   if (MO.getTargetFlags() == PPCII::MO_PLT)
     RefKind = MCSymbolRefExpr::VK_PLT;
   else if (MO.getTargetFlags() == PPCII::MO_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PCREL;
-  else if (MO.getTargetFlags() == (PPCII::MO_PCREL_FLAG | PPCII::MO_GOT_FLAG))
+  else if (MO.getTargetFlags() == PPCII::MO_GOT_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_PCREL;
-  else if (MO.getTargetFlags() == (PPCII::MO_PCREL_FLAG | PPCII::MO_TPREL_FLAG))
+  else if (MO.getTargetFlags() == PPCII::MO_TPREL_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_TPREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL;
@@ -94,12 +100,28 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TPREL_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL;
+  else if (MO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
+           MO.getTargetFlags() == PPCII::MO_TLSLD_FLAG) {
+    assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
+    TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
+    const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+    // For the local-[exec|dynamic] TLS model, we may generate the offset from
+    // the TLS base as an immediate operand (instead of using a TOC entry). Set
+    // the relocation type in case the result is used for purposes other than a
+    // TOC reference. In TOC reference cases, this result is discarded.
+    if (Model == TLSModel::LocalExec)
+      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
+    else if (Model == TLSModel::LocalDynamic &&
+             FuncInfo->isAIXFuncUseTLSIEForLD())
+      // On AIX, TLS model opt may have turned local-dynamic accesses into
+      // initial-exec accesses.
+      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSIE;
+    else if (Model == TLSModel::LocalDynamic)
+      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLD;
+  }
 
-  const MachineInstr *MI = MO.getParent();
-  const MachineFunction *MF = MI->getMF();
   const Module *M = MF->getFunction().getParent();
   const PPCSubtarget *Subtarget = &(MF->getSubtarget<PPCSubtarget>());
-  const TargetMachine &TM = Printer.TM;
 
   unsigned MIOpcode = MI->getOpcode();
   assert((Subtarget->isUsingPCRelativeCalls() || MIOpcode != PPC::BL8_NOTOC) &&
@@ -128,7 +150,9 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
                                    Ctx);
 
   // Subtract off the PIC base if required.
-  if (MO.getTargetFlags() & PPCII::MO_PIC_FLAG) {
+  if (MO.getTargetFlags() == PPCII::MO_PIC_FLAG ||
+      MO.getTargetFlags() == PPCII::MO_PIC_HA_FLAG ||
+      MO.getTargetFlags() == PPCII::MO_PIC_LO_FLAG) {
     const MachineFunction *MF = MO.getParent()->getParent()->getParent();
 
     const MCExpr *PB = MCSymbolRefExpr::create(MF->getPICBaseSymbol(), Ctx);
@@ -138,9 +162,11 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   // Add ha16() / lo16() markers if required.
   switch (access) {
     case PPCII::MO_LO:
+    case PPCII::MO_PIC_LO_FLAG:
       Expr = PPCMCExpr::createLo(Expr, Ctx);
       break;
     case PPCII::MO_HA:
+    case PPCII::MO_PIC_HA_FLAG:
       Expr = PPCMCExpr::createHa(Expr, Ctx);
       break;
   }

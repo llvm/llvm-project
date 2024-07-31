@@ -17,6 +17,7 @@
 #include <tuple>
 
 #include "TestTraits.h"
+#include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -29,6 +30,19 @@
 
 namespace test {
 class TestDialect;
+// Payload class for the CopyCountAttr.
+class CopyCount {
+public:
+  CopyCount(std::string value) : value(value) {}
+  CopyCount(const CopyCount &rhs);
+  CopyCount &operator=(const CopyCount &rhs);
+  CopyCount(CopyCount &&rhs) = default;
+  CopyCount &operator=(CopyCount &&rhs) = default;
+  static int counter;
+  std::string value;
+};
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                              const test::CopyCount &value);
 
 /// A handle used to reference external elements instances.
 using TestDialectResourceBlobHandle =

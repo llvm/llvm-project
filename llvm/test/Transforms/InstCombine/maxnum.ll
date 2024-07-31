@@ -66,7 +66,7 @@ define float @constant_fold_maxnum_f32_p0_n0() {
 
 define float @constant_fold_maxnum_f32_n0_p0() {
 ; CHECK-LABEL: @constant_fold_maxnum_f32_n0_p0(
-; CHECK-NEXT:    ret float -0.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %x = call float @llvm.maxnum.f32(float -0.0, float 0.0)
   ret float %x
@@ -400,35 +400,35 @@ define float @reduce_precision_fmf(float %x, float %y) {
   ret float %trunc
 }
 
-define float @reduce_precision_multi_use_0(float %x, float %y) {
+define float @reduce_precision_multi_use_0(float %x, float %y, ptr %p) {
 ; CHECK-LABEL: @reduce_precision_multi_use_0(
 ; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
-; CHECK-NEXT:    store double [[X_EXT]], ptr undef, align 8
+; CHECK-NEXT:    store double [[X_EXT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[MAXNUM:%.*]] = call double @llvm.maxnum.f64(double [[X_EXT]], double [[Y_EXT]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXNUM]] to float
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
   %y.ext = fpext float %y to double
-  store double %x.ext, ptr undef
+  store double %x.ext, ptr %p
   %maxnum = call double @llvm.maxnum.f64(double %x.ext, double %y.ext)
   %trunc = fptrunc double %maxnum to float
   ret float %trunc
 }
 
-define float @reduce_precision_multi_use_1(float %x, float %y) {
+define float @reduce_precision_multi_use_1(float %x, float %y, ptr %p) {
 ; CHECK-LABEL: @reduce_precision_multi_use_1(
 ; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
-; CHECK-NEXT:    store double [[Y_EXT]], ptr undef, align 8
+; CHECK-NEXT:    store double [[Y_EXT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[MAXNUM:%.*]] = call double @llvm.maxnum.f64(double [[X_EXT]], double [[Y_EXT]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXNUM]] to float
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
   %y.ext = fpext float %y to double
-  store double %y.ext, ptr undef
+  store double %y.ext, ptr %p
   %maxnum = call double @llvm.maxnum.f64(double %x.ext, double %y.ext)
   %trunc = fptrunc double %maxnum to float
   ret float %trunc
@@ -458,11 +458,24 @@ define float @negated_op_extra_use(float %x) {
 ; CHECK-LABEL: @negated_op_extra_use(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maxnum.f32(float [[NEGX]], float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg float %x
   call void @use(float %negx)
   %r = call float @llvm.maxnum.f32(float %negx, float %x)
+  ret float %r
+}
+
+define float @negated_op_extra_use_comm(float %x) {
+; CHECK-LABEL: @negated_op_extra_use_comm(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[NEGX]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %negx = fneg float %x
+  call void @use(float %negx)
+  %r = call float @llvm.maxnum.f32(float %x, float %negx)
   ret float %r
 }

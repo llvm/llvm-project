@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // Test that <filesystem> provides all of the arithmetic, enum, and pointer
 // hash specializations.
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include "poisoned_hash_helper.h"
+namespace fs = std::filesystem;
 
 int main(int, char**) {
   test_library_hash_specializations_available();

@@ -52,7 +52,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}Estep
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}Ex
 ! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}Ey
-! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<i32>
+! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:  hlfir.forall lb {
 ! CHECK:    hlfir.yield %[[VAL_2]] : i32
 ! CHECK:  } ub {
@@ -144,7 +144,7 @@ subroutine test_nested_foralls()
     ! ifoo and ibar could depend on x since it is a module
     ! variable use associated. The calls in the control value
     ! computation cannot be hoisted from the outer forall
-    ! even when they do not depend on outer forall indicies.
+    ! even when they do not depend on outer forall indices.
     forall (integer(8)::j=jfoo():jbar())
       x(i, j) = x(j, i)
     end forall

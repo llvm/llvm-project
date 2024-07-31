@@ -97,6 +97,7 @@ struct IFSStub {
   IFSStub() = default;
   IFSStub(const IFSStub &Stub);
   IFSStub(IFSStub &&Stub);
+  virtual ~IFSStub() = default;
 };
 
 // Create a alias class for IFSStub.

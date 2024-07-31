@@ -16,11 +16,11 @@ define i32 @test1() nounwind readnone {
 ; CHECK-NEXT:    %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,50) S: [0,50) Exits: 49 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [50 x i32], ptr @arr1, i32 0, i32 %i.03
-; CHECK-NEXT:    --> {@arr1,+,4}<nuw><%for.body> U: [0,-7) S: [-2147483648,2147483645) Exits: (196 + @arr1)<nuw> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {@arr1,+,4}<nuw><%for.body> U: [4,-7) S: [-2147483648,2147483645) Exits: (196 + @arr1)<nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 50 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [50 x i32], ptr @arr2, i32 0, i32 %i.03
-; CHECK-NEXT:    --> {@arr2,+,4}<nuw><%for.body> U: [0,-7) S: [-2147483648,2147483645) Exits: (196 + @arr2)<nuw> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {@arr2,+,4}<nuw><%for.body> U: [4,-7) S: [-2147483648,2147483645) Exits: (196 + @arr2)<nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %1 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add i32 %0, %sum.04
@@ -30,12 +30,10 @@ define i32 @test1() nounwind readnone {
 ; CHECK-NEXT:    %inc = add nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,51) S: [1,51) Exits: 50 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 49
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 49
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 49
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 49
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 50
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 49
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 49
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 49
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 50
 ;
 entry:
   br label %for.body
@@ -84,12 +82,10 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:    %1 = load ptr, ptr %next, align 8
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: null LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 4
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 4
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 4
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 4
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 5
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 5
 ;
 entry:
   br label %for.body

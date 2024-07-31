@@ -30,23 +30,31 @@ class Descriptor;
 
 extern "C" {
 // API for lowering assignment
-void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
+void RTDECL(Assign)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant has no finalization, defined assignment, or allocatable
 // reallocation.
-void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
+void RTDECL(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(CopyOutAssign)(Descriptor &to, const Descriptor &from,
-    bool skipToInit, const char *sourceFile = nullptr, int sourceLine = 0);
+
+// Establish "temp" descriptor as an allocatable descriptor with the same type,
+// rank, and length parameters as "var" and copy "var" to it using
+// AssignTemporary.
+void RTDECL(CopyInAssign)(Descriptor &temp, const Descriptor &var,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// When "var" is provided, copy "temp" to it assuming "var" is already
+// initialized. Destroy and deallocate "temp" in all cases.
+void RTDECL(CopyOutAssign)(Descriptor *var, Descriptor &temp,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
 // sides that might need to handle truncation or blank-fill, and
 // must maintain the character length even if an allocatable array
 // is reallocated.
-void RTNAME(AssignExplicitLengthCharacter)(Descriptor &to,
+void RTDECL(AssignExplicitLengthCharacter)(Descriptor &to,
     const Descriptor &from, const char *sourceFile = nullptr,
     int sourceLine = 0);
 // This variant is assignments to whole polymorphic allocatables.
-void RTNAME(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
+void RTDECL(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime

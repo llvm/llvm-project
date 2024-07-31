@@ -30,7 +30,7 @@ static bool canComputePointerDiff(ScalarEvolution &SE,
       SE.getEffectiveSCEVType(B->getType()))
     return false;
 
-  return SE.instructionCouldExistWitthOperands(A, B);
+  return SE.instructionCouldExistWithOperands(A, B);
 }
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
@@ -55,11 +55,24 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
   if (canComputePointerDiff(SE, AS, BS)) {
     unsigned BitWidth = SE.getTypeSizeInBits(AS->getType());
     APInt ASizeInt(BitWidth, LocA.Size.hasValue()
-                                 ? LocA.Size.getValue()
+                                 ? static_cast<uint64_t>(LocA.Size.getValue())
                                  : MemoryLocation::UnknownSize);
     APInt BSizeInt(BitWidth, LocB.Size.hasValue()
-                                 ? LocB.Size.getValue()
+                                 ? static_cast<uint64_t>(LocB.Size.getValue())
                                  : MemoryLocation::UnknownSize);
+
+    // Firstly, try to convert the two pointers into ptrtoint expressions to
+    // handle two pointers with different pointer bases.
+    // Either both pointers are used with ptrtoint or neither, so we can't end
+    // up with a ptr + int mix.
+    const SCEV *AInt =
+        SE.getPtrToIntExpr(AS, SE.getEffectiveSCEVType(AS->getType()));
+    const SCEV *BInt =
+        SE.getPtrToIntExpr(BS, SE.getEffectiveSCEVType(BS->getType()));
+    if (!isa<SCEVCouldNotCompute>(AInt) && !isa<SCEVCouldNotCompute>(BInt)) {
+      AS = AInt;
+      BS = BInt;
+    }
 
     // Compute the difference between the two pointers.
     const SCEV *BA = SE.getMinusSCEV(BS, AS);
@@ -105,8 +118,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
               AAQI, nullptr) == AliasResult::NoAlias)
       return AliasResult::NoAlias;
 
-  // Forward the query to the next analysis.
-  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+  return AliasResult::MayAlias;
 }
 
 /// Given an expression, try to find a base value.

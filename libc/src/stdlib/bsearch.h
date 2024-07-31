@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
+#ifndef LLVM_LIBC_SRC_STDLIB_BSEARCH_H
+#define LLVM_LIBC_SRC_STDLIB_BSEARCH_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+#include <stddef.h> // size_t
+
+namespace LIBC_NAMESPACE_DECL {
 
 void *bsearch(const void *key, const void *array, size_t array_size,
               size_t elem_size, int (*compare)(const void *, const void *));
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif //LLVM_LIBC_SRC_STDLIB_BSEARCH_H

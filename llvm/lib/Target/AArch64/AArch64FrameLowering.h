@@ -35,10 +35,14 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  bool enableCFIFixup(MachineFunction &MF) const override;
+
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                           int FI) const override;
   StackOffset resolveFrameIndexReference(const MachineFunction &MF, int FI,
                                          Register &FrameReg, bool PreferFP,
                                          bool ForSimm) const;
@@ -148,10 +152,32 @@ private:
                                   MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVERestores(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MBBI) const;
+  void allocateStackSpace(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          int64_t RealignmentPadding, StackOffset AllocSize,
+                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
+                          StackOffset InitialOffset, bool FollowupAllocs) const;
+  /// Make a determination whether a Hazard slot is used and create it if
+  /// needed.
+  void determineStackHazardSlot(MachineFunction &MF,
+                                BitVector &SavedRegs) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,
                             MachineBasicBlock &MBB) const override;
+
+  /// Replace a StackProbe stub (if any) with the actual probe code inline
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologueMBB) const override;
+
+  void inlineStackProbeFixed(MachineBasicBlock::iterator MBBI,
+                             Register ScratchReg, int64_t FrameSize,
+                             StackOffset CFAOffset) const;
+
+  MachineBasicBlock::iterator
+  inlineStackProbeLoopExactMultiple(MachineBasicBlock::iterator MBBI,
+                                    int64_t NegProbeSize,
+                                    Register TargetReg) const;
 };
 
 } // End llvm namespace

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -59,7 +59,7 @@ struct SymbolUsesPass
               symbolUse.getUser()->getParentOp(), symbolUse.getSymbolRef())) {
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
-            << symbol->getAttr(SymbolTable::getSymbolAttrName());
+            << *symbol->getInherentAttr(SymbolTable::getSymbolAttrName());
       }
     }
     symbol->emitRemark() << "symbol has " << llvm::size(*symbolUses) << " uses";

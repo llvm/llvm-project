@@ -4,6 +4,7 @@
 define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-LABEL: LV: Checking a loop in 'iv_no_binary_op_in_descriptor'
 ; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
@@ -16,15 +17,24 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next.p, ir<1>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[STEPS:%.+]]>
-; CHECK-NEXT:     WIDEN store ir<%gep>, ir<%iv>
-; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_INC]]> vp<[[VEC_TC]]>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%iv>
+; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT: No successors
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
 entry:

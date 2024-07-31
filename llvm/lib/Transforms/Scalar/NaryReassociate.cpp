@@ -205,7 +205,7 @@ bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
   SE = SE_;
   TLI = TLI_;
   TTI = TTI_;
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   bool Changed = false, ChangedInThisIteration;
   do {
@@ -359,12 +359,13 @@ bool NaryReassociatePass::requiresSignExtension(Value *Index,
 GetElementPtrInst *
 NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
                                               unsigned I, Type *IndexedType) {
+  SimplifyQuery SQ(*DL, DT, AC, GEP);
   Value *IndexToSplit = GEP->getOperand(I + 1);
   if (SExtInst *SExt = dyn_cast<SExtInst>(IndexToSplit)) {
     IndexToSplit = SExt->getOperand(0);
   } else if (ZExtInst *ZExt = dyn_cast<ZExtInst>(IndexToSplit)) {
     // zext can be treated as sext if the source is non-negative.
-    if (isKnownNonNegative(ZExt->getOperand(0), *DL, 0, AC, GEP, DT))
+    if (isKnownNonNegative(ZExt->getOperand(0), SQ))
       IndexToSplit = ZExt->getOperand(0);
   }
 
@@ -373,8 +374,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // nsw, we cannot split the add because
     //   sext(LHS + RHS) != sext(LHS) + sext(RHS).
     if (requiresSignExtension(IndexToSplit, GEP) &&
-        computeOverflowForSignedAdd(AO, *DL, AC, GEP, DT) !=
-            OverflowResult::NeverOverflows)
+        computeOverflowForSignedAdd(AO, SQ) != OverflowResult::NeverOverflows)
       return nullptr;
 
     Value *LHS = AO->getOperand(0), *RHS = AO->getOperand(1);
@@ -402,7 +402,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
-  if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&
+  if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
       DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
           DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
               .getFixedValue()) {
@@ -511,14 +511,15 @@ Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
   Instruction *NewI = nullptr;
   switch (I->getOpcode()) {
   case Instruction::Add:
-    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I->getIterator());
     break;
   case Instruction::Mul:
-    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I->getIterator());
     break;
   default:
     llvm_unreachable("Unexpected instruction.");
   }
+  NewI->setDebugLoc(I->getDebugLoc());
   NewI->takeName(I);
   return NewI;
 }
@@ -564,14 +565,24 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
     // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
-    // removed
-    // during rewriting.
-    if (Value *Candidate = Candidates.back()) {
+    // removed during rewriting.
+    if (Value *Candidate = Candidates.pop_back_val()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);
-      if (DT->dominates(CandidateInstruction, Dominatee))
-        return CandidateInstruction;
+      if (!DT->dominates(CandidateInstruction, Dominatee))
+        continue;
+
+      // Make sure that the instruction is safe to reuse without introducing
+      // poison.
+      SmallVector<Instruction *> DropPoisonGeneratingInsts;
+      if (!SE->canReuseInstruction(CandidateExpr, CandidateInstruction,
+                                   DropPoisonGeneratingInsts))
+        continue;
+
+      for (Instruction *I : DropPoisonGeneratingInsts)
+        I->dropPoisonGeneratingAnnotations();
+
+      return CandidateInstruction;
     }
-    Candidates.pop_back();
   }
   return nullptr;
 }

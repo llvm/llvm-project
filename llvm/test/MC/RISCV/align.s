@@ -22,10 +22,10 @@
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-RELAX-RELOC %s
 
 # Relaxation enabled with Zca extension:
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,+relax < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zca -d -M no-aliases - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,+relax < %s \
+# RUN:     | llvm-objdump --mattr=+zca -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=C-OR-ZCA-EXT-RELAX-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,+relax < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,+relax < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-RELAX-RELOC %s
 
 # Relaxation disabled with C extension:
@@ -36,10 +36,10 @@
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-NORELAX-RELOC %s
 
 # Relaxation disabled with ZCA extension:
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,-relax < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zca -d -M no-aliases - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,-relax < %s \
+# RUN:     | llvm-objdump --mattr=+zca -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=C-OR-ZCA-EXT-NORELAX-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zca,-relax < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,-relax < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=C-OR-ZCA-EXT-NORELAX-RELOC %s
 
 # We need to insert N-MinNopSize bytes NOPs and R_RISCV_ALIGN relocation
@@ -98,11 +98,11 @@ test:
 # The behavior is the same as GNU assembler.
 	.p2align 4, 1
 # RELAX-RELOC-NOT: R_RISCV_ALIGN - 0xC
-# RELAX-INST:  01 01
-# RELAX-INST:  01 01
+# RELAX-INST:  0101
+# RELAX-INST:  0101
 # C-OR-ZCA-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN - 0xE
-# C-OR-ZCA-EXT-RELAX-INST:  01 01
-# C-EXT-INST:  01 01
+# C-OR-ZCA-EXT-RELAX-INST:  0101
+# C-EXT-INST:  0101
 	ret
 # NORELAX-RELOC-NOT: R_RISCV
 # C-OR-ZCA-EXT-NORELAX-RELOC-NOT: R_RISCV

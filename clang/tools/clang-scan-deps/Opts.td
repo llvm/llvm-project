@@ -11,6 +11,8 @@ multiclass Eq<string name, string help> {
 def help : Flag<["--"], "help">, HelpText<"Display this help">;
 def version : Flag<["--"], "version">, HelpText<"Display the version">;
 
+def o : Arg<"o", "Destination of the primary output">;
+
 defm mode : Eq<"mode", "The preprocessing mode used to compute the dependencies">;
 
 defm format : Eq<"format", "The output format for the dependencies">;
@@ -18,7 +20,7 @@ defm format : Eq<"format", "The output format for the dependencies">;
 defm module_files_dir : Eq<"module-files-dir",
     "The build directory for modules. Defaults to the value of '-fmodules-cache-path=' from command lines for implicit modules">;
 
-def optimize_args : F<"optimize-args", "Whether to optimize command-line arguments of modules">;
+def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Which command-line arguments of modules to optimize">;
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
 
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;

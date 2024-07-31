@@ -1,3 +1,10 @@
+// RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix INTERFERENCE %s
+//
+// We purposefully do not test the values produced, only that the macros are
+// predefined to some value.
+// INTERFERENCE:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// INTERFERENCE:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
+
 // RUN: %clang_cc1 -E -dM -x assembler-with-cpp < /dev/null | FileCheck -match-full-lines -check-prefix ASM %s
 //
 // ASM:#define __ASSEMBLER__ 1
@@ -92,6 +99,70 @@
 // C99-NOT: __GXX_RTTI
 // C99-NOT: __GXX_WEAK__
 // C99-NOT: __cplusplus
+//
+// RUN: %clang_cc1 -std=c17 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C17-FMT %s
+// RUN: %clang_cc1 -std=c23 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C23-FMT %s
+//
+// C17-FMT-NOT: __SIZE_FMTB__
+// C17-FMT-NOT: __SIZE_FMTb__
+// C17-FMT-NOT: __UINT8_FMTB__
+// C17-FMT-NOT: __UINT8_FMTb__
+// C17-FMT-NOT: __UINT16_FMTB__
+// C17-FMT-NOT: __UINT16_FMTb__
+// C17-FMT-NOT: __UINT32_FMTB__
+// C17-FMT-NOT: __UINT32_FMTb__
+// C17-FMT-NOT: __UINT64_FMTB__
+// C17-FMT-NOT: __UINT64_FMTb__
+// C17-FMT-NOT: __UINTMAX_FMTB__
+// C17-FMT-NOT: __UINTMAX_FMTb__
+// C17-FMT-NOT: __UINTPTR_FMTB__
+// C17-FMT-NOT: __UINTPTR_FMTb__
+// C17-FMT-NOT: __UINT_FAST16_FMTB__
+// C17-FMT-NOT: __UINT_FAST16_FMTb__
+// C17-FMT-NOT: __UINT_FAST32_FMTB__
+// C17-FMT-NOT: __UINT_FAST32_FMTb__
+// C17-FMT-NOT: __UINT_FAST64_FMTB__
+// C17-FMT-NOT: __UINT_FAST64_FMTb__
+// C17-FMT-NOT: __UINT_FAST8_FMTB__
+// C17-FMT-NOT: __UINT_FAST8_FMTb__
+// C17-FMT-NOT: __UINT_LEAST16_FMTB__
+// C17-FMT-NOT: __UINT_LEAST16_FMTb__
+// C17-FMT-NOT: __UINT_LEAST32_FMTB__
+// C17-FMT-NOT: __UINT_LEAST32_FMTb__
+// C17-FMT-NOT: __UINT_LEAST64_FMTB__
+// C17-FMT-NOT: __UINT_LEAST64_FMTb__
+// C17-FMT-NOT: __UINT_LEAST8_FMTB__
+// C17-FMT-NOT: __UINT_LEAST8_FMTb__
+// C23-FMT: #define __SIZE_FMTB__ "llB"
+// C23-FMT: #define __SIZE_FMTb__ "llb"
+// C23-FMT: #define __UINT16_FMTB__ "hB"
+// C23-FMT: #define __UINT16_FMTb__ "hb"
+// C23-FMT: #define __UINT32_FMTB__ "B"
+// C23-FMT: #define __UINT32_FMTb__ "b"
+// C23-FMT: #define __UINT64_FMTB__ "llB"
+// C23-FMT: #define __UINT64_FMTb__ "llb"
+// C23-FMT: #define __UINT8_FMTB__ "hhB"
+// C23-FMT: #define __UINT8_FMTb__ "hhb"
+// C23-FMT: #define __UINTMAX_FMTB__ "llB"
+// C23-FMT: #define __UINTMAX_FMTb__ "llb"
+// C23-FMT: #define __UINTPTR_FMTB__ "llB"
+// C23-FMT: #define __UINTPTR_FMTb__ "llb"
+// C23-FMT: #define __UINT_FAST16_FMTB__ "hB"
+// C23-FMT: #define __UINT_FAST16_FMTb__ "hb"
+// C23-FMT: #define __UINT_FAST32_FMTB__ "B"
+// C23-FMT: #define __UINT_FAST32_FMTb__ "b"
+// C23-FMT: #define __UINT_FAST64_FMTB__ "llB"
+// C23-FMT: #define __UINT_FAST64_FMTb__ "llb"
+// C23-FMT: #define __UINT_FAST8_FMTB__ "hhB"
+// C23-FMT: #define __UINT_FAST8_FMTb__ "hhb"
+// C23-FMT: #define __UINT_LEAST16_FMTB__ "hB"
+// C23-FMT: #define __UINT_LEAST16_FMTb__ "hb"
+// C23-FMT: #define __UINT_LEAST32_FMTB__ "B"
+// C23-FMT: #define __UINT_LEAST32_FMTb__ "b"
+// C23-FMT: #define __UINT_LEAST64_FMTB__ "llB"
+// C23-FMT: #define __UINT_LEAST64_FMTb__ "llb"
+// C23-FMT: #define __UINT_LEAST8_FMTB__ "hhB"
+// C23-FMT: #define __UINT_LEAST8_FMTb__ "hhb"
 //
 //
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
@@ -1454,6 +1525,13 @@
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix LANAI %s
 // LANAI: #define __lanai__ 1
 //
+// RUN: %clang_cc1 -triple=aarch64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=arm-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=riscv64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=i386-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// HAIKU: #define __HAIKU__ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=amd64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-unknown-openbsd6.1-gnueabi < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
@@ -1570,6 +1648,7 @@
 // WEBASSEMBLY-NEXT:#define __DBL_MIN_10_EXP__ (-307)
 // WEBASSEMBLY-NEXT:#define __DBL_MIN_EXP__ (-1021)
 // WEBASSEMBLY-NEXT:#define __DBL_MIN__ 2.2250738585072014e-308
+// WEBASSEMBLY-NEXT:#define __DBL_NORM_MAX__ 1.7976931348623157e+308
 // WEBASSEMBLY-NEXT:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 // WEBASSEMBLY-NOT:#define __ELF__
 // EMSCRIPTEN-THREADS-NEXT:#define __EMSCRIPTEN_PTHREADS__ 1
@@ -1590,6 +1669,7 @@
 // WEBASSEMBLY-NOT:#define __FLT16_MIN_10_EXP__
 // WEBASSEMBLY-NOT:#define __FLT16_MIN_EXP__
 // WEBASSEMBLY-NOT:#define __FLT16_MIN__
+// WEBASSEMBLY-NOT:#define __FLT16_NORM_MAX__
 // WEBASSEMBLY-NEXT:#define __FLT_DECIMAL_DIG__ 9
 // WEBASSEMBLY-NEXT:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // WEBASSEMBLY-NEXT:#define __FLT_DIG__ 6
@@ -1604,7 +1684,18 @@
 // WEBASSEMBLY-NEXT:#define __FLT_MIN_10_EXP__ (-37)
 // WEBASSEMBLY-NEXT:#define __FLT_MIN_EXP__ (-125)
 // WEBASSEMBLY-NEXT:#define __FLT_MIN__ 1.17549435e-38F
+// WEBASSEMBLY-NEXT:#define __FLT_NORM_MAX__ 3.40282347e+38F
 // WEBASSEMBLY-NEXT:#define __FLT_RADIX__ 2
+// WEBASSEMBLY-NEXT:#define __FPCLASS_NEGINF 0x0004
+// WEBASSEMBLY-NEXT:#define __FPCLASS_NEGNORMAL 0x0008
+// WEBASSEMBLY-NEXT:#define __FPCLASS_NEGSUBNORMAL 0x0010
+// WEBASSEMBLY-NEXT:#define __FPCLASS_NEGZERO 0x0020
+// WEBASSEMBLY-NEXT:#define __FPCLASS_POSINF 0x0200
+// WEBASSEMBLY-NEXT:#define __FPCLASS_POSNORMAL 0x0100
+// WEBASSEMBLY-NEXT:#define __FPCLASS_POSSUBNORMAL 0x0080
+// WEBASSEMBLY-NEXT:#define __FPCLASS_POSZERO 0x0040
+// WEBASSEMBLY-NEXT:#define __FPCLASS_QNAN 0x0002
+// WEBASSEMBLY-NEXT:#define __FPCLASS_SNAN 0x0001
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_BOOL_LOCK_FREE 2
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
@@ -1616,6 +1707,8 @@
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// WEBASSEMBLY-NEXT:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// WEBASSEMBLY-NEXT:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
@@ -1716,6 +1809,7 @@
 // WEBASSEMBLY-NEXT:#define __LDBL_MIN_10_EXP__ (-4931)
 // WEBASSEMBLY-NEXT:#define __LDBL_MIN_EXP__ (-16381)
 // WEBASSEMBLY-NEXT:#define __LDBL_MIN__ 3.36210314311209350626267781732175260e-4932L
+// WEBASSEMBLY-NEXT:#define __LDBL_NORM_MAX__ 1.18973149535723176508575932662800702e+4932L
 // WEBASSEMBLY-NEXT:#define __LITTLE_ENDIAN__ 1
 // WEBASSEMBLY-NEXT:#define __LLONG_WIDTH__ 64
 // WEBASSEMBLY-NEXT:#define __LONG_LONG_MAX__ 9223372036854775807LL
@@ -1725,6 +1819,11 @@
 // WEBASSEMBLY64-NEXT:#define __LONG_MAX__ 9223372036854775807L
 // WEBASSEMBLY64-NEXT:#define __LONG_WIDTH__ 64
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3
 // WEBASSEMBLY-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY-NEXT:#define __NO_MATH_ERRNO__ 1
 // WEBASSEMBLY-NEXT:#define __OBJC_BOOL_IS_BOOL 0
@@ -1780,6 +1879,9 @@
 // WEBASSEMBLY-NEXT:#define __SIZE_TYPE__ long unsigned int
 // WEBASSEMBLY32-NEXT:#define __SIZE_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIZE_WIDTH__ 64
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_EMPTY__ 2
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_FOUND__ 1
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_NOT_FOUND__ 0
 // WEBASSEMBLY-NEXT:#define __STDC_HOSTED__ 0
 // WEBASSEMBLY-NOT:#define __STDC_MB_MIGHT_NEQ_WC__
 // WEBASSEMBLY-NOT:#define __STDC_NO_ATOMICS__
@@ -2040,6 +2142,11 @@
 // AVR:#define __LDBL_MIN__ 1.17549435e-38L
 // AVR:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // AVR:#define __LONG_MAX__ 2147483647L
+// AVR:#define __MEMORY_SCOPE_DEVICE 1
+// AVR:#define __MEMORY_SCOPE_SINGLE 4
+// AVR:#define __MEMORY_SCOPE_SYSTEM 0
+// AVR:#define __MEMORY_SCOPE_WRKGRP 2
+// AVR:#define __MEMORY_SCOPE_WVFRNT 3
 // AVR:#define __NO_INLINE__ 1
 // AVR:#define __ORDER_BIG_ENDIAN__ 4321
 // AVR:#define __ORDER_LITTLE_ENDIAN__ 1234
@@ -2331,6 +2438,11 @@
 // RISCV32: #define __LITTLE_ENDIAN__ 1
 // RISCV32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV32: #define __LONG_MAX__ 2147483647L
+// RISCV32: #define __MEMORY_SCOPE_DEVICE 1
+// RISCV32: #define __MEMORY_SCOPE_SINGLE 4
+// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0
+// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2
+// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3
 // RISCV32: #define __NO_INLINE__ 1
 // RISCV32: #define __POINTER_WIDTH__ 32
 // RISCV32: #define __PRAGMA_REDEFINE_EXTNAME 1
@@ -2422,6 +2534,8 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-linux < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64,RISCV64-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-fuchsia < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64 %s
 // RISCV64: #define _LP64 1
 // RISCV64: #define __ATOMIC_ACQUIRE 2
 // RISCV64: #define __ATOMIC_ACQ_REL 4
@@ -2538,6 +2652,11 @@
 // RISCV64: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV64: #define __LONG_MAX__ 9223372036854775807L
 // RISCV64: #define __LP64__ 1
+// RISCV64: #define __MEMORY_SCOPE_DEVICE 1
+// RISCV64: #define __MEMORY_SCOPE_SINGLE 4
+// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0
+// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2
+// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3
 // RISCV64: #define __NO_INLINE__ 1
 // RISCV64: #define __POINTER_WIDTH__ 64
 // RISCV64: #define __PRAGMA_REDEFINE_EXTNAME 1

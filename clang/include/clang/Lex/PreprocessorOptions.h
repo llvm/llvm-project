@@ -69,9 +69,15 @@ public:
   std::vector<std::string> Includes;
   std::vector<std::string> MacroIncludes;
 
+  /// Perform extra checks when loading PCM files for mutable file systems.
+  bool ModulesCheckRelocated = true;
+
   /// Initialize the preprocessor with the compiler and target specific
   /// predefines.
   bool UsePredefines = true;
+
+  /// Indicates whether to predefine target OS macros.
+  bool DefineTargetOSMacros = false;
 
   /// Whether we should maintain a detailed record of all macro
   /// definitions and expansions.
@@ -164,6 +170,9 @@ public:
   /// of the specified memory buffer (the second part of each pair).
   std::vector<std::pair<std::string, llvm::MemoryBuffer *>> RemappedFileBuffers;
 
+  /// User specified embed entries.
+  std::vector<std::string> EmbedEntries;
+
   /// Whether the compiler instance should retain (i.e., not free)
   /// the buffers associated with remapped files.
   ///
@@ -179,28 +188,6 @@ public:
   /// by providing appropriate definitions to retrofit the standard library
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
-
-  /// Records the set of modules
-  class FailedModulesSet {
-    llvm::StringSet<> Failed;
-
-  public:
-    bool hasAlreadyFailed(StringRef module) {
-      return Failed.count(module) > 0;
-    }
-
-    void addFailed(StringRef module) {
-      Failed.insert(module);
-    }
-  };
-
-  /// The set of modules that failed to build.
-  ///
-  /// This pointer will be shared among all of the compiler instances created
-  /// to (re)build modules, so that once a module fails to build anywhere,
-  /// other instances will see that the module has failed and won't try to
-  /// build it again.
-  std::shared_ptr<FailedModulesSet> FailedModules;
 
   /// Function for getting the dependency preprocessor directives of a file.
   ///
@@ -223,6 +210,10 @@ public:
 
   /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
   std::optional<uint64_t> SourceDateEpoch;
+
+  /// If set, the preprocessor reports an error when processing #pragma mc_func
+  /// on AIX.
+  bool ErrorOnPragmaMcfuncOnAIX = false;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
@@ -261,6 +252,7 @@ public:
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = false;
     RetainExcludedConditionalBlocks = false;
+    ErrorOnPragmaMcfuncOnAIX = false;
   }
 };
 

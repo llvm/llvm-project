@@ -5,7 +5,7 @@ define float @test_powi(ptr %p) nounwind {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:        movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-COUNT-31:    mulss %xmm1, %xmm1
-; CHECK-NEXT:        movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:        movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:        divss %xmm1, %xmm0
 ; CHECK-NEXT:        retq
 bb:

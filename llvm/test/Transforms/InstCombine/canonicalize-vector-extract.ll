@@ -10,6 +10,7 @@ declare <3 x i32> @llvm.vector.extract.v3i32.v8i32(<8 x i32> %vec, i64 %idx)
 declare <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> %vec, i64 %idx)
 declare <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %vec, i64 %idx)
 declare <8 x i32> @llvm.vector.extract.v8i32.v8i32(<8 x i32> %vec, i64 %idx)
+declare <vscale x 8 x i32> @llvm.vector.extract.nxv8i32.nxv8i32(<vscale x 8 x i32> %vec, i64 %idx)
 
 ; ============================================================================ ;
 ; Trivial cases
@@ -22,6 +23,15 @@ define <8 x i32> @trivial_nop(<8 x i32> %vec) {
 ;
   %1 = call <8 x i32> @llvm.vector.extract.v8i32.v8i32(<8 x i32> %vec, i64 0)
   ret <8 x i32> %1
+}
+
+define <vscale x 8 x i32> @trivial_nop_scalable(<vscale x 8 x i32> %vec) {
+; CHECK-LABEL: define <vscale x 8 x i32> @trivial_nop_scalable(
+; CHECK-SAME: <vscale x 8 x i32> [[VEC:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 8 x i32> [[VEC]]
+;
+  %ext = call <vscale x 8 x i32> @llvm.vector.extract.nxv8i32.nxv8i32(<vscale x 8 x i32> %vec, i64 0)
+  ret <vscale x 8 x i32> %ext
 }
 
 ; ============================================================================ ;

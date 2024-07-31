@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
@@ -23,6 +25,7 @@
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 
 #include <ctime>
@@ -127,6 +130,7 @@ void PDBFileBuilder::addInjectedSource(StringRef Name,
 }
 
 Error PDBFileBuilder::finalizeMsfLayout() {
+  llvm::TimeTraceScope timeScope("MSF layout");
 
   if (Ipi && Ipi->getRecordCount() > 0) {
     // In theory newer PDBs always have an ID stream, but by saying that we're
@@ -252,6 +256,7 @@ void PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
   if (InjectedSourceTable.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Commit injected sources");
   commitSrcHeaderBlock(MsfBuffer, Layout);
 
   for (const auto &IS : InjectedSources) {
@@ -288,15 +293,18 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   if (auto EC = Strings.commit(NSWriter))
     return EC;
 
-  for (const auto &NSE : NamedStreamData) {
-    if (NSE.second.empty())
-      continue;
+  {
+    llvm::TimeTraceScope timeScope("Named stream data");
+    for (const auto &NSE : NamedStreamData) {
+      if (NSE.second.empty())
+        continue;
 
-    auto NS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, NSE.first, Allocator);
-    BinaryStreamWriter NSW(*NS);
-    if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
-      return EC;
+      auto NS = WritableMappedBlockStream::createIndexedStream(
+          Layout, Buffer, NSE.first, Allocator);
+      BinaryStreamWriter NSW(*NS);
+      if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
+        return EC;
+    }
   }
 
   if (Info) {
@@ -336,9 +344,11 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   // Set the build id at the very end, after every other byte of the PDB
   // has been written.
   if (Info->hashPDBContentsToGUID()) {
+    llvm::TimeTraceScope timeScope("Compute build ID");
+
     // Compute a hash of all sections of the output file.
     uint64_t Digest =
-        xxHash64({Buffer.getBufferStart(), Buffer.getBufferEnd()});
+        xxh3_64bits({Buffer.getBufferStart(), Buffer.getBufferEnd()});
 
     H->Age = 1;
 

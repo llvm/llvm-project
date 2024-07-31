@@ -6,11 +6,11 @@ define void @test_mismatched_setcc(<4 x i22> %l, <4 x i22> %r, ptr %addr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.4s, #63, msl #16
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    strb w8, [x0]

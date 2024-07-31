@@ -21,7 +21,7 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    %idxprom20 = zext i32 %storemerge1921 to i64
 ; CHECK-NEXT:    --> (zext i32 {3,+,-1}<nsw><%for.cond6> to i64) U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %arrayidx7 = getelementptr inbounds [1 x [4 x i16]], ptr @__const.f.g, i64 0, i64 0, i64 %idxprom20
-; CHECK-NEXT:    --> ((2 * (zext i32 {3,+,-1}<nsw><%for.cond6> to i64))<nuw><nsw> + @__const.f.g)<nuw> U: [6,-3) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> ((2 * (zext i32 {3,+,-1}<nsw><%for.cond6> to i64))<nuw><nsw> + @__const.f.g)<nuw> U: [8,-3) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %i = load i16, ptr %arrayidx7, align 2
 ; CHECK-NEXT:    --> %i U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond6: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %storemerge1822.lcssa.ph = phi i32 [ 0, %for.cond6 ]
@@ -45,7 +45,7 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    %idxprom20.3 = zext i32 %storemerge1921.3 to i64
 ; CHECK-NEXT:    --> (zext i32 {3,+,-1}<nsw><%inner.loop> to i64) U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %arrayidx7.3 = getelementptr inbounds [1 x [4 x i16]], ptr @__const.f.g, i64 0, i64 0, i64 %idxprom20.3
-; CHECK-NEXT:    --> ((2 * (zext i32 {3,+,-1}<nsw><%inner.loop> to i64))<nuw><nsw> + @__const.f.g)<nuw> U: [6,-3) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> ((2 * (zext i32 {3,+,-1}<nsw><%inner.loop> to i64))<nuw><nsw> + @__const.f.g)<nuw> U: [8,-3) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %i7 = load i16, ptr %arrayidx7.3, align 2
 ; CHECK-NEXT:    --> %i7 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner.loop: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %i8 = load volatile i32, ptr @b, align 4
@@ -58,31 +58,28 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    --> {2,+,-1}<nsw><%outer.loop> U: [0,3) S: [0,3) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %for.cond6: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for for.cond6: 0
+; CHECK-NEXT:    exit count for for.cond6: i32 0
 ; CHECK-NEXT:    exit count for for.end: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %for.cond6: constant max backedge-taken count is 0
-; CHECK-NEXT:  Loop %for.cond6: symbolic max backedge-taken count is 0
-; CHECK-NEXT:    symbolic max exit count for for.cond6: 0
+; CHECK-NEXT:  Loop %for.cond6: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %for.cond6: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:    symbolic max exit count for for.cond6: i32 0
 ; CHECK-NEXT:    symbolic max exit count for for.end: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %for.cond6: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %inner.loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for inner.loop: 0
+; CHECK-NEXT:    exit count for inner.loop: i32 0
 ; CHECK-NEXT:    exit count for for.end.3: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is 0
-; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is 0
-; CHECK-NEXT:    symbolic max exit count for inner.loop: 0
+; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:    symbolic max exit count for inner.loop: i32 0
 ; CHECK-NEXT:    symbolic max exit count for for.end.3: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner.loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for for.cond6: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for inner.loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for for.inc13.3: 2
-; CHECK-NEXT:  Loop %outer.loop: constant max backedge-taken count is 2
-; CHECK-NEXT:  Loop %outer.loop: symbolic max backedge-taken count is 2
+; CHECK-NEXT:    exit count for for.inc13.3: i32 2
+; CHECK-NEXT:  Loop %outer.loop: constant max backedge-taken count is i32 2
+; CHECK-NEXT:  Loop %outer.loop: symbolic max backedge-taken count is i32 2
 ; CHECK-NEXT:    symbolic max exit count for for.cond6: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for inner.loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for for.inc13.3: 2
-; CHECK-NEXT:  Loop %outer.loop: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:    symbolic max exit count for for.inc13.3: i32 2
 ;
 entry:
   store i32 3, ptr @a, align 4

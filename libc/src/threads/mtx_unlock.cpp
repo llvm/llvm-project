@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/threads/mtx_unlock.h"
-#include "include/threads.h" // For mtx_t definition.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
-namespace __llvm_libc {
+#include <threads.h> // For mtx_t definition.
+
+namespace LIBC_NAMESPACE_DECL {
 
 // The implementation currently handles only plain mutexes.
 LLVM_LIBC_FUNCTION(int, mtx_unlock, (mtx_t * mutex)) {
@@ -20,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, mtx_unlock, (mtx_t * mutex)) {
   return err == MutexError::NONE ? thrd_success : thrd_error;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

@@ -7,7 +7,7 @@ declare void @use(i8)
 
 define i32 @shl_C1_add_A_C2_i32(i16 %A) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_i32(
-; CHECK-NEXT:    [[B:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i16 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[D:%.*]] = shl i32 192, [[B]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -41,7 +41,7 @@ define i32 @lshr_C1_add_A_C2_i32(i32 %A) {
 
 define <4 x i32> @shl_C1_add_A_C2_v4i32(<4 x i16> %A) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_v4i32(
-; CHECK-NEXT:    [[B:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[B:%.*]] = zext nneg <4 x i16> [[A:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[D:%.*]] = shl <4 x i32> <i32 6, i32 4, i32 poison, i32 -458752>, [[B]]
 ; CHECK-NEXT:    ret <4 x i32> [[D]]
 ;
@@ -78,8 +78,8 @@ define <4 x i32> @lshr_C1_add_A_C2_v4i32(<4 x i32> %A) {
 define <4 x i32> @shl_C1_add_A_C2_v4i32_splat(i16 %I) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_v4i32_splat(
 ; CHECK-NEXT:    [[A:%.*]] = zext i16 [[I:%.*]] to i32
-; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> undef, i32 [[A]], i64 0
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = shl <4 x i32> <i32 6, i32 4, i32 poison, i32 -458752>, [[C]]
 ; CHECK-NEXT:    ret <4 x i32> [[E]]
 ;
@@ -94,8 +94,8 @@ define <4 x i32> @shl_C1_add_A_C2_v4i32_splat(i16 %I) {
 define <4 x i32> @ashr_C1_add_A_C2_v4i32_splat(i16 %I) {
 ; CHECK-LABEL: @ashr_C1_add_A_C2_v4i32_splat(
 ; CHECK-NEXT:    [[A:%.*]] = zext i16 [[I:%.*]] to i32
-; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> undef, i32 [[A]], i64 0
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = ashr <4 x i32> <i32 6, i32 1, i32 poison, i32 -1>, [[C]]
 ; CHECK-NEXT:    ret <4 x i32> [[E]]
 ;
@@ -110,8 +110,8 @@ define <4 x i32> @ashr_C1_add_A_C2_v4i32_splat(i16 %I) {
 define <4 x i32> @lshr_C1_add_A_C2_v4i32_splat(i16 %I) {
 ; CHECK-LABEL: @lshr_C1_add_A_C2_v4i32_splat(
 ; CHECK-NEXT:    [[A:%.*]] = zext i16 [[I:%.*]] to i32
-; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> undef, i32 [[A]], i64 0
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = lshr <4 x i32> <i32 6, i32 1, i32 poison, i32 65535>, [[C]]
 ; CHECK-NEXT:    ret <4 x i32> [[E]]
 ;
@@ -156,6 +156,48 @@ define i32 @ashr_add_nuw(i32 %x, ptr %p) {
   %a = add nuw i32 %x, 5
   store i32 %a, ptr %p
   %r = ashr i32 -6, %a
+  ret i32 %r
+}
+
+; Preserve nuw and exact flags.
+
+define i32 @shl_nuw_add_nuw(i32 %x) {
+; CHECK-LABEL: @shl_nuw_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = shl nuw i32 1, %a
+  ret i32 %r
+}
+
+define i32 @shl_nsw_add_nuw(i32 %x) {
+; CHECK-LABEL: @shl_nsw_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = shl nsw i32 -1, %a
+  ret i32 %r
+}
+
+define i32 @lshr_exact_add_nuw(i32 %x) {
+; CHECK-LABEL: @lshr_exact_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = lshr exact i32 4, %a
+  ret i32 %r
+}
+
+define i32 @ashr_exact_add_nuw(i32 %x) {
+; CHECK-LABEL: @ashr_exact_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = ashr exact i32 -4, %a
   ret i32 %r
 }
 
@@ -700,9 +742,9 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <3 x i32> [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 32
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc nuw nsw i64 [[TMP15]] to i32
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP14]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <3 x i32> undef, i32 [[ADD_NARROWED]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <3 x i32> poison, i32 [[ADD_NARROWED]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <3 x i32> [[TMP18]], i32 [[TMP19]], i64 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <3 x i32> [[TMP20]], i32 [[TMP17]], i64 2
@@ -732,4 +774,33 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
   %24 = insertelement <3 x i32> %22, i32 %23, i32 1
   %25 = insertelement <3 x i32> %24, i32 %20, i32 2
   ret <3 x i32> %25
+}
+
+define i8 @shl_fold_or_disjoint_cnt(i8 %x) {
+; CHECK-LABEL: @shl_fold_or_disjoint_cnt(
+; CHECK-NEXT:    [[R:%.*]] = shl i8 16, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = or disjoint i8 %x, 3
+  %r = shl i8 2, %a
+  ret i8 %r
+}
+
+define <2 x i8> @ashr_fold_or_disjoint_cnt(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_fold_or_disjoint_cnt(
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> <i8 0, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = or disjoint <2 x i8> %x, <i8 3, i8 1>
+  %r = ashr <2 x i8> <i8 2, i8 3>, %a
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_fold_or_disjoint_cnt_out_of_bounds(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_fold_or_disjoint_cnt_out_of_bounds(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %a = or disjoint <2 x i8> %x, <i8 3, i8 8>
+  %r = lshr <2 x i8> <i8 2, i8 3>, %a
+  ret <2 x i8> %r
 }

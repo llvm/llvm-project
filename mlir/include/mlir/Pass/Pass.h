@@ -9,9 +9,9 @@
 #ifndef MLIR_PASS_PASS_H
 #define MLIR_PASS_PASS_H
 
+#include "mlir/IR/Action.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
 #include <optional>
@@ -55,12 +55,9 @@ public:
   /// Returns the unique identifier that corresponds to this pass.
   TypeID getTypeID() const { return passID; }
 
-  /// Returns the pass info for the specified pass class or null if unknown.
-  static const PassInfo *lookupPassInfo(StringRef passArg);
-
   /// Returns the pass info for this pass, or null if unknown.
   const PassInfo *lookupPassInfo() const {
-    return lookupPassInfo(getArgument());
+    return PassInfo::lookup(getArgument());
   }
 
   /// Returns the derived pass name.
@@ -116,7 +113,9 @@ public:
   /// Derived classes may override this method to hook into the point at which
   /// options are initialized, but should generally always invoke this base
   /// class variant.
-  virtual LogicalResult initializeOptions(StringRef options);
+  virtual LogicalResult
+  initializeOptions(StringRef options,
+                    function_ref<LogicalResult(const Twine &)> errorHandler);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
   /// an adaptor pass, print its pass managers.
@@ -163,6 +162,9 @@ protected:
   explicit Pass(TypeID passID, std::optional<StringRef> opName = std::nullopt)
       : passID(passID), opName(opName) {}
   Pass(const Pass &other) : Pass(other.passID, other.opName) {}
+  Pass &operator=(const Pass &) = delete;
+  Pass(Pass &&) = delete;
+  Pass &operator=(Pass &&) = delete;
 
   /// Returns the current pass state.
   detail::PassExecutionState &getPassState() {
@@ -180,8 +182,10 @@ protected:
   /// should not rely on any state accessible during the execution of a pass.
   /// For example, `getContext`/`getOperation`/`getAnalysis`/etc. should not be
   /// invoked within this hook.
-  /// Returns a LogicalResult to indicate failure, in which case the pass
-  /// pipeline won't execute.
+  /// This method is invoked after all dependent dialects for the pipeline are
+  /// loaded, and is not allowed to load any further dialects (override the
+  /// `getDependentDialects()` for this purpose instead). Returns a LogicalResult
+  /// to indicate failure, in which case the pass pipeline won't execute.
   virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
   /// Indicate if the current pass can be scheduled on the given operation type.
@@ -349,9 +353,15 @@ private:
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
 template <typename OpT = void>
 class OperationPass : public Pass {
+public:
+  ~OperationPass() override = default;
+
 protected:
   OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
   OperationPass(const OperationPass &) = default;
+  OperationPass &operator=(const OperationPass &) = delete;
+  OperationPass(OperationPass &&) = delete;
+  OperationPass &operator=(OperationPass &&) = delete;
 
   /// Support isa/dyn_cast functionality.
   static bool classof(const Pass *pass) {
@@ -388,9 +398,15 @@ protected:
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
 template <>
 class OperationPass<void> : public Pass {
+public:
+  ~OperationPass() override = default;
+
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
   OperationPass(const OperationPass &) = default;
+  OperationPass &operator=(const OperationPass &) = delete;
+  OperationPass(OperationPass &&) = delete;
+  OperationPass &operator=(OperationPass &&) = delete;
 
   /// Indicate if the current pass can be scheduled on the given operation type.
   /// By default, generic operation passes can be scheduled on any operation.
@@ -444,10 +460,14 @@ public:
   static bool classof(const Pass *pass) {
     return pass->getTypeID() == TypeID::get<PassT>();
   }
+  ~PassWrapper() override = default;
 
 protected:
   PassWrapper() : BaseT(TypeID::get<PassT>()) {}
   PassWrapper(const PassWrapper &) = default;
+  PassWrapper &operator=(const PassWrapper &) = delete;
+  PassWrapper(PassWrapper &&) = delete;
+  PassWrapper &operator=(PassWrapper &&) = delete;
 
   /// Returns the derived pass name.
   StringRef getName() const override { return llvm::getTypeName<PassT>(); }
@@ -456,6 +476,52 @@ protected:
   std::unique_ptr<Pass> clonePass() const override {
     return std::make_unique<PassT>(*static_cast<const PassT *>(this));
   }
+};
+
+/// This class encapsulates the "action" of executing a single pass. This allows
+/// a user of the Action infrastructure to query information about an action in
+/// (for example) a breakpoint context. You could use it like this:
+///
+///  auto onBreakpoint = [&](const ActionActiveStack *backtrace) {
+///    if (auto passExec = dyn_cast<PassExecutionAction>(anAction))
+///      record(passExec.getPass());
+///    return ExecutionContext::Apply;
+///  };
+///  ExecutionContext exeCtx(onBreakpoint);
+///
+class PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
+  using Base = tracing::ActionImpl<PassExecutionAction>;
+
+public:
+  /// Define a TypeID for this PassExecutionAction.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PassExecutionAction)
+  /// Construct a PassExecutionAction. This is called by the OpToOpPassAdaptor
+  /// when it calls `executeAction`.
+  PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass);
+
+  /// The tag required by ActionImpl to identify this action.
+  static constexpr StringLiteral tag = "pass-execution";
+
+  /// Print a textual version of this action to `os`.
+  void print(raw_ostream &os) const override;
+
+  /// Get the pass that will be executed by this action. This is not a class of
+  /// passes, or all instances of a pass kind, this is a single pass.
+  const Pass &getPass() const { return pass; }
+
+  /// Get the operation that is the base of this pass. For example, an
+  /// OperationPass<ModuleOp> would return a ModuleOp.
+  Operation *getOp() const;
+
+public:
+  /// Reference to the pass being run. Notice that this will *not* extend the
+  /// lifetime of the pass, and so this class is therefore unsafe to keep past
+  /// the lifetime of the `executeAction` call.
+  const Pass &pass;
+
+  /// The base op for this pass. For an OperationPass<ModuleOp>, we would have a
+  /// ModuleOp here.
+  Operation *op;
 };
 
 } // namespace mlir

@@ -8,13 +8,14 @@
 
 #include "src/time/gmtime.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(struct tm *, gmtime, (const time_t *timer)) {
   static struct tm tm_out;
   return time_utils::gmtime_internal(timer, &tm_out);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

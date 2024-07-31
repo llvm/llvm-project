@@ -49,18 +49,9 @@ createSPIRVMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createSPIRVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
-static MCStreamer *
-createSPIRVMCStreamer(const Triple &T, MCContext &Ctx,
-                      std::unique_ptr<MCAsmBackend> &&MAB,
-                      std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
-  return createSPIRVStreamer(Ctx, std::move(MAB), std::move(OW),
-                             std::move(Emitter), RelaxAll);
-}
-
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &,
-                                                 MCInstPrinter *, bool) {
+                                                 MCInstPrinter *) {
   return new SPIRVTargetStreamer(S);
 }
 
@@ -88,12 +79,12 @@ static MCInstrAnalysis *createSPIRVInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTargetMC() {
-  for (Target *T : {&getTheSPIRV32Target(), &getTheSPIRV64Target()}) {
+  for (Target *T : {&getTheSPIRV32Target(), &getTheSPIRV64Target(),
+                    &getTheSPIRVLogicalTarget()}) {
     RegisterMCAsmInfo<SPIRVMCAsmInfo> X(*T);
     TargetRegistry::RegisterMCInstrInfo(*T, createSPIRVMCInstrInfo);
     TargetRegistry::RegisterMCRegInfo(*T, createSPIRVMCRegisterInfo);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createSPIRVMCSubtargetInfo);
-    TargetRegistry::RegisterSPIRVStreamer(*T, createSPIRVMCStreamer);
     TargetRegistry::RegisterMCInstPrinter(*T, createSPIRVMCInstPrinter);
     TargetRegistry::RegisterMCInstrAnalysis(*T, createSPIRVInstrAnalysis);
     TargetRegistry::RegisterMCCodeEmitter(*T, createSPIRVMCCodeEmitter);

@@ -82,7 +82,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   Identifier.split(Names, "::");
 
   bool IsFullyQualified = false;
-  if (Identifier.startswith("::")) {
+  if (Identifier.starts_with("::")) {
     Names.erase(Names.begin()); // Drop first (empty) element.
     IsFullyQualified = true;
   }

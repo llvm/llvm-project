@@ -341,6 +341,50 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
   return Results;
 }
 
+// Given LocatedSymbol results derived from the AST, query the index to obtain
+// definitions and preferred declarations.
+void enhanceLocatedSymbolsFromIndex(llvm::MutableArrayRef<LocatedSymbol> Result,
+                                    const SymbolIndex *Index,
+                                    llvm::StringRef MainFilePath) {
+  LookupRequest QueryRequest;
+  llvm::DenseMap<SymbolID, unsigned> ResultIndex;
+  for (unsigned I = 0; I < Result.size(); ++I) {
+    if (auto ID = Result[I].ID) {
+      ResultIndex.try_emplace(ID, I);
+      QueryRequest.IDs.insert(ID);
+    }
+  }
+  if (!Index || QueryRequest.IDs.empty())
+    return;
+  std::string Scratch;
+  Index->lookup(QueryRequest, [&](const Symbol &Sym) {
+    auto &R = Result[ResultIndex.lookup(Sym.ID)];
+
+    if (R.Definition) { // from AST
+      // Special case: if the AST yielded a definition, then it may not be
+      // the right *declaration*. Prefer the one from the index.
+      if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration, MainFilePath))
+        R.PreferredDeclaration = *Loc;
+
+      // We might still prefer the definition from the index, e.g. for
+      // generated symbols.
+      if (auto Loc = toLSPLocation(
+              getPreferredLocation(*R.Definition, Sym.Definition, Scratch),
+              MainFilePath))
+        R.Definition = *Loc;
+    } else {
+      R.Definition = toLSPLocation(Sym.Definition, MainFilePath);
+
+      // Use merge logic to choose AST or index declaration.
+      if (auto Loc = toLSPLocation(
+              getPreferredLocation(R.PreferredDeclaration,
+                                   Sym.CanonicalDeclaration, Scratch),
+              MainFilePath))
+        R.PreferredDeclaration = *Loc;
+    }
+  });
+}
+
 // Decls are more complicated.
 // The AST contains at least a declaration, maybe a definition.
 // These are up-to-date, and so generally preferred over index results.
@@ -352,8 +396,6 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   const SourceManager &SM = AST.getSourceManager();
   // Results follow the order of Symbols.Decls.
   std::vector<LocatedSymbol> Result;
-  // Keep track of SymbolID -> index mapping, to fill in index data later.
-  llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
   static constexpr trace::Metric LocateASTReferentMetric(
       "locate_ast_referent", trace::Metric::Counter, "case");
@@ -371,10 +413,6 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     if (const NamedDecl *Def = getDefinition(D))
       Result.back().Definition = makeLocation(
           AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
-
-    // Record SymbolID for index lookup later.
-    if (auto ID = getSymbolID(D))
-      ResultIndex[ID] = Result.size() - 1;
   };
 
   // Emit all symbol locations (declaration or definition) from AST.
@@ -389,7 +427,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       // Special case: virtual void ^method() = 0: jump to all overrides.
       // FIXME: extend it to ^virtual, unfortunately, virtual location is not
       // saved in the AST.
-      if (CMD->isPure()) {
+      if (CMD->isPureVirtual()) {
         if (TouchedIdentifier && SM.getSpellingLoc(CMD->getLocation()) ==
                                      TouchedIdentifier->location()) {
           VirtualMethods.insert(getSymbolID(CMD));
@@ -448,40 +486,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     // Otherwise the target declaration is the right one.
     AddResultDecl(D);
   }
-
-  // Now query the index for all Symbol IDs we found in the AST.
-  if (Index && !ResultIndex.empty()) {
-    LookupRequest QueryRequest;
-    for (auto It : ResultIndex)
-      QueryRequest.IDs.insert(It.first);
-    std::string Scratch;
-    Index->lookup(QueryRequest, [&](const Symbol &Sym) {
-      auto &R = Result[ResultIndex.lookup(Sym.ID)];
-
-      if (R.Definition) { // from AST
-        // Special case: if the AST yielded a definition, then it may not be
-        // the right *declaration*. Prefer the one from the index.
-        if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration, MainFilePath))
-          R.PreferredDeclaration = *Loc;
-
-        // We might still prefer the definition from the index, e.g. for
-        // generated symbols.
-        if (auto Loc = toLSPLocation(
-                getPreferredLocation(*R.Definition, Sym.Definition, Scratch),
-                MainFilePath))
-          R.Definition = *Loc;
-      } else {
-        R.Definition = toLSPLocation(Sym.Definition, MainFilePath);
-
-        // Use merge logic to choose AST or index declaration.
-        if (auto Loc = toLSPLocation(
-                getPreferredLocation(R.PreferredDeclaration,
-                                     Sym.CanonicalDeclaration, Scratch),
-                MainFilePath))
-          R.PreferredDeclaration = *Loc;
-      }
-    });
-  }
+  enhanceLocatedSymbolsFromIndex(Result, Index, MainFilePath);
 
   auto Overrides = findImplementors(VirtualMethods, RelationKind::OverriddenBy,
                                     Index, MainFilePath);
@@ -490,7 +495,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
 }
 
 std::vector<LocatedSymbol> locateSymbolForType(const ParsedAST &AST,
-                                               const QualType &Type) {
+                                               const QualType &Type,
+                                               const SymbolIndex *Index) {
   const auto &SM = AST.getSourceManager();
   auto MainFilePath = AST.tuPath();
 
@@ -520,6 +526,7 @@ std::vector<LocatedSymbol> locateSymbolForType(const ParsedAST &AST,
       Results.back().Definition =
           makeLocation(ASTContext, nameLocation(*Def, SM), MainFilePath);
   }
+  enhanceLocatedSymbolsFromIndex(Results, Index, MainFilePath);
 
   return Results;
 }
@@ -784,7 +791,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
       // go-to-definition on auto should find the definition of the deduced
       // type, if possible
       if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
-        auto LocSym = locateSymbolForType(AST, *Deduced);
+        auto LocSym = locateSymbolForType(AST, *Deduced, Index);
         if (!LocSym.empty())
           return LocSym;
       }
@@ -837,7 +844,7 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
     if (Inc.Resolved.empty())
       continue;
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
-    const auto *HashTok = AST.getTokens().spelledTokenAt(HashLoc);
+    const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
@@ -931,7 +938,7 @@ public:
     CollectorOpts.CollectMainFileSymbols = true;
     for (SourceLocation L : Locs) {
       L = SM.getFileLoc(L);
-      if (const auto *Tok = TB.spelledTokenAt(L))
+      if (const auto *Tok = TB.spelledTokenContaining(L))
         References.push_back(
             {*Tok, Roles,
              SymbolCollector::getRefContainer(ASTNode.Parent, CollectorOpts)});
@@ -1209,7 +1216,7 @@ DocumentHighlight toHighlight(const ReferenceFinder::Reference &Ref,
 std::optional<DocumentHighlight> toHighlight(SourceLocation Loc,
                                              const syntax::TokenBuffer &TB) {
   Loc = TB.sourceManager().getFileLoc(Loc);
-  if (const auto *Tok = TB.spelledTokenAt(Loc)) {
+  if (const auto *Tok = TB.spelledTokenContaining(Loc)) {
     DocumentHighlight Result;
     Result.range = halfOpenToRange(
         TB.sourceManager(),
@@ -1327,22 +1334,16 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   if (IncludeOnLine == Includes.end())
     return std::nullopt;
 
-  const auto &Inc = *IncludeOnLine;
   const SourceManager &SM = AST.getSourceManager();
   ReferencesResult Results;
-  auto ConvertedMainFileIncludes = convertIncludes(SM, Includes);
-  auto ReferencedInclude = convertIncludes(SM, Inc);
+  auto Converted = convertIncludes(AST);
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes(), SM,
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
-        if (Ref.RT != include_cleaner::RefType::Explicit)
-          return;
-
-        auto Provider =
-            firstMatchedProvider(ConvertedMainFileIncludes, Providers);
-        if (!Provider || ReferencedInclude.match(*Provider).empty())
+        if (Ref.RT != include_cleaner::RefType::Explicit ||
+            !isPreferredProvider(*IncludeOnLine, Converted, Providers))
           return;
 
         auto Loc = SM.getFileLoc(Ref.RefLocation);
@@ -1352,7 +1353,8 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
           Loc = SM.getIncludeLoc(SM.getFileID(Loc));
 
         ReferencesResult::Reference Result;
-        const auto *Token = AST.getTokens().spelledTokenAt(Loc);
+        const auto *Token = AST.getTokens().spelledTokenContaining(Loc);
+        assert(Token && "references expected token here");
         Result.Loc.range = Range{sourceLocToPosition(SM, Token->location()),
                                  sourceLocToPosition(SM, Token->endLocation())};
         Result.Loc.uri = URIMainFile;
@@ -1362,15 +1364,11 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
     return std::nullopt;
 
   // Add the #include line to the references list.
-  auto IncludeLen = std::string{"#include"}.length() + Inc.Written.length() + 1;
   ReferencesResult::Reference Result;
-  Result.Loc.range = clangd::Range{Position{Inc.HashLine, 0},
-                                   Position{Inc.HashLine, (int)IncludeLen}};
+  Result.Loc.range = rangeTillEOL(SM.getBufferData(SM.getMainFileID()),
+                                  IncludeOnLine->HashOffset);
   Result.Loc.uri = URIMainFile;
   Results.References.push_back(std::move(Result));
-
-  if (Results.References.empty())
-    return std::nullopt;
   return Results;
 }
 } // namespace
@@ -1408,7 +1406,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       if (Refs != IDToRefs.end()) {
         for (const auto &Ref : Refs->second) {
           ReferencesResult::Reference Result;
-          Result.Loc.range = Ref.Rng;
+          Result.Loc.range = Ref.toRange(SM);
           Result.Loc.uri = URIMainFile;
           if (Ref.IsDefinition) {
             Result.Attributes |= ReferencesResult::Declaration;
@@ -1622,7 +1620,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     }
     llvm::SmallString<32> USR;
     if (!index::generateUSRForDecl(D, USR)) {
-      NewSymbol.USR = std::string(USR.str());
+      NewSymbol.USR = std::string(USR);
       NewSymbol.ID = SymbolID(NewSymbol.USR);
     }
     if (const NamedDecl *Def = getDefinition(D))
@@ -1645,7 +1643,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     llvm::SmallString<32> USR;
     if (!index::generateUSRForMacro(NewMacro.name, M->Info->getDefinitionLoc(),
                                     SM, USR)) {
-      NewMacro.USR = std::string(USR.str());
+      NewMacro.USR = std::string(USR);
       NewMacro.ID = SymbolID(NewMacro.USR);
     }
     Results.push_back(std::move(NewMacro));
@@ -1854,7 +1852,8 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
       if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
         // If this is a variable, use the type of the variable.
-        Records.push_back(VD->getType().getTypePtr()->getAsCXXRecordDecl());
+        if (const auto *RD = VD->getType().getTypePtr()->getAsCXXRecordDecl())
+          Records.push_back(RD);
         continue;
       }
 
@@ -2057,13 +2056,13 @@ static void unwrapFindType(
 // Convenience overload, to allow calling this without the out-parameter
 static llvm::SmallVector<QualType> unwrapFindType(
     QualType T, const HeuristicResolver* H) {
-    llvm::SmallVector<QualType> Result;
-    unwrapFindType(T, H, Result);
-    return Result;
+  llvm::SmallVector<QualType> Result;
+  unwrapFindType(T, H, Result);
+  return Result;
 }
 
-
-std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos) {
+std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
+                                    const SymbolIndex *Index) {
   const SourceManager &SM = AST.getSourceManager();
   auto Offset = positionToOffset(SM.getBufferData(SM.getMainFileID()), Pos);
   std::vector<LocatedSymbol> Result;
@@ -2074,7 +2073,7 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos) {
   }
   // The general scheme is: position -> AST node -> type -> declaration.
   auto SymbolsFromNode =
-      [&AST](const SelectionTree::Node *N) -> std::vector<LocatedSymbol> {
+      [&](const SelectionTree::Node *N) -> std::vector<LocatedSymbol> {
     std::vector<LocatedSymbol> LocatedSymbols;
 
     // NOTE: unwrapFindType might return duplicates for something like
@@ -2082,7 +2081,8 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos) {
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
     for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
-        llvm::copy(locateSymbolForType(AST, Type), std::back_inserter(LocatedSymbols));
+      llvm::copy(locateSymbolForType(AST, Type, Index),
+                 std::back_inserter(LocatedSymbols));
 
     return LocatedSymbols;
   };

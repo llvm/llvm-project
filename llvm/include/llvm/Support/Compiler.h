@@ -113,12 +113,24 @@
 /// LLVM_EXTERNAL_VISIBILITY - classes, functions, and variables marked with
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
-#if __has_attribute(visibility) &&                                             \
-    (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
+
+#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility)
+#define LLVM_ATTRIBUTE_VISIBILITY_HIDDEN [[gnu::visibility("hidden")]]
+#define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT [[gnu::visibility("default")]]
+#elif __has_attribute(visibility)
+#define LLVM_ATTRIBUTE_VISIBILITY_HIDDEN __attribute__((visibility("hidden")))
+#define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT __attribute__((visibility("default")))
+#else
+#define LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
+#define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#endif
+
+
+#if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
      (defined(__MINGW32__) && defined(__clang__)))
-#define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
+#define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 #if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
-#define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
+#define LLVM_EXTERNAL_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #else
 #define LLVM_EXTERNAL_VISIBILITY
 #endif
@@ -144,6 +156,25 @@
 #else
 #define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
 #endif
+
+// clang-format off
+#if defined(__clang__) || defined(__GNUC__)
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
+  _Pragma("GCC diagnostic push")                                               \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
+  _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
+  _Pragma("warning(push)")                                                     \
+  _Pragma("warning(disable : 4996)")
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
+  _Pragma("warning(pop)")
+#else
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+#endif
+// clang-format on
 
 // Indicate that a non-static, non-const C++ member function reinitializes
 // the entire object to a known state, independent of the previous state of
@@ -247,6 +278,14 @@
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL
 #endif
 
+/// LLVM_ATTRIBUTE_RESTRICT - Annotates a pointer to tell the compiler that
+/// it is not aliased in the current scope.
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_RESTRICT __restrict
+#else
+#define LLVM_ATTRIBUTE_RESTRICT
+#endif
+
 /// \macro LLVM_ATTRIBUTE_RETURNS_NOALIAS Used to mark a function as returning a
 /// pointer that does not alias any other valid pointer.
 #ifdef __GNUC__
@@ -293,6 +332,12 @@
 #define LLVM_GSL_POINTER [[gsl::Pointer]]
 #else
 #define LLVM_GSL_POINTER
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L
+#define LLVM_CTOR_NODISCARD [[nodiscard]]
+#else
+#define LLVM_CTOR_NODISCARD
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
@@ -549,6 +594,14 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
   __attribute__((no_profile_instrument_function))
 #else
 #define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
+#endif
+
+/// \macro LLVM_PREFERRED_TYPE
+/// Adjust type of bit-field in debug info.
+#if __has_attribute(preferred_type)
+#define LLVM_PREFERRED_TYPE(T) __attribute__((preferred_type(T)))
+#else
+#define LLVM_PREFERRED_TYPE(T)
 #endif
 
 #endif

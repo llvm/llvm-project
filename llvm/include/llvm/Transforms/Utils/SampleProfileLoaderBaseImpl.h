@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -87,12 +88,6 @@ template <> struct IRTraits<BasicBlock> {
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
 
-  const PseudoProbeDescriptor *getDesc(const Function &F) const {
-    auto I = GUIDToProbeDescMap.find(
-        Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
-    return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
-  }
-
 public:
   PseudoProbeManager(const Module &M) {
     if (NamedMDNode *FuncInfo =
@@ -108,29 +103,74 @@ public:
     }
   }
 
+  const PseudoProbeDescriptor *getDesc(uint64_t GUID) const {
+    auto I = GUIDToProbeDescMap.find(GUID);
+    return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
+  }
+
+  const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
+    return getDesc(Function::getGUID(FProfileName));
+  }
+
+  const PseudoProbeDescriptor *getDesc(const Function &F) const {
+    return getDesc(Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+  }
+
+  bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,
+                               const FunctionSamples &Samples) const {
+    return FuncDesc.getFunctionHash() != Samples.getFunctionHash();
+  }
+
   bool moduleIsProbed(const Module &M) const {
     return M.getNamedMetadata(PseudoProbeDescMetadataName);
   }
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    if (!Desc) {
-      LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function "
-                        << F.getName() << "\n");
-      return false;
-    }
-    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
-      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
-                        << "\n");
-      return false;
-    }
-    return true;
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
+    // Always check the function attribute to determine checksum mismatch for
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
+    if (IsAvailableExternallyLinkage || !Desc)
+      return !F.hasFnAttribute("profile-checksum-mismatch");
+
+    return Desc && !profileIsHashMismatched(*Desc, Samples);
   }
 };
 
 
 
 extern cl::opt<bool> SampleProfileUseProfi;
+
+static inline bool skipProfileForFunction(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
+
+static inline void
+buildTopDownFuncOrder(LazyCallGraph &CG,
+                      std::vector<Function *> &FunctionOrderList) {
+  CG.buildRefSCCs();
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &C : RC) {
+      for (LazyCallGraph::Node &N : C) {
+        Function &F = N.getFunction();
+        if (!skipProfileForFunction(F))
+          FunctionOrderList.push_back(&F);
+      }
+    }
+  }
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
+}
 
 template <typename FT> class SampleProfileLoaderBaseImpl {
 public:
@@ -140,7 +180,7 @@ public:
   void dump() { Reader->dump(); }
 
   using NodeRef = typename GraphTraits<FT *>::NodeRef;
-  using BT = typename std::remove_pointer<NodeRef>::type;
+  using BT = std::remove_pointer_t<NodeRef>;
   using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;
   using BasicBlockT = typename afdo_detail::IRTraits<BT>::BasicBlockT;
   using BlockFrequencyInfoT =
@@ -264,6 +304,11 @@ protected:
 
   /// Profile reader object.
   std::unique_ptr<SampleProfileReader> Reader;
+
+  /// Synthetic samples created by duplicating the samples of inlined functions
+  /// from the original profile as if they were top level sample profiles.
+  /// Use std::map because insertion may happen while its content is referenced.
+  std::map<SampleContext, FunctionSamples> OutlineFunctionSamples;
 
   // A pseudo probe helper to correlate the imported sample counts.
   std::unique_ptr<PseudoProbeManager> ProbeManager;

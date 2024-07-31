@@ -885,8 +885,11 @@ _Unwind_GetLanguageSpecificData(struct _Unwind_Context *context) {
   return result;
 }
 
-static uint64_t ValueAsBitPattern(_Unwind_VRS_DataRepresentation representation,
-                                  void* valuep) {
+// Only used in _LIBUNWIND_TRACE_API, which is a no-op when assertions are
+// disabled.
+[[gnu::unused]] static uint64_t
+ValueAsBitPattern(_Unwind_VRS_DataRepresentation representation,
+                  const void *valuep) {
   uint64_t value = 0;
   switch (representation) {
     case _UVRSD_UINT32:

@@ -182,7 +182,7 @@ define void @integer_extension_and_truncation(i32 %arg1) {
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
 define ptr @pointer_casts(ptr %arg1, i64 %arg2) {
-  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr to i64
   ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr
   ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr to !llvm.ptr
@@ -370,6 +370,19 @@ define void @load_store(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @invariant_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define float @invariant_load(ptr %ptr) {
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] invariant {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = load float, ptr %ptr, align 4, !invariant.load !0
+  ; CHECK:  llvm.return %[[V]]
+  ret float %1
+}
+
+!0 = !{}
+
+; // -----
+
 ; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @atomic_load_store(ptr %ptr) {
@@ -480,6 +493,17 @@ define void @indirect_call(ptr addrspace(42) %fn) {
 
 ; // -----
 
+; CHECK-LABEL: @indirect_vararg_call
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @indirect_vararg_call(ptr addrspace(42) %fn) {
+  ; CHECK:  %[[C0:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
+  ; CHECK:  llvm.call %[[PTR]](%[[C0]]) vararg(!llvm.func<void (...)>) : !llvm.ptr<42>, (i16) -> ()
+  call addrspace(42) void (...) %fn(i16 0)
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @gep_static_idx
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @gep_static_idx(ptr %ptr) {
@@ -497,8 +521,66 @@ declare void @varargs(...)
 ; CHECK-LABEL: @varargs_call
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @varargs_call(i32 %0) {
-  ; CHECK:  llvm.call @varargs(%[[ARG1]]) : (i32) -> ()
+  ; CHECK:  llvm.call @varargs(%[[ARG1]]) vararg(!llvm.func<void (...)>) : (i32) -> ()
   call void (...) @varargs(i32 %0)
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_convergent
+define void @call_convergent() {
+; CHECK: llvm.call @f() {convergent}
+  call void @f() convergent
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_no_unwind
+define void @call_no_unwind() {
+; CHECK: llvm.call @f() {no_unwind}
+  call void @f() nounwind
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_will_return
+define void @call_will_return() {
+; CHECK: llvm.call @f() {will_return}
+  call void @f() willreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_memory_effects
+define void @call_memory_effects() {
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+  call void @f() memory(none)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read>}
+  call void @f() memory(none, argmem: write, inaccessiblemem: read)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write>}
+  call void @f() memory(write, argmem: none)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read>}
+  call void @f() memory(readwrite, inaccessiblemem: read)
+; CHECK: llvm.call @f()
+; CHECK-NOT: #llvm.memory_effects
+; CHECK-SAME: : () -> ()
+  call void @f() memory(readwrite)
   ret void
 }
 

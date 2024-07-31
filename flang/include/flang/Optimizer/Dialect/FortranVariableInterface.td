@@ -75,7 +75,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// variable.
     mlir::Type getElementOrSequenceType() {
       mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
-      if (auto boxCharType = type.dyn_cast<fir::BoxCharType>())
+      if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type))
         return boxCharType.getEleTy();
       return type;
     }
@@ -87,13 +87,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is the variable an array?
     bool isArray() {
-      return getElementOrSequenceType().isa<fir::SequenceType>();
+      return mlir::isa<fir::SequenceType>(getElementOrSequenceType());
     }
 
     /// Return the rank of the entity if it is known at compile time.
     std::optional<unsigned> getRank() {
       if (auto sequenceType =
-            getElementOrSequenceType().dyn_cast<fir::SequenceType>()) {
+            mlir::dyn_cast<fir::SequenceType>(getElementOrSequenceType())) {
         if (sequenceType.hasUnknownShape())
           return {};
         return sequenceType.getDimension();
@@ -133,7 +133,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this a Fortran character variable?
     bool isCharacter() {
-      return getElementType().isa<fir::CharacterType>();
+      return mlir::isa<fir::CharacterType>(getElementType());
     }
 
     /// Is this a Fortran character variable with an explicit length?
@@ -149,7 +149,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this variable represented as a fir.box or fir.class value?
     bool isBoxValue() {
-      return getBase().getType().isa<fir::BaseBoxType>();
+      return mlir::isa<fir::BaseBoxType>(getBase().getType());
     }
 
     /// Is this variable represented as a fir.box or fir.class address?
@@ -170,8 +170,29 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::parameter);
     }
 
+    /// Is this a host associated variable?
+    bool isHostAssoc() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::host_assoc);
+    }
+
+    /// Is this variable a Fortran target?
+    bool isTarget() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::target);
+    }
+
+    /// Is this variable a Fortran intent(in)?
+    bool isIntentIn() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::intent_in);
+    }
+
     /// Interface verifier imlementation for declare operations.
-    mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
+    llvm::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 
   }];
 

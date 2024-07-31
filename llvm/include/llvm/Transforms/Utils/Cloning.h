@@ -21,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
@@ -33,7 +34,6 @@ class AAResults;
 class AllocaInst;
 class BasicBlock;
 class BlockFrequencyInfo;
-class CallGraph;
 class DebugInfoFinder;
 class DominatorTree;
 class Function;

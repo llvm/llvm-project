@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdMain.h"
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
@@ -28,11 +29,13 @@
 #include "support/ThreadCrashReporter.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -272,15 +275,6 @@ opt<bool> ImportInsertions{
     init(CodeCompleteOptions().ImportInsertions),
 };
 
-opt<bool> IncludeCleanerStdlib{
-    "include-cleaner-stdlib",
-    cat(Features),
-    desc("Apply include-cleaner analysis to standard library headers "
-         "(immature!)"),
-    init(false),
-    Hidden,
-};
-
 opt<bool> HeaderInsertionDecorators{
     "header-insertion-decorators",
     cat(Features),
@@ -316,7 +310,7 @@ RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
 RetiredFlag<bool> InlayHints("inlay-hints");
 RetiredFlag<bool> FoldingRanges("folding-ranges");
-
+RetiredFlag<bool> IncludeCleanerStdlib("include-cleaner-stdlib");
 
 opt<int> LimitResults{
     "limit-results",
@@ -557,6 +551,13 @@ opt<std::string> ProjectRoot{
 };
 #endif
 
+opt<bool> ExperimentalModulesSupport{
+    "experimental-modules-support",
+    cat(Features),
+    desc("Experimental support for standard c++ modules"),
+    init(false),
+};
+
 /// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
@@ -569,7 +570,7 @@ public:
     using namespace llvm::sys;
     // Still require "/" in body to mimic file scheme, as we want lengths of an
     // equivalent URI in both schemes to be the same.
-    if (!Body.startswith("/"))
+    if (!Body.starts_with("/"))
       return error(
           "Expect URI body to be an absolute path starting with '/': {0}",
           Body);
@@ -710,8 +711,6 @@ public:
   }
 };
 } // namespace
-} // namespace clangd
-} // namespace clang
 
 enum class ErrorResultCode : int {
   NoShutdownRequest = 1,
@@ -719,12 +718,12 @@ enum class ErrorResultCode : int {
   CheckFailed = 3
 };
 
-int main(int argc, char *argv[]) {
-  using namespace clang;
-  using namespace clang::clangd;
-
+int clangdMain(int argc, char *argv[]) {
+  // Clang could run on the main thread. e.g., when the flag '-check' or '-sync'
+  // is enabled.
+  clang::noteBottomOfStack();
+  llvm::InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::sys::AddSignalHandler(
       [](void *) {
         ThreadCrashReporter::runCrashHandlers();
@@ -848,8 +847,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
   llvm::errs().SetBuffered();
-  // Don't flush stdout when logging, this would be both slow and racy!
-  llvm::errs().tie(nullptr);
   StreamLogger Logger(llvm::errs(), LogLevel);
   LoggingSession LoggingSession(Logger);
   // Write some initial logs before we start doing any real work.
@@ -870,6 +867,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
+  Opts.EnableExperimentalModulesSupport = ExperimentalModulesSupport;
 
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:
@@ -883,7 +881,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = true;
   std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
-  std::unique_ptr<SymbolIndex> StaticIdx;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
@@ -904,14 +901,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
   auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
-  if (StaticIdx) {
-    IdxStack.emplace_back(std::move(StaticIdx));
-    IdxStack.emplace_back(
-        std::make_unique<MergedIndex>(PAI.get(), IdxStack.back().get()));
-    Opts.StaticIndex = IdxStack.back().get();
-  } else {
-    Opts.StaticIndex = PAI.get();
-  }
+  Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
@@ -980,7 +970,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
-  setIncludeCleanerAnalyzesStdlib(IncludeCleanerStdlib);
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
@@ -1041,3 +1030,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   return ExitCode;
 }
+
+} // namespace clangd
+} // namespace clang

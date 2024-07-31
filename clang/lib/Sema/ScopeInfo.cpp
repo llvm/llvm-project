@@ -39,6 +39,7 @@ void FunctionScopeInfo::Clear() {
   FirstReturnLoc = SourceLocation();
   FirstCXXOrObjCTryLoc = SourceLocation();
   FirstSEHTryLoc = SourceLocation();
+  FirstVLALoc = SourceLocation();
   FoundImmediateEscalatingExpression = false;
 
   // Coroutine state
@@ -246,6 +247,14 @@ void LambdaScopeInfo::visitPotentialCaptures(
       llvm_unreachable("unexpected expression in potential captures list");
     }
   }
+}
+
+bool LambdaScopeInfo::lambdaCaptureShouldBeConst() const {
+  if (ExplicitObjectParameter)
+    return ExplicitObjectParameter->getType()
+        .getNonReferenceType()
+        .isConstQualified();
+  return !Mutable;
 }
 
 FunctionScopeInfo::~FunctionScopeInfo() { }

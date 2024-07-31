@@ -27,6 +27,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__sgpr_samp(<8 x i32> inre
   ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__sgpr_rsrc__sgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
@@ -81,6 +82,7 @@ define amdgpu_ps void @sample_1d_sgpr_vaddr__sgpr_rsrc__sgpr_samp(<8 x i32> inre
   ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY13]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_sgpr_vaddr__sgpr_rsrc__sgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14
@@ -159,8 +161,8 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; FAST-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
   ; FAST-NEXT:   [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
   ; FAST-NEXT:   [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
-  ; FAST-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
-  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
+  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -177,6 +179,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
@@ -224,8 +227,8 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; GREEDY-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
   ; GREEDY-NEXT:   [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
   ; GREEDY-NEXT:   [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
-  ; GREEDY-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
-  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
+  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -288,8 +291,8 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; FAST-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; FAST-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; FAST-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -306,6 +309,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
@@ -345,8 +349,8 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; GREEDY-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GREEDY-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GREEDY-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -429,8 +433,8 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; FAST-NEXT:   [[AND3:%[0-9]+]]:vcc(s1) = G_AND [[AND2]], [[ICMP4]]
   ; FAST-NEXT:   [[ICMP5:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV23]](s64), [[UV21]]
   ; FAST-NEXT:   [[AND4:%[0-9]+]]:vcc(s1) = G_AND [[AND3]], [[ICMP5]]
-  ; FAST-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND4]](s1)
-  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND4]](s1)
+  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -447,6 +451,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
+  ;
   ; GREEDY-LABEL: name: sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp
   ; GREEDY: bb.1 (%ir-block.0):
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
@@ -506,8 +511,8 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; GREEDY-NEXT:   [[AND3:%[0-9]+]]:vcc(s1) = G_AND [[AND2]], [[ICMP4]]
   ; GREEDY-NEXT:   [[ICMP5:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV23]](s64), [[UV21]]
   ; GREEDY-NEXT:   [[AND4:%[0-9]+]]:vcc(s1) = G_AND [[AND3]], [[ICMP5]]
-  ; GREEDY-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND4]](s1)
-  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND4]](s1)
+  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)

@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -25,6 +26,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
@@ -45,9 +47,10 @@ class WebAssemblyDisassembler final : public MCDisassembler {
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
-  std::optional<DecodeStatus>
-  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                uint64_t Address, raw_ostream &CStream) const override;
+
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
 
 public:
   WebAssemblyDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -108,8 +111,8 @@ template <typename T>
 bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   if (Size + sizeof(T) > Bytes.size())
     return false;
-  T Val = support::endian::read<T, support::endianness::little, 1>(
-      Bytes.data() + Size);
+  T Val =
+      support::endian::read<T, llvm::endianness::little>(Bytes.data() + Size);
   Size += sizeof(T);
   if (std::is_floating_point<T>::value) {
     MI.addOperand(
@@ -120,31 +123,30 @@ bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   return true;
 }
 
-std::optional<MCDisassembler::DecodeStatus>
-WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                                       ArrayRef<uint8_t> Bytes,
-                                       uint64_t Address,
-                                       raw_ostream &CStream) const {
+Expected<bool> WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                                      uint64_t &Size,
+                                                      ArrayRef<uint8_t> Bytes,
+                                                      uint64_t Address) const {
   Size = 0;
-  if (Address == 0) {
+  if (Symbol.Type == wasm::WASM_SYMBOL_TYPE_SECTION) {
     // Start of a code section: we're parsing only the function count.
     int64_t FunctionCount;
     if (!nextLEB(FunctionCount, Bytes, Size, false))
-      return std::nullopt;
+      return false;
     outs() << "        # " << FunctionCount << " functions in section.";
   } else {
     // Parse the start of a single function.
     int64_t BodySize, LocalEntryCount;
     if (!nextLEB(BodySize, Bytes, Size, false) ||
         !nextLEB(LocalEntryCount, Bytes, Size, false))
-      return std::nullopt;
+      return false;
     if (LocalEntryCount) {
       outs() << "        .local ";
       for (int64_t I = 0; I < LocalEntryCount; I++) {
         int64_t Count, Type;
         if (!nextLEB(Count, Bytes, Size, false) ||
             !nextLEB(Type, Bytes, Size, false))
-          return std::nullopt;
+          return false;
         for (int64_t J = 0; J < Count; J++) {
           if (I || J)
             outs() << ", ";
@@ -154,7 +156,7 @@ WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
     }
   }
   outs() << "\n";
-  return MCDisassembler::Success;
+  return true;
 }
 
 MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(

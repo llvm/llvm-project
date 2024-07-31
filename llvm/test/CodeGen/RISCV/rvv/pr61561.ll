@@ -14,7 +14,7 @@ define <vscale x 4 x i8> @foo(ptr %p) {
 ; CHECK-NEXT:    lui a0, 4
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    lui a0, 1
-; CHECK-NEXT:    addiw a0, a0, -361
+; CHECK-NEXT:    addi a0, a0, -361
 ; CHECK-NEXT:    vmacc.vx v10, a0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 15
@@ -23,11 +23,11 @@ define <vscale x 4 x i8> @foo(ptr %p) {
 ; CHECK-NEXT:    ret
   %i13 = load <vscale x 4 x i16>, ptr %p, align 2
   %i14 = zext <vscale x 4 x i16> %i13 to <vscale x 4 x i32>
-  %i15 = shl nuw nsw <vscale x 4 x i32> %i14, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-  %i16 = and <vscale x 4 x i32> %i15, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 248, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-  %i17 = mul nuw nsw <vscale x 4 x i32> %i16, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3735, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-  %i18 = add nuw nsw <vscale x 4 x i32> %i17, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 16384, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-  %i21 = lshr <vscale x 4 x i32> %i18, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 15, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %i15 = shl nuw nsw <vscale x 4 x i32> %i14, splat (i32 3)
+  %i16 = and <vscale x 4 x i32> %i15, splat (i32 248)
+  %i17 = mul nuw nsw <vscale x 4 x i32> %i16, splat (i32 3735)
+  %i18 = add nuw nsw <vscale x 4 x i32> %i17, splat (i32 16384)
+  %i21 = lshr <vscale x 4 x i32> %i18, splat (i32 15)
   %i22 = trunc <vscale x 4 x i32> %i21 to <vscale x 4 x i8>
   ret <vscale x 4 x i8> %i22
 }

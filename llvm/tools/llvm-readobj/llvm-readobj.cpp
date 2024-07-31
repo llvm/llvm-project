@@ -42,7 +42,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -55,9 +54,7 @@ namespace {
 using namespace llvm::opt; // for HelpHidden in Opts.inc
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -70,13 +67,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -104,12 +95,15 @@ static bool Addrsig;
 static bool All;
 static bool ArchSpecificInfo;
 static bool BBAddrMap;
+static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
 static bool CGProfile;
+static bool Decompress;
 bool Demangle;
 static bool DependentLibraries;
 static bool DynRelocs;
 static bool DynamicSymbols;
+static bool ExtraSymInfo;
 static bool FileHeaders;
 static bool Headers;
 static std::vector<std::string> HexDump;
@@ -140,7 +134,6 @@ static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
-bool RawRelr;
 static bool SectionGroups;
 static bool VersionInfo;
 
@@ -219,12 +212,19 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::All = Args.hasArg(OPT_all);
   opts::ArchSpecificInfo = Args.hasArg(OPT_arch_specific);
   opts::BBAddrMap = Args.hasArg(OPT_bb_addr_map);
+  opts::PrettyPGOAnalysisMap = Args.hasArg(OPT_pretty_pgo_analysis_map);
+  if (opts::PrettyPGOAnalysisMap && !opts::BBAddrMap)
+    WithColor::warning(errs(), ToolName)
+        << "--bb-addr-map must be enabled for --pretty-pgo-analysis-map to "
+           "have an effect\n";
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
+  opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
   opts::DependentLibraries = Args.hasArg(OPT_dependent_libraries);
   opts::DynRelocs = Args.hasArg(OPT_dyn_relocations);
   opts::DynamicSymbols = Args.hasArg(OPT_dyn_syms);
   opts::ExpandRelocs = Args.hasArg(OPT_expand_relocs);
+  opts::ExtraSymInfo = Args.hasArg(OPT_extra_sym_info);
   opts::FileHeaders = Args.hasArg(OPT_file_header);
   opts::Headers = Args.hasArg(OPT_headers);
   opts::HexDump = Args.getAllArgValues(OPT_hex_dump_EQ);
@@ -272,7 +272,6 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Notes = Args.hasArg(OPT_notes);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
-  opts::RawRelr = Args.hasArg(OPT_raw_relr);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
     std::string SortKeysString = A->getValue();
@@ -443,11 +442,12 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
   if (opts::UnwindInfo)
     Dumper->printUnwindInfo();
   if (opts::Symbols || opts::DynamicSymbols)
-    Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols, SymComp);
+    Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols,
+                         opts::ExtraSymInfo, SymComp);
   if (!opts::StringDump.empty())
-    Dumper->printSectionsAsString(Obj, opts::StringDump);
+    Dumper->printSectionsAsString(Obj, opts::StringDump, opts::Decompress);
   if (!opts::HexDump.empty())
-    Dumper->printSectionsAsHex(Obj, opts::HexDump);
+    Dumper->printSectionsAsHex(Obj, opts::HexDump, opts::Decompress);
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
@@ -470,7 +470,7 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     if (opts::CGProfile)
       Dumper->printCGProfile();
     if (opts::BBAddrMap)
-      Dumper->printBBAddrMaps();
+      Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
       Dumper->printAddrsig();
     if (opts::Notes)
@@ -638,7 +638,6 @@ std::unique_ptr<ScopedPrinter> createWriter() {
 }
 
 int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ReadobjOptTable Tbl;
@@ -701,14 +700,14 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
   std::unique_ptr<ScopedPrinter> Writer = createWriter();
 
   for (const std::string &I : opts::InputFilenames)
-    dumpInput(I, *Writer.get());
+    dumpInput(I, *Writer);
 
   if (opts::CodeViewMergedTypes) {
     if (opts::CodeViewEnableGHash)
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.GlobalIDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.GlobalIDTable.records(),
                               CVTypes.GlobalTypeTable.records());
     else
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.IDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.IDTable.records(),
                               CVTypes.TypeTable.records());
   }
 

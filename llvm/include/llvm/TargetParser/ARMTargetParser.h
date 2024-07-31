@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_ARMTARGETPARSER_H
 #define LLVM_TARGETPARSER_ARMTARGETPARSER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -28,44 +29,44 @@ namespace ARM {
 // Arch extension modifiers for CPUs.
 // Note that this is not the same as the AArch64 list
 enum ArchExtKind : uint64_t {
-  AEK_INVALID =     0,
-  AEK_NONE =        1,
-  AEK_CRC =         1 << 1,
-  AEK_CRYPTO =      1 << 2,
-  AEK_FP =          1 << 3,
-  AEK_HWDIVTHUMB =  1 << 4,
-  AEK_HWDIVARM =    1 << 5,
-  AEK_MP =          1 << 6,
-  AEK_SIMD =        1 << 7,
-  AEK_SEC =         1 << 8,
-  AEK_VIRT =        1 << 9,
-  AEK_DSP =         1 << 10,
-  AEK_FP16 =        1 << 11,
-  AEK_RAS =         1 << 12,
-  AEK_DOTPROD =     1 << 13,
-  AEK_SHA2    =     1 << 14,
-  AEK_AES     =     1 << 15,
-  AEK_FP16FML =     1 << 16,
-  AEK_SB      =     1 << 17,
-  AEK_FP_DP   =     1 << 18,
-  AEK_LOB     =     1 << 19,
-  AEK_BF16    =     1 << 20,
-  AEK_I8MM    =     1 << 21,
-  AEK_CDECP0 =      1 << 22,
-  AEK_CDECP1 =      1 << 23,
-  AEK_CDECP2 =      1 << 24,
-  AEK_CDECP3 =      1 << 25,
-  AEK_CDECP4 =      1 << 26,
-  AEK_CDECP5 =      1 << 27,
-  AEK_CDECP6 =      1 << 28,
-  AEK_CDECP7 =      1 << 29,
-  AEK_PACBTI =      1 << 30,
+  AEK_INVALID = 0,
+  AEK_NONE = 1,
+  AEK_CRC = 1 << 1,
+  AEK_CRYPTO = 1 << 2,
+  AEK_FP = 1 << 3,
+  AEK_HWDIVTHUMB = 1 << 4,
+  AEK_HWDIVARM = 1 << 5,
+  AEK_MP = 1 << 6,
+  AEK_SIMD = 1 << 7,
+  AEK_SEC = 1 << 8,
+  AEK_VIRT = 1 << 9,
+  AEK_DSP = 1 << 10,
+  AEK_FP16 = 1 << 11,
+  AEK_RAS = 1 << 12,
+  AEK_DOTPROD = 1 << 13,
+  AEK_SHA2 = 1 << 14,
+  AEK_AES = 1 << 15,
+  AEK_FP16FML = 1 << 16,
+  AEK_SB = 1 << 17,
+  AEK_FP_DP = 1 << 18,
+  AEK_LOB = 1 << 19,
+  AEK_BF16 = 1 << 20,
+  AEK_I8MM = 1 << 21,
+  AEK_CDECP0 = 1 << 22,
+  AEK_CDECP1 = 1 << 23,
+  AEK_CDECP2 = 1 << 24,
+  AEK_CDECP3 = 1 << 25,
+  AEK_CDECP4 = 1 << 26,
+  AEK_CDECP5 = 1 << 27,
+  AEK_CDECP6 = 1 << 28,
+  AEK_CDECP7 = 1 << 29,
+  AEK_PACBTI = 1 << 30,
   // Unsupported extensions.
-  AEK_OS       =    1ULL << 59,
-  AEK_IWMMXT   =    1ULL << 60,
-  AEK_IWMMXT2  =    1ULL << 61,
-  AEK_MAVERICK =    1ULL << 62,
-  AEK_XSCALE   =    1ULL << 63,
+  AEK_OS = 1ULL << 59,
+  AEK_IWMMXT = 1ULL << 60,
+  AEK_IWMMXT2 = 1ULL << 61,
+  AEK_MAVERICK = 1ULL << 62,
+  AEK_XSCALE = 1ULL << 63,
 };
 
 // List of Arch Extension names.
@@ -141,6 +142,14 @@ enum class FPURestriction {
   D16,      ///< Only 16 D registers
   SP_D16    ///< Only single-precision instructions, with 16 D registers
 };
+
+inline bool isDoublePrecision(const FPURestriction restriction) {
+  return restriction != FPURestriction::SP_D16;
+}
+
+inline bool has32Regs(const FPURestriction restriction) {
+  return restriction == FPURestriction::None;
+}
 
 // An FPU name implies one of three levels of Neon support:
 enum class NeonSupportLevel {
@@ -258,6 +267,8 @@ StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 /// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
 /// string then the triple's arch name is used.
 StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
+
+void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 
 } // namespace ARM
 } // namespace llvm

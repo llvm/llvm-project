@@ -31,8 +31,8 @@
 #ifndef C99_KEYWORD
 #define C99_KEYWORD(X,Y) KEYWORD(X,KEYC99|(Y))
 #endif
-#ifndef C2X_KEYWORD
-#define C2X_KEYWORD(X,Y) KEYWORD(X,KEYC2X|(Y))
+#ifndef C23_KEYWORD
+#define C23_KEYWORD(X,Y) KEYWORD(X,KEYC23|(Y))
 #endif
 #ifndef COROUTINES_KEYWORD
 #define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
@@ -85,6 +85,9 @@
 #ifndef PRAGMA_ANNOTATION
 #define PRAGMA_ANNOTATION(X) ANNOTATION(X)
 #endif
+#ifndef NOTABLE_IDENTIFIER
+#define NOTABLE_IDENTIFIER(X)
+#endif
 
 //===----------------------------------------------------------------------===//
 // Preprocessor keywords.
@@ -123,6 +126,9 @@ PPKEYWORD(error)
 // C99 6.10.6 - Pragma Directive.
 PPKEYWORD(pragma)
 
+// C23 & C++26 #embed
+PPKEYWORD(embed)
+
 // GNU Extensions.
 PPKEYWORD(import)
 PPKEYWORD(include_next)
@@ -158,6 +164,9 @@ TOK(raw_identifier)      // Used only in raw lexing mode.
 // C99 6.4.4.1: Integer Constants
 // C99 6.4.4.2: Floating Constants
 TOK(numeric_constant)    // 0x123
+
+// Directly holds numerical value. Used to process C23 #embed.
+TOK(binary_data)
 
 // C99 6.4.4: Character Constants
 TOK(char_constant)       // 'a'
@@ -256,7 +265,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //              always be treated as a keyword
 //   KEYC99   - This is a keyword introduced to C in C99
 //   KEYC11   - This is a keyword introduced to C in C11
-//   KEYC2X   - This is a keyword introduced to C in C2x
+//   KEYC23   - This is a keyword introduced to C in C23
 //   KEYCXX   - This is a C++ keyword, or a C++-specific keyword in the
 //              implementation namespace
 //   KEYNOCXX - This is a keyword in every non-C++ dialect.
@@ -281,6 +290,8 @@ PUNCTUATOR(caretcaret,            "^^")
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
 //   WCHARSUPPORT - This is a keyword if 'wchar_t' is a built-in type
 //   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
+//   KEYFIXEDPOINT - This is a keyword according to the N1169 fixed point
+//                   extension.
 //
 KEYWORD(auto                        , KEYALL)
 KEYWORD(break                       , KEYALL)
@@ -307,6 +318,7 @@ KEYWORD(return                      , KEYALL)
 KEYWORD(short                       , KEYALL)
 KEYWORD(signed                      , KEYALL)
 UNARY_EXPR_OR_TYPE_TRAIT(sizeof, SizeOf, KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__datasizeof, DataSizeOf, KEYCXX)
 KEYWORD(static                      , KEYALL)
 KEYWORD(struct                      , KEYALL)
 KEYWORD(switch                      , KEYALL)
@@ -322,6 +334,11 @@ KEYWORD(_Atomic                     , KEYALL|KEYNOOPENCL)
 KEYWORD(_Bool                       , KEYNOCXX)
 KEYWORD(_Complex                    , KEYALL)
 KEYWORD(_Generic                    , KEYALL)
+// Note, C2y removed support for _Imaginary; we retain it as a keyword because
+// 1) it's a reserved identifier, so we're allowed to steal it, 2) there's no
+// good way to specify a keyword in earlier but not later language modes within
+// this file, 3) this allows us to provide a better diagnostic in case a user
+// does use the keyword.
 KEYWORD(_Imaginary                  , KEYALL)
 KEYWORD(_Noreturn                   , KEYALL)
 KEYWORD(_Static_assert              , KEYALL)
@@ -333,7 +350,7 @@ KEYWORD(__objc_no                   , KEYALL)
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
-KEYWORD(bool                        , BOOLSUPPORT|KEYC2X)
+KEYWORD(bool                        , BOOLSUPPORT|KEYC23)
 KEYWORD(catch                       , KEYCXX)
 KEYWORD(class                       , KEYCXX)
 KEYWORD(const_cast                  , KEYCXX)
@@ -341,7 +358,7 @@ KEYWORD(delete                      , KEYCXX)
 KEYWORD(dynamic_cast                , KEYCXX)
 KEYWORD(explicit                    , KEYCXX)
 KEYWORD(export                      , KEYCXX)
-KEYWORD(false                       , BOOLSUPPORT|KEYC2X)
+KEYWORD(false                       , BOOLSUPPORT|KEYC23)
 KEYWORD(friend                      , KEYCXX)
 KEYWORD(mutable                     , KEYCXX)
 KEYWORD(namespace                   , KEYCXX)
@@ -355,7 +372,7 @@ KEYWORD(static_cast                 , KEYCXX)
 KEYWORD(template                    , KEYCXX)
 KEYWORD(this                        , KEYCXX)
 KEYWORD(throw                       , KEYCXX)
-KEYWORD(true                        , BOOLSUPPORT|KEYC2X)
+KEYWORD(true                        , BOOLSUPPORT|KEYC23)
 KEYWORD(try                         , KEYCXX)
 KEYWORD(typename                    , KEYCXX)
 KEYWORD(typeid                      , KEYCXX)
@@ -382,17 +399,17 @@ C99_KEYWORD(inline                      , KEYCXX|KEYGNU)
 
 
 // C++11 keywords
-CXX11_KEYWORD(alignas               , KEYC2X)
+CXX11_KEYWORD(alignas               , KEYC23)
 // alignof and _Alignof return the required ABI alignment
-CXX11_UNARY_EXPR_OR_TYPE_TRAIT(alignof, AlignOf, KEYC2X)
+CXX11_UNARY_EXPR_OR_TYPE_TRAIT(alignof, AlignOf, KEYC23)
 CXX11_KEYWORD(char16_t              , KEYNOMS18)
 CXX11_KEYWORD(char32_t              , KEYNOMS18)
-CXX11_KEYWORD(constexpr             , 0)
+CXX11_KEYWORD(constexpr             , KEYC23)
 CXX11_KEYWORD(decltype              , 0)
 CXX11_KEYWORD(noexcept              , 0)
-CXX11_KEYWORD(nullptr               , KEYC2X)
-CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC2X)
-CXX11_KEYWORD(thread_local          , KEYC2X)
+CXX11_KEYWORD(nullptr               , KEYC23)
+CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC23)
+CXX11_KEYWORD(thread_local          , KEYC23)
 
 // C++20 / coroutines keywords
 COROUTINES_KEYWORD(co_await)
@@ -415,14 +432,14 @@ KEYWORD(char8_t                     , CHAR8SUPPORT)
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
 
-// C2x keywords
-C2X_KEYWORD(typeof                  , KEYGNU)
-C2X_KEYWORD(typeof_unqual           , 0)
+// C23 keywords
+C23_KEYWORD(typeof                  , KEYGNU)
+C23_KEYWORD(typeof_unqual           , 0)
 
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
-KEYWORD(_Accum                      , KEYNOCXX)
-KEYWORD(_Fract                      , KEYNOCXX)
-KEYWORD(_Sat                        , KEYNOCXX)
+KEYWORD(_Accum                      , KEYFIXEDPOINT)
+KEYWORD(_Fract                      , KEYFIXEDPOINT)
+KEYWORD(_Sat                        , KEYFIXEDPOINT)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
@@ -484,6 +501,7 @@ TYPE_TRAIT_1(__has_trivial_move_assign, HasTrivialMoveAssign, KEYCXX)
 TYPE_TRAIT_1(__has_trivial_move_constructor, HasTrivialMoveConstructor, KEYCXX)
 
 // GNU and MS Type Traits
+TYPE_TRAIT_2(__builtin_is_virtual_base_of, IsVirtualBaseOf, KEYCXX)
 TYPE_TRAIT_1(__has_nothrow_assign, HasNothrowAssign, KEYCXX)
 TYPE_TRAIT_1(__has_nothrow_copy, HasNothrowCopy, KEYCXX)
 TYPE_TRAIT_1(__has_nothrow_constructor, HasNothrowConstructor, KEYCXX)
@@ -514,6 +532,8 @@ TYPE_TRAIT_1(__is_trivially_copyable, IsTriviallyCopyable, KEYCXX)
 TYPE_TRAIT_1(__is_union, IsUnion, KEYCXX)
 TYPE_TRAIT_1(__has_unique_object_representations,
              HasUniqueObjectRepresentations, KEYCXX)
+TYPE_TRAIT_2(__is_layout_compatible, IsLayoutCompatible, KEYCXX)
+TYPE_TRAIT_2(__is_pointer_interconvertible_base_of, IsPointerInterconvertibleBaseOf, KEYCXX)
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) KEYWORD(__##Trait, KEYCXX)
 #include "clang/Basic/TransformTypeTraits.def"
@@ -528,6 +548,13 @@ TYPE_TRAIT_1(__is_scoped_enum, IsScopedEnum, KEYCXX)
 TYPE_TRAIT_1(__is_referenceable, IsReferenceable, KEYCXX)
 TYPE_TRAIT_1(__can_pass_in_regs, CanPassInRegs, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
+TYPE_TRAIT_2(__reference_constructs_from_temporary, ReferenceConstructsFromTemporary, KEYCXX)
+TYPE_TRAIT_2(__reference_converts_from_temporary, ReferenceConvertsFromTemporary, KEYCXX)
+// IsDeducible is only used internally by clang for CTAD implementation and
+// is not exposed to users.
+TYPE_TRAIT_2(/*EmptySpellingName*/, IsDeducible, KEYCXX)
+
+TYPE_TRAIT_1(__is_bitwise_cloneable, IsBitwiseCloneable, KEYALL)
 
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
@@ -560,6 +587,7 @@ TYPE_TRAIT_1(__is_unsigned, IsUnsigned, KEYCXX)
 // Embarcadero Binary Type Traits
 TYPE_TRAIT_2(__is_same, IsSame, KEYCXX)
 TYPE_TRAIT_2(__is_convertible, IsConvertible, KEYCXX)
+TYPE_TRAIT_2(__is_nothrow_convertible, IsNothrowConvertible, KEYCXX)
 ARRAY_TYPE_TRAIT(__array_rank, ArrayRank, KEYCXX)
 ARRAY_TYPE_TRAIT(__array_extent, ArrayExtent, KEYCXX)
 // Name for GCC 6 compatibility.
@@ -568,6 +596,8 @@ ALIAS("__is_same_as", __is_same, KEYCXX)
 // Apple Extension.
 KEYWORD(__private_extern__          , KEYALL)
 KEYWORD(__module_private__          , KEYALL)
+
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_type_discriminator, PtrAuthTypeDiscriminator, KEYALL)
 
 // Extension that will be enabled for Microsoft, Borland and PS4, but can be
 // disabled via '-fno-declspec'.
@@ -621,6 +651,9 @@ KEYWORD(__noinline__                , KEYCUDA)
 KEYWORD(cbuffer                     , KEYHLSL)
 KEYWORD(tbuffer                     , KEYHLSL)
 KEYWORD(groupshared                 , KEYHLSL)
+KEYWORD(in                          , KEYHLSL)
+KEYWORD(inout                       , KEYHLSL)
+KEYWORD(out                         , KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
@@ -653,28 +686,30 @@ KEYWORD(__kindof                     , KEYOBJC)
 
 // Alternate spelling for various tokens.  There are GCC extensions in all
 // languages, but should not be disabled in strict conformance mode.
-ALIAS("__alignof__"  , __alignof  , KEYALL)
-ALIAS("__asm"        , asm        , KEYALL)
-ALIAS("__asm__"      , asm        , KEYALL)
-ALIAS("__attribute__", __attribute, KEYALL)
-ALIAS("__complex"    , _Complex   , KEYALL)
-ALIAS("__complex__"  , _Complex   , KEYALL)
-ALIAS("__const"      , const      , KEYALL)
-ALIAS("__const__"    , const      , KEYALL)
-ALIAS("__decltype"   , decltype   , KEYCXX)
-ALIAS("__imag__"     , __imag     , KEYALL)
-ALIAS("__inline"     , inline     , KEYALL)
-ALIAS("__inline__"   , inline     , KEYALL)
-ALIAS("__nullptr"    , nullptr    , KEYCXX)
-ALIAS("__real__"     , __real     , KEYALL)
-ALIAS("__restrict"   , restrict   , KEYALL)
-ALIAS("__restrict__" , restrict   , KEYALL)
-ALIAS("__signed"     , signed     , KEYALL)
-ALIAS("__signed__"   , signed     , KEYALL)
-ALIAS("__typeof"     , typeof     , KEYALL)
-ALIAS("__typeof__"   , typeof     , KEYALL)
-ALIAS("__volatile"   , volatile   , KEYALL)
-ALIAS("__volatile__" , volatile   , KEYALL)
+ALIAS("__alignof__"      , __alignof    , KEYALL)
+ALIAS("__asm"            , asm          , KEYALL)
+ALIAS("__asm__"          , asm          , KEYALL)
+ALIAS("__attribute__"    , __attribute  , KEYALL)
+ALIAS("__complex"        , _Complex     , KEYALL)
+ALIAS("__complex__"      , _Complex     , KEYALL)
+ALIAS("__const"          , const        , KEYALL)
+ALIAS("__const__"        , const        , KEYALL)
+ALIAS("__decltype"       , decltype     , KEYCXX)
+ALIAS("__imag__"         , __imag       , KEYALL)
+ALIAS("__inline"         , inline       , KEYALL)
+ALIAS("__inline__"       , inline       , KEYALL)
+ALIAS("__nullptr"        , nullptr      , KEYCXX)
+ALIAS("__real__"         , __real       , KEYALL)
+ALIAS("__restrict"       , restrict     , KEYALL)
+ALIAS("__restrict__"     , restrict     , KEYALL)
+ALIAS("__signed"         , signed       , KEYALL)
+ALIAS("__signed__"       , signed       , KEYALL)
+ALIAS("__typeof"         , typeof       , KEYALL)
+ALIAS("__typeof__"       , typeof       , KEYALL)
+ALIAS("__typeof_unqual"  , typeof_unqual, KEYALL)
+ALIAS("__typeof_unqual__", typeof_unqual, KEYALL)
+ALIAS("__volatile"       , volatile     , KEYALL)
+ALIAS("__volatile__"     , volatile     , KEYALL)
 
 // Type nullability.
 KEYWORD(_Nonnull                 , KEYALL)
@@ -742,6 +777,7 @@ ALIAS("_pascal"      , __pascal   , KEYBORLAND)
 
 // Clang Extensions.
 KEYWORD(__builtin_convertvector          , KEYALL)
+UNARY_EXPR_OR_TYPE_TRAIT(__builtin_vectorelements, VectorElements, KEYALL)
 ALIAS("__char16_t"   , char16_t          , KEYCXX)
 ALIAS("__char32_t"   , char32_t          , KEYCXX)
 KEYWORD(__builtin_bit_cast               , KEYALL)
@@ -749,10 +785,11 @@ KEYWORD(__builtin_available              , KEYALL)
 KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 
 // Keywords defined by Attr.td.
+// The "EMPTY ## X" is used to prevent early macro-expansion of the keyword.
 #ifndef KEYWORD_ATTRIBUTE
-#define KEYWORD_ATTRIBUTE(X) KEYWORD(X, KEYALL)
+#define KEYWORD_ATTRIBUTE(X, HASARG, EMPTY) KEYWORD(EMPTY ## X, KEYALL)
 #endif
-#include "clang/Basic/AttrTokenKinds.inc"
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
 
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
@@ -794,6 +831,17 @@ OBJC_AT_KEYWORD(dynamic)
 OBJC_AT_KEYWORD(import)
 OBJC_AT_KEYWORD(available)
 
+//===----------------------------------------------------------------------===//
+// Notable identifiers.
+//===----------------------------------------------------------------------===//
+NOTABLE_IDENTIFIER(not_notable)
+NOTABLE_IDENTIFIER(FILE)
+NOTABLE_IDENTIFIER(jmp_buf)
+NOTABLE_IDENTIFIER(sigjmp_buf)
+NOTABLE_IDENTIFIER(ucontext_t)
+NOTABLE_IDENTIFIER(float_t)
+NOTABLE_IDENTIFIER(double_t)
+
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
 
@@ -817,6 +865,8 @@ ANNOTATION(primary_expr) // annotation for a primary expression, used when
                          // message send
 ANNOTATION(decltype)     // annotation for a decltype expression,
                          // e.g., "decltype(foo.bar())"
+ANNOTATION(pack_indexing_type) // annotation for an indexed pack of type,
+                              // e.g., "T...[expr]"
 
 // Annotation for #pragma unused(...)
 // For each argument inside the parentheses the pragma handler will produce
@@ -889,6 +939,11 @@ PRAGMA_ANNOTATION(pragma_fenv_access_ms)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_round)
 
+// Annotation for #pragma STDC CX_LIMITED_RANGE
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+PRAGMA_ANNOTATION(pragma_cx_limited_range)
+
 // Annotation for #pragma float_control
 // The lexer produces these so that they only take effect when the parser
 // handles them.
@@ -927,6 +982,12 @@ ANNOTATION(attr_openmp)
 PRAGMA_ANNOTATION(pragma_openmp)
 PRAGMA_ANNOTATION(pragma_openmp_end)
 
+// Annotations for OpenACC pragma directives - #pragma acc.
+// Like with OpenMP, these are produced by the lexer when it parses a
+// #pragma acc directive so it can be handled during parsing of the directives.
+PRAGMA_ANNOTATION(pragma_openacc)
+PRAGMA_ANNOTATION(pragma_openacc_end)
+
 // Annotations for loop pragma directives #pragma clang loop ...
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma loop ... directives.
@@ -952,6 +1013,9 @@ ANNOTATION(header_unit)
 // Annotation for end of input in clang-repl.
 ANNOTATION(repl_input_end)
 
+// Annotation for #embed
+ANNOTATION(embed)
+
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION
 #undef TESTING_KEYWORD
@@ -973,4 +1037,5 @@ ANNOTATION(repl_input_end)
 #undef PUNCTUATOR
 #undef TOK
 #undef C99_KEYWORD
-#undef C2X_KEYWORD
+#undef C23_KEYWORD
+#undef NOTABLE_IDENTIFIER

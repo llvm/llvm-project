@@ -8,11 +8,21 @@
 
 #include "CollectMacros.h"
 #include "AST.h"
+#include "Protocol.h"
+#include "SourceCode.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include <cstddef>
 
 namespace clang {
 namespace clangd {
+
+Range MacroOccurrence::toRange(const SourceManager &SM) const {
+  auto MainFile = SM.getMainFileID();
+  return halfOpenToRange(
+      SM, syntax::FileRange(MainFile, StartOffset, EndOffset).toCharRange(SM));
+}
 
 void CollectMainFileMacros::add(const Token &MacroNameTok, const MacroInfo *MI,
                                 bool IsDefinition, bool InIfCondition) {
@@ -24,12 +34,12 @@ void CollectMainFileMacros::add(const Token &MacroNameTok, const MacroInfo *MI,
 
   auto Name = MacroNameTok.getIdentifierInfo()->getName();
   Out.Names.insert(Name);
-  auto Range = halfOpenToRange(
-      SM, CharSourceRange::getCharRange(Loc, MacroNameTok.getEndLoc()));
+  size_t Start = SM.getFileOffset(Loc);
+  size_t End = SM.getFileOffset(MacroNameTok.getEndLoc());
   if (auto SID = getSymbolID(Name, MI, SM))
-    Out.MacroRefs[SID].push_back({Range, IsDefinition, InIfCondition});
+    Out.MacroRefs[SID].push_back({Start, End, IsDefinition, InIfCondition});
   else
-    Out.UnknownMacros.push_back({Range, IsDefinition, InIfCondition});
+    Out.UnknownMacros.push_back({Start, End, IsDefinition, InIfCondition});
 }
 
 void CollectMainFileMacros::FileChanged(SourceLocation Loc, FileChangeReason,

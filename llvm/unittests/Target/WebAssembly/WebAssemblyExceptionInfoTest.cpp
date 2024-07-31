@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -36,7 +37,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOpt::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -167,7 +168,7 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.runOnMachineFunction(*MF);
+  MDT.calculate(*MF);
   MDF.getBase().analyze(MDT.getBase());
   WEI.recalculate(*MF, MDT, MDF);
 
@@ -342,7 +343,7 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.runOnMachineFunction(*MF);
+  MDT.calculate(*MF);
   MDF.getBase().analyze(MDT.getBase());
   WEI.recalculate(*MF, MDT, MDF);
 

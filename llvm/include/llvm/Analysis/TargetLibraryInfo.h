@@ -24,14 +24,46 @@ class Function;
 class Module;
 class Triple;
 
-/// Describes a possible vectorization of a function.
-/// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
-/// by a factor 'VectorizationFactor'.
-struct VecDesc {
+/// Provides info so a possible vectorization of a function can be
+/// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
+/// vectorized by a factor 'VectorizationFactor'.
+/// The VABIPrefix string holds information about isa, mask, vlen,
+/// and vparams so a scalar-to-vector mapping of the form:
+///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
+/// can be constructed where:
+///
+/// <isa> = "_LLVM_"
+/// <mask> = "M" if masked, "N" if no mask.
+/// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
+///          field of the `VecDesc` struct. If the number of lanes is scalable
+///          then 'x' is printed instead.
+/// <vparams> = "v", as many as are the numArgs.
+/// <scalarname> = the name of the scalar function.
+/// <vectorname> = the name of the vector function.
+class VecDesc {
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
   bool Masked;
+  StringRef VABIPrefix;
+
+public:
+  VecDesc() = delete;
+  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
+          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix)
+      : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
+        VectorizationFactor(VectorizationFactor), Masked(Masked),
+        VABIPrefix(VABIPrefix) {}
+
+  StringRef getScalarFnName() const { return ScalarFnName; }
+  StringRef getVectorFnName() const { return VectorFnName; }
+  ElementCount getVectorizationFactor() const { return VectorizationFactor; }
+  bool isMasked() const { return Masked; }
+  StringRef getVABIPrefix() const { return VABIPrefix; }
+
+  /// Returns a vector function ABI variant string on the form:
+  ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
+  std::string getVectorFunctionABIVariantString() const;
 };
 
   enum LibFunc : unsigned {
@@ -96,7 +128,9 @@ public:
     LIBMVEC_X86,      // GLIBC Vector Math library.
     MASSV,            // IBM MASS vector library.
     SVML,             // Intel short vector math library.
-    SLEEFGNUABI       // SLEEF - SIMD Library for Evaluating Elementary Functions.
+    SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
+    ArmPL,       // Arm Performance Libraries.
+    AMDLIBM      // AMD Math Vector library.
   };
 
   TargetLibraryInfoImpl();
@@ -122,6 +156,10 @@ public:
   ///
   /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -174,6 +212,12 @@ public:
   /// such mapping exists, return the empty string.
   StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
                                   bool Masked) const;
+
+  /// Return a pointer to a VecDesc object holding all info for scalar to vector
+  /// mappings in TLI for the equivalent of F, vectorized with factor VF.
+  /// If no such mapping exists, return nullpointer.
+  const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
+                                      bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -271,14 +315,9 @@ public:
 
   // Provide value semantics.
   TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo(TargetLibraryInfo &&TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+  TargetLibraryInfo(TargetLibraryInfo &&TLI) = default;
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
-    Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
-    return *this;
-  }
+  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) = default;
 
   /// Determine whether a callee with the given TLI can be inlined into
   /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
@@ -288,11 +327,9 @@ public:
                            bool AllowCallerSuperset) const {
     if (!AllowCallerSuperset)
       return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
-    BitVector B = OverrideAsUnavailable;
-    B |= CalleeTLI.OverrideAsUnavailable;
-    // We can inline if the union of the caller and callee's nobuiltin
-    // attributes is no stricter than the caller's nobuiltin attributes.
-    return B == OverrideAsUnavailable;
+    // We can inline if the callee's nobuiltin attributes are no stricter than
+    // the caller's.
+    return !CalleeTLI.OverrideAsUnavailable.test(OverrideAsUnavailable);
   }
 
   /// Return true if the function type FTy is valid for the library function
@@ -319,6 +356,12 @@ public:
   bool getLibFunc(const CallBase &CB, LibFunc &F) const {
     return !CB.isNoBuiltin() && CB.getCalledFunction() &&
            getLibFunc(*(CB.getCalledFunction()), F);
+  }
+
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
+    return Impl->getLibFunc(Opcode, Ty, F);
   }
 
   /// Disables all builtins.
@@ -353,6 +396,10 @@ public:
                                   bool Masked = false) const {
     return Impl->getVectorizedFunction(F, VF, Masked);
   }
+  const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
+                                      bool Masked) const {
+    return Impl->getVectorMappingInfo(F, VF, Masked);
+  }
 
   /// Tests if the function is both available and a candidate for optimized code
   /// generation.
@@ -361,10 +408,12 @@ public:
       return false;
     switch (F) {
     default: break;
+      // clang-format off
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
+    case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:
@@ -383,6 +432,7 @@ public:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
+      // clang-format on
       return true;
     }
     return false;
@@ -578,6 +628,10 @@ public:
   TargetLibraryInfoWrapperPass();
   explicit TargetLibraryInfoWrapperPass(const Triple &T);
   explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfoImpl &TLI);
+
+  // FIXME: This should be removed when PlaceSafepoints is fixed to not create a
+  // PassManager inside a pass.
+  explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfo &TLI);
 
   TargetLibraryInfo &getTLI(const Function &F) {
     FunctionAnalysisManager DummyFAM;

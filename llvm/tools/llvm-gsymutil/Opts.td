@@ -34,4 +34,7 @@ def quiet : FF<"quiet", "Do not output warnings about the debug information">;
 defm address : Eq<"address", "Lookup an address in a GSYM file">;
 def addresses_from_stdin :
   FF<"addresses-from-stdin",
-     "Emit a section containing remark diagnostics metadata. By default, this is enabled for the following formats: yaml-strtab, bitstream">;
+     "Lookup addresses in a GSYM file that are read from stdin\nEach input line is expected to be of the following format: <addr> <gsym-path>">;
+defm json_summary_file :
+  Eq<"json-summary-file",
+     "Output a categorized summary of errors into the JSON file specified.">;

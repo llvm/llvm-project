@@ -78,11 +78,11 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
   %t3 = shl nuw nsw i32 %t1, 9
   %ttile_origin.2 = and i32 %t3, 130560
   %tstart_offset_x_mul = shl nuw nsw i32 %t0, 1
-  %t4 = or i32 %ttile_origin.2, %tstart_offset_x_mul
-  %t6 = or i32 %t4, 1
-  %t8 = or i32 %t4, 128
+  %t4 = or disjoint i32 %ttile_origin.2, %tstart_offset_x_mul
+  %t6 = or disjoint i32 %t4, 1
+  %t8 = or disjoint i32 %t4, 128
   %t9 = zext i32 %t8 to i64
-  %t10 = or i32 %t4, 129
+  %t10 = or disjoint i32 %t4, 129
   %t11 = zext i32 %t10 to i64
   %t20 = zext i32 %t2 to i64
   %t27 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t9
@@ -94,6 +94,105 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
   %t34 = select i1 %t33, i8 %t32, i8 %t28
   store i8 %t34, ptr %t31
 ; CHECK: ret
+  ret void
+}
+
+; CHECK-LABEL: extv8f16_global_a16(
+define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
+; CHECK: ld.global.v4.b32 {%r
+  %v = load <8 x half>, ptr addrspace(1) %src, align 16
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.global.v4.f32
+; CHECK: st.global.v4.f32
+  store <8 x float> %ext, ptr addrspace(1) %dst, align 16
+  ret void
+}
+
+; CHECK-LABEL: extv8f16_global_a4(
+define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
+; CHECK: ld.global.b32 %r
+; CHECK: ld.global.b32 %r
+; CHECK: ld.global.b32 %r
+; CHECK: ld.global.b32 %r
+  %v = load <8 x half>, ptr addrspace(1) %src, align 4
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.global.v4.f32
+; CHECK: st.global.v4.f32
+  store <8 x float> %ext, ptr addrspace(1) %dst, align 16
+  ret void
+}
+
+
+; CHECK-LABEL: extv8f16_generic_a16(
+define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
+; CHECK: ld.v4.b32 {%r
+  %v = load <8 x half>, ptr %src, align 16
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.v4.f32
+; CHECK: st.v4.f32
+  store <8 x float> %ext, ptr %dst, align 16
+  ret void
+}
+
+; CHECK-LABEL: extv8f16_generic_a4(
+define void @extv8f16_generic_a4(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
+; CHECK: ld.b32 %r
+; CHECK: ld.b32 %r
+; CHECK: ld.b32 %r
+; CHECK: ld.b32 %r
+  %v = load <8 x half>, ptr %src, align 4
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: mov.b32 {%rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.v4.f32
+; CHECK: st.v4.f32
+  store <8 x float> %ext, ptr %dst, align 16
   ret void
 }
 

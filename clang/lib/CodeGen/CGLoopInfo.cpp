@@ -440,6 +440,14 @@ MDNode *LoopInfo::createMetadata(
         Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccGroup}));
   }
 
+  // Setting clang::code_align attribute.
+  if (Attrs.CodeAlign > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.align"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx), Attrs.CodeAlign))};
+    LoopProperties.push_back(MDNode::get(Ctx, Vals));
+  }
+
   LoopProperties.insert(LoopProperties.end(), AdditionalLoopProperties.begin(),
                         AdditionalLoopProperties.end());
   return createFullUnrollMetadata(Attrs, LoopProperties, HasUserTransforms);
@@ -453,7 +461,7 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), MustProgress(false) {}
+      PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -469,6 +477,7 @@ void LoopAttributes::clear() {
   DistributeEnable = LoopAttributes::Unspecified;
   PipelineDisabled = false;
   PipelineInitiationInterval = 0;
+  CodeAlign = 0;
   MustProgress = false;
 }
 
@@ -493,8 +502,8 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollAndJamEnable == LoopAttributes::Unspecified &&
-      Attrs.DistributeEnable == LoopAttributes::Unspecified && !StartLoc &&
-      !EndLoc && !Attrs.MustProgress)
+      Attrs.DistributeEnable == LoopAttributes::Unspecified &&
+      Attrs.CodeAlign == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
     return;
 
   TempLoopID = MDNode::getTemporary(Header->getContext(), std::nullopt);
@@ -603,9 +612,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     const LoopHintAttr *LH = dyn_cast<LoopHintAttr>(Attr);
     const OpenCLUnrollHintAttr *OpenCLHint =
         dyn_cast<OpenCLUnrollHintAttr>(Attr);
-
+    const HLSLLoopHintAttr *HLSLLoopHint = dyn_cast<HLSLLoopHintAttr>(Attr);
     // Skip non loop hint attributes
-    if (!LH && !OpenCLHint) {
+    if (!LH && !OpenCLHint && !HLSLLoopHint) {
       continue;
     }
 
@@ -625,6 +634,17 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       } else if (ValueInt != 1) {
         Option = LoopHintAttr::UnrollCount;
         State = LoopHintAttr::Numeric;
+      }
+    } else if (HLSLLoopHint) {
+      ValueInt = HLSLLoopHint->getDirective();
+      if (HLSLLoopHint->getSemanticSpelling() ==
+          HLSLLoopHintAttr::Spelling::Microsoft_unroll) {
+        if (ValueInt == 0)
+          State = LoopHintAttr::Enable;
+        if (ValueInt > 0) {
+          Option = LoopHintAttr::UnrollCount;
+          State = LoopHintAttr::Numeric;
+        }
       }
     } else if (LH) {
       auto *ValueExpr = LH->getValue();
@@ -786,6 +806,15 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       }
       break;
     }
+  }
+
+  // Identify loop attribute 'code_align' from Attrs.
+  // For attribute code_align:
+  // n - 'llvm.loop.align i32 n' metadata will be emitted.
+  if (const auto *CodeAlign = getSpecificAttr<const CodeAlignAttr>(Attrs)) {
+    const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
+    llvm::APSInt ArgVal = CE->getResultAsAPSInt();
+    setCodeAlign(ArgVal.getSExtValue());
   }
 
   setMustProgress(MustProgress);

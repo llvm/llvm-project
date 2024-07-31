@@ -390,7 +390,8 @@ class CallExpr final : public Node::NodeBase<CallExpr, Expr>,
                        private llvm::TrailingObjects<CallExpr, Expr *> {
 public:
   static CallExpr *create(Context &ctx, SMRange loc, Expr *callable,
-                          ArrayRef<Expr *> arguments, Type resultType);
+                          ArrayRef<Expr *> arguments, Type resultType,
+                          bool isNegated = false);
 
   /// Return the callable of this call.
   Expr *getCallableExpr() const { return callable; }
@@ -403,9 +404,14 @@ public:
     return const_cast<CallExpr *>(this)->getArguments();
   }
 
+  /// Returns whether the result of this call is to be negated.
+  bool getIsNegated() const { return isNegated; }
+
 private:
-  CallExpr(SMRange loc, Type type, Expr *callable, unsigned numArgs)
-      : Base(loc, type), callable(callable), numArgs(numArgs) {}
+  CallExpr(SMRange loc, Type type, Expr *callable, unsigned numArgs,
+           bool isNegated)
+      : Base(loc, type), callable(callable), numArgs(numArgs),
+        isNegated(isNegated) {}
 
   /// The callable of this call.
   Expr *callable;
@@ -415,6 +421,9 @@ private:
 
   /// TrailingObject utilities.
   friend llvm::TrailingObjects<CallExpr, Expr *>;
+
+  // Is the result of this call to be negated.
+  bool isNegated;
 };
 
 //===----------------------------------------------------------------------===//
@@ -588,7 +597,7 @@ public:
   }
 
   /// Return the range result type of this expression.
-  RangeType getType() const { return Base::getType().cast<RangeType>(); }
+  RangeType getType() const { return mlir::cast<RangeType>(Base::getType()); }
 
 private:
   RangeExpr(SMRange loc, RangeType type, unsigned numElements)
@@ -621,7 +630,7 @@ public:
   }
 
   /// Return the tuple result type of this expression.
-  TupleType getType() const { return Base::getType().cast<TupleType>(); }
+  TupleType getType() const { return mlir::cast<TupleType>(Base::getType()); }
 
 private:
   TupleExpr(SMRange loc, TupleType type) : Base(loc, type) {}

@@ -17,7 +17,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -205,7 +205,7 @@ void ErrnoChecker::checkPreCall(const CallEvent &Call,
   // Probably 'strerror'?
   if (CallF->isExternC() && CallF->isGlobal() &&
       C.getSourceManager().isInSystemHeader(CallF->getLocation()) &&
-      !isErrno(CallF)) {
+      !isErrnoLocationCall(Call)) {
     if (getErrnoState(C.getState()) == MustBeChecked) {
       std::optional<ento::Loc> ErrnoLoc = getErrnoLoc(C.getState());
       assert(ErrnoLoc && "ErrnoLoc should exist if an errno state is set.");

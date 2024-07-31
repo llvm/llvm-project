@@ -54,13 +54,11 @@ struct Config {
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;
-  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
-  CodeGenFileType CGFileType = CGFT_ObjectFile;
+  CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Default;
+  CodeGenFileType CGFileType = CodeGenFileType::ObjectFile;
   unsigned OptLevel = 2;
+  bool VerifyEach = false;
   bool DisableVerify = false;
-
-  /// Use the standard optimization pipeline.
-  bool UseDefaultPipeline = false;
 
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
@@ -78,6 +76,12 @@ struct Config {
   /// Asserts whether we can assume whole program visibility during the LTO
   /// link.
   bool HasWholeProgramVisibility = false;
+
+  /// We're validating that all native vtables have corresponding type infos.
+  bool ValidateAllVtablesHaveTypeInfos = false;
+  /// If all native vtables have corresponding type infos, allow
+  /// usage of RTTI to block devirtualization on types used in native files.
+  bool AllVtablesHaveTypeInfos = false;
 
   /// Always emit a Regular LTO object even when it is empty because no Regular
   /// LTO modules were linked. This option is useful for some build system which

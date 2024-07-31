@@ -8,6 +8,9 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include "allocator_config.h"
+#include "allocator_config_wrapper.h"
+#include "condition_variable.h"
 #include "primary32.h"
 #include "primary64.h"
 #include "size_class_map.h"
@@ -27,6 +30,9 @@
 
 template <typename SizeClassMapT> struct TestConfig1 {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
 
   struct Primary {
     using SizeClassMap = SizeClassMapT;
@@ -43,6 +49,9 @@ template <typename SizeClassMapT> struct TestConfig1 {
 
 template <typename SizeClassMapT> struct TestConfig2 {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
 
   struct Primary {
     using SizeClassMap = SizeClassMapT;
@@ -64,6 +73,9 @@ template <typename SizeClassMapT> struct TestConfig2 {
 
 template <typename SizeClassMapT> struct TestConfig3 {
   static const bool MaySupportMemoryTagging = true;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
 
   struct Primary {
     using SizeClassMap = SizeClassMapT;
@@ -78,6 +90,7 @@ template <typename SizeClassMapT> struct TestConfig3 {
     static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
     typedef scudo::uptr CompactPtrT;
     static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableContiguousRegions = false;
     static const bool EnableRandomOffset = true;
     static const scudo::uptr MapSizeIncrement = 1UL << 18;
   };
@@ -85,6 +98,9 @@ template <typename SizeClassMapT> struct TestConfig3 {
 
 template <typename SizeClassMapT> struct TestConfig4 {
   static const bool MaySupportMemoryTagging = true;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
 
   struct Primary {
     using SizeClassMap = SizeClassMapT;
@@ -104,19 +120,54 @@ template <typename SizeClassMapT> struct TestConfig4 {
   };
 };
 
+// This is the only test config that enables the condition variable.
+template <typename SizeClassMapT> struct TestConfig5 {
+  static const bool MaySupportMemoryTagging = true;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+#if defined(__mips__)
+    // Unable to allocate greater size on QEMU-user.
+    static const scudo::uptr RegionSizeLog = 23U;
+#else
+    static const scudo::uptr RegionSizeLog = 24U;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::u32 CompactPtrT;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#if SCUDO_LINUX
+    using ConditionVariableT = scudo::ConditionVariableLinux;
+#else
+    using ConditionVariableT = scudo::ConditionVariableDummy;
+#endif
+  };
+};
+
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct Config : public BaseConfig<SizeClassMapT> {};
 
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct SizeClassAllocator
-    : public scudo::SizeClassAllocator64<Config<BaseConfig, SizeClassMapT>> {};
+    : public scudo::SizeClassAllocator64<
+          scudo::PrimaryConfig<Config<BaseConfig, SizeClassMapT>>> {};
 template <typename SizeClassMapT>
 struct SizeClassAllocator<TestConfig1, SizeClassMapT>
-    : public scudo::SizeClassAllocator32<Config<TestConfig1, SizeClassMapT>> {};
+    : public scudo::SizeClassAllocator32<
+          scudo::PrimaryConfig<Config<TestConfig1, SizeClassMapT>>> {};
 
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
-  ~TestAllocator() { this->unmapTestOnly(); }
+  ~TestAllocator() {
+    this->verifyAllBlocksAreReleasedTestOnly();
+    this->unmapTestOnly();
+  }
 
   void *operator new(size_t size) {
     void *p = nullptr;
@@ -139,7 +190,8 @@ struct ScudoPrimaryTest : public Test {};
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig1)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -185,6 +237,9 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
 
 struct SmallRegionsConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
 
   struct Primary {
     using SizeClassMap = scudo::DefaultSizeClassMap;
@@ -202,8 +257,8 @@ struct SmallRegionsConfig {
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
 // For the 32-bit one, it requires actually exhausting memory, so we skip it.
 TEST(ScudoPrimaryTest, Primary64OOM) {
-  using Primary = scudo::SizeClassAllocator64<SmallRegionsConfig>;
-  using TransferBatch = Primary::CacheT::TransferBatch;
+  using Primary =
+      scudo::SizeClassAllocator64<scudo::PrimaryConfig<SmallRegionsConfig>>;
   Primary Allocator;
   Allocator.init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
@@ -211,28 +266,26 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   Stats.init();
   Cache.init(&Stats, &Allocator);
   bool AllocationFailed = false;
-  std::vector<TransferBatch *> Batches;
+  std::vector<void *> Blocks;
   const scudo::uptr ClassId = Primary::SizeClassMap::LargestClassId;
   const scudo::uptr Size = Primary::getSizeByClassId(ClassId);
-  typename Primary::CacheT::CompactPtrT Blocks[TransferBatch::MaxNumCached];
+  const scudo::u16 MaxCachedBlockCount = Primary::CacheT::getMaxCached(Size);
 
   for (scudo::uptr I = 0; I < 10000U; I++) {
-    TransferBatch *B = Allocator.popBatch(&Cache, ClassId);
-    if (!B) {
-      AllocationFailed = true;
-      break;
+    for (scudo::uptr J = 0; J < MaxCachedBlockCount; ++J) {
+      void *Ptr = Cache.allocate(ClassId);
+      if (Ptr == nullptr) {
+        AllocationFailed = true;
+        break;
+      }
+      memset(Ptr, 'B', Size);
+      Blocks.push_back(Ptr);
     }
-    for (scudo::u16 J = 0; J < B->getCount(); J++)
-      memset(Allocator.decompactPtr(ClassId, B->get(J)), 'B', Size);
-    Batches.push_back(B);
   }
-  while (!Batches.empty()) {
-    TransferBatch *B = Batches.back();
-    Batches.pop_back();
-    B->copyToArray(Blocks);
-    Allocator.pushBlocks(&Cache, ClassId, Blocks, B->getCount());
-    Cache.deallocate(Primary::SizeClassMap::BatchClassId, B);
-  }
+
+  for (auto *Ptr : Blocks)
+    Cache.deallocate(ClassId, Ptr);
+
   Cache.destroy(nullptr);
   Allocator.releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
@@ -250,7 +303,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   Cache.init(nullptr, Allocator.get());
   std::vector<std::pair<scudo::uptr, void *>> V;
   for (scudo::uptr I = 0; I < 64U; I++) {
-    const scudo::uptr Size = std::rand() % Primary::SizeClassMap::MaxSize;
+    const scudo::uptr Size =
+        static_cast<scudo::uptr>(std::rand()) % Primary::SizeClassMap::MaxSize;
     const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
     void *P = Cache.allocate(ClassId);
     V.push_back(std::make_pair(ClassId, P));
@@ -279,14 +333,14 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
-  using Primary = TestAllocator<TypeParam, scudo::SvelteSizeClassMap>;
+  using Primary = TestAllocator<TypeParam, scudo::Config::Primary::SizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   std::mutex Mutex;
   std::condition_variable Cv;
   bool Ready = false;
   std::thread Threads[32];
-  for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
+  for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++) {
     Threads[I] = std::thread([&]() {
       static thread_local typename Primary::CacheT Cache;
       Cache.init(nullptr, Allocator.get());
@@ -297,21 +351,30 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
           Cv.wait(Lock);
       }
       for (scudo::uptr I = 0; I < 256U; I++) {
-        const scudo::uptr Size =
-            std::rand() % Primary::SizeClassMap::MaxSize / 4;
+        const scudo::uptr Size = static_cast<scudo::uptr>(std::rand()) %
+                                 Primary::SizeClassMap::MaxSize / 4;
         const scudo::uptr ClassId =
             Primary::SizeClassMap::getClassIdBySize(Size);
         void *P = Cache.allocate(ClassId);
         if (P)
           V.push_back(std::make_pair(ClassId, P));
       }
+
+      // Try to interleave pushBlocks(), popBlocks() and releaseToOS().
+      Allocator->releaseToOS(scudo::ReleaseToOS::Force);
+
       while (!V.empty()) {
         auto Pair = V.back();
         Cache.deallocate(Pair.first, Pair.second);
         V.pop_back();
+        // This increases the chance of having non-full TransferBatches and it
+        // will jump into the code path of merging TransferBatches.
+        if (std::rand() % 8 == 0)
+          Cache.drain();
       }
       Cache.destroy(nullptr);
     });
+  }
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     Ready = true;
@@ -322,6 +385,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
+  Allocator->getFragmentationInfo(&Str);
   Str.output();
 }
 
@@ -386,4 +450,10 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {
   EXPECT_LE(*std::max_element(Blocks.begin(), Blocks.end()) -
                 *std::min_element(Blocks.begin(), Blocks.end()),
             GroupSizeMem * 2);
+
+  while (!Blocks.empty()) {
+    Cache.deallocate(ClassId, reinterpret_cast<void *>(Blocks.back()));
+    Blocks.pop_back();
+  }
+  Cache.drain();
 }

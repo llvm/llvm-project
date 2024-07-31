@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_FCNTL_CREAT_H
 #define LLVM_LIBC_SRC_FCNTL_CREAT_H
 
+#include "src/__support/macros/config.h"
 #include <fcntl.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int creat(const char *path, int mode);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_FCNTL_CREAT_H

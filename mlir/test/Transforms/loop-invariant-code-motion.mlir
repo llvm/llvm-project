@@ -374,7 +374,7 @@ func.func @parallel_loop_with_invariant() {
   // CHECK-NEXT: arith.addi
   // CHECK-NEXT: scf.parallel (%[[A:.*]],{{.*}}) =
   // CHECK-NEXT:   arith.addi %[[A]]
-  // CHECK-NEXT:   yield
+  // CHECK-NEXT:   reduce
   // CHECK-NEXT: }
   // CHECK-NEXT: return
 
@@ -699,6 +699,54 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
 
 // -----
 
+// CHECK-LABEL: @speculate_memref_dim_known_rank_known_dim_inbounds
+func.func @speculate_memref_dim_known_rank_known_dim_inbounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %alloc = memref.alloc(%c22) : memref<?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = memref.dim %alloc, %c0 : memref<?xi1>
+  }
+  return
+}
+// CHECK: memref.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_inbounds
+func.func @speculate_tensor_dim_known_rank_known_dim_inbounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %t = tensor.empty(%c22, %c22) : tensor<?x?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = tensor.dim %t, %c1 : tensor<?x?xi1>
+  }
+  return
+}
+// CHECK: tensor.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
+// CHECK-LABEL: @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds
+func.func @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %alloc = memref.alloc(%c22) : memref<?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = memref.dim %alloc, %c1 : memref<?xi1>
+  }
+  return
+}
+// CHECK: scf.for
+// CHECK-NEXT: memref.dim
+
+// -----
+
 func.func @no_speculate_divui(
 // CHECK-LABEL: @no_speculate_divui(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
@@ -928,4 +976,31 @@ func.func @speculate_dynamic_pack_and_unpack(%source: tensor<?x?xf32>,
       inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @hoist_from_scf_while(
+//  CHECK-SAME:     %[[arg0:.*]]: i32, %{{.*}}: i32)
+//   CHECK-DAG:   arith.constant 1 : i32
+//   CHECK-DAG:   %[[c2:.*]] = arith.constant 2 : i32
+//   CHECK-DAG:   %[[c10:.*]] = arith.constant 10 : i32
+//   CHECK-DAG:   %[[added:.*]] = arith.addi %[[arg0]], %[[c2]]
+//       CHECK:   scf.while
+//       CHECK:     %[[cmpi:.*]] = arith.cmpi slt, %{{.*}}, %[[added]]
+//       CHECK:     scf.condition(%[[cmpi]])
+func.func @hoist_from_scf_while(%arg0: i32, %arg1: i32) -> i32 {
+  %0 = scf.while (%arg2 = %arg1) : (i32) -> (i32) {
+    %c2 = arith.constant 2 : i32
+    %c10 = arith.constant 10 : i32
+    %added = arith.addi %arg0, %c2 : i32
+    %1 = arith.cmpi slt, %arg2, %added : i32
+    scf.condition(%1) %arg2 : i32
+  } do {
+  ^bb0(%arg2: i32):
+    %c1 = arith.constant 1 : i32
+    %added2 = arith.addi %c1, %arg2 : i32
+    scf.yield %added2 : i32
+  }
+  return %0 : i32
 }

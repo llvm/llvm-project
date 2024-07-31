@@ -68,6 +68,8 @@ public:
 
   uint64_t GetValueAsUnsigned(uint64_t fail_value = 0);
 
+  lldb::addr_t GetValueAsAddress();
+
   ValueType GetValueType();
 
   // If you call this on a newly created ValueObject, it will always return
@@ -87,6 +89,8 @@ public:
 
   lldb::SBValue GetNonSyntheticValue();
 
+  lldb::SBValue GetSyntheticValue();
+
   lldb::DynamicValueType GetPreferDynamicValue();
 
   void SetPreferDynamicValue(lldb::DynamicValueType use_dynamic);
@@ -105,7 +109,8 @@ public:
 
   const char *GetLocation();
 
-  // Deprecated - use the one that takes SBError&
+  LLDB_DEPRECATED_FIXME("Use the variant that takes an SBError &",
+                        "SetValueFromCString(const char *, SBError &)")
   bool SetValueFromCString(const char *value_str);
 
   bool SetValueFromCString(const char *value_str, lldb::SBError &error);
@@ -123,7 +128,7 @@ public:
   lldb::SBValue CreateChildAtOffset(const char *name, uint32_t offset,
                                     lldb::SBType type);
 
-  // Deprecated - use the expression evaluator to perform type casting
+  LLDB_DEPRECATED("Use the expression evaluator to perform type casting")
   lldb::SBValue Cast(lldb::SBType type);
 
   lldb::SBValue CreateValueFromExpression(const char *name,
@@ -278,10 +283,25 @@ public:
 
   bool IsRuntimeSupportValue();
 
+  /// Return the number of children of this variable. Note that for some
+  /// variables this operation can be expensive. If possible, prefer calling
+  /// GetNumChildren(max) with the maximum number of children you are interested
+  /// in.
   uint32_t GetNumChildren();
 
+  /// Return the numer of children of this variable, with a hint that the
+  /// caller is interested in at most \a max children. Use this function to
+  /// avoid expensive child computations in some cases. For example, if you know
+  /// you will only ever display 100 elements, calling GetNumChildren(100) can
+  /// avoid enumerating all the other children. If the returned value is smaller
+  /// than \a max, then it represents the true number of children, otherwise it
+  /// indicates that their number is at least \a max. Do not assume the returned
+  /// number will always be less than or equal to \a max, as the implementation
+  /// may choose to return a larger (but still smaller than the actual number of
+  /// children) value.
   uint32_t GetNumChildren(uint32_t max);
 
+  LLDB_DEPRECATED("SBValue::GetOpaqueType() is deprecated.")
   void *GetOpaqueType();
 
   lldb::SBTarget GetTarget();
@@ -294,7 +314,7 @@ public:
 
   lldb::SBValue Dereference();
 
-  // Deprecated - please use GetType().IsPointerType() instead.
+  LLDB_DEPRECATED("Use GetType().IsPointerType() instead")
   bool TypeIsPointerType();
 
   lldb::SBType GetType();
@@ -372,12 +392,59 @@ public:
   lldb::SBWatchpoint WatchPointee(bool resolve_location, bool read, bool write,
                                   SBError &error);
 
+  /// If this value represents a C++ class that has a vtable, return an value
+  /// that represents the virtual function table.
+  ///
+  /// SBValue::GetError() will be in the success state if this value represents
+  /// a C++ class with a vtable, or an appropriate error describing that the
+  /// object isn't a C++ class with a vtable or not a C++ class.
+  ///
+  /// SBValue::GetName() will be the demangled symbol name for the virtual
+  /// function table like "vtable for <classname>".
+  ///
+  /// SBValue::GetValue() will be the address of the first vtable entry if the
+  /// current SBValue is a class with a vtable, or nothing the current SBValue
+  /// is not a C++ class or not a C++ class that has a vtable.
+  ///
+  /// SBValue::GetValueAtUnsigned(...) will return the address of the first
+  /// vtable entry.
+  ///
+  /// SBValue::GetLoadAddress() will return the address of the vtable pointer
+  /// found in the parent SBValue.
+  ///
+  /// SBValue::GetNumChildren() will return the number of virtual function
+  /// pointers in the vtable, or zero on error.
+  ///
+  /// SBValue::GetChildAtIndex(...) will return each virtual function pointer
+  /// as a SBValue object.
+  ///
+  /// The child SBValue objects will have the following values:
+  ///
+  /// SBValue::GetError() will indicate success if the vtable entry was
+  /// successfully read from memory, or an error if not.
+  ///
+  /// SBValue::GetName() will be the vtable function index in the form "[%u]"
+  /// where %u is the index.
+  ///
+  /// SBValue::GetValue() will be the virtual function pointer value as a
+  /// string.
+  ///
+  /// SBValue::GetValueAtUnsigned(...) will return the virtual function
+  /// pointer value.
+  ///
+  /// SBValue::GetLoadAddress() will return the address of the virtual function
+  /// pointer.
+  ///
+  /// SBValue::GetNumChildren() returns 0
+  lldb::SBValue GetVTable();
+
 protected:
   friend class SBBlock;
   friend class SBFrame;
   friend class SBModule;
   friend class SBTarget;
   friend class SBThread;
+  friend class SBTypeStaticField;
   friend class SBTypeSummary;
   friend class SBValueList;
 

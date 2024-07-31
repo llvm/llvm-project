@@ -1,10 +1,10 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1031 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1032 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1033 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1034 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1035 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1036 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1031 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1032 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1033 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1034 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1035 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1036 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 global_load_dword_addtid v1, s[2:3] offset:16
 // GFX10: encoding: [0x10,0x80,0x58,0xdc,0x00,0x00,0x02,0x01]
@@ -30,17 +30,29 @@ global_store_dword v254, v1, s[2:3] offset:16
 global_atomic_csub v2, v[0:1], v2, off offset:100 glc slc
 // GFX10: encoding: [0x64,0x80,0xd3,0xdc,0x00,0x02,0x7d,0x02]
 
+global_atomic_csub v[0:1], v2, off offset:100 slc
+// GFX10: encoding: [0x64,0x80,0xd2,0xdc,0x00,0x02,0x7d,0x00]
+
 global_atomic_csub v2, v[0:1], v2, off glc
 // GFX10: encoding: [0x00,0x80,0xd1,0xdc,0x00,0x02,0x7d,0x02]
 
+global_atomic_csub v[0:1], v2, off
+// GFX10: encoding: [0x00,0x80,0xd0,0xdc,0x00,0x02,0x7d,0x00]
+
 global_atomic_csub v2, v0, v2, s[2:3] glc
 // GFX10: encoding: [0x00,0x80,0xd1,0xdc,0x00,0x02,0x02,0x02]
+
+global_atomic_csub v0, v2, s[2:3]
+// GFX10: encoding: [0x00,0x80,0xd0,0xdc,0x00,0x02,0x02,0x00]
 
 global_atomic_csub v2, v0, v2, s[2:3] offset:100 glc slc
 // GFX10: encoding: [0x64,0x80,0xd3,0xdc,0x00,0x02,0x02,0x02]
 
 buffer_atomic_csub v5, off, s[8:11], s3 glc
 // GFX10: encoding: [0x00,0x40,0xd0,0xe0,0x00,0x05,0x02,0x03]
+
+buffer_atomic_csub v5, off, s[8:11], s3
+// GFX10: encoding: [0x00,0x00,0xd0,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_atomic_csub v5, off, s[8:11], s3 offset:4095 glc
 // GFX10: encoding: [0xff,0x4f,0xd0,0xe0,0x00,0x05,0x02,0x03]
@@ -51,11 +63,20 @@ buffer_atomic_csub v5, off, s[8:11], -1 offset:4095 glc
 buffer_atomic_csub v5, v0, s[8:11], s3 offen offset:4095 glc
 // GFX10: encoding: [0xff,0x5f,0xd0,0xe0,0x00,0x05,0x02,0x03]
 
+buffer_atomic_csub v5, v0, s[8:11], s3 offen offset:4095
+// GFX10: encoding: [0xff,0x1f,0xd0,0xe0,0x00,0x05,0x02,0x03]
+
 buffer_atomic_csub v5, v0, s[8:11], s3 idxen offset:4095 glc
 // GFX10: encoding: [0xff,0x6f,0xd0,0xe0,0x00,0x05,0x02,0x03]
 
+buffer_atomic_csub v5, v0, s[8:11], s3 idxen offset:4095
+// GFX10: encoding: [0xff,0x2f,0xd0,0xe0,0x00,0x05,0x02,0x03]
+
 buffer_atomic_csub v5, off, s[8:11], s3 glc slc
 // GFX10: encoding: [0x00,0x40,0xd0,0xe0,0x00,0x05,0x42,0x03]
+
+buffer_atomic_csub v5, off, s[8:11], s3 slc
+// GFX10: encoding: [0x00,0x00,0xd0,0xe0,0x00,0x05,0x42,0x03]
 
 s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 // GFX10: encoding: [0x1d,0xf8,0x02,0xb9]
@@ -87,6 +108,9 @@ v_fmac_legacy_f32 v0, s1, 2.0
 image_bvh_intersect_ray v[4:7], v[9:19], s[4:7]
 // GFX10: encoding: [0x01,0x9f,0x98,0xf1,0x09,0x04,0x01,0x00]
 
+image_bvh_intersect_ray v[4:7], v[9:19], s[4:7] noa16
+// GFX10: encoding: [0x01,0x9f,0x98,0xf1,0x09,0x04,0x01,0x00]
+
 image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] a16
 // GFX10: encoding: [0x01,0x9f,0x98,0xf1,0x09,0x04,0x01,0x40]
 
@@ -97,6 +121,9 @@ image_bvh64_intersect_ray v[4:7], v[9:17], s[4:7] a16
 // GFX10: encoding: [0x01,0x9f,0x9c,0xf1,0x09,0x04,0x01,0x40]
 
 image_bvh_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20, v19, v37, v40], s[12:15]
+// GFX10: encoding: [0x07,0x9f,0x98,0xf1,0x32,0x27,0x03,0x00,0x2e,0x17,0x11,0x10,0x0f,0x15,0x14,0x13,0x25,0x28,0x00,0x00]
+
+image_bvh_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20, v19, v37, v40], s[12:15] noa16
 // GFX10: encoding: [0x07,0x9f,0x98,0xf1,0x32,0x27,0x03,0x00,0x2e,0x17,0x11,0x10,0x0f,0x15,0x14,0x13,0x25,0x28,0x00,0x00]
 
 image_bvh_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20], s[12:15] a16

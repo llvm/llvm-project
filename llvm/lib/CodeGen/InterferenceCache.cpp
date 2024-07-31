@@ -93,8 +93,8 @@ void InterferenceCache::Entry::revalidate(LiveIntervalUnion *LIUArray,
   // Invalidate all iterators.
   PrevPos = SlotIndex();
   unsigned i = 0;
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units, ++i)
-    RegUnits[i].VirtTag = LIUArray[*Units].getTag();
+  for (MCRegUnit Unit : TRI->regunits(PhysReg))
+    RegUnits[i++].VirtTag = LIUArray[Unit].getTag();
 }
 
 void InterferenceCache::Entry::reset(MCRegister physReg,
@@ -110,20 +110,21 @@ void InterferenceCache::Entry::reset(MCRegister physReg,
   // Reset iterators.
   PrevPos = SlotIndex();
   RegUnits.clear();
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    RegUnits.push_back(LIUArray[*Units]);
-    RegUnits.back().Fixed = &LIS->getRegUnit(*Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    RegUnits.push_back(LIUArray[Unit]);
+    RegUnits.back().Fixed = &LIS->getRegUnit(Unit);
   }
 }
 
 bool InterferenceCache::Entry::valid(LiveIntervalUnion *LIUArray,
                                      const TargetRegisterInfo *TRI) {
   unsigned i = 0, e = RegUnits.size();
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units, ++i) {
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     if (i == e)
       return false;
-    if (LIUArray[*Units].changedSince(RegUnits[i].VirtTag))
+    if (LIUArray[Unit].changedSince(RegUnits[i].VirtTag))
       return false;
+    ++i;
   }
   return i == e;
 }
@@ -135,14 +136,12 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
   // Use advanceTo only when possible.
   if (PrevPos != Start) {
     if (!PrevPos.isValid() || Start < PrevPos) {
-      for (unsigned i = 0, e = RegUnits.size(); i != e; ++i) {
-        RegUnitInfo &RUI = RegUnits[i];
+      for (RegUnitInfo &RUI : RegUnits) {
         RUI.VirtI.find(Start);
         RUI.FixedI = RUI.Fixed->find(Start);
       }
     } else {
-      for (unsigned i = 0, e = RegUnits.size(); i != e; ++i) {
-        RegUnitInfo &RUI = RegUnits[i];
+      for (RegUnitInfo &RUI : RegUnits) {
         RUI.VirtI.advanceTo(Start);
         if (RUI.FixedI != RUI.Fixed->end())
           RUI.FixedI = RUI.Fixed->advanceTo(RUI.FixedI, Start);
@@ -161,8 +160,8 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
     BI->First = BI->Last = SlotIndex();
 
     // Check for first interference from virtregs.
-    for (unsigned i = 0, e = RegUnits.size(); i != e; ++i) {
-      LiveIntervalUnion::SegmentIter &I = RegUnits[i].VirtI;
+    for (RegUnitInfo &RUI : RegUnits) {
+      LiveIntervalUnion::SegmentIter &I = RUI.VirtI;
       if (!I.valid())
         continue;
       SlotIndex StartI = I.start();
@@ -173,9 +172,9 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
     }
 
     // Same thing for fixed interference.
-    for (unsigned i = 0, e = RegUnits.size(); i != e; ++i) {
-      LiveInterval::const_iterator I = RegUnits[i].FixedI;
-      LiveInterval::const_iterator E = RegUnits[i].Fixed->end();
+    for (RegUnitInfo &RUI : RegUnits) {
+      LiveInterval::const_iterator I = RUI.FixedI;
+      LiveInterval::const_iterator E = RUI.Fixed->end();
       if (I == E)
         continue;
       SlotIndex StartI = I->start;
@@ -212,8 +211,8 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
   }
 
   // Check for last interference in block.
-  for (unsigned i = 0, e = RegUnits.size(); i != e; ++i) {
-    LiveIntervalUnion::SegmentIter &I = RegUnits[i].VirtI;
+  for (RegUnitInfo &RUI : RegUnits) {
+    LiveIntervalUnion::SegmentIter &I = RUI.VirtI;
     if (!I.valid() || I.start() >= Stop)
       continue;
     I.advanceTo(Stop);
@@ -228,9 +227,9 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
   }
 
   // Fixed interference.
-  for (unsigned i = 0, e = RegUnits.size(); i != e; ++i) {
-    LiveInterval::iterator &I = RegUnits[i].FixedI;
-    LiveRange *LR = RegUnits[i].Fixed;
+  for (RegUnitInfo &RUI : RegUnits) {
+    LiveInterval::iterator &I = RUI.FixedI;
+    LiveRange *LR = RUI.Fixed;
     if (I == LR->end() || I->start >= Stop)
       continue;
     I = LR->advanceTo(I, Stop);

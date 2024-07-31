@@ -62,7 +62,7 @@ class TestWatchTaggedAddresses(TestBase):
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = w",
+                "type = m",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -96,7 +96,7 @@ class TestWatchTaggedAddresses(TestBase):
         self.expect(
             "watchpoint set expression -s 4 -- tagged_ptr",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = w"],
+            substrs=["Watchpoint created", "size = 4", "type = m"],
         )
 
         self.verify_watch_hits()
@@ -129,12 +129,15 @@ class TestWatchTaggedAddresses(TestBase):
             substrs=["stop reason = watchpoint"],
         )
 
+        # Use the '-v' option to do verbose listing of the watchpoint.
+        # The hit count should now be 2.
+        self.expect("watchpoint list -v", substrs=["hit_count = 2"])
+
+        # On some hardware, during __do_global_dtors_aux a flag is set near
+        # the global which can trigger the watchpoint. So we must remove it.
+        self.runCmd("watchpoint delete 1")
         self.runCmd("process continue")
 
         # There should be no more watchpoint hit and the process status should
         # be 'exited'.
         self.expect("process status", substrs=["exited"])
-
-        # Use the '-v' option to do verbose listing of the watchpoint.
-        # The hit count should now be 2.
-        self.expect("watchpoint list -v", substrs=["hit_count = 2"])

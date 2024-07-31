@@ -13,7 +13,6 @@ define i32 @test_min_max_ValK0_K1_u32(i32 %a) {
 ; GFX10-LABEL: test_min_max_ValK0_K1_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umax = call i32 @llvm.umax.i32(i32 %a, i32 12)
@@ -31,7 +30,6 @@ define i32 @min_max_ValK0_K1_i32(i32 %a) {
 ; GFX10-LABEL: min_max_ValK0_K1_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umax = call i32 @llvm.umax.i32(i32 12, i32 %a)
@@ -49,7 +47,6 @@ define i32 @test_min_K1max_ValK0__u32(i32 %a) {
 ; GFX10-LABEL: test_min_K1max_ValK0__u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umax = call i32 @llvm.umax.i32(i32 %a, i32 12)
@@ -67,7 +64,6 @@ define i32 @test_min_K1max_K0Val__u32(i32 %a) {
 ; GFX10-LABEL: test_min_K1max_K0Val__u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umax = call i32 @llvm.umax.i32(i32 12, i32 %a)
@@ -85,7 +81,6 @@ define i32 @test_max_min_ValK1_K0_u32(i32 %a) {
 ; GFX10-LABEL: test_max_min_ValK1_K0_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umin = call i32 @llvm.umin.i32(i32 %a, i32 17)
@@ -103,7 +98,6 @@ define i32 @test_max_min_K1Val_K0_u32(i32 %a) {
 ; GFX10-LABEL: test_max_min_K1Val_K0_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umin = call i32 @llvm.umin.i32(i32 17, i32 %a)
@@ -121,7 +115,6 @@ define i32 @test_max_K0min_ValK1__u32(i32 %a) {
 ; GFX10-LABEL: test_max_K0min_ValK1__u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umin = call i32 @llvm.umin.i32(i32 %a, i32 17)
@@ -139,7 +132,6 @@ define i32 @test_max_K0min_K1Val__u32(i32 %a) {
 ; GFX10-LABEL: test_max_K0min_K1Val__u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 17
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umin = call i32 @llvm.umin.i32(i32 17, i32 %a)
@@ -153,10 +145,10 @@ define <2 x i16> @test_max_K0min_K1Val__v2u16(<2 x i16> %a) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 17
 ; GFX8-NEXT:    v_min_u16_e32 v1, 17, v0
-; GFX8-NEXT:    v_min_u16_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-NEXT:    v_min_u16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 12
 ; GFX8-NEXT:    v_max_u16_e32 v1, 12, v1
-; GFX8-NEXT:    v_max_u16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-NEXT:    v_max_u16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -170,7 +162,6 @@ define <2 x i16> @test_max_K0min_K1Val__v2u16(<2 x i16> %a) {
 ; GFX10-LABEL: test_max_K0min_K1Val__v2u16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_min_u16 v0, 17, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_max_u16 v0, 12, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -207,7 +198,6 @@ define i32 @test_non_inline_constant_u32(i32 %a) {
 ; GFX10-LABEL: test_non_inline_constant_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_u32 v0, v0, 12, 0x41
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %umax = call i32 @llvm.umax.i32(i32 %a, i32 12)

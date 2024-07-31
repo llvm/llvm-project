@@ -15,14 +15,16 @@
 
 namespace Fortran::runtime {
 
-std::size_t TrimTrailingSpaces(const char *s, std::size_t n) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS std::size_t TrimTrailingSpaces(const char *s, std::size_t n) {
   while (n > 0 && s[n - 1] == ' ') {
     --n;
   }
   return n;
 }
 
-OwningPtr<char> SaveDefaultCharacter(
+RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *s, std::size_t length, const Terminator &terminator) {
   if (s) {
     auto *p{static_cast<char *>(AllocateMemoryOrCrash(terminator, length + 1))};
@@ -34,7 +36,7 @@ OwningPtr<char> SaveDefaultCharacter(
   }
 }
 
-static bool CaseInsensitiveMatch(
+static RT_API_ATTRS bool CaseInsensitiveMatch(
     const char *value, std::size_t length, const char *possibility) {
   for (; length-- > 0; ++possibility) {
     char ch{*value++};
@@ -57,7 +59,7 @@ static bool CaseInsensitiveMatch(
   return *possibility == '\0';
 }
 
-int IdentifyValue(
+RT_API_ATTRS int IdentifyValue(
     const char *value, std::size_t length, const char *possibilities[]) {
   if (value) {
     for (int j{0}; possibilities[j]; ++j) {
@@ -69,9 +71,9 @@ int IdentifyValue(
   return -1;
 }
 
-void ToFortranDefaultCharacter(
+RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from) {
-  std::size_t len{std::strlen(from)};
+  std::size_t len{Fortran::runtime::strlen(from)};
   if (len < toLength) {
     std::memcpy(to, from, len);
     std::memset(to + len, ' ', toLength - len);
@@ -80,7 +82,7 @@ void ToFortranDefaultCharacter(
   }
 }
 
-void CheckConformability(const Descriptor &to, const Descriptor &x,
+RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
     Terminator &terminator, const char *funcName, const char *toName,
     const char *xName) {
   if (x.rank() == 0) {
@@ -104,10 +106,166 @@ void CheckConformability(const Descriptor &to, const Descriptor &x,
   }
 }
 
-void CheckIntegerKind(Terminator &terminator, int kind, const char *intrinsic) {
+RT_API_ATTRS void CheckIntegerKind(
+    Terminator &terminator, int kind, const char *intrinsic) {
   if (kind < 1 || kind > 16 || (kind & (kind - 1)) != 0) {
-    terminator.Crash(
-        "not yet implemented: %s: KIND=%d argument", intrinsic, kind);
+    terminator.Crash("not yet implemented: INTEGER(KIND=%d) in %s intrinsic",
+        intrinsic, kind);
   }
 }
+
+RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from) {
+  SubscriptValue toAt[maxRank], fromAt[maxRank];
+  to.GetLowerBounds(toAt);
+  from.GetLowerBounds(fromAt);
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+    std::memcpy(
+        to.Element<char>(toAt), from.Element<char>(fromAt), elementBytes);
+  }
+}
+
+RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
+    const Descriptor &to, const Descriptor &from) {
+  char *toAt{to.OffsetElement()};
+  SubscriptValue fromAt[maxRank];
+  from.GetLowerBounds(fromAt);
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
+    std::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
+  }
+}
+
+RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from) {
+  SubscriptValue toAt[maxRank];
+  to.GetLowerBounds(toAt);
+  char *fromAt{from.OffsetElement()};
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       to.IncrementSubscripts(toAt), fromAt += elementBytes) {
+    std::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
+  }
+}
+
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous) {
+  if (toIsContiguous) {
+    if (fromIsContiguous) {
+      std::memcpy(to.OffsetElement(), from.OffsetElement(),
+          to.Elements() * to.ElementBytes());
+    } else {
+      ShallowCopyDiscontiguousToContiguous(to, from);
+    }
+  } else {
+    if (fromIsContiguous) {
+      ShallowCopyContiguousToDiscontiguous(to, from);
+    } else {
+      ShallowCopyDiscontiguousToDiscontiguous(to, from);
+    }
+  }
+}
+
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
+  ShallowCopy(to, from, to.IsContiguous(), from.IsContiguous());
+}
+
+RT_API_ATTRS char *EnsureNullTerminated(
+    char *str, std::size_t length, Terminator &terminator) {
+  if (runtime::memchr(str, '\0', length) == nullptr) {
+    char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
+    std::memcpy(newCmd, str, length);
+    newCmd[length] = '\0';
+    return newCmd;
+  } else {
+    return str;
+  }
+}
+
+RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value) {
+  return value && value->IsAllocated() &&
+      value->type() == TypeCode(TypeCategory::Character, 1) &&
+      value->rank() == 0;
+}
+
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal) {
+  // Check that our descriptor is allocated and is a scalar integer with
+  // kind != 1 (i.e. with a large enough decimal exponent range).
+  return intVal && intVal->IsAllocated() && intVal->rank() == 0 &&
+      intVal->type().IsInteger() && intVal->type().GetCategoryAndKind() &&
+      intVal->type().GetCategoryAndKind()->second != 1;
+}
+
+RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
+    const char *rawValue, std::size_t rawValueLength, const Descriptor *errmsg,
+    std::size_t offset) {
+
+  const std::int64_t toCopy{std::min(static_cast<std::int64_t>(rawValueLength),
+      static_cast<std::int64_t>(value.ElementBytes() - offset))};
+  if (toCopy < 0) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+
+  if (static_cast<std::int64_t>(rawValueLength) > toCopy) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  return StatOk;
+}
+
+RT_API_ATTRS void StoreIntToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  int kind{typeCode->second};
+  ApplyIntegerKind<StoreIntegerAt, void>(
+      kind, terminator, *length, /* atIndex = */ 0, value);
+}
+
+template <int KIND> struct FitsInIntegerKind {
+  RT_API_ATTRS bool operator()([[maybe_unused]] std::int64_t value) {
+    if constexpr (KIND >= 8) {
+      return true;
+    } else {
+      return value <=
+          std::numeric_limits<
+              CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>>::max();
+    }
+  }
+};
+
+// Utility: establishes & allocates the result array for a partial
+// reduction (i.e., one with DIM=).
+RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
+    const Descriptor &x, std::size_t resultElementSize, int dim,
+    Terminator &terminator, const char *intrinsic, TypeCode typeCode) {
+  int xRank{x.rank()};
+  if (dim < 1 || dim > xRank) {
+    terminator.Crash(
+        "%s: bad DIM=%d for ARRAY with rank %d", intrinsic, dim, xRank);
+  }
+  int zeroBasedDim{dim - 1};
+  SubscriptValue resultExtent[maxRank];
+  for (int j{0}; j < zeroBasedDim; ++j) {
+    resultExtent[j] = x.GetDimension(j).Extent();
+  }
+  for (int j{zeroBasedDim + 1}; j < xRank; ++j) {
+    resultExtent[j - 1] = x.GetDimension(j).Extent();
+  }
+  result.Establish(typeCode, resultElementSize, nullptr, xRank - 1,
+      resultExtent, CFI_attribute_allocatable);
+  for (int j{0}; j + 1 < xRank; ++j) {
+    result.GetDimension(j).SetBounds(1, resultExtent[j]);
+  }
+  if (int stat{result.Allocate()}) {
+    terminator.Crash(
+        "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
+  }
+}
+
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

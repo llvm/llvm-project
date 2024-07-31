@@ -128,7 +128,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
     return HighlightingKind::Class;
   if (isa<ObjCProtocolDecl>(D))
     return HighlightingKind::Interface;
-  if (isa<ObjCCategoryDecl>(D))
+  if (isa<ObjCCategoryDecl, ObjCCategoryImplDecl>(D))
     return HighlightingKind::Namespace;
   if (auto *MD = dyn_cast<CXXMethodDecl>(D))
     return MD->isStatic() ? HighlightingKind::StaticMethod
@@ -136,7 +136,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     return OMD->isClassMethod() ? HighlightingKind::StaticMethod
                                 : HighlightingKind::Method;
-  if (isa<FieldDecl, ObjCPropertyDecl>(D))
+  if (isa<FieldDecl, IndirectFieldDecl, ObjCPropertyDecl>(D))
     return HighlightingKind::Field;
   if (isa<EnumDecl>(D))
     return HighlightingKind::Enum;
@@ -265,7 +265,7 @@ bool isStatic(const Decl *D) {
 
 bool isAbstract(const Decl *D) {
   if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isPure();
+    return CMD->isPureVirtual();
   if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
     return CRD->hasDefinition() && CRD->isAbstract();
   return false;
@@ -418,7 +418,8 @@ class HighlightingsBuilder {
 public:
   HighlightingsBuilder(const ParsedAST &AST, const HighlightingFilter &Filter)
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
-        LangOpts(AST.getLangOpts()), Filter(Filter) {}
+        LangOpts(AST.getLangOpts()), Filter(Filter),
+        Resolver(AST.getHeuristicResolver()) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     auto Range = getRangeForSourceLocation(Loc);
@@ -446,11 +447,10 @@ public:
     if (!RLoc.isValid())
       return;
 
-    const auto *RTok = TB.spelledTokenAt(RLoc);
-    // Handle `>>`. RLoc is always pointing at the right location, just change
-    // the end to be offset by 1.
-    // We'll either point at the beginning of `>>`, hence get a proper spelled
-    // or point in the middle of `>>` hence get no spelled tok.
+    const auto *RTok = TB.spelledTokenContaining(RLoc);
+    // Handle `>>`. RLoc is either part of `>>` or a spelled token on its own
+    // `>`. If it's the former, slice to have length of 1, if latter use the
+    // token as-is.
     if (!RTok || RTok->kind() == tok::greatergreater) {
       Position Begin = sourceLocToPosition(SourceMgr, RLoc);
       Position End = sourceLocToPosition(SourceMgr, RLoc.getLocWithOffset(1));
@@ -576,7 +576,7 @@ private:
       return std::nullopt;
     // We might have offsets in the main file that don't correspond to any
     // spelled tokens.
-    const auto *Tok = TB.spelledTokenAt(Loc);
+    const auto *Tok = TB.spelledTokenContaining(Loc);
     if (!Tok)
       return std::nullopt;
     return halfOpenToRange(SourceMgr,
@@ -589,7 +589,7 @@ private:
   HighlightingFilter Filter;
   std::vector<HighlightingToken> Tokens;
   std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
-  const HeuristicResolver *Resolver = nullptr;
+  const HeuristicResolver *Resolver;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
 };
@@ -617,7 +617,8 @@ std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   if (DC->isTranslationUnit() && D->isTemplateParameter())
     return std::nullopt;
   // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
-  if (D->getLinkageInternal() < ExternalLinkage)
+  if (llvm::to_underlying(D->getLinkageInternal()) <
+      llvm::to_underlying(Linkage::External))
     return HighlightingModifier::FileScope;
   return HighlightingModifier::GlobalScope;
 }
@@ -691,17 +692,22 @@ public:
     return true;
   }
 
-  bool VisitClassTemplatePartialSpecializationDecl(
-      ClassTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+  bool
+  VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    return true;
+  }
+
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsInfo())
+    if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
@@ -710,15 +716,6 @@ public:
       VarTemplatePartialSpecializationDecl *D) {
     if (auto *TPL = D->getTemplateParameters())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
-    return true;
-  }
-
-  bool VisitClassScopeFunctionSpecializationDecl(
-      ClassScopeFunctionSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
@@ -733,12 +730,6 @@ public:
 
   bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
     H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
-    return true;
-  }
-
-  bool VisitAutoTypeLoc(AutoTypeLoc L) {
-    if (L.isConstrained())
-      H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
 
@@ -758,8 +749,6 @@ public:
     }
     if (auto *Args = D->getTemplateSpecializationArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
-    if (auto *I = D->getDependentSpecializationInfo())
-      H.addAngleBracketTokens(I->getLAngleLoc(), I->getRAngleLoc());
     return true;
   }
 
@@ -953,13 +942,18 @@ public:
         kindForType(AT->getDeducedType().getTypePtrOrNull(), H.getResolver());
     if (!K)
       return true;
-    SourceLocation StartLoc = D->getTypeSpecStartLoc();
+    auto *TSI = D->getTypeSourceInfo();
+    if (!TSI)
+      return true;
+    SourceLocation StartLoc =
+        TSI->getTypeLoc().getContainedAutoTypeLoc().getNameLoc();
     // The AutoType may not have a corresponding token, e.g. in the case of
     // init-captures. In this case, StartLoc overlaps with the location
     // of the decl itself, and producing a token for the type here would result
     // in both it and the token for the decl being dropped due to conflict.
     if (StartLoc == D->getLocation())
       return true;
+
     auto &Tok =
         H.addToken(StartLoc, *K).addModifier(HighlightingModifier::Deduced);
     const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
@@ -1211,7 +1205,8 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
       AST.getHeuristicResolver());
   // Add highlightings for macro references.
   auto AddMacro = [&](const MacroOccurrence &M) {
-    auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);
+    auto &T = Builder.addToken(M.toRange(C.getSourceManager()),
+                               HighlightingKind::Macro);
     T.addModifier(HighlightingModifier::GlobalScope);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);

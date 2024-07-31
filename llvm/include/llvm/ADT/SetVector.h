@@ -23,10 +23,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <iterator>
-#include <vector>
 
 namespace llvm {
 
@@ -52,7 +52,7 @@ namespace llvm {
 /// when searching for elements instead of checking Set, due to it being better
 /// for performance. A value of 0 means that this mode of operation is not used,
 /// and is the default value.
-template <typename T, typename Vector = std::vector<T>,
+template <typename T, typename Vector = SmallVector<T, 0>,
           typename Set = DenseSet<T>, unsigned N = 0>
 class SetVector {
   // Much like in SmallPtrSet, this value should not be too high to prevent
@@ -162,7 +162,7 @@ public:
   bool insert(const value_type &X) {
     if constexpr (canBeSmall())
       if (isSmall()) {
-        if (llvm::find(vector_, X) == vector_.end()) {
+        if (!llvm::is_contained(vector_, X)) {
           vector_.push_back(X);
           if (vector_.size() > N)
             makeBig();

@@ -12,7 +12,6 @@
 #include "ELFAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include <optional>
@@ -58,7 +57,7 @@ public:
   ELFAttributeParser(TagNameMap tagNameMap, StringRef vendor)
       : vendor(vendor), sw(nullptr), tagToStringMap(tagNameMap) {}
 
-  Error parse(ArrayRef<uint8_t> section, support::endianness endian);
+  Error parse(ArrayRef<uint8_t> section, llvm::endianness endian);
 
   std::optional<unsigned> getAttributeValue(unsigned tag) const {
     auto I = attributes.find(tag);

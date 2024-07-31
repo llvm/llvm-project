@@ -146,6 +146,14 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     }
   }
 
+  if (Function *TypeCheckedLoadRelativeFunc = M.getFunction(
+          Intrinsic::getName(Intrinsic::type_checked_load_relative))) {
+    for (const Use &U : TypeCheckedLoadRelativeFunc->uses()) {
+      auto CI = cast<CallInst>(U.getUser());
+      ExternalizeTypeId(CI, 2);
+    }
+  }
+
   for (GlobalObject &GO : M.global_objects()) {
     SmallVector<MDNode *, 1> MDs;
     GO.getMetadata(LLVMContext::MD_type, MDs);
@@ -178,7 +186,7 @@ void simplifyExternals(Module &M) {
 
     if (!F.isDeclaration() || F.getFunctionType() == EmptyFT ||
         // Changing the type of an intrinsic may invalidate the IR.
-        F.getName().startswith("llvm."))
+        F.getName().starts_with("llvm."))
       continue;
 
     Function *NewF =
@@ -190,7 +198,7 @@ void simplifyExternals(Module &M) {
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
-    F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));
+    F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }
 
@@ -251,6 +259,16 @@ static void cloneUsedGlobalVariables(const Module &SrcM, Module &DestM,
     appendToUsed(DestM, NewUsed);
 }
 
+#ifndef NDEBUG
+static bool enableUnifiedLTO(Module &M) {
+  bool UnifiedLTO = false;
+  if (auto *MD =
+          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("UnifiedLTO")))
+    UnifiedLTO = MD->getZExtValue();
+  return UnifiedLTO;
+}
+#endif
+
 // If it's possible to split M into regular and thin LTO parts, do so and write
 // a multi-module bitcode file with the two parts to OS. Otherwise, write only a
 // regular LTO bitcode file to OS.
@@ -259,18 +277,20 @@ void splitAndWriteThinLTOBitcode(
     function_ref<AAResults &(Function &)> AARGetter, Module &M) {
   std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
+    assert(!enableUnifiedLTO(M));
     // We couldn't generate a module ID for this module, write it out as a
     // regular LTO module with an index for summary-based dead stripping.
     ProfileSummaryInfo PSI(M);
     M.addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
     ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
-    WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false, &Index);
+    WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false, &Index,
+                       /*UnifiedLTO=*/false);
 
     if (ThinLinkOS)
       // We don't have a ThinLTO part, but still write the module to the
       // ThinLinkOS if requested so that the expected output file is produced.
       WriteBitcodeToFile(M, *ThinLinkOS, /*ShouldPreserveUseListOrder=*/false,
-                         &Index);
+                         &Index, /*UnifiedLTO=*/false);
 
     return;
   }
@@ -309,7 +329,7 @@ void splitAndWriteThinLTOBitcode(
   // comdat in MergedM to keep the comdat together.
   DenseSet<const Comdat *> MergedMComdats;
   for (GlobalVariable &GV : M.globals())
-    if (HasTypeMetadata(&GV)) {
+    if (!GV.isDeclaration() && HasTypeMetadata(&GV)) {
       if (const auto *C = GV.getComdat())
         MergedMComdats.insert(C);
       forEachVirtualFunction(GV.getInitializer(), [&](Function *F) {
@@ -555,16 +575,23 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
 }
 
 } // anonymous namespace
-
+extern bool WriteNewDbgInfoFormatToBitcode;
 PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
+                                                WriteNewDbgInfoFormatToBitcode);
+  if (M.IsNewDbgInfoFormat)
+    M.removeDebugIntrinsicDeclarations();
+
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
       },
       M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
+
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

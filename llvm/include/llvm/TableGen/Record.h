@@ -36,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -317,7 +318,8 @@ protected:
     IK_VarBitInit,
     IK_VarDefInit,
     IK_LastTypedInit,
-    IK_UnsetInit
+    IK_UnsetInit,
+    IK_ArgumentInit,
   };
 
 private:
@@ -478,6 +480,68 @@ public:
 
   /// Get the string representation of the Init.
   std::string getAsString() const override { return "?"; }
+};
+
+// Represent an argument.
+using ArgAuxType = std::variant<unsigned, Init *>;
+class ArgumentInit : public Init, public FoldingSetNode {
+public:
+  enum Kind {
+    Positional,
+    Named,
+  };
+
+private:
+  Init *Value;
+  ArgAuxType Aux;
+
+protected:
+  explicit ArgumentInit(Init *Value, ArgAuxType Aux)
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+
+public:
+  ArgumentInit(const ArgumentInit &) = delete;
+  ArgumentInit &operator=(const ArgumentInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ArgumentInit; }
+
+  RecordKeeper &getRecordKeeper() const { return Value->getRecordKeeper(); }
+
+  static ArgumentInit *get(Init *Value, ArgAuxType Aux);
+
+  bool isPositional() const { return Aux.index() == Positional; }
+  bool isNamed() const { return Aux.index() == Named; }
+
+  Init *getValue() const { return Value; }
+  unsigned getIndex() const {
+    assert(isPositional() && "Should be positional!");
+    return std::get<Positional>(Aux);
+  }
+  Init *getName() const {
+    assert(isNamed() && "Should be named!");
+    return std::get<Named>(Aux);
+  }
+  ArgumentInit *cloneWithValue(Init *Value) const { return get(Value, Aux); }
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  Init *resolveReferences(Resolver &R) const override;
+  std::string getAsString() const override {
+    if (isPositional())
+      return utostr(getIndex()) + ": " + Value->getAsString();
+    if (isNamed())
+      return getName()->getAsString() + ": " + Value->getAsString();
+    llvm_unreachable("Unsupported argument type!");
+    return "";
+  }
+
+  bool isComplete() const override { return false; }
+  bool isConcrete() const override { return false; }
+  Init *getBit(unsigned Bit) const override { return Value->getBit(Bit); }
+  Init *getCastTo(RecTy *Ty) const override { return Value->getCastTo(Ty); }
+  Init *convertInitializerTo(RecTy *Ty) const override {
+    return Value->convertInitializerTo(Ty);
+  }
 };
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
@@ -781,7 +845,8 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
-    LOG2
+    LOG2,
+    REPR
   };
 
 private:
@@ -847,7 +912,6 @@ public:
     LISTREMOVE,
     LISTELEM,
     LISTSLICE,
-    RANGE,
     RANGEC,
     STRCONCAT,
     INTERLEAVE,
@@ -924,6 +988,7 @@ public:
     FILTER,
     IF,
     DAG,
+    RANGE,
     SUBSTR,
     FIND,
     SETDAGARG,
@@ -1278,8 +1343,9 @@ public:
 
 /// classname<targs...> - Represent an uninstantiated anonymous class
 /// instantiation.
-class VarDefInit final : public TypedInit, public FoldingSetNode,
-                         public TrailingObjects<VarDefInit, Init *> {
+class VarDefInit final : public TypedInit,
+                         public FoldingSetNode,
+                         public TrailingObjects<VarDefInit, ArgumentInit *> {
   Record *Class;
   DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
@@ -1298,7 +1364,7 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
   }
-  static VarDefInit *get(Record *Class, ArrayRef<Init *> Args);
+  static VarDefInit *get(Record *Class, ArrayRef<ArgumentInit *> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1307,20 +1373,24 @@ public:
 
   std::string getAsString() const override;
 
-  Init *getArg(unsigned i) const {
+  ArgumentInit *getArg(unsigned i) const {
     assert(i < NumArgs && "Argument index out of range!");
-    return getTrailingObjects<Init *>()[i];
+    return getTrailingObjects<ArgumentInit *>()[i];
   }
 
-  using const_iterator = Init *const *;
+  using const_iterator = ArgumentInit *const *;
 
-  const_iterator args_begin() const { return getTrailingObjects<Init *>(); }
+  const_iterator args_begin() const {
+    return getTrailingObjects<ArgumentInit *>();
+  }
   const_iterator args_end  () const { return args_begin() + NumArgs; }
 
   size_t         args_size () const { return NumArgs; }
   bool           args_empty() const { return NumArgs == 0; }
 
-  ArrayRef<Init *> args() const { return ArrayRef(args_begin(), NumArgs); }
+  ArrayRef<ArgumentInit *> args() const {
+    return ArrayRef(args_begin(), NumArgs);
+  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off anonymous def");
@@ -1571,6 +1641,17 @@ public:
         : Loc(Loc), Condition(Condition), Message(Message) {}
   };
 
+  struct DumpInfo {
+    SMLoc Loc;
+    Init *Message;
+
+    // User-defined constructor to support std::make_unique(). It can be
+    // removed in C++20 when braced initialization is supported.
+    DumpInfo(SMLoc Loc, Init *Message) : Loc(Loc), Message(Message) {}
+  };
+
+  enum RecordKind { RK_Def, RK_AnonymousDef, RK_Class, RK_MultiClass };
+
 private:
   Init *Name;
   // Location where record was instantiated, followed by the location of
@@ -1582,6 +1663,7 @@ private:
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
+  SmallVector<DumpInfo, 0> Dumps;
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
@@ -1596,24 +1678,22 @@ private:
   // Unique record ID.
   unsigned ID;
 
-  bool IsAnonymous;
-  bool IsClass;
+  RecordKind Kind;
 
   void checkName();
 
 public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  bool Anonymous = false, bool Class = false)
+                  RecordKind Kind = RK_Def)
       : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
-        ID(getNewUID(N->getRecordKeeper())), IsAnonymous(Anonymous),
-        IsClass(Class) {
+        ID(getNewUID(N->getRecordKeeper())), Kind(Kind) {
     checkName();
   }
 
   explicit Record(StringRef N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  bool Class = false)
-      : Record(StringInit::get(records, N), locs, records, false, Class) {}
+                  RecordKind Kind = RK_Def)
+      : Record(StringInit::get(records, N), locs, records, Kind) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
   // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
@@ -1622,8 +1702,7 @@ public:
       : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
         Values(O.Values), Assertions(O.Assertions),
         SuperClasses(O.SuperClasses), TrackedRecords(O.TrackedRecords),
-        ID(getNewUID(O.getRecords())), IsAnonymous(O.IsAnonymous),
-        IsClass(O.IsClass) {}
+        ID(getNewUID(O.getRecords())), Kind(O.Kind) {}
 
   static unsigned getNewUID(RecordKeeper &RK);
 
@@ -1663,7 +1742,11 @@ public:
   /// get the corresponding DefInit.
   DefInit *getDefInit();
 
-  bool isClass() const { return IsClass; }
+  bool isClass() const { return Kind == RK_Class; }
+
+  bool isMultiClass() const { return Kind == RK_MultiClass; }
+
+  bool isAnonymous() const { return Kind == RK_AnonymousDef; }
 
   ArrayRef<Init *> getTemplateArgs() const {
     return TemplateArgs;
@@ -1672,6 +1755,7 @@ public:
   ArrayRef<RecordVal> getValues() const { return Values; }
 
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
+  ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
   ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
     return SuperClasses;
@@ -1732,11 +1816,18 @@ public:
     Assertions.push_back(AssertionInfo(Loc, Condition, Message));
   }
 
+  void addDump(SMLoc Loc, Init *Message) {
+    Dumps.push_back(DumpInfo(Loc, Message));
+  }
+
   void appendAssertions(const Record *Rec) {
     Assertions.append(Rec->Assertions);
   }
 
+  void appendDumps(const Record *Rec) { Dumps.append(Rec->Dumps); }
+
   void checkRecordAssertions();
+  void emitRecordDumps();
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
@@ -1781,10 +1872,6 @@ public:
 
   RecordKeeper &getRecords() const {
     return TrackedRecords;
-  }
-
-  bool isAnonymous() const {
-    return IsAnonymous;
   }
 
   void dump() const;
@@ -2011,7 +2098,7 @@ private:
 /// Sorting predicate to sort record pointers by name.
 struct LessRecord {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
-    return StringRef(Rec1->getName()).compare_numeric(Rec2->getName()) < 0;
+    return Rec1->getName().compare_numeric(Rec2->getName()) < 0;
   }
 };
 
@@ -2067,6 +2154,11 @@ struct LessRecordRegister {
   };
 
   bool operator()(const Record *Rec1, const Record *Rec2) const {
+    int64_t LHSPositionOrder = Rec1->getValueAsInt("PositionOrder");
+    int64_t RHSPositionOrder = Rec2->getValueAsInt("PositionOrder");
+    if (LHSPositionOrder != RHSPositionOrder)
+      return LHSPositionOrder < RHSPositionOrder;
+
     RecordParts LHSParts(StringRef(Rec1->getName()));
     RecordParts RHSParts(StringRef(Rec2->getName()));
 

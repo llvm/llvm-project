@@ -4,7 +4,7 @@
 
 // RUN: %clang_pgogen -o %t.no.dbg -mllvm --debug-info-correlate -mllvm --disable-vp=true %s
 // RUN: not llvm-profdata show --debug-info=%t.no.dbg 2>&1 | FileCheck %s --check-prefix NO-DBG
-// NO-DBG: unable to correlate profile: could not find any profile metadata in debug info
+// NO-DBG: unable to correlate profile: could not find any profile data metadata in correlated file
 
 // YAML: Probes:
 // YAML:   - Function Name:   a
@@ -34,8 +34,8 @@ void b() {}
 // YAML:     Line:            [[@LINE+1]]
 int main() { return 0; }
 
-// CHECK: main
-// CHECK: a
-// CHECK: b
+// CHECK:      a
+// CHECK-NEXT: b
+// CHECK-NEXT: main
 // CHECK: Counters section size: 0x18 bytes
 // CHECK: Found 3 functions

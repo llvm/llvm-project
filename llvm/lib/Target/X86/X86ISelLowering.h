@@ -295,6 +295,10 @@ namespace llvm {
     // thunk at the address from an earlier relocation.
     TLSCALL,
 
+    // Thread Local Storage. A descriptor containing pointer to
+    // code and to argument to get the TLS offset for the symbol.
+    TLSDESC,
+
     // Exception Handling helpers.
     EH_RETURN,
 
@@ -695,18 +699,6 @@ namespace llvm {
     // Test if in transactional execution.
     XTEST,
 
-    // ERI instructions.
-    RSQRT28,
-    RSQRT28_SAE,
-    RSQRT28S,
-    RSQRT28S_SAE,
-    RCP28,
-    RCP28_SAE,
-    RCP28S,
-    RCP28S_SAE,
-    EXP2,
-    EXP2_SAE,
-
     // Conversions between float and half-float.
     CVTPS2PH,
     CVTPS2PH_SAE,
@@ -742,6 +734,10 @@ namespace llvm {
 
     // Perform an FP80 add after changing precision control in FPCW.
     FP80_ADD,
+
+    // Conditional compare instructions
+    CCMP,
+    CTEST,
 
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
@@ -833,6 +829,12 @@ namespace llvm {
     // Load FP control word from i16 memory.
     FLDCW16m,
 
+    // Store x87 FPU environment into memory.
+    FNSTENVm,
+
+    // Load x87 FPU environment from memory.
+    FLDENVm,
+
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
     /// to the X86::FIST*m instructions and the rounding mode change stuff. It
@@ -901,6 +903,10 @@ namespace llvm {
     // is needed so that this can be expanded with control flow.
     VASTART_SAVE_XMM_REGS,
 
+    // Conditional load/store instructions
+    CLOAD,
+    CSTORE,
+
     // WARNING: Do not add anything in the end unless you want the node to
     // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
     // opcodes will be thought as target memory ops!
@@ -960,6 +966,11 @@ namespace llvm {
     /// Check if Op is an operation that could be folded into a zero extend x86
     /// instruction.
     bool mayFoldIntoZeroExtend(SDValue Op);
+
+    /// True if the target supports the extended frame for async Swift
+    /// functions.
+    bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
+                                            const MachineFunction &MF);
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
@@ -1048,6 +1059,12 @@ namespace llvm {
 
     bool preferABDSToABSWithNSW(EVT VT) const override;
 
+    bool preferSextInRegOfTruncate(EVT TruncVT, EVT VT,
+                                   EVT ExtVT) const override;
+
+    bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode Cond,
+                                           EVT VT) const override;
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
@@ -1126,7 +1143,16 @@ namespace llvm {
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
         SelectionDAG &DAG) const override;
 
+    unsigned preferedOpcodeForCmpEqPiecesOfOperand(
+        EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
+        const APInt &ShiftOrRotateAmt,
+        const std::optional<APInt> &AndMask) const override;
+
     bool preferScalarizeSplat(SDNode *N) const override;
+
+    CondMergingParams
+    getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                  const Value *Rhs) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
@@ -1254,23 +1280,22 @@ namespace llvm {
     /// Examine constraint string and operand type and determine a weight value.
     /// The operand object must already have been set up with the operand type.
     ConstraintWeight
-      getSingleConstraintMatchWeight(AsmOperandInfo &info,
-                                     const char *constraint) const override;
+      getSingleConstraintMatchWeight(AsmOperandInfo &Info,
+                                     const char *Constraint) const override;
 
     const char *LowerXConstraint(EVT ConstraintVT) const override;
 
     /// Lower the specified operand into the Ops vector. If it is invalid, don't
     /// add anything to Ops. If hasMemory is true it means one of the asm
     /// constraint of the inline asm instruction being processed is 'm'.
-    void LowerAsmOperandForConstraint(SDValue Op,
-                                      std::string &Constraint,
+    void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "v")
-        return InlineAsm::Constraint_v;
+        return InlineAsm::ConstraintCode::v;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
@@ -1293,6 +1318,8 @@ namespace llvm {
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
+
+    bool addressingModeSupportsTLS(const GlobalValue &GV) const override;
 
     /// Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
@@ -1450,11 +1477,6 @@ namespace llvm {
                                  const SelectionDAG &DAG,
                                  const MachineMemOperand &MMO) const override;
 
-    /// Intel processors have a unified instruction and data cache
-    const char * getClearCacheBuiltinName() const override {
-      return nullptr; // nothing to do, move along.
-    }
-
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
@@ -1538,6 +1560,14 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
+    SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                            MachineMemOperand *MMO, SDValue &NewLoad,
+                            SDValue Ptr, SDValue PassThru,
+                            SDValue Mask) const override;
+    SDValue visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                             MachineMemOperand *MMO, SDValue Ptr, SDValue Val,
+                             SDValue Mask) const override;
+
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
     bool lowerInterleavedLoad(LoadInst *LI,
@@ -1550,9 +1580,8 @@ namespace llvm {
     bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
-    SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value,
-                                   SDValue Addr, SelectionDAG &DAG)
-                                   const override;
+    SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
+                                   int JTI, SelectionDAG &DAG) const override;
 
     Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
@@ -1602,10 +1631,8 @@ namespace llvm {
     /// Check whether the call is eligible for tail call optimization. Targets
     /// that want to do tail call optimization should implement this function.
     bool IsEligibleForTailCallOptimization(
-        SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleeStackStructRet,
-        bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<SDValue> &OutVals,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,
@@ -1625,8 +1652,8 @@ namespace llvm {
     SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
-    unsigned getGlobalWrapperKind(const GlobalValue *GV = nullptr,
-                                  const unsigned char OpFlags = 0) const;
+    unsigned getGlobalWrapperKind(const GlobalValue *GV,
+                                  const unsigned char OpFlags) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -1663,6 +1690,9 @@ namespace llvm {
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGET_FPENV_MEM(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_FPENV_MEM(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_FP_TO_INT128(SDValue Op, SelectionDAG &DAG,
                                     SDValue &Chain) const;
@@ -1696,16 +1726,6 @@ namespace llvm {
       MachineBasicBlock *Entry,
       const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
-    bool splitValueIntoRegisterParts(
-        SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-        unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
-        const override;
-
-    SDValue joinRegisterPartsIntoValue(
-        SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
-        unsigned NumParts, MVT PartVT, EVT ValueVT,
-        std::optional<CallingConv::ID> CC) const override;
-
     bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
@@ -1735,12 +1755,7 @@ namespace llvm {
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
 
-    bool lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const override;
-    bool lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const override;
-
     bool needsCmpXchgNb(Type *MemType) const;
-
-    template<typename T> bool isSoftFP16(T VT) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;
@@ -1790,11 +1805,17 @@ namespace llvm {
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
 
+    MachineBasicBlock *emitPatchableEventCall(MachineInstr &MI,
+                                              MachineBasicBlock *MBB) const;
+
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.
     SDValue emitFlagsForSetcc(SDValue Op0, SDValue Op1, ISD::CondCode CC,
                               const SDLoc &dl, SelectionDAG &DAG,
                               SDValue &X86CC) const;
+
+    bool optimizeFMulOrFDivAsShiftAddBitcast(SDNode *N, SDValue FPConst,
+                                             SDValue IntPow2) const override;
 
     /// Check if replacement of SQRT with RSQRT should be disabled.
     bool isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const override;
@@ -1813,6 +1834,9 @@ namespace llvm {
 
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                           SmallVectorImpl<SDNode *> &Created) const override;
+
+    SDValue getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT, SDValue V1,
+                    SDValue V2) const;
   };
 
   namespace X86 {

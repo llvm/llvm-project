@@ -30,6 +30,7 @@
 // Note this should be discussed in LEWG.
 
 #include <concepts>
+#include <format>
 #include <thread>
 
 #include "test_macros.h"

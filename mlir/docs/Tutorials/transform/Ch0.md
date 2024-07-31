@@ -56,7 +56,7 @@ Even when special instructions are available, it may still be desirable to use t
 
 ## Contraction
 
-Contraction is a generalization of reduction that multiplies elements from two vectors before adding them up. A simple “add” reduction can be thought of as a contraction where one of the vectors contains `1.0`, the neutral element of multiplication. Contractions offer even more flexibility to the compiler, and are represented as by a dedicated operation in MLIR:
+Contraction is a generalization of reduction that multiplies elements from two vectors before adding them up. A simple “add” reduction can be thought of as a contraction where one of the vectors contains `1.0`, the neutral element of multiplication. Contractions offer even more flexibility to the compiler, and are represented by a dedicated operation in MLIR:
 
 ```mlir
 // Neutral initializer for the addition.
@@ -72,14 +72,14 @@ Contraction is a generalization of reduction that multiplies elements from two v
 } %0, %ones, %init : vector<8xf32>, vector<8xf32> into f32
 ```
 
-Note the `affine_map` expressions indicating how vector elements are indexed. Their meaning is perhaps most evident when writing the loop form pseudo-code equivalent to this contraction:
+Note the `affine_map` expressions indicating how vector elements are indexed. Their meaning is perhaps most evident when writing the loop form in pseudo-code equivalent to this contraction:
 
 ```mlir
 for i in 0 to 8:
   init += p0[i] * ones[i]
 ```
 
-where both `%0` and `%ones` use the loop induction variable `i`, as noted on the right-hand side of the corresponding affine map, `(i) -> (i)`, and the `%init` does not, as reflected on the right-hand side of its affine map, `(i) -> ()`.
+where both `%0` and `%ones` use the loop induction variable `i`, as noted on the right-hand side of the corresponding affine map, `(i) -> (i)`, and `%init` does not, as reflected on the right-hand side of its affine map, `(i) -> ()`.
 
 Similarly to uniform elementwise extension, MLIR vector contractions are not limited to 1D cases. In the 2D+ case, one can additionally specify which of the vector dimensions are being reduced and which ones are being preserved. This can be achieved by using the `iterator_types` attribute that specifies, for each dimension, whether it is being reduced (`"reduction"`) or preserved (`"parallel"`). Consider the following 3D contraction that encodes a matrix-matrix multiplication:
 
@@ -134,7 +134,7 @@ Furthermore, the operation now contains a region that explicitly specifies the m
 
 ## “Loop” Fusion
 
-Since the region of the `generic` operation can contain arbitrarily many operations, we can use it to express “fusion” of the implicit loops by simply having more operations chained in the region. For example, the common machine learning rectified linear unit layer (ReLU), which can be defined as `relu(x) = max(0, x)`, can be defined be expressed using the “compare-and-select” idiom in one `generic` operation, without the temporary buffer for the comparison result and without repeating the outer operation:
+Since the region of the `linalg.generic` operation can contain arbitrarily many operations, we can use it to express “fusion” of the implicit loops by simply having more operations chained in the region. For example, the common machine learning rectified linear unit layer (ReLU), which can be defined as `relu(x) = max(0, x)`, can be defined be expressed using the “compare-and-select” idiom in one `linalg.generic` operation, without the temporary buffer for the comparison result and without repeating the outer operation:
 
 ```mlir
 linalg.generic {
@@ -155,7 +155,7 @@ Such operations can be converted to loops or lowered into vector forms after spl
 
 Let us take one last step up on the abstraction ladder. MLIR provides a tensor abstraction that makes it easy for the compiler to reason about multidimensional yet regular data without having to solve complex problems such as alias analysis and dependency satisfaction, which would be necessary on multidimensional buffers. The tensor abstraction is very similar to the vector abstraction (major differences include the availability of unranked tensors, tensor layouts, and vectors being usable as elemental types of tensors but not of other vectors). Tensors are read-only, and operations updating a tensor produce a new tensor.
 
-The `generic` operation from above can lifted to operate on tensors instead of buffers:
+The `linalg.generic` operation from above can lifted to operate on tensors instead of buffers:
 
 ```mlir
 %result = linalg.generic {
@@ -174,15 +174,15 @@ The `generic` operation from above can lifted to operate on tensors instead of b
 
 As you can notice, most components of this operation remain identical to its buffer version. It has been specifically designed this way. The main difference, beside the operand types, is that the operation now produces a new result instead of updating the `out` buffer. The `out` operand is used only as the initialization value.
 
-If the `generic` operation had existed on vectors, it would have had the exact same structure.
+If the `linalg.generic` operation had existed on vectors, it would have had the exact same structure.
 
 ## Tiling and Loop Materialization
 
 At this level of abstraction, it becomes easy for the compiler to perform more advanced transformations usually required for high-performance code generation, such as [tiling](https://en.wikipedia.org/wiki/Loop_nest_optimization). Tiling, in general, can be seen as partitioning the iteration space into smaller parts, or tiles, so that the data required by each part fits into a level of cache for example. The order in which tiles are executed must preserve the original data dependencies.
 
-In the case of `generic` operations, the iteration space is implicit and is defined by the shape of the operands. Therefore, a tile can be expressed by performing the _same_ operation on a subset (slice) of the original data. Since the order in which the body of `generic` is applied to different tuples of the input elements is unspecified, tiles can be executed in any order, without the need for dependence analysis. In order to control the execution of different tiles, the implementation of tiling produces loops. Thus tiling `generic` operations can also be seen as materializing the loops that have been implicit until now.
+In the case of `linalg.generic` operations, the iteration space is implicit and is defined by the shape of the operands. Therefore, a tile can be expressed by performing the _same_ operation on a subset (slice) of the original data. Since the order in which the body of `linalg.generic` is applied to different tuples of the input elements is unspecified, tiles can be executed in any order, without the need for dependence analysis. In order to control the execution of different tiles, the implementation of tiling produces loops. Thus tiling `linalg.generic` operations can also be seen as materializing the loops that have been implicit until now.
 
-For example, tiling the matrix multiplication presented above with tile sizes `(2, 8)`, we obtain a loop nest around a `generic` expressing the same operation on a `2x8` tensor.
+For example, tiling the matrix multiplication presented above with tile sizes `(2, 8)`, we obtain a loop nest around a `linalg.generic` expressing the same operation on a `2x8` tensor.
 
 ```mlir
 // A special "multi-for" loop that supports tensor-insertion semantics 

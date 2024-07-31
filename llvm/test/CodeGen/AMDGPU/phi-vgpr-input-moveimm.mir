@@ -1,4 +1,4 @@
-# RUN: llc  -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc  -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
 ---
 # GCN-LABEL: name: phi_moveimm_input
 # GCN-NOT: %{{[0-9]+}}:vgpr_32 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
@@ -34,8 +34,7 @@ body:             |
 
 ---
 # GCN-LABEL: name: phi_moveimm_subreg_input
-# GCN-NOT: %{{[0-9]+}}:sreg_64 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
-# GCN: %{{[0-9]+}}:vreg_64 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
+# GCN: %{{[0-9]+}}:sreg_64 = PHI %{{[0-9]+}}, %bb.3, %{{[0-9]+}}, %bb.1
 name:            phi_moveimm_subreg_input
 tracksRegLiveness: true
 body:             |

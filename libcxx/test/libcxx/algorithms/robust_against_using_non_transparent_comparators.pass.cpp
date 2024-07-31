@@ -58,7 +58,7 @@ private:
   T* ptr_;
 };
 
-int main() {
+int main(int, char**) {
   int array[5] = {1, 2, 3, 4, 5};
   Iterator<int> first(array);
   Iterator<int> middle(array + 3);
@@ -74,4 +74,6 @@ int main() {
   (void)std::min_element(first, last);
   (void)std::minmax_element(first, last);
   (void)std::upper_bound(first, last, 3);
+
+  return 0;
 }

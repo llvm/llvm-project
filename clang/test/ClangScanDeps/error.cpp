@@ -1,26 +1,21 @@
-// RUN: rm -rf %t.dir
-// RUN: rm -rf %t.cdb
-// RUN: mkdir -p %t.dir
-// RUN: cp %s %t.dir/regular_cdb_input.cpp
-// RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/regular_cdb.json > %t.cdb
-// RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/regular_cdb_clangcl.json > %t_clangcl.cdb
-//
-// RUN: not clang-scan-deps -compilation-database %t.cdb -j 1 2>%t.dir/errs
-// RUN: echo EOF >> %t.dir/errs
-// RUN: FileCheck %s --input-file %t.dir/errs
+// RUN: rm -rf %t
+// RUN: split-file %s %t
 
-// RUN: not clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 2>%t.dir/errs_clangcl
-// RUN: echo EOF >> %t.dir/errs_clangcl
-// RUN: FileCheck %s --input-file %t.dir/errs_clangcl
-
+//--- missing_header.c
 #include "missing.h"
 
-// CHECK: Error while scanning dependencies
-// CHECK-NEXT: error: no such file or directory:
-// CHECK-NEXT: error: no input files
-// CHECK-NEXT: error:
-// CHECK-NEXT: Error while scanning dependencies
-// CHECK-NEXT: fatal error: 'missing.h' file not found
-// CHECK-NEXT: Error while scanning dependencies
-// CHECK-NEXT: fatal error: 'missing.h' file not found
-// CHECK-NEXT: EOF
+// RUN: not clang-scan-deps -- %clang -c %t/missing_tu.c 2>%t/missing_tu.errs
+// RUN: echo EOF >> %t/missing_tu.errs
+// RUN: cat %t/missing_tu.errs | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-MISSING-TU -DPREFIX=%/t
+// CHECK-MISSING-TU: Error while scanning dependencies for [[PREFIX]]/missing_tu.c
+// CHECK-MISSING-TU-NEXT: error: no such file or directory: '[[PREFIX]]/missing_tu.c'
+// CHECK-MISSING-TU-NEXT: error: no input files
+// CHECK-MISSING-TU-NEXT: error:
+// CHECK-MISSING-TU-NEXT: EOF
+
+// RUN: not clang-scan-deps -- %clang -c %t/missing_header.c 2>%t/missing_header.errs
+// RUN: echo EOF >> %t/missing_header.errs
+// RUN: cat %t/missing_header.errs | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-MISSING-HEADER -DPREFIX=%/t
+// CHECK-MISSING-HEADER: Error while scanning dependencies for [[PREFIX]]/missing_header.c
+// CHECK-MISSING-HEADER-NEXT: fatal error: 'missing.h' file not found
+// CHECK-MISSING-HEADER-NEXT: EOF

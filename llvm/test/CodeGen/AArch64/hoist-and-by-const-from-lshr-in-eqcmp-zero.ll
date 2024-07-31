@@ -285,7 +285,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i32_x_is_const_eq(i32 %y) nounwind {
 ; CHECK-LABEL: scalar_i32_x_is_const_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43605
+; CHECK-NEXT:    mov w8, #43605 // =0xaa55
 ; CHECK-NEXT:    movk w8, #43605, lsl #16
 ; CHECK-NEXT:    lsr w8, w8, w0
 ; CHECK-NEXT:    tst w8, #0x1
@@ -299,7 +299,7 @@ define i1 @scalar_i32_x_is_const_eq(i32 %y) nounwind {
 define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; CHECK-LABEL: scalar_i32_x_is_const2_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    lsr w8, w8, w0
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -324,7 +324,7 @@ define i1 @scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_signbit_eq_with_nonzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #128
+; CHECK-NEXT:    mov w8, #128 // =0x80
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    and w8, w8, w0

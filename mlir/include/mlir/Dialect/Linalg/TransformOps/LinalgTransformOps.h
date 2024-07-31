@@ -9,10 +9,12 @@
 #ifndef MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGTRANSFORMOPS_H
 #define MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGTRANSFORMOPS_H
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -22,6 +24,7 @@ class TilingInterface;
 class RewriterBase;
 
 namespace linalg {
+class CopyOp;
 struct ForallTilingResult;
 class GenericOp;
 class LinalgOp;
@@ -35,6 +38,9 @@ class UnPackOp;
 } // namespace tensor
 
 namespace transform {
+class AnyOpType;
+class AnyValueType;
+class OperationType;
 class TransformHandleTypeInterface;
 // Types needed for builders.
 struct TileSizesSpec {};

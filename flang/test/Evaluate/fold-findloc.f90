@@ -4,6 +4,9 @@ module m1
   integer, parameter :: ia1(2:6) = [1, 2, 3, 2, 1]
   integer, parameter :: ia2(2:3,2:4) = reshape([1, 2, 3, 3, 2, 1], shape(ia2))
   integer, parameter :: ia3(2,0,2) = 0 ! middle dimension has zero extent
+  real, parameter :: nan = real(z'7FC00000')
+  real, parameter :: nans(*) = [nan, nan]
+  real, parameter :: someNans(*) = [nan, 0.]
 
   logical, parameter :: test_fi1a = all(findloc(ia1, 1) == 1)
   logical, parameter :: test_fi1ar = rank(findloc(ia1, 1)) == 1
@@ -74,6 +77,8 @@ module m1
   logical, parameter:: test_xia1_mtd = all(maxloc(ia1, mask=.true., dim=1) == [3])
   logical, parameter:: test_fia1_mt  = all(findloc(ia1, 1, mask=.true.) == 1)
   logical, parameter:: test_fia1_mtd = all(findloc(ia1, 1, mask=.true., dim=1) == [1])
+  logical, parameter:: test_fia2_mtd1 = all(findloc(ia2, 1, dim=1, mask=.true.) == [1, 0, 2])
+  logical, parameter:: test_fia2_mtd2 = all(findloc(ia2, 1, dim=2, mask=.true.) == [1, 3])
 
   logical, parameter:: test_mia1_mf  = all(minloc(ia1, mask=.false.) == 0)
   logical, parameter:: test_mia1_mfd = all(minloc(ia1, mask=.false., dim=1) == [0])
@@ -81,4 +86,15 @@ module m1
   logical, parameter:: test_xia1_mfd = all(maxloc(ia1, mask=.false., dim=1) == [0])
   logical, parameter:: test_fia1_mf  = all(findloc(ia1, 1, mask=.false.) == 0)
   logical, parameter:: test_fia1_mfd = all(findloc(ia1, 1, mask=.false., dim=1) == [0])
+  logical, parameter:: test_fia2_mfd1 = all(findloc(ia2, 1, dim=1, mask=.false.) == [0, 0, 0])
+  logical, parameter:: test_fia2_mfd2 = all(findloc(ia2, 1, dim=2, mask=.false.) == [0, 0])
+
+  logical, parameter :: test_nan1 = maxloc(nans,1) == 1
+  logical, parameter :: test_nan2 = maxloc(nans,1,back=.true.) == 2
+  logical, parameter :: test_nan3 = minloc(nans,1) == 1
+  logical, parameter :: test_nan4 = minloc(nans,1,back=.true.) == 2
+  logical, parameter :: test_nan5 = maxloc(someNans,1) == 2
+  logical, parameter :: test_nan6 = maxloc(someNans,1,back=.true.) == 2
+  logical, parameter :: test_nan7 = minloc(someNans,1) == 2
+  logical, parameter :: test_nan8 = minloc(someNans,1,back=.true.) == 2
 end module

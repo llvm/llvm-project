@@ -270,9 +270,10 @@ void DependencyGraph::getCriticalSequence(
   // To obtain the sequence of critical edges, we simply follow the chain of
   // critical predecessors starting from node N (field
   // DGNode::CriticalPredecessor).
-  const auto It = std::max_element(
-      Nodes.begin(), Nodes.end(),
-      [](const DGNode &Lhs, const DGNode &Rhs) { return Lhs.Cost < Rhs.Cost; });
+  const auto It =
+      llvm::max_element(Nodes, [](const DGNode &Lhs, const DGNode &Rhs) {
+        return Lhs.Cost < Rhs.Cost;
+      });
   unsigned IID = std::distance(Nodes.begin(), It);
   Seq.resize(Nodes[IID].Depth);
   for (const DependencyEdge *&DE : llvm::reverse(Seq)) {
@@ -611,9 +612,9 @@ void BottleneckAnalysis::printBottleneckHints(raw_ostream &OS) const {
     ArrayRef<unsigned> Distribution = Tracker.getResourcePressureDistribution();
     const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
     for (unsigned I = 0, E = Distribution.size(); I < E; ++I) {
-      unsigned ResourceCycles = Distribution[I];
-      if (ResourceCycles) {
-        double Frequency = (double)ResourceCycles * 100 / TotalCycles;
+      unsigned ReleaseAtCycles = Distribution[I];
+      if (ReleaseAtCycles) {
+        double Frequency = (double)ReleaseAtCycles * 100 / TotalCycles;
         const MCProcResourceDesc &PRDesc = *SM.getProcResource(I);
         OS << "\n  - " << PRDesc.Name << "  [ "
            << format("%.2f", floor((Frequency * 100) + 0.5) / 100) << "% ]";

@@ -14,12 +14,14 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 
+#include "CGPointerAuthInfo.h"
 #include "CGValue.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Value.h"
 
 namespace llvm {
@@ -30,6 +32,7 @@ class Value;
 namespace clang {
 class Decl;
 class FunctionDecl;
+class TargetOptions;
 class VarDecl;
 
 namespace CodeGen {
@@ -67,6 +70,10 @@ class CGCallee {
     Last = Virtual
   };
 
+  struct OrdinaryInfoStorage {
+    CGCalleeInfo AbstractInfo;
+    CGPointerAuthInfo PointerAuthInfo;
+  };
   struct BuiltinInfoStorage {
     const FunctionDecl *Decl;
     unsigned ID;
@@ -83,7 +90,7 @@ class CGCallee {
 
   SpecialKind KindOrFunctionPointer;
   union {
-    CGCalleeInfo AbstractInfo;
+    OrdinaryInfoStorage OrdinaryInfo;
     BuiltinInfoStorage BuiltinInfo;
     PseudoDestructorInfoStorage PseudoDestructorInfo;
     VirtualInfoStorage VirtualInfo;
@@ -102,15 +109,15 @@ public:
 
   /// Construct a callee.  Call this constructor directly when this
   /// isn't a direct call.
-  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
+  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr,
+           /* FIXME: make parameter pointerAuthInfo mandatory */
+           const CGPointerAuthInfo &pointerAuthInfo = CGPointerAuthInfo())
       : KindOrFunctionPointer(
             SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
-    AbstractInfo = abstractInfo;
+    OrdinaryInfo.AbstractInfo = abstractInfo;
+    OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
-    assert(functionPtr->getType()->isOpaquePointerTy() ||
-           functionPtr->getType()->getNonOpaquePointerElementType()
-               ->isFunctionTy());
   }
 
   static CGCallee forBuiltin(unsigned builtinID,
@@ -174,7 +181,11 @@ public:
     if (isVirtual())
       return VirtualInfo.MD;
     assert(isOrdinary());
-    return AbstractInfo;
+    return OrdinaryInfo.AbstractInfo;
+  }
+  const CGPointerAuthInfo &getPointerAuthInfo() const {
+    assert(isOrdinary());
+    return OrdinaryInfo.PointerAuthInfo;
   }
   llvm::Value *getFunctionPointer() const {
     assert(isOrdinary());
@@ -184,6 +195,10 @@ public:
     assert(isOrdinary());
     KindOrFunctionPointer =
         SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
+  }
+  void setPointerAuthInfo(CGPointerAuthInfo PointerAuth) {
+    assert(isOrdinary());
+    OrdinaryInfo.PointerAuthInfo = PointerAuth;
   }
 
   bool isVirtual() const {
@@ -258,7 +273,7 @@ public:
 /// arguments in a call.
 class CallArgList : public SmallVector<CallArg, 8> {
 public:
-  CallArgList() : StackBase(nullptr) {}
+  CallArgList() = default;
 
   struct Writeback {
     /// The original argument.  Note that the argument l-value
@@ -344,7 +359,7 @@ private:
   SmallVector<CallArgCleanup, 1> CleanupsToDeactivate;
 
   /// The stacksave call.  It dominates all of the argument evaluation.
-  llvm::CallInst *StackBase;
+  llvm::CallInst *StackBase = nullptr;
 };
 
 /// FunctionArgList - Type for representing both the decl and type
@@ -358,8 +373,11 @@ class ReturnValueSlot {
   Address Addr = Address::invalid();
 
   // Return value slot flags
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVolatile : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnused : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExternallyDestructed : 1;
 
 public:
@@ -375,7 +393,58 @@ public:
   Address getValue() const { return Addr; }
   bool isUnused() const { return IsUnused; }
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
+  Address getAddress() const { return Addr; }
 };
+
+/// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
+/// though we had emitted it ourselves. We remove any attributes on F that
+/// conflict with the attributes we add here.
+///
+/// This is useful for adding attrs to bitcode modules that you want to link
+/// with but don't control, such as CUDA's libdevice.  When linking with such
+/// a bitcode library, you might want to set e.g. its functions'
+/// "unsafe-fp-math" attribute to match the attr of the functions you're
+/// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
+/// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
+/// will propagate unsafe-fp-math=false up to every transitive caller of a
+/// function in the bitcode library!
+///
+/// With the exception of fast-math attrs, this will only make the attributes
+/// on the function more conservative.  But it's unsafe to call this on a
+/// function which relies on particular fast-math attributes for correctness.
+/// It's up to you to ensure that this is safe.
+void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
+                                              const CodeGenOptions &CodeGenOpts,
+                                              const LangOptions &LangOpts,
+                                              const TargetOptions &TargetOpts,
+                                              bool WillInternalize);
+
+enum class FnInfoOpts {
+  None = 0,
+  IsInstanceMethod = 1 << 0,
+  IsChainCall = 1 << 1,
+  IsDelegateCall = 1 << 2,
+};
+
+inline FnInfoOpts operator|(FnInfoOpts A, FnInfoOpts B) {
+  return static_cast<FnInfoOpts>(llvm::to_underlying(A) |
+                                 llvm::to_underlying(B));
+}
+
+inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
+  return static_cast<FnInfoOpts>(llvm::to_underlying(A) &
+                                 llvm::to_underlying(B));
+}
+
+inline FnInfoOpts operator|=(FnInfoOpts A, FnInfoOpts B) {
+  A = A | B;
+  return A;
+}
+
+inline FnInfoOpts operator&=(FnInfoOpts A, FnInfoOpts B) {
+  A = A & B;
+  return A;
+}
 
 } // end namespace CodeGen
 } // end namespace clang

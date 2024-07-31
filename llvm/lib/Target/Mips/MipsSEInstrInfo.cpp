@@ -42,7 +42,7 @@ const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned MipsSEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register MipsSEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   unsigned Opc = MI.getOpcode();
 
@@ -64,7 +64,7 @@ unsigned MipsSEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   unsigned Opc = MI.getOpcode();
 
@@ -200,44 +200,14 @@ static bool isORCopyInst(const MachineInstr &MI) {
   return false;
 }
 
-/// If @MI is WRDSP/RRDSP instruction return true with @isWrite set to true
-/// if it is WRDSP instruction.
-static bool isReadOrWriteToDSPReg(const MachineInstr &MI, bool &isWrite) {
-  switch (MI.getOpcode()) {
-  default:
-   return false;
-  case Mips::WRDSP:
-  case Mips::WRDSP_MM:
-    isWrite = true;
-    break;
-  case Mips::RDDSP:
-  case Mips::RDDSP_MM:
-    isWrite = false;
-    break;
-  }
-  return true;
-}
-
 /// We check for the common case of 'or', as it's MIPS' preferred instruction
 /// for GPRs but we have to check the operands to ensure that is the case.
 /// Other move instructions for MIPS are directly identifiable.
 std::optional<DestSourcePair>
 MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
-  bool isDSPControlWrite = false;
-  // Condition is made to match the creation of WRDSP/RDDSP copy instruction
-  // from copyPhysReg function.
-  if (isReadOrWriteToDSPReg(MI, isDSPControlWrite)) {
-    if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != (1 << 4))
-      return std::nullopt;
-    else if (isDSPControlWrite) {
-      return DestSourcePair{MI.getOperand(2), MI.getOperand(0)};
-
-    } else {
-      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-    }
-  } else if (MI.isMoveReg() || isORCopyInst(MI)) {
+  if (MI.isMoveReg() || isORCopyInst(MI))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-  }
+
   return std::nullopt;
 }
 

@@ -81,9 +81,8 @@ public:
   /// Return the number of registers in this class.
   unsigned getNumRegs() const { return MC->getNumRegs(); }
 
-  iterator_range<SmallVectorImpl<MCPhysReg>::const_iterator>
-  getRegisters() const {
-    return make_range(MC->begin(), MC->end());
+  ArrayRef<MCPhysReg> getRegisters() const {
+    return ArrayRef(begin(), getNumRegs());
   }
 
   /// Return the specified register in the class.
@@ -118,6 +117,9 @@ public:
   /// Return true if this register class may be used to create virtual
   /// registers.
   bool isAllocatable() const { return MC->isAllocatable(); }
+
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return MC->isBaseClass(); }
 
   /// Return true if the specified TargetRegisterClass
   /// is a proper sub-class of this TargetRegisterClass.
@@ -200,7 +202,7 @@ public:
   ///
   /// By default, this method returns all registers in the class.
   ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : ArrayRef(begin(), getNumRegs());
+    return OrderFunc ? OrderFunc(MF) : getRegisters();
   }
 
   /// Returns the combination of all lane masks of register in this class.
@@ -239,31 +241,47 @@ public:
   using vt_iterator = const MVT::SimpleValueType *;
   struct RegClassInfo {
     unsigned RegSize, SpillSize, SpillAlignment;
-    vt_iterator VTList;
+    unsigned VTListOffset;
   };
+
+  /// SubRegCoveredBits - Emitted by tablegen: bit range covered by a subreg
+  /// index, -1 in any being invalid.
+  struct SubRegCoveredBits {
+    uint16_t Offset;
+    uint16_t Size;
+  };
+
 private:
   const TargetRegisterInfoDesc *InfoDesc;     // Extra desc array for codegen
   const char *const *SubRegIndexNames;        // Names of subreg indexes.
+  const SubRegCoveredBits *SubRegIdxRanges;   // Pointer to the subreg covered
+                                              // bit ranges array.
+
   // Pointer to array of lane masks, one per sub-reg index.
   const LaneBitmask *SubRegIndexLaneMasks;
 
   regclass_iterator RegClassBegin, RegClassEnd;   // List of regclasses
   LaneBitmask CoveringLanes;
   const RegClassInfo *const RCInfos;
+  const MVT::SimpleValueType *const RCVTLists;
   unsigned HwMode;
 
 protected:
-  TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
-                     regclass_iterator RCB,
-                     regclass_iterator RCE,
-                     const char *const *SRINames,
-                     const LaneBitmask *SRILaneMasks,
-                     LaneBitmask CoveringLanes,
+  TargetRegisterInfo(const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
+                     regclass_iterator RCE, const char *const *SRINames,
+                     const SubRegCoveredBits *SubIdxRanges,
+                     const LaneBitmask *SRILaneMasks, LaneBitmask CoveringLanes,
                      const RegClassInfo *const RCIs,
+                     const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
   virtual ~TargetRegisterInfo();
 
 public:
+  /// Return the number of registers for the function. (may overestimate)
+  virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
+    return getNumRegs();
+  }
+
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
   //
@@ -276,8 +294,8 @@ public:
   // DenseMapInfo<unsigned> uses -1u and -2u.
 
   /// Return the size in bits of a register from class RC.
-  unsigned getRegSizeInBits(const TargetRegisterClass &RC) const {
-    return getRegClassInfo(RC).RegSize;
+  TypeSize getRegSizeInBits(const TargetRegisterClass &RC) const {
+    return TypeSize::getFixed(getRegClassInfo(RC).RegSize);
   }
 
   /// Return the size in bytes of the stack slot allocated to hold a spilled
@@ -316,7 +334,7 @@ public:
   /// Loop over all of the value types that can be represented by values
   /// in the given register class.
   vt_iterator legalclasstypes_begin(const TargetRegisterClass &RC) const {
-    return getRegClassInfo(RC).VTList;
+    return &RCVTLists[getRegClassInfo(RC).VTListOffset];
   }
 
   vt_iterator legalclasstypes_end(const TargetRegisterClass &RC) const {
@@ -373,6 +391,16 @@ public:
     return SubRegIndexNames[SubIdx-1];
   }
 
+  /// Get the size of the bit range covered by a sub-register index.
+  /// If the index isn't continuous, return the sum of the sizes of its parts.
+  /// If the index is used to access subregisters of different sizes, return -1.
+  unsigned getSubRegIdxSize(unsigned Idx) const;
+
+  /// Get the offset of the bit range covered by a sub-register index.
+  /// If an Offset doesn't make sense (the index isn't continuous, or is used to
+  /// access sub-registers at different offsets), return -1.
+  unsigned getSubRegIdxOffset(unsigned Idx) const;
+
   /// Return a bitmask representing the parts of a register that are covered by
   /// SubIdx \see LaneBitmask.
   ///
@@ -428,8 +456,8 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
-    for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units)
-      if (Register(*Units) == RegUnit)
+    for (MCRegUnit Unit : regunits(Reg))
+      if (Register(Unit) == RegUnit)
         return true;
     return false;
   }
@@ -560,6 +588,12 @@ public:
   /// Returns true if the register is considered uniform.
   virtual bool isUniformReg(const MachineRegisterInfo &MRI,
                             const RegisterBankInfo &RBI, Register Reg) const {
+    return false;
+  }
+
+  /// Returns true if MachineLoopInfo should analyze the given physreg
+  /// for loop invariance.
+  virtual bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const {
     return false;
   }
 
@@ -851,7 +885,7 @@ public:
     const TargetRegisterClass *RC) const = 0;
 
   /// Returns size in bits of a phys/virtual/generic register.
-  unsigned getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
+  TypeSize getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
 
   /// Get the weight in units of pressure for this register unit.
   virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
@@ -1045,7 +1079,8 @@ public:
   /// the RegScavenger passed to eliminateFrameIndex. If this is true targets
   /// should scavengeRegisterBackwards in eliminateFrameIndex. New targets
   /// should prefer reverse scavenging behavior.
-  virtual bool supportsBackwardScavenger() const { return false; }
+  /// TODO: Remove this when all targets return true.
+  virtual bool eliminateFrameIndicesBackwards() const { return true; }
 
   /// This method must be overriden to eliminate abstract frame indices from
   /// instructions which may use them. The instruction referenced by the
@@ -1160,6 +1195,28 @@ public:
   /// of the explicit callee saved register list, but should be handled as such
   /// in certain cases.
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
+    return false;
+  }
+
+  /// Returns the Largest Super Class that is being initialized. There
+  /// should be a Pseudo Instruction implemented for the super class
+  /// that is being returned to ensure that Init Undef can apply the
+  /// initialization correctly.
+  virtual const TargetRegisterClass *
+  getLargestSuperClass(const TargetRegisterClass *RC) const {
+    llvm_unreachable("Unexpected target register class.");
+  }
+
+  /// Returns if the architecture being targeted has the required Pseudo
+  /// Instructions for initializing the register. By default this returns false,
+  /// but where it is overriden for an architecture, the behaviour will be
+  /// different. This can either be a check to ensure the Register Class is
+  /// present, or to return true as an indication the architecture supports the
+  /// pass. If using the method that does not check for the Register Class, it
+  /// is imperative to ensure all required Pseudo Instructions are implemented,
+  /// otherwise compilation may fail with an `Unexpected register class` error.
+  virtual bool
+  doesRegClassHavePseudoInitUndef(const TargetRegisterClass *RC) const {
     return false;
   }
 };

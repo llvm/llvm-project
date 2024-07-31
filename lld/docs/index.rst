@@ -22,10 +22,11 @@ Features
   machine, you can expect that LLD runs more than twice as fast as the GNU
   gold linker. Your mileage may vary, though.
 
-- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon, MIPS
-  32/64 big/little-endian, PowerPC, PowerPC64, RISC-V, SPARC V9, x86-32 and
-  x86-64. Among these, AArch64, ARM (>= v4), PowerPC, PowerPC64, RISC-V, x86-32
-  and x86-64 have production quality. MIPS seems decent too.
+- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon,
+  LoongArch, MIPS 32/64 big/little-endian, PowerPC, PowerPC64, RISC-V,
+  SPARC V9, x86-32 and x86-64. Among these, AArch64, ARM (>= v4), LoongArch,
+  PowerPC, PowerPC64, RISC-V, x86-32 and x86-64 have production quality.
+  MIPS seems decent too.
 
 - It is always a cross-linker, meaning that it always supports all the
   above targets however it was built. In fact, we don't provide a
@@ -36,7 +37,7 @@ Features
   external linkers. All you have to do is to construct object files
   and command line arguments just like you would do to invoke an
   external linker and then call the linker's main function,
-  ``lld::elf::link``, from your code.
+  ``lld::lldMain``, from your code.
 
 - It is small. We are using LLVM libObject library to read from object
   files, so it is not a completely fair comparison, but as of February
@@ -124,30 +125,6 @@ not, run ``readelf --string-dump .comment <output-file>`` and examine the
 output. If the string "Linker: LLD" is included in the output, you are
 using LLD.
 
-History
--------
-
-Here is a brief project history of the ELF and COFF ports.
-
-- May 2015: We decided to rewrite the COFF linker and did that.
-  Noticed that the new linker is much faster than the MSVC linker.
-
-- July 2015: The new ELF port was developed based on the COFF linker
-  architecture.
-
-- September 2015: The first patches to support MIPS and AArch64 landed.
-
-- October 2015: Succeeded to self-host the ELF port. We have noticed
-  that the linker was faster than the GNU linkers, but we weren't sure
-  at the time if we would be able to keep the gap as we would add more
-  features to the linker.
-
-- July 2016: Started working on improving the linker script support.
-
-- December 2016: Succeeded to build the entire FreeBSD base system
-  including the kernel. We had widen the performance gap against the
-  GNU linkers.
-
 Internals
 ---------
 
@@ -165,6 +142,7 @@ document soon.
    error_handling_script
    Partitions
    ReleaseNotes
+   ELF/large_sections
    ELF/linker_script
    ELF/start-stop-gc
    ELF/warn_backrefs

@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
+#include "EHFrameSupportImpl.h"
 #include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
 #include "PerGraphGOTAndPLTStubsBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/riscv.h"
 #include "llvm/Object/ELF.h"
@@ -131,38 +133,6 @@ const uint8_t
 namespace llvm {
 namespace jitlink {
 
-static Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) {
-  using namespace riscv;
-  assert((E.getKind() == R_RISCV_PCREL_LO12_I ||
-          E.getKind() == R_RISCV_PCREL_LO12_S) &&
-         "Can only have high relocation for R_RISCV_PCREL_LO12_I or "
-         "R_RISCV_PCREL_LO12_S");
-
-  const Symbol &Sym = E.getTarget();
-  const Block &B = Sym.getBlock();
-  orc::ExecutorAddrDiff Offset = Sym.getOffset();
-
-  struct Comp {
-    bool operator()(const Edge &Lhs, orc::ExecutorAddrDiff Offset) {
-      return Lhs.getOffset() < Offset;
-    }
-    bool operator()(orc::ExecutorAddrDiff Offset, const Edge &Rhs) {
-      return Offset < Rhs.getOffset();
-    }
-  };
-
-  auto Bound =
-      std::equal_range(B.edges().begin(), B.edges().end(), Offset, Comp{});
-
-  for (auto It = Bound.first; It != Bound.second; ++It) {
-    if (It->getKind() == R_RISCV_PCREL_HI20)
-      return *It;
-  }
-
-  return make_error<JITLinkError>(
-      "No HI20 PCREL relocation type be found for LO12 PCREL relocation type");
-}
-
 static uint32_t extractBits(uint32_t Num, unsigned Low, unsigned Size) {
   return (Num & (((1ULL << Size) - 1) << Low)) >> Low;
 }
@@ -182,9 +152,43 @@ class ELFJITLinker_riscv : public JITLinker<ELFJITLinker_riscv> {
 public:
   ELFJITLinker_riscv(std::unique_ptr<JITLinkContext> Ctx,
                      std::unique_ptr<LinkGraph> G, PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    JITLinkerBase::getPassConfig().PostAllocationPasses.push_back(
+        [this](LinkGraph &G) { return gatherRISCVPCRelHi20(G); });
+  }
 
 private:
+  DenseMap<std::pair<const Block *, orc::ExecutorAddrDiff>, const Edge *>
+      RelHi20;
+
+  Error gatherRISCVPCRelHi20(LinkGraph &G) {
+    for (Block *B : G.blocks())
+      for (Edge &E : B->edges())
+        if (E.getKind() == R_RISCV_PCREL_HI20)
+          RelHi20[{B, E.getOffset()}] = &E;
+
+    return Error::success();
+  }
+
+  Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) const {
+    using namespace riscv;
+    assert((E.getKind() == R_RISCV_PCREL_LO12_I ||
+            E.getKind() == R_RISCV_PCREL_LO12_S) &&
+           "Can only have high relocation for R_RISCV_PCREL_LO12_I or "
+           "R_RISCV_PCREL_LO12_S");
+
+    const Symbol &Sym = E.getTarget();
+    const Block &B = Sym.getBlock();
+    orc::ExecutorAddrDiff Offset = Sym.getOffset();
+
+    auto It = RelHi20.find({&B, Offset});
+    if (It != RelHi20.end())
+      return *It->second;
+
+    return make_error<JITLinkError>("No HI20 PCREL relocation type be found "
+                                    "for LO12 PCREL relocation type");
+  }
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
     using namespace riscv;
     using namespace llvm::support;
@@ -233,6 +237,8 @@ private:
           (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
+    case CallRelaxable:
+      // Treat as R_RISCV_CALL when the relaxation pass did not run
     case R_RISCV_CALL_PLT:
     case R_RISCV_CALL: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
@@ -451,6 +457,16 @@ private:
       *(little32_t *)FixupPtr = Word32;
       break;
     }
+    case AlignRelaxable:
+      // Ignore when the relaxation pass did not run
+      break;
+    case NegDelta32: {
+      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      if (LLVM_UNLIKELY(!isInRangeForImm(Value, 32)))
+        return makeTargetOutOfRangeError(G, B, E);
+      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
     }
     return Error::success();
   }
@@ -510,9 +526,9 @@ static bool isRelaxable(const Edge &E) {
 static RelaxAux initRelaxAux(LinkGraph &G) {
   RelaxAux Aux;
   Aux.Config.IsRV32 = G.getTargetTriple().isRISCV32();
-  const auto &Features = G.getFeatures();
-  Aux.Config.HasRVC =
-      std::find(Features.begin(), Features.end(), "+c") != Features.end();
+  const auto &Features = G.getFeatures().getFeatures();
+  Aux.Config.HasRVC = llvm::is_contained(Features, "+c") ||
+                      llvm::is_contained(Features, "+zca");
 
   for (auto &S : G.sections()) {
     if (!shouldRelax(S))
@@ -723,25 +739,27 @@ static void finalizeBlockRelax(LinkGraph &G, Block &Block, BlockRelaxAux &Aux) {
 
   // Fixup edge offsets and kinds.
   Delta = 0;
-  for (auto [I, E] : llvm::enumerate(Aux.RelaxEdges)) {
-    E->setOffset(E->getOffset() - Delta);
+  size_t I = 0;
+  for (auto &E : Block.edges()) {
+    E.setOffset(E.getOffset() - Delta);
 
-    if (Aux.EdgeKinds[I] != Edge::Invalid)
-      E->setKind(Aux.EdgeKinds[I]);
+    if (I < Aux.RelaxEdges.size() && Aux.RelaxEdges[I] == &E) {
+      if (Aux.EdgeKinds[I] != Edge::Invalid)
+        E.setKind(Aux.EdgeKinds[I]);
 
-    Delta = Aux.RelocDeltas[I];
+      Delta = Aux.RelocDeltas[I];
+      ++I;
+    }
   }
 
   // Remove AlignRelaxable edges: all other relaxable edges got modified and
   // will be used later while linking. Alignment is entirely handled here so we
   // don't need these edges anymore.
-  for (auto *B : G.blocks()) {
-    for (auto IE = B->edges().begin(); IE != B->edges().end();) {
-      if (IE->getKind() == AlignRelaxable)
-        IE = B->removeEdge(IE);
-      else
-        ++IE;
-    }
+  for (auto IE = Block.edges().begin(); IE != Block.edges().end();) {
+    if (IE->getKind() == AlignRelaxable)
+      IE = Block.removeEdge(IE);
+    else
+      ++IE;
   }
 }
 
@@ -910,7 +928,7 @@ private:
 public:
   ELFLinkGraphBuilder_riscv(StringRef FileName,
                             const object::ELFFile<ELFT> &Obj, Triple TT,
-                            LinkGraph::FeatureVector Features)
+                            SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, riscv::getEdgeKindName) {}
 };
@@ -934,7 +952,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), Features->getFeatures())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   } else {
     assert((*ELFObj)->getArch() == Triple::riscv32 &&
@@ -942,7 +960,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF32LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), Features->getFeatures())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 }
@@ -952,19 +970,28 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
   const Triple &TT = G->getTargetTriple();
   if (Ctx->shouldAddDefaultTargetPasses(TT)) {
+
+    Config.PrePrunePasses.push_back(DWARFRecordSectionSplitter(".eh_frame"));
+    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
+        ".eh_frame", G->getPointerSize(), Edge::Invalid, Edge::Invalid,
+        Edge::Invalid, Edge::Invalid, NegDelta32));
+    Config.PrePrunePasses.push_back(EHFrameNullTerminator(".eh_frame"));
+
     if (auto MarkLive = Ctx->getMarkLivePass(TT))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
     Config.PostPrunePasses.push_back(
         PerGraphGOTAndPLTStubsBuilder_ELF_riscv::asPass);
-    Config.PreFixupPasses.push_back(relax);
+    Config.PostAllocationPasses.push_back(relax);
   }
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
   ELFJITLinker_riscv::link(std::move(Ctx), std::move(G), std::move(Config));
 }
+
+LinkGraphPassFunction createRelaxationPass_ELF_riscv() { return relax; }
 
 } // namespace jitlink
 } // namespace llvm

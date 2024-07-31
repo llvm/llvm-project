@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_ldexpl_H
-#define LLVM_LIBC_SRC_MATH_ldexpl_H
+#ifndef LLVM_LIBC_SRC_MATH_LDEXPL_H
+#define LLVM_LIBC_SRC_MATH_LDEXPL_H
 
-namespace __llvm_libc {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 long double ldexpl(long double x, int exp);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_ldexpl_H
+#endif // LLVM_LIBC_SRC_MATH_LDEXPL_H

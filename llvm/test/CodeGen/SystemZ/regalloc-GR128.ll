@@ -1,3 +1,4 @@
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 -O3 -o /dev/null
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -O3 -o /dev/null
 ;
 ; Test that regalloc does not run out of registers

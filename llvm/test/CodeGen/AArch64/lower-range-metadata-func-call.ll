@@ -7,7 +7,7 @@
 ; CHECK: ret
 define i32 @test_call_known_max_range() #0 {
 entry:
-  %id = tail call i32 @foo(), !range !0
+  %id = tail call i32 @foo(), !range !0, !noundef !{}
   %and = and i32 %id, 1023
   ret i32 %and
 }
@@ -18,7 +18,7 @@ entry:
 ; CHECK: ret
 define i32 @test_call_known_trunc_1_bit_range() #0 {
 entry:
-  %id = tail call i32 @foo(), !range !0
+  %id = tail call i32 @foo(), !range !0, !noundef !{}
   %and = and i32 %id, 511
   ret i32 %and
 }
@@ -29,11 +29,33 @@ entry:
 ; CHECK: ret
 define i32 @test_call_known_max_range_m1() #0 {
 entry:
-  %id = tail call i32 @foo(), !range !1
+  %id = tail call i32 @foo(), !range !1, !noundef !{}
   %and = and i32 %id, 255
   ret i32 %and
 }
 
+; and can be eliminated
+; CHECK-LABEL: {{^}}test_call_known_max_range_attr:
+; CHECK: bl foo
+; CHECK-NOT: and
+; CHECK: ret
+define i32 @test_call_known_max_range_attr() #0 {
+entry:
+  %id = tail call noundef range(i32 0, 1024) i32 @foo()
+  %and = and i32 %id, 1023
+  ret i32 %and
+}
+
+; CHECK-LABEL: {{^}}test_call_known_max_range_attr_no_noundef:
+; CHECK: bl foo
+; CHECK: and w{{[0-9]+}}, w0, #0x3ff
+; CHECK: ret
+define i32 @test_call_known_max_range_attr_no_noundef() #0 {
+entry:
+  %id = tail call range(i32 0, 1024) i32 @foo()
+  %and = and i32 %id, 1023
+  ret i32 %and
+}
 
 declare i32 @foo()
 

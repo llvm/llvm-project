@@ -1,0 +1,31 @@
+## Checking crashes against injected binary functions created by patch
+## entries pass and debug info turned on. In these cases, we were
+## trying to fetch input to output maps on injected functions and
+## crashing.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags -no-pie -g %p/Inputs/patch-entries.c -fuse-ld=lld -o %t.exe \
+RUN:   -Wl,-q -I%p/../Inputs
+RUN: llvm-bolt -relocs %t.exe -o %t.out --update-debug-sections --force-patch \
+RUN:   --enable-bat
+
+## Check that patched functions can be disassembled (override FDE from the
+## original function)
+# PREAGG: B X:0 #foo.org.0# 1 0
+RUN: link_fdata %s %t.out %t.preagg PREAGG
+RUN: perf2bolt %t.out -p %t.preagg --pa -o %t.yaml --profile-format=yaml \
+RUN:   -print-disasm -print-only=foo.org.0/1 2>&1 | FileCheck %s
+CHECK-NOT: BOLT-WARNING: sizes differ for function foo.org.0/1
+CHECK: Binary Function "foo.org.0/1(*2)" after disassembly {
+
+## Check the expected eh_frame contents
+RUN: llvm-nm --print-size %t.out > %t.foo
+RUN: llvm-objdump %t.out --dwarf=frames >> %t.foo
+RUN: FileCheck %s --input-file %t.foo --check-prefix=CHECK-FOO
+CHECK-FOO: 0000000000[[#%x,FOO:]] [[#%x,OPTSIZE:]] t foo
+CHECK-FOO: 0000000000[[#%x,ORG:]] [[#%x,ORGSIZE:]] t foo.org.0
+## patched FDE comes first
+CHECK-FOO: FDE {{.*}} pc=00[[#%x,ORG]]...00[[#%x,ORG+ORGSIZE]]
+## original FDE comes second
+CHECK-FOO: FDE {{.*}} pc=00[[#%x,ORG]]...00[[#%x,ORG+OPTSIZE]]

@@ -48,6 +48,10 @@ template <typename LatticeT> struct TransferState {
 };
 
 /// A read-only version of TransferState.
+///
+/// FIXME: this type is being used as a general (typed) view type for untyped
+/// dataflow analysis state, rather than strictly for transfer-function
+/// purposes. Move it (and rename it) to DataflowAnalysis.h.
 template <typename LatticeT> struct TransferStateForDiagnostics {
   TransferStateForDiagnostics(const LatticeT &Lattice, const Environment &Env)
       : Lattice(Lattice), Env(Env) {}

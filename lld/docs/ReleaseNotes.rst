@@ -26,11 +26,6 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--remap-inputs=`` and ``--remap-inputs-file=`` are added to remap input files.
-  (`D148859 <https://reviews.llvm.org/D148859>`_)
-* ``PT_RISCV_ATTRIBUTES`` is added to include the SHT_RISCV_ATTRIBUTES section.
-  (`D152065 <https://reviews.llvm.org/D152065>`_)
-
 Breaking changes
 ----------------
 
@@ -48,7 +43,3 @@ WebAssembly Improvements
 
 Fixes
 #####
-
-* Arm exception index tables (.ARM.exidx sections) are now output
-  correctly when they are at a non zero offset within their output
-  section. (`D148033 <https://reviews.llvm.org/D148033>`_)

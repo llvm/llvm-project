@@ -37,7 +37,7 @@ struct H3 {
 template<typename T> struct X {
   X();
   bool operator==(const X&) const = default; // #x expected-note 4{{deleted here}}
-  T t; // expected-note 3{{because there is no viable three-way comparison function for member 't'}}
+  T t; // expected-note 3{{because there is no viable 'operator==' for member 't'}}
        // expected-note@-1 {{because it would invoke a deleted comparison function for member 't'}}
 };
 

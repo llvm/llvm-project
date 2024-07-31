@@ -20,10 +20,8 @@
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
@@ -283,7 +281,7 @@ private:
   bool ReverseLocalAssignment = false;
 
 public:
-  RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
+  RAGreedy(const RegAllocFilterFunc F = nullptr);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
@@ -348,6 +346,12 @@ private:
                       const SmallVirtRegSet &);
   MCRegister tryRegionSplit(const LiveInterval &, AllocationOrder &,
                             SmallVectorImpl<Register> &);
+  /// Calculate cost of region splitting around the specified register.
+  unsigned calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
+                                             AllocationOrder &Order,
+                                             BlockFrequency &BestCost,
+                                             unsigned &NumCands,
+                                             unsigned &BestCand);
   /// Calculate cost of region splitting.
   unsigned calculateRegionSplitCost(const LiveInterval &VirtReg,
                                     AllocationOrder &Order,
@@ -356,6 +360,10 @@ private:
   /// Perform region splitting.
   unsigned doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
                          bool HasCompact, SmallVectorImpl<Register> &NewVRegs);
+  /// Try to split VirtReg around physical Hint register.
+  bool trySplitAroundHintReg(MCPhysReg Hint, const LiveInterval &VirtReg,
+                             SmallVectorImpl<Register> &NewVRegs,
+                             AllocationOrder &Order);
   /// Check other options before using a callee-saved register for the first
   /// time.
   MCRegister tryAssignCSRFirstTime(const LiveInterval &VirtReg,
@@ -417,7 +425,7 @@ private:
                ZeroCostFoldedReloads || Copies);
     }
 
-    void add(RAGreedyStats other) {
+    void add(const RAGreedyStats &other) {
       Reloads += other.Reloads;
       FoldedReloads += other.FoldedReloads;
       ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;

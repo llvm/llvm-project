@@ -35,6 +35,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <cstring>
@@ -59,7 +60,7 @@ namespace detail {
 
 template <typename T>
 using EnableIfTrivial =
-    std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
+    std::enable_if_t<std::is_trivially_move_constructible<T>::value &&
                      std::is_trivially_destructible<T>::value>;
 template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
@@ -99,11 +100,11 @@ protected:
   template <typename T> struct AdjustedParamTBase {
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
-    using type = std::conditional_t<
-        llvm::is_trivially_copy_constructible<T>::value &&
-            llvm::is_trivially_move_constructible<T>::value &&
-            IsSizeLessThanThresholdT<T>::value,
-        T, T &>;
+    using type =
+        std::conditional_t<std::is_trivially_copy_constructible<T>::value &&
+                               std::is_trivially_move_constructible<T>::value &&
+                               IsSizeLessThanThresholdT<T>::value,
+                           T, T &>;
   };
 
   // This specialization ensures that 'AdjustedParam<V<T>&>' or
@@ -160,8 +161,7 @@ protected:
     // provide three pointers worth of storage here.
     // This is mutable as an inlined `const unique_function<void() const>` may
     // still modify its own mutable members.
-    mutable std::aligned_storage_t<InlineStorageSize, alignof(void *)>
-        InlineStorage;
+    alignas(void *) mutable std::byte InlineStorage[InlineStorageSize];
   } StorageUnion;
 
   // A compressed pointer to either our dispatching callback or our table of
@@ -317,8 +317,10 @@ protected:
     // Clear the old callback and inline flag to get back to as-if-null.
     RHS.CallbackAndInlineFlag = {};
 
-#ifndef NDEBUG
-    // In debug builds, we also scribble across the rest of the storage.
+#if !defined(NDEBUG) && !LLVM_ADDRESS_SANITIZER_BUILD
+    // In debug builds without ASan, we also scribble across the rest of the
+    // storage. Scribbling under AddressSanitizer (ASan) is disabled to prevent
+    // overwriting poisoned objects (e.g., annotated short strings).
     memset(RHS.getInlineStorage(), 0xAD, InlineStorageSize);
 #endif
   }

@@ -21,13 +21,13 @@ define <32 x i8> @test_l_v32i8(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = load <32 x i8>, ptr %p, align 1
@@ -54,13 +54,13 @@ define <16 x i16> @test_l_v16i16(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = load <16 x i16>, ptr %p, align 2
@@ -87,13 +87,13 @@ define <8 x i32> @test_l_v8i32(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = load <8 x i32>, ptr %p, align 4
@@ -144,13 +144,13 @@ define <8 x float> @test_l_v8float(ptr %p) #0 {
 ; CHECK-LABEL: test_l_v8float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 31
-; CHECK-NEXT:    lvsl 5, 0, 3
+; CHECK-NEXT:    lvsl 4, 0, 3
 ; CHECK-NEXT:    lvx 2, 3, 4
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lvx 4, 3, 4
-; CHECK-NEXT:    lvx 0, 0, 3
-; CHECK-NEXT:    vperm 3, 4, 2, 5
-; CHECK-NEXT:    vperm 2, 0, 4, 5
+; CHECK-NEXT:    lvx 5, 3, 4
+; CHECK-NEXT:    vperm 3, 5, 2, 4
+; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = load <8 x float>, ptr %p, align 4

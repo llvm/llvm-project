@@ -5,21 +5,30 @@ set(LLVM_LINK_COMPONENTS
   MCDisassembler
   Object
   Support
+  BinaryFormat
+  AsmPrinter
   TargetParser
   )
 
 add_llvm_library(LLVMBOLTCore
+  AddressMap.cpp
   BinaryBasicBlock.cpp
   BinaryContext.cpp
   BinaryData.cpp
   BinaryEmitter.cpp
   BinaryFunction.cpp
+  BinaryFunctionCallGraph.cpp
   BinaryFunctionProfile.cpp
   BinarySection.cpp
+  CallGraph.cpp
+  CallGraphWalker.cpp
   DebugData.cpp
+  DebugNames.cpp
+  DIEBuilder.cpp
   DynoStats.cpp
   Exceptions.cpp
   FunctionLayout.cpp
+  GDBIndex.cpp
   HashUtilities.cpp
   JumpTable.cpp
   MCPlusBuilder.cpp

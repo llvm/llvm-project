@@ -15,10 +15,9 @@ and it is advised that all five are defaulted or explicitly defined.
 Note that defining a function with ``= delete`` is considered to be a
 definition.
 
-This rule is part of the "Constructors, assignments, and destructors" profile of the C++ Core
-Guidelines, corresponding to rule C.21. See
-
-https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#c21-if-you-define-or-delete-any-default-operation-define-or-delete-them-all.
+This check implements `C.21
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-five>`_
+from the C++ Core Guidelines.
 
 Options
 -------
@@ -46,9 +45,10 @@ Options
 
 .. option:: AllowMissingMoveFunctions
 
-   When set to `true` (default is `false`), this check doesn't flag classes which define no move
-   operations at all. It still flags classes which define only one of either
-   move constructor or move assignment operator. With this option enabled, the following class won't be flagged:
+   When set to `true` (default is `false`), this check doesn't flag classes
+   which define no move operations at all. It still flags classes which define
+   only one of either move constructor or move assignment operator. With this
+   option enabled, the following class won't be flagged:
 
    .. code-block:: c++
 
@@ -60,10 +60,11 @@ Options
 
 .. option:: AllowMissingMoveFunctionsWhenCopyIsDeleted
 
-   When set to `true` (default is `false`), this check doesn't flag classes which define deleted copy
-   operations but don't define move operations. This flag is related to Google C++ Style Guide
-   https://google.github.io/styleguide/cppguide.html#Copyable_Movable_Types. With this option enabled, the
-   following class won't be flagged:
+   When set to `true` (default is `false`), this check doesn't flag classes
+   which define deleted copy operations but don't define move operations. This
+   flag is related to Google C++ Style Guide `Copyable and Movable Types
+   <https://google.github.io/styleguide/cppguide.html#Copyable_Movable_Types>`_.
+   With this option enabled, the following class won't be flagged:
 
    .. code-block:: c++
 
@@ -72,3 +73,15 @@ Options
        A& operator=(const A&) = delete;
        ~A();
      };
+
+.. option:: AllowImplicitlyDeletedCopyOrMove
+
+   When set to `true` (default is `false`), this check doesn't flag classes
+   which implicitly delete copy or move operations.
+   With this option enabled, the following class won't be flagged:
+
+   .. code-block:: c++
+
+      struct A : boost::noncopyable {
+        ~A() { std::cout << "dtor\n"; }
+      };

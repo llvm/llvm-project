@@ -11,10 +11,12 @@
 // template<class F, class I1, class I2 = I1>
 // concept indirect_strict_weak_order;
 
-#include <iterator>
 #include <concepts>
+#include <functional>
+#include <iterator>
 
 #include "indirectly_readable.h"
+#include "test_macros.h"
 
 using It1 = IndirectlyReadable<struct Token1>;
 using It2 = IndirectlyReadable<struct Token2>;
@@ -89,9 +91,18 @@ struct BadOrder5 {
 };
 static_assert(!std::indirect_strict_weak_order<BadOrder5, It1, It2>);
 
-// Should fail when the function can't be called with (iter_common_reference_t, iter_common_reference_t)
-struct BadOrder6 {
-    template <class T, class U> bool operator()(T const&, U const&) const;
-    bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
+// This case was made valid by P2997R1.
+struct GoodOrder6 {
+  template <class T, class U>
+  bool operator()(T const&, U const&) const;
+  bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
-static_assert(!std::indirect_strict_weak_order<BadOrder6, It1, It2>);
+static_assert(std::indirect_strict_weak_order<GoodOrder6, It1, It2>);
+
+// Test ADL-proofing (P2538R1)
+#if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(std::indirect_strict_weak_order<std::less<Holder<Incomplete>*>, Holder<Incomplete>**, Holder<Incomplete>**>);
+static_assert(!std::indirect_strict_weak_order<Holder<Incomplete>*, Holder<Incomplete>**, Holder<Incomplete>**>);
+#endif

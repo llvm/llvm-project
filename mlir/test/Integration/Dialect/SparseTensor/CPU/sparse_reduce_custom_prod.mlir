@@ -1,29 +1,40 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false  enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
 
-// Product reductions - kept in a seperate file as these are not supported by
+// Product reductions - kept in a separate file as these are not supported by
 // the AArch64 SVE backend (so the set-up is a bit different to
 // sparse_reducitons.mlir)
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 //
@@ -44,7 +55,7 @@ module {
     %c0 = arith.constant 0 : index
     %cf1 = arith.constant 1.0 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSR>
-    %xv = bufferization.alloc_tensor(%d0): tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d0): tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_mat_reduce_rowwise
       ins(%arga: tensor<?x?xf64, #CSR>)
       outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -63,7 +74,7 @@ module {
     %c0 = arith.constant 0 : index
     %cf1 = arith.constant 1.0 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSC>
-    %xv = bufferization.alloc_tensor(%d0): tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d0): tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_mat_reduce_rowwise
       ins(%arga: tensor<?x?xf64, #CSC>)
       outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -78,37 +89,9 @@ module {
     return %0 : tensor<?xf64, #SparseVector>
   }
 
-  // Dumps a sparse vector of type f64.
-  func.func @dump_vec(%arg0: tensor<?xf64, #SparseVector>) {
-    // Dump the values array to verify only sparse contents are stored.
-    %c0 = arith.constant 0 : index
-    %d0 = arith.constant 0.0 : f64
-    %0 = sparse_tensor.values %arg0 : tensor<?xf64, #SparseVector> to memref<?xf64>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<8xf64>
-    vector.print %1 : vector<8xf64>
-    // Dump the dense vector to verify structure is correct.
-    %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
-    %2 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<16xf64>
-    vector.print %2 : vector<16xf64>
-    return
-  }
-
-  // Dump a sparse matrix.
-  func.func @dump_mat(%arg0: tensor<?x?xf64, #CSR>) {
-    // Dump the values array to verify only sparse contents are stored.
-    %c0 = arith.constant 0 : index
-    %d0 = arith.constant 0.0 : f64
-    %0 = sparse_tensor.values %arg0 : tensor<?x?xf64, #CSR> to memref<?xf64>
-    %1 = vector.transfer_read %0[%c0], %d0: memref<?xf64>, vector<16xf64>
-    vector.print %1 : vector<16xf64>
-    %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #CSR> to tensor<?x?xf64>
-    %2 = vector.transfer_read %dm[%c0, %c0], %d0: tensor<?x?xf64>, vector<5x5xf64>
-    vector.print %2 : vector<5x5xf64>
-    return
-  }
 
   // Driver method to call and verify vector kernels.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
 
     // Setup sparse matrices.
@@ -131,15 +114,43 @@ module {
     //
     // Verify the results.
     //
-    // CHECK: ( 2, 3, 120, 504, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 2, 3, 120, 504, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 6, 5, 12, 2, 11, 0, 0, 0 )
-    // CHECK-NEXT: ( 6, 5, 12, 2, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 4, 5 )
+    // CHECK-NEXT: lvl = ( 4, 5 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 2, 3, 4, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9 )
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 5, 4 )
+    // CHECK-NEXT: lvl = ( 5, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2, 4, 5, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 3, 0, 3, 1, 1 )
+    // CHECK-NEXT: values : ( 6, 5, 4, 3, 2, 11 )
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 4
+    // CHECK-NEXT: dim = ( 4 )
+    // CHECK-NEXT: lvl = ( 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 2, 3, 120, 504 )
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 5 )
+    // CHECK-NEXT: lvl = ( 5 )
+    // CHECK-NEXT: pos[0] : ( 0, 5 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4 )
+    // CHECK-NEXT: values : ( 6, 5, 12, 2, 11 )
+    // CHECK-NEXT: ----
     //
-    call @dump_mat(%sm1) : (tensor<?x?xf64, #CSR>) -> ()
-    call @dump_mat(%sm2r) : (tensor<?x?xf64, #CSR>) -> ()
-    call @dump_vec(%1) : (tensor<?xf64, #SparseVector>) -> ()
-    call @dump_vec(%2) : (tensor<?xf64, #SparseVector>) -> ()
+    sparse_tensor.print %sm1 : tensor<?x?xf64, #CSR>
+    sparse_tensor.print %sm2r : tensor<?x?xf64, #CSR>
+    sparse_tensor.print %1 : tensor<?xf64, #SparseVector>
+    sparse_tensor.print %2 : tensor<?xf64, #SparseVector>
 
     // Release the resources.
     bufferization.dealloc_tensor %sm1 : tensor<?x?xf64, #CSR>

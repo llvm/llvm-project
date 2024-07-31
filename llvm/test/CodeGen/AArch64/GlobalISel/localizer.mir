@@ -23,15 +23,15 @@
 
   define i32 @intrablock_with_globalvalue() {
   entry:
-    %0 = load i32, i32* @var1, align 4
+    %0 = load i32, ptr @var1, align 4
     %cmp = icmp eq i32 %0, 1
     br i1 %cmp, label %if.then, label %if.end
 
   if.then:
-    store i32 2, i32* @var2, align 4
-    store i32 3, i32* @var1, align 4
-    store i32 2, i32* @var3, align 4
-    store i32 3, i32* @var1, align 4
+    store i32 2, ptr @var2, align 4
+    store i32 3, ptr @var1, align 4
+    store i32 2, ptr @var3, align 4
+    store i32 3, ptr @var1, align 4
     br label %if.end
 
   if.end:
@@ -39,15 +39,15 @@
   }
   define i32 @adrp_add() {
   entry:
-    %0 = load i32, i32* @var1, align 4
+    %0 = load i32, ptr @var1, align 4
     %cmp = icmp eq i32 %0, 1
     br i1 %cmp, label %if.then, label %if.end
 
   if.then:
-    store i32 2, i32* @var2, align 4
-    store i32 3, i32* @var1, align 4
-    store i32 2, i32* @var3, align 4
-    store i32 3, i32* @var1, align 4
+    store i32 2, ptr @var2, align 4
+    store i32 3, ptr @var1, align 4
+    store i32 2, ptr @var3, align 4
+    store i32 3, ptr @var1, align 4
     br label %if.end
 
   if.end:
@@ -56,7 +56,9 @@
 
   define void @test_inttoptr() { ret void }
   define void @many_local_use_intra_block() { ret void }
-  define void @non_local_phi_use_nonunique() { ret void }
+  define void @non_local_phi_single_use() { ret void }
+  define void @non_local_phi_three_uses() { ret void }
+
 ...
 
 ---
@@ -285,8 +287,8 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[PHI:%[0-9]+]]:fpr(s32) = PHI [[FADD]](s32), %bb.0, %4(s32), %bb.1
-  ; CHECK:   [[C1:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK:   [[FADD1:%[0-9]+]]:fpr(s32) = G_FADD [[PHI]], [[FADD]]
+  ; CHECK:   [[C1:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK:   G_BR %bb.1
 
   ; Existing registers should be left untouched
@@ -566,12 +568,12 @@ body:             |
 ...
 
 ---
-name:            non_local_phi_use_nonunique
+name:            non_local_phi_single_use
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: non_local_phi_use_nonunique
+  ; CHECK-LABEL: name: non_local_phi_single_use
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
@@ -582,12 +584,12 @@ body:             |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI [[C]](s32), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI [[C2]](s32), %bb.1
   ; CHECK:   [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[PHI]], [[PHI]]
 
-  ; Don't localize the 1 into bb.1, because there are multiple edges
-  ; using that register.
+  ; Localize the 1 into bb.1, since the number of uses is under the threshold.
 
   bb.0:
     successors: %bb.1, %bb.2
@@ -604,5 +606,45 @@ body:             |
 
   bb.2:
     %3:gpr(s32) = G_PHI %0(s32), %bb.1, %0(s32), %bb.0
+    %2:gpr(s32) = G_ADD %3, %3
+...
+---
+name:            non_local_phi_three_uses
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: non_local_phi_three_uses
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
+  ; CHECK:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[ADD]](s32), [[C]]
+  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cmp(s32)
+  ; CHECK:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK: bb.2:
+  ; CHECK:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI [[C]](s32), %bb.1
+  ; CHECK:   [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[PHI]], [[PHI]]
+
+  ; Don't localize the 1 into bb.1, above the thresold of uses in the phi.
+
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:gpr(s32) = G_CONSTANT i32 1
+    %1:gpr(s32) = G_ADD %0, %0
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %1(s32), %0
+    %cond:gpr(s1) = G_TRUNC %cmp(s32)
+    G_BRCOND %cond(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    %3:gpr(s32) = G_PHI %0(s32), %bb.1, %0(s32), %bb.0, %0(s32), %bb.0, %0(s32), %bb.0
     %2:gpr(s32) = G_ADD %3, %3
 ...

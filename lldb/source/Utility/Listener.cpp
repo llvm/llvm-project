@@ -18,42 +18,21 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-class BroadcasterManagerWPMatcher {
-public:
-  BroadcasterManagerWPMatcher(BroadcasterManagerSP manager_sp)
-      : m_manager_sp(std::move(manager_sp)) {}
-  bool operator()(const BroadcasterManagerWP &input_wp) const {
-    BroadcasterManagerSP input_sp = input_wp.lock();
-    return (input_sp && input_sp == m_manager_sp);
-  }
-
-  BroadcasterManagerSP m_manager_sp;
-};
-} // anonymous namespace
-
-Listener::Listener(const char *name)
-    : m_name(name), m_broadcasters(), m_broadcasters_mutex(), m_events(),
-      m_events_mutex(), m_is_shadow() {
-  Log *log = GetLog(LLDBLog::Object);
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Listener::Listener('%s')", static_cast<void *>(this),
-              m_name.c_str());
+Listener::Listener(const char *name) : m_name(name) {
+  LLDB_LOGF(GetLog(LLDBLog::Object), "%p Listener::Listener('%s')",
+            static_cast<void *>(this), m_name.c_str());
 }
 
 Listener::~Listener() {
-  Log *log = GetLog(LLDBLog::Object);
+  // Don't call Clear() from here as that can cause races. See #96750.
 
-  Clear();
-
-  LLDB_LOGF(log, "%p Listener::%s('%s')", static_cast<void *>(this),
-            __FUNCTION__, m_name.c_str());
+  LLDB_LOGF(GetLog(LLDBLog::Object), "%p Listener::%s('%s')",
+            static_cast<void *>(this), __FUNCTION__, m_name.c_str());
 }
 
 void Listener::Clear() {
   Log *log = GetLog(LLDBLog::Object);
-  std::lock_guard<std::recursive_mutex> broadcasters_guard(
-      m_broadcasters_mutex);
+  std::lock_guard<std::mutex> broadcasters_guard(m_broadcasters_mutex);
   broadcaster_collection::iterator pos, end = m_broadcasters.end();
   for (pos = m_broadcasters.begin(); pos != end; ++pos) {
     Broadcaster::BroadcasterImplSP broadcaster_sp(pos->first.lock());
@@ -82,8 +61,7 @@ uint32_t Listener::StartListeningForEvents(Broadcaster *broadcaster,
     // Scope for "locker"
     // Tell the broadcaster to add this object as a listener
     {
-      std::lock_guard<std::recursive_mutex> broadcasters_guard(
-          m_broadcasters_mutex);
+      std::lock_guard<std::mutex> broadcasters_guard(m_broadcasters_mutex);
       Broadcaster::BroadcasterImplWP impl_wp(broadcaster->GetBroadcasterImpl());
       m_broadcasters.insert(
           std::make_pair(impl_wp, BroadcasterInfo(event_mask)));
@@ -113,8 +91,7 @@ uint32_t Listener::StartListeningForEvents(Broadcaster *broadcaster,
     // Scope for "locker"
     // Tell the broadcaster to add this object as a listener
     {
-      std::lock_guard<std::recursive_mutex> broadcasters_guard(
-          m_broadcasters_mutex);
+      std::lock_guard<std::mutex> broadcasters_guard(m_broadcasters_mutex);
       Broadcaster::BroadcasterImplWP impl_wp(broadcaster->GetBroadcasterImpl());
       m_broadcasters.insert(std::make_pair(
           impl_wp, BroadcasterInfo(event_mask, callback, callback_user_data)));
@@ -145,8 +122,7 @@ bool Listener::StopListeningForEvents(Broadcaster *broadcaster,
   if (broadcaster) {
     // Scope for "locker"
     {
-      std::lock_guard<std::recursive_mutex> broadcasters_guard(
-          m_broadcasters_mutex);
+      std::lock_guard<std::mutex> broadcasters_guard(m_broadcasters_mutex);
       m_broadcasters.erase(broadcaster->GetBroadcasterImpl());
     }
     // Remove the broadcaster from our set of broadcasters
@@ -161,8 +137,7 @@ bool Listener::StopListeningForEvents(Broadcaster *broadcaster,
 void Listener::BroadcasterWillDestruct(Broadcaster *broadcaster) {
   // Scope for "broadcasters_locker"
   {
-    std::lock_guard<std::recursive_mutex> broadcasters_guard(
-        m_broadcasters_mutex);
+    std::lock_guard<std::mutex> broadcasters_guard(m_broadcasters_mutex);
     m_broadcasters.erase(broadcaster->GetBroadcasterImpl());
   }
 
@@ -181,17 +156,12 @@ void Listener::BroadcasterWillDestruct(Broadcaster *broadcaster) {
 }
 
 void Listener::BroadcasterManagerWillDestruct(BroadcasterManagerSP manager_sp) {
-  // Just need to remove this broadcast manager from the list of managers:
-  broadcaster_manager_collection::iterator iter,
-      end_iter = m_broadcaster_managers.end();
-  BroadcasterManagerWP manager_wp;
-
-  BroadcasterManagerWPMatcher matcher(std::move(manager_sp));
-  iter = std::find_if<broadcaster_manager_collection::iterator,
-                      BroadcasterManagerWPMatcher>(
-      m_broadcaster_managers.begin(), end_iter, matcher);
-  if (iter != end_iter)
-    m_broadcaster_managers.erase(iter);
+  const auto manager_matcher =
+      [&manager_sp](const BroadcasterManagerWP &input_wp) -> bool {
+    BroadcasterManagerSP input_sp = input_wp.lock();
+    return (input_sp && input_sp == manager_sp);
+  };
+  llvm::erase_if(m_broadcaster_managers, manager_matcher);
 }
 
 void Listener::AddEvent(EventSP &event_sp) {
@@ -206,36 +176,6 @@ void Listener::AddEvent(EventSP &event_sp) {
   m_events_condition.notify_all();
 }
 
-class EventBroadcasterMatches {
-public:
-  EventBroadcasterMatches(Broadcaster *broadcaster)
-      : m_broadcaster(broadcaster) {}
-
-  bool operator()(const EventSP &event_sp) const {
-    return event_sp->BroadcasterIs(m_broadcaster);
-  }
-
-private:
-  Broadcaster *m_broadcaster;
-};
-
-class EventMatcher {
-public:
-  EventMatcher(Broadcaster *broadcaster, uint32_t event_type_mask)
-      : m_broadcaster(broadcaster), m_event_type_mask(event_type_mask) {}
-
-  bool operator()(const EventSP &event_sp) const {
-    if (m_broadcaster && !event_sp->BroadcasterIs(m_broadcaster))
-      return false;
-
-    return m_event_type_mask == 0 || m_event_type_mask & event_sp->GetType();
-  }
-
-private:
-  Broadcaster *m_broadcaster;
-  const uint32_t m_event_type_mask;
-};
-
 bool Listener::FindNextEventInternal(
     std::unique_lock<std::mutex> &lock,
     Broadcaster *broadcaster, // nullptr for any broadcaster
@@ -249,14 +189,18 @@ bool Listener::FindNextEventInternal(
   if (m_events.empty())
     return false;
 
+  const auto event_matcher =
+      [broadcaster, event_type_mask](const EventSP &event_sp) -> bool {
+    if (broadcaster && !event_sp->BroadcasterIs(broadcaster))
+      return false;
+    return event_type_mask == 0 || event_type_mask & event_sp->GetType();
+  };
   Listener::event_collection::iterator pos = m_events.end();
 
-  if (broadcaster == nullptr && event_type_mask == 0) {
+  if (broadcaster == nullptr && event_type_mask == 0)
     pos = m_events.begin();
-  } else {
-    pos = std::find_if(m_events.begin(), m_events.end(),
-                       EventMatcher(broadcaster, event_type_mask));
-  }
+  else
+    pos = llvm::find_if(m_events, event_matcher);
 
   if (pos != m_events.end()) {
     event_sp = *pos;
@@ -276,8 +220,7 @@ bool Listener::FindNextEventInternal(
       // to return it so it should be okay to get the next event off the queue
       // here - and it might be useful to do that in the "DoOnRemoval".
       lock.unlock();
-      if (!m_is_shadow)
-        event_sp->DoOnRemoval();
+      event_sp->DoOnRemoval();
     }
     return true;
   }
@@ -368,7 +311,7 @@ bool Listener::GetEvent(EventSP &event_sp, const Timeout<std::micro> &timeout) {
 
 size_t Listener::HandleBroadcastEvent(EventSP &event_sp) {
   size_t num_handled = 0;
-  std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
+  std::lock_guard<std::mutex> guard(m_broadcasters_mutex);
   Broadcaster *broadcaster = event_sp->GetBroadcaster();
   if (!broadcaster)
     return 0;
@@ -395,23 +338,22 @@ Listener::StartListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
   if (!manager_sp)
     return 0;
 
+  const auto manager_matcher =
+      [&manager_sp](const BroadcasterManagerWP &input_wp) -> bool {
+    BroadcasterManagerSP input_sp = input_wp.lock();
+    return (input_sp && input_sp == manager_sp);
+  };
   // The BroadcasterManager mutex must be locked before m_broadcasters_mutex to
   // avoid violating the lock hierarchy (manager before broadcasters).
-  std::lock_guard<std::recursive_mutex> manager_guard(
-      manager_sp->m_manager_mutex);
-  std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
+  std::lock_guard<std::mutex> manager_guard(manager_sp->m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_broadcasters_mutex);
 
-  uint32_t bits_acquired = manager_sp->RegisterListenerForEvents(
+  uint32_t bits_acquired = manager_sp->RegisterListenerForEventsNoLock(
       this->shared_from_this(), event_spec);
   if (bits_acquired) {
-    broadcaster_manager_collection::iterator iter,
-        end_iter = m_broadcaster_managers.end();
     BroadcasterManagerWP manager_wp(manager_sp);
-    BroadcasterManagerWPMatcher matcher(manager_sp);
-    iter = std::find_if<broadcaster_manager_collection::iterator,
-                        BroadcasterManagerWPMatcher>(
-        m_broadcaster_managers.begin(), end_iter, matcher);
-    if (iter == end_iter)
+    auto iter = llvm::find_if(m_broadcaster_managers, manager_matcher);
+    if (iter == m_broadcaster_managers.end())
       m_broadcaster_managers.push_back(manager_wp);
   }
 
@@ -423,9 +365,12 @@ bool Listener::StopListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
   if (!manager_sp)
     return false;
 
-  std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
-  return manager_sp->UnregisterListenerForEvents(this->shared_from_this(),
-                                                 event_spec);
+  // The BroadcasterManager mutex must be locked before m_broadcasters_mutex to
+  // avoid violating the lock hierarchy (manager before broadcasters).
+  std::lock_guard<std::mutex> manager_guard(manager_sp->m_manager_mutex);
+  std::lock_guard<std::mutex> guard(m_broadcasters_mutex);
+  return manager_sp->UnregisterListenerForEventsNoLock(this->shared_from_this(),
+                                                       event_spec);
 }
 
 ListenerSP Listener::MakeListener(const char *name) {

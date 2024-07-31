@@ -8,7 +8,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests checks that DW_AT_high_pc[DW_FORM_ADDR] can be converted to DW_AT_ranges correctly in Dwarf3
+## This tests checks that DW_AT_high_pc[DW_FORM_ADDR] can be converted to DW_AT_ranges correctly in Dwarf3
 
 # PRECHECK: version = 0x0003
 # PRECHECK: DW_AT_low_pc
@@ -26,7 +26,7 @@
 # POSTCHECK-SAME: DW_FORM_addr
 # POSTCHECK-SAME: (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges
-# POSTCHECK-SAME: DW_FORM_sec_offset
+# POSTCHECK-SAME: DW_FORM_data4
 # POSTCHECK-SAME: (0x[[#OFFSET]]
 # POSTCHECK-NEXT: [0x[[#ADDR_1_BEGIN]]
 # POSTCHECK-SAME: 0x[[#ADDR_1_END]]

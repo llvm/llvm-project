@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMPasses
+  CodeGenPassBuilder.cpp
   OptimizationLevel.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp
@@ -16,9 +17,12 @@ add_llvm_component_library(LLVMPasses
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
+  CFGuard
   CodeGen
   Core
   Coroutines
+  Demangle
+  HipStdPar
   IPO
   InstCombine
   IRPrinter

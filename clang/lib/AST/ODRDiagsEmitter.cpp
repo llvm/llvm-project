@@ -461,8 +461,10 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
   }
   if (FirstMethod->getImplementationControl() !=
       SecondMethod->getImplementationControl()) {
-    DiagError(ControlLevel) << FirstMethod->getImplementationControl();
-    DiagNote(ControlLevel) << SecondMethod->getImplementationControl();
+    DiagError(ControlLevel)
+        << llvm::to_underlying(FirstMethod->getImplementationControl());
+    DiagNote(ControlLevel) << llvm::to_underlying(
+        SecondMethod->getImplementationControl());
     return true;
   }
   if (FirstMethod->isThisDeclarationADesignatedInitializer() !=
@@ -994,40 +996,43 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       return true;
     }
 
-    const StringLiteral *FirstStr = FirstSA->getMessage();
-    const StringLiteral *SecondStr = SecondSA->getMessage();
-    assert((FirstStr || SecondStr) && "Both messages cannot be empty");
-    if ((FirstStr && !SecondStr) || (!FirstStr && SecondStr)) {
+    const Expr *FirstMessage = FirstSA->getMessage();
+    const Expr *SecondMessage = SecondSA->getMessage();
+    assert((FirstMessage || SecondMessage) && "Both messages cannot be empty");
+    if ((FirstMessage && !SecondMessage) || (!FirstMessage && SecondMessage)) {
       SourceLocation FirstLoc, SecondLoc;
       SourceRange FirstRange, SecondRange;
-      if (FirstStr) {
-        FirstLoc = FirstStr->getBeginLoc();
-        FirstRange = FirstStr->getSourceRange();
+      if (FirstMessage) {
+        FirstLoc = FirstMessage->getBeginLoc();
+        FirstRange = FirstMessage->getSourceRange();
       } else {
         FirstLoc = FirstSA->getBeginLoc();
         FirstRange = FirstSA->getSourceRange();
       }
-      if (SecondStr) {
-        SecondLoc = SecondStr->getBeginLoc();
-        SecondRange = SecondStr->getSourceRange();
+      if (SecondMessage) {
+        SecondLoc = SecondMessage->getBeginLoc();
+        SecondRange = SecondMessage->getSourceRange();
       } else {
         SecondLoc = SecondSA->getBeginLoc();
         SecondRange = SecondSA->getSourceRange();
       }
       DiagError(FirstLoc, FirstRange, StaticAssertOnlyMessage)
-          << (FirstStr == nullptr);
+          << (FirstMessage == nullptr);
       DiagNote(SecondLoc, SecondRange, StaticAssertOnlyMessage)
-          << (SecondStr == nullptr);
+          << (SecondMessage == nullptr);
       return true;
     }
 
-    if (FirstStr && SecondStr &&
-        FirstStr->getString() != SecondStr->getString()) {
-      DiagError(FirstStr->getBeginLoc(), FirstStr->getSourceRange(),
-                StaticAssertMessage);
-      DiagNote(SecondStr->getBeginLoc(), SecondStr->getSourceRange(),
-               StaticAssertMessage);
-      return true;
+    if (FirstMessage && SecondMessage) {
+      unsigned FirstMessageODRHash = computeODRHash(FirstMessage);
+      unsigned SecondMessageODRHash = computeODRHash(SecondMessage);
+      if (FirstMessageODRHash != SecondMessageODRHash) {
+        DiagError(FirstMessage->getBeginLoc(), FirstMessage->getSourceRange(),
+                  StaticAssertMessage);
+        DiagNote(SecondMessage->getBeginLoc(), SecondMessage->getSourceRange(),
+                 StaticAssertMessage);
+        return true;
+      }
     }
     break;
   }
@@ -1097,8 +1102,8 @@ bool ODRDiagsEmitter::diagnoseMismatch(
 
     const bool FirstVirtual = FirstMethod->isVirtualAsWritten();
     const bool SecondVirtual = SecondMethod->isVirtualAsWritten();
-    const bool FirstPure = FirstMethod->isPure();
-    const bool SecondPure = SecondMethod->isPure();
+    const bool FirstPure = FirstMethod->isPureVirtual();
+    const bool SecondPure = SecondMethod->isPureVirtual();
     if ((FirstVirtual || SecondVirtual) &&
         (FirstVirtual != SecondVirtual || FirstPure != SecondPure)) {
       DiagMethodError(MethodVirtual) << FirstPure << FirstVirtual;
@@ -1404,13 +1409,15 @@ bool ODRDiagsEmitter::diagnoseMismatch(
         }
 
         if (HasFirstDefaultArgument && HasSecondDefaultArgument) {
-          QualType FirstType = FirstTTPD->getDefaultArgument();
-          QualType SecondType = SecondTTPD->getDefaultArgument();
-          if (computeODRHash(FirstType) != computeODRHash(SecondType)) {
+          TemplateArgument FirstTA =
+              FirstTTPD->getDefaultArgument().getArgument();
+          TemplateArgument SecondTA =
+              SecondTTPD->getDefaultArgument().getArgument();
+          if (computeODRHash(FirstTA) != computeODRHash(SecondTA)) {
             DiagTemplateError(FunctionTemplateParameterDifferentDefaultArgument)
-                << (i + 1) << FirstType;
+                << (i + 1) << FirstTA;
             DiagTemplateNote(FunctionTemplateParameterDifferentDefaultArgument)
-                << (i + 1) << SecondType;
+                << (i + 1) << SecondTA;
             return true;
           }
         }
@@ -1516,8 +1523,11 @@ bool ODRDiagsEmitter::diagnoseMismatch(
         }
 
         if (HasFirstDefaultArgument && HasSecondDefaultArgument) {
-          Expr *FirstDefaultArgument = FirstNTTPD->getDefaultArgument();
-          Expr *SecondDefaultArgument = SecondNTTPD->getDefaultArgument();
+          TemplateArgument FirstDefaultArgument =
+              FirstNTTPD->getDefaultArgument().getArgument();
+          TemplateArgument SecondDefaultArgument =
+              SecondNTTPD->getDefaultArgument().getArgument();
+
           if (computeODRHash(FirstDefaultArgument) !=
               computeODRHash(SecondDefaultArgument)) {
             DiagTemplateError(FunctionTemplateParameterDifferentDefaultArgument)
@@ -2096,7 +2106,8 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       << FirstDecl->getSourceRange();
   Diag(SecondDecl->getLocation(),
        diag::note_module_odr_violation_mismatch_decl_unknown)
-      << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
+      << SecondModule.empty() << SecondModule << FirstDiffType
+      << SecondDecl->getSourceRange();
   return true;
 }
 

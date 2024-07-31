@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/Loads.h"
@@ -72,6 +73,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-scops"
 
 STATISTIC(AssumptionsAliasing, "Number of aliasing assumptions taken.");
@@ -531,6 +533,9 @@ MemoryAccess::getReductionOperatorStr(MemoryAccess::ReductionType RT) {
   case MemoryAccess::RT_NONE:
     llvm_unreachable("Requested a reduction operator string for a memory "
                      "access which isn't a reduction");
+  case MemoryAccess::RT_BOTTOM:
+    llvm_unreachable("Requested a reduction operator string for a internal "
+                     "reduction type!");
   case MemoryAccess::RT_ADD:
     return "+";
   case MemoryAccess::RT_MUL:
@@ -913,10 +918,15 @@ isl::id MemoryAccess::getId() const { return Id; }
 
 raw_ostream &polly::operator<<(raw_ostream &OS,
                                MemoryAccess::ReductionType RT) {
-  if (RT == MemoryAccess::RT_NONE)
+  switch (RT) {
+  case MemoryAccess::RT_NONE:
+  case MemoryAccess::RT_BOTTOM:
     OS << "NONE";
-  else
+    break;
+  default:
     OS << MemoryAccess::getReductionOperatorStr(RT);
+    break;
+  }
   return OS;
 }
 
@@ -1646,9 +1656,7 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
   } else {
     auto StmtMapIt = StmtMap.find(Stmt.getBasicBlock());
     if (StmtMapIt != StmtMap.end())
-      StmtMapIt->second.erase(std::remove(StmtMapIt->second.begin(),
-                                          StmtMapIt->second.end(), &Stmt),
-                              StmtMapIt->second.end());
+      llvm::erase(StmtMapIt->second, &Stmt);
     for (Instruction *Inst : Stmt.getInstructions())
       InstStmtMap.erase(Inst);
   }
@@ -2043,7 +2051,7 @@ void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
 }
 
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
-  LLVM_DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
+  POLLY_DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
   addAssumption(Kind, isl::set::empty(getParamSpace()), Loc, AS_ASSUMPTION, BB);
 }
 
@@ -2423,15 +2431,13 @@ void Scop::removeAccessData(MemoryAccess *Access) {
     ValueDefAccs.erase(Access->getAccessValue());
   } else if (Access->isOriginalValueKind() && Access->isRead()) {
     auto &Uses = ValueUseAccs[Access->getScopArrayInfo()];
-    auto NewEnd = std::remove(Uses.begin(), Uses.end(), Access);
-    Uses.erase(NewEnd, Uses.end());
+    llvm::erase(Uses, Access);
   } else if (Access->isOriginalPHIKind() && Access->isRead()) {
     PHINode *PHI = cast<PHINode>(Access->getAccessInstruction());
     PHIReadAccs.erase(PHI);
   } else if (Access->isOriginalAnyPHIKind() && Access->isWrite()) {
     auto &Incomings = PHIIncomingAccs[Access->getScopArrayInfo()];
-    auto NewEnd = std::remove(Incomings.begin(), Incomings.end(), Access);
-    Incomings.erase(NewEnd, Incomings.end());
+    llvm::erase(Incomings, Access);
   }
 }
 

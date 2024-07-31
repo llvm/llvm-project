@@ -5,6 +5,8 @@
 ; REQUIRES: zlib
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
+;; -stats requires asserts
+; REQUIRES: asserts
 
 ;; TODO: Use text profile inputs once that is available for memprof.
 ;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
@@ -14,8 +16,9 @@
 
 ;; Generate indexed profiles of all combinations:
 ; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.profraw %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.pgomemprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.profraw -o %t.pgoprofdata
+; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.pgomemprofdata
+; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext -o %t.pgoprofdata
+; RUN: llvm-profdata merge %S/Inputs/memprof.nocolinfo.memprofraw --profiled-binary %S/Inputs/memprof.nocolinfo.exe -o %t.nocolinfo.memprofdata
 
 ;; In all below cases we should not get any messages about missing profile data
 ;; for any functions. Either we are not performing any matching for a particular
@@ -23,19 +26,54 @@
 ; ALL-NOT: memprof record not found for function hash
 ; ALL-NOT: no profile data available for function
 
-;; Feed back memprof-only profile
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+;; Using a memprof-only profile for memprof-use should only give memprof metadata
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS
 ; There should not be any PGO metadata
 ; MEMPROFONLY-NOT: !prof
 
-;; Feed back pgo-only profile
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgoprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=PGO,ALL,PGOONLY
+;; Try again but using a profile with missing columns. The memprof matcher
+;; should recognize that there are no non-zero columns in the profile and
+;; not attempt to include column numbers in the matching (which means that the
+;; stack ids will be different).
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.nocolinfo.memprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFNOCOLINFO,ALL,MEMPROFONLY
+
+;; Test the same thing but by passing the memory profile through to a default
+;; pipeline via -memory-profile-file=, which should cause the necessary field
+;; of the PGOOptions structure to be populated with the profile filename.
+; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+
+;; Using a pgo+memprof profile for memprof-use should only give memprof metadata
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+
+;; Using a pgo-only profile for memprof-use should give an error
+; RUN: not opt < %s -passes='memprof-use<profile-filename=%t.pgoprofdata>' -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFWITHPGOONLY
+; MEMPROFWITHPGOONLY: Not a memory profile
+
+;; Using a memprof-only profile for pgo-instr-use should give an error
+; RUN: not opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.memprofdata -S 2>&1 | FileCheck %s --check-prefixes=PGOWITHMEMPROFONLY
+; PGOWITHMEMPROFONLY: Not an IR level instrumentation profile
+
+;; Using a pgo+memprof profile for pgo-instr-use should only give pgo metadata
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=PGO,ALL,PGOONLY
 ; There should not be any memprof related metadata
 ; PGOONLY-NOT: !memprof
 ; PGOONLY-NOT: !callsite
 
-;; Feed back pgo+memprof-only profile
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,PGO,ALL
+;; Using a pgo+memprof profile for both memprof-use and pgo-instr-use should
+;; give both memprof and pgo metadata.
+; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
+
+;; Check that the total sizes are reported if requested.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+
+; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 8525406123785421946 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 11714230664165068698 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 15737101490731057601 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 16342802530253093571 has total profiled size 10 is matched
+; MEMPROFMATCHINFO: MemProf cold context with id 18254812774972004394 has total profiled size 10 is matched
 
 ; ModuleID = 'memprof.cc'
 source_filename = "memprof.cc"
@@ -49,6 +87,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
 entry:
   ; MEMPROF: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !13
   ret ptr %call, !dbg !14
 }
@@ -61,6 +100,7 @@ declare noundef nonnull ptr @_Znam(i64 noundef) #1
 define dso_local noundef ptr @_Z4foo2v() #0 !dbg !15 {
 entry:
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C2:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z3foov{{.*}} !callsite ![[C2:[0-9]+]]
   %call = call noundef ptr @_Z3foov(), !dbg !16
   ret ptr %call, !dbg !17
 }
@@ -69,6 +109,7 @@ entry:
 define dso_local noundef ptr @_Z3barv() #0 !dbg !18 {
 entry:
   ; MEMPROF: call {{.*}} @_Z4foo2v{{.*}} !callsite ![[C3:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z4foo2v{{.*}} !callsite ![[C3:[0-9]+]]
   %call = call noundef ptr @_Z4foo2v(), !dbg !19
   ret ptr %call, !dbg !20
 }
@@ -77,6 +118,7 @@ entry:
 define dso_local noundef ptr @_Z3bazv() #0 !dbg !21 {
 entry:
   ; MEMPROF: call {{.*}} @_Z4foo2v{{.*}} !callsite ![[C4:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z4foo2v{{.*}} !callsite ![[C4:[0-9]+]]
   %call = call noundef ptr @_Z4foo2v(), !dbg !22
   ret ptr %call, !dbg !23
 }
@@ -93,6 +135,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C5:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z3foov{{.*}} !callsite ![[C5:[0-9]+]]
   %call = call noundef ptr @_Z3foov(), !dbg !27
   store ptr %call, ptr %retval, align 8, !dbg !28
   br label %return, !dbg !28
@@ -101,6 +144,7 @@ if.end:                                           ; preds = %entry
   %1 = load i32, ptr %n.addr, align 4, !dbg !29
   %sub = sub i32 %1, 1, !dbg !30
   ; MEMPROF: call {{.*}} @_Z7recursej{{.*}} !callsite ![[C6:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z7recursej{{.*}} !callsite ![[C6:[0-9]+]]
   %call1 = call noundef ptr @_Z7recursej(i32 noundef %sub), !dbg !31
   store ptr %call1, ptr %retval, align 8, !dbg !32
   br label %return, !dbg !32
@@ -128,21 +172,27 @@ entry:
   store i32 %argc, ptr %argc.addr, align 4
   store ptr %argv, ptr %argv.addr, align 8
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !35
   store ptr %call, ptr %a, align 8, !dbg !36
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A2:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} #[[A2:[0-9]+]]
   %call1 = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !37
   store ptr %call1, ptr %b, align 8, !dbg !38
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C7:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z3foov{{.*}} !callsite ![[C7:[0-9]+]]
   %call2 = call noundef ptr @_Z3foov(), !dbg !39
   store ptr %call2, ptr %c, align 8, !dbg !40
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C8:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z3foov{{.*}} !callsite ![[C8:[0-9]+]]
   %call3 = call noundef ptr @_Z3foov(), !dbg !41
   store ptr %call3, ptr %d, align 8, !dbg !42
   ; MEMPROF: call {{.*}} @_Z3barv{{.*}} !callsite ![[C9:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z3barv{{.*}} !callsite ![[C9:[0-9]+]]
   %call4 = call noundef ptr @_Z3barv(), !dbg !43
   store ptr %call4, ptr %e, align 8, !dbg !44
   ; MEMPROF: call {{.*}} @_Z3bazv{{.*}} !callsite ![[C10:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z3bazv{{.*}} !callsite ![[C10:[0-9]+]]
   %call5 = call noundef ptr @_Z3bazv(), !dbg !45
   store ptr %call5, ptr %f, align 8, !dbg !46
   %0 = load ptr, ptr %a, align 8, !dbg !47
@@ -224,6 +274,7 @@ for.body:                                         ; preds = %for.cond
   %13 = load i32, ptr %i, align 4, !dbg !84
   %add = add i32 %13, 3, !dbg !85
   ; MEMPROF: call {{.*}} @_Z7recursej{{.*}} !callsite ![[C11:[0-9]+]]
+  ; MEMPROFNOCOLINFO: call {{.*}} @_Z7recursej{{.*}} !callsite ![[C11:[0-9]+]]
   %call22 = call noundef ptr @_Z7recursej(i32 noundef %add), !dbg !86
   store ptr %call22, ptr %g, align 8, !dbg !87
   %14 = load ptr, ptr %g, align 8, !dbg !88
@@ -282,6 +333,52 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[C9]] = !{i64 -5747251260480066785}
 ; MEMPROF: ![[C10]] = !{i64 2061451396820446691}
 ; MEMPROF: ![[C11]] = !{i64 1544787832369987002}
+
+;; For non-context sensitive allocations that get attributes we emit a message
+;; with the allocation hash, type, and size in bytes.
+; TOTALSIZES: Total size for allocation with location hash 6792096022461663180 and single alloc type notcold: 10
+; TOTALSIZES: Total size for allocation with location hash 15737101490731057601 and single alloc type cold: 10
+;; For context sensitive allocations the size in bytes is included on the MIB
+;; metadata.
+; TOTALSIZES: !"cold", i64 10}
+; TOTALSIZES: !"cold", i64 10}
+; TOTALSIZES: !"notcold", i64 10}
+; TOTALSIZES: !"cold", i64 20}
+; TOTALSIZES: !"notcold", i64 10}
+
+
+; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
+; MEMPROFNOCOLINFO: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
+; MEMPROFNOCOLINFO: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROFNOCOLINFO: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
+; MEMPROFNOCOLINFO: ![[STACK1]] = !{i64 5281664982037379640, i64 6362220161075421157, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790, i64 3577763375057267810}
+; MEMPROFNOCOLINFO: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"notcold"}
+; MEMPROFNOCOLINFO: ![[STACK2]] = !{i64 5281664982037379640, i64 6362220161075421157, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790, i64 -5772587307814069790}
+; MEMPROFNOCOLINFO: ![[MIB3]] = !{![[STACK3:[0-9]+]], !"notcold"}
+; MEMPROFNOCOLINFO: ![[STACK3]] = !{i64 5281664982037379640, i64 -6896091699916449732}
+; MEMPROFNOCOLINFO: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
+; MEMPROFNOCOLINFO: ![[STACK4]] = !{i64 5281664982037379640, i64 -6871734214936418908}
+; MEMPROFNOCOLINFO: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"cold"}
+; MEMPROFNOCOLINFO: ![[STACK5]] = !{i64 5281664982037379640, i64 -6201180255894224618}
+; MEMPROFNOCOLINFO: ![[C1]] = !{i64 5281664982037379640}
+; MEMPROFNOCOLINFO: ![[C2]] = !{i64 -6871734214936418908}
+; MEMPROFNOCOLINFO: ![[C3]] = !{i64 -5588766871448036195}
+; MEMPROFNOCOLINFO: ![[C4]] = !{i64 -8990226808646054327}
+; MEMPROFNOCOLINFO: ![[C5]] = !{i64 6362220161075421157}
+; MEMPROFNOCOLINFO: ![[C6]] = !{i64 -5772587307814069790}
+; MEMPROFNOCOLINFO: ![[C7]] = !{i64 -6896091699916449732}
+; MEMPROFNOCOLINFO: ![[C8]] = !{i64 -6201180255894224618}
+; MEMPROFNOCOLINFO: ![[C9]] = !{i64 -962804290746547393}
+; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
+; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
+
+; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
+; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.
+; MEMPROFSTATS:  6 memprof - Number of functions having valid memory profile.
+; MEMPROFSTATS:  8 memprof - Number of matched memory profile alloc contexts.
+; MEMPROFSTATS:  3 memprof - Number of matched memory profile allocs.
+; MEMPROFSTATS: 10 memprof - Number of matched memory profile callsites.
+
 
 ; Function Attrs: argmemonly nofree nounwind willreturn writeonly
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3

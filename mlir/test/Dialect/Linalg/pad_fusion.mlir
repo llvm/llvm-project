@@ -22,7 +22,7 @@ func.func @dynamic_pad_fusion(%arg0 : tensor<?x?xf32>, %arg1 : index, %arg2 : in
   return %1 : tensor<?x?xf32>
 }
 
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s2 + s0 + s1)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + s1 + s2)>
 //      CHECK: func @dynamic_pad_fusion
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index
@@ -70,7 +70,7 @@ func.func @mixed_pad_fusion(%arg0 : tensor<?x42xf32>, %arg1 : index, %arg2 : ind
     } : tensor<42x?xf32> to tensor<49x?xf32>
   return %1 : tensor<49x?xf32>
 }
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s2 + s0 + s1)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + s1 + s2)>
 //      CHECK: func @mixed_pad_fusion
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<?x42xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index

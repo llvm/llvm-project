@@ -1,16 +1,17 @@
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 
 ; Checks whether the dbg.declare for `__coro_frame` are created.
 
 ; CHECK-LABEL: define void @f(
 ; CHECK:       coro.init:
 ; CHECK:        %[[begin:.*]] = call noalias nonnull ptr @llvm.coro.begin(
-; CHECK:        call void @llvm.dbg.declare(metadata ptr %[[begin]], metadata ![[CORO_FRAME:[0-9]+]], metadata !DIExpression())
+; CHECK:        #dbg_declare(ptr %[[begin]], ![[CORO_FRAME:[0-9]+]], !DIExpression(),
 ;
 ; CHECK:       define internal fastcc void @f.resume(
 ; CHECK:       entry.resume:
 ; CHECK:            %[[FramePtr_RESUME:.*]] = alloca ptr
-; CHECK:            call void @llvm.dbg.declare(metadata ptr %[[FramePtr_RESUME]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref)
+; CHECK:            #dbg_declare(ptr %[[FramePtr_RESUME]], ![[CORO_FRAME_IN_RESUME:[0-9]+]], !DIExpression(DW_OP_deref)
 ;
 ; CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "coro-debug.cpp"
 ; CHECK-DAG: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",
@@ -205,7 +206,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(ptr null, i1 false)
+    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -334,7 +335,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(ptr null, i1 false)
+    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -350,7 +351,7 @@ declare token @llvm.coro.save(ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
 declare ptr @new(i64)
 declare void @delete(ptr)

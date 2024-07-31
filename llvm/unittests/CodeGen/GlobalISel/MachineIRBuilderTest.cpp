@@ -165,14 +165,12 @@ TEST_F(AArch64GISelMITest, BuildIntrinsic) {
   collectCopies(Copies, MF);
 
   // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
-  B.buildIntrinsic(Intrinsic::sqrt, {S64}, false)
-    .addUse(Copies[0]);
+  B.buildIntrinsic(Intrinsic::sqrt, {S64}).addUse(Copies[0]);
 
   // Make sure register version works
   SmallVector<Register, 1> Results;
   Results.push_back(MRI->createGenericVirtualRegister(S64));
-  B.buildIntrinsic(Intrinsic::sqrt, Results, false)
-    .addUse(Copies[1]);
+  B.buildIntrinsic(Intrinsic::sqrt, Results).addUse(Copies[1]);
 
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
@@ -447,6 +445,37 @@ TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
   ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
   ; CHECK: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY0]]:_, [[COPY1]]:_(s64), [[COPY2]]:_
   ; CHECK: [[SBFX:%[0-9]+]]:_(s64) = G_SBFX [[UBFX]]:_, [[COPY0]]:_(s64), [[COPY2]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(AArch64GISelMITest, BuildFPEnv) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32); 
+  SmallVector<Register, 4> Copies;
+  collectCopies(Copies, MF);
+
+  B.buildGetFPEnv(Copies[0]);
+  B.buildSetFPEnv(Copies[1]);
+  B.buildResetFPEnv();
+  auto GetFPMode = B.buildGetFPMode(S32);
+  B.buildSetFPMode(GetFPMode);
+  B.buildResetFPMode();
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+  ; CHECK: [[COPY0]]:_(s64) = G_GET_FPENV
+  ; CHECK: G_SET_FPENV [[COPY1]]:_(s64)
+  ; CHECK: G_RESET_FPENV
+  ; CHECK: [[FPMODE:%[0-9]+]]:_(s32) = G_GET_FPMODE
+  ; CHECK: G_SET_FPMODE [[FPMODE]]:_(s32)
+  ; CHECK: G_RESET_FPMODE
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

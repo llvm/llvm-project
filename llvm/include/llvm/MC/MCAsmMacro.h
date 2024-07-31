@@ -46,7 +46,7 @@ public:
     Slash,     // '/'
     BackSlash, // '\'
     LParen, RParen, LBrac, RBrac, LCurly, RCurly,
-    Star, Dot, Comma, Dollar, Equal, EqualEqual,
+    Question, Star, Dot, Comma, Dollar, Equal, EqualEqual,
 
     Pipe, PipePipe, Caret,
     Amp, AmpAmp, Exclaim, ExclaimEqual, Percent, Hash,
@@ -145,6 +145,7 @@ struct MCAsmMacro {
   MCAsmMacroParameters Parameters;
   std::vector<std::string> Locals;
   bool IsFunction = false;
+  unsigned Count = 0;
 
 public:
   MCAsmMacro(StringRef N, StringRef B, MCAsmMacroParameters P)

@@ -10,8 +10,18 @@
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES
 
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
+
+def Transform_AffineMapParamType : TypeDef<Transform_Dialect, "AffineMapParam",
+    [DeclareTypeInterfaceMethods<TransformParamTypeInterface>]> {
+  let description = [{
+    Transform IR parameter value that can be associated with a list of affine
+    map attributes.
+  }];
+  let mnemonic = "affine_map";
+  let assemblyFormat = "";
+}
 
 def Transform_AnyOpType : TypeDef<Transform_Dialect, "AnyOp",
     [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
@@ -20,6 +30,15 @@ def Transform_AnyOpType : TypeDef<Transform_Dialect, "AnyOp",
     Payload IR operations.
   }];
   let mnemonic = "any_op";
+  let assemblyFormat = "";
+}
+
+def Transform_AnyValue : TypeDef<Transform_Dialect, "AnyValue",
+    [DeclareTypeInterfaceMethods<TransformValueHandleTypeInterface>]> {
+  let description = [{
+    Transform IR value that can be associated with a list of Payload IR values.
+  }];
+  let mnemonic = "any_value";
   let assemblyFormat = "";
 }
 
@@ -34,6 +53,16 @@ def Transform_OperationType : TypeDef<Transform_Dialect, "Operation",
     StringRefParameter<"Name of the allowed payload operation">:$operation_name
   );
   let assemblyFormat = "`<` $operation_name `>`";
+}
+
+def Transform_AnyParamType : TypeDef<Transform_Dialect, "AnyParam",
+    [DeclareTypeInterfaceMethods<TransformParamTypeInterface>]> {
+  let description = [{
+    Transform IR value that can be associated with a list of parameters
+    of any type.
+  }];
+  let mnemonic = "any_param";
+  let assemblyFormat = "";
 }
 
 def Transform_ParamType : TypeDef<Transform_Dialect, "Param",
@@ -52,12 +81,13 @@ def Transform_ParamType : TypeDef<Transform_Dialect, "Param",
   let genVerifyDecl = 1;
 }
 
-def Transform_AnyValue : TypeDef<Transform_Dialect, "AnyValue",
-    [DeclareTypeInterfaceMethods<TransformValueHandleTypeInterface>]> {
+def Transform_TypeParamType : TypeDef<Transform_Dialect, "TypeParam",
+    [DeclareTypeInterfaceMethods<TransformParamTypeInterface>]> {
   let description = [{
-    Transform IR value that can be associated with a list of Payload IR values.
+    Transform IR parameter value that can be associated with a list of type
+    attributes.
   }];
-  let mnemonic = "any_value";
+  let mnemonic = "type";
   let assemblyFormat = "";
 }
 

@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_INIT_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_INIT_H
 
-#include "include/pthread.h"
+#include "src/__support/macros/config.h"
+#include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_mutex_init(pthread_mutex_t *mutex,
                        const pthread_mutexattr_t *__restrict attr);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_PTHREAD_pthread_mutex_INIT_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_INIT_H

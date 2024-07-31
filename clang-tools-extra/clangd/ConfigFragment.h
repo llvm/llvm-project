@@ -235,9 +235,6 @@ struct Fragment {
     /// - std::nullopt
     std::optional<Located<std::string>> UnusedIncludes;
 
-    /// Enable emitting diagnostics using stale preambles.
-    std::optional<Located<bool>> AllowStalePreamble;
-
     /// Controls if clangd should analyze missing #include directives.
     /// clangd will warn if no header providing a symbol is `#include`d
     /// (missing) directly, and suggest adding it.
@@ -257,6 +254,10 @@ struct Fragment {
       /// unused or missing. These can match any suffix of the header file in
       /// question.
       std::vector<Located<std::string>> IgnoreHeader;
+
+      /// If false (default), unused system headers will be ignored.
+      /// Standard library headers are analyzed regardless of this option.
+      std::optional<Located<bool>> AnalyzeAngledIncludes;
     };
     IncludesBlock Includes;
 
@@ -280,6 +281,13 @@ struct Fragment {
       ///     readability-braces-around-statements.ShortStatementLines: 2
       std::vector<std::pair<Located<std::string>, Located<std::string>>>
           CheckOptions;
+
+      /// Whether to run checks that may slow down clangd.
+      ///   Strict: Run only checks measured to be fast. (Default)
+      ///           This excludes recently-added checks we have not timed yet.
+      ///   Loose: Run checks unless they are known to be slow.
+      ///   None: Run checks regardless of their speed.
+      std::optional<Located<std::string>> FastCheckFilter;
     };
     ClangTidyBlock ClangTidy;
   };
@@ -321,6 +329,8 @@ struct Fragment {
     std::optional<Located<bool>> DeducedTypes;
     /// Show designators in aggregate initialization.
     std::optional<Located<bool>> Designators;
+    /// Show defined symbol names at the end of a definition block.
+    std::optional<Located<bool>> BlockEnd;
     /// Limit the length of type name hints. (0 means no limit)
     std::optional<Located<uint32_t>> TypeNameLimit;
   };

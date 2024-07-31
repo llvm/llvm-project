@@ -5,10 +5,10 @@
 // RUN: --checks='-*,bad*glob,llvm*,llvm-includeorder,my-made-up-check' --config='{Checks: "readability-else-after-ret", \
 // RUN: HeaderFileExtensions: ["h", "hh", "hpp"], \
 // RUN: ImplementationFileExtensions: ["c", "cc", "hpp"], \
-// RUN: CheckOptions: [{key: "IgnoreMacros", value: "true"}, \
-// RUN:                {key: "StriceMode", value: "true"}, \
-// RUN:                {key: modernize-lop-convert.UseCxx20ReverseRanges, value: true} \
-// RUN:               ]}' 2>&1 | FileCheck %s \
+// RUN: CheckOptions: {IgnoreMacros: true, \
+// RUN:                StriceMode: true, \
+// RUN:                modernize-lop-convert.UseCxx20ReverseRanges: true \
+// RUN:               }}' 2>&1 | FileCheck %s \
 // RUN: -check-prefix=CHECK-VERIFY -implicit-check-not='{{warning|error}}:'
 
 // CHECK-VERIFY-DAG: command-line option '-config': warning: unknown check 'readability-else-after-ret'; did you mean 'readability-else-after-return' [-verify-config]
@@ -18,3 +18,15 @@
 // CHECK-VERIFY: command-line option '-checks': warning: check glob 'bad*glob' doesn't match any known check [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: unknown check 'llvm-includeorder'; did you mean 'llvm-include-order' [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: unknown check 'my-made-up-check' [-verify-config]
+
+// RUN: echo -e 'Checks: |\n bugprone-argument-comment\n bugprone-assert-side-effect,\n bugprone-bool-pointer-implicit-conversion\n readability-use-anyof*' > %T/MyClangTidyConfig
+// RUN: clang-tidy -verify-config \
+// RUN: --config-file=%T/MyClangTidyConfig | FileCheck %s -check-prefix=CHECK-VERIFY-BLOCK-OK
+// CHECK-VERIFY-BLOCK-OK: No config errors detected.
+
+// RUN: echo -e 'Checks: |\n bugprone-arguments-*\n bugprone-assert-side-effects\n bugprone-bool-pointer-implicit-conversion' > %T/MyClangTidyConfigBad
+// RUN: not clang-tidy -verify-config \
+// RUN: --config-file=%T/MyClangTidyConfigBad 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-BLOCK-BAD
+// CHECK-VERIFY-BLOCK-BAD: command-line option '-config': warning: check glob 'bugprone-arguments-*' doesn't match any known check [-verify-config]
+// CHECK-VERIFY-BLOCK-BAD: command-line option '-config': warning: unknown check 'bugprone-assert-side-effects'; did you mean 'bugprone-assert-side-effect' [-verify-config]
+

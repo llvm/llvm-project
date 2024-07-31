@@ -4,7 +4,7 @@
 
 // Make sure add HLSLShaderAttr along with HLSLNumThreadsAttr.
 // CHECK:HLSLNumThreadsAttr 0x{{.*}} <line:10:2, col:18> 1 1 1
-// CHECK:HLSLShaderAttr 0x{{.*}} <line:13:1> Compute
+// CHECK:HLSLShaderAttr 0x{{.*}} <line:13:1> Implicit Compute
 
 #ifdef WITH_NUM_THREADS
 [numthreads(1,1,1)]

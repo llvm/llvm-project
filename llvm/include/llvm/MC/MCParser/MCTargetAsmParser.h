@@ -14,8 +14,8 @@
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
 #include <memory>
 
@@ -126,6 +126,45 @@ enum OperandMatchResultTy {
   MatchOperand_Success,  // operand matched successfully
   MatchOperand_NoMatch,  // operand did not match
   MatchOperand_ParseFail // operand matched but had errors
+};
+
+/// Ternary parse status returned by various parse* methods.
+class ParseStatus {
+  enum class StatusTy { Success, Failure, NoMatch } Status;
+
+public:
+#if __cplusplus >= 202002L
+  using enum StatusTy;
+#else
+  static constexpr StatusTy Success = StatusTy::Success;
+  static constexpr StatusTy Failure = StatusTy::Failure;
+  static constexpr StatusTy NoMatch = StatusTy::NoMatch;
+#endif
+
+  constexpr ParseStatus() : Status(NoMatch) {}
+
+  constexpr ParseStatus(StatusTy Status) : Status(Status) {}
+
+  constexpr ParseStatus(bool Error) : Status(Error ? Failure : Success) {}
+
+  template <typename T> constexpr ParseStatus(T) = delete;
+
+  constexpr bool isSuccess() const { return Status == StatusTy::Success; }
+  constexpr bool isFailure() const { return Status == StatusTy::Failure; }
+  constexpr bool isNoMatch() const { return Status == StatusTy::NoMatch; }
+
+  // Allow implicit conversions to / from OperandMatchResultTy.
+  LLVM_DEPRECATED("Migrate to ParseStatus", "")
+  constexpr ParseStatus(OperandMatchResultTy R)
+      : Status(R == MatchOperand_Success     ? Success
+               : R == MatchOperand_ParseFail ? Failure
+                                             : NoMatch) {}
+  LLVM_DEPRECATED("Migrate to ParseStatus", "")
+  constexpr operator OperandMatchResultTy() const {
+    return isSuccess()   ? MatchOperand_Success
+           : isFailure() ? MatchOperand_ParseFail
+                         : MatchOperand_NoMatch;
+  }
 };
 
 enum class DiagnosticPredicateTy {
@@ -384,8 +423,8 @@ public:
   /// Check whether a register specification can be parsed at the current
   /// location, without failing the entire parse if it can't. Must not consume
   /// tokens if the parse fails.
-  virtual OperandMatchResultTy
-  tryParseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
+  virtual ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                       SMLoc &EndLoc) = 0;
 
   /// ParseInstruction - Parse one assembly instruction.
   ///
@@ -408,6 +447,7 @@ public:
   }
 
   /// ParseDirective - Parse a target specific assembler directive
+  /// This method is deprecated, use 'parseDirective' instead.
   ///
   /// The parser is positioned following the directive name.  The target
   /// specific directive parser should parse the entire directive doing or
@@ -417,7 +457,19 @@ public:
   /// end-of-statement token and false is returned.
   ///
   /// \param DirectiveID - the identifier token of the directive.
-  virtual bool ParseDirective(AsmToken DirectiveID) = 0;
+  virtual bool ParseDirective(AsmToken DirectiveID) { return true; }
+
+  /// Parses a target-specific assembler directive.
+  ///
+  /// The parser is positioned following the directive name. The target-specific
+  /// directive parser should parse the entire directive doing or recording any
+  /// target-specific work, or emit an error. On success, the entire line should
+  /// be parsed up to and including the end-of-statement token. On failure, the
+  /// parser is not required to read to the end of the line. If the directive is
+  /// not target-specific, no tokens should be consumed and NoMatch is returned.
+  ///
+  /// \param DirectiveID - The token identifying the directive.
+  virtual ParseStatus parseDirective(AsmToken DirectiveID);
 
   /// MatchAndEmitInstruction - Recognize a series of operands of a parsed
   /// instruction as an actual MCInst and emit it to the specified MCStreamer.
@@ -462,9 +514,7 @@ public:
   /// by the tied-operands checks in the AsmMatcher. This method can be
   /// overridden to allow e.g. a sub- or super-register as the tied operand.
   virtual bool areEqualRegs(const MCParsedAsmOperand &Op1,
-                            const MCParsedAsmOperand &Op2) const {
-    return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
-  }
+                            const MCParsedAsmOperand &Op2) const;
 
   // Return whether this parser uses assignment statements with equals tokens
   virtual bool equalIsAsmAssignment() { return true; };
@@ -473,6 +523,10 @@ public:
   // Return whether this parser accept star as start of statement
   virtual bool starIsStartOfStatement() { return false; };
 
+  virtual MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const {
+    return MCSymbolRefExpr::getVariantKindForName(Name);
+  }
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,
                                             MCContext &Ctx) {

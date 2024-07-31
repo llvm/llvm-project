@@ -160,7 +160,6 @@ def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
-def ARMsubs          : SDNode<"ARMISD::SUBS", SDTIntBinOp, [SDNPOutGlue]>;
 
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
@@ -379,6 +378,8 @@ def imm_neg_XFORM : SDNodeXForm<imm, [{
 def imm_not_XFORM : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(~(int)N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
+def gi_imm_not_XFORM : GICustomOperandRenderer<"renderInvertedImm">,
+  GISDNodeXFormEquiv<imm_not_XFORM>;
 
 // asr_imm_XFORM - Returns a shift immediate with bit {5} set to 1
 def asr_imm_XFORM : SDNodeXForm<imm, [{
@@ -830,8 +831,8 @@ def mod_imm : Operand<i32>, ImmLeaf<i32, [{
 // instructions, which use mod_imm.
 
 def ModImmNotAsmOperand : AsmOperandClass { let Name = "ModImmNot"; }
-def mod_imm_not : Operand<i32>, PatLeaf<(imm), [{
-    return ARM_AM::getSOImmVal(~(uint32_t)N->getZExtValue()) != -1;
+def mod_imm_not : Operand<i32>, ImmLeaf<i32, [{
+    return ARM_AM::getSOImmVal(~(uint32_t)Imm) != -1;
   }], imm_not_XFORM> {
   let ParserMatchClass = ModImmNotAsmOperand;
 }
@@ -965,6 +966,19 @@ def imm0_255 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
   let ParserMatchClass = Imm0_255AsmOperand;
 }
 
+// imm0_255_expr - For Thumb1 movs/adds - 8-bit immediate that can also reference
+// a relocatable expression.
+def Imm0_255ExprAsmOperand: AsmOperandClass {
+  let Name = "Imm0_255Expr";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticString = "operand must be an immediate in the range [0,255] or a relocatable expression";
+}
+
+def imm0_255_expr : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
+  let EncoderMethod = "getHiLoImmOpValue";
+  let ParserMatchClass = Imm0_255ExprAsmOperand;
+}
+
 /// imm0_65535 - An immediate is in the range [0,65535].
 def Imm0_65535AsmOperand: ImmAsmOperand<0,65535> { let Name = "Imm0_65535"; }
 def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
@@ -990,8 +1004,10 @@ def Imm0_65535ExprAsmOperand: AsmOperandClass {
   let DiagnosticString = "operand must be an immediate in the range [0,0xffff] or a relocatable expression";
 }
 
-def imm0_65535_expr : Operand<i32> {
-  let EncoderMethod = "getHiLo16ImmOpValue";
+def imm0_65535_expr : Operand<i32>, ImmLeaf<i32, [{
+  return Imm >= 0 && Imm < 65536;
+}]> {
+  let EncoderMethod = "getHiLoImmOpValue";
   let ParserMatchClass = Imm0_65535ExprAsmOperand;
 }
 
@@ -2660,6 +2676,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
   def TCRETURNri : PseudoInst<(outs), (ins tcGPR:$dst, i32imm:$SPDiff), IIC_Br, []>,
                    Sched<[WriteBr]>;
 
+  def TCRETURNrinotr12 : PseudoInst<(outs), (ins tcGPRnotr12:$dst, i32imm:$SPDiff), IIC_Br, []>,
+                   Sched<[WriteBr]>;
+
   def TAILJMPd : ARMPseudoExpand<(outs), (ins arm_br_target:$dst),
                                  4, IIC_Br, [],
                                  (Bcc arm_br_target:$dst, (ops 14, zero_reg))>,
@@ -3859,14 +3878,6 @@ let isAdd = 1 in
 defm ADDS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMaddc, 1>;
 defm SUBS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMsubc>;
 
-def : ARMPat<(ARMsubs GPR:$Rn, mod_imm:$imm), (SUBSri $Rn, mod_imm:$imm)>;
-def : ARMPat<(ARMsubs GPR:$Rn, GPR:$Rm), (SUBSrr $Rn, $Rm)>;
-def : ARMPat<(ARMsubs GPR:$Rn, so_reg_imm:$shift),
-             (SUBSrsi $Rn, so_reg_imm:$shift)>;
-def : ARMPat<(ARMsubs GPR:$Rn, so_reg_reg:$shift),
-             (SUBSrsr $Rn, so_reg_reg:$shift)>;
-
-
 let isAdd = 1 in
 defm ADC : AI1_adde_sube_irs<0b0101, "adc", ARMadde, 1>;
 defm SBC : AI1_adde_sube_irs<0b0110, "sbc", ARMsube>;
@@ -4839,7 +4850,7 @@ class AI_crc32<bit C, bits<2> sz, string suffix, SDPatternOperator builtin>
   : AInoP<(outs GPRnopc:$Rd), (ins GPRnopc:$Rn, GPRnopc:$Rm), MiscFrm, NoItinerary,
                !strconcat("crc32", suffix), "\t$Rd, $Rn, $Rm",
                [(set GPRnopc:$Rd, (builtin GPRnopc:$Rn, GPRnopc:$Rm))]>,
-               Requires<[IsARM, HasV8, HasCRC]> {
+               Requires<[IsARM, HasCRC]> {
   bits<4> Rd;
   bits<4> Rn;
   bits<4> Rm;
@@ -5342,7 +5353,7 @@ def atomic_load_acquire_16 : acquiring_load<atomic_load_16>;
 def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
 
 class releasing_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isReleaseOrStronger(Ordering);
 }]>;
@@ -6064,8 +6075,14 @@ def : ARMPat<(ARMWrapperJT tjumptable:$dst),
 // TODO: add,sub,and, 3-instr forms?
 
 // Tail calls. These patterns also apply to Thumb mode.
+// Regular indirect tail call
 def : Pat<(ARMtcret tcGPR:$dst, (i32 timm:$SPDiff)),
-          (TCRETURNri tcGPR:$dst, timm:$SPDiff)>;
+          (TCRETURNri tcGPR:$dst, timm:$SPDiff)>,
+          Requires<[NoSignRetAddr]>;
+// Indirect tail call when PACBTI is enabled
+def : Pat<(ARMtcret tcGPRnotr12:$dst, (i32 timm:$SPDiff)),
+          (TCRETURNrinotr12 tcGPRnotr12:$dst, timm:$SPDiff)>,
+          Requires<[SignRetAddr]>;
 def : Pat<(ARMtcret (i32 tglobaladdr:$dst), (i32 timm:$SPDiff)),
           (TCRETURNdi texternalsym:$dst, (i32 timm:$SPDiff))>;
 def : Pat<(ARMtcret (i32 texternalsym:$dst), (i32 timm:$SPDiff)),
@@ -6169,15 +6186,15 @@ def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
 def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
-def : ARMPat<(atomic_store_8 ldst_so_reg:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;
-def : ARMPat<(atomic_store_8 addrmode_imm12:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_8 GPR:$val, addrmode_imm12:$ptr),
              (STRBi12 GPR:$val, addrmode_imm12:$ptr)>;
-def : ARMPat<(atomic_store_16 addrmode3:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_16 GPR:$val, addrmode3:$ptr),
              (STRH GPR:$val, addrmode3:$ptr)>;
-def : ARMPat<(atomic_store_32 ldst_so_reg:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_32 GPR:$val, ldst_so_reg:$ptr),
              (STRrs GPR:$val, ldst_so_reg:$ptr)>;
-def : ARMPat<(atomic_store_32 addrmode_imm12:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_32 GPR:$val, addrmode_imm12:$ptr),
              (STRi12 GPR:$val, addrmode_imm12:$ptr)>;
 
 
@@ -6516,4 +6533,16 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// Pseudo Instructions for use when early-clobber is defined and Greedy Register
+// Allocation is used. This ensures the constraint is used properly.
+//===----------------------------------------------------------------------===//
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def PseudoARMInitUndefMQPR      :  PseudoInst<(outs MQPR:$vd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefSPR      :  PseudoInst<(outs SPR:$sd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefDPR_VFP2      :  PseudoInst<(outs DPR_VFP2:$dd), (ins), NoItinerary, []>;
+  def PseudoARMInitUndefGPR     :  PseudoInst<(outs GPR:$rd), (ins), NoItinerary, []>;
 }

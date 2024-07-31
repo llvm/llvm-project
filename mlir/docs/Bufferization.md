@@ -5,35 +5,45 @@
 ## Overview
 
 Bufferization in MLIR is the process of converting ops with `tensor` semantics
-to ops with `memref` semantics. MLIR provides an infrastructure that bufferizes
-an entire program in a single pass (*One-Shot Bufferize*). This infrastructure
-bufferizes all ops that implement the
-[`BufferizableOpInterface`](https://github.com/llvm/llvm-project/blob/17a68065c378da74805e4e1b9a5b78cc9f83e580/mlir/include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td)
-can be bufferized.
+to ops with `memref` semantics. There are multiple MLIR passes that are related
+to bufferization. These passes typically run as one of the last steps in a
+pass pipeline, right before lowering to `memref` ops to LLVM. That is because
+many transformations are easier or only supported in tensor land; e.g.,
+[tile/fuse/… on tensors first](https://llvm.discourse.group/t/rfc-linalg-on-tensors-update-and-comprehensive-bufferization-rfc/3373),
+then bufferize the remaining IR.
 
-MLIR has an older bufferization infrastructure built around
-[dialect conversion](DialectConversion.md). Most dialect conversion
-bufferization patterns have been migrated to One-Shot Bufferize, but some
-functionality such as function boundary bufferization still depends on dialect
-conversion and its type converter. New projects should use One-Shot Bufferize,
-as the dialect conversion-based bufferization will eventually be deprecated.
-Moreover, One-Shot Bufferize results in better bufferization with fewer memory
-allocations and buffer copies. This documentation is mostly about One-Shot
-Bufferize, but also describes how to gradually migrate a project from dialect
-conversion-based bufferization to One-Shot Bufferize.
+![bufferization passes](/includes/img/bufferization_passes.svg)
+
+The most important bufferization pass is *One-Shot Bufferize*: This pass
+rewrites `tensor` IR to `memref` IR. There are additional helper passes that
+preprocess IR (e.g., so that IR can be bufferized more efficiently), perform
+buffer-level optimizations such as allocation hoisting, and
+[insert buffer deallocation ops](OwnershipBasedBufferDeallocation.md) so that
+the resulting `memref` IR has no memory leaks.
+
+## Deprecated Passes
+
+The old dialect conversion-based bufferization passes have been deprecated and
+should not be used anymore. Most of those passes have already been removed from
+MLIR. One-Shot Bufferize produces in better bufferization results with fewer
+memory allocations and buffer copies.
+
+The buffer deallocation pass has been deprecated in favor of the ownership-based
+buffer deallocation pipeline. The deprecated pass has some limitations that may
+cause memory leaks in the resulting IR.
 
 ## What is One-Shot Bufferize?
 
-One-Shot Bufferize is a new tensor bufferization pass designed for IR in
+One-Shot Bufferize is a tensor bufferization pass designed for IR in
 [destination-passing style](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/dps-fhpc17.pdf),
 and with aggressive in-place bufferization.
 
 One-Shot Bufferize is:
 
-*   **Monolithic**: A single MLIR pass does the entire work, whereas the
-    previous bufferization in MLIR was split across multiple passes residing in
-    different dialects. In One-Shot Bufferize, `BufferizableOpInterface`
-    implementations are spread across different dialects.
+*   **Monolithic**: A single MLIR pass does the entire work.
+
+*   **Extensible** via an op interface: All ops that implement
+    `BufferizableOpInterface` can be bufferized.
 
 *   A **whole-function at a time analysis**. In-place bufferization decisions
     are made by analyzing SSA use-def chains on tensors. Op interface
@@ -41,10 +51,7 @@ One-Shot Bufferize is:
     ops, but also helper methods for One-Shot Bufferize's analysis to query
     information about an op's bufferization/memory semantics.
 
-*   **Extensible** via an op interface: All ops that implement
-    `BufferizableOpInterface` can be bufferized.
-
-*   **2-Pass**: Bufferization is internally broken down into 2 steps: First,
+*   **2-Phase**: Bufferization is internally broken down into 2 steps: First,
     analyze the entire IR and make bufferization decisions. Then, bufferize
     (rewrite) the IR. The analysis has access to exact SSA use-def information.
     It incrementally builds alias and equivalence sets and does not rely on a
@@ -60,27 +67,17 @@ One-Shot Bufferize is:
     of `AnalysisState` that implements a small number virtual functions can
     serve as a custom analysis. It is even possible to run One-Shot Bufferize
     without any analysis (`AlwaysCopyAnalysisState`), in which case One-Shot
-    Bufferize behaves exactly like the old dialect conversion-based
-    bufferization (i.e., copy every buffer before writing to it).
+    Bufferize copies every buffer before writing to it.
 
-To reduce complexity, One-Shot Bufferize should be
-[run after other transformations](https://llvm.discourse.group/t/rfc-linalg-on-tensors-update-and-comprehensive-bufferization-rfc/3373),
-typically as one of the last steps right before lowering memref ops. Many
-transformations are easier in tensor land; e.g., tile/fuse/… on tensors first,
-then bufferize the remaining IR.
-
-From an architecture perspective, One-Shot Bufferize consists of
-[BufferizableOpInterface](https://github.com/llvm/llvm-project/blob/17a68065c378da74805e4e1b9a5b78cc9f83e580/mlir/include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td)
-(and its implementations) and an
-[analysis](https://github.com/llvm/llvm-project/blob/ae2764e835a26bad9774803eca0a6530df2a3e2d/mlir/include/mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h#L164)
-of tensor SSA values that decides if a buffer can be used directly or must be
-copied. The [bufferize] method of the op interface inspects analysis results and
-rewrites tensor ops into memref ops.
+Note that One-Shot Bufferize does not deallocate buffers. That is done by the
+[Ownership-based Buffer Deallocation passes](OwnershipBasedBufferDeallocation.md).
 
 ## Goals of Bufferization
 
-The high-level goal of every bufferization technique is to: 1. Use as little
-memory as possible. 2. Copy as little memory as possible.
+The high-level goal of every bufferization technique is to:
+
+1. Use as little memory as possible.
+2. Copy as little memory as possible.
 
 This implies reusing already allocated buffers when possible, turning
 bufferization into an algorithmically complex problem with similarities to
@@ -101,26 +98,51 @@ bufferization strategy would be unacceptable for high-performance codegen. When
 choosing an already existing buffer, we must be careful not to accidentally
 overwrite data that is still needed later in the program.
 
-To simplify this problem, One-Shot Bufferize was designed for ops that are in
-*destination-passing style*. For every tensor result, such ops have a tensor
-operand, whose buffer could be utilized for storing the result of the op in the
-absence of other conflicts. We call such tensor operands the *destination*.
+To simplify this problem, One-Shot Bufferize was designed to take advantage of
+*destination-passing style* (DPS). In MLIR, DPS op should implement the
+[`DestinationStyleOpInterface`](https://github.com/llvm/llvm-project/blob/792d437b56adfb3416daf8105942d4899fb82763/mlir/include/mlir/Interfaces/DestinationStyleOpInterface.td).
+DPS exists in itself independently of bufferization and is tied to SSA
+semantics: many ops are "updating" a part of their input SSA variables. For
+example the LLVM instruction
+[`insertelement`](https://llvm.org/docs/LangRef.html#insertelement-instruction)
+is inserting an element inside a vector. Since SSA values are immutable, the
+operation returns a copy of the input vector with the element inserted.
+Another example in MLIR is `linalg.generic` on tensors, which always has an
+extra `outs` operand for each result, which provides the initial values to
+update (for example when the operation is doing a reduction).
 
-As an example, consider the following op: `%0 = tensor.insert %cst into
-%t[%idx] : tensor<?xf32>`
+`outs` operands are referred to as "destinations" in the following (quotes are
+important as this operand isn't modified in place but copied) and comes into
+place in the context of bufferization as a possible "anchor" for the
+bufferization algorithm. This allows the user to shape the input in a form that
+guarantees close to optimal bufferization result when carefully choosing the
+SSA value used as "destination".
 
-`%t` is the destination in this example. When choosing a buffer for the result
-`%0`, One-Shot Bufferize considers only two options:
+For every tensor result, a DPS op has a corresponding tensor operand. If there
+aren't any other conflicting uses of this tensor, the bufferization can alias
+it with the op result and perform the operation "in-place" by reusing the buffer
+allocated for this "destination" input.
 
-1.  buffer(`%0`) = buffer(`%t`).
-2.  buffer(`%0`) is a newly allocated buffer.
+As an example, consider the following op: `%r = tensor.insert %f into
+%t[%idx] : tensor<5xf32>`
+
+![tensor.insert example](/includes/img/bufferization_tensor_insert_dst.svg)
+
+`%t` is the "destination" in this example. When choosing a buffer for the result
+`%r`, denoted as `buffer(%r)`, One-Shot Bufferize considers only two options:
+
+1.  `buffer(%r) = buffer(%t)`: store the result in the existing `buffer(%t)`.
+    Note that this is not always possible. E.g., if the old contents of
+    `buffer(%t)` are still needed. One-Shot Bufferize's main task is to detect
+    such cases and fall back to the second option when necessary.
+2.  `buffer(%r)` is a newly allocated buffer.
 
 There may be other buffers in the same function that could potentially be used
-for buffer(`%0`), but those are not considered by One-Shot Bufferize to keep the
+for `buffer(%r)`, but those are not considered by One-Shot Bufferize to keep the
 bufferization simple. One-Shot Bufferize could be extended to consider such
 buffers in the future to achieve a better quality of bufferization.
 
-Tensor ops that are not in destination-passing style always bufferize to a
+Tensor ops that are not in destination-passing style always bufferized to a
 memory allocation. E.g.:
 
 ```mlir
@@ -131,10 +153,10 @@ memory allocation. E.g.:
 } : tensor<?xf32>
 ```
 
-The result of `tensor.generate` does not have a "destination", so bufferization
-allocates a new buffer. This could be avoided by choosing an op such as
-`linalg.generic`, which can express the same computation with a destination
-("out") tensor:
+The result of `tensor.generate` does not have a "destination" operand, so
+bufferization allocates a new buffer. This could be avoided by instead using an
+op such as `linalg.generic`, which can express the same computation with a
+"destination" operand, as specified behind outputs (`outs`):
 
 ```mlir
 #map = affine_map<(i) -> (i)>
@@ -159,14 +181,13 @@ slice of a tensor:
 ```
 
 The above example bufferizes to a `memref.subview`, followed by a
-"`linalg.generic` on memrefs" that overwrites the memory of the subview. The
-`tensor.insert_slice` bufferizes to a no-op (in the absence of RaW conflicts
-such as a subsequent read of `%s`).
+"`linalg.generic` on memrefs" that overwrites the memory of the subview, assuming
+that the slice `%t` has no other user. The `tensor.insert_slice` then bufferizes
+to a no-op (in the absence of RaW conflicts such as a subsequent read of `%s`).
 
 RaW conflicts are detected with an analysis of SSA use-def chains (details
 later). One-Shot Bufferize works best if there is a single SSA use-def chain,
-where the result of a tensor op is the "destination" operand of the next tensor
-ops, e.g.:
+where the result of a tensor op is the operand of the next tensor ops, e.g.:
 
 ```mlir
 %0 = "my_dialect.some_op"(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
@@ -180,12 +201,61 @@ e.g.:
 ```mlir
 %0 = "my_dialect.some_op"(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
 %1 = "my_dialect.another_op"(%0) : (tensor<?xf32>) -> (tensor<?xf32>)
+
+// "yet_another_op" likely needs to read the data of %0, so "another_op" cannot
+// in-place write to buffer(%0).
 %2 = "my_dialect.yet_another_op"(%0) : (tensor<?xf32>) -> (tensor<?xf32>)
 ```
 
-One-Shot Bufferize has debug flags (`test-analysis-only print-conflicts`) that
-print the results of the analysis and explain to the user why buffer copies were
-inserted.
+## Tensor / MemRef Boundary
+
+The bufferization dialect provides a few helper ops to connect tensor IR (that
+should be bufferized) with existing buffers (that may be allocated/provided by
+a different runtime/library/etc.).
+
+`bufferization.to_memref %t` returns the future buffer of a tensor SSA value.
+`bufferization.to_tensor %m` returns a tensor SSA value for a given MemRef
+buffer. `bufferization.materialize_in_destination` indicates that a tensor value
+should materialize in a certain buffer.
+
+Consider the following example, where a TOSA matmul result should materialize in
+an existing buffer `%C`:
+
+```mlir
+// Batched TOSA matrix multiplication. %A and %B are the
+// inputs, %C is the output.
+func.func @test_matmul(%A: memref<1x17x19xf32>,
+                       %B: memref<1x19x29xf32>,
+                       %C: memref<1x17x29xf32>) {
+
+  %A_tensor = bufferization.to_tensor %A restrict : memref<1x17x19xf32>
+  %B_tensor = bufferization.to_tensor %B restrict : memref<1x19x29xf32>
+
+  %0 = tosa.matmul %A_tensor, %B_tensor
+      : (tensor<1x17x19xf32>, tensor<1x19x29xf32>) ->
+         tensor<1x17x29xf32>
+
+  bufferization.materialize_in_destination
+    %0 in restrict writable %C
+      : (tensor<1x17x29xf32>, memref<1x17x29xf32>) -> ()
+
+  return
+}
+```
+
+Note that all bufferization ops in this example have the `restrict` unit
+attribute set. This attribute is similar to the C restrict keyword and indicates
+that there is no other `to_tensor` or `materialize_in_destination` op with
+the same or an aliasing MemRef operand. Only such
+`to_tensor`/`materialize_in_destination` ops are supported. The `restrict`
+attribute gives strong aliasing guarantees to the bufferization analysis and
+allows us to look only at the tensor IR in a program. (Ops that do not operate
+on tensors are ignored by the One-Shot Bufferize.)
+
+Also note that `tosa.matmul` cannot be bufferized as is: there is no
+`BufferizableOpInterface` implementation for that op. However, the op can be
+lowered to a combination of `tensor.empty` and `linalg.matmul`, which can be
+bufferized.
 
 ## Using One-Shot Bufferize
 
@@ -203,17 +273,14 @@ By default, One-Shot Bufferize fails when it encounters an op with tensor
 semantics (i.e., tensor result or tensor operand) that is not bufferizable
 (i.e., does not implement `BufferizableOpInterface`). This can be avoided with
 `allow-unknown-ops`. In that case, One-Shot Bufferize inserts
-`to_memref`/`to_tensor` ops around the bufferization boundary. These ops are
-named versions of `unrealized_conversion_cast`. Note that One-Shot Bufferize's
-analysis can currently not analyze these ops, so input IR with such ops may fail
-bufferization. Therefore, running One-Shot Bufferize multiple times in a
-sequence is also not supported at the moment.
+`to_memref`/`to_tensor` ops around the bufferization boundary.
 
 One-Shot Bufferize can be configured to bufferize only ops from a set of
 dialects with `dialect-filter`. This can be useful for gradually migrating from
 dialect conversion-based bufferization to One-Shot Bufferize. One-Shot Bufferize
 must run first in such a case, because dialect conversion-based bufferization
-generates `to_tensor`/`to_memref` ops which One-Shot Bufferize cannot analyze.
+generates `to_tensor` ops without the `restrict` unit attribute, which One-Shot
+Bufferize cannot analyze.
 
 One-Shot Bufferize can also be called programmatically with
 [`bufferization::runOneShotBufferize`](https://github.com/llvm/llvm-project/blob/ae2764e835a26bad9774803eca0a6530df2a3e2d/mlir/include/mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h#L167).
@@ -222,83 +289,13 @@ Alternatively,
 skips the analysis and inserts a copy on every buffer write, just like the
 dialect conversion-based bufferization.
 
-## Buffer Deallocation
-
-One-Shot Bufferize deallocates all buffers that it allocates. This is in
-contrast to the dialect conversion-based bufferization that delegates this job
-to the
-[`-buffer-deallocation`](https://mlir.llvm.org/docs/Passes/#-buffer-deallocation-adds-all-required-dealloc-operations-for-all-allocations-in-the-input-program)
-pass. By default, One-Shot Bufferize rejects IR where a newly allocated buffer
-is returned from a block. Such IR will fail bufferization.
-
-A new buffer allocation is returned from a block when the result of an op that
-is not in destination-passing style is returned. E.g.:
-
-```mlir
-%0 = scf.if %c -> (tensor<?xf32>) {
-  %1 = tensor.generate ... -> tensor<?xf32>
-  scf.yield %1 : tensor<?xf32>
-} else {
-  scf.yield %another_tensor : tensor<?xf32>
-}
-```
-
-The `scf.yield` in the "else" branch is OK, but the `scf.yield` in the "then"
-branch will be rejected.
-
-Another case in which a buffer allocation may be returned is when a buffer copy
-must be inserted due to a RaW conflict. E.g.:
-
-```mlir
-%0 = scf.if %c -> (tensor<?xf32>) {
-  %1 = tensor.insert %cst into %another_tensor[%idx] : tensor<?xf32>
-  "my_dialect.reading_tensor_op"(%another_tensor) : (tensor<?xf32>) -> ()
-  ...
-  scf.yield %1 : tensor<?xf32>
-} else {
-  scf.yield %yet_another_tensor : tensor<?xf32>
-}
-```
-
-In the above example, a buffer copy of buffer(`%another_tensor`) (with `%cst`
-inserted) is yielded from the "then" branch.
-
-In both examples, a buffer is allocated inside of a block and then yielded from
-the block. Deallocation of such buffers is tricky and not currently implemented
-in an efficient way. For this reason, One-Shot Bufferize must be explicitly
-configured with `allow-return-allocs` to support such IR.
-
-When running with `allow-return-allocs`, One-Shot Bufferize may introduce
-allocations that cannot be deallocated by One-Shot Bufferize yet. For that
-reason, `-buffer-deallocation` must be run after One-Shot Bufferize. This buffer
-deallocation pass resolves yields of newly allocated buffers with copies. E.g.,
-the `scf.if` example above would bufferize to IR similar to the following:
-
-```mlir
-%0 = scf.if %c -> (memref<?xf32>) {
-  %1 = memref.alloc(...) : memref<?xf32>
-  ...
-  scf.yield %1 : memref<?xf32>
-} else {
-  %2 = memref.alloc(...) : memref<?xf32>
-  memref.copy %another_memref, %2
-  scf.yield %2 : memref<?xf32>
-}
-```
-
-In the bufferized IR, both branches return a newly allocated buffer, so it does
-not matter which if-branch was taken. In both cases, the resulting buffer `%0`
-must be deallocated at some point after the `scf.if` (unless the `%0` is
-returned/yielded from its block).
-
-Note: Buffer allocations that are returned from a function are not deallocated,
-not even with `-buffer-deallocation`. It is the caller's responsibility to
-deallocate the buffer. In the future, this could be automated with allocation
-hoisting (across function boundaries) or reference counting.
-
-One-Shot Bufferize can be configured to leak all memory and not generate any
-buffer deallocations with `create-deallocs=0`. This can be useful for
-compatibility with legacy code that has its own method of deallocating buffers.
+By default, function boundaries are not bufferized. This is because there are
+currently limitations around function graph bufferization: recursive
+calls are not supported. As long as there are no recursive calls, function
+boundary bufferization can be enabled with `bufferize-function-boundaries`. Each
+tensor function argument and tensor function result is then turned into a
+memref. The layout map of the memref type can be controlled with
+`function-boundary-type-conversion`.
 
 ## Memory Layouts
 
@@ -379,6 +376,11 @@ To get a better intuition of the interface methods, we invite users to take a
 look at existing implementations in MLIR, e.g., the implementation of
 `tensor.insert` or `tensor.extract`.
 
+Interface implementations of DPS ops (that implement
+`DestinationStyleOpInterface`) can derive from
+`DstBufferizableOpInterfaceExternalModel`, which provides all necessary
+method implementations except for `bufferize`.
+
 ## Debugging Buffer Copies
 
 To get a better understanding of why One-Shot Bufferize introduced a buffer
@@ -398,14 +400,90 @@ There are two reasons why a buffer copy may be inserted.
 In the first case, `print-conflicts` illustrates the conflict in the form of a
 ("read", "conflicting write", "last write") tuple.
 
-## Understanding the SSA Use-Def Chain Analysis
+A RaW conflict consists of three parts, in the following order according to
+op dominance:
+
+1. **Definition:** A tensor `%t` is defined.
+2. **Conflicting Write:** An operation writes to `buffer(%t)`.
+3. **Read:** An operation reads `%t`.
+
+When such a RaW conflict is detected during the analysis phase, One-Shot
+Bufferize will insert a buffer copy for the conflicting write.
+
+**Example**
+
+```mlir
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only print-conflicts"
+func.func @test(%arg0: f32, %arg1: f32, %arg2: index, %arg3: index) -> (f32, tensor<3xf32>) {
+  // Create a new tensor with [%arg0, %arg0, %arg0].
+  %0 = tensor.from_elements %arg0, %arg0, %arg0 : tensor<3xf32>
+
+  // Insert something into the new tensor.
+  %1 = tensor.insert %arg1 into %0[%arg2] : tensor<3xf32>
+
+  // Read from the old tensor.
+  %r = tensor.extract %0[%arg3] : tensor<3xf32>
+
+  // Return the extracted value and the result of the insertion.
+  func.return %r, %1 : f32, tensor<3xf32>
+}
+```
+
+The output IR is as follows:
+
+```mlir
+func.func @test(%arg0: f32, %arg1: f32, %arg2: index, %arg3: index) -> (f32, tensor<3xf32>) {
+  %from_elements = tensor.from_elements %arg0, %arg0, %arg0 {"C_0[DEF: result 0]"} : tensor<3xf32>
+  %inserted = tensor.insert %arg1 into %from_elements[%arg2] {"C_0[CONFL-WRITE: 1]", __inplace_operands_attr__ = ["none", "false", "none"]} : tensor<3xf32>
+  %extracted = tensor.extract %from_elements[%arg3] {"C_0[READ: 0]", __inplace_operands_attr__ = ["true", "none"]} : tensor<3xf32>
+  return {__inplace_operands_attr__ = ["none", "true"]} %extracted, %inserted : f32, tensor<3xf32>
+}
+```
+
+Note that the IR was not bufferized. It was merely annotated with the results
+of the bufferization analysis. Every operation with tensor semantics has a
+`__inplace_operands_attr__` attribute with one value per operand. If an operand
+is not a tensor, the respective value is `none`. Otherwise, if the operand was
+decided to be bufferized in-place, the value is `true`. A value of `false`
+indicates a buffer copy. In the above example, a buffer copy would be inserted
+for `tensor.insert`, so that it does not overwrite `buffer(%from_elements)`,
+which is still needed for `tensor.extract`.
+
+For each RaW (there is only one in the example), three `C_i` attributes were
+added:
+
+* `C_0[DEF: result 0]`: A tensor is defined: 0-th result of
+  `tensor.from_elements`.
+* `C_0[CONFL-WRITE: 1]`: An operation (if bufferized in-place) would write into
+  the future buffer of the defined tensor: 1-st operand of `tensor.insert`.
+* `C_0[READ: 0]`: An operation reads the tensor definition: 0-th operand of
+  `tensor.extract`.
+
+The fully bufferized IR (with the inserted buffer copy) is as follows:
+
+```mlir
+func.func @test(%arg0: f32, %arg1: f32, %arg2: index, %arg3: index) -> (f32, memref<3xf32>) {
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<3xf32>
+  memref.store %arg0, %alloc[%c0] : memref<3xf32>
+  memref.store %arg0, %alloc[%c1] : memref<3xf32>
+  memref.store %arg0, %alloc[%c2] : memref<3xf32>
+  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<3xf32>
+  memref.copy %alloc, %alloc_0 : memref<3xf32> to memref<3xf32>
+  memref.store %arg1, %alloc_0[%arg2] : memref<3xf32>
+  %0 = memref.load %alloc[%arg3] : memref<3xf32>
+  return %0, %alloc_0 : f32, memref<3xf32>
+}
+```
 
 To get a better understanding of the SSA Use-Def Chain Analysis and the RaW
-conflict detection algorithm, we invite interested users to read the
-[design document](https://discourse.llvm.org/uploads/short-url/5kckJ3DftYwQokG252teFgw3sYa.pdf)
-and watch the corresponding [ODM talk](https://youtu.be/TXEo59CYS9A)
-([slides](https://mlir.llvm.org/OpenMeetings/2022-01-13-One-Shot-Bufferization.pdf)).
-can be used to bufferize a program in a single pass, as long as each op
+conflict detection algorithm, interested users may want to refer to:
+
+* [Original design document](https://discourse.llvm.org/uploads/short-url/5kckJ3DftYwQokG252teFgw3sYa.pdf)
+* [ODM talk](https://youtu.be/TXEo59CYS9A), ([slides](https://mlir.llvm.org/OpenMeetings/2022-01-13-One-Shot-Bufferization.pdf)).
+* [LLVM Dev Meeting 2023 tutorial slides](https://m-sp.org/downloads/llvm_dev_2023.pdf)
 
 ## Migrating from Dialect Conversion-based Bufferization
 
@@ -415,20 +493,6 @@ Both dialect conversion-based bufferization and One-Shot Bufferize generate
 One-Shot Bufferize must run first because it cannot analyze those boundary ops.
 To update existing code step-by-step, it may be useful to specify a dialect
 filter for One-Shot Bufferize, so that dialects can be switched over one-by-one.
-
-## Bufferization Function Graphs
-
-One-Shot Bufferize does currently not support function graph bufferization.
-I.e., `CallOp`, `ReturnOp` and function bbArgs are not bufferizable. Users can
-run the existing `--func-bufferize` bufferization pass after One-Shot Bufferize.
-
-Alternatively, users can try
-[`ModuleBufferization`](https://github.com/llvm/llvm-project/blob/ae2764e835a26bad9774803eca0a6530df2a3e2d/mlir/include/mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h#L31),
-which is an extension of One-Shot Bufferize. This bufferization is still under
-development and does not support arbitrary IR. In essence, returning a tensor
-from a function is not supported, unless it is equivalent to a function bbArg.
-In that case, the corresponding return value can simply be dropped during
-bufferization.
 
 ## Dialect Conversion-based Bufferization
 
@@ -468,7 +532,7 @@ of:
 1.  Buffer optimizations such as `buffer-hoisting`, `buffer-loop-hoisting`, and
     `promote-buffers-to-stack`, which do optimizations that are only exposed
     after bufferization.
-1.  Finally, running the [buffer deallocation](BufferDeallocationInternals.md)
+1.  Finally, running the [ownership-based buffer deallocation](OwnershipBasedBufferDeallocation.md)
     pass.
 
 After buffer deallocation has been completed, the program will be quite

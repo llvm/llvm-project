@@ -23,7 +23,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    store i32 42, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i32, ptr [[PTR2]], i64 1
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR2]], i64 4
 ; CHECK-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB12]]
 ; CHECK:       exit:

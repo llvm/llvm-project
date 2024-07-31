@@ -12,6 +12,75 @@ define double @log_pow(double %x, double %y) {
   ret double %log
 }
 
+define double @log_powi_const(double %x) {
+; CHECK-LABEL: @log_powi_const(
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @llvm.log.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], -3.000000e+00
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %pow = call fast double @llvm.powi.f64.i32(double %x, i32 -3)
+  %log = call fast double @log(double %pow)
+  ret double %log
+}
+
+define double @log_powi_nonconst(double %x, i32 %y) {
+; CHECK-LABEL: @log_powi_nonconst(
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @llvm.log.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to double
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], [[CAST]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %pow = call fast double @llvm.powi.f64.i32(double %x, i32 %y)
+  %log = call fast double @log(double %pow)
+  ret double %log
+}
+
+define double @logf64_powi_nonconst(double %x, i32 %y) {
+; CHECK-LABEL: @logf64_powi_nonconst(
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @llvm.log.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to double
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], [[CAST]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %pow = call fast double @llvm.powi.f64.i32(double %x, i32 %y)
+  %log = call fast double @llvm.log.f64(double %pow)
+  ret double %log
+}
+
+define float @logf_powfi_const(float %x) {
+; CHECK-LABEL: @logf_powfi_const(
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast float @llvm.log.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[LOG1]], -3.000000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %pow = call fast float @llvm.powi.f32.i32(float %x, i32 -3)
+  %log = call fast float @logf(float %pow)
+  ret float %log
+}
+
+define float @logf_powfi_nonconst(float %x, i32 %y) {
+; CHECK-LABEL: @logf_powfi_nonconst(
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast float @llvm.log.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to float
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[LOG1]], [[CAST]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %pow = call fast float @llvm.powi.f32.i32(float %x, i32 %y)
+  %log = call fast float @logf(float %pow)
+  ret float %log
+}
+
+define double @log_powi_not_fast(double %x, i32 %y) {
+; CHECK-LABEL: @log_powi_not_fast(
+; CHECK-NEXT:    [[POW:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[LOG:%.*]] = call fast double @log(double [[POW]])
+; CHECK-NEXT:    ret double [[LOG]]
+;
+  %pow = call double @llvm.powi.f64.i32(double %x, i32 %y)
+  %log = call fast double @log(double %pow)
+  ret double %log
+}
+
 define float @log10f_powf(float %x, float %y) {
 ; CHECK-LABEL: @log10f_powf(
 ; CHECK-NEXT:    [[LOG1:%.*]] = call fast float @llvm.log10.f32(float [[X:%.*]])
@@ -128,6 +197,8 @@ declare float @exp10f(float) #0
 declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
+declare float @llvm.powi.f32.i32(float, i32) #0
+declare double @llvm.powi.f64.i32(double, i32) #0
 declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>)
 
 attributes #0 = { nounwind readnone }

@@ -10,7 +10,6 @@
 #define MLIR_DEBUG_CLOPTIONSSETUP_H
 
 #include "mlir/Debug/BreakpointManagers/FileLineColLocBreakpointManager.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <memory>
@@ -51,6 +50,9 @@ public:
   /// Get the filename to use for logging actions.
   StringRef getLogActionsTo() const { return logActionsToFlag; }
 
+  /// Get the filename to use for profiling actions.
+  StringRef getProfileActionsTo() const { return profileActionsToFlag; }
+
   /// Set a location breakpoint manager to filter out action logging based on
   /// the attached IR location in the Action context. Ownership stays with the
   /// caller.
@@ -70,6 +72,9 @@ protected:
 
   /// Log action execution to the given file (or "-" for stdout)
   std::string logActionsToFlag;
+
+  /// Profile action execution to the given file (or "-" for stdout)
+  std::string profileActionsToFlag;
 
   /// Location Breakpoints to filter the action logging.
   std::vector<tracing::BreakpointManager *> logActionLocationFilter;

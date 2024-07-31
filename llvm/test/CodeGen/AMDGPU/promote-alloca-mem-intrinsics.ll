@@ -53,6 +53,14 @@ define amdgpu_kernel void @promote_with_objectsize(ptr addrspace(1) %out) #0 {
   ret void
 }
 
+; CHECK-LABEL: @promote_with_objectsize_8(
+; CHECK: store i32 32, ptr addrspace(1) %out, align 4
+define amdgpu_kernel void @promote_with_objectsize_8(ptr addrspace(1) %out) #0 {
+  %alloca = alloca [8 x i32], align 4, addrspace(5)
+  %size = call i32 @llvm.objectsize.i32.p5(ptr addrspace(5) %alloca, i1 false, i1 false, i1 false)
+  store i32 %size, ptr addrspace(1) %out
+  ret void
+}
 ; CHECK-LABEL: @promote_alloca_used_twice_in_memcpy(
 ; CHECK: call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) align 8 dereferenceable(16) %arrayidx1, ptr addrspace(3) align 8 dereferenceable(16) %arrayidx2, i64 16, i1 false)
 define amdgpu_kernel void @promote_alloca_used_twice_in_memcpy(i32 %c) {

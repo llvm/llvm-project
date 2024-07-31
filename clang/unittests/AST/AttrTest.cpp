@@ -157,7 +157,7 @@ TEST(Attr, AnnotateType) {
   AST = buildASTFromCodeWithArgs(R"c(
     __auto_type [[clang::annotate_type("auto")]] auto_var = 1;
   )c",
-                                 {"-fdouble-square-bracket-attributes"},
+                                 {},
                                  "input.c");
 
   {

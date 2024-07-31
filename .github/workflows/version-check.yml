@@ -17,15 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install dependencies
         run: |
-          pip install -r ./llvm/utils/git/requirements.txt
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
       - name: Version Check
         run: |
-          version=$(grep -o 'LLVM_VERSION_\(MAJOR\|MINOR\|PATCH\) [0-9]\+' llvm/CMakeLists.txt  | cut -d ' ' -f 2 | tr "\n" "." | sed 's/.$//g')
-          .github/workflows/version-check.py $version
+          version=$(grep -o 'LLVM_VERSION_\(MAJOR\|MINOR\|PATCH\) [0-9]\+' cmake/Modules/LLVMVersion.cmake  | cut -d ' ' -f 2 | tr "\n" "." | sed 's/.$//g')
+          .github/workflows/version-check.py "$version"

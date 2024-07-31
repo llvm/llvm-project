@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: availability-filesystem-missing
 
 // path
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <concepts>
 #include <ranges>
-
-
+namespace fs = std::filesystem;
 
 static_assert(std::same_as<std::ranges::iterator_t<fs::path>, fs::path::iterator>);
 static_assert(std::ranges::common_range<fs::path>);

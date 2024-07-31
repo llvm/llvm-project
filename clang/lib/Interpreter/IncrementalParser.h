@@ -13,9 +13,9 @@
 #ifndef LLVM_CLANG_LIB_INTERPRETER_INCREMENTALPARSER_H
 #define LLVM_CLANG_LIB_INTERPRETER_INCREMENTALPARSER_H
 
+#include "clang/AST/GlobalDecl.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
-#include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -24,7 +24,8 @@
 #include <memory>
 namespace llvm {
 class LLVMContext;
-}
+class Module;
+} // namespace llvm
 
 namespace clang {
 class ASTConsumer;
@@ -56,6 +57,10 @@ protected:
   /// List containing every information about every incrementally parsed piece
   /// of code.
   std::list<PartialTranslationUnit> PTUs;
+
+  /// When CodeGen is created the first llvm::Module gets cached in many places
+  /// and we must keep it alive.
+  std::unique_ptr<llvm::Module> CachedInCodeGenModule;
 
   IncrementalParser();
 

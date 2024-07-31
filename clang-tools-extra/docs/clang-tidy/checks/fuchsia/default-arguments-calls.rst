@@ -19,4 +19,4 @@ Calling it without defaults will not cause a warning:
   foo();  // warning
   foo(0); // no warning
 
-See the features disallowed in Fuchsia at https://fuchsia.googlesource.com/zircon/+/master/docs/cxx.md
+See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx?hl=en

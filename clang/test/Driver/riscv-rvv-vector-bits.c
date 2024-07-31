@@ -31,20 +31,20 @@
 
 // Error out if an unsupported value is passed to -mrvv-vector-bits.
 // -----------------------------------------------------------------------------
-// RUN: %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc_zve64x \
+// RUN: not %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc_zve64x \
 // RUN:  -mrvv-vector-bits=16 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
-// RUN: %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc_zve64x \
+// RUN: not %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc_zve64x \
 // RUN:  -mrvv-vector-bits=A 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
-// RUN: %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc_zve64x \
+// RUN: not %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc_zve64x \
 // RUN:  -mrvv-vector-bits=131072 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
-// RUN: %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc \
+// RUN: not %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gc \
 // RUN:  -mrvv-vector-bits=zvl 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
-// RUN: %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gcv \
+// RUN: not %clang -c %s -### --target=riscv64-linux-gnu -march=rv64gcv \
 // RUN:  -mrvv-vector-bits=64 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
 
 // CHECK-BAD-VALUE-ERROR: error: unsupported argument '{{.*}}' to option '-mrvv-vector-bits='
 
-// Error if using attribute without -msve-vector-bits=<bits> or if using -msve-vector-bits=<bits>+ syntax
+// Error if using attribute without -mrvv-vector-bits=<bits> or if using -mrvv-vector-bits=<bits>+ syntax
 // -----------------------------------------------------------------------------
 // RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
 // RUN:  -march=rv64gc_zve64x 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s

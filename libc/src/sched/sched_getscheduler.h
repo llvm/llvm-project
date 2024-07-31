@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_GETSCHEDULER_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_GETSCHEDULER_H
 
+#include "src/__support/macros/config.h"
 #include <sched.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 int sched_getscheduler(pid_t tid);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_GETSCHEDULER_H

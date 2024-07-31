@@ -18,41 +18,6 @@ def get_required_attr(config, attr_name):
         )
     return attr_value
 
-
-def push_dynamic_library_lookup_path(config, new_path):
-    if platform.system() == "Windows":
-        dynamic_library_lookup_var = "PATH"
-    elif platform.system() == "Darwin":
-        dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
-    else:
-        dynamic_library_lookup_var = "LD_LIBRARY_PATH"
-
-    new_ld_library_path = os.path.pathsep.join(
-        (new_path, config.environment.get(dynamic_library_lookup_var, ""))
-    )
-    config.environment[dynamic_library_lookup_var] = new_ld_library_path
-
-    if platform.system() == "FreeBSD":
-        dynamic_library_lookup_var = "LD_32_LIBRARY_PATH"
-        new_ld_32_library_path = os.path.pathsep.join(
-            (new_path, config.environment.get(dynamic_library_lookup_var, ""))
-        )
-        config.environment[dynamic_library_lookup_var] = new_ld_32_library_path
-
-    if platform.system() == "SunOS":
-        dynamic_library_lookup_var = "LD_LIBRARY_PATH_32"
-        new_ld_library_path_32 = os.path.pathsep.join(
-            (new_path, config.environment.get(dynamic_library_lookup_var, ""))
-        )
-        config.environment[dynamic_library_lookup_var] = new_ld_library_path_32
-
-        dynamic_library_lookup_var = "LD_LIBRARY_PATH_64"
-        new_ld_library_path_64 = os.path.pathsep.join(
-            (new_path, config.environment.get(dynamic_library_lookup_var, ""))
-        )
-        config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
-
-
 # Setup config name.
 config.name = "AddressSanitizer" + config.name_suffix
 
@@ -136,14 +101,24 @@ if platform.system() == "Windows":
     config.available_features.add(win_runtime_feature)
 
 
-def build_invocation(compile_flags):
-    return " " + " ".join([config.clang] + compile_flags) + " "
+def build_invocation(compile_flags, with_lto=False):
+    lto_flags = []
+    if with_lto and config.lto_supported:
+        lto_flags += config.lto_flags
+
+    return " " + " ".join([config.clang] + lto_flags + compile_flags) + " "
 
 
 config.substitutions.append(("%clang ", build_invocation(target_cflags)))
 config.substitutions.append(("%clangxx ", build_invocation(target_cxxflags)))
 config.substitutions.append(("%clang_asan ", build_invocation(clang_asan_cflags)))
 config.substitutions.append(("%clangxx_asan ", build_invocation(clang_asan_cxxflags)))
+config.substitutions.append(
+    ("%clang_asan_lto ", build_invocation(clang_asan_cflags, True))
+)
+config.substitutions.append(
+    ("%clangxx_asan_lto ", build_invocation(clang_asan_cxxflags, True))
+)
 if config.asan_dynamic:
     if config.host_os in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
         shared_libasan_path = os.path.join(
@@ -284,15 +259,6 @@ if (
     or leak_detection_netbsd
 ):
     config.available_features.add("leak-detection")
-
-# Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
-push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)
-
-# GCC-ASan uses dynamic runtime by default.
-if config.compiler_id == "GNU":
-    gcc_dir = os.path.dirname(config.clang)
-    libasan_dir = os.path.join(gcc_dir, "..", "lib" + config.bits)
-    push_dynamic_library_lookup_path(config, libasan_dir)
 
 # Add the RT libdir to PATH directly so that we can successfully run the gtest
 # binary to list its tests.

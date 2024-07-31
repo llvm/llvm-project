@@ -351,7 +351,7 @@ define <vscale x 4 x i32> @umax_i32_pos(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @umax_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: umax_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
@@ -457,7 +457,7 @@ define <vscale x 4 x i32> @umin_i32_pos(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @umin_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: umin_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mov w8, #257 // =0x101
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
@@ -771,7 +771,7 @@ define <vscale x 4 x i32> @sdiv_const(<vscale x 4 x i32> %a) #0 {
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
-  %div = sdiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 3, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+  %div = sdiv <vscale x 4 x i32> %a, splat (i32 3)
   ret <vscale x 4 x i32> %div
 }
 
@@ -783,7 +783,7 @@ define <vscale x 4 x i32> @udiv_const(<vscale x 4 x i32> %a) #0 {
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
-  %div = udiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 3, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+  %div = udiv <vscale x 4 x i32> %a, splat (i32 3)
   ret <vscale x 4 x i32> %div
 }
 
@@ -795,9 +795,9 @@ define <vscale x 8 x i16> @uqsub(<vscale x 8 x i16> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.h, z0.h, #32768 // =0x8000
 ; CHECK-NEXT:    ret
-  %cmp = icmp slt <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 0, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
-  %sub = xor <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 -32768, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
-  %sel = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %sub, <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 0, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
+  %cmp = icmp slt <vscale x 8 x i16> %a, zeroinitializer
+  %sub = xor <vscale x 8 x i16> %a, splat (i16 -32768)
+  %sel = select <vscale x 8 x i1> %cmp, <vscale x 8 x i16> %sub, <vscale x 8 x i16> zeroinitializer
   ret <vscale x 8 x i16> %sel
 }
 

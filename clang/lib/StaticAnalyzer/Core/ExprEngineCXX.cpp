@@ -20,6 +20,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 using namespace clang;
@@ -59,40 +61,39 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     AlwaysReturnsLValue = true;
   }
 
-  assert(ThisRD);
-  if (ThisRD->isEmpty()) {
-    // Do nothing for empty classes. Otherwise it'd retrieve an UnknownVal
-    // and bind it and RegionStore would think that the actual value
-    // in this region at this offset is unknown.
-    return;
-  }
-
   const LocationContext *LCtx = Pred->getLocationContext();
+  const Expr *CallExpr = Call.getOriginExpr();
 
   ExplodedNodeSet Dst;
   Bldr.takeNodes(Pred);
 
-  SVal V = Call.getArgSVal(0);
+  assert(ThisRD);
+  if (!ThisRD->isEmpty()) {
+    // Load the source value only for non-empty classes.
+    // Otherwise it'd retrieve an UnknownVal
+    // and bind it and RegionStore would think that the actual value
+    // in this region at this offset is unknown.
+    SVal V = Call.getArgSVal(0);
 
-  // If the value being copied is not unknown, load from its location to get
-  // an aggregate rvalue.
-  if (std::optional<Loc> L = V.getAs<Loc>())
-    V = Pred->getState()->getSVal(*L);
-  else
-    assert(V.isUnknownOrUndef());
-
-  const Expr *CallExpr = Call.getOriginExpr();
-  evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+    // If the value being copied is not unknown, load from its location to get
+    // an aggregate rvalue.
+    if (std::optional<Loc> L = V.getAs<Loc>())
+      V = Pred->getState()->getSVal(*L);
+    else
+      assert(V.isUnknownOrUndef());
+    evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+  } else {
+    Dst.Add(Pred);
+  }
 
   PostStmt PS(CallExpr, LCtx);
-  for (ExplodedNodeSet::iterator I = Dst.begin(), E = Dst.end();
-       I != E; ++I) {
-    ProgramStateRef State = (*I)->getState();
+  for (ExplodedNode *N : Dst) {
+    ProgramStateRef State = N->getState();
     if (AlwaysReturnsLValue)
       State = State->BindExpr(CallExpr, LCtx, ThisVal);
     else
       State = bindReturnValue(Call, LCtx, State);
-    Bldr.generateNode(PS, State, *I);
+    Bldr.generateNode(PS, State, N);
   }
 }
 
@@ -228,7 +229,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // We are on the top frame of the analysis. We do not know where is the
         // object returned to. Conjure a symbolic region for the return value.
         // TODO: We probably need a new MemRegion kind to represent the storage
-        // of that SymbolicRegion, so that we cound produce a fancy symbol
+        // of that SymbolicRegion, so that we could produce a fancy symbol
         // instead of an anonymous conjured symbol.
         // TODO: Do we need to track the region to avoid having it dead
         // too early? It does die too early, at least in C++17, but because
@@ -284,7 +285,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
       CallOpts.IsTemporaryCtorOrDtor = true;
       if (MTE) {
         if (const ValueDecl *VD = MTE->getExtendingDecl()) {
-          assert(MTE->getStorageDuration() != SD_FullExpression);
+          StorageDuration SD = MTE->getStorageDuration();
+          assert(SD != SD_FullExpression);
           if (!VD->getType()->isReferenceType()) {
             // We're lifetime-extended by a surrounding aggregate.
             // Automatic destructors aren't quite working in this case
@@ -293,11 +295,15 @@ SVal ExprEngine::computeObjectUnderConstruction(
             // the MaterializeTemporaryExpr?
             CallOpts.IsTemporaryLifetimeExtendedViaAggregate = true;
           }
-        }
 
-        if (MTE->getStorageDuration() == SD_Static ||
-            MTE->getStorageDuration() == SD_Thread)
-          return loc::MemRegionVal(MRMgr.getCXXStaticTempObjectRegion(E));
+          if (SD == SD_Static || SD == SD_Thread)
+            return loc::MemRegionVal(
+                MRMgr.getCXXStaticLifetimeExtendedObjectRegion(E, VD));
+
+          return loc::MemRegionVal(
+              MRMgr.getCXXLifetimeExtendedObjectRegion(E, VD, LCtx));
+        }
+        assert(MTE->getStorageDuration() == SD_FullExpression);
       }
 
       return loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
@@ -606,10 +612,10 @@ void ExprEngine::handleConstructor(const Expr *E,
   assert(C || getCurrentCFGElement().getAs<CFGStmt>());
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
-  const CXXConstructExpr::ConstructionKind CK =
+  const CXXConstructionKind CK =
       CE ? CE->getConstructionKind() : CIE->getConstructionKind();
   switch (CK) {
-  case CXXConstructExpr::CK_Complete: {
+  case CXXConstructionKind::Complete: {
     // Inherited constructors are always base class constructors.
     assert(CE && !CIE && "A complete constructor is inherited?!");
 
@@ -660,21 +666,21 @@ void ExprEngine::handleConstructor(const Expr *E,
         CE, State, currBldrCtx, LCtx, CC, CallOpts, Idx);
     break;
   }
-  case CXXConstructExpr::CK_VirtualBase: {
+  case CXXConstructionKind::VirtualBase: {
     // Make sure we are not calling virtual base class initializers twice.
     // Only the most-derived object should initialize virtual base classes.
     const auto *OuterCtor = dyn_cast_or_null<CXXConstructExpr>(
         LCtx->getStackFrame()->getCallSite());
     assert(
         (!OuterCtor ||
-         OuterCtor->getConstructionKind() == CXXConstructExpr::CK_Complete ||
-         OuterCtor->getConstructionKind() == CXXConstructExpr::CK_Delegating) &&
+         OuterCtor->getConstructionKind() == CXXConstructionKind::Complete ||
+         OuterCtor->getConstructionKind() == CXXConstructionKind::Delegating) &&
         ("This virtual base should have already been initialized by "
          "the most derived class!"));
     (void)OuterCtor;
     [[fallthrough]];
   }
-  case CXXConstructExpr::CK_NonVirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
     // In C++17, classes with non-virtual bases may be aggregates, so they would
     // be initialized as aggregates without a constructor call, so we may have
     // a base class constructed directly into an initializer list without
@@ -693,17 +699,17 @@ void ExprEngine::handleConstructor(const Expr *E,
       break;
     }
     [[fallthrough]];
-  case CXXConstructExpr::CK_Delegating: {
+  case CXXConstructionKind::Delegating: {
     const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
     Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor,
                                               LCtx->getStackFrame());
     SVal ThisVal = State->getSVal(ThisPtr);
 
-    if (CK == CXXConstructExpr::CK_Delegating) {
+    if (CK == CXXConstructionKind::Delegating) {
       Target = ThisVal;
     } else {
       // Cast to the base type.
-      bool IsVirtual = (CK == CXXConstructExpr::CK_VirtualBase);
+      bool IsVirtual = (CK == CXXConstructionKind::VirtualBase);
       SVal BaseVal =
           getStoreManager().evalDerivedToBase(ThisVal, E->getType(), IsVirtual);
       Target = BaseVal;
@@ -739,10 +745,8 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (CE) {
     // FIXME: Is it possible and/or useful to do this before PreStmt?
     StmtNodeBuilder Bldr(DstPreVisit, PreInitialized, *currBldrCtx);
-    for (ExplodedNodeSet::iterator I = DstPreVisit.begin(),
-                                   E = DstPreVisit.end();
-         I != E; ++I) {
-      ProgramStateRef State = (*I)->getState();
+    for (ExplodedNode *N : DstPreVisit) {
+      ProgramStateRef State = N->getState();
       if (CE->requiresZeroInitialization()) {
         // FIXME: Once we properly handle constructors in new-expressions, we'll
         // need to invalidate the region before setting a default value, to make
@@ -759,7 +763,7 @@ void ExprEngine::handleConstructor(const Expr *E,
         State = State->bindDefaultZero(Target, LCtx);
       }
 
-      Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
+      Bldr.generateNode(CE, N, State, /*tag=*/nullptr,
                         ProgramPoint::PreStmtKind);
     }
   } else {
@@ -777,14 +781,12 @@ void ExprEngine::handleConstructor(const Expr *E,
       !CallOpts.IsArrayCtorOrDtor) {
     StmtNodeBuilder Bldr(DstPreCall, DstEvaluated, *currBldrCtx);
     // FIXME: Handle other kinds of trivial constructors as well.
-    for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-         I != E; ++I)
-      performTrivialCopy(Bldr, *I, *Call);
+    for (ExplodedNode *N : DstPreCall)
+      performTrivialCopy(Bldr, N, *Call);
 
   } else {
-    for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-         I != E; ++I)
-      getCheckerManager().runCheckersForEvalCall(DstEvaluated, *I, *Call, *this,
+    for (ExplodedNode *N : DstPreCall)
+      getCheckerManager().runCheckersForEvalCall(DstEvaluated, N, *Call, *this,
                                                  CallOpts);
   }
 
@@ -799,7 +801,8 @@ void ExprEngine::handleConstructor(const Expr *E,
   StmtNodeBuilder Bldr(DstEvaluated, DstEvaluatedPostProcessed, *currBldrCtx);
   const AnalysisDeclContext *ADC = LCtx->getAnalysisDeclContext();
   if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
-    if (llvm::isa_and_nonnull<CXXTempObjectRegion>(TargetRegion) &&
+    if (llvm::isa_and_nonnull<CXXTempObjectRegion,
+                              CXXLifetimeExtendedObjectRegion>(TargetRegion) &&
         cast<CXXConstructorDecl>(Call->getDecl())
             ->getParent()
             ->isAnyDestructorNoReturn()) {
@@ -910,9 +913,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
 
   ExplodedNodeSet DstInvalidated;
   StmtNodeBuilder Bldr(DstPreCall, DstInvalidated, *currBldrCtx);
-  for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-       I != E; ++I)
-    defaultEvalCall(Bldr, *I, *Call, CallOpts);
+  for (ExplodedNode *N : DstPreCall)
+    defaultEvalCall(Bldr, N, *Call, CallOpts);
 
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,
                                              *Call, *this);
@@ -1191,18 +1193,13 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   // If we created a new MemRegion for the lambda, we should explicitly bind
   // the captures.
-  unsigned Idx = 0;
-  CXXRecordDecl::field_iterator CurField = LE->getLambdaClass()->field_begin();
-  for (LambdaExpr::const_capture_init_iterator i = LE->capture_init_begin(),
-                                               e = LE->capture_init_end();
-       i != e; ++i, ++CurField, ++Idx) {
-    FieldDecl *FieldForCapture = *CurField;
+  for (auto const [Idx, FieldForCapture, InitExpr] :
+       llvm::zip(llvm::seq<unsigned>(0, -1), LE->getLambdaClass()->fields(),
+                 LE->capture_inits())) {
     SVal FieldLoc = State->getLValue(FieldForCapture, V);
 
     SVal InitVal;
     if (!FieldForCapture->hasCapturedVLAType()) {
-      const Expr *InitExpr = *i;
-
       assert(InitExpr && "Capture missing initialization expression");
 
       // Capturing a 0 length array is a no-op, so we ignore it to get a more

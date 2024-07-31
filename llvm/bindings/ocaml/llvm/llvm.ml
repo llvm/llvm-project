@@ -12,6 +12,7 @@ type llmodule
 type llmetadata
 type lltype
 type llvalue
+type lldbgrecord
 type lluse
 type llbasicblock
 type llbuilder
@@ -518,7 +519,6 @@ external vector_size : lltype -> int = "llvm_vector_size"
 (*--... Operations on other types ..........................................--*)
 external void_type : llcontext -> lltype = "llvm_void_type"
 external label_type : llcontext -> lltype = "llvm_label_type"
-external x86_mmx_type : llcontext -> lltype = "llvm_x86_mmx_type"
 external type_by_name : llmodule -> string -> lltype option = "llvm_type_by_name"
 
 external classify_value : llvalue -> ValueKind.t = "llvm_classify_value"
@@ -528,6 +528,7 @@ external value_name : llvalue -> string = "llvm_value_name"
 external set_value_name : string -> llvalue -> unit = "llvm_set_value_name"
 external dump_value : llvalue -> unit = "llvm_dump_value"
 external string_of_llvalue : llvalue -> string = "llvm_string_of_llvalue"
+external string_of_lldbgrecord : lldbgrecord -> string = "llvm_string_of_lldbgrecord"
 external replace_all_uses_with : llvalue -> llvalue -> unit
                                = "llvm_replace_all_uses_with"
 
@@ -648,43 +649,19 @@ external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
 external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
-external const_and : llvalue -> llvalue -> llvalue = "llvm_const_and"
-external const_or : llvalue -> llvalue -> llvalue = "llvm_const_or"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_icmp"
-external const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_fcmp"
-external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
-external const_lshr : llvalue -> llvalue -> llvalue = "llvm_const_lshr"
-external const_ashr : llvalue -> llvalue -> llvalue = "llvm_const_ashr"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
 external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
                              = "llvm_const_in_bounds_gep"
 external const_trunc : llvalue -> lltype -> llvalue = "llvm_const_trunc"
-external const_sext : llvalue -> lltype -> llvalue = "llvm_const_sext"
-external const_zext : llvalue -> lltype -> llvalue = "llvm_const_zext"
-external const_fptrunc : llvalue -> lltype -> llvalue = "llvm_const_fptrunc"
-external const_fpext : llvalue -> lltype -> llvalue = "llvm_const_fpext"
-external const_uitofp : llvalue -> lltype -> llvalue = "llvm_const_uitofp"
-external const_sitofp : llvalue -> lltype -> llvalue = "llvm_const_sitofp"
-external const_fptoui : llvalue -> lltype -> llvalue = "llvm_const_fptoui"
-external const_fptosi : llvalue -> lltype -> llvalue = "llvm_const_fptosi"
 external const_ptrtoint : llvalue -> lltype -> llvalue = "llvm_const_ptrtoint"
 external const_inttoptr : llvalue -> lltype -> llvalue = "llvm_const_inttoptr"
 external const_bitcast : llvalue -> lltype -> llvalue = "llvm_const_bitcast"
-external const_zext_or_bitcast : llvalue -> lltype -> llvalue
-                               = "llvm_const_zext_or_bitcast"
-external const_sext_or_bitcast : llvalue -> lltype -> llvalue
-                               = "llvm_const_sext_or_bitcast"
 external const_trunc_or_bitcast : llvalue -> lltype -> llvalue
                                 = "llvm_const_trunc_or_bitcast"
 external const_pointercast : llvalue -> lltype -> llvalue
                            = "llvm_const_pointercast"
-external const_intcast : llvalue -> lltype -> is_signed:bool -> llvalue
-                       = "llvm_const_intcast"
-external const_fpcast : llvalue -> lltype -> llvalue = "llvm_const_fpcast"
 external const_extractelement : llvalue -> llvalue -> llvalue
                               = "llvm_const_extractelement"
 external const_insertelement : llvalue -> llvalue -> llvalue -> llvalue
@@ -1156,6 +1133,9 @@ external delete_instruction : llvalue -> unit = "llvm_delete_instruction"
 external builder : llcontext -> llbuilder = "llvm_builder"
 external position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
                           = "llvm_position_builder"
+external position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                               llbuilder -> unit
+                                  = "llvm_position_builder_before_dbg_records"
 external insertion_block : llbuilder -> llbasicblock = "llvm_insertion_block"
 external insert_into_builder : llvalue -> string -> llbuilder -> unit
                              = "llvm_insert_into_builder"
@@ -1169,6 +1149,8 @@ let builder_before context i = builder_at context (Before i)
 let builder_at_end context bb = builder_at context (At_end bb)
 
 let position_before i = position_builder (Before i)
+let position_before_dbg_records i =
+  position_builder_before_dbg_records (Before i)
 let position_at_end bb = position_builder (At_end bb)
 
 

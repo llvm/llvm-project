@@ -163,7 +163,7 @@ public:
                                StringRef Constraint, MVT VT) const override;
 
   // Lower operand with C_Immediate and C_Other constraint type
-  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
@@ -187,11 +187,21 @@ public:
   Register
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
 
 private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                        SelectionDAG &DAG) const;
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override {
+    // In many cases, `GA` doesn't give the correct offset to fold. It's
+    // hard to know if the real offset actually fits into the displacement
+    // of the perspective addressing mode.
+    // Thus, we disable offset folding altogether and leave that to ISel
+    // patterns.
+    return false;
+  }
 
   SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
 

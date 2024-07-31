@@ -44,8 +44,8 @@
 
 #ifdef __ANDROID__
 #include "lldb/Host/android/HostInfoAndroid.h"
+#include "lldb/Host/common/ZipFileResolver.h"
 #endif
-
 
 using namespace lldb;
 using namespace lldb_private::process_gdb_remote;
@@ -340,13 +340,13 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
     llvm::StringRef value;
     while (packet.GetNameColonValue(key, value)) {
       bool success = true;
-      if (key.equals("name")) {
+      if (key == "name") {
         StringExtractor extractor(value);
         std::string file;
         extractor.GetHexByteString(file);
         match_info.GetProcessInfo().GetExecutableFile().SetFile(
             file, FileSpec::Style::native);
-      } else if (key.equals("name_match")) {
+      } else if (key == "name_match") {
         NameMatch name_match = llvm::StringSwitch<NameMatch>(value)
                                    .Case("equals", NameMatch::Equals)
                                    .Case("starts_with", NameMatch::StartsWith)
@@ -357,40 +357,40 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
         match_info.SetNameMatchType(name_match);
         if (name_match == NameMatch::Ignore)
           return SendErrorResponse(2);
-      } else if (key.equals("pid")) {
+      } else if (key == "pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
         if (value.getAsInteger(0, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetProcessID(pid);
-      } else if (key.equals("parent_pid")) {
+      } else if (key == "parent_pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
         if (value.getAsInteger(0, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetParentProcessID(pid);
-      } else if (key.equals("uid")) {
+      } else if (key == "uid") {
         uint32_t uid = UINT32_MAX;
         if (value.getAsInteger(0, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetUserID(uid);
-      } else if (key.equals("gid")) {
+      } else if (key == "gid") {
         uint32_t gid = UINT32_MAX;
         if (value.getAsInteger(0, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetGroupID(gid);
-      } else if (key.equals("euid")) {
+      } else if (key == "euid") {
         uint32_t uid = UINT32_MAX;
         if (value.getAsInteger(0, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveUserID(uid);
-      } else if (key.equals("egid")) {
+      } else if (key == "egid") {
         uint32_t gid = UINT32_MAX;
         if (value.getAsInteger(0, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveGroupID(gid);
-      } else if (key.equals("all_users")) {
+      } else if (key == "all_users") {
         match_info.SetMatchAllUsers(
             OptionArgParser::ToBoolean(value, false, &success));
-      } else if (key.equals("triple")) {
+      } else if (key == "triple") {
         match_info.GetProcessInfo().GetArchitecture() =
             HostInfo::GetAugmentedArchSpec(value);
       } else {
@@ -472,7 +472,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest(
   llvm::StringRef key;
   llvm::StringRef value;
   bool success = packet.GetNameColonValue(key, value);
-  if (success && key.equals("response_size")) {
+  if (success && key == "response_size") {
     uint32_t response_size = 0;
     if (!value.getAsInteger(0, response_size)) {
       if (response_size == 0)
@@ -1138,7 +1138,7 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
 
   response.PutCString("file_path:");
   response.PutStringAsRawHex8(
-        matched_module_spec.GetFileSpec().GetPath().c_str());
+      matched_module_spec.GetFileSpec().GetPath().c_str());
   response.PutChar(';');
   response.PutCString("file_offset:");
   response.PutHex64(file_offset);
@@ -1326,16 +1326,49 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
   const FileSpec module_path_spec =
       FindModuleFile(req_module_path_spec.GetPath(), arch);
-  const ModuleSpec module_spec(module_path_spec, arch);
+
+  lldb::offset_t file_offset = 0;
+  lldb::offset_t file_size = 0;
+#ifdef __ANDROID__
+  // In Android API level 23 and above, dynamic loader is able to load .so file
+  // directly from zip file. In that case, module_path will be
+  // "zip_path!/so_path". Resolve the zip file path, .so file offset and size.
+  ZipFileResolver::FileKind file_kind = ZipFileResolver::eFileKindInvalid;
+  std::string file_path;
+  if (!ZipFileResolver::ResolveSharedLibraryPath(
+          module_path_spec, file_kind, file_path, file_offset, file_size)) {
+    return ModuleSpec();
+  }
+  lldbassert(file_kind != ZipFileResolver::eFileKindInvalid);
+  // For zip .so file, this file_path will contain only the actual zip file
+  // path for the object file processing. Otherwise it is the same as
+  // module_path.
+  const FileSpec actual_module_path_spec(file_path);
+#else
+  // It is just module_path_spec reference for other platforms.
+  const FileSpec &actual_module_path_spec = module_path_spec;
+#endif
+
+  const ModuleSpec module_spec(actual_module_path_spec, arch);
 
   ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(module_path_spec, 0, 0,
-                                           module_specs))
+  if (!ObjectFile::GetModuleSpecifications(actual_module_path_spec, file_offset,
+                                           file_size, module_specs))
     return ModuleSpec();
 
   ModuleSpec matched_module_spec;
   if (!module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec))
     return ModuleSpec();
+
+#ifdef __ANDROID__
+  if (file_kind == ZipFileResolver::eFileKindZip) {
+    // For zip .so file, matched_module_spec contains only the actual zip file
+    // path for the object file processing. Overwrite the matched_module_spec
+    // file spec with the original module_path_spec to pass "zip_path!/so_path"
+    // through to PlatformAndroid::DownloadModuleSlice.
+    *matched_module_spec.GetFileSpecPtr() = module_path_spec;
+  }
+#endif
 
   return matched_module_spec;
 }

@@ -1161,6 +1161,13 @@ def : Pat<(v8i16 (srl (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
 def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
           (v16i8 (immEQOneV)))), (v16i8 (VAVGUB $vA, $vB))>;
 
+def : Pat<(v16i8 (shl v16i8:$vA, (v16i8 (immEQOneV)))),
+          (v16i8 (VADDUBM $vA, $vA))>;
+def : Pat<(v8i16 (shl v8i16:$vA, (v8i16 (immEQOneV)))),
+          (v8i16 (VADDUHM $vA, $vA))>;
+def : Pat<(v4i32 (shl v4i32:$vA, (v4i32 (immEQOneV)))),
+          (v4i32 (VADDUWM $vA, $vA))>;
+
 } // end HasAltivec
 
 // [PO VRT VRA VRB 1 PS XO], "_o" means CR6 is set.

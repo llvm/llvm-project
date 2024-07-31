@@ -32,7 +32,6 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 namespace llvm {
-class AAResults;
 class AssumptionCache;
 class BasicBlock;
 class BlockFrequencyInfo;
@@ -277,9 +276,12 @@ public:
   bool canVectorizeFPMath(bool EnableStrictReductions);
 
   /// Return true if we can vectorize this loop while folding its tail by
-  /// masking, and mark all respective loads/stores for masking.
-  /// This object's state is only modified iff this function returns true.
-  bool prepareToFoldTailByMasking();
+  /// masking.
+  bool canFoldTailByMasking() const;
+
+  /// Mark all respective loads/stores for masking. Must only be called when
+  /// tail-folding is possible.
+  void prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
@@ -347,8 +349,8 @@ public:
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
-  /// Returns true if value V is uniform across \p VF lanes, when \p VF is
-  /// provided, and otherwise if \p V is invariant across all loop iterations.
+  /// Returns true if \p V is invariant across all loop iterations according to
+  /// SCEV.
   bool isInvariant(Value *V) const;
 
   /// Returns true if value V is uniform across \p VF lanes, when \p VF is
@@ -371,8 +373,6 @@ public:
     return LAI->getDepChecker().isSafeForAnyVectorWidth();
   }
 
-  unsigned getMaxSafeDepDistBytes() { return LAI->getMaxSafeDepDistBytes(); }
-
   uint64_t getMaxSafeVectorWidthInBits() const {
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
@@ -383,14 +383,12 @@ public:
     return MaskedOp.contains(I);
   }
 
+  /// Returns true if there is at least one function call in the loop which
+  /// has a vectorized variant available.
+  bool hasVectorCallVariants() const { return VecCallVariantsFound; }
+
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
-
-  /// Returns all assume calls in predicated blocks. They need to be dropped
-  /// when flattening the CFG.
-  const SmallPtrSetImpl<Instruction *> &getConditionalAssumes() const {
-    return ConditionalAssumes;
-  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -453,13 +451,11 @@ private:
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
   /// that we can read from them without segfault.
   /// \p MaskedOp is a list of instructions that have to be transformed into
-  /// calls to the appropriate masked intrinsic when the loop is vectorized.
-  /// \p ConditionalAssumes is a list of assume instructions in predicated
-  /// blocks that must be dropped if the CFG gets flattened.
-  bool blockCanBePredicated(
-      BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
-      SmallPtrSetImpl<const Instruction *> &MaskedOp,
-      SmallPtrSetImpl<Instruction *> &ConditionalAssumes) const;
+  /// calls to the appropriate masked intrinsic when the loop is vectorized
+  /// or dropped if the instruction is a conditional assume intrinsic.
+  bool
+  blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+                       SmallPtrSetImpl<const Instruction *> &MaskedOp) const;
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
@@ -542,16 +538,19 @@ private:
   AssumptionCache *AC;
 
   /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic
+  /// call to the appropriate masked intrinsic or drop them in case of
+  /// conditional assumes.
   SmallPtrSet<const Instruction *, 8> MaskedOp;
-
-  /// Assume instructions in predicated blocks must be dropped if the CFG gets
-  /// flattened.
-  SmallPtrSet<Instruction *, 8> ConditionalAssumes;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
+
+  /// If we discover function calls within the loop which have a valid
+  /// vectorized variant, record that fact so that LoopVectorize can
+  /// (potentially) make a better decision on the maximum VF and enable
+  /// the use of those function variants.
+  bool VecCallVariantsFound = false;
 };
 
 } // namespace llvm

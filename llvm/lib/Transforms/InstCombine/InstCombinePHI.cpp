@@ -248,7 +248,7 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
   PHINode *NewPtrPHI = PHINode::Create(
       IntToPtr->getType(), PN.getNumIncomingValues(), PN.getName() + ".ptr");
 
-  InsertNewInstBefore(NewPtrPHI, PN);
+  InsertNewInstBefore(NewPtrPHI, PN.getIterator());
   SmallDenseMap<Value *, Instruction *> Casts;
   for (auto Incoming : zip(PN.blocks(), AvailablePtrVals)) {
     auto *IncomingBB = std::get<0>(Incoming);
@@ -285,10 +285,10 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
         if (isa<PHINode>(IncomingI))
           InsertPos = BB->getFirstInsertionPt();
         assert(InsertPos != BB->end() && "should have checked above");
-        InsertNewInstBefore(CI, *InsertPos);
+        InsertNewInstBefore(CI, InsertPos);
       } else {
         auto *InsertBB = &IncomingBB->getParent()->getEntryBlock();
-        InsertNewInstBefore(CI, *InsertBB->getFirstInsertionPt());
+        InsertNewInstBefore(CI, InsertBB->getFirstInsertionPt());
       }
     }
     NewPtrPHI->addIncoming(CI, IncomingBB);
@@ -331,7 +331,7 @@ Instruction *
 InstCombinerImpl::foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN) {
   auto *FirstIVI = cast<InsertValueInst>(PN.getIncomingValue(0));
 
-  // Scan to see if all operands are `insertvalue`'s with the same indicies,
+  // Scan to see if all operands are `insertvalue`'s with the same indices,
   // and all have a single use.
   for (Value *V : drop_begin(PN.incoming_values())) {
     auto *I = dyn_cast<InsertValueInst>(V);
@@ -353,7 +353,7 @@ InstCombinerImpl::foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN) {
       NewOperand->addIncoming(
           cast<InsertValueInst>(std::get<1>(Incoming))->getOperand(OpIdx),
           std::get<0>(Incoming));
-    InsertNewInstBefore(NewOperand, PN);
+    InsertNewInstBefore(NewOperand, PN.getIterator());
   }
 
   // And finally, create `insertvalue` over the newly-formed PHI nodes.
@@ -371,7 +371,7 @@ Instruction *
 InstCombinerImpl::foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN) {
   auto *FirstEVI = cast<ExtractValueInst>(PN.getIncomingValue(0));
 
-  // Scan to see if all operands are `extractvalue`'s with the same indicies,
+  // Scan to see if all operands are `extractvalue`'s with the same indices,
   // and all have a single use.
   for (Value *V : drop_begin(PN.incoming_values())) {
     auto *I = dyn_cast<ExtractValueInst>(V);
@@ -391,7 +391,7 @@ InstCombinerImpl::foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN) {
     NewAggregateOperand->addIncoming(
         cast<ExtractValueInst>(std::get<1>(Incoming))->getAggregateOperand(),
         std::get<0>(Incoming));
-  InsertNewInstBefore(NewAggregateOperand, PN);
+  InsertNewInstBefore(NewAggregateOperand, PN.getIterator());
 
   // And finally, create `extractvalue` over the newly-formed PHI nodes.
   auto *NewEVI = ExtractValueInst::Create(NewAggregateOperand,
@@ -450,7 +450,7 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
     NewLHS = PHINode::Create(LHSType, PN.getNumIncomingValues(),
                              FirstInst->getOperand(0)->getName() + ".pn");
     NewLHS->addIncoming(InLHS, PN.getIncomingBlock(0));
-    InsertNewInstBefore(NewLHS, PN);
+    InsertNewInstBefore(NewLHS, PN.getIterator());
     LHSVal = NewLHS;
   }
 
@@ -458,7 +458,7 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
     NewRHS = PHINode::Create(RHSType, PN.getNumIncomingValues(),
                              FirstInst->getOperand(1)->getName() + ".pn");
     NewRHS->addIncoming(InRHS, PN.getIncomingBlock(0));
-    InsertNewInstBefore(NewRHS, PN);
+    InsertNewInstBefore(NewRHS, PN.getIterator());
     RHSVal = NewRHS;
   }
 
@@ -513,7 +513,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // especially bad when the PHIs are in the header of a loop.
   bool NeededPhi = false;
 
-  bool AllInBounds = true;
+  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
 
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
@@ -523,7 +523,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
         GEP->getNumOperands() != FirstInst->getNumOperands())
       return nullptr;
 
-    AllInBounds &= GEP->isInBounds();
+    NW &= GEP->getNoWrapFlags();
 
     // Keep track of whether or not all GEPs are of alloca pointers.
     if (AllBasePointersAreAllocas &&
@@ -581,7 +581,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
     Value *FirstOp = FirstInst->getOperand(I);
     PHINode *NewPN =
         PHINode::Create(FirstOp->getType(), E, FirstOp->getName() + ".pn");
-    InsertNewInstBefore(NewPN, PN);
+    InsertNewInstBefore(NewPN, PN.getIterator());
 
     NewPN->addIncoming(FirstOp, PN.getIncomingBlock(0));
     OperandPhis[I] = NewPN;
@@ -605,8 +605,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   Value *Base = FixedOperands[0];
   GetElementPtrInst *NewGEP =
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
-                                ArrayRef(FixedOperands).slice(1));
-  if (AllInBounds) NewGEP->setIsInBounds();
+                                ArrayRef(FixedOperands).slice(1), NW);
   PHIArgMergedDebugLoc(NewGEP, PN);
   return NewGEP;
 }
@@ -769,7 +768,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
     NewLI->setOperand(0, InVal);
     delete NewPN;
   } else {
-    InsertNewInstBefore(NewPN, PN);
+    InsertNewInstBefore(NewPN, PN.getIterator());
   }
 
   // If this was a volatile load that we are merging, make sure to loop through
@@ -825,8 +824,8 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
       NumZexts++;
     } else if (auto *C = dyn_cast<Constant>(V)) {
       // Make sure that constants can fit in the new type.
-      Constant *Trunc = ConstantExpr::getTrunc(C, NarrowType);
-      if (ConstantExpr::getZExt(Trunc, C->getType()) != C)
+      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType);
+      if (!Trunc)
         return nullptr;
       NewIncoming.push_back(Trunc);
       NumConsts++;
@@ -853,7 +852,7 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
   for (unsigned I = 0; I != NumIncomingValues; ++I)
     NewPhi->addIncoming(NewIncoming[I], Phi.getIncomingBlock(I));
 
-  InsertNewInstBefore(NewPhi, Phi);
+  InsertNewInstBefore(NewPhi, Phi.getIterator());
   return CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
 }
 
@@ -943,7 +942,7 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
     PhiVal = InVal;
     delete NewPN;
   } else {
-    InsertNewInstBefore(NewPN, PN);
+    InsertNewInstBefore(NewPN, PN.getIterator());
     PhiVal = NewPN;
   }
 
@@ -996,8 +995,8 @@ static bool isDeadPHICycle(PHINode *PN,
 /// Return true if this phi node is always equal to NonPhiInVal.
 /// This happens with mutually cyclic phi nodes like:
 ///   z = some value; x = phi (y, z); y = phi (x, z)
-static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
-                           SmallPtrSetImpl<PHINode*> &ValueEqualPHIs) {
+static bool PHIsEqualValue(PHINode *PN, Value *&NonPhiInVal,
+                           SmallPtrSetImpl<PHINode *> &ValueEqualPHIs) {
   // See if we already saw this PHI node.
   if (!ValueEqualPHIs.insert(PN).second)
     return true;
@@ -1010,8 +1009,11 @@ static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
   // the value.
   for (Value *Op : PN->incoming_values()) {
     if (PHINode *OpPN = dyn_cast<PHINode>(Op)) {
-      if (!PHIsEqualValue(OpPN, NonPhiInVal, ValueEqualPHIs))
-        return false;
+      if (!PHIsEqualValue(OpPN, NonPhiInVal, ValueEqualPHIs)) {
+        if (NonPhiInVal)
+          return false;
+        NonPhiInVal = OpPN;
+      }
     } else if (Op != NonPhiInVal)
       return false;
   }
@@ -1202,7 +1204,8 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
       // Otherwise, Create the new PHI node for this user.
       EltPHI = PHINode::Create(Ty, PN->getNumIncomingValues(),
-                               PN->getName()+".off"+Twine(Offset), PN);
+                               PN->getName() + ".off" + Twine(Offset),
+                               PN->getIterator());
       assert(EltPHI->getType() != PN->getType() &&
              "Truncate didn't shrink phi?");
 
@@ -1368,11 +1371,63 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   // sinking.
   auto InsertPt = BB->getFirstInsertionPt();
   if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(&*InsertPt);
+    Self.Builder.SetInsertPoint(&*BB, InsertPt);
     return Self.Builder.CreateNot(Cond);
   }
 
   return nullptr;
+}
+
+// Fold  iv = phi(start, iv.next = iv2.next op start)
+// where iv2 = phi(iv2.start, iv2.next = iv2 + iv2.step)
+// and   iv2.start op start = start
+// to    iv = iv2 op start
+static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
+  BasicBlock *BB = PN.getParent();
+  if (PN.getNumIncomingValues() != 2)
+    return nullptr;
+
+  Value *Start;
+  Instruction *IvNext;
+  BinaryOperator *Iv2Next;
+  auto MatchOuterIV = [&](Value *V1, Value *V2) {
+    if (match(V2, m_c_BinOp(m_Specific(V1), m_BinOp(Iv2Next))) ||
+        match(V2, m_GEP(m_Specific(V1), m_BinOp(Iv2Next)))) {
+      Start = V1;
+      IvNext = cast<Instruction>(V2);
+      return true;
+    }
+    return false;
+  };
+
+  if (!MatchOuterIV(PN.getIncomingValue(0), PN.getIncomingValue(1)) &&
+      !MatchOuterIV(PN.getIncomingValue(1), PN.getIncomingValue(0)))
+    return nullptr;
+
+  PHINode *Iv2;
+  Value *Iv2Start, *Iv2Step;
+  if (!matchSimpleRecurrence(Iv2Next, Iv2, Iv2Start, Iv2Step) ||
+      Iv2->getParent() != BB)
+    return nullptr;
+
+  auto *BO = dyn_cast<BinaryOperator>(IvNext);
+  Constant *Identity =
+      BO ? ConstantExpr::getBinOpIdentity(BO->getOpcode(), Iv2Start->getType())
+         : Constant::getNullValue(Iv2Start->getType());
+  if (Iv2Start != Identity)
+    return nullptr;
+
+  Builder.SetInsertPoint(&*BB, BB->getFirstInsertionPt());
+  if (!BO) {
+    auto *GEP = cast<GEPOperator>(IvNext);
+    return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",
+                             cast<GEPOperator>(IvNext)->getNoWrapFlags());
+  }
+
+  assert(BO->isCommutative() && "Must be commutative");
+  Value *Res = Builder.CreateBinOp(BO->getOpcode(), Iv2, Start);
+  cast<Instruction>(Res)->copyIRFlags(BO);
+  return Res;
 }
 
 // PHINode simplification
@@ -1437,33 +1492,58 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // are induction variable analysis (sometimes) and ADCE, which is only run
     // late.
     if (PHIUser->hasOneUse() &&
-        (isa<BinaryOperator>(PHIUser) || isa<GetElementPtrInst>(PHIUser)) &&
+        (isa<BinaryOperator>(PHIUser) || isa<UnaryOperator>(PHIUser) ||
+         isa<GetElementPtrInst>(PHIUser)) &&
         PHIUser->user_back() == &PN) {
       return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
     }
-    // When a PHI is used only to be compared with zero, it is safe to replace
-    // an incoming value proved as known nonzero with any non-zero constant.
-    // For example, in the code below, the incoming value %v can be replaced
-    // with any non-zero constant based on the fact that the PHI is only used to
-    // be compared with zero and %v is a known non-zero value:
-    // %v = select %cond, 1, 2
-    // %p = phi [%v, BB] ...
-    //      icmp eq, %p, 0
-    auto *CmpInst = dyn_cast<ICmpInst>(PHIUser);
-    // FIXME: To be simple, handle only integer type for now.
-    if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
-        match(CmpInst->getOperand(1), m_Zero())) {
+  }
+
+  // When a PHI is used only to be compared with zero, it is safe to replace
+  // an incoming value proved as known nonzero with any non-zero constant.
+  // For example, in the code below, the incoming value %v can be replaced
+  // with any non-zero constant based on the fact that the PHI is only used to
+  // be compared with zero and %v is a known non-zero value:
+  // %v = select %cond, 1, 2
+  // %p = phi [%v, BB] ...
+  //      icmp eq, %p, 0
+  // FIXME: To be simple, handle only integer type for now.
+  // This handles a small number of uses to keep the complexity down, and an
+  // icmp(or(phi)) can equally be replaced with any non-zero constant as the
+  // "or" will only add bits.
+  if (!PN.hasNUsesOrMore(3)) {
+    SmallVector<Instruction *> DropPoisonFlags;
+    bool AllUsesOfPhiEndsInCmp = all_of(PN.users(), [&](User *U) {
+      auto *CmpInst = dyn_cast<ICmpInst>(U);
+      if (!CmpInst) {
+        // This is always correct as OR only add bits and we are checking
+        // against 0.
+        if (U->hasOneUse() && match(U, m_c_Or(m_Specific(&PN), m_Value()))) {
+          DropPoisonFlags.push_back(cast<Instruction>(U));
+          CmpInst = dyn_cast<ICmpInst>(U->user_back());
+        }
+      }
+      if (!CmpInst || !isa<IntegerType>(PN.getType()) ||
+          !CmpInst->isEquality() || !match(CmpInst->getOperand(1), m_Zero())) {
+        return false;
+      }
+      return true;
+    });
+    // All uses of PHI results in a compare with zero.
+    if (AllUsesOfPhiEndsInCmp) {
       ConstantInt *NonZeroConst = nullptr;
       bool MadeChange = false;
       for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
         Instruction *CtxI = PN.getIncomingBlock(I)->getTerminator();
         Value *VA = PN.getIncomingValue(I);
-        if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
+        if (isKnownNonZero(VA, getSimplifyQuery().getWithInstruction(CtxI))) {
           if (!NonZeroConst)
             NonZeroConst = getAnyNonZeroConstInt(PN);
-
           if (NonZeroConst != VA) {
             replaceOperand(PN, I, NonZeroConst);
+            // The "disjoint" flag may no longer hold after the transform.
+            for (Instruction *I : DropPoisonFlags)
+              I->dropPoisonGeneratingFlags();
             MadeChange = true;
           }
         }
@@ -1478,7 +1558,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   //   z = some value; x = phi (y, z); y = phi (x, z)
   // where the phi nodes don't necessarily need to be in the same block.  Do a
   // quick check to see if the PHI node only contains a single non-phi value, if
-  // so, scan to see if the phi cycle is actually equal to that value.
+  // so, scan to see if the phi cycle is actually equal to that value. If the
+  // phi has no non-phi values then allow the "NonPhiInVal" to be set later if
+  // one of the phis itself does not have a single input.
   {
     unsigned InValNo = 0, NumIncomingVals = PN.getNumIncomingValues();
     // Scan for the first non-phi operand.
@@ -1486,25 +1568,25 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
            isa<PHINode>(PN.getIncomingValue(InValNo)))
       ++InValNo;
 
-    if (InValNo != NumIncomingVals) {
-      Value *NonPhiInVal = PN.getIncomingValue(InValNo);
+    Value *NonPhiInVal =
+        InValNo != NumIncomingVals ? PN.getIncomingValue(InValNo) : nullptr;
 
-      // Scan the rest of the operands to see if there are any conflicts, if so
-      // there is no need to recursively scan other phis.
+    // Scan the rest of the operands to see if there are any conflicts, if so
+    // there is no need to recursively scan other phis.
+    if (NonPhiInVal)
       for (++InValNo; InValNo != NumIncomingVals; ++InValNo) {
         Value *OpVal = PN.getIncomingValue(InValNo);
         if (OpVal != NonPhiInVal && !isa<PHINode>(OpVal))
           break;
       }
 
-      // If we scanned over all operands, then we have one unique value plus
-      // phi values.  Scan PHI nodes to see if they all merge in each other or
-      // the value.
-      if (InValNo == NumIncomingVals) {
-        SmallPtrSet<PHINode*, 16> ValueEqualPHIs;
-        if (PHIsEqualValue(&PN, NonPhiInVal, ValueEqualPHIs))
-          return replaceInstUsesWith(PN, NonPhiInVal);
-      }
+    // If we scanned over all operands, then we have one unique value plus
+    // phi values.  Scan PHI nodes to see if they all merge in each other or
+    // the value.
+    if (InValNo == NumIncomingVals) {
+      SmallPtrSet<PHINode *, 16> ValueEqualPHIs;
+      if (PHIsEqualValue(&PN, NonPhiInVal, ValueEqualPHIs))
+        return replaceInstUsesWith(PN, NonPhiInVal);
     }
   }
 
@@ -1512,11 +1594,12 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // the blocks in the same order. This will help identical PHIs be eliminated
   // by other passes. Other passes shouldn't depend on this for correctness
   // however.
-  PHINode *FirstPN = cast<PHINode>(PN.getParent()->begin());
-  if (&PN != FirstPN)
-    for (unsigned I = 0, E = FirstPN->getNumIncomingValues(); I != E; ++I) {
+  auto Res = PredOrder.try_emplace(PN.getParent());
+  if (!Res.second) {
+    const auto &Preds = Res.first->second;
+    for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
       BasicBlock *BBA = PN.getIncomingBlock(I);
-      BasicBlock *BBB = FirstPN->getIncomingBlock(I);
+      BasicBlock *BBB = Preds[I];
       if (BBA != BBB) {
         Value *VA = PN.getIncomingValue(I);
         unsigned J = PN.getBasicBlockIndex(BBB);
@@ -1531,6 +1614,10 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         // this in this case.
       }
     }
+  } else {
+    // Remember the block order of the first encountered phi node.
+    append_range(Res.first->second, PN.blocks());
+  }
 
   // Is there an identical PHI node in this basic block?
   for (PHINode &IdenticalPN : PN.getParent()->phis()) {
@@ -1559,6 +1646,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // Ultimately, try to replace this Phi with a dominating condition.
   if (auto *V = simplifyUsingControlFlow(*this, PN, DT))
     return replaceInstUsesWith(PN, V);
+
+  if (Value *Res = foldDependentIVs(PN, Builder))
+    return replaceInstUsesWith(PN, Res);
 
   return nullptr;
 }

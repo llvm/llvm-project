@@ -26,6 +26,13 @@ void registerGPUDialectTranslation(DialectRegistry &registry);
 /// associated with the given context.
 void registerGPUDialectTranslation(MLIRContext &context);
 
+namespace gpu {
+/// Registers the offloading LLVM translation interfaces for
+/// `gpu.select_object`.
+void registerOffloadingLLVMTranslationInterfaceExternalModels(
+    mlir::DialectRegistry &registry);
+} // namespace gpu
+
 } // namespace mlir
 
 #endif // MLIR_TARGET_LLVMIR_DIALECT_GPU_GPUTOLLVMIRTRANSLATION_H

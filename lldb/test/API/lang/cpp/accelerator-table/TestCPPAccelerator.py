@@ -7,6 +7,7 @@ from lldbsuite.test import lldbutil
 class CPPAcceleratorTableTestCase(TestBase):
     @skipUnlessDarwin
     @skipIf(debug_info=no_match(["dwarf"]))
+    @skipIf(dwarf_version=[">=", "5"])
     def test(self):
         """Test that type lookups fail early (performance)"""
         self.build()

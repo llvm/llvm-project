@@ -40,6 +40,11 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   if (getCodeGenOpts().OptimizationLevel == 0)
     return true;
 
+  // Disable this optimization for ARM64EC.  FIXME: This probably should work,
+  // but getting the symbol table correct is complicated.
+  if (getTarget().getTriple().isWindowsArm64EC())
+    return true;
+
   // If sanitizing memory to check for use-after-dtor, do not emit as
   //  an alias, unless this class owns no members.
   if (getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
@@ -131,17 +136,10 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   if (Replacements.count(MangledName))
     return false;
 
-  // Derive the type for the alias.
   llvm::Type *AliasValueType = getTypes().GetFunctionType(AliasDecl);
-  llvm::PointerType *AliasType = AliasValueType->getPointerTo();
 
-  // Find the referent.  Some aliases might require a bitcast, in
-  // which case the caller is responsible for ensuring the soundness
-  // of these semantics.
-  auto *Ref = cast<llvm::GlobalValue>(GetAddrOfGlobal(TargetDecl));
-  llvm::Constant *Aliasee = Ref;
-  if (Ref->getType() != AliasType)
-    Aliasee = llvm::ConstantExpr::getBitCast(Ref, AliasType);
+  // Find the referent.
+  auto *Aliasee = cast<llvm::GlobalValue>(GetAddrOfGlobal(TargetDecl));
 
   // Instead of creating as alias to a linkonce_odr, replace all of the uses
   // of the aliasee.
@@ -170,7 +168,7 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // If we don't have a definition for the destructor yet or the definition is
   // avaialable_externally, don't emit an alias.  We can't emit aliases to
   // declarations; that's just not how aliases work.
-  if (Ref->isDeclarationForLinker())
+  if (Aliasee->isDeclarationForLinker())
     return true;
 
   // Don't create an alias to a linker weak symbol. This avoids producing
@@ -189,7 +187,8 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
 
   // Switch any previous uses to the alias.
   if (Entry) {
-    assert(Entry->getType() == AliasType &&
+    assert(Entry->getValueType() == AliasValueType &&
+           Entry->getAddressSpace() == Alias->getAddressSpace() &&
            "declaration exists with different type");
     Alias->takeName(Entry);
     Entry->replaceAllUsesWith(Alias);
@@ -252,8 +251,7 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
          "No kext in Microsoft ABI");
   CodeGenModule &CGM = CGF.CGM;
   llvm::Value *VTable = CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
-  Ty = Ty->getPointerTo();
-  VTable = CGF.Builder.CreateBitCast(VTable, Ty->getPointerTo());
+  Ty = llvm::PointerType::getUnqual(CGM.getLLVMContext());
   assert(VTable && "BuildVirtualCall = kext vtbl pointer is null");
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   const VTableLayout &VTLayout = CGM.getItaniumVTableContext().getVTableLayout(RD);
@@ -265,7 +263,16 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(Ty, VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc = CGF.Builder.CreateAlignedLoad(
       Ty, VFuncPtr, llvm::Align(CGF.PointerAlignInBytes));
-  CGCallee Callee(GD, VFunc);
+
+  CGPointerAuthInfo PointerAuth;
+  if (auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+    GlobalDecl OrigMD =
+        CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    PointerAuth = CGF.EmitPointerAuthInfo(Schema, VFuncPtr, OrigMD, QualType());
+  }
+
+  CGCallee Callee(GD, VFunc, PointerAuth);
   return Callee;
 }
 

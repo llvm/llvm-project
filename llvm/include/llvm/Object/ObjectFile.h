@@ -46,6 +46,7 @@ class WasmObjectFile;
 
 using section_iterator = content_iterator<SectionRef>;
 
+typedef std::function<bool(const SectionRef &)> SectionFilterPredicate;
 /// This is a value type class that represents a single relocation in the list
 /// of relocations in the object file.
 class RelocationRef {
@@ -301,6 +302,7 @@ protected:
 public:
   ObjectFile() = delete;
   ObjectFile(const ObjectFile &other) = delete;
+  ObjectFile &operator=(const ObjectFile &other) = delete;
 
   uint64_t getCommonSymbolSize(DataRefImpl Symb) const {
     Expected<uint32_t> SymbolFlagsOrErr = getSymbolFlags(Symb);
@@ -336,6 +338,7 @@ public:
 
   virtual StringRef getFileFormatName() const = 0;
   virtual Triple::ArchType getArch() const = 0;
+  virtual Triple::OSType getOS() const { return Triple::UnknownOS; }
   virtual Expected<SubtargetFeatures> getFeatures() const = 0;
   virtual std::optional<StringRef> tryGetCPUName() const {
     return std::nullopt;
@@ -388,15 +391,66 @@ public:
   createELFObjectFile(MemoryBufferRef Object, bool InitContent = true);
 
   static Expected<std::unique_ptr<MachOObjectFile>>
-  createMachOObjectFile(MemoryBufferRef Object,
-                        uint32_t UniversalCputype = 0,
-                        uint32_t UniversalIndex = 0);
+  createMachOObjectFile(MemoryBufferRef Object, uint32_t UniversalCputype = 0,
+                        uint32_t UniversalIndex = 0,
+                        size_t MachOFilesetEntryOffset = 0);
 
   static Expected<std::unique_ptr<ObjectFile>>
   createGOFFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<WasmObjectFile>>
   createWasmObjectFile(MemoryBufferRef Object);
+};
+
+/// A filtered iterator for SectionRefs that skips sections based on some given
+/// predicate.
+class SectionFilterIterator {
+public:
+  SectionFilterIterator(SectionFilterPredicate Pred,
+                        const section_iterator &Begin,
+                        const section_iterator &End)
+      : Predicate(std::move(Pred)), Iterator(Begin), End(End) {
+    scanPredicate();
+  }
+  const SectionRef &operator*() const { return *Iterator; }
+  SectionFilterIterator &operator++() {
+    ++Iterator;
+    scanPredicate();
+    return *this;
+  }
+  bool operator!=(const SectionFilterIterator &Other) const {
+    return Iterator != Other.Iterator;
+  }
+
+private:
+  void scanPredicate() {
+    while (Iterator != End && !Predicate(*Iterator)) {
+      ++Iterator;
+    }
+  }
+  SectionFilterPredicate Predicate;
+  section_iterator Iterator;
+  section_iterator End;
+};
+
+/// Creates an iterator range of SectionFilterIterators for a given Object and
+/// predicate.
+class SectionFilter {
+public:
+  SectionFilter(SectionFilterPredicate Pred, const ObjectFile &Obj)
+      : Predicate(std::move(Pred)), Object(Obj) {}
+  SectionFilterIterator begin() {
+    return SectionFilterIterator(Predicate, Object.section_begin(),
+                                 Object.section_end());
+  }
+  SectionFilterIterator end() {
+    return SectionFilterIterator(Predicate, Object.section_end(),
+                                 Object.section_end());
+  }
+
+private:
+  SectionFilterPredicate Predicate;
+  const ObjectFile &Object;
 };
 
 // Inline function definitions.

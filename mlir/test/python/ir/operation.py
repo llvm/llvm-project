@@ -5,6 +5,8 @@ import io
 import itertools
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
+from mlir.dialects import arith
+from mlir.dialects._ods_common import _cext
 
 
 def run(f):
@@ -440,9 +442,11 @@ def testOperationResultList():
         r"""
     func.func @f1() {
       %0:3 = call @f2() : () -> (i32, f64, index)
+      call @f3() : () -> ()
       return
     }
     func.func private @f2() -> (i32, f64, index)
+    func.func private @f3() -> ()
   """,
         ctx,
     )
@@ -464,6 +468,10 @@ def testOperationResultList():
     # Out of range
     expect_index_error(lambda: call.results[3])
     expect_index_error(lambda: call.results[-4])
+
+    no_results_call = caller.regions[0].blocks[0].operations[1]
+    assert len(no_results_call.results) == 0
+    assert no_results_call.results.owner == no_results_call
 
 
 # CHECK-LABEL: TEST: testOperationResultListSlice
@@ -532,9 +540,9 @@ def testOperationAttributes():
     )
     op = module.body.operations[0]
     assert len(op.attributes) == 3
-    iattr = IntegerAttr(op.attributes["some.attribute"])
-    fattr = FloatAttr(op.attributes["other.attribute"])
-    sattr = StringAttr(op.attributes["dependent"])
+    iattr = op.attributes["some.attribute"]
+    fattr = op.attributes["other.attribute"]
+    sattr = op.attributes["dependent"]
     # CHECK: Attribute type i8, value 1
     print(f"Attribute type {iattr.type}, value {iattr.value}")
     # CHECK: Attribute type f64, value 3.0
@@ -614,11 +622,16 @@ def testOperationPrint():
     print(bytes_value.__class__)
     print(bytes_value)
 
-    # Test get_asm local_scope.
+    # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
 
-    # Test get_asm with options.
+    # Test printing using state.
+    state = AsmState(module.operation)
+    # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(state)
+
+    # Test print with options.
     # CHECK: value = dense_resource<__elided__> : tensor<4xi32>
     # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
     module.operation.print(
@@ -627,6 +640,13 @@ def testOperationPrint():
         pretty_debug_info=True,
         print_generic_op_form=True,
         use_local_scope=True,
+    )
+
+    # Test print with skip_regions option
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: func.return
+    module.body.operations[0].print(
+        skip_regions=True,
     )
 
 
@@ -640,6 +660,7 @@ def testKnownOpView():
       %1 = "custom.f32"() : () -> f32
       %2 = "custom.f32"() : () -> f32
       %3 = arith.addf %1, %2 : f32
+      %4 = arith.constant 0 : i32
     """
         )
         print(module)
@@ -661,6 +682,31 @@ def testKnownOpView():
         custom = module.body.operations[0]
         # CHECK: OpView object
         print(repr(custom))
+
+        # constant should map to an extension OpView class in the arithmetic dialect.
+        constant = module.body.operations[3]
+        # CHECK: <mlir.dialects.arith.ConstantOp object
+        print(repr(constant))
+        # Checks that the arith extension is being registered successfully
+        # (literal_value is a property on the extension class but not on the default OpView).
+        # CHECK: literal value 0
+        print("literal value", constant.literal_value)
+
+        # Checks that "late" registration/replacement (i.e., post all module loading/initialization)
+        # is working correctly.
+        @_cext.register_operation(arith._Dialect, replace=True)
+        class ConstantOp(arith.ConstantOp):
+            def __init__(self, result, value, *, loc=None, ip=None):
+                if isinstance(value, int):
+                    super().__init__(IntegerAttr.get(result, value), loc=loc, ip=ip)
+                elif isinstance(value, float):
+                    super().__init__(FloatAttr.get(result, value), loc=loc, ip=ip)
+                else:
+                    super().__init__(value, loc=loc, ip=ip)
+
+        constant = module.body.operations[3]
+        # CHECK: <__main__.testKnownOpView.<locals>.ConstantOp object
+        print(repr(constant))
 
 
 # CHECK-LABEL: TEST: testSingleResultProperty
@@ -976,3 +1022,78 @@ def testOperationParse():
         print(
             f"op_with_source_name: {o.get_asm(enable_debug_info=True, use_local_scope=True)}"
         )
+
+
+# CHECK-LABEL: TEST: testOpWalk
+@run
+def testOpWalk():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(
+        r"""
+    builtin.module {
+      func.func @f() {
+        func.return
+      }
+    }
+  """,
+        ctx,
+    )
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.ADVANCE
+
+    # Test post-order walk (default).
+    # CHECK-NEXT:  Post-order
+    # CHECK-NEXT:  func.return
+    # CHECK-NEXT:  func.func
+    # CHECK-NEXT:  builtin.module
+    print("Post-order")
+    module.operation.walk(callback)
+
+    # Test pre-order walk.
+    # CHECK-NEXT:  Pre-order
+    # CHECK-NEXT:  builtin.module
+    # CHECK-NEXT:  func.fun
+    # CHECK-NEXT:  func.return
+    print("Pre-order")
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test interrput.
+    # CHECK-NEXT:  Interrupt post-order
+    # CHECK-NEXT:  func.return
+    print("Interrupt post-order")
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.INTERRUPT
+
+    module.operation.walk(callback)
+
+    # Test skip.
+    # CHECK-NEXT:  Skip pre-order
+    # CHECK-NEXT:  builtin.module
+    print("Skip pre-order")
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.SKIP
+
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test exception.
+    # CHECK: Exception
+    # CHECK-NEXT: func.return
+    # CHECK-NEXT: Exception raised
+    print("Exception")
+
+    def callback(op):
+        print(op.name)
+        raise ValueError
+        return WalkResult.ADVANCE
+
+    try:
+        module.operation.walk(callback)
+    except RuntimeError:
+        print("Exception raised")

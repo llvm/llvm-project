@@ -31,13 +31,40 @@ struct DocumentedGroup;
 struct Documentation {
   std::vector<DocumentedGroup> Groups;
   std::vector<DocumentedOption> Options;
+
+  bool empty() {
+    return Groups.empty() && Options.empty();
+  }
 };
 struct DocumentedGroup : Documentation {
   Record *Group;
 };
 
+static bool hasFlag(const Record *Option, StringRef OptionFlag,
+                    StringRef FlagsField) {
+  for (const Record *Flag : Option->getValueAsListOfDefs(FlagsField))
+    if (Flag->getName() == OptionFlag)
+      return true;
+  if (const DefInit *DI = dyn_cast<DefInit>(Option->getValueInit("Group")))
+    for (const Record *Flag : DI->getDef()->getValueAsListOfDefs(FlagsField))
+      if (Flag->getName() == OptionFlag)
+        return true;
+  return false;
+}
+
+static bool isOptionVisible(const Record *Option, const Record *DocInfo) {
+  for (StringRef IgnoredFlag : DocInfo->getValueAsListOfStrings("IgnoreFlags"))
+    if (hasFlag(Option, IgnoredFlag, "Flags"))
+      return false;
+  for (StringRef Mask : DocInfo->getValueAsListOfStrings("VisibilityMask"))
+    if (hasFlag(Option, Mask, "Visibility"))
+      return true;
+  return false;
+}
+
 // Reorganize the records into a suitable form for emitting documentation.
-Documentation extractDocumentation(RecordKeeper &Records) {
+Documentation extractDocumentation(RecordKeeper &Records,
+                                   const Record *DocInfo) {
   Documentation Result;
 
   // Build the tree of groups. The root in the tree is the fake option group
@@ -124,12 +151,15 @@ Documentation extractDocumentation(RecordKeeper &Records) {
       D.Groups.back().Group = G;
       Documentation &Base = D.Groups.back();
       Base = DocumentationForGroup(G);
+      if (Base.empty())
+        D.Groups.pop_back();
     }
 
     auto &Options = OptionsInGroup[R];
     llvm::sort(Options, CompareByName);
     for (Record *O : Options)
-      D.Options.push_back(DocumentationForOption(O));
+      if (isOptionVisible(O, DocInfo))
+        D.Options.push_back(DocumentationForOption(O));
 
     return D;
   };
@@ -161,48 +191,10 @@ unsigned getNumArgsForKind(Record *OptionKind, const Record *Option) {
     .Default(0);
 }
 
-bool hasFlag(const Record *OptionOrGroup, StringRef OptionFlag) {
-  for (const Record *Flag : OptionOrGroup->getValueAsListOfDefs("Flags"))
-    if (Flag->getName() == OptionFlag)
-      return true;
-  return false;
-}
-
-bool isIncluded(const Record *OptionOrGroup, const Record *DocInfo) {
-  assert(DocInfo->getValue("IncludedFlags") && "Missing includeFlags");
-  for (StringRef Inclusion : DocInfo->getValueAsListOfStrings("IncludedFlags"))
-    if (hasFlag(OptionOrGroup, Inclusion))
-      return true;
-  return false;
-}
-
-bool isGroupIncluded(const DocumentedGroup &Group, const Record *DocInfo) {
-  if (isIncluded(Group.Group, DocInfo))
-    return true;
-  for (auto &O : Group.Options)
-    if (isIncluded(O.Option, DocInfo))
-      return true;
-  for (auto &G : Group.Groups) {
-    if (isIncluded(G.Group, DocInfo))
-      return true;
-    if (isGroupIncluded(G, DocInfo))
-      return true;
-  }
-  return false;
-}
-
-bool isExcluded(const Record *OptionOrGroup, const Record *DocInfo) {
-  // FIXME: Provide a flag to specify the set of exclusions.
-  for (StringRef Exclusion : DocInfo->getValueAsListOfStrings("ExcludedFlags"))
-    if (hasFlag(OptionOrGroup, Exclusion))
-      return true;
-  return false;
-}
-
 std::string escapeRST(StringRef Str) {
   std::string Out;
   for (auto K : Str) {
-    if (StringRef("`*|_[]\\").count(K))
+    if (StringRef("`*|[]\\").count(K))
       Out.push_back('\\');
     Out.push_back(K);
   }
@@ -319,16 +311,13 @@ void forEachOptionName(const DocumentedOption &Option, const Record *DocInfo,
   F(Option.Option);
 
   for (auto *Alias : Option.Aliases)
-    if (!isExcluded(Alias, DocInfo) && canSphinxCopeWithOption(Option.Option))
+    if (isOptionVisible(Alias, DocInfo) &&
+        canSphinxCopeWithOption(Option.Option))
       F(Alias);
 }
 
 void emitOption(const DocumentedOption &Option, const Record *DocInfo,
                 raw_ostream &OS) {
-  if (isExcluded(Option.Option, DocInfo))
-    return;
-  if (DocInfo->getValue("IncludedFlags") && !isIncluded(Option.Option, DocInfo))
-    return;
   if (Option.Option->getValueAsDef("Kind")->getName() == "KIND_UNKNOWN" ||
       Option.Option->getValueAsDef("Kind")->getName() == "KIND_INPUT")
     return;
@@ -353,9 +342,10 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
       })];
   for (auto &S : SphinxOptionIDs)
     NextSuffix[S] = SphinxWorkaroundSuffix + 1;
+
+  std::string Program = DocInfo->getValueAsString("Program").lower();
   if (SphinxWorkaroundSuffix)
-    OS << ".. program:: " << DocInfo->getValueAsString("Program")
-       << SphinxWorkaroundSuffix << "\n";
+    OS << ".. program:: " << Program << SphinxWorkaroundSuffix << "\n";
 
   // Emit the names of the option.
   OS << ".. option:: ";
@@ -364,13 +354,43 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
     EmittedAny = emitOptionNames(Option, OS, EmittedAny);
   });
   if (SphinxWorkaroundSuffix)
-    OS << "\n.. program:: " << DocInfo->getValueAsString("Program");
+    OS << "\n.. program:: " << Program;
   OS << "\n\n";
 
   // Emit the description, if we have one.
   const Record *R = Option.Option;
-  std::string Description =
-      getRSTStringWithTextFallback(R, "DocBrief", "HelpText");
+  std::string Description;
+
+  // Prefer a program specific help string.
+  // This is a list of (visibilities, string) pairs.
+  std::vector<Record *> VisibilitiesHelp =
+      R->getValueAsListOfDefs("HelpTextsForVariants");
+  for (Record *VisibilityHelp : VisibilitiesHelp) {
+    // This is a list of visibilities.
+    ArrayRef<Init *> Visibilities =
+        VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+
+    // See if any of the program's visibilities are in the list.
+    for (StringRef DocInfoMask :
+         DocInfo->getValueAsListOfStrings("VisibilityMask")) {
+      for (Init *Visibility : Visibilities) {
+        if (Visibility->getAsUnquotedString() == DocInfoMask) {
+          // Use the first one we find.
+          Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
+          break;
+        }
+      }
+      if (!Description.empty())
+        break;
+    }
+
+    if (!Description.empty())
+      break;
+  }
+
+  // If there's not a program specific string, use the default one.
+  if (Description.empty())
+    Description = getRSTStringWithTextFallback(R, "DocBrief", "HelpText");
 
   if (!isa<UnsetInit>(R->getValueInit("Values"))) {
     if (!Description.empty() && Description.back() != '.')
@@ -401,12 +421,6 @@ void emitDocumentation(int Depth, const Documentation &Doc,
 
 void emitGroup(int Depth, const DocumentedGroup &Group, const Record *DocInfo,
                raw_ostream &OS) {
-  if (isExcluded(Group.Group, DocInfo))
-    return;
-
-  if (DocInfo->getValue("IncludedFlags") && !isGroupIncluded(Group, DocInfo))
-    return;
-
   emitHeading(Depth,
               getRSTStringWithTextFallback(Group.Group, "DocName", "Name"), OS);
 
@@ -438,7 +452,7 @@ void clang::EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
   OS << DocInfo->getValueAsString("Intro") << "\n";
-  OS << ".. program:: " << DocInfo->getValueAsString("Program") << "\n";
+  OS << ".. program:: " << DocInfo->getValueAsString("Program").lower() << "\n";
 
-  emitDocumentation(0, extractDocumentation(Records), DocInfo, OS);
+  emitDocumentation(0, extractDocumentation(Records, DocInfo), DocInfo, OS);
 }

@@ -151,7 +151,7 @@ define <8 x i1> @andnot_ne_v8i16_todo_no_splat(<8 x i16> %x) nounwind {
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm2
 ; AVX512-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $18, %xmm1, %xmm2, %xmm0
+; AVX512-NEXT:    vpternlogq $54, %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: andnot_ne_v8i16_todo_no_splat:
@@ -159,19 +159,18 @@ define <8 x i1> @andnot_ne_v8i16_todo_no_splat(<8 x i16> %x) nounwind {
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE-LABEL: andnot_ne_v8i16_todo_no_splat:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqw %xmm2, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqw %xmm1, %xmm2
 ; SSE-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
   %cmp1 = icmp ne <8 x i16> %x, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %cmp2 = icmp ne <8 x i16> %x, <i16 -16385, i16 -257, i16 -33, i16 -8193, i16 -16385, i16 -257, i16 -33, i16 -8193>
@@ -216,29 +215,28 @@ define <16 x i1> @andnot_ne_v16i8_fail_max_not_n1(<16 x i8> %x) nounwind {
 ; AVX512-LABEL: andnot_ne_v16i8_fail_max_not_n1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq $54, %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: andnot_ne_v16i8_fail_max_not_n1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; SSE-LABEL: andnot_ne_v16i8_fail_max_not_n1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; SSE-NEXT:    pcmpgtb %xmm0, %xmm2
-; SSE-NEXT:    pandn %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm1, %xmm2
+; SSE-NEXT:    pcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
   %cmp1 = icmp ne <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %cmp2 = icmp ne <16 x i8> %x, <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>
@@ -311,7 +309,7 @@ define <8 x i1> @addand_ne_v8i16_fail(<8 x i16> %x) nounwind {
 ; AVX512-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $18, %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    vpternlogq $86, %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: addand_ne_v8i16_fail:
@@ -319,20 +317,29 @@ define <8 x i1> @addand_ne_v8i16_fail(<8 x i16> %x) nounwind {
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; SSE-LABEL: addand_ne_v8i16_fail:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65533,65533,65533,65533,65533,65533,65533,65533]
-; SSE-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pxor %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE41-LABEL: addand_ne_v8i16_fail:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm1 = [65533,65533,65533,65533,65533,65533,65533,65533]
+; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; SSE2-LABEL: addand_ne_v8i16_fail:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65533,65533,65533,65533,65533,65533,65533,65533]
+; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    retq
   %cmp1 = icmp ne <8 x i16> %x, <i16 -3, i16 -3, i16 -3, i16 -3, i16 -3, i16 -3, i16 -3, i16 -3>
   %cmp2 = icmp ne <8 x i16> %x, <i16 16381, i16 16381, i16 16381, i16 16381, i16 16381, i16 16381, i16 16381, i16 16381>
   %r = and <8 x i1> %cmp1, %cmp2

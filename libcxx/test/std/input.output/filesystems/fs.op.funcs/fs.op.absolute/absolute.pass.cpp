@@ -6,19 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // path absolute(const path& p, const path& base=current_path());
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+#include "../../class.path/path_helper.h"
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void absolute_signature_test()
@@ -48,7 +51,7 @@ static void basic_test()
         assert(!ec);
         assert(ret.is_absolute());
         assert(PathEqIgnoreSep(ret, TC.expect));
-        LIBCPP_ONLY(assert(PathEq(ret, TC.expect)));
+        LIBCPP_ASSERT(PathEq(ret, TC.expect));
     }
 }
 

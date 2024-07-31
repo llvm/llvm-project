@@ -41,6 +41,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -68,20 +69,30 @@ struct CalleeInfo {
   // added to HotnessType enum.
   uint32_t Hotness : 3;
 
+  // True if at least one of the calls to the callee is a tail call.
+  bool HasTailCall : 1;
+
   /// The value stored in RelBlockFreq has to be interpreted as the digits of
   /// a scaled number with a scale of \p -ScaleShift.
-  uint32_t RelBlockFreq : 29;
+  static constexpr unsigned RelBlockFreqBits = 28;
+  uint32_t RelBlockFreq : RelBlockFreqBits;
   static constexpr int32_t ScaleShift = 8;
-  static constexpr uint64_t MaxRelBlockFreq = (1 << 29) - 1;
+  static constexpr uint64_t MaxRelBlockFreq = (1 << RelBlockFreqBits) - 1;
 
   CalleeInfo()
-      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)), RelBlockFreq(0) {}
-  explicit CalleeInfo(HotnessType Hotness, uint64_t RelBF)
-      : Hotness(static_cast<uint32_t>(Hotness)), RelBlockFreq(RelBF) {}
+      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
+        HasTailCall(false), RelBlockFreq(0) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, uint64_t RelBF)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
+        RelBlockFreq(RelBF) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
   }
+
+  bool hasTailCall() const { return HasTailCall; }
+
+  void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 
@@ -392,6 +403,10 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
+  // If requested, keep track of total profiled sizes for each MIB. This will be
+  // a vector of the same length and order as the MIBs vector, if non-empty.
+  std::vector<uint64_t> TotalSizes;
+
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
   }
@@ -412,6 +427,16 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
   }
+  if (!AE.TotalSizes.empty()) {
+    OS << " TotalSizes per MIB:\n\t\t";
+    First = true;
+    for (uint64_t TS : AE.TotalSizes) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << TS << "\n";
+    }
+  }
   return OS;
 }
 
@@ -421,6 +446,18 @@ class GlobalValueSummary {
 public:
   /// Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
+
+  enum ImportKind : unsigned {
+    // The global value definition corresponding to the summary should be
+    // imported from source module
+    Definition = 0,
+
+    // When its definition doesn't exist in the destination module and not
+    // imported (e.g., function is too large to be inlined), the global value
+    // declaration corresponding to the summary should be imported, or the
+    // attributes from summary should be annotated on the function declaration.
+    Declaration = 1,
+  };
 
   /// Group flags (Linkage, NotEligibleToImport, etc.) as a bitfield.
   struct GVFlags {
@@ -462,14 +499,19 @@ public:
     /// means the symbol was externally visible.
     unsigned CanAutoHide : 1;
 
+    /// This field is written by the ThinLTO indexing step to postlink combined
+    /// summary. The value is interpreted as 'ImportKind' enum defined above.
+    unsigned ImportType : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
-                     bool CanAutoHide)
+                     bool CanAutoHide, ImportKind ImportType)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
-          DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
+          DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
+          ImportType(static_cast<unsigned>(ImportType)) {}
   };
 
 private:
@@ -553,6 +595,16 @@ public:
   void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
+
+  bool shouldImportAsDecl() const {
+    return Flags.ImportType == GlobalValueSummary::ImportKind::Declaration;
+  }
+
+  void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
+
+  GlobalValueSummary::ImportKind importType() const {
+    return static_cast<ImportKind>(Flags.ImportType);
+  }
 
   GlobalValue::VisibilityTypes getVisibility() const {
     return (GlobalValue::VisibilityTypes)Flags.Visibility;
@@ -756,7 +808,7 @@ public:
       OS << ", hasUnknownCall: " << this->HasUnknownCall;
       OS << ", mustBeUnreachable: " << this->MustBeUnreachable;
       OS << ")";
-      return OS.str();
+      return Output;
     }
   };
 
@@ -803,7 +855,7 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false),
+            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),
@@ -999,6 +1051,12 @@ public:
   CallsitesTy &mutableCallsites() {
     assert(Callsites);
     return *Callsites;
+  }
+
+  void addCallsite(CallsiteInfo &Callsite) {
+    if (!Callsites)
+      Callsites = std::make_unique<CallsitesTy>();
+    Callsites->push_back(Callsite);
   }
 
   ArrayRef<AllocInfo> allocs() const {
@@ -1225,14 +1283,16 @@ using ModuleHash = std::array<uint32_t, 5>;
 using const_gvsummary_iterator = GlobalValueSummaryMapTy::const_iterator;
 using gvsummary_iterator = GlobalValueSummaryMapTy::iterator;
 
-/// String table to hold/own module path strings, which additionally holds the
-/// module ID assigned to each module during the plugin step, as well as a hash
+/// String table to hold/own module path strings, as well as a hash
 /// of the module. The StringMap makes a copy of and owns inserted strings.
-using ModulePathStringTableTy = StringMap<std::pair<uint64_t, ModuleHash>>;
+using ModulePathStringTableTy = StringMap<ModuleHash>;
 
 /// Map of global value GUID to its summary, used to identify values defined in
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
+
+/// A set of global value summary pointers.
+using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
@@ -1327,6 +1387,9 @@ private:
   // True if the index was created for a module compiled with -fsplit-lto-unit.
   bool EnableSplitLTOUnit;
 
+  // True if the index was created for a module compiled with -funified-lto
+  bool UnifiedLTO;
+
   // True if some of the modules were compiled with -fsplit-lto-unit and
   // some were not. Set when the combined index is created during the thin link.
   bool PartiallySplitLTOUnits = false;
@@ -1359,7 +1422,7 @@ private:
 
   // Temporary map while building StackIds list. Clear when index is completely
   // built via releaseTemporaryMemory.
-  std::map<uint64_t, unsigned> StackIdToIndex;
+  DenseMap<uint64_t, unsigned> StackIdToIndex;
 
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
@@ -1372,16 +1435,17 @@ private:
 
 public:
   // See HaveGVs variable comment.
-  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc),
-        BlockCount(0) {}
+  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
+                     bool UnifiedLTO = false)
+      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
+        UnifiedLTO(UnifiedLTO), Saver(Alloc), BlockCount(0) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 9;
+  static constexpr uint64_t BitcodeSummaryVersion = 10;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1532,6 +1596,9 @@ public:
   bool enableSplitLTOUnit() const { return EnableSplitLTOUnit; }
   void setEnableSplitLTOUnit() { EnableSplitLTOUnit = true; }
 
+  bool hasUnifiedLTO() const { return UnifiedLTO; }
+  void setUnifiedLTO() { UnifiedLTO = true; }
+
   bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
   void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
 
@@ -1667,25 +1734,18 @@ public:
                                             bool PerModuleIndex = true) const;
 
   /// Table of modules, containing module hash and id.
-  const StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() const {
+  const StringMap<ModuleHash> &modulePaths() const {
     return ModulePathStringTable;
   }
 
   /// Table of modules, containing hash and id.
-  StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() {
-    return ModulePathStringTable;
-  }
-
-  /// Get the module ID recorded for the given module path.
-  uint64_t getModuleId(const StringRef ModPath) const {
-    return ModulePathStringTable.lookup(ModPath).first;
-  }
+  StringMap<ModuleHash> &modulePaths() { return ModulePathStringTable; }
 
   /// Get the module SHA1 hash recorded for the given module path.
   const ModuleHash &getModuleHash(const StringRef ModPath) const {
     auto It = ModulePathStringTable.find(ModPath);
     assert(It != ModulePathStringTable.end() && "Module not registered");
-    return It->second.second;
+    return It->second;
   }
 
   /// Convenience method for creating a promoted global name
@@ -1700,7 +1760,7 @@ public:
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
     NewName += Suffix;
-    return std::string(NewName.str());
+    return std::string(NewName);
   }
 
   /// Helper to obtain the unpromoted name for a global value (or the original
@@ -1716,9 +1776,8 @@ public:
 
   /// Add a new module with the given \p Hash, mapped to the given \p
   /// ModID, and return a reference to the module.
-  ModuleInfo *addModule(StringRef ModPath, uint64_t ModId,
-                        ModuleHash Hash = ModuleHash{{0}}) {
-    return &*ModulePathStringTable.insert({ModPath, {ModId, Hash}}).first;
+  ModuleInfo *addModule(StringRef ModPath, ModuleHash Hash = ModuleHash{{0}}) {
+    return &*ModulePathStringTable.insert({ModPath, Hash}).first;
   }
 
   /// Return module entry for module with the given \p ModPath.

@@ -81,12 +81,30 @@ TEST(MangledTest, ResultForValidDLangName) {
   EXPECT_STREQ(expected_result.GetCString(), the_demangled.GetCString());
 }
 
-TEST(MangledTest, EmptyForInvalidDLangName) {
+TEST(MangledTest, SameForInvalidDLangPrefixedName) {
   ConstString mangled_name("_DDD");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();
 
-  EXPECT_STREQ("", the_demangled.GetCString());
+  EXPECT_STREQ("_DDD", the_demangled.GetCString());
+}
+
+TEST(MangledTest, RecognizeSwiftMangledNames) {
+  llvm::StringRef valid_swift_mangled_names[] = {
+      "_TtC4main7MyClass",   // Mangled objc class name
+      "_TtP4main3Foo_",      // Mangld objc protocol name
+      "$s4main3BarCACycfC",  // Mangled name
+      "_$s4main3BarCACycfC", // Mangled name with leading underscore
+      "$S4main3BarCACycfC",  // Older swift mangled name
+      "_$S4main3BarCACycfC", // Older swift mangled name
+                             // with leading underscore
+      // Mangled swift filename
+      "@__swiftmacro_4main16FunVariableNames9OptionSetfMm_.swift",
+  };
+
+  for (llvm::StringRef mangled : valid_swift_mangled_names)
+    EXPECT_EQ(Mangled::GetManglingScheme(mangled),
+              Mangled::eManglingSchemeSwift);
 }
 
 TEST(MangledTest, BoolConversionOperator) {

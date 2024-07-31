@@ -20,14 +20,12 @@ namespace llvm {
 class MipsSEDAGToDAGISel : public MipsDAGToDAGISel {
 
 public:
-  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOptLevel OL)
       : MipsDAGToDAGISel(TM, OL) {}
 
 private:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                              MachineFunction &MF);
@@ -135,12 +133,18 @@ private:
   void processFunctionAfterISel(MachineFunction &MF) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                    unsigned ConstraintID,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 };
 
+class MipsSEDAGToDAGISelLegacy : public MipsDAGToDAGISelLegacy {
+public:
+  explicit MipsSEDAGToDAGISelLegacy(MipsTargetMachine &TM, CodeGenOptLevel OL);
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
 FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+                                  CodeGenOptLevel OptLevel);
 }
 
 #endif

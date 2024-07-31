@@ -42,17 +42,13 @@ class Boolean final {
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
+  Boolean operator-(const Boolean &Other) const { return Boolean(V - Other.V); }
   Boolean operator~() const { return Boolean(true); }
 
-  explicit operator int8_t() const { return V; }
-  explicit operator uint8_t() const { return V; }
-  explicit operator int16_t() const { return V; }
-  explicit operator uint16_t() const { return V; }
-  explicit operator int32_t() const { return V; }
-  explicit operator uint32_t() const { return V; }
-  explicit operator int64_t() const { return V; }
-  explicit operator uint64_t() const { return V; }
-  explicit operator bool() const { return V; }
+  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
+  explicit operator Ty() const {
+    return V;
+  }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(1, static_cast<uint64_t>(V), false), true);
@@ -60,11 +56,11 @@ class Boolean final {
   APSInt toAPSInt(unsigned NumBits) const {
     return APSInt(toAPSInt().zextOrTrunc(NumBits), true);
   }
-  APValue toAPValue() const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
   Boolean toUnsigned() const { return *this; }
 
-  constexpr static unsigned bitWidth() { return true; }
+  constexpr static unsigned bitWidth() { return 1; }
   bool isZero() const { return !V; }
   bool isMin() const { return isZero(); }
 
@@ -84,6 +80,12 @@ class Boolean final {
   Boolean truncate(unsigned TruncBits) const { return *this; }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    print(OS);
+    return NameStr;
+  }
 
   static Boolean min(unsigned NumBits) { return Boolean(false); }
   static Boolean max(unsigned NumBits) { return Boolean(true); }
@@ -97,11 +99,6 @@ class Boolean final {
   template <unsigned SrcBits, bool SrcSign>
   static std::enable_if_t<SrcBits != 0, Boolean>
   from(Integral<SrcBits, SrcSign> Value) {
-    return Boolean(!Value.isZero());
-  }
-
-  template <bool SrcSign>
-  static Boolean from(Integral<0, SrcSign> Value) {
     return Boolean(!Value.isZero());
   }
 

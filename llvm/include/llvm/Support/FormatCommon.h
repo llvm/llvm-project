@@ -17,13 +17,13 @@ namespace llvm {
 enum class AlignStyle { Left, Center, Right };
 
 struct FmtAlign {
-  detail::format_adapter &Adapter;
+  support::detail::format_adapter &Adapter;
   AlignStyle Where;
   size_t Amount;
   char Fill;
 
-  FmtAlign(detail::format_adapter &Adapter, AlignStyle Where, size_t Amount,
-           char Fill = ' ')
+  FmtAlign(support::detail::format_adapter &Adapter, AlignStyle Where,
+           size_t Amount, char Fill = ' ')
       : Adapter(Adapter), Where(Where), Amount(Amount), Fill(Fill) {}
 
   void format(raw_ostream &S, StringRef Options) {
@@ -66,8 +66,8 @@ struct FmtAlign {
   }
 
 private:
-  void fill(llvm::raw_ostream &S, uint32_t Count) {
-    for (uint32_t I = 0; I < Count; ++I)
+  void fill(llvm::raw_ostream &S, size_t Count) {
+    for (size_t I = 0; I < Count; ++I)
       S << Fill;
   }
 };

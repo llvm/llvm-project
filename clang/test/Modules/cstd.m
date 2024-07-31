@@ -1,5 +1,6 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fsyntax-only -internal-isystem %S/Inputs/System/usr/include -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -D__need_wint_t -Werror=implicit-function-declaration %s
+// RUN: %clang_cc1 -fsyntax-only -internal-isystem %S/Inputs/System/usr/include -fmodules -fimplicit-module-maps -fbuiltin-headers-in-system-modules -fmodules-cache-path=%t -D__need_wint_t -Werror=implicit-function-declaration %s
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 @import uses_other_constants;
 const double other_value = DBL_MAX;

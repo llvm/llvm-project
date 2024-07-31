@@ -115,7 +115,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
         out, err = p.communicate(input=input)
         exitCode = p.wait()
     finally:
-        if timerObject != None:
+        if timerObject is not None:
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
@@ -186,4 +186,4 @@ class TestLuaAPI(TestBase):
             print(out)
             print(err, file=sys.stderr)
 
-            self.assertTrue(exitCode == 0, "Lua test '%s' failure." % lua_test)
+            self.assertEqual(exitCode, 0, "Lua test '%s' failure." % lua_test)

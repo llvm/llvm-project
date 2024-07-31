@@ -22,6 +22,19 @@ define i32 @p0_scalar(i32 %x, i32 %y) {
   ret i32 %t1
 }
 
+define i8 @p0_scalar_not_truly_negatable(i8 %x, i8 %y) {
+; CHECK-LABEL: @p0_scalar_not_truly_negatable(
+; CHECK-NEXT:    [[XX:%.*]] = xor i8 [[X:%.*]], 123
+; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 45
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[XX]], [[YY]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xx = xor i8 %x, 123
+  %yy = xor i8 %y, 45
+  %r = sub i8 %xx, %yy
+  ret i8 %r
+}
+
 ;------------------------------------------------------------------------------;
 ; Vector tests
 ;------------------------------------------------------------------------------;
@@ -37,13 +50,13 @@ define <4 x i32> @p1_vector_splat(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %t1
 }
 
-define <4 x i32> @p2_vector_undef(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @p2_vector_undef(
+define <4 x i32> @p2_vector_poison(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @p2_vector_poison(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = add <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T1]]
 ;
-  %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 undef, i32 -1>
+  %t0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 poison, i32 -1>
   %t1 = sub <4 x i32> %y, %t0
   ret <4 x i32> %t1
 }
@@ -79,28 +92,28 @@ define i32 @n4(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[T1]]
 ;
   %t0 = xor i32 %x, -1
-  %t1 = sub i32 %t0, %y ; swapped
+  %t1 = sub i32 %t0, %y  ; swapped
   ret i32 %t1
 }
 
 define i32 @n5_is_not_not(i32 %x, i32 %y) {
 ; CHECK-LABEL: @n5_is_not_not(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = add i32 [[X:%.*]], -2147483647
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[T0_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[T1:%.*]] = sub i32 [[Y:%.*]], [[T0]]
 ; CHECK-NEXT:    ret i32 [[T1]]
 ;
-  %t0 = xor i32 %x, 2147483647 ; not -1
+  %t0 = xor i32 %x, 2147483647  ; not -1
   %t1 = sub i32 %y, %t0
   ret i32 %t1
 }
 
 define <2 x i32> @n5_is_not_not_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @n5_is_not_not_vec_splat(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = add <2 x i32> [[X:%.*]], <i32 -2147483647, i32 -2147483647>
-; CHECK-NEXT:    [[T1:%.*]] = add <2 x i32> [[T0_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = xor <2 x i32> [[X:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[T1:%.*]] = sub <2 x i32> [[Y:%.*]], [[T0]]
 ; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;
-  %t0 = xor <2 x i32> %x, <i32 2147483647, i32 2147483647> ; signmask, but not -1
+  %t0 = xor <2 x i32> %x, <i32 2147483647, i32 2147483647>  ; signmask, but not -1
   %t1 = sub <2 x i32> %y, %t0
   ret <2 x i32> %t1
 }

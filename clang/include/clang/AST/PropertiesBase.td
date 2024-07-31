@@ -74,7 +74,7 @@ def APInt : PropertyType<"llvm::APInt"> { let PassByReference = 1; }
 def APSInt : PropertyType<"llvm::APSInt"> { let PassByReference = 1; }
 def APValue : PropertyType { let PassByReference = 1; }
 def APValueKind : EnumPropertyType<"APValue::ValueKind">;
-def ArraySizeModifier : EnumPropertyType<"ArrayType::ArraySizeModifier">;
+def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
@@ -117,6 +117,8 @@ def ExtParameterInfo : PropertyType<"FunctionProtoType::ExtParameterInfo">;
 def FixedPointSemantics : PropertyType<"llvm::FixedPointSemantics"> {
   let PassByReference = 1;
 }
+def FunctionEffect : PropertyType<"FunctionEffect">;
+def EffectConditionExpr : PropertyType<"EffectConditionExpr">;
 def Identifier : RefPropertyType<"IdentifierInfo"> { let ConstWhenWriting = 1; }
 def LValuePathEntry : PropertyType<"APValue::LValuePathEntry">;
 def LValuePathSerializationHelper :
@@ -142,7 +144,8 @@ def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
-def VectorKind : EnumPropertyType<"VectorType::VectorKind">;
+def VectorKind : EnumPropertyType<"VectorKind">;
+def TypeCoupledDeclRefInfo : PropertyType;
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];
@@ -450,10 +453,13 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
         lvalueBase ? lvalueBase.dyn_cast<const Expr *>() : nullptr;
     bool lvalueBaseIsExpr = (bool) expr;
     bool lvalueBaseIsTypeInfo = lvalueBase.is<TypeInfoLValue>();
+    bool lvalueBaseIsDynamicAlloc = lvalueBase.is<DynamicAllocLValue>();
     QualType elemTy;
     if (lvalueBase) {
       if (lvalueBaseIsTypeInfo) {
         elemTy = lvalueBase.getTypeInfoType();
+      } else if (lvalueBaseIsDynamicAlloc) {
+        elemTy = lvalueBase.getDynamicAllocType();
       } else if (lvalueBaseIsExpr) {
         elemTy = expr->getType();
       } else {
@@ -473,6 +479,9 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
   def : Property<"isTypeInfo", Bool> {
     let Read = [{ lvalueBaseIsTypeInfo }];
   }
+  def : Property<"isDynamicAlloc", Bool> {
+    let Read = [{ lvalueBaseIsDynamicAlloc }];
+  }
   def : Property<"hasBase", Bool> {
     let Read = [{ static_cast<bool>(lvalueBase) }];
   }
@@ -485,9 +494,17 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
       QualType(node.getLValueBase().get<TypeInfoLValue>().getType(), 0)
     }];
   }
+  def : Property<"dynamicAlloc", UInt32> {
+    let Conditional = [{ hasBase && isDynamicAlloc }];
+    let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
+  }
   def : Property<"type", QualType> {
-    let Conditional = [{ hasBase && isTypeInfo }];
-    let Read = [{ node.getLValueBase().getTypeInfoType() }];
+    let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
+    let Read = [{
+      isTypeInfo
+        ? node.getLValueBase().getTypeInfoType()
+        : node.getLValueBase().getDynamicAllocType()
+    }];
   }
   def : Property<"callIndex", UInt32> {
     let Conditional = [{ hasBase && !isTypeInfo }];
@@ -502,7 +519,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Read = [{ const_cast<Expr *>(expr) }];
   }
   def : Property<"decl", DeclRef> {
-    let Conditional = [{ hasBase && !isTypeInfo && !isExpr }];
+    let Conditional = [{ hasBase && !isTypeInfo && !isDynamicAlloc && !isExpr }];
     let Read = [{ lvalueBase.get<const ValueDecl *>() }];
   }
   def : Property<"offsetQuantity", UInt32> {
@@ -521,6 +538,9 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
       if (isTypeInfo) {
         base = APValue::LValueBase::getTypeInfo(
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
+      } else if (isDynamicAlloc) {
+        base = APValue::LValueBase::getDynamicAlloc(
+            DynamicAllocLValue(*dynamicAlloc), *type);
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);
@@ -789,6 +809,20 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
   }
   def : Creator<[{
     return TemplateArgument(ctx, value, type, isDefaulted);
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateArgument, "StructuralValue"> in {
+  def : Property<"value", APValue> {
+    let Read = [{ node.getAsStructuralValue() }];
+  }
+  def : Property<"type", QualType> {
+    let Read = [{ node.getStructuralValueType() }];
+  }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
+  def : Creator<[{
+    return TemplateArgument(ctx, type, value, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {

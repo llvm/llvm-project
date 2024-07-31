@@ -32,7 +32,6 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -289,6 +288,18 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
+  } else if (Name == "table.size") {
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
+      return true;
+    Stack.push_back(wasm::ValType::I32);
+  } else if (Name == "table.grow") {
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+    Stack.push_back(wasm::ValType::I32);
   } else if (Name == "table.fill") {
     if (getTable(Operands[1]->getStartLoc(), Inst, Type))
       return true;

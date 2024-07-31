@@ -85,11 +85,10 @@ public:
     const bool is_global = false;
 
     auto dict_sp = std::make_shared<OptionValueDictionary>(1 << eTypeUInt64);
-    props_sp->AppendProperty(ConstString("dict"), "", is_global, dict_sp);
+    props_sp->AppendProperty("dict", "", is_global, dict_sp);
 
     auto file_list_sp = std::make_shared<OptionValueFileSpecList>();
-    props_sp->AppendProperty(ConstString("file-list"), "", is_global,
-                             file_list_sp);
+    props_sp->AppendProperty("file-list", "", is_global, file_list_sp);
     return props_sp;
   }
 

@@ -223,11 +223,11 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="TorC" Condition="Typename">typename</DisplayString>
     <DisplayString IncludeView="TorC" Condition="!Typename">class</DisplayString>
     <DisplayString IncludeView="MaybeEllipses" Condition="TypeForDecl == nullptr">(not yet known if parameter pack) </DisplayString>
-    <DisplayString IncludeView="MaybeEllipses" Condition="((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack">...</DisplayString>
-    <DisplayString IncludeView="MaybeEllipses" Condition="!((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack"></DisplayString>
-    <DisplayString IncludeView="DefaultArg" Condition="(DefaultArgument.ValueOrInherited.Val.Value&amp;3LL) == 0">{(TypeSourceInfo *)(DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL),view(cpp)}</DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)TypeForDecl-&gt;CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType)->CanTTPTInfo.ParameterPack">...</DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="!((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)TypeForDecl-&gt;CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType)->CanTTPTInfo.ParameterPack"></DisplayString>
+    <DisplayString IncludeView="DefaultArg" Condition="(*(uintptr_t *)DefaultArgument.ValueOrInherited.Val.Value.Data &amp; 3LL) == 0">{(TypeSourceInfo *)(*(uintptr_t *)DefaultArgument.ValueOrInherited.Val.Value.Data&amp;~3LL),view(cpp)}</DisplayString>
     <DisplayString IncludeView="DefaultArg">{{InheritedInitializer}}</DisplayString>
-    <DisplayString IncludeView="Initializer" Condition="DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL">= {this,view(DefaultArg)na}</DisplayString>
+    <DisplayString IncludeView="Initializer" Condition="*(uintptr_t *)DefaultArgument.ValueOrInherited.Val.Value.Data &amp; 3LL">= {this,view(DefaultArg)na}</DisplayString>
     <DisplayString IncludeView="Initializer"></DisplayString>
     <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)} {this,view(Initializer)na}</DisplayString>
   </Type>
@@ -347,11 +347,11 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="implicit"></DisplayString>
     <DisplayString IncludeView="modifiers">{*this,view(implicit)nd}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(modifiers)}{Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Struct">{*this,view(modifiers)nd}struct {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Interface">{*this,view(modifiers)nd}interface {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Union">{*this,view(modifiers)nd}union {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Class">{*this,view(modifiers)nd}class {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Enum">{*this,view(modifiers)nd}enum {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Struct">{*this,view(modifiers)nd}struct {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Interface">{*this,view(modifiers)nd}interface {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Union">{*this,view(modifiers)nd}union {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Class">{*this,view(modifiers)nd}class {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::Enum">{*this,view(modifiers)nd}enum {Name,view(cpp)}</DisplayString>
     <Expand>
       <ExpandedItem>(clang::DeclContext *)this</ExpandedItem>
     </Expand>
@@ -439,8 +439,8 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::TemplateTypeParmType">
-    <DisplayString IncludeView="cpp" Condition="CanonicalType.Value.Value != this">{TTPDecl->Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="CanonicalType.Value.Value != this">Non-canonical: {*TTPDecl}</DisplayString>
+    <DisplayString IncludeView="cpp" Condition="((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType) != this">{TTPDecl->Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType) != this">Non-canonical: {*TTPDecl}</DisplayString>
     <DisplayString>Canonical: {CanTTPTInfo}</DisplayString>
     <Expand>
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
@@ -817,7 +817,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="cached"> {IncludeMacroStack._Mypair._Myval2._Mylast - 1,na}</DisplayString>
     <DisplayString Condition="CurLexer._Mypair._Myval2 != 0">{CurLexer._Mypair._Myval2,na}</DisplayString>
     <DisplayString Condition="CurTokenLexer._Mypair._Myval2 != 0">Expanding Macro: {CurTokenLexer._Mypair._Myval2,na}</DisplayString>
-    <!-- Can't use CurLexerKind because natvis sees the type rather than the variable -->
+    <!-- Can't use CurLexerCallback because natvis sees the type rather than the variable -->
     <DisplayString Condition="IncludeMacroStack._Mypair._Myval2._Mylast - IncludeMacroStack._Mypair._Myval2._Myfirst">
       {this,view(cached)}
     </DisplayString>
@@ -878,7 +878,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{Name,s}</DisplayString>
   </Type>
   <Type Name="clang::FileEntry">
-    <DisplayString>{Name,s}</DisplayString>
+    <DisplayString>{RealPathName,s}</DisplayString>
   </Type>
   <Type Name="clang::DirectoryEntry">
     <DisplayString>{Name,s}</DisplayString>
@@ -1000,7 +1000,14 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::Expr">
+    <DisplayString Condition="StmtBits.sClass==clang::Stmt::StmtClass::StringLiteralClass" IncludeView="poly">{*(clang::StringLiteral *)this}</DisplayString>
     <DisplayString>Expression of class {(clang::Stmt::StmtClass)StmtBits.sClass,en} and type {TR,view(cpp)}</DisplayString>
+  </Type>
+  <Type Name="clang::StringLiteral">
+    <Expand>
+      <Item Name="Length">*(unsigned *)(((clang::StringLiteral *)this)+1)</Item>
+      <Item Name="Data" Condition="StringLiteralBits.NumConcatenated==1">(const char *)(((clang::StringLiteral *)this)+1)+4+4,[*(unsigned *)(((clang::StringLiteral *)this)+1)]s8</Item>
+    </Expand>
   </Type>
   <Type Name="clang::DeclAccessPair">
     <DisplayString IncludeView="access" Condition="(Ptr&amp;Mask) == clang::AS_public">public</DisplayString>
@@ -1071,12 +1078,12 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{Val}</DisplayString>
   </Type>
   <Type Name="clang::ActionResult&lt;*, 1&gt;">
-    <DisplayString Condition="PtrWithInvalid&amp;1">Invalid</DisplayString>
-    <DisplayString Condition="!PtrWithInvalid">Unset</DisplayString>
-    <DisplayString>{($T1)(PtrWithInvalid&amp;~1)}</DisplayString>
+    <DisplayString Condition="Value&amp;1">Invalid</DisplayString>
+    <DisplayString Condition="Value==0">Unset</DisplayString>
+    <DisplayString>{($T1)(Value&amp;~1)}</DisplayString>
     <Expand>
-      <Item Name="Invalid">(bool)(PtrWithInvalid&amp;1)</Item>
-      <Item Name="Val">($T1)(PtrWithInvalid&amp;~1)</Item>
+      <Item Name="Invalid">(bool)(Value&amp;1)</Item>
+      <Item Name="Val">($T1)(Value&amp;~1)</Item>
     </Expand>
   </Type>
 </AutoVisualizer>

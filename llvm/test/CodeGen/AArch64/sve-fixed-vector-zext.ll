@@ -1,8 +1,8 @@
 
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -opaque-pointers -aarch64-sve-vector-bits-min=256 -verify-machineinstrs | FileCheck %s --check-prefixes=SVE256
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -opaque-pointers -aarch64-sve-vector-bits-min=128 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 -O3 -opaque-pointers -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v2 -O3 -opaque-pointers -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -aarch64-sve-vector-bits-min=256 -verify-machineinstrs | FileCheck %s --check-prefixes=SVE256
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -aarch64-sve-vector-bits-min=128 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 -O3 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v2 -O3 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
 
 define internal i32 @test(ptr nocapture readonly %p1, i32 %i1, ptr nocapture readonly %p2, i32 %i2) {
 ; SVE256-LABEL: test:

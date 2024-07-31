@@ -16,7 +16,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Debug/*.cpp",
-        "Debug/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -35,10 +34,12 @@ cc_test(
     size = "small",
     srcs = glob([
         "IR/*.cpp",
-        "IR/*.h",
     ]),
     deps = [
         "//llvm:Support",
+        "//mlir:BytecodeReader",
+        "//mlir:CallOpInterfaces",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Support",
@@ -54,12 +55,12 @@ cc_test(
     size = "small",
     srcs = glob([
         "Interfaces/*.cpp",
-        "Interfaces/*.h",
     ]),
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeReader",
         "//mlir:ControlFlowInterfaces",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",
@@ -78,7 +79,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Support/*.cpp",
-        "Support/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -94,12 +94,12 @@ cc_test(
     size = "small",
     srcs = glob([
         "Pass/*.cpp",
-        "Pass/*.h",
     ]),
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:Analysis",
+        "//mlir:Debug",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
@@ -113,11 +113,11 @@ cc_test(
     size = "small",
     srcs = glob([
         "Rewrite/*.cpp",
-        "Rewrite/*.h",
     ]),
     deps = [
         "//mlir:IR",
         "//mlir:Rewrite",
+        "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -128,7 +128,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/*.cpp",
-        "Dialect/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -143,28 +142,13 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/MemRef/*.cpp",
-        "Dialect/MemRef/*.h",
     ]),
     deps = [
         "//llvm:TestingSupport",
         "//mlir:IR",
         "//mlir:MemRefDialect",
+        "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "quantops_tests",
-    size = "small",
-    srcs = glob([
-        "Dialect/Quant/*.cpp",
-        "Dialect/Quant/*.h",
-    ]),
-    deps = [
-        "//llvm:TestingSupport",
-        "//mlir:QuantOps",
-        "//mlir:Transforms",
         "//third-party/unittest:gtest_main",
     ],
 )
@@ -174,12 +158,15 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/SCF/*.cpp",
-        "Dialect/SCF/*.h",
     ]),
     deps = [
+        "//mlir:ArithDialect",
         "//mlir:FuncDialect",
+        "//mlir:IR",
         "//mlir:Parser",
         "//mlir:SCFDialect",
+        "//mlir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )
@@ -189,11 +176,11 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/SparseTensor/*.cpp",
-        "Dialect/SparseTensor/*.h",
     ]),
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//mlir:SideEffectInterfaces",
         "//mlir:SparseTensorUtils",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -206,7 +193,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/SPIRV/*.cpp",
-        "Dialect/SPIRV/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -226,13 +212,21 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/Transform/*.cpp",
-        "Dialect/Transform/*.h",
     ]),
     deps = [
+        "//llvm:Support",
         "//llvm:TestingSupport",
+        "//mlir:BytecodeReader",
         "//mlir:FuncDialect",
         "//mlir:IR",
+        "//mlir:MlirOptLib",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:TransformDebugExtension",
         "//mlir:TransformDialect",
+        "//mlir:TransformDialectTransforms",
+        "//mlir/test:TestTransformDialect",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -243,9 +237,9 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/Utils/*.cpp",
-        "Dialect/Utils/*.h",
     ]),
     deps = [
+        "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:DialectUtils",
         "//mlir:IR",
@@ -295,7 +289,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "TableGen/*.cpp",
-        "TableGen/*.h",
     ]) + [
         "TableGen/EnumsGenTest.cpp.inc",
         "TableGen/EnumsGenTest.h.inc",
@@ -321,13 +314,14 @@ cc_test(
     size = "small",
     srcs = glob([
         "Transforms/*.cpp",
-        "Transforms/*.h",
     ]),
     deps = [
         "//mlir:AffineAnalysis",
+        "//mlir:BytecodeReader",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",
+        "//mlir:SideEffectInterfaces",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//third-party/unittest:gtest",
@@ -339,8 +333,6 @@ cc_test(
     name = "analysis_tests",
     size = "small",
     srcs = glob([
-        "Analysis/*.cpp",
-        "Analysis/*.h",
         "Analysis/*/*.cpp",
         "Analysis/*/*.h",
     ]),
@@ -359,13 +351,29 @@ cc_test(
 )
 
 cc_test(
+    name = "bytecode_tests",
+    size = "small",
+    srcs = glob([
+        "Bytecode/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//mlir:BytecodeReader",
+        "//mlir:BytecodeWriter",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:SideEffectInterfaces",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "conversion_tests",
     size = "small",
     srcs = glob([
-        "Conversion/*.cpp",
-        "Conversion/*.h",
         "Conversion/*/*.cpp",
-        "Conversion/*/*.h",
     ]),
     deps = [
         "//mlir:ArithDialect",
@@ -393,12 +401,12 @@ cc_test(
         "//mlir:Analysis",
         "//mlir:ArithToLLVM",
         "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:BytecodeReader",
         "//mlir:ExecutionEngine",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:IR",
         "//mlir:LLVMToLLVMIRTranslation",
-        "//mlir:LinalgToLLVM",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefToLLVM",
         "//mlir:Parser",

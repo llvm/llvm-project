@@ -14,13 +14,40 @@
 #include "src/stdlib/strtof.h"
 #include "src/stdlib/strtold.h"
 
-#include <math.h>
+#include "src/__support/FPUtil/FPBits.h"
+
+#include "hdr/math_macros.h"
 #include <stddef.h>
 #include <stdint.h>
 
 #include "utils/MPFRWrapper/mpfr_inc.h"
 
+using LIBC_NAMESPACE::fputil::FPBits;
+
+// This function calculates the effective precision for a given float type and
+// exponent. Subnormals have a lower effective precision since they don't
+// necessarily use all of the bits of the mantissa.
+template <typename F> inline constexpr int effective_precision(int exponent) {
+  const int full_precision = FPBits<F>::FRACTION_LEN + 1;
+
+  // This is intended to be 0 when the exponent is the lowest normal and
+  // increase as the exponent's magnitude increases.
+  const int bits_below_normal = (-exponent) - (FPBits<F>::EXP_BIAS - 1);
+
+  // The precision should be the normal, full precision, minus the bits lost
+  // by this being a subnormal, minus one for the implicit leading one.
+  const int bits_if_subnormal = full_precision - bits_below_normal - 1;
+
+  if (bits_below_normal >= 0) {
+    return bits_if_subnormal;
+  }
+  return full_precision;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  // const char newstr[] = "123";
+  // data = reinterpret_cast<const uint8_t *>(newstr);
+  // size = sizeof(newstr);
   uint8_t *container = new uint8_t[size + 1];
   if (!container)
     __builtin_trap();
@@ -40,6 +67,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   char *out_ptr = nullptr;
 
+  size_t base = 0;
+
+  // This is just used to determine the base and precision.
   mpfr_t result;
   mpfr_init2(result, 256);
   mpfr_t bin_result;
@@ -59,41 +89,85 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       bin_result_ld == result_ld) {
     mpfr_strtofr(result, str_ptr, &out_ptr, 10 /* base */, MPFR_RNDN);
     result_strlen = out_ptr - str_ptr;
+    base = 10;
   }
 
-  auto volatile atof_output = __llvm_libc::atof(str_ptr);
-  auto volatile strtof_output = __llvm_libc::strtof(str_ptr, &out_ptr);
-  ptrdiff_t strtof_strlen = out_ptr - str_ptr;
-  if (result_strlen != strtof_strlen)
-    __builtin_trap();
-  auto volatile strtod_output = __llvm_libc::strtod(str_ptr, &out_ptr);
-  ptrdiff_t strtod_strlen = out_ptr - str_ptr;
-  if (result_strlen != strtod_strlen)
-    __builtin_trap();
-  auto volatile strtold_output = __llvm_libc::strtold(str_ptr, &out_ptr);
-  ptrdiff_t strtold_strlen = out_ptr - str_ptr;
-  if (result_strlen != strtold_strlen)
-    __builtin_trap();
-
-  // If any result is NaN, all of them should be NaN. We can't use the usual
-  // comparisons because NaN != NaN.
-  if (isnan(result_ld)) {
-    if (!(isnan(atof_output) && isnan(strtof_output) && isnan(strtod_output) &&
-          isnan(strtold_output)))
-      __builtin_trap();
-  } else {
-    if (mpfr_get_d(result, MPFR_RNDN) != atof_output)
-      __builtin_trap();
-    if (mpfr_get_flt(result, MPFR_RNDN) != strtof_output)
-      __builtin_trap();
-    if (mpfr_get_d(result, MPFR_RNDN) != strtod_output)
-      __builtin_trap();
-    if (mpfr_get_ld(result, MPFR_RNDN) != strtold_output)
-      __builtin_trap();
-  }
+  auto result_exp = mpfr_get_exp(result);
 
   mpfr_clear(result);
   mpfr_clear(bin_result);
+
+  // These must be calculated with the correct precision, and not any more, to
+  // prevent numbers like 66336650.00...01 (many zeroes) from causing an issue.
+  // 66336650 is exactly between two float values (66336652 and 66336648) so the
+  // correct float result for 66336650.00...01 is rounding up to 66336652. The
+  // correct double is instead 66336650, which when converted to float is
+  // rounded down to 66336648. This means we have to compare against the correct
+  // precision to get the correct result.
+
+  // TODO: Add support for other rounding modes.
+  int float_precision = effective_precision<float>(result_exp);
+  if (float_precision >= 2) {
+    mpfr_t mpfr_float;
+    mpfr_init2(mpfr_float, float_precision);
+    mpfr_strtofr(mpfr_float, str_ptr, &out_ptr, base, MPFR_RNDN);
+    float volatile float_result = mpfr_get_flt(mpfr_float, MPFR_RNDN);
+    auto volatile strtof_result = LIBC_NAMESPACE::strtof(str_ptr, &out_ptr);
+    ptrdiff_t strtof_strlen = out_ptr - str_ptr;
+    if (result_strlen != strtof_strlen)
+      __builtin_trap();
+    // If any result is NaN, all of them should be NaN. We can't use the usual
+    // comparisons because NaN != NaN.
+    if (FPBits<float>(float_result).is_nan() !=
+        FPBits<float>(strtof_result).is_nan())
+      __builtin_trap();
+    if (!FPBits<float>(float_result).is_nan() && float_result != strtof_result)
+      __builtin_trap();
+    mpfr_clear(mpfr_float);
+  }
+
+  int double_precision = effective_precision<double>(result_exp);
+  if (double_precision >= 2) {
+    mpfr_t mpfr_double;
+    mpfr_init2(mpfr_double, double_precision);
+    mpfr_strtofr(mpfr_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+    double volatile double_result = mpfr_get_d(mpfr_double, MPFR_RNDN);
+    auto volatile strtod_result = LIBC_NAMESPACE::strtod(str_ptr, &out_ptr);
+    auto volatile atof_result = LIBC_NAMESPACE::atof(str_ptr);
+    ptrdiff_t strtod_strlen = out_ptr - str_ptr;
+    if (result_strlen != strtod_strlen)
+      __builtin_trap();
+    if (FPBits<double>(double_result).is_nan() !=
+            FPBits<double>(strtod_result).is_nan() ||
+        FPBits<double>(double_result).is_nan() !=
+            FPBits<double>(atof_result).is_nan())
+      __builtin_trap();
+    if (!FPBits<double>(double_result).is_nan() &&
+        (double_result != strtod_result || double_result != atof_result))
+      __builtin_trap();
+    mpfr_clear(mpfr_double);
+  }
+
+  int long_double_precision = effective_precision<long double>(result_exp);
+  if (long_double_precision >= 2) {
+    mpfr_t mpfr_long_double;
+    mpfr_init2(mpfr_long_double, long_double_precision);
+    mpfr_strtofr(mpfr_long_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+    long double volatile long_double_result =
+        mpfr_get_ld(mpfr_long_double, MPFR_RNDN);
+    auto volatile strtold_result = LIBC_NAMESPACE::strtold(str_ptr, &out_ptr);
+    ptrdiff_t strtold_strlen = out_ptr - str_ptr;
+    if (result_strlen != strtold_strlen)
+      __builtin_trap();
+    if (FPBits<long double>(long_double_result).is_nan() ^
+        FPBits<long double>(strtold_result).is_nan())
+      __builtin_trap();
+    if (!FPBits<long double>(long_double_result).is_nan() &&
+        long_double_result != strtold_result)
+      __builtin_trap();
+    mpfr_clear(mpfr_long_double);
+  }
+
   delete[] container;
   return 0;
 }

@@ -88,7 +88,7 @@ public:
 
   const char *IOHandlerGetFixIndentationCharacters() override;
 
-  ConstString IOHandlerGetControlSequence(char ch) override;
+  llvm::StringRef IOHandlerGetControlSequence(char ch) override;
 
   const char *IOHandlerGetCommandPrefix() override;
 

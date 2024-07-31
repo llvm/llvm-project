@@ -8,37 +8,42 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/errno/libc_errno.h"
+#include "src/string/string_utils.h"
 #include "src/unistd/readlink.h"
 #include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-namespace cpp = __llvm_libc::cpp;
+namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char LINK_VAL[] = "readlink_test_value";
-  constexpr const char LINK[] = "testdata/readlink.test.link";
-  libc_errno = 0;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *FILENAME = "readlink_test_file";
+  auto LINK_VAL = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "readlink_test_file.link";
+  auto LINK = libc_make_test_file_path(FILENAME2);
+  LIBC_NAMESPACE::libc_errno = 0;
 
   // The test strategy is as follows:
   //   1. Create a symlink with value LINK_VAL.
   //   2. Read the symlink with readlink. The link value read should be LINK_VAL
   //   3. Cleanup the symlink created in step #1.
-  ASSERT_THAT(__llvm_libc::symlink(LINK_VAL, LINK), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::symlink(LINK_VAL, LINK), Succeeds(0));
 
-  char buf[sizeof(LINK_VAL)];
-  ssize_t len = __llvm_libc::readlink(LINK, buf, sizeof(buf));
-  ASSERT_EQ(libc_errno, 0);
+  char buf[256];
+  ssize_t len = LIBC_NAMESPACE::readlink(
+      LINK, buf, LIBC_NAMESPACE::internal::string_length(FILENAME));
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cpp::string_view(buf, len), cpp::string_view(LINK_VAL));
 
-  ASSERT_THAT(__llvm_libc::unlink(LINK), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(LINK), Succeeds(0));
 }
 
 TEST(LlvmLibcReadlinkTest, ReadlinkInNonExistentPath) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  char buf[8];
-  ASSERT_THAT(__llvm_libc::readlink("non-existent-link", buf, sizeof(buf)),
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  constexpr auto LEN = 8;
+  char buf[LEN];
+  ASSERT_THAT(LIBC_NAMESPACE::readlink("non-existent-link", buf, LEN),
               Fails(ENOENT));
 }

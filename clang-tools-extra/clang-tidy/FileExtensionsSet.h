@@ -13,7 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang::tidy {
-typedef llvm::SmallSet<llvm::StringRef, 5> FileExtensionsSet;
+using FileExtensionsSet = llvm::SmallSet<llvm::StringRef, 5>;
 } // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FILE_EXTENSIONS_SET_H

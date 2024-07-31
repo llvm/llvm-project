@@ -44,6 +44,11 @@ def err_pch_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the PCH file">;
 def err_pch_modulecache_mismatch : Error<"PCH was compiled with module cache "
   "path '%0', but the path is currently '%1'">;
+def warn_pch_vfsoverlay_mismatch : Warning<
+  "PCH was compiled with different VFS overlay files than are currently in use">,
+  InGroup<DiagGroup<"pch-vfs-diff">>;
+def note_pch_vfsoverlay_files : Note<"%select{PCH|current translation unit}0 has the following VFS overlays:\n%1">;
+def note_pch_vfsoverlay_empty : Note<"%select{PCH|current translation unit}0 has no VFS overlays">;
 
 def err_pch_version_too_old : Error<
     "PCH file uses an older PCH format that is no longer supported">;
@@ -62,7 +67,7 @@ def err_ast_file_out_of_date : Error<
   "%select{PCH|module|AST}0 file '%1' is out of date and "
   "needs to be rebuilt%select{|: %3}2">, DefaultFatal;
 def err_ast_file_invalid : Error<
-  "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file">, DefaultFatal;
+  "file '%1' is not a valid precompiled %select{PCH|module|AST}0 file: %2">, DefaultFatal;
 def note_module_file_imported_by : Note<
   "imported by %select{|module '%2' in }1'%0'">;
 def err_module_file_not_module : Error<
@@ -129,15 +134,8 @@ def warn_module_system_bit_conflict : Warning<
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
 
-def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
-  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
-  "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
-  InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
-
-def warn_reading_std_cxx_module_by_implicit_paths : Warning<
-  "it is deprecated to read module '%0' implcitly; it is going to be removed in clang18; "
-  "consider to specify the dependencies explicitly">,
-  InGroup<DiagGroup<"read-modules-implicitly">>;
+def err_failed_to_find_module_file : Error<
+  "failed to find module file for module '%0'">;
 } // let CategoryName
 
 let CategoryName = "AST Serialization Issue" in {

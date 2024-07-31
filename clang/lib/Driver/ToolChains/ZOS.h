@@ -14,6 +14,39 @@
 
 namespace clang {
 namespace driver {
+namespace tools {
+
+/// Directly call system default assembler and linker.
+namespace zos {
+
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
+public:
+  Assembler(const ToolChain &TC) : Tool("zos::Assembler", "assembler", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
+public:
+  Linker(const ToolChain &TC) : Tool("zos::Linker", "linker", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+  bool isLinkJob() const override { return true; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+} // end namespace zos
+} // end namespace tools
+
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY ZOS : public ToolChain {
@@ -28,13 +61,34 @@ public:
   }
   bool isPICDefaultForced() const override { return false; }
 
-  bool IsIntegratedAssemblerDefault() const override { return true; }
+  void TryAddIncludeFromPath(llvm::SmallString<128> Path,
+                             const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
 
   unsigned GetDefaultDwarfVersion() const override { return 4; }
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
+
+  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const override;
+
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
       Action::OffloadKind DeviceOffloadingKind) const override;
+
+  const char *getDefaultLinker() const override { return "/bin/ld"; }
+
+protected:
+  Tool *buildAssembler() const override;
+  Tool *buildLinker() const override;
 };
 
 } // end namespace toolchains

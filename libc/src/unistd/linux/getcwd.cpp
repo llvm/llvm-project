@@ -10,6 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/allocating_string_utils.h" // For strdup.
 
 #include "src/errno/libc_errno.h"
@@ -17,12 +18,12 @@
 #include <stdlib.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
 bool getcwd_syscall(char *buf, size_t size) {
-  int ret = __llvm_libc::syscall_impl(SYS_getcwd, buf, size);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_getcwd, buf, size);
   if (ret < 0) {
     libc_errno = -ret;
     return false;
@@ -63,4 +64,4 @@ LLVM_LIBC_FUNCTION(char *, getcwd, (char *buf, size_t size)) {
   return buf;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL

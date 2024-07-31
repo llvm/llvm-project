@@ -19,6 +19,7 @@
 
 /*  Constant             Value
     __cpp_lib_char8_t    201907L [C++20]
+    __cpp_lib_print      202207L [C++23]
 */
 
 #include <ostream>
@@ -30,16 +31,28 @@
 #   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_char8_t
 #   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_char8_t
 #   error "__cpp_lib_char8_t should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -57,6 +70,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 #elif TEST_STD_VER == 23
 
 # if defined(__cpp_char8_t)
@@ -72,6 +89,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++23"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++23"
+# endif
+
 #elif TEST_STD_VER > 23
 
 # if defined(__cpp_char8_t)
@@ -85,6 +109,13 @@
 #   ifdef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++26"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

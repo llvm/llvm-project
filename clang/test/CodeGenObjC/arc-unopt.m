@@ -45,7 +45,6 @@ Test4 *test4(void) {
   return test4_helper();
 }
 
-// rdar://problem/9418404
 @class Test5;
 void test5(void) {
   Test5 *x, *y;

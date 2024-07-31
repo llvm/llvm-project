@@ -22,11 +22,12 @@ module m
       procedure(mf) :: f
     end subroutine
   end interface
+  integer sm
 end module
 !CHECK:    mf, MODULE, PUBLIC (Function): Subprogram isInterface result:TYPE(pdt2(k2=2_4,l2=n)) res (INTEGER(4) n,CHARACTER(n,1) str,TYPE(pdt1(k1=1_4,l1=n)) x1)
 !CHECK:    pdt1, PUBLIC: DerivedType components: a1
 !CHECK:    pdt2, PUBLIC: DerivedType components: j2,a2
-!CHECK:    sm: Module (m)
+!CHECK:    sm, PUBLIC size=4 offset=0: ObjectEntity type: INTEGER(4)
 !CHECK:    DerivedType scope: pdt1
 !CHECK:      a1, ALLOCATABLE: ObjectEntity type: TYPE(pdt2(int(k1,kind=4),int(l1,kind=4)))
 !CHECK:      k1: TypeParam type:INTEGER(4) Kind
@@ -128,6 +129,7 @@ end program
 !CHECK:    mf, MODULE (Function): Use from mf in m
 !CHECK:    pdt1: Use from pdt1 in m
 !CHECK:    pdt2: Use from pdt2 in m
+!CHECK:    sm: Use from sm in m
 !CHECK:    x size=88 offset=0: ObjectEntity type: TYPE(pdt2(k2=2_4,l2=3_4))
 !CHECK:    DerivedType scope: size=88 alignment=8 instantiation of pdt2(k2=2_4,l2=3_4)
 !CHECK:      a2 size=80 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=3_4)) shape: 1_8:2_8

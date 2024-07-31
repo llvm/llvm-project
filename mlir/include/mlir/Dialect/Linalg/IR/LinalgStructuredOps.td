@@ -16,7 +16,6 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -32,7 +31,6 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        DestinationStyleOpInterface,
        LinalgStructuredInterface,
-       RegionBranchOpInterface,
        ReifyRankedShapedTypeOpInterface], props)> {
   code structuredOpsBaseDecls = [{
     // Return whether the op accesses the iteration indices.
@@ -44,13 +42,6 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
         ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
       return llvm::cast<LinalgOp>(getOperation()).reifyResultShapes(b,
           reifiedReturnShapes);
-    }
-
-    void getSuccessorRegions(
-        std::optional<unsigned> index, ArrayRef<Attribute> operands,
-        SmallVectorImpl<RegionSuccessor> &regions) {
-      // Op has a region, but conceptually the control flow does not enter the
-      // region.
     }
   }];
 }
@@ -216,10 +207,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     getRegionBuilder() {
       return nullptr;
     }
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - getOutputs().size(), getNumOperands};
-    }
+
+    MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
   }];
 
   let hasCanonicalizer = 1;
@@ -256,7 +245,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
           }
     ```
 
-    Shortened print form is available. Applies to simple maps with one 
+    Shortened print form is available. Applies to simple maps with one
     non-yield operation inside the body.
 
     The example above will be printed as:
@@ -292,11 +281,9 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
-    }
-    OpOperandVector getOpOperandsMatchingBBargs() {
+    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+
+    SmallVector<OpOperand *> getOpOperandsMatchingBBargs() {
       return getDpsInputOperands();
     }
 
@@ -390,9 +377,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     getRegionBuilder() {
       return nullptr;
     }
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {getInits().size(), getNumOperands()};
-    }
+    MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -406,7 +391,6 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 
 def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SameVariadicOperandSize,
     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Transpose operator";
   let description = [{
@@ -455,21 +439,26 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
+    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
+        mlir::ArrayRef<mlir::NamedAttribute>) {
+      OpBuilder::InsertionGuard guard(b);
+      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-      return nullptr;
+      return regionBuilder;
     }
 
     static void createRegion(::mlir::OpBuilder &opBuilder,
                              ::mlir::OperationState & odsState);
   }];
 
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -481,7 +470,6 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
 
 def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SameVariadicOperandSize,
     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Static broadcast operator";
   let description = [{
@@ -526,20 +514,24 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
+    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
+        mlir::ArrayRef<mlir::NamedAttribute>) {
+      OpBuilder::InsertionGuard guard(b);
+      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-      return nullptr;
+      return regionBuilder;
     }
   }];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

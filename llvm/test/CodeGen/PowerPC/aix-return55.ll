@@ -27,8 +27,8 @@ entry:
 ;CHECKOBJ64:    0000000000000000 <.foo>:
 ;CHECKOBJ-NEXT:       0: 38 60 00 37                    li 3, 55
 ;CHECKOBJ-NEXT:       4: 4e 80 00 20                    blr{{[[:space:]] *}}
-;CHECKOBJ32-NEXT: 00000008 <.rodata.str1.1>:
-;CHECKOBJ64-NEXT: 0000000000000008 <.rodata.str1.1>:
+;CHECKOBJ32-NEXT: 00000008 <.rodata>:
+;CHECKOBJ64-NEXT: 0000000000000008 <.rodata>:
 ;CHECKOBJ-NEXT:       8: 68 65 6c 6c                   xori 5, 3, 27756
 ;CHECKOBJ-NEXT:       c: 6f 77 6f 72 xoris 23, 27, 28530
 ;CHECKOBJ-NEXT:      10: 0a 00 00 00 tdlti 0, 0{{[[:space:]] *}}
@@ -39,7 +39,7 @@ entry:
 ;CHECKOBJ-NEXT:      1c: 67 8a bc de                   oris 10, 28, 48350{{[[:space:]] *}}
 ;CHECKOBJ32-NEXT: 00000020 <d>:
 ;CHECKOBJ64-NEXT: 0000000000000020 <d>:
-;CHECKOBJ-NEXT:      20: 40 14 00 00                   bdnzf   20, 0x20
+;CHECKOBJ-NEXT:      20: 40 14 00 00                   bdnzf   20, 0x20 <d>
 ;CHECKOBJ-NEXT:      24: 00 00 00 00                   <unknown>{{[[:space:]] *}}
 ;CHECKOBJ32-NEXT: 00000028 <foo>:
 ;CHECKOBJ32-NEXT:    28: 00 00 00 00                   <unknown>

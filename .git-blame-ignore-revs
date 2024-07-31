@@ -55,3 +55,35 @@ dd3c26a045c081620375a878159f536758baba6e
 f98ee40f4b5d7474fc67e82824bf6abbaedb7b1c
 2238dcc39358353cac21df75c3c3286ab20b8f53
 f9008e6366c2496b1ca1785b891d5578174ad63e
+
+# [libc++][NFC] Apply clang-format on large parts of the code base
+5aa03b648b827128d439f705cd7d57d59673741d
+
+# [clang][NFC] Remove trailing whitespaces and enforce it in lib, include and docs
+f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
+
+# [libc++][NFC] clang-format <shared_mutex>
+2d7eb9c9ea1a146412a83603d5c0c6339a5d8284
+
+# [libc++] Rename _LIBCPP_INLINE_VISIBILITY to _LIBCPP_HIDE_FROM_ABI
+4c198542226223f6a5c5511a1f89b37d15ee10b9
+
+# [libc++] Replace uses of _VSTD:: by std:: (#74331)
+77a00c0d546cd4aa8311b5b9031ae9ea8cdb050c
+
+# [libc++] Format the code base (#74334)
+9783f28cbb155e4a8d49c12e1c60ce14dcfaf0c7
+
+# [RFC] compiler-rt builtins cleanup and refactoring
+082b89b25faae3e45a023caf51b65ca0f02f377f
+0ba22f51d128bee9d69756c56c4678097270e10b
+84da0e1bb75f8666cf222d2f600f37bebb9ea389
+
+# [NFC] clang-format utils/TableGen (#80973)
+b9079baaddfed5e604fbfaa1d81a7a1c38e78c26
+
+# [libc++][NFC] Run clang-format on libcxx/include again (#95874)
+e2c2ffbe7a1b5d9e32a2ce64279475b50c4cba5b
+
+# [lldb][nfc] Deindent ProcessGDBRemote::SetThreadStopInfo by two levels
+b32931c5b32eb0d2cf37d688b34f8548c9674c19

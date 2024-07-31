@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -410,8 +410,8 @@ void SingleDepthReferencesTopCalled(U &&u) {
 
 template <typename U>
 void SingleDepthReferencesTopLambda(U &&u) {
-  []()
-    requires IsInt<decltype(u)>
+  []() // #SDRTL_OP
+    requires IsInt<decltype(u)> // #SDRTL_REQ
   {}();
 }
 
@@ -434,8 +434,8 @@ void DoubleDepthReferencesTop(U &&u) {
 
 template <typename U>
 void DoubleDepthReferencesTopLambda(U &&u) {
-  []() { []()
-           requires IsInt<decltype(u)>
+  []() { []() // #DDRTL_OP
+           requires IsInt<decltype(u)> // #DDRTL_REQ
          {}(); }();
 }
 
@@ -459,10 +459,11 @@ void DoubleDepthReferencesAll(U &&u) {
 
 template <typename U>
 void DoubleDepthReferencesAllLambda(U &&u) {
-  [](U &&u2) {
-    [](U && u3)
-      requires IsInt<decltype(u)> &&
-               IsInt<decltype(u2)> && IsInt<decltype(u3)>
+  [](U &&u2) { // #DDRAL_OP1
+    [](U && u3) // #DDRAL_OP2
+      requires IsInt<decltype(u)> // #DDRAL_REQ
+            && IsInt<decltype(u2)>
+            && IsInt<decltype(u3)>
     {}(u2);
   }(u);
 }
@@ -484,8 +485,8 @@ struct CausesFriendConstraint {
 template <typename T>
 void ChecksLocalVar(T x) {
   T Local;
-  []()
-    requires(IsInt<decltype(Local)>)
+  []() // #CLV_OP
+    requires(IsInt<decltype(Local)>) // #CLV_REQ
   {}();
 }
 
@@ -527,8 +528,12 @@ void test_dependent() {
   SingleDepthReferencesTopNotCalled(will_fail);
   SingleDepthReferencesTopCalled(v); // #SDRTC
   SingleDepthReferencesTopLambda(v);
-  // FIXME: This should error on constraint failure! (Lambda!)
   SingleDepthReferencesTopLambda(will_fail);
+  // expected-note@-1{{in instantiation of function template specialization}}
+  // expected-error@#SDRTL_OP{{no matching function for call to object of type}}
+  // expected-note@#SDRTL_OP{{candidate function not viable: constraints not satisfied}}
+  // expected-note@#SDRTL_REQ{{because 'IsInt<decltype(u)>' evaluated to false}}
+
   DoubleDepthReferencesTop(v);
   DoubleDepthReferencesTop(will_fail);
   // expected-error@#DDRT_CALL{{no matching function for call to object of type 'lc2'}}
@@ -538,8 +543,12 @@ void test_dependent() {
   // expected-note@#DDRT_REQ{{'IsInt<decltype(u)>' evaluated to false}}
 
   DoubleDepthReferencesTopLambda(v);
-  // FIXME: This should error on constraint failure! (Lambda!)
   DoubleDepthReferencesTopLambda(will_fail);
+  // expected-note@-1{{in instantiation of function template specialization}}
+  // expected-error@#DDRTL_OP{{no matching function for call to object of type}}
+  // expected-note@#DDRTL_OP{{candidate function not viable: constraints not satisfied}}
+  // expected-note@#DDRTL_OP{{while substituting into a lambda expression here}}
+  // expected-note@#DDRTL_REQ{{because 'IsInt<decltype(u)>' evaluated to false}}
   DoubleDepthReferencesAll(v);
   DoubleDepthReferencesAll(will_fail);
   // expected-error@#DDRA_CALL{{no matching function for call to object of type 'lc2'}}
@@ -549,8 +558,12 @@ void test_dependent() {
   // expected-note@#DDRA_REQ{{'IsInt<decltype(u)>' evaluated to false}}
 
   DoubleDepthReferencesAllLambda(v);
-  // FIXME: This should error on constraint failure! (Lambda!)
   DoubleDepthReferencesAllLambda(will_fail);
+  // expected-note@-1{{in instantiation of function template specialization}}
+  // expected-note@#DDRAL_OP1{{while substituting into a lambda expression here}}
+  // expected-error@#DDRAL_OP2{{no matching function for call to object of type}}
+  // expected-note@#DDRAL_OP2{{candidate function not viable: constraints not satisfied}}
+  // expected-note@#DDRAL_REQ{{because 'IsInt<decltype(u)>' evaluated to false}}
 
   CausesFriendConstraint<int> CFC;
   FriendFunc(CFC, 1);
@@ -563,8 +576,13 @@ void test_dependent() {
   // ChecksCapture(v);
 
   ChecksLocalVar(v);
-  // FIXME: This should error on constraint failure! (Lambda!)
   ChecksLocalVar(will_fail);
+  // expected-note@-1{{in instantiation of function template specialization}}
+  // expected-error@#CLV_OP{{no matching function for call to object of type}}
+  // expected-note@#CLV_OP{{candidate function not viable: constraints not satisfied}}
+  // expected-note@#CLV_REQ{{because 'IsInt<decltype(Local)>' evaluated to false}}
+
+
 
   LocalStructMemberVar(v);
   LocalStructMemberVar(will_fail);
@@ -699,6 +717,18 @@ namespace SelfFriend {
                         // expected-note@-1{{in instantiation of template class}}
                         // expected-note@#ITER_BAD{{previous template declaration}}
 } // namespace SelfFriend
+
+
+namespace Surrogates {
+int f1(int);
+template <auto N>
+struct A {
+    using F = int(int);
+    operator F*() requires N { return f1; } // expected-note{{conversion candidate 'operator int (*)(int)' not viable: constraints not satisfied}}
+};
+int i = A<true>{}(0);
+int j = A<false>{}(0); // expected-error{{no matching function for call to object of type 'A<false>'}}
+}
 
 
 namespace ConstrainedMemberVarTemplate {
@@ -914,3 +944,203 @@ struct W0 {
 
 static_assert(W0<0>::W1<1>::F<int>::value == 1);
 } // TemplateInsideTemplateInsideTemplate
+
+
+namespace GH63181 {
+
+template<auto N, class T> void f() {
+auto l = []() requires N { }; // expected-note 2{{candidate function not viable: constraints not satisfied}} \
+                              // expected-note 2{{because 'false' evaluated to false}}
+
+l();
+// expected-error@-1 {{no matching function for call to object of type}}
+void(*ptr)() = l;
+// expected-error-re@-1 {{no viable conversion from '(lambda {{.*}})' to 'void (*)()'}}
+}
+
+template void f<false, int>(); // expected-note {{in instantiation of function template specialization 'GH63181::f<false, int>' requested here}}
+template void f<true, int>();
+
+template<class T> concept C = __is_same(T, int); // expected-note{{because '__is_same(char, int)' evaluated to false}}
+
+template<class... Ts> void f() {
+  ([]() requires C<Ts> { return Ts(); }(), ...);
+  // expected-error@-1 {{no matching function for call to object of type}} \
+  // expected-note@-1 {{candidate function not viable: constraints not satisfied}} \
+  // expected-note@-1 {{because 'char' does not satisfy 'C'}}
+}
+
+template void f<int, int, int>();
+template void f<int, int, char>();
+//expected-note@-1{{in instantiation of function template specialization 'GH63181::f<int, int, char>' requested here}}
+
+
+template <typename T, bool IsTrue>
+concept Test = IsTrue; // expected-note 2{{because 'false' evaluated to false}}
+
+template <typename T, bool IsTrue>
+void params() {
+    auto l = [](T t)  // expected-note 2{{candidate function not viable: constraints not satisfied}}
+    requires Test<decltype(t), IsTrue> // expected-note 2{{because 'Test<decltype(t), false>' evaluated to false}}
+    {};
+    using F = void(T);
+    F* f = l; // expected-error {{no viable conversion from}}
+    l(0); // expected-error {{no matching function for call to object}}
+}
+
+void test_params() {
+    params<int, true>();
+    params<int, false>(); // expected-note {{in instantiation of function template specialization 'GH63181::params<int, false>' requested here}}
+}
+
+}
+
+namespace GH54678 {
+template<class>
+concept True = true;
+
+template<class>
+concept False = false; // expected-note 9 {{'false' evaluated to false}}
+
+template<class>
+concept Irrelevant = false;
+
+template <typename T>
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+
+template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
+template<class T> void bbb(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (False<T> || False<T>) && True<T> {} // expected-note 2 {{'long' does not satisfy 'False'}}
+template<class T> void ccc(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (True<T> || Irrelevant<T>) && False<T> {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+template<class T> void ddd(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'int' does not satisfy 'False'}}
+template<class T> void eee(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
+
+template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+
+void test() {
+    aaa(42); // expected-error {{no matching function}}
+    bbb(42L); // expected-error{{no matching function}}
+    ccc(42UL); // expected-error {{no matching function}}
+    ddd(42); // expected-error {{no matching function}}
+    eee(42L); // expected-error {{no matching function}}
+    fff(42UL); // expected-error {{no matching function}}
+}
+}
+
+namespace GH66612 {
+  template<typename C>
+    auto end(C c) ->int;
+
+  template <typename T>
+    concept Iterator = true;
+
+  template <typename CT>
+    concept Container = requires(CT b) {
+        { end } -> Iterator; // #66612GH_END
+    };
+
+  static_assert(Container<int>);// expected-error{{static assertion failed}}
+  // expected-note@-1{{because 'int' does not satisfy 'Container'}}
+  // expected-note@#66612GH_END{{because 'end' would be invalid: reference to overloaded function could not be resolved; did you mean to call it?}}
+}
+
+namespace GH66938 {
+template <class>
+concept True = true;
+
+template <class>
+concept False = false;
+
+template <class T>
+void cand(T t)
+  requires False<T> || False<T> || False<T> || False<T> || False<T> ||
+           False<T> || False<T> || False<T> || False<T> || True<T>
+{}
+
+void test() { cand(42); }
+}
+
+namespace GH63837 {
+
+template<class> concept IsFoo = true;
+
+template<class> struct Struct {
+  template<IsFoo auto... xs>
+  void foo() {}
+
+  template<auto... xs> requires (... && IsFoo<decltype(xs)>)
+  void bar() {}
+
+  template<IsFoo auto... xs>
+  static inline int field = 0;
+};
+
+template void Struct<void>::foo<>();
+template void Struct<void>::bar<>();
+template int Struct<void>::field<1, 2>;
+
+}
+
+namespace GH64808 {
+
+template <class T> struct basic_sender {
+  T func;
+  basic_sender(T) : func(T()) {}
+};
+
+auto a = basic_sender{[](auto... __captures) {
+  return []() // #note-a-1
+    requires((__captures, ...), false) // #note-a-2
+  {};
+}()};
+
+auto b = basic_sender{[](auto... __captures) {
+  return []()
+    requires([](int, double) { return true; }(decltype(__captures)()...))
+  {};
+}(1, 2.33)};
+
+void foo() {
+  a.func();
+  // expected-error@-1{{no matching function for call}}
+  // expected-note@#note-a-1{{constraints not satisfied}}
+  // expected-note@#note-a-2{{evaluated to false}}
+  b.func();
+}
+
+} // namespace GH64808
+
+namespace GH86757_1 {
+template <typename...> concept b = false;
+template <typename> concept c = b<>;
+template <typename d> concept f = c< d >;
+template <f> struct e; // expected-note {{}}
+template <f d> struct e<d>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
+}
+
+
+namespace constrained_variadic {
+template <typename T = int>
+struct S {
+    void f(); // expected-note {{candidate}}
+    void f(...) requires true;   // expected-note {{candidate}}
+
+    void g(...);  // expected-note {{candidate}}
+    void g() requires true;  // expected-note {{candidate}}
+
+    consteval void h(...);
+    consteval void h(...) requires true {};
+};
+
+int test() {
+    S{}.f(); // expected-error{{call to member function 'f' is ambiguous}}
+    S{}.g(); // expected-error{{call to member function 'g' is ambiguous}}
+    S{}.h();
+}
+
+}

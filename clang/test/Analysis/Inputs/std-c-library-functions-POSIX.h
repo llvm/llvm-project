@@ -11,6 +11,7 @@ typedef unsigned long int pthread_t;
 typedef unsigned long time_t;
 typedef unsigned long clockid_t;
 typedef __INT64_TYPE__ off64_t;
+typedef __INT64_TYPE__ fpos_t;
 
 typedef struct {
   int a;
@@ -42,11 +43,26 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode);
 FILE *tmpfile(void);
 FILE *freopen(const char *restrict pathname, const char *restrict mode,
               FILE *restrict stream);
+FILE *fdopen(int fd, const char *mode);
 int fclose(FILE *stream);
+int putc(int c, FILE *stream);
+int fputc(int c, FILE *stream);
+char *fgets(char *restrict s, int n, FILE *restrict stream);
+int fputs(const char *restrict s, FILE *restrict stream);
 int fseek(FILE *stream, long offset, int whence);
+int fgetpos(FILE *restrict stream, fpos_t *restrict pos);
+int fsetpos(FILE *stream, const fpos_t *pos);
+int fflush(FILE *stream);
+long ftell(FILE *stream);
 int fileno(FILE *stream);
+void rewind(FILE *stream);
+void clearerr(FILE *stream);
+int feof(FILE *stream);
+int ferror(FILE *stream);
 long a64l(const char *str64);
 char *l64a(long value);
+int open(const char *path, int oflag, ...);
+int openat(int fd, const char *path, int oflag, ...);
 int access(const char *pathname, int amode);
 int faccessat(int dirfd, const char *pathname, int mode, int flags);
 int dup(int fildes);
@@ -98,7 +114,6 @@ int pclose(FILE *stream);
 int close(int fildes);
 long fpathconf(int fildes, int name);
 long pathconf(const char *path, int name);
-FILE *fdopen(int fd, const char *mode);
 void rewinddir(DIR *dir);
 void seekdir(DIR *dirp, long loc);
 int rand_r(unsigned int *seedp);
@@ -135,6 +150,7 @@ typedef union {
 } __CONST_SOCKADDR_ARG __attribute__((__transparent_union__));
 #undef __SOCKADDR_ONETYPE
 
+int socket(int domain, int type, int protocol);
 int accept(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
 int bind(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len);
 int getpeername(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
@@ -150,6 +166,7 @@ int setsockopt(int socket, int level, int option_name, const void *option_value,
 int getsockopt(int socket, int level, int option_name, void *restrict option_value, socklen_t *restrict option_len);
 ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 int socketpair(int domain, int type, int protocol, int sv[2]);
+int shutdown(int socket, int how);
 int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags);
 int utime(const char *filename, struct utimbuf *buf);
 int futimens(int fd, const struct timespec times[2]);

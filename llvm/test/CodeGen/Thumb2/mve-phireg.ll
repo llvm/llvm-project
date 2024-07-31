@@ -6,52 +6,42 @@
 define arm_aapcs_vfpcc void @k() {
 ; CHECK-LABEL: k:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14}
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    adr.w r8, .LCPI0_0
-; CHECK-NEXT:    adr.w r9, .LCPI0_1
-; CHECK-NEXT:    vldrw.u32 q6, [r8]
-; CHECK-NEXT:    vldrw.u32 q5, [r9]
+; CHECK-NEXT:    .pad #32
+; CHECK-NEXT:    sub sp, #32
+; CHECK-NEXT:    adr r5, .LCPI0_0
+; CHECK-NEXT:    adr r4, .LCPI0_1
+; CHECK-NEXT:    vldrw.u32 q6, [r5]
+; CHECK-NEXT:    vldrw.u32 q5, [r4]
+; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vmov.i32 q0, #0x1
 ; CHECK-NEXT:    vmov.i8 q1, #0x0
 ; CHECK-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-NEXT:    vmov.i16 q3, #0x6
 ; CHECK-NEXT:    vmov.i16 q4, #0x3
-; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vand q6, q6, q0
 ; CHECK-NEXT:    vand q5, q5, q0
-; CHECK-NEXT:    vcmp.i32 eq, q6, zr
-; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    vpsel q6, q2, q1
+; CHECK-NEXT:    vand q6, q6, q0
 ; CHECK-NEXT:    vcmp.i32 eq, q5, zr
 ; CHECK-NEXT:    vpsel q5, q2, q1
-; CHECK-NEXT:    vmov r4, r0, d12
-; CHECK-NEXT:    vmov r3, r6, d10
-; CHECK-NEXT:    vmov r1, r2, d11
-; CHECK-NEXT:    vmov.16 q5[0], r3
-; CHECK-NEXT:    vmov.16 q5[1], r6
-; CHECK-NEXT:    vmov r5, r7, d13
-; CHECK-NEXT:    vmov.16 q5[2], r1
-; CHECK-NEXT:    vmov.16 q5[3], r2
-; CHECK-NEXT:    vmov.16 q5[4], r4
-; CHECK-NEXT:    vmov.16 q5[5], r0
-; CHECK-NEXT:    vmov.16 q5[6], r5
-; CHECK-NEXT:    vmov.16 q5[7], r7
+; CHECK-NEXT:    vcmp.i32 eq, q6, zr
+; CHECK-NEXT:    vpsel q6, q2, q1
+; CHECK-NEXT:    vstrh.32 q5, [r0]
+; CHECK-NEXT:    vstrh.32 q6, [r0, #8]
+; CHECK-NEXT:    vldrw.u32 q5, [r0]
 ; CHECK-NEXT:    vcmp.i16 ne, q5, zr
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    vpsel q6, q4, q3
 ; CHECK-NEXT:    vstrh.16 q6, [r0]
 ; CHECK-NEXT:    vmov q6, q5
-; CHECK-NEXT:    bne .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond4.preheader
+; CHECK-NEXT:    cbz r1, .LBB0_2
+; CHECK-NEXT:    le .LBB0_1
+; CHECK-NEXT:  .LBB0_2: @ %for.cond4.preheader
 ; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    cbnz r6, .LBB0_5
 ; CHECK-NEXT:  .LBB0_3: @ %for.body10
@@ -61,8 +51,8 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:  .LBB0_4: @ %for.cond4.loopexit
 ; CHECK-NEXT:    bl l
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body105.preheader
-; CHECK-NEXT:    vldrw.u32 q0, [r8]
-; CHECK-NEXT:    vldrw.u32 q1, [r9]
+; CHECK-NEXT:    vldrw.u32 q0, [r5]
+; CHECK-NEXT:    vldrw.u32 q1, [r4]
 ; CHECK-NEXT:    movs r0, #8
 ; CHECK-NEXT:  .LBB0_6: @ %vector.body105
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -71,7 +61,7 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:    cbz r6, .LBB0_7
 ; CHECK-NEXT:    le .LBB0_6
 ; CHECK-NEXT:  .LBB0_7: @ %vector.body115.ph
-; CHECK-NEXT:    vldrw.u32 q0, [r9]
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    @APP
@@ -102,8 +92,8 @@ vector.body:                                      ; preds = %vector.body, %entry
   %0 = and <8 x i32> %vec.ind, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %1 = icmp eq <8 x i32> %0, zeroinitializer
   %2 = select <8 x i1> %1, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>, <8 x i16> <i16 6, i16 6, i16 6, i16 6, i16 6, i16 6, i16 6, i16 6>
-  %3 = bitcast i16* undef to <8 x i16>*
-  store <8 x i16> %2, <8 x i16>* %3, align 2
+  %3 = bitcast ptr undef to ptr
+  store <8 x i16> %2, ptr %3, align 2
   %4 = icmp eq i32 undef, 128
   br i1 %4, label %for.cond4.preheader, label %vector.body
 
@@ -111,7 +101,7 @@ for.cond4.preheader:                              ; preds = %vector.body
   br i1 undef, label %vector.body105, label %for.body10
 
 for.cond4.loopexit:                               ; preds = %for.body10
-  %call5 = call arm_aapcs_vfpcc i32 bitcast (i32 (...)* @l to i32 ()*)()
+  %call5 = call arm_aapcs_vfpcc i32 @l()
   br label %vector.body105
 
 for.body10:                                       ; preds = %for.body10, %for.cond4.preheader
@@ -138,7 +128,7 @@ vector.body115:                                   ; preds = %vector.body115, %ve
 
 
 @a = external dso_local global i32, align 4
-@b = dso_local local_unnamed_addr global i32 ptrtoint (i32* @a to i32), align 4
+@b = dso_local local_unnamed_addr global i32 ptrtoint (ptr @a to i32), align 4
 @c = dso_local global i32 2, align 4
 @d = dso_local global i32 2, align 4
 
@@ -221,43 +211,43 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
   %f = alloca i16, align 2
-  %g = alloca [3 x [8 x [4 x i16*]]], align 4
-  store i16 4, i16* %f, align 2
-  %0 = load i32, i32* @c, align 4
-  %1 = load i32, i32* @d, align 4
-  %arrayinit.element7 = getelementptr inbounds [3 x [8 x [4 x i16*]]], [3 x [8 x [4 x i16*]]]* %g, i32 0, i32 0, i32 1, i32 1
-  %2 = bitcast i16** %arrayinit.element7 to i32*
-  store i32 %0, i32* %2, align 4
-  %arrayinit.element8 = getelementptr inbounds [3 x [8 x [4 x i16*]]], [3 x [8 x [4 x i16*]]]* %g, i32 0, i32 0, i32 1, i32 2
-  store i16* null, i16** %arrayinit.element8, align 4
-  %3 = bitcast i16** undef to i32*
-  store i32 %1, i32* %3, align 4
-  %4 = bitcast i16** undef to i32*
-  store i32 %0, i32* %4, align 4
-  %arrayinit.element13 = getelementptr inbounds [3 x [8 x [4 x i16*]]], [3 x [8 x [4 x i16*]]]* %g, i32 0, i32 0, i32 2, i32 2
-  %5 = bitcast i16** %arrayinit.element13 to <4 x i16*>*
-  store <4 x i16*> <i16* inttoptr (i32 4 to i16*), i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*), i16* null>, <4 x i16*>* %5, align 4
-  %arrayinit.element24 = getelementptr inbounds [3 x [8 x [4 x i16*]]], [3 x [8 x [4 x i16*]]]* %g, i32 0, i32 0, i32 4, i32 2
-  %6 = bitcast i16** %arrayinit.element24 to <4 x i16*>*
-  store <4 x i16*> <i16* bitcast (i32* @d to i16*), i16* null, i16* bitcast (i32* @d to i16*), i16* bitcast (i32 ()* @e to i16*)>, <4 x i16*>* %6, align 4
-  %7 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* inttoptr (i32 4 to i16*), i16* bitcast (i32 ()* @e to i16*), i16* bitcast (i32* @c to i16*), i16* null>, <4 x i16*>* %7, align 4
-  %8 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* bitcast (i32* @c to i16*), i16* bitcast (i32 ()* @e to i16*), i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*)>, <4 x i16*>* %8, align 4
-  %9 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* bitcast (i32 ()* @e to i16*), i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*)>, <4 x i16*>* %9, align 4
-  %10 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*), i16* null, i16* bitcast (i32 ()* @e to i16*)>, <4 x i16*>* %10, align 4
-  call void @llvm.memset.p0i8.i32(i8* nonnull align 4 dereferenceable(64) undef, i8 0, i32 64, i1 false)
-  %11 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* bitcast (i32* @d to i16*), i16* bitcast (i32 ()* @e to i16*), i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @d to i16*)>, <4 x i16*>* %11, align 4
-  %12 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* null, i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @c to i16*)>, <4 x i16*>* %12, align 4
-  %13 = bitcast i16** undef to <4 x i16*>*
-  store <4 x i16*> <i16* bitcast (i32* @c to i16*), i16* bitcast (i32* @d to i16*), i16* bitcast (i32* @c to i16*), i16* null>, <4 x i16*>* %13, align 4
-  %arrayinit.begin78 = getelementptr inbounds [3 x [8 x [4 x i16*]]], [3 x [8 x [4 x i16*]]]* %g, i32 0, i32 2, i32 3, i32 0
-  store i16* inttoptr (i32 4 to i16*), i16** %arrayinit.begin78, align 4
-  store i32 0, i32* @b, align 4
+  %g = alloca [3 x [8 x [4 x ptr]]], align 4
+  store i16 4, ptr %f, align 2
+  %0 = load i32, ptr @c, align 4
+  %1 = load i32, ptr @d, align 4
+  %arrayinit.element7 = getelementptr inbounds [3 x [8 x [4 x ptr]]], ptr %g, i32 0, i32 0, i32 1, i32 1
+  %2 = bitcast ptr %arrayinit.element7 to ptr
+  store i32 %0, ptr %2, align 4
+  %arrayinit.element8 = getelementptr inbounds [3 x [8 x [4 x ptr]]], ptr %g, i32 0, i32 0, i32 1, i32 2
+  store ptr null, ptr %arrayinit.element8, align 4
+  %3 = bitcast ptr undef to ptr
+  store i32 %1, ptr %3, align 4
+  %4 = bitcast ptr undef to ptr
+  store i32 %0, ptr %4, align 4
+  %arrayinit.element13 = getelementptr inbounds [3 x [8 x [4 x ptr]]], ptr %g, i32 0, i32 0, i32 2, i32 2
+  %5 = bitcast ptr %arrayinit.element13 to ptr
+  store <4 x ptr> <ptr inttoptr (i32 4 to ptr), ptr @c, ptr @c, ptr null>, ptr %5, align 4
+  %arrayinit.element24 = getelementptr inbounds [3 x [8 x [4 x ptr]]], ptr %g, i32 0, i32 0, i32 4, i32 2
+  %6 = bitcast ptr %arrayinit.element24 to ptr
+  store <4 x ptr> <ptr @d, ptr null, ptr @d, ptr @e>, ptr %6, align 4
+  %7 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr inttoptr (i32 4 to ptr), ptr @e, ptr @c, ptr null>, ptr %7, align 4
+  %8 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr @c, ptr @e, ptr @c, ptr @c>, ptr %8, align 4
+  %9 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr @e, ptr @c, ptr @c, ptr @c>, ptr %9, align 4
+  %10 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr @c, ptr @c, ptr null, ptr @e>, ptr %10, align 4
+  call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(64) undef, i8 0, i32 64, i1 false)
+  %11 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr @d, ptr @e, ptr @c, ptr @d>, ptr %11, align 4
+  %12 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr null, ptr @c, ptr @c, ptr @c>, ptr %12, align 4
+  %13 = bitcast ptr undef to ptr
+  store <4 x ptr> <ptr @c, ptr @d, ptr @c, ptr null>, ptr %13, align 4
+  %arrayinit.begin78 = getelementptr inbounds [3 x [8 x [4 x ptr]]], ptr %g, i32 0, i32 2, i32 3, i32 0
+  store ptr inttoptr (i32 4 to ptr), ptr %arrayinit.begin78, align 4
+  store i32 0, ptr @b, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry
@@ -265,10 +255,10 @@ for.cond:                                         ; preds = %for.cond, %entry
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg) #1
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 
 
 declare arm_aapcs_vfpcc i32 @l(...)

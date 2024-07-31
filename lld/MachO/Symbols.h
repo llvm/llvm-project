@@ -58,14 +58,14 @@ public:
 
   virtual uint64_t getVA() const { return 0; }
 
-  virtual bool isWeakDef() const { llvm_unreachable("cannot be weak def"); }
+  virtual bool isWeakDef() const { return false; }
 
   // Only undefined or dylib symbols can be weak references. A weak reference
   // need not be satisfied at runtime, e.g. due to the symbol not being
   // available on a given target platform.
   virtual bool isWeakRef() const { return false; }
 
-  virtual bool isTlv() const { llvm_unreachable("cannot be TLV"); }
+  virtual bool isTlv() const { return false; }
 
   // Whether this symbol is in the GOT or TLVPointer sections.
   bool isInGot() const { return gotIndex != UINT32_MAX; }
@@ -129,7 +129,7 @@ public:
   bool isTlv() const override;
 
   bool isExternal() const { return external; }
-  bool isAbsolute() const { return isec == nullptr; }
+  bool isAbsolute() const { return originalIsec == nullptr; }
 
   uint64_t getVA() const override;
 
@@ -139,9 +139,11 @@ public:
 
   std::string getSourceLocation();
 
-  // Ensure this symbol's pointers to InputSections point to their canonical
-  // copies.
-  void canonicalize();
+  // Get the canonical InputSection of the symbol.
+  InputSection *isec() const;
+
+  // Get the canonical unwind entry of the symbol.
+  ConcatInputSection *unwindEntry() const;
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
@@ -182,14 +184,17 @@ private:
   const bool external : 1;
 
 public:
-  InputSection *isec;
+  // The native InputSection of the symbol. The symbol may be moved to another
+  // InputSection in which case originalIsec->canonical() will point to the new
+  // InputSection
+  InputSection *originalIsec;
   // Contains the offset from the containing subsection. Note that this is
   // different from nlist::n_value, which is the absolute address of the symbol.
   uint64_t value;
   // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
   // This can be a subsection of either __compact_unwind or __eh_frame.
-  ConcatInputSection *unwindEntry = nullptr;
+  ConcatInputSection *originalUnwindEntry = nullptr;
 };
 
 // This enum does double-duty: as a symbol property, it indicates whether & how

@@ -55,9 +55,9 @@ public:
 } // namespace
 
 bool DylinkSection::isNeeded() const {
-  return config->isPic ||
+  return ctx.isPic ||
          config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic ||
-         !symtab->sharedFiles.empty();
+         !ctx.sharedFiles.empty();
 }
 
 void DylinkSection::writeBody() {
@@ -72,10 +72,10 @@ void DylinkSection::writeBody() {
     sub.writeTo(os);
   }
 
-  if (symtab->sharedFiles.size()) {
+  if (ctx.sharedFiles.size()) {
     SubSection sub(WASM_DYLINK_NEEDED);
-    writeUleb128(sub.os, symtab->sharedFiles.size(), "Needed");
-    for (auto *so : symtab->sharedFiles)
+    writeUleb128(sub.os, ctx.sharedFiles.size(), "Needed");
+    for (auto *so : ctx.sharedFiles)
       writeStr(sub.os, llvm::sys::path::filename(so->getName()), "so name");
     sub.writeTo(os);
   }
@@ -139,7 +139,7 @@ void DylinkSection::writeBody() {
 uint32_t TypeSection::registerType(const WasmSignature &sig) {
   auto pair = typeIndices.insert(std::make_pair(sig, types.size()));
   if (pair.second) {
-    LLVM_DEBUG(llvm::dbgs() << "type " << toString(sig) << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "registerType " << toString(sig) << "\n");
     types.push_back(&sig);
   }
   return pair.first->second;
@@ -174,7 +174,7 @@ void ImportSection::addGOTEntry(Symbol *sym) {
     return;
   LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   sym->setGOTIndex(numImportedGlobals++);
-  if (config->isPic) {
+  if (ctx.isPic) {
     // Any symbol that is assigned an normal GOT entry must be exported
     // otherwise the dynamic linker won't be able create the entry that contains
     // it.
@@ -319,7 +319,7 @@ void TableSection::addTable(InputTable *table) {
     return;
   // Some inputs require that the indirect function table be assigned to table
   // number 0.
-  if (config->legacyFunctionTable &&
+  if (ctx.legacyFunctionTable &&
       isa<DefinedTable>(WasmSym::indirectFunctionTable) &&
       cast<DefinedTable>(WasmSym::indirectFunctionTable)->table == table) {
     if (out.importSec->getNumImportedTables()) {
@@ -449,7 +449,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
       writeU8(os, opcode_ptr_const, "CONST");
       writeSleb128(os, f->getTableIndex(), "offset");
     } else {
-      assert(isa<UndefinedData>(sym));
+      assert(isa<UndefinedData>(sym) || isa<SharedData>(sym));
       continue;
     }
     writeU8(os, opcode_ptr_add, "ADD");
@@ -474,7 +474,7 @@ void GlobalSection::writeBody() {
       // In the case of dynamic linking, unless we have 'extended-const'
       // available, these global must to be mutable since they get updated to
       // the correct runtime value during `__wasm_apply_global_relocs`.
-      if (!config->extendedConst && config->isPic && !sym->isTLS())
+      if (!config->extendedConst && ctx.isPic && !sym->isTLS())
         mutable_ = true;
       // With multi-theadeding any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
@@ -484,16 +484,31 @@ void GlobalSection::writeBody() {
     WasmGlobalType type{itype, mutable_};
     writeGlobalType(os, type);
 
-    if (config->extendedConst && config->isPic && !sym->isTLS() &&
-        isa<DefinedData>(sym)) {
+    bool useExtendedConst = false;
+    uint32_t globalIdx;
+    int64_t offset;
+    if (config->extendedConst && ctx.isPic) {
+      if (auto *d = dyn_cast<DefinedData>(sym)) {
+        if (!sym->isTLS()) {
+          globalIdx = WasmSym::memoryBase->getGlobalIndex();
+          offset = d->getVA();
+          useExtendedConst = true;
+        }
+      } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+        if (!sym->isStub) {
+          globalIdx = WasmSym::tableBase->getGlobalIndex();
+          offset = f->getTableIndex();
+          useExtendedConst = true;
+        }
+      }
+    }
+    if (useExtendedConst) {
       // We can use an extended init expression to add a constant
-      // offset of __memory_base.
-      auto *d = cast<DefinedData>(sym);
+      // offset of __memory_base/__table_base.
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
-      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
-                   "literal (global index)");
-      if (d->getVA()) {
-        writePtrConst(os, d->getVA(), is64, "offset");
+      writeUleb128(os, globalIdx, "literal (global index)");
+      if (offset) {
+        writePtrConst(os, offset, is64, "offset");
         writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
       }
       writeU8(os, WASM_OPCODE_END, "opcode:end");
@@ -504,7 +519,7 @@ void GlobalSection::writeBody() {
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
-        assert(isa<UndefinedData>(sym));
+        assert(isa<UndefinedData>(sym) || isa<SharedData>(sym));
         initExpr = intConst(0, is64);
       }
       writeInitExpr(os, initExpr);
@@ -567,14 +582,12 @@ void ElemSection::writeBody() {
 
   WasmInitExpr initExpr;
   initExpr.Extended = false;
-  if (config->isPic) {
+  if (ctx.isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Inst.Value.Global =
-        (config->is64.value_or(false) ? WasmSym::tableBase32
-                                      : WasmSym::tableBase)
-            ->getGlobalIndex();
+    initExpr.Inst.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
-    initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
+    bool is64 = config->is64.value_or(false);
+    initExpr.Inst.Opcode = is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
     initExpr.Inst.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);
@@ -650,9 +663,14 @@ void LinkingSection::writeBody() {
       } else if (isa<DataSymbol>(sym)) {
         writeStr(sub.os, sym->getName(), "sym name");
         if (auto *dataSym = dyn_cast<DefinedData>(sym)) {
-          writeUleb128(sub.os, dataSym->getOutputSegmentIndex(), "index");
-          writeUleb128(sub.os, dataSym->getOutputSegmentOffset(),
-                       "data offset");
+          if (dataSym->segment) {
+            writeUleb128(sub.os, dataSym->getOutputSegmentIndex(), "index");
+            writeUleb128(sub.os, dataSym->getOutputSegmentOffset(),
+                         "data offset");
+          } else {
+            writeUleb128(sub.os, 0, "index");
+            writeUleb128(sub.os, dataSym->getVA(), "data offset");
+          }
           writeUleb128(sub.os, dataSym->getSize(), "data size");
         }
       } else {
@@ -764,6 +782,15 @@ unsigned NameSection::numNamedDataSegments() const {
 
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
+  {
+    SubSection sub(WASM_NAMES_MODULE);
+    StringRef moduleName = config->soName;
+    if (config->soName.empty())
+      moduleName = llvm::sys::path::filename(config->outputFile);
+    writeStr(sub.os, moduleName, "module name");
+    sub.writeTo(bodyOutputStream);
+  }
+
   unsigned count = numNamedFunctions();
   if (count) {
     SubSection sub(WASM_NAMES_FUNCTION);

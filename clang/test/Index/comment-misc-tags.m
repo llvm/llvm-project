@@ -2,7 +2,6 @@
 // RUN: mkdir %t
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s > %t/out
 // RUN: FileCheck %s < %t/out
-// rdar://12379114
 
 /*!
      @interface IOCommandGate
@@ -47,7 +46,6 @@
 // CHECK-NEXT:     (CXComment_Paragraph
 // CHECK-NEXT:     (CXComment_Text Text=[ //k_ref/doc/uid/XX30000905-CH204 Programming])
 
-// rdar://12379053
 /*!
 \arg \c AlignLeft left alignment.
 \li \c AlignRight right alignment.
@@ -72,7 +70,6 @@ struct S {
 // CHECK:       (CXComment_Paragraph
 // CHECK-NEXT:    (CXComment_Text Text=[  No other types of alignment are supported.]))
 
-// rdar://12379053
 /*! \struct Test
  * Normal text.
  *
@@ -94,18 +91,16 @@ struct S {
   
 struct Test {int filler;};
 
-// CHECK:       (CXComment_BlockCommand CommandName=[par]
+// CHECK:       (CXComment_BlockCommand CommandName=[par] Arg[0]=User defined paragraph:
 // CHECK-NEXT:     (CXComment_Paragraph
-// CHECK-NEXT:        (CXComment_Text Text=[ User defined paragraph:] HasTrailingNewline)
 // CHECK-NEXT:        (CXComment_Text Text=[ Contents of the paragraph.])))
 // CHECK:       (CXComment_BlockCommand CommandName=[par]
 // CHECK-NEXT:     (CXComment_Paragraph
-// CHECK-NEXT:        (CXComment_Text Text=[ New paragraph under the same heading.])))
+// CHECK-NEXT:        (CXComment_Text Text=[New paragraph under the same heading.])))
 // CHECK:       (CXComment_BlockCommand CommandName=[note]
 // CHECK-NEXT:     (CXComment_Paragraph
 // CHECK-NEXT:        (CXComment_Text Text=[ This note consists of two paragraphs.] HasTrailingNewline)
 // CHECK-NEXT:        (CXComment_Text Text=[ This is the first paragraph.])))
 // CHECK:       (CXComment_BlockCommand CommandName=[par]
 // CHECK-NEXT:     (CXComment_Paragraph
-// CHECK-NEXT:     (CXComment_Text Text=[ And this is the second paragraph.])))
-
+// CHECK-NEXT:     (CXComment_Text Text=[And this is the second paragraph.])))

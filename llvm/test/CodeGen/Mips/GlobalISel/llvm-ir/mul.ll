@@ -123,10 +123,8 @@ define i128 @mul_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    mfhi $5
 ; MIPS32-NEXT:    addu $3, $3, $4
 ; MIPS32-NEXT:    sltu $4, $3, $4
-; MIPS32-NEXT:    andi $4, $4, 1
 ; MIPS32-NEXT:    addu $3, $3, $5
 ; MIPS32-NEXT:    sltu $5, $3, $5
-; MIPS32-NEXT:    andi $5, $5, 1
 ; MIPS32-NEXT:    addu $10, $4, $5
 ; MIPS32-NEXT:    mul $4, $8, $14
 ; MIPS32-NEXT:    mul $5, $7, $13
@@ -137,22 +135,17 @@ define i128 @mul_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    mfhi $11
 ; MIPS32-NEXT:    addu $4, $4, $5
 ; MIPS32-NEXT:    sltu $5, $4, $5
-; MIPS32-NEXT:    andi $5, $5, 1
 ; MIPS32-NEXT:    addu $4, $4, $24
 ; MIPS32-NEXT:    sltu $24, $4, $24
-; MIPS32-NEXT:    andi $24, $24, 1
 ; MIPS32-NEXT:    addu $5, $5, $24
 ; MIPS32-NEXT:    addu $4, $4, $15
 ; MIPS32-NEXT:    sltu $15, $4, $15
-; MIPS32-NEXT:    andi $15, $15, 1
 ; MIPS32-NEXT:    addu $5, $5, $15
 ; MIPS32-NEXT:    addu $4, $4, $11
 ; MIPS32-NEXT:    sltu $11, $4, $11
-; MIPS32-NEXT:    andi $11, $11, 1
 ; MIPS32-NEXT:    addu $5, $5, $11
 ; MIPS32-NEXT:    addu $4, $4, $10
 ; MIPS32-NEXT:    sltu $10, $4, $10
-; MIPS32-NEXT:    andi $10, $10, 1
 ; MIPS32-NEXT:    addu $5, $5, $10
 ; MIPS32-NEXT:    mul $1, $1, $14
 ; MIPS32-NEXT:    mul $11, $8, $13
@@ -186,7 +179,6 @@ define void @umul_with_overflow(i32 %lhs, i32 %rhs, ptr %pmul, ptr %pcarry_flag)
 ; MIPS32-NEXT:    mfhi $2
 ; MIPS32-NEXT:    mul $1, $4, $5
 ; MIPS32-NEXT:    sltu $2, $zero, $2
-; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    sb $2, 0($7)
 ; MIPS32-NEXT:    sw $1, 0($6)

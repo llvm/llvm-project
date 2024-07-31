@@ -63,8 +63,6 @@ public:
 
   ~Watchpoint() override;
 
-  void IncrementFalseAlarmsAndReviseHitCount();
-
   bool IsEnabled() const;
 
   // This doesn't really enable/disable the watchpoint.   It is currently just
@@ -78,12 +76,14 @@ public:
   
   bool WatchpointRead() const;
   bool WatchpointWrite() const;
+  bool WatchpointModify() const;
   uint32_t GetIgnoreCount() const;
   void SetIgnoreCount(uint32_t n);
   void SetWatchpointType(uint32_t type, bool notify = true);
   void SetDeclInfo(const std::string &str);
   std::string GetWatchSpec();
   void SetWatchSpec(const std::string &str);
+  bool WatchedValueReportable(const ExecutionContext &exe_ctx);
 
   // Snapshot management interface.
   bool IsWatchVariable() const;
@@ -126,7 +126,7 @@ public:
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
   void Dump(Stream *s) const override;
-  void DumpSnapshots(Stream *s, const char *prefix = nullptr) const;
+  bool DumpSnapshots(Stream *s, const char *prefix = nullptr) const;
   void DumpWithLevel(Stream *s, lldb::DescriptionLevel description_level) const;
   Target &GetTarget() { return m_target; }
   const Status &GetError() { return m_error; }
@@ -215,11 +215,8 @@ private:
   // supplied actions actually want the watchpoint to be disabled!
   uint32_t m_watch_read : 1, // 1 if we stop when the watched data is read from
       m_watch_write : 1,     // 1 if we stop when the watched data is written to
-      m_watch_was_read : 1, // Set to 1 when watchpoint is hit for a read access
-      m_watch_was_written : 1;  // Set to 1 when watchpoint is hit for a write
-                                // access
+      m_watch_modify : 1;    // 1 if we stop when the watched data is changed
   uint32_t m_ignore_count;      // Number of times to ignore this watchpoint
-  uint32_t m_false_alarms;      // Number of false alarms.
   std::string m_decl_str;       // Declaration information, if any.
   std::string m_watch_spec_str; // Spec for the watchpoint.
   lldb::ValueObjectSP m_old_value_sp;
@@ -227,18 +224,13 @@ private:
   CompilerType m_type;
   Status m_error; // An error object describing errors associated with this
                   // watchpoint.
-  WatchpointOptions
-      m_options; // Settable watchpoint options, which is a delegate to handle
-                 // the callback machinery.
-  bool m_being_created;
-
+  WatchpointOptions m_options; // Settable watchpoint options, which is a
+                               // delegate to handle the callback machinery.
   std::unique_ptr<UserExpression> m_condition_up; // The condition to test.
 
   void SetID(lldb::watch_id_t id) { m_id = id; }
 
   void SendWatchpointChangedEvent(lldb::WatchpointEventType eventKind);
-
-  void SendWatchpointChangedEvent(WatchpointEventData *data);
 
   Watchpoint(const Watchpoint &) = delete;
   const Watchpoint &operator=(const Watchpoint &) = delete;

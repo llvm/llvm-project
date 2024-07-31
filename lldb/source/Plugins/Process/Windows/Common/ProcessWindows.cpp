@@ -405,12 +405,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                "{1:x} with watchpoint {2}",
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc, id);
 
-      if (lldb::WatchpointSP wp_sp =
-              GetTarget().GetWatchpointList().FindByID(id))
-        wp_sp->SetHardwareIndex(slot_id);
-
-      stop_info = StopInfo::CreateStopReasonWithWatchpointID(
-          *stop_thread, id, m_watchpoints[id].address);
+      stop_info = StopInfo::CreateStopReasonWithWatchpointID(*stop_thread, id);
       stop_thread->SetStopInfo(stop_info);
 
       return;
@@ -839,11 +834,11 @@ std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
   return RegisterContextWindows::GetNumHardwareBreakpointSlots();
 }
 
-Status ProcessWindows::EnableWatchpoint(Watchpoint *wp, bool notify) {
+Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
 
-  if (wp->IsEnabled()) {
-    wp->SetEnabled(true, notify);
+  if (wp_sp->IsEnabled()) {
+    wp_sp->SetEnabled(true, notify);
     return error;
   }
 
@@ -855,13 +850,13 @@ Status ProcessWindows::EnableWatchpoint(Watchpoint *wp, bool notify) {
       break;
   if (info.slot_id == RegisterContextWindows::GetNumHardwareBreakpointSlots()) {
     error.SetErrorStringWithFormat("Can't find free slot for watchpoint %i",
-                                   wp->GetID());
+                                   wp_sp->GetID());
     return error;
   }
-  info.address = wp->GetLoadAddress();
-  info.size = wp->GetByteSize();
-  info.read = wp->WatchpointRead();
-  info.write = wp->WatchpointWrite();
+  info.address = wp_sp->GetLoadAddress();
+  info.size = wp_sp->GetByteSize();
+  info.read = wp_sp->WatchpointRead();
+  info.write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
 
   for (unsigned i = 0U; i < m_thread_list.GetSize(); i++) {
     Thread *thread = m_thread_list.GetThreadAtIndex(i).get();
@@ -870,7 +865,7 @@ Status ProcessWindows::EnableWatchpoint(Watchpoint *wp, bool notify) {
     if (!reg_ctx->AddHardwareBreakpoint(info.slot_id, info.address, info.size,
                                         info.read, info.write)) {
       error.SetErrorStringWithFormat(
-          "Can't enable watchpoint %i on thread 0x%llx", wp->GetID(),
+          "Can't enable watchpoint %i on thread 0x%llx", wp_sp->GetID(),
           thread->GetID());
       break;
     }
@@ -885,26 +880,26 @@ Status ProcessWindows::EnableWatchpoint(Watchpoint *wp, bool notify) {
     return error;
   }
 
-  m_watchpoints[wp->GetID()] = info;
-  m_watchpoint_ids[info.slot_id] = wp->GetID();
+  m_watchpoints[wp_sp->GetID()] = info;
+  m_watchpoint_ids[info.slot_id] = wp_sp->GetID();
 
-  wp->SetEnabled(true, notify);
+  wp_sp->SetEnabled(true, notify);
 
   return error;
 }
 
-Status ProcessWindows::DisableWatchpoint(Watchpoint *wp, bool notify) {
+Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
 
-  if (!wp->IsEnabled()) {
-    wp->SetEnabled(false, notify);
+  if (!wp_sp->IsEnabled()) {
+    wp_sp->SetEnabled(false, notify);
     return error;
   }
 
-  auto it = m_watchpoints.find(wp->GetID());
+  auto it = m_watchpoints.find(wp_sp->GetID());
   if (it == m_watchpoints.end()) {
     error.SetErrorStringWithFormat("Info about watchpoint %i is not found",
-                                   wp->GetID());
+                                   wp_sp->GetID());
     return error;
   }
 
@@ -914,7 +909,7 @@ Status ProcessWindows::DisableWatchpoint(Watchpoint *wp, bool notify) {
         thread->GetRegisterContext().get());
     if (!reg_ctx->RemoveHardwareBreakpoint(it->second.slot_id)) {
       error.SetErrorStringWithFormat(
-          "Can't disable watchpoint %i on thread 0x%llx", wp->GetID(),
+          "Can't disable watchpoint %i on thread 0x%llx", wp_sp->GetID(),
           thread->GetID());
       break;
     }
@@ -925,7 +920,7 @@ Status ProcessWindows::DisableWatchpoint(Watchpoint *wp, bool notify) {
   m_watchpoint_ids[it->second.slot_id] = LLDB_INVALID_BREAK_ID;
   m_watchpoints.erase(it);
 
-  wp->SetEnabled(false, notify);
+  wp_sp->SetEnabled(false, notify);
 
   return error;
 }

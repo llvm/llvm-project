@@ -24,6 +24,7 @@
 #CHECK: aghik	%r0, %r15, 0            # encoding: [0xec,0x0f,0x00,0x00,0x00,0xd9]
 #CHECK: aghik	%r15, %r0, 0            # encoding: [0xec,0xf0,0x00,0x00,0x00,0xd9]
 #CHECK: aghik	%r7, %r8, -16           # encoding: [0xec,0x78,0xff,0xf0,0x00,0xd9]
+#CHECK: aghik	%r0, %r1, foo           # encoding: [0xec,0x01,A,A,0x00,0xd9]
 
 	aghik	%r0, %r0, -32768
 	aghik	%r0, %r0, -1
@@ -33,6 +34,7 @@
 	aghik	%r0, %r15, 0
 	aghik	%r15, %r0, 0
 	aghik	%r7, %r8, -16
+	aghik	%r0, %r1, foo
 
 #CHECK: agrk	%r0, %r0, %r0           # encoding: [0xb9,0xe8,0x00,0x00]
 #CHECK: agrk	%r0, %r0, %r15          # encoding: [0xb9,0xe8,0xf0,0x00]
@@ -78,6 +80,7 @@
 #CHECK: ahik	%r0, %r15, 0            # encoding: [0xec,0x0f,0x00,0x00,0x00,0xd8]
 #CHECK: ahik	%r15, %r0, 0            # encoding: [0xec,0xf0,0x00,0x00,0x00,0xd8]
 #CHECK: ahik	%r7, %r8, -16           # encoding: [0xec,0x78,0xff,0xf0,0x00,0xd8]
+#CHECK: ahik	%r0, %r1, foo           # encoding: [0xec,0x01,A,A,0x00,0xd8]
 
 	ahik	%r0, %r0, -32768
 	ahik	%r0, %r0, -1
@@ -87,6 +90,7 @@
 	ahik	%r0, %r15, 0
 	ahik	%r15, %r0, 0
 	ahik	%r7, %r8, -16
+	ahik	%r0, %r1, foo
 
 #CHECK: aih	%r0, -2147483648        # encoding: [0xcc,0x08,0x80,0x00,0x00,0x00]
 #CHECK: aih	%r0, -1                 # encoding: [0xcc,0x08,0xff,0xff,0xff,0xff]
@@ -273,9 +277,12 @@
 # fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
 #CHECK: brcth	%r8, frob@PLT           # encoding: [0xcc,0x86,A,A,A,A]
 # fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
+#CHECK: brcth	%r8, frob@PLT           # encoding: [0xcc,0x86,A,A,A,A]
+# fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
 
 	brcth	%r7,frob@PLT
 	brcth	%r8,frob@PLT
+	jcth	%r8,frob@PLT
 
 #CHECK: cdfbra	%f0, 0, %r0, 0          # encoding: [0xb3,0x95,0x00,0x00]
 #CHECK: cdfbra	%f0, 0, %r0, 15         # encoding: [0xb3,0x95,0x0f,0x00]

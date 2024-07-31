@@ -21,74 +21,85 @@
 
 namespace llvm {
 
-template <typename _FunctionT> class GenericSSAContext {
-public:
-  // Specializations should provide the following types that are similar to how
-  // LLVM IR is structured:
+template <typename, bool> class DominatorTreeBase;
+template <typename> class SmallVectorImpl;
 
+namespace Intrinsic {
+typedef unsigned ID;
+}
+
+// Specializations of this template should provide the types used by the
+// template GenericSSAContext below.
+template <typename _FunctionT> struct GenericSSATraits;
+
+// Ideally this should have been a stateless traits class. But the print methods
+// for Machine IR need access to the owning function. So we track that state in
+// the template itself.
+//
+// We use FunctionT as a template argument and not GenericSSATraits to allow
+// forward declarations using well-known typenames.
+template <typename _FunctionT> class GenericSSAContext {
+  using SSATraits = GenericSSATraits<_FunctionT>;
+  const typename SSATraits::FunctionT *F;
+
+public:
   // The smallest unit of the IR is a ValueT. The SSA context uses a ValueRefT,
   // which is a pointer to a ValueT, since Machine IR does not have the
   // equivalent of a ValueT.
-  //
-  // using ValueRefT = ...
+  using ValueRefT = typename SSATraits::ValueRefT;
 
-  // An InstT is a subclass of ValueT that itself defines one or more ValueT
-  // objects.
-  //
-  // using InstT = ... must be a subclass of Value
+  // The ConstValueRefT is needed to work with "const Value *", where const
+  // needs to bind to the pointee and not the pointer.
+  using ConstValueRefT = typename SSATraits::ConstValueRefT;
 
-  // A BlockT is a sequence of InstT, and forms a node of the CFG. It
-  // has global methods predecessors() and successors() that return
-  // the list of incoming CFG edges and outgoing CFG edges
-  // respectively.
-  //
-  // using BlockT = ...
+  // The null value for ValueRefT. For LLVM IR and MIR, this is simply the
+  // default constructed value.
+  static constexpr ValueRefT *ValueRefNull = {};
 
-  // A FunctionT represents a CFG along with arguments and return values. It is
-  // the smallest complete unit of code in a Module.
-  //
-  // The compiler produces an error here if this class is implicitly
-  // specialized due to an instantiation. An explicit specialization
-  // of this template needs to be added before the instantiation point
-  // indicated by the compiler.
-  using FunctionT = typename _FunctionT::invalidTemplateInstanceError;
+  // An InstructionT usually defines one or more ValueT objects.
+  using InstructionT = typename SSATraits::InstructionT;
 
   // A UseT represents a data-edge from the defining instruction to the using
   // instruction.
-  //
-  // using UseT = ...
+  using UseT = typename SSATraits::UseT;
 
-  // Initialize the SSA context with information about the FunctionT being
-  // processed.
-  //
-  // void setFunction(FunctionT &function);
-  // FunctionT* getFunction() const;
+  // A BlockT is a sequence of InstructionT, and forms a node of the CFG. It
+  // has global methods predecessors() and successors() that return
+  // the list of incoming CFG edges and outgoing CFG edges
+  // respectively.
+  using BlockT = typename SSATraits::BlockT;
 
-  // Every FunctionT has a unique BlockT marked as its entry.
-  //
-  // static BlockT* getEntryBlock(FunctionT &F);
+  // A FunctionT represents a CFG along with arguments and return values. It is
+  // the smallest complete unit of code in a Module.
+  using FunctionT = typename SSATraits::FunctionT;
 
-  // Methods to examine basic blocks and values
-  //
-  // static void appendBlockDefs(SmallVectorImpl<ValueRefT> &defs,
-  //                             BlockT &block);
-  // static void appendBlockDefs(SmallVectorImpl<const ValueRefT> &defs,
-  //                             const BlockT &block);
+  // A dominator tree provides the dominance relation between basic blocks in
+  // a given funciton.
+  using DominatorTreeT = DominatorTreeBase<BlockT, false>;
 
-  // static void appendBlockTerms(SmallVectorImpl<InstT *> &terms,
-  //                              BlockT &block);
-  // static void appendBlockTerms(SmallVectorImpl<const InstT *> &terms,
-  //                              const BlockT &block);
-  //
-  // static bool comesBefore(const InstT *lhs, const InstT *rhs);
-  // static bool isConstantOrUndefValuePhi(const InstT &Instr);
-  // const BlockT *getDefBlock(const ValueRefT value) const;
+  GenericSSAContext() = default;
+  GenericSSAContext(const FunctionT *F) : F(F) {}
 
-  // Methods to print various objects.
-  //
-  // Printable print(BlockT *block) const;
-  // Printable print(InstT *inst) const;
-  // Printable print(ValueRefT value) const;
+  const FunctionT *getFunction() const { return F; }
+
+  static Intrinsic::ID getIntrinsicID(const InstructionT &I);
+
+  static void appendBlockDefs(SmallVectorImpl<ValueRefT> &defs, BlockT &block);
+  static void appendBlockDefs(SmallVectorImpl<ConstValueRefT> &defs,
+                              const BlockT &block);
+
+  static void appendBlockTerms(SmallVectorImpl<InstructionT *> &terms,
+                               BlockT &block);
+  static void appendBlockTerms(SmallVectorImpl<const InstructionT *> &terms,
+                               const BlockT &block);
+
+  static bool isConstantOrUndefValuePhi(const InstructionT &Instr);
+  const BlockT *getDefBlock(ConstValueRefT value) const;
+
+  Printable print(const BlockT *block) const;
+  Printable printAsOperand(const BlockT *BB) const;
+  Printable print(const InstructionT *inst) const;
+  Printable print(ConstValueRefT value) const;
 };
 } // namespace llvm
 

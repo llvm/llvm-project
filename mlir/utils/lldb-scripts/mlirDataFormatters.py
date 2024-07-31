@@ -51,12 +51,14 @@ builtin_attr_type_mnemonics = {
     "mlir::FusedLoc": '"loc(fused<...>[...])"',
     "mlir::UnknownLoc": '"loc(unknown)"',
     "mlir::Float8E5M2Type": '"f8E5M2"',
+    "mlir::Float8E4M3Type": '"f8E4M3"',
     "mlir::Float8E4M3FNType": '"f8E4M3FN"',
     "mlir::Float8E5M2FNUZType": '"f8E5M2FNUZ"',
     "mlir::Float8E4M3FNUZType": '"f8E4M3FNUZ"',
     "mlir::Float8E4M3B11FNUZType": '"f8E4M3B11FNUZ"',
     "mlir::BFloat16Type": '"bf16"',
     "mlir::Float16Type": '"f16"',
+    "mlir::FloatTF32Type": '"tf32"',
     "mlir::Float32Type": '"f32"',
     "mlir::Float64Type": '"f64"',
     "mlir::Float80Type": '"f80"',
@@ -195,6 +197,7 @@ class AttrTypeSynthProvider:
             valobj, self.abstractVal, internal_dict
         )
         if not self.type:
+            self.impl_type = None
             return
 
         # Grab the ImplTy from the resolved type. This is the 3rd template

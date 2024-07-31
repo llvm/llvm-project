@@ -44,7 +44,6 @@
 #include <cassert>
 #include <iterator>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -64,6 +63,10 @@ STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
 static cl::opt<int>
     CSUsesThreshold("csuses-threshold", cl::Hidden, cl::init(1024),
                     cl::desc("Threshold for the size of CSUses"));
+
+static cl::opt<bool> AggressiveMachineCSE(
+    "aggressive-machine-cse", cl::Hidden, cl::init(false),
+    cl::desc("Override the profitability heuristics for Machine CSE"));
 
 namespace {
 
@@ -89,10 +92,10 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreservedID(MachineLoopInfoID);
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addPreserved<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
@@ -163,7 +166,7 @@ char &llvm::MachineCSEID = MachineCSE::ID;
 
 INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
                     "Machine Common Subexpression Elimination", false, false)
@@ -181,7 +184,7 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
       continue;
     bool OnlyOneUse = MRI->hasOneNonDBGUse(Reg);
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
-    if (!DefMI->isCopy())
+    if (!DefMI || !DefMI->isCopy())
       continue;
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
@@ -403,7 +406,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
 
 bool MachineCSE::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
-      MI->isInlineAsm() || MI->isDebugInstr())
+      MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo())
     return false;
 
   // Ignore copies.
@@ -439,6 +442,9 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
 /// defined.
 bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
                                    MachineBasicBlock *CSBB, MachineInstr *MI) {
+  if (AggressiveMachineCSE)
+    return true;
+
   // FIXME: Heuristics that works around the lack the live range splitting.
 
   // If CSReg is used at all uses of Reg, CSE should not increase register
@@ -703,7 +709,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
         for (MachineBasicBlock::iterator II = CSMI, IE = &MI; II != IE; ++II)
           for (auto ImplicitDef : ImplicitDefs)
             if (MachineOperand *MO = II->findRegisterUseOperand(
-                    ImplicitDef, /*isKill=*/true, TRI))
+                    ImplicitDef, TRI, /*isKill=*/true))
               MO->setIsKill(false);
       } else {
         // If the instructions aren't in the same BB, bail out and clear the
@@ -937,8 +943,8 @@ bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  DT = &getAnalysis<MachineDominatorTree>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
   bool ChangedPRE, ChangedCSE;
   ChangedPRE = PerformSimplePRE(DT);

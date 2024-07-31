@@ -3,6 +3,8 @@ static_library("Core") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
     "//bolt/lib/Utils",
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/Demangle",
     "//llvm/lib/MC",
@@ -13,17 +15,24 @@ static_library("Core") {
     "//llvm/utils/gn/build/libs/pthread",
   ]
   sources = [
+    "AddressMap.cpp",
     "BinaryBasicBlock.cpp",
     "BinaryContext.cpp",
     "BinaryData.cpp",
     "BinaryEmitter.cpp",
     "BinaryFunction.cpp",
+    "BinaryFunctionCallGraph.cpp",
     "BinaryFunctionProfile.cpp",
     "BinarySection.cpp",
+    "CallGraph.cpp",
+    "CallGraphWalker.cpp",
+    "DIEBuilder.cpp",
     "DebugData.cpp",
+    "DebugNames.cpp",
     "DynoStats.cpp",
     "Exceptions.cpp",
     "FunctionLayout.cpp",
+    "GDBIndex.cpp",
     "HashUtilities.cpp",
     "JumpTable.cpp",
     "MCPlusBuilder.cpp",

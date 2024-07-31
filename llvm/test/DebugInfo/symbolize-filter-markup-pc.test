@@ -14,13 +14,15 @@ CHECK: first[/dir[[SEP:[/\\]]]tmp.c:3]
 CHECK: first[/dir[[SEP]]tmp.c:5]
 CHECK: first[/dir[[SEP]]tmp.c:4]
 CHECK: first[/dir[[SEP]]tmp.c:5]
+
 CHECK: [[BEGIN]]pc:0xff[[END]]
 CHECK: [[BEGIN]]pc:0x100[[END]]
+CHECK: first[/dir[[SEP]]tmp.c:5]
+ERR: error: no mmap covers address
+ERR: warning: expected at most 2 field(s); found 3
 
 ERR: error: expected at least 1 field(s); found 0
-ERR: error: no mmap covers address
 ERR: error: expected PC type; found ''
-ERR: error: expected at most 2 field(s); found 3
 
 ;--- input
 {{{module:0:a.o:elf:abcdef}}}
@@ -29,12 +31,13 @@ ERR: error: expected at most 2 field(s); found 3
 {{{pc:0x9}}}
 {{{pc:0x9:ra}}}
 {{{pc:0x9:pc}}}
+
 {{{pc:0xff}}}
+{{{pc:0x100}}}
+{{{pc:0x9:pc:ext}}}
 
 {{{pc}}}
-{{{pc:0x100}}}
 {{{pc:0x9:}}}
-{{{pc:0x9:pc:}}}
 ;--- asm.s
 	.text
 	.file	"tmp.c"

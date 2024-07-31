@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 
 #define SIGHUP 1
 #define SIGINT 2
@@ -93,4 +93,12 @@
 #define SIG_IGN ((__sighandler_t)1)
 #define SIG_ERR ((__sighandler_t)-1)
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
+// SIGCHLD si_codes
+#define CLD_EXITED 1    // child has exited
+#define CLD_KILLED 2    // child was killed
+#define CLD_DUMPED 3    // child terminated abnormally
+#define CLD_TRAPPED 4   // traced child has trapped
+#define CLD_STOPPED 5   // child has stopped
+#define CLD_CONTINUED 6 // stopped child has continued
+
+#endif // LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H

@@ -103,6 +103,8 @@ public:
       const char *stdin_path, const char *stdout_path, const char *stderr_path,
       bool no_stdio, MachProcess *process, int disable_aslr, DNBError &err);
   nub_addr_t GetDYLDAllImageInfosAddress();
+  std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+  GetMainBinaryCPUTypes(nub_process_t pid);
   static const void *PrepareForAttach(const char *path,
                                       nub_launch_flavor_t launch_flavor,
                                       bool waitfor, DNBError &err_str);
@@ -126,6 +128,11 @@ public:
   static bool GetOSVersionNumbers(uint64_t *major, uint64_t *minor,
                                   uint64_t *patch);
   static std::string GetMacCatalystVersionString();
+
+  static nub_process_t GetParentProcessID(nub_process_t child_pid);
+
+  static bool ProcessIsBeingDebugged(nub_process_t pid);
+
 #ifdef WITH_BKS
   static void BKSCleanupAfterAttach(const void *attach_token,
                                     DNBError &err_str);

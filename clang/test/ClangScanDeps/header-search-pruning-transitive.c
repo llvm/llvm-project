@@ -54,8 +54,8 @@ module X { header "X.h" }
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_with_a.json.template    > %t/cdb_with_a.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_without_a.json.template > %t/cdb_without_a.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb_with_a.json    -format experimental-full -optimize-args >  %t/results.json
-// RUN: clang-scan-deps -compilation-database %t/cdb_without_a.json -format experimental-full -optimize-args >> %t/results.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_with_a.json    -format experimental-full -optimize-args=header-search >  %t/results.json
+// RUN: clang-scan-deps -compilation-database %t/cdb_without_a.json -format experimental-full -optimize-args=header-search >> %t/results.json
 // RUN: cat %t/results.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
@@ -72,9 +72,10 @@ module X { header "X.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_X:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/./X.h",
-// CHECK-NEXT:         "[[PREFIX]]/./module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/X.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -84,12 +85,13 @@ module X { header "X.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_Y_WITH_A]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/./Y.h",
-// CHECK-NEXT:         "[[PREFIX]]/./a/a.h",
-// CHECK-NEXT:         "[[PREFIX]]/./begin/begin.h",
-// CHECK-NEXT:         "[[PREFIX]]/./end/end.h",
-// CHECK-NEXT:         "[[PREFIX]]/./module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Y.h",
+// CHECK-NEXT:         "[[PREFIX]]/a/a.h",
+// CHECK-NEXT:         "[[PREFIX]]/begin/begin.h",
+// CHECK-NEXT:         "[[PREFIX]]/end/end.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -126,9 +128,10 @@ module X { header "X.h" }
 // also has a different context hash from the first version of module X.
 // CHECK-NOT:        "context-hash": "[[HASH_X]]",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/./X.h",
-// CHECK-NEXT:         "[[PREFIX]]/./module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/X.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -138,11 +141,12 @@ module X { header "X.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_Y_WITHOUT_A]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/./Y.h",
-// CHECK-NEXT:         "[[PREFIX]]/./begin/begin.h",
-// CHECK-NEXT:         "[[PREFIX]]/./end/end.h",
-// CHECK-NEXT:         "[[PREFIX]]/./module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Y.h",
+// CHECK-NEXT:         "[[PREFIX]]/begin/begin.h",
+// CHECK-NEXT:         "[[PREFIX]]/end/end.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

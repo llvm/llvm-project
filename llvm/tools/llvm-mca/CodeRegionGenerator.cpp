@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SMLoc.h"
@@ -29,46 +28,12 @@ namespace mca {
 // This virtual dtor serves as the anchor for the CodeRegionGenerator class.
 CodeRegionGenerator::~CodeRegionGenerator() {}
 
-// This class provides the callbacks that occur when parsing input assembly.
-class MCStreamerWrapper final : public MCStreamer {
-  CodeRegions &Regions;
-
-public:
-  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
-      : MCStreamer(Context), Regions(R) {}
-
-  // We only want to intercept the emission of new instructions.
-  void emitInstruction(const MCInst &Inst,
-                       const MCSubtargetInfo & /* unused */) override {
-    Regions.addInstruction(Inst);
-  }
-
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return true;
-  }
-
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override {}
-  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, Align ByteAlignment = Align(1),
-                    SMLoc Loc = SMLoc()) override {}
-  void emitGPRel32Value(const MCExpr *Value) override {}
-  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-  void emitCOFFSymbolStorageClass(int StorageClass) override {}
-  void emitCOFFSymbolType(int Type) override {}
-  void endCOFFSymbolDef() override {}
-
-  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
-    return Regions.getInstructionSequence(Index);
-  }
-};
-
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
-    const std::unique_ptr<MCInstPrinter> &IP) {
+    const std::unique_ptr<MCInstPrinter> &IP, bool SkipFailures) {
   MCTargetOptions Opts;
   Opts.PreserveAsmComments = false;
   CodeRegions &Regions = getRegions();
-  MCStreamerWrapper Str(Ctx, Regions);
+  MCStreamerWrapper *Str = getMCStreamer();
 
   // Need to initialize an MCTargetStreamer otherwise
   // certain asm directives will cause a segfault.
@@ -76,13 +41,12 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // doesn't show up in the llvm-mca output.
   raw_ostream &OSRef = nulls();
   formatted_raw_ostream FOSRef(OSRef);
-  TheTarget.createAsmTargetStreamer(Str, FOSRef, IP.get(),
-                                    /*IsVerboseAsm=*/true);
+  TheTarget.createAsmTargetStreamer(*Str, FOSRef, IP.get());
 
   // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
   // comments.
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(Regions.getSourceMgr(), Ctx, Str, MAI));
+      createMCAsmParser(Regions.getSourceMgr(), Ctx, *Str, MAI));
   MCAsmLexer &Lexer = Parser->getLexer();
   MCACommentConsumer *CCP = getCommentConsumer();
   Lexer.setCommentConsumer(CCP);
@@ -96,7 +60,16 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
         "This target does not support assembly parsing.",
         inconvertibleErrorCode());
   Parser->setTargetParser(*TAP);
-  Parser->Run(false);
+  // Parser->Run() confusingly returns true on errors, in which case the errors
+  // were already shown to the user. SkipFailures implies continuing in the
+  // presence of any kind of failure within the parser, in which case failing
+  // input lines are not represented, but the rest of the input remains.
+  if (Parser->Run(false) && !SkipFailures) {
+    const char *Message = "Assembly input parsing had errors, use "
+                          "-skip-unsupported-instructions=parse-failure "
+                          "to drop failing lines from the input.";
+    return make_error<StringError>(Message, inconvertibleErrorCode());
+  }
 
   if (CCP->hadErr())
     return make_error<StringError>("There was an error parsing comments.",

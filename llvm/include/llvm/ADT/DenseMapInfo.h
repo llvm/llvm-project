@@ -20,24 +20,25 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 
 namespace llvm {
+
+namespace densemap::detail {
+// A bit mixer with very low latency using one multiplications and one
+// xor-shift. The constant is from splitmix64.
+inline uint64_t mix(uint64_t x) {
+  x *= 0xbf58476d1ce4e5b9u;
+  x ^= x >> 31;
+  return x;
+}
+} // namespace densemap::detail
 
 namespace detail {
 
 /// Simplistic combination of 32-bit hash values into 32-bit hash values.
-static inline unsigned combineHashValue(unsigned a, unsigned b) {
-  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
-  key += ~(key << 32);
-  key ^= (key >> 22);
-  key += ~(key << 13);
-  key ^= (key >> 8);
-  key += (key << 3);
-  key ^= (key >> 15);
-  key += ~(key << 27);
-  key ^= (key >> 31);
-  return (unsigned)key;
+inline unsigned combineHashValue(unsigned a, unsigned b) {
+  uint64_t x = (uint64_t)a << 32 | (uint64_t)b;
+  return (unsigned)densemap::detail::mix(x);
 }
 
 } // end namespace detail
@@ -138,7 +139,10 @@ template<> struct DenseMapInfo<unsigned long> {
   static inline unsigned long getTombstoneKey() { return ~0UL - 1L; }
 
   static unsigned getHashValue(const unsigned long& Val) {
-    return (unsigned)(Val * 37UL);
+    if constexpr (sizeof(Val) == 4)
+      return DenseMapInfo<unsigned>::getHashValue(Val);
+    else
+      return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long& LHS, const unsigned long& RHS) {
@@ -152,7 +156,7 @@ template<> struct DenseMapInfo<unsigned long long> {
   static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
   static unsigned getHashValue(const unsigned long long& Val) {
-    return (unsigned)(Val * 37ULL);
+    return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long long& LHS,
@@ -234,6 +238,14 @@ struct DenseMapInfo<std::pair<T, U>> {
                                     SecondInfo::getHashValue(PairVal.second));
   }
 
+  // Expose an additional function intended to be used by other
+  // specializations of DenseMapInfo without needing to know how
+  // to combine hash values manually
+  static unsigned getHashValuePiecewise(const T &First, const U &Second) {
+    return detail::combineHashValue(FirstInfo::getHashValue(First),
+                                    SecondInfo::getHashValue(Second));
+  }
+
   static bool isEqual(const Pair &LHS, const Pair &RHS) {
     return FirstInfo::isEqual(LHS.first, RHS.first) &&
            SecondInfo::isEqual(LHS.second, RHS.second);
@@ -290,51 +302,23 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 };
 
-// Provide DenseMapInfo for variants whose all alternatives have DenseMapInfo.
-template <typename... Ts> struct DenseMapInfo<std::variant<Ts...>> {
-  using Variant = std::variant<Ts...>;
-  using FirstT = std::variant_alternative_t<0, Variant>;
+// Provide DenseMapInfo for enum classes.
+template <typename Enum>
+struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
+  using UnderlyingType = std::underlying_type_t<Enum>;
+  using Info = DenseMapInfo<UnderlyingType>;
 
-  static inline Variant getEmptyKey() {
-    return Variant(std::in_place_index<0>, DenseMapInfo<FirstT>::getEmptyKey());
+  static Enum getEmptyKey() { return static_cast<Enum>(Info::getEmptyKey()); }
+
+  static Enum getTombstoneKey() {
+    return static_cast<Enum>(Info::getTombstoneKey());
   }
 
-  static inline Variant getTombstoneKey() {
-    return Variant(std::in_place_index<0>,
-                   DenseMapInfo<FirstT>::getTombstoneKey());
+  static unsigned getHashValue(const Enum &Val) {
+    return Info::getHashValue(static_cast<UnderlyingType>(Val));
   }
 
-  static unsigned getHashValue(const Variant &Val) {
-    return std::visit(
-        [&Val](auto &&Alternative) {
-          using T = std::decay_t<decltype(Alternative)>;
-          // Include index in hash to make sure same value as different
-          // alternatives don't collide.
-          return detail::combineHashValue(
-              DenseMapInfo<size_t>::getHashValue(Val.index()),
-              DenseMapInfo<T>::getHashValue(Alternative));
-        },
-        Val);
-  }
-
-  static bool isEqual(const Variant &LHS, const Variant &RHS) {
-    if (LHS.index() != RHS.index())
-      return false;
-    if (LHS.valueless_by_exception())
-      return true;
-    // We want to dispatch to DenseMapInfo<T>::isEqual(LHS.get(I), RHS.get(I))
-    // We know the types are the same, but std::visit(V, LHS, RHS) doesn't.
-    // We erase the type held in LHS to void*, and dispatch over RHS.
-    const void *ErasedLHS =
-        std::visit([](const auto &LHS) -> const void * { return &LHS; }, LHS);
-    return std::visit(
-        [&](const auto &RHS) -> bool {
-          using T = std::remove_cv_t<std::remove_reference_t<decltype(RHS)>>;
-          return DenseMapInfo<T>::isEqual(*static_cast<const T *>(ErasedLHS),
-                                          RHS);
-        },
-        RHS);
-  }
+  static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
 };
 } // end namespace llvm
 

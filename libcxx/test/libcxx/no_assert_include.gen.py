@@ -9,11 +9,11 @@
 # Ensure that none of the standard C++ headers implicitly include cassert or
 # assert.h (because assert() is implemented as a macro).
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
   if header == 'cassert':

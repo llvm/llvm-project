@@ -40,11 +40,12 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
-        echo_all_commands=opts.echoAllCommands,
+        per_test_coverage=opts.per_test_coverage,
+        gtest_sharding=opts.gtest_sharding,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
-        lit_config, opts.test_paths, opts.indirectlyRunCheck
+        lit_config, opts.test_paths
     )
     if not discovered_tests:
         sys.stderr.write("error: did not discover any tests for provided path(s)\n")
@@ -73,7 +74,7 @@ def main(builtin_params={}):
                     "The test suite configuration requested an individual"
                     " test timeout of {0} seconds but a timeout of {1} seconds was"
                     " requested on the command line. Forcing timeout to be {1}"
-                    " seconds"
+                    " seconds."
                 ).format(lit_config.maxIndividualTestTime, opts.maxIndividualTestTime)
             )
             lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
@@ -123,7 +124,8 @@ def main(builtin_params={}):
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    record_test_times(selected_tests, lit_config)
+    if not opts.skip_test_time_recording:
+        record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
         selected_tests, discovered_tests
@@ -310,6 +312,7 @@ def print_histogram(tests):
 
 def print_results(tests, elapsed, opts):
     tests_by_code = {code: [] for code in lit.Test.ResultCode.all_codes()}
+    total_tests = len(tests)
     for test in tests:
         tests_by_code[test.result.code].append(test)
 
@@ -320,7 +323,7 @@ def print_results(tests, elapsed, opts):
             opts.shown_codes,
         )
 
-    print_summary(tests_by_code, opts.quiet, elapsed)
+    print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
 
 
 def print_group(tests, code, shown_codes):
@@ -335,10 +338,11 @@ def print_group(tests, code, shown_codes):
     sys.stdout.write("\n")
 
 
-def print_summary(tests_by_code, quiet, elapsed):
+def print_summary(total_tests, tests_by_code, quiet, elapsed):
     if not quiet:
         print("\nTesting Time: %.2fs" % elapsed)
 
+    print("\nTotal Discovered Tests: %s" % (total_tests))
     codes = [c for c in lit.Test.ResultCode.all_codes() if not quiet or c.isFailure]
     groups = [(c.label, len(tests_by_code[c])) for c in codes]
     groups = [(label, count) for label, count in groups if count]
@@ -351,4 +355,4 @@ def print_summary(tests_by_code, quiet, elapsed):
     for (label, count) in groups:
         label = label.ljust(max_label_len)
         count = str(count).rjust(max_count_len)
-        print("  %s: %s" % (label, count))
+        print("  %s: %s (%.2f%%)" % (label, count, float(count) / total_tests * 100))

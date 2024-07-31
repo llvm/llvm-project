@@ -44,7 +44,7 @@ enum {
 
 
 // Initialized in HwasanAllocatorInit, an never changed.
-static ALIGNED(16) u8 tail_magic[kShadowAlignment - 1];
+alignas(16) static u8 tail_magic[kShadowAlignment - 1];
 static uptr max_malloc_size;
 
 bool HwasanChunkView::IsAllocated() const {
@@ -234,28 +234,23 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   }
 
   void *user_ptr = allocated;
-  // Tagging can only be skipped when both tag_in_malloc and tag_in_free are
-  // false. When tag_in_malloc = false and tag_in_free = true malloc needs to
-  // retag to 0.
   if (InTaggableRegion(reinterpret_cast<uptr>(user_ptr)) &&
-      (flags()->tag_in_malloc || flags()->tag_in_free) &&
-      atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
-    if (flags()->tag_in_malloc && malloc_bisect(stack, orig_size)) {
-      tag_t tag = t ? t->GenerateRandomTag() : kFallbackAllocTag;
-      uptr tag_size = orig_size ? orig_size : 1;
-      uptr full_granule_size = RoundDownTo(tag_size, kShadowAlignment);
-      user_ptr =
-          (void *)TagMemoryAligned((uptr)user_ptr, full_granule_size, tag);
-      if (full_granule_size != tag_size) {
-        u8 *short_granule =
-            reinterpret_cast<u8 *>(allocated) + full_granule_size;
-        TagMemoryAligned((uptr)short_granule, kShadowAlignment,
-                         tag_size % kShadowAlignment);
-        short_granule[kShadowAlignment - 1] = tag;
-      }
-    } else {
-      user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, size, 0);
+      atomic_load_relaxed(&hwasan_allocator_tagging_enabled) &&
+      flags()->tag_in_malloc && malloc_bisect(stack, orig_size)) {
+    tag_t tag = t ? t->GenerateRandomTag() : kFallbackAllocTag;
+    uptr tag_size = orig_size ? orig_size : 1;
+    uptr full_granule_size = RoundDownTo(tag_size, kShadowAlignment);
+    user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, full_granule_size, tag);
+    if (full_granule_size != tag_size) {
+      u8 *short_granule = reinterpret_cast<u8 *>(allocated) + full_granule_size;
+      TagMemoryAligned((uptr)short_granule, kShadowAlignment,
+                       tag_size % kShadowAlignment);
+      short_granule[kShadowAlignment - 1] = tag;
     }
+  } else {
+    // Tagging can not be completely skipped. If it's disabled, we need to tag
+    // with zeros.
+    user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, size, 0);
   }
 
   Metadata *meta =
@@ -294,6 +289,9 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   CHECK(tagged_ptr);
   void *untagged_ptr = UntagPtr(tagged_ptr);
 
+  if (RunFreeHooks(tagged_ptr))
+    return;
+
   if (CheckInvalidFree(stack, untagged_ptr, tagged_ptr))
     return;
 
@@ -306,8 +304,6 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
     return;
   }
-
-  RunFreeHooks(tagged_ptr);
 
   uptr orig_size = meta->GetRequestedSize();
   u32 free_context_id = StackDepotPut(*stack);
@@ -345,7 +341,8 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     internal_memset(aligned_ptr, flags()->free_fill_byte, fill_size);
   }
   if (in_taggable_region && flags()->tag_in_free && malloc_bisect(stack, 0) &&
-      atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
+      atomic_load_relaxed(&hwasan_allocator_tagging_enabled) &&
+      allocator.FromPrimary(untagged_ptr) /* Secondary 0-tag and unmap.*/) {
     // Always store full 8-bit tags on free to maximize UAF detection.
     tag_t tag;
     if (t) {

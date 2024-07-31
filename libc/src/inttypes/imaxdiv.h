@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_INTTYPES_IMAXDIV_H
 #define LLVM_LIBC_SRC_INTTYPES_IMAXDIV_H
 
+#include "src/__support/macros/config.h"
 #include <inttypes.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
 imaxdiv_t imaxdiv(intmax_t x, intmax_t y);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_INTTYPES_IMAXDIV_H

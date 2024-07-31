@@ -29,7 +29,6 @@ int t(void) {
 }
 
 
-// rdar://8040728
 wchar_t in[] = L"\x434" "\x434";  // No warning
 
 #ifndef SKIP_ERROR_TESTS

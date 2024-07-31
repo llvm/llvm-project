@@ -9,8 +9,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests checks that re-writing of .debug_loclists is handled correctly for two CUs,
-# and two loclist entries.
+## This tests checks that re-writing of .debug_loclists is handled correctly for two CUs,
+## and two loclist entries.
 
 # PRECHECK: version = 0x0005
 # PRECHECK: DW_AT_loclists_base [DW_FORM_sec_offset] (0x0000000c)
@@ -45,7 +45,7 @@
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x0000000c)
 # POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)
-# POSTCHECK-EMPTY
+# POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_variable
 # POSTCHECK: DW_AT_location [DW_FORM_loclistx]
 # POSTCHECK-SAME: indexed (0x0)
@@ -64,7 +64,7 @@
 # Checking second CU
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x00000045)
-# POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000035)
+# POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000025)
 # POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_variable
 # POSTCHECK: DW_TAG_variable

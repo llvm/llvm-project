@@ -192,16 +192,17 @@ multiclass AtomicStore<WebAssemblyRegClass rc, string name, int atomic_op> {
 defm ATOMIC_STORE_I32 : AtomicStore<I32, "i32.atomic.store", 0x17>;
 defm ATOMIC_STORE_I64 : AtomicStore<I64, "i64.atomic.store", 0x18>;
 
-// We need an 'atomic' version of store patterns because store and atomic_store
-// nodes have different operand orders:
-// store: (store $val, $ptr)
-// atomic_store: (store $ptr, $val)
+// We used to need an 'atomic' version of store patterns because store and atomic_store
+// nodes have different operand orders.
+//
+// TODO: This is no longer true and atomic_store and store patterns
+// can be unified.
 
 multiclass AStorePat<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$val),
+  def : Pat<(kind ty:$val, (AddrOps32 offset32_op:$offset, I32:$addr)),
             (!cast<NI>(inst#_A32) 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$val),
+  def : Pat<(kind ty:$val, (AddrOps64 offset64_op:$offset, I64:$addr)),
             (!cast<NI>(inst#_A64) 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
@@ -221,8 +222,8 @@ defm ATOMIC_STORE32_I64 : AtomicStore<I64, "i64.atomic.store32", 0x1d>;
 // instructions, we just need to match bare atomic stores. On the other hand,
 // truncating stores from i64 values are once truncated to i32 first.
 class trunc_astore_64<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$val),
-          (kind node:$addr, (i32 (trunc (i64 node:$val))))>;
+  PatFrag<(ops node:$val, node:$addr),
+          (kind (i32 (trunc (i64 node:$val))), node:$addr)>;
 def trunc_astore_8_64 : trunc_astore_64<atomic_store_8>;
 def trunc_astore_16_64 : trunc_astore_64<atomic_store_16>;
 def trunc_astore_32_64 : trunc_astore_64<atomic_store_32>;
@@ -350,17 +351,17 @@ multiclass BinRMWPattern<PatFrag rmw_32, PatFrag rmw_64, string inst_32,
   defm : BinRMWPat<i64, rmw_64, inst_64>;
 }
 
-defm : BinRMWPattern<atomic_load_add_32, atomic_load_add_64,
+defm : BinRMWPattern<atomic_load_add_i32, atomic_load_add_i64,
                      "ATOMIC_RMW_ADD_I32", "ATOMIC_RMW_ADD_I64">;
-defm : BinRMWPattern<atomic_load_sub_32, atomic_load_sub_64,
+defm : BinRMWPattern<atomic_load_sub_i32, atomic_load_sub_i64,
                      "ATOMIC_RMW_SUB_I32", "ATOMIC_RMW_SUB_I64">;
-defm : BinRMWPattern<atomic_load_and_32, atomic_load_and_64,
+defm : BinRMWPattern<atomic_load_and_i32, atomic_load_and_i64,
                      "ATOMIC_RMW_AND_I32", "ATOMIC_RMW_AND_I64">;
-defm : BinRMWPattern<atomic_load_or_32, atomic_load_or_64,
+defm : BinRMWPattern<atomic_load_or_i32, atomic_load_or_i64,
                      "ATOMIC_RMW_OR_I32", "ATOMIC_RMW_OR_I64">;
-defm : BinRMWPattern<atomic_load_xor_32, atomic_load_xor_64,
+defm : BinRMWPattern<atomic_load_xor_i32, atomic_load_xor_i64,
                      "ATOMIC_RMW_XOR_I32", "ATOMIC_RMW_XOR_I64">;
-defm : BinRMWPattern<atomic_swap_32, atomic_swap_64,
+defm : BinRMWPattern<atomic_swap_i32, atomic_swap_i64,
                      "ATOMIC_RMW_XCHG_I32", "ATOMIC_RMW_XCHG_I64">;
 
 // Truncating & zero-extending binary RMW patterns.
@@ -407,27 +408,27 @@ multiclass BinRMWTruncExtPattern<
 }
 
 defm : BinRMWTruncExtPattern<
-  atomic_load_add_8, atomic_load_add_16, atomic_load_add_32,
+  atomic_load_add_i8, atomic_load_add_i16, atomic_load_add_i32,
   "ATOMIC_RMW8_U_ADD_I32", "ATOMIC_RMW16_U_ADD_I32",
   "ATOMIC_RMW8_U_ADD_I64", "ATOMIC_RMW16_U_ADD_I64", "ATOMIC_RMW32_U_ADD_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_sub_8, atomic_load_sub_16, atomic_load_sub_32,
+  atomic_load_sub_i8, atomic_load_sub_i16, atomic_load_sub_i32,
   "ATOMIC_RMW8_U_SUB_I32", "ATOMIC_RMW16_U_SUB_I32",
   "ATOMIC_RMW8_U_SUB_I64", "ATOMIC_RMW16_U_SUB_I64", "ATOMIC_RMW32_U_SUB_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_and_8, atomic_load_and_16, atomic_load_and_32,
+  atomic_load_and_i8, atomic_load_and_i16, atomic_load_and_i32,
   "ATOMIC_RMW8_U_AND_I32", "ATOMIC_RMW16_U_AND_I32",
   "ATOMIC_RMW8_U_AND_I64", "ATOMIC_RMW16_U_AND_I64", "ATOMIC_RMW32_U_AND_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_or_8, atomic_load_or_16, atomic_load_or_32,
+  atomic_load_or_i8, atomic_load_or_i16, atomic_load_or_i32,
   "ATOMIC_RMW8_U_OR_I32", "ATOMIC_RMW16_U_OR_I32",
   "ATOMIC_RMW8_U_OR_I64", "ATOMIC_RMW16_U_OR_I64", "ATOMIC_RMW32_U_OR_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_load_xor_8, atomic_load_xor_16, atomic_load_xor_32,
+  atomic_load_xor_i8, atomic_load_xor_i16, atomic_load_xor_i32,
   "ATOMIC_RMW8_U_XOR_I32", "ATOMIC_RMW16_U_XOR_I32",
   "ATOMIC_RMW8_U_XOR_I64", "ATOMIC_RMW16_U_XOR_I64", "ATOMIC_RMW32_U_XOR_I64">;
 defm : BinRMWTruncExtPattern<
-  atomic_swap_8, atomic_swap_16, atomic_swap_32,
+  atomic_swap_i8, atomic_swap_i16, atomic_swap_i32,
   "ATOMIC_RMW8_U_XCHG_I32", "ATOMIC_RMW16_U_XCHG_I32",
   "ATOMIC_RMW8_U_XCHG_I64", "ATOMIC_RMW16_U_XCHG_I64",
   "ATOMIC_RMW32_U_XCHG_I64">;
@@ -484,8 +485,8 @@ multiclass TerRMWPat<ValueType ty, PatFrag kind, string inst> {
         Requires<[HasAddr64, HasAtomics]>;
 }
 
-defm : TerRMWPat<i32, atomic_cmp_swap_32, "ATOMIC_RMW_CMPXCHG_I32">;
-defm : TerRMWPat<i64, atomic_cmp_swap_64, "ATOMIC_RMW_CMPXCHG_I64">;
+defm : TerRMWPat<i32, atomic_cmp_swap_i32, "ATOMIC_RMW_CMPXCHG_I32">;
+defm : TerRMWPat<i64, atomic_cmp_swap_i64, "ATOMIC_RMW_CMPXCHG_I64">;
 
 // Truncating & zero-extending ternary RMW patterns.
 // DAG legalization & optimization before instruction selection may introduce
@@ -523,13 +524,13 @@ class sext_ter_rmw_8_64<PatFrag kind> :
 class sext_ter_rmw_16_64<PatFrag kind> : sext_ter_rmw_8_64<kind>;
 // 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_i32_s
 
-defm : TerRMWPat<i32, zext_ter_rmw_8_32<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
-defm : TerRMWPat<i32, zext_ter_rmw_16_32<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
-defm : TerRMWPat<i64, zext_ter_rmw_8_64<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
-defm : TerRMWPat<i64, zext_ter_rmw_16_64<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;
-defm : TerRMWPat<i64, zext_ter_rmw_32_64<atomic_cmp_swap_32>, "ATOMIC_RMW32_U_CMPXCHG_I64">;
+defm : TerRMWPat<i32, zext_ter_rmw_8_32<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
+defm : TerRMWPat<i32, zext_ter_rmw_16_32<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
+defm : TerRMWPat<i64, zext_ter_rmw_8_64<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
+defm : TerRMWPat<i64, zext_ter_rmw_16_64<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;
+defm : TerRMWPat<i64, zext_ter_rmw_32_64<atomic_cmp_swap_i32>, "ATOMIC_RMW32_U_CMPXCHG_I64">;
 
-defm : TerRMWPat<i32, sext_ter_rmw_8_32<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
-defm : TerRMWPat<i32, sext_ter_rmw_16_32<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
-defm : TerRMWPat<i64, sext_ter_rmw_8_64<atomic_cmp_swap_8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
-defm : TerRMWPat<i64, sext_ter_rmw_16_64<atomic_cmp_swap_16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;
+defm : TerRMWPat<i32, sext_ter_rmw_8_32<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I32">;
+defm : TerRMWPat<i32, sext_ter_rmw_16_32<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I32">;
+defm : TerRMWPat<i64, sext_ter_rmw_8_64<atomic_cmp_swap_i8>, "ATOMIC_RMW8_U_CMPXCHG_I64">;
+defm : TerRMWPat<i64, sext_ter_rmw_16_64<atomic_cmp_swap_i16>, "ATOMIC_RMW16_U_CMPXCHG_I64">;

@@ -15,7 +15,7 @@
 
 from io import StringIO
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import re
 import sys
@@ -37,12 +37,6 @@ class Entry:
 LINE_REGEX = re.compile(
     r"^(?P<lower>[0-9A-F]{4,6})(?:\.\.(?P<upper>[0-9A-F]{4,6}))?\s*;\s*(?P<prop>\w+)"
 )
-
-
-def filterCoreProperty(element: PropertyRange) -> Optional[PropertyRange]:
-    if element.prop == "Grapheme_Extend":
-        return element
-    return None
 
 
 # https://www.unicode.org/reports/tr44/#GC_Values_Table
@@ -90,14 +84,13 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-DATA_ARRAY_TEMPLATE = """
+DATA_ARRAY_TEMPLATE = r"""
 /// The entries of the characters to escape in format's debug string.
 ///
 /// Contains the entries for [format.string.escaped]/2.2.1.2.1
-///   CE is a Unicode encoding and C corresponds to either a UCS scalar value
-///   whose Unicode property General_Category has a value in the groups
-///   Separator (Z) or Other (C) or to a UCS scalar value which has the Unicode
-///   property Grapheme_Extend=Yes, as described by table 12 of UAX #44
+///   CE is a Unicode encoding and C corresponds to a UCS scalar value whose
+///   Unicode property General_Category has a value in the groups Separator (Z)
+///   or Other (C), as described by table 12 of UAX #44
 ///
 /// Separator (Z) consists of General_Category
 /// - Space_Separator,
@@ -112,7 +105,6 @@ DATA_ARRAY_TEMPLATE = """
 /// - Unassigned.
 ///
 /// The data is generated from
-/// - https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
 /// - https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedGeneralCategory.txt
 ///
 /// The table is similar to the table
@@ -121,34 +113,41 @@ DATA_ARRAY_TEMPLATE = """
 /// table lacks a property, thus having more bits available for the size.
 ///
 /// The data has 2 values:
-/// - bits [0, 10] The size of the range, allowing 2048 elements.
-/// - bits [11, 31] The lower bound code point of the range. The upper bound of
-///   the range is lower bound + size.
-inline constexpr uint32_t __entries[{size}] = {{
+/// - bits [0, 13] The size of the range, allowing 16384 elements.
+/// - bits [14, 31] The lower bound code point of the range. The upper bound of
+///   the range is lower bound + size. Note the code expects code units the fit
+///   into 18 bits, instead of the 21 bits needed for the full Unicode range.
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
-
-/// At the end of the valid Unicode code points space a lot of code points are
-/// either reserved or a noncharacter. Adding all these entries to the
-/// lookup table would add 446 entries to the table (in Unicode 14).
-/// Instead the only the start of the region is stored, every code point in
-/// this region needs to be escaped.
-inline constexpr uint32_t __unallocated_region_lower_bound = 0x{unallocated:08x};
 
 /// Returns whether the code unit needs to be escaped.
 ///
-/// \pre The code point is a valid Unicode code point.
+/// At the end of the valid Unicode code points space a lot of code points are
+/// either reserved or a noncharacter. Adding all these entries to the
+/// lookup table would greatly increase the size of the table. Instead these
+/// entries are manually processed. In this large area of reserved code points,
+/// there is a small area of extended graphemes that should not be escaped
+/// unconditionally. This is also manually coded. See the generation script for
+/// more details.
+
+///
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __needs_escape(const char32_t __code_point) noexcept {{
-  // Since __unallocated_region_lower_bound contains the unshifted range do the
-  // comparison without shifting.
-  if (__code_point >= __unallocated_region_lower_bound)
+
+  // The entries in the gap at the end.
+  if(__code_point >= 0x{gap_lower:08x} && __code_point <= 0x{gap_upper:08x})
+     return false;
+
+  // The entries at the end.
+  if (__code_point >= 0x{unallocated:08x})
     return true;
 
-  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 11) | 0x7ffu) - __entries;
+  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 14) | 0x3fffu) - __entries;
   if (__i == 0)
     return false;
 
   --__i;
-  uint32_t __upper_bound = (__entries[__i] >> 11) + (__entries[__i] & 0x7ffu);
+  uint32_t __upper_bound = (__entries[__i] >> 14) + (__entries[__i] & 0x3fffu);
   return __code_point <= __upper_bound;
 }}
 """
@@ -231,7 +230,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace __escaped_output_table {{
+// clang-format off
 {content}
+// clang-format on
 }} // namespace __escaped_output_table
 
 #endif //_LIBCPP_STD_VER >= 23
@@ -251,28 +252,43 @@ def property_ranges_to_table(ranges: list[PropertyRange]) -> list[Entry]:
 
         while True:
             e = Entry(range.lower, range.upper - range.lower)
-            if e.offset <= 2047:
+            if e.offset <= 16383:
                 result.append(e)
                 break
-            e.offset = 2047
+            e.offset = 16383
             result.append(e)
-            range.lower += 2048
+            range.lower += 16384
     return result
 
 
-cpp_entrytemplate = "    0x{:08x}"
+cpp_entrytemplate = "    0x{:08x} /* {:08x} - {:08x} [{:>5}] */"
 
 
-def generate_cpp_data(ranges: list[PropertyRange], unallocated: int) -> str:
+def generate_cpp_data(
+    ranges: list[PropertyRange], unallocated: int, gap_lower: int, gap_upper: int
+) -> str:
     result = StringIO()
     table = property_ranges_to_table(ranges)
+    # Validates all entries fit in 18 bits.
+    for x in table:
+        assert x.lower + x.offset < 0x3FFFF
     result.write(
         DATA_ARRAY_TEMPLATE.format(
             size=len(table),
             entries=",\n".join(
-                [cpp_entrytemplate.format(x.lower << 11 | x.offset) for x in table]
+                [
+                    cpp_entrytemplate.format(
+                        x.lower << 14 | x.offset,
+                        x.lower,
+                        x.lower + x.offset,
+                        x.offset + 1,
+                    )
+                    for x in table
+                ]
             ),
             unallocated=unallocated,
+            gap_lower=gap_lower,
+            gap_upper=gap_upper,
         )
     )
 
@@ -289,12 +305,6 @@ def generate_data_tables() -> str:
         / "unicode"
         / "DerivedGeneralCategory.txt"
     )
-    derived_core_catagory_path = (
-        Path(__file__).absolute().parent
-        / "data"
-        / "unicode"
-        / "DerivedCoreProperties.txt"
-    )
 
     properties = list()
     with derived_general_catagory_path.open(encoding="utf-8") as f:
@@ -306,30 +316,31 @@ def generate_data_tables() -> str:
                 )
             )
         )
-    with derived_core_catagory_path.open(encoding="utf-8") as f:
-        properties.extend(
-            list(
-                filter(
-                    filterCoreProperty,
-                    [x for line in f if (x := parsePropertyLine(line))],
-                )
-            )
-        )
 
     data = compactPropertyRanges(sorted(properties, key=lambda x: x.lower))
 
-    # The last entry is large. In Unicode 14 it contains the entries
-    # 3134B..0FFFF 912564 elements
-    # This are 446 entries of 1325 entries in the table.
-    # Based on the nature of these entries it is expected they remain for the
-    # forseeable future. Therefore we only store the lower bound of this section.
-    #
-    # When this region becomes substantially smaller we need to investigate
-    # this design.
-    assert data[-1].upper == 0x10FFFF
-    assert data[-1].upper - data[-1].lower > 900000
+    # The output table has two large entries at the end, with a small "gap"
+    #   E0100..E01EF  ; Grapheme_Extend # Mn [240] VARIATION SELECTOR-17..VARIATION SELECTOR-256
+    # Based on Unicode 15.1.0:
+    # - Encoding all these entries in the table requires 1173 entries.
+    # - Manually handling these last two blocks reduces the size to 729 entries.
+    # This not only reduces the binary size, but also improves the performance
+    # by having fewer elements to search.
+    # The exact entries may differ between Unicode versions. When these numbers
+    # change the test needs to be updated too.
+    #   libcxx/test/libcxx/utilities/format/format.string/format.string.std/escaped_output.pass.cpp
+    assert (data[-2].lower) == 0x323B0
+    assert (data[-2].upper) == 0xE00FF
+    assert (data[-1].lower) == 0xE01F0
+    assert (data[-1].upper) == 0x10FFFF
 
-    return "\n".join([generate_cpp_data(data[:-1], data[-1].lower)])
+    return "\n".join(
+        [
+            generate_cpp_data(
+                data[:-2], data[-2].lower, data[-2].upper + 1, data[-1].lower - 1
+            )
+        ]
+    )
 
 
 if __name__ == "__main__":

@@ -14,7 +14,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -33,7 +32,7 @@ namespace hlfir {
 } // namespace hlfir
 
 /// If the elemental has only two uses and those two are an apply operation and
-/// a destory operation, return those two, otherwise return {}
+/// a destroy operation, return those two, otherwise return {}
 static std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>>
 getTwoUses(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -41,6 +40,11 @@ getTwoUses(hlfir::ElementalOp elemental) {
   if (std::distance(users.begin(), users.end()) != 2) {
     return std::nullopt;
   }
+
+  // If the ElementalOp must produce a temporary (e.g. for
+  // finalization purposes), then we cannot inline it.
+  if (hlfir::elementalOpMustProduceTemp(elemental))
+    return std::nullopt;
 
   hlfir::ApplyOp apply;
   hlfir::DestroyOp destroy;
@@ -69,22 +73,29 @@ class InlineElementalConversion
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
                   mlir::PatternRewriter &rewriter) const override {
     std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>> maybeTuple =
         getTwoUses(elemental);
-    if (!maybeTuple) {
-      return rewriter.notifyMatchFailure(elemental.getLoc(),
-                                         [](mlir::Diagnostic &) {});
+    if (!maybeTuple)
+      return rewriter.notifyMatchFailure(
+          elemental, "hlfir.elemental does not have two uses");
+
+    if (elemental.isOrdered()) {
+      // We can only inline the ordered elemental into a loop-like
+      // construct that processes the indices in-order and does not
+      // have the side effects itself. Adhere to conservative behavior
+      // for the time being.
+      return rewriter.notifyMatchFailure(elemental,
+                                         "hlfir.elemental is ordered");
     }
     auto [apply, destroy] = *maybeTuple;
 
     assert(elemental.getRegion().hasOneBlock() &&
            "expect elemental region to have one block");
 
-    fir::FirOpBuilder builder{rewriter,
-                              fir::KindMapping{rewriter.getContext()}};
+    fir::FirOpBuilder builder{rewriter, elemental.getOperation()};
     builder.setInsertionPointAfter(apply);
     hlfir::YieldElementOp yield = hlfir::inlineElementalOp(
         elemental.getLoc(), builder, elemental, apply.getIndices());
@@ -104,25 +115,22 @@ class InlineElementalsPass
     : public hlfir::impl::InlineElementalsBase<InlineElementalsPass> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
     mlir::MLIRContext *context = &getContext();
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            func, std::move(patterns), config))) {
-      mlir::emitError(func->getLoc(), "failure in HLFIR elemental inlining");
+            getOperation(), std::move(patterns), config))) {
+      mlir::emitError(getOperation()->getLoc(),
+                      "failure in HLFIR elemental inlining");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createInlineElementalsPass() {
-  return std::make_unique<InlineElementalsPass>();
-}

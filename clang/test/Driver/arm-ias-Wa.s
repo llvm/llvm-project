@@ -12,7 +12,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-CPU %s
 // CHECK-CPU: "-target-cpu" "cortex-a15"
 
-// RUN: %clang -target arm -Wa,-mcpu=bogus -c %s -### 2>&1 \
+// RUN: not %clang --target=arm -Wa,-mcpu=bogus -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
 // CHECK-BOGUS-CPU: error: unsupported argument '-mcpu=bogus' to option '-Wa,'
 
@@ -25,7 +25,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NEON %s
 // CHECK-NEON: "-target-feature" "+neon"
 
-// RUN: %clang -target arm-linux-eabi -Wa,-mfpu=bogus -c %s -### 2>&1 \
+// RUN: not %clang --target=arm-linux-eabi -Wa,-mfpu=bogus -c %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-BOGUS-FPU %s
 // CHECK-BOGUS-FPU: error: {{.*}} does not support '-Wa,-mfpu=bogus'
 
@@ -36,7 +36,7 @@
 // ================================================================= Arch
 // Arch validation only for now, in case we're passing to an external asm
 
-// RUN: %clang -target arm -Wa,-march=armbogusv6 -c %s -### 2>&1 \
+// RUN: not %clang --target=arm -Wa,-march=armbogusv6 -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-BOGUS-ARCH %s
 // CHECK-BOGUS-ARCH: error: unsupported argument '-march=armbogusv6' to option '-Wa,'
 
@@ -54,7 +54,7 @@
 // CHECK-THUMB: "-target-feature" "-hwdiv-arm"
 // CHECK-THUMB: "-target-feature" "+hwdiv"
 
-// RUN: %clang -target arm -Wa,-mhwdiv=bogus -c %s -### 2>&1 \
+// RUN: not %clang --target=arm -Wa,-mhwdiv=bogus -c %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-BOGUS-HDIV %s
 // CHECK-BOGUS-HDIV: error: {{.*}} does not support '-Wa,-mhwdiv=bogus'
 
@@ -71,7 +71,7 @@
 
 // RUN: %clang -target armv7r-none-eabi -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-R-PROFILE %s
-// CHECK-R-PROFILE: "-triple" "armv7r-none-unknown-eabi"
+// CHECK-R-PROFILE: "-triple" "armv7r-unknown-none-eabi"
 
 // RUN: %clang -target armv7m-none-eabi -c %s -### 2>&1 \
 // RUN: %clang -target thumbv7m-none-eabi -c %s -### 2>&1 \

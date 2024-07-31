@@ -273,7 +273,7 @@ protected:
 
   PointerType *GetI8PtrTy() {
     if (!m_i8ptr_ty)
-      m_i8ptr_ty = llvm::Type::getInt8PtrTy(m_module.getContext());
+      m_i8ptr_ty = llvm::PointerType::getUnqual(m_module.getContext());
 
     return m_i8ptr_ty;
   }

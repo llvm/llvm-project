@@ -1,3 +1,13 @@
+if(LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(gpu)
+  return()
+endif()
+
+# The CPU build depends on Google benchmark.
+if(NOT LIBC_INCLUDE_BENCHMARKS)
+  return()
+endif()
+
 find_package(Threads)
 
 set(LLVM_LINK_COMPONENTS
@@ -85,6 +95,9 @@ add_library(libc-benchmark
     LibcBenchmark.h
 )
 
+target_include_directories(libc-benchmark
+    PUBLIC ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR}
+)
 target_link_libraries(libc-benchmark
     PUBLIC
     benchmark::benchmark
@@ -159,7 +172,7 @@ function(add_libc_multi_impl_benchmark name)
         get_target_property(entrypoint_object_file ${fq_config_name} "OBJECT_FILE_RAW")
         target_link_libraries(${benchmark_name} PUBLIC json ${entrypoint_object_file})
         string(TOUPPER ${name} name_upper)
-        target_compile_definitions(${benchmark_name} PRIVATE "-DLIBC_BENCHMARK_FUNCTION_${name_upper}=__llvm_libc::${name}" "-DLIBC_BENCHMARK_FUNCTION_NAME=\"${fq_config_name}\"")
+        target_compile_definitions(${benchmark_name} PRIVATE "-DLIBC_BENCHMARK_FUNCTION_${name_upper}=LIBC_NAMESPACE::${name}" "-DLIBC_BENCHMARK_FUNCTION_NAME=\"${fq_config_name}\"")
         llvm_update_compile_flags(${benchmark_name})
     else()
       message(STATUS "Skipping benchmark for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")

@@ -77,10 +77,10 @@ public:
     return 0;
   }
 
-  StringPoolValueType GetMangledCounterpart(const char *ccstr) const {
+  StringPoolValueType GetMangledCounterpart(const char *ccstr) {
     if (ccstr != nullptr) {
-      const uint8_t h = hash(llvm::StringRef(ccstr));
-      llvm::sys::SmartScopedReader<false> rlock(m_string_pools[h].m_mutex);
+      const PoolEntry &pool = selectPool(llvm::StringRef(ccstr));
+      llvm::sys::SmartScopedReader<false> rlock(pool.m_mutex);
       return GetStringMapEntryFromKeyData(ccstr).getValue();
     }
     return nullptr;
@@ -100,19 +100,20 @@ public:
 
   const char *GetConstCStringWithStringRef(llvm::StringRef string_ref) {
     if (string_ref.data()) {
-      const uint8_t h = hash(string_ref);
+      const uint32_t string_hash = StringPool::hash(string_ref);
+      PoolEntry &pool = selectPool(string_hash);
 
       {
-        llvm::sys::SmartScopedReader<false> rlock(m_string_pools[h].m_mutex);
-        auto it = m_string_pools[h].m_string_map.find(string_ref);
-        if (it != m_string_pools[h].m_string_map.end())
+        llvm::sys::SmartScopedReader<false> rlock(pool.m_mutex);
+        auto it = pool.m_string_map.find(string_ref, string_hash);
+        if (it != pool.m_string_map.end())
           return it->getKeyData();
       }
 
-      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+      llvm::sys::SmartScopedWriter<false> wlock(pool.m_mutex);
       StringPoolEntryType &entry =
-          *m_string_pools[h]
-               .m_string_map.insert(std::make_pair(string_ref, nullptr))
+          *pool.m_string_map
+               .insert(std::make_pair(string_ref, nullptr), string_hash)
                .first;
       return entry.getKeyData();
     }
@@ -125,12 +126,14 @@ public:
     const char *demangled_ccstr = nullptr;
 
     {
-      const uint8_t h = hash(demangled);
-      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+      const uint32_t demangled_hash = StringPool::hash(demangled);
+      PoolEntry &pool = selectPool(demangled_hash);
+      llvm::sys::SmartScopedWriter<false> wlock(pool.m_mutex);
 
       // Make or update string pool entry with the mangled counterpart
-      StringPool &map = m_string_pools[h].m_string_map;
-      StringPoolEntryType &entry = *map.try_emplace(demangled).first;
+      StringPool &map = pool.m_string_map;
+      StringPoolEntryType &entry =
+          *map.try_emplace_with_hash(demangled, demangled_hash).first;
 
       entry.second = mangled_ccstr;
 
@@ -141,8 +144,8 @@ public:
     {
       // Now assign the demangled const string as the counterpart of the
       // mangled const string...
-      const uint8_t h = hash(llvm::StringRef(mangled_ccstr));
-      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+      PoolEntry &pool = selectPool(llvm::StringRef(mangled_ccstr));
+      llvm::sys::SmartScopedWriter<false> wlock(pool.m_mutex);
       GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
     }
 
@@ -171,17 +174,20 @@ public:
   }
 
 protected:
-  uint8_t hash(llvm::StringRef s) const {
-    uint32_t h = llvm::djbHash(s);
-    return ((h >> 24) ^ (h >> 16) ^ (h >> 8) ^ h) & 0xff;
-  }
-
   struct PoolEntry {
     mutable llvm::sys::SmartRWMutex<false> m_mutex;
     StringPool m_string_map;
   };
 
   std::array<PoolEntry, 256> m_string_pools;
+
+  PoolEntry &selectPool(const llvm::StringRef &s) {
+    return selectPool(StringPool::hash(s));
+  }
+
+  PoolEntry &selectPool(uint32_t h) {
+    return m_string_pools[((h >> 24) ^ (h >> 16) ^ (h >> 8) ^ h) & 0xff];
+  }
 };
 
 // Frameworks and dylibs aren't supposed to have global C++ initializers so we
@@ -197,7 +203,7 @@ static Pool &StringPool() {
   static Pool *g_string_pool = nullptr;
 
   llvm::call_once(g_pool_initialization_flag,
-                 []() { g_string_pool = new Pool(); });
+                  []() { g_string_pool = new Pool(); });
 
   return *g_string_pool;
 }

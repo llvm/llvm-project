@@ -97,6 +97,16 @@ The presence of ``address`` can cause the condition unsatisfied. LLD will warn.
 GNU ld from Binutils 2.35 onwards will reduce sh_addralign so that
 sh_addr=0 (modulo sh_addralign).
 
+When an output section has no input section, GNU ld will eliminate it if it
+only contains symbol assignments (e.g. ``.foo { symbol = 42; }``). LLD will
+retain such sections unless all the symbol assignments are unreferenced
+``PROVIDED``.
+
+When an output section has no input section but advances the location counter,
+GNU ld sets the ``SHF_WRITE`` flag. LLD sets the SHF_WRITE flag only if the
+preceding output section with non-empty input sections also has the SHF_WRITE
+flag.
+
 Output section type
 -------------------
 
@@ -172,3 +182,29 @@ description in the ``OVERWRITE_SECTIONS`` command while the insert command
 still applies (possibly after orphan section placement). It is recommended to
 leave the brace empty (i.e. ``section : {}``) for the insert command, because
 its description will be ignored anyway.
+
+Built-in functions
+~~~~~~~~~~~~~~~~~~
+
+``DATA_SEGMENT_RELRO_END(offset, exp)`` defines the end of the ``PT_GNU_RELRO``
+segment when ``-z relro`` (default) is in effect. Sections between
+``DATA_SEGMENT_ALIGN`` and ``DATA_SEGMENT_RELRO_END`` are considered RELRO.
+
+The typical use case is ``. = DATA_SEGMENT_RELRO_END(0, .);`` followed by
+writable but non-RELRO sections. LLD ignores ``offset`` and ``exp`` and aligns
+the current location to a max-page-size boundary, ensuring that the next
+``PT_LOAD`` segment will not overlap with the ``PT_GNU_RELRO`` segment.
+
+LLD will insert ``.relro_padding`` immediately before the symbol assignment
+using ``DATA_SEGMENT_RELRO_END``.
+
+Non-contiguous regions
+~~~~~~~~~~~~~~~~~~~~~~
+
+The flag ``--enable-non-contiguous-regions`` allows input sections to spill to
+later matches rather than causing the link to fail by overflowing a memory
+region. Unlike GNU ld, ``/DISCARD/`` only matches previously-unmatched sections
+(i.e., the flag does not affect it). Also, if a section fails to fit at any of
+its matches, the link fails instead of discarding the section. Accordingly, the
+GNU flag ``--enable-non-contiguous-regions-warnings`` is not implemented, as it
+exists to warn about such occurrences.

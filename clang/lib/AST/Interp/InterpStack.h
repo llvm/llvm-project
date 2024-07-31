@@ -14,6 +14,8 @@
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
 #include "FunctionPointer.h"
+#include "IntegralAP.h"
+#include "MemberPointer.h"
 #include "PrimType.h"
 #include <memory>
 #include <vector>
@@ -44,9 +46,8 @@ public:
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peek<T>();
-    auto Value = std::move(*Ptr);
-    Ptr->~T();
+    T *Ptr = &peekInternal<T>();
+    T Value = std::move(*Ptr);
     shrink(aligned_size<T>());
     return Value;
   }
@@ -54,17 +55,22 @@ public:
   /// Discards the top value from the stack.
   template <typename T> void discard() {
 #ifndef NDEBUG
+    assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peek<T>();
+    T *Ptr = &peekInternal<T>();
     Ptr->~T();
     shrink(aligned_size<T>());
   }
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
-    return *reinterpret_cast<T *>(peekData(aligned_size<T>()));
+#ifndef NDEBUG
+    assert(!ItemTypes.empty());
+    assert(ItemTypes.back() == toPrimType<T>());
+#endif
+    return peekInternal<T>();
   }
 
   template <typename T> T &peek(size_t Offset) const {
@@ -81,8 +87,11 @@ public:
   /// Clears the stack without calling any destructors.
   void clear();
 
-  // Returns whether the stack is empty.
+  /// Returns whether the stack is empty.
   bool empty() const { return StackSize == 0; }
+
+  /// dump the stack contents to stderr.
+  void dump() const;
 
 private:
   /// All stack slots are aligned to the native pointer alignment for storage.
@@ -90,6 +99,11 @@ private:
   template <typename T> constexpr size_t aligned_size() const {
     constexpr size_t PtrAlign = alignof(void *);
     return ((sizeof(T) + PtrAlign - 1) / PtrAlign) * PtrAlign;
+  }
+
+  /// Like the public peek(), but without the debug type checks.
+  template <typename T> T &peekInternal() const {
+    return *reinterpret_cast<T *>(peekData(aligned_size<T>()));
   }
 
   /// Grows the stack to accommodate a value and returns a pointer to it.
@@ -170,6 +184,12 @@ private:
       return PT_Float;
     else if constexpr (std::is_same_v<T, FunctionPointer>)
       return PT_FnPtr;
+    else if constexpr (std::is_same_v<T, IntegralAP<true>>)
+      return PT_IntAP;
+    else if constexpr (std::is_same_v<T, IntegralAP<false>>)
+      return PT_IntAP;
+    else if constexpr (std::is_same_v<T, MemberPointer>)
+      return PT_MemberPtr;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

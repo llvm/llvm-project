@@ -35,7 +35,7 @@ public:
   X86TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
                    std::optional<Reloc::Model> RM,
-                   std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                   std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
   ~X86TargetMachine() override;
 
@@ -57,6 +57,21 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
+  yaml::MachineFunctionInfo *
+  convertFuncInfoToYAML(const MachineFunction &MF) const override;
+  bool parseMachineFunctionInfo(const yaml::MachineFunctionInfo &,
+                                PerFunctionMIParsingState &PFS,
+                                SMDiagnostic &Error,
+                                SMRange &SourceRange) const override;
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
+                             raw_pwrite_stream *, CodeGenFileType,
+                             const CGPassBuilderOption &,
+                             PassInstrumentationCallbacks *) override;
 
   bool isJIT() const { return IsJIT; }
 

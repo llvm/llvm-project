@@ -2438,12 +2438,6 @@ defm t2SUB  : T2I_bin_ii12rs<0b101, "sub", sub>;
 defm t2ADDS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMaddc, 1>;
 defm t2SUBS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMsubc>;
 
-def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_imm:$imm),
-            (t2SUBSri $Rn, t2_so_imm:$imm)>;
-def : T2Pat<(ARMsubs GPRnopc:$Rn, rGPR:$Rm), (t2SUBSrr $Rn, $Rm)>;
-def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_reg:$ShiftedRm),
-            (t2SUBSrs $Rn, t2_so_reg:$ShiftedRm)>;
-
 defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1, 1>;
 defm t2SBC  : T2I_adde_sube_irs<0b1011, "sbc", ARMsube, 0, 1>;
 
@@ -3448,7 +3442,7 @@ class T2I_crc32<bit C, bits<2> sz, string suffix, SDPatternOperator builtin>
   : T2ThreeRegNoP<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), NoItinerary,
                !strconcat("crc32", suffix, "\t$Rd, $Rn, $Rm"),
                [(set rGPR:$Rd, (builtin rGPR:$Rn, rGPR:$Rm))]>,
-               Requires<[IsThumb2, HasV8, HasCRC]> {
+               Requires<[IsThumb2, HasCRC]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-21} = 0b010110;
   let Inst{20}    = C;
@@ -4893,23 +4887,23 @@ def : T2Pat<(atomic_load_32  t2addrmode_negimm8:$addr),
             (t2LDRi8    t2addrmode_negimm8:$addr)>;
 def : T2Pat<(atomic_load_32  t2addrmode_so_reg:$addr),
             (t2LDRs     t2addrmode_so_reg:$addr)>;
-def : T2Pat<(atomic_store_8  t2addrmode_imm12:$addr, GPR:$val),
+def : T2Pat<(atomic_store_8  GPR:$val, t2addrmode_imm12:$addr),
             (t2STRBi12  GPR:$val, t2addrmode_imm12:$addr)>;
-def : T2Pat<(atomic_store_8  t2addrmode_negimm8:$addr, GPR:$val),
+def : T2Pat<(atomic_store_8  GPR:$val, t2addrmode_negimm8:$addr),
             (t2STRBi8   GPR:$val, t2addrmode_negimm8:$addr)>;
-def : T2Pat<(atomic_store_8  t2addrmode_so_reg:$addr, GPR:$val),
+def : T2Pat<(atomic_store_8  GPR:$val, t2addrmode_so_reg:$addr),
             (t2STRBs    GPR:$val, t2addrmode_so_reg:$addr)>;
-def : T2Pat<(atomic_store_16 t2addrmode_imm12:$addr, GPR:$val),
+def : T2Pat<(atomic_store_16 GPR:$val, t2addrmode_imm12:$addr),
             (t2STRHi12  GPR:$val, t2addrmode_imm12:$addr)>;
-def : T2Pat<(atomic_store_16 t2addrmode_negimm8:$addr, GPR:$val),
+def : T2Pat<(atomic_store_16 GPR:$val, t2addrmode_negimm8:$addr),
             (t2STRHi8   GPR:$val, t2addrmode_negimm8:$addr)>;
-def : T2Pat<(atomic_store_16 t2addrmode_so_reg:$addr, GPR:$val),
+def : T2Pat<(atomic_store_16 GPR:$val, t2addrmode_so_reg:$addr),
             (t2STRHs    GPR:$val, t2addrmode_so_reg:$addr)>;
-def : T2Pat<(atomic_store_32 t2addrmode_imm12:$addr, GPR:$val),
+def : T2Pat<(atomic_store_32 GPR:$val,t2addrmode_imm12:$addr),
             (t2STRi12   GPR:$val, t2addrmode_imm12:$addr)>;
-def : T2Pat<(atomic_store_32 t2addrmode_negimm8:$addr, GPR:$val),
+def : T2Pat<(atomic_store_32 GPR:$val, t2addrmode_negimm8:$addr),
             (t2STRi8    GPR:$val, t2addrmode_negimm8:$addr)>;
-def : T2Pat<(atomic_store_32 t2addrmode_so_reg:$addr, GPR:$val),
+def : T2Pat<(atomic_store_32 GPR:$val, t2addrmode_so_reg:$addr),
             (t2STRs     GPR:$val, t2addrmode_so_reg:$addr)>;
 
 let AddedComplexity = 8, Predicates = [IsThumb, HasAcquireRelease, HasV7Clrex] in {
@@ -5092,14 +5086,14 @@ def : InstAlias<"dmb${p}.w", (t2DMB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}.w\t$opt", (t2DSB memb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}.w", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
-def : InstAlias<"isb${p}.w\t$opt", (t2ISB memb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
+def : InstAlias<"isb${p}.w\t$opt", (t2ISB instsyncb_opt:$opt, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}.w", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 
-// Non-predicable aliases of a predicable DSB: the predicate is (14, 0) where
-// 14 = AL (always execute) and 0 = "instruction doesn't read the CPSR".
-def : InstAlias<"ssbb", (t2DSB 0x0, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
-def : InstAlias<"pssbb", (t2DSB 0x4, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
+// Non-predicable aliases of a predicable DSB: the predicate is (14, zero_reg) where
+// 14 = AL (always execute) and zero_reg = "instruction doesn't read the CPSR".
+def : InstAlias<"ssbb", (t2DSB 0x0, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"pssbb", (t2DSB 0x4, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
 
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;

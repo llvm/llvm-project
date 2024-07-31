@@ -21,6 +21,7 @@ namespace llvm {
 
 class GCNSubtarget;
 class MachineMemOperand;
+class MachineInstr;
 
 class AMDGPUInstrInfo {
 public:
@@ -30,6 +31,13 @@ public:
 };
 
 namespace AMDGPU {
+
+/// Return the intrinsic ID for opcodes with the G_AMDGPU_INTRIN_ prefix.
+///
+/// These opcodes have an Intrinsic::ID operand similar to a GIntrinsic. But
+/// they are not actual instances of GIntrinsics, so we cannot use
+/// GIntrinsic::getIntrinsicID() on them.
+Intrinsic::ID getIntrinsicID(const MachineInstr &I);
 
 struct RsrcIntrinsic {
   unsigned Intr;

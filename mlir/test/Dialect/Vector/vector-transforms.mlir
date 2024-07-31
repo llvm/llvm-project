@@ -18,6 +18,38 @@ func.func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
   return %1: vector<4x2xf32>
 }
 
+// Regression test. Previously, this example would trigger
+// CastAwayElementwiseLeadingOneDim as:
+//    * `vector<2x[4]x1xf32>`, would be reformulated as
+//    * `vector<2x4x1xf32>`.
+// With the updated shape, the conversion pattern would incorrectly assume that
+// some leading dims have been dropped.
+// CHECK-LABEL:   func.func @no_change(
+// CHECK-SAME:      %[[VAL_0:.*]]: vector<2x[4]x1xf32>,
+// CHECK-SAME:      %[[VAL_1:.*]]: vector<2x[4]x1xf32>)
+// CHECK-NEXT:           %[[VAL_2:.*]] = arith.mulf %[[VAL_0]], %[[VAL_1]] : vector<2x[4]x1xf32>
+// CHECK-NEXT:           return %[[VAL_2]]
+func.func @no_change(%arg0: vector<2x[4]x1xf32>, %arg1: vector<2x[4]x1xf32>) -> vector<2x[4]x1xf32> {
+  %1 = arith.mulf %arg0, %arg1 : vector<2x[4]x1xf32>
+  return %1 : vector<2x[4]x1xf32>
+}
+
+// CHECK-LABEL:   func.func @cast_away_leading_one_dim(
+// CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<4x1xf32>
+// CHECK:           vector.broadcast %[[MUL]] : vector<4x1xf32> to vector<1x4x1xf32>
+func.func @cast_away_leading_one_dim(%arg0: vector<1x4x1xf32>, %arg1: vector<1x4x1xf32>) -> vector<1x4x1xf32> {
+  %1 = arith.mulf %arg0, %arg1 : vector<1x4x1xf32>
+  return %1: vector<1x4x1xf32>
+}
+
+// CHECK-LABEL:   func.func @cast_away_leading_one_dim_scalable(
+// CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<[4]x1xf32>
+// CHECK:           vector.broadcast %[[MUL]] : vector<[4]x1xf32> to vector<1x[4]x1xf32>
+func.func @cast_away_leading_one_dim_scalable(%arg0: vector<1x[4]x1xf32>, %arg1: vector<1x[4]x1xf32>) -> vector<1x[4]x1xf32> {
+  %1 = arith.mulf %arg0, %arg1 : vector<1x[4]x1xf32>
+  return %1: vector<1x[4]x1xf32>
+}
+
 // CHECK-LABEL: func @add4x4
 //      CHECK: %[[S1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
 // CHECK-NEXT: %[[S2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf32> to vector<2x2xf32>
@@ -253,14 +285,16 @@ func.func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
 //  CHECK-SAME: %[[SRC:.+]]: vector<4xf32>
 func.func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
   %0 = vector.bitcast %src : vector<4xf32> to vector<8xf16>
-  // CHECK: %[[EXTRACT1:.+]] = vector.extract %[[SRC]][1] : vector<4xf32>
-  // CHECK:    %[[CAST1:.+]] = vector.bitcast %[[EXTRACT1]] : vector<1xf32> to vector<2xf16>
-  // CHECK: %[[EXTRACT2:.+]] = vector.extract %[[CAST1]][1] : vector<2xf16>
-  %1 = vector.extract %0[3] : vector<8xf16>
-  // CHECK: %[[EXTRACT3:.+]] = vector.extract %[[SRC]][2] : vector<4xf32>
-  // CHECK:    %[[CAST2:.+]] = vector.bitcast %[[EXTRACT3]] : vector<1xf32> to vector<2xf16>
-  // CHECK: %[[EXTRACT4:.+]] = vector.extract %[[CAST2]][0] : vector<2xf16>
-  %2 = vector.extract %0[4] : vector<8xf16>
+  // CHECK: %[[EXTRACT1:.+]] = vector.extract %[[SRC]][1] : f32 from vector<4xf32>
+  // CHECK:  %[[INSERT1:.+]] = vector.insert %[[EXTRACT1]], %{{.+}} [0] : f32 into vector<1xf32>
+  // CHECK:    %[[CAST1:.+]] = vector.bitcast %[[INSERT1]] : vector<1xf32> to vector<2xf16>
+  // CHECK: %[[EXTRACT2:.+]] = vector.extract %[[CAST1]][1] : f16 from vector<2xf16>
+  %1 = vector.extract %0[3] : f16 from vector<8xf16>
+  // CHECK: %[[EXTRACT3:.+]] = vector.extract %[[SRC]][2] : f32 from vector<4xf32>
+  // CHECK:  %[[INSERT3:.+]] = vector.insert %[[EXTRACT3]], %{{.+}} [0] : f32 into vector<1xf32>
+  // CHECK:    %[[CAST2:.+]] = vector.bitcast %[[INSERT3]] : vector<1xf32> to vector<2xf16>
+  // CHECK: %[[EXTRACT4:.+]] = vector.extract %[[CAST2]][0] : f16 from vector<2xf16>
+  %2 = vector.extract %0[4] : f16 from vector<8xf16>
   // CHECK: return %[[EXTRACT2]], %[[EXTRACT4]]
   return %1, %2: f16, f16
 }
@@ -303,6 +337,51 @@ func.func @bubble_down_bitcast_in_strided_slice_extract_odd_size(%arg0: vector<4
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
   %0 = vector.extract_strided_slice %cast {offsets = [0], sizes = [3], strides = [1]} : vector<8xf16> to vector<3xf16>
   return %0: vector<3xf16>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i4_i8(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<32xi4>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x32xi4>) -> vector<8x16xi8> {
+func.func @bubble_up_bitcast_in_insert_i4_i8(%val: vector<32xi4>, %src: vector<8x32xi4>) -> vector<8x16xi8> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<32xi4> to vector<16xi8>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x32xi4> to vector<8x16xi8>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<16xi8> into vector<8x16xi8>
+  %0 = vector.insert %val, %src[4] : vector<32xi4> into vector<8x32xi4>
+  %1 = vector.bitcast %0 : vector<8x32xi4> to vector<8x16xi8>
+  return %1 : vector<8x16xi8>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i8_i4(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<16xi8>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x16xi8>) -> vector<8x32xi4> {
+func.func @bubble_up_bitcast_in_insert_i8_i4(%val: vector<16xi8>, %src: vector<8x16xi8>) -> vector<8x32xi4> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<16xi8> to vector<32xi4>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x16xi8> to vector<8x32xi4>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<32xi4> into vector<8x32xi4>
+  %0 = vector.insert %val, %src[4] : vector<16xi8> into vector<8x16xi8>
+  %1 = vector.bitcast %0 : vector<8x16xi8> to vector<8x32xi4>
+  return %1 : vector<8x32xi4>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i32_f32(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<16xi32>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x16xi32>) -> vector<8x16xf32> {
+func.func @bubble_up_bitcast_in_insert_i32_f32(%val: vector<16xi32>, %src: vector<8x16xi32>) -> vector<8x16xf32> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<16xi32> to vector<16xf32>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x16xi32> to vector<8x16xf32>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<16xf32> into vector<8x16xf32>
+  %0 = vector.insert %val, %src[4] : vector<16xi32> into vector<8x16xi32>
+  %1 = vector.bitcast %0 : vector<8x16xi32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_scalar(
+func.func @bubble_up_bitcast_in_insert_scalar(%val: i8, %src: vector<8x16xi8>) -> vector<8x32xi4> {
+// CHECK:           vector.insert
+// CHECK-NEXT:      vector.bitcast
+  %0 = vector.insert %val, %src[4, 8] : i8 into vector<8x16xi8>
+  %1 = vector.bitcast %0 : vector<8x16xi8> to vector<8x32xi4>
+  return %1 : vector<8x32xi4>
 }
 
 // CHECK-LABEL: func @bubble_up_bitcast_in_strided_slice_insert

@@ -1,11 +1,11 @@
 ; RUN: opt < %s -disable-output -passes='default<O2>' -time-passes 2>&1 | FileCheck %s --check-prefix=TIME
 ;
 ; For new pass manager, check that -time-passes-per-run emit one report for each pass run.
-; RUN: opt < %s -disable-output -passes='instcombine,instcombine,loop-mssa(licm)' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-PER-RUN
+; RUN: opt < %s -disable-output -passes='coro-cleanup,function(instcombine,instcombine,loop-mssa(licm))' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-PER-RUN --check-prefix=TIME-PER-RUN-CORO
 ; RUN: opt < %s -disable-output -passes='instcombine,loop-mssa(licm),instcombine,loop-mssa(licm)' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-PER-RUN -check-prefix=TIME-DOUBLE-LICM
 ;
 ; For new pass manager, check that -time-passes emit one report for each pass.
-; RUN: opt < %s -disable-output -passes='instcombine,instcombine,loop-mssa(licm)' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-PER-PASS
+; RUN: opt < %s -disable-output -passes='coro-cleanup,function(instcombine,instcombine,loop-mssa(licm))' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-PER-PASS,TIME-PER-PASS-CORO
 ; RUN: opt < %s -disable-output -passes='instcombine,loop-mssa(licm),instcombine,loop-mssa(licm)' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-PER-PASS
 ;
 ; The following 2 test runs verify -info-output-file interaction (default goes to stderr, '-' goes to stdout).
@@ -30,11 +30,15 @@
 ; TIME-PER-RUN-DAG:      LCSSAPass
 ; TIME-PER-RUN-DAG:      LoopSimplifyPass
 ; TIME-PER-RUN-DAG:      VerifierPass
+; TIME-PER-RUN-CORO-DAG:     SimplifyCFGPass #1
+; TIME-PER-RUN-CORO-DAG:     CoroCleanupPass #1
 ; TIME-PER-PASS-DAG:   InstCombinePass
 ; TIME-PER-PASS-DAG:   LICMPass
 ; TIME-PER-PASS-DAG:   LCSSAPass
 ; TIME-PER-PASS-DAG:   LoopSimplifyPass
 ; TIME-PER-PASS-DAG:   VerifierPass
+; TIME-PER-PASS-CORO-DAG:    SimplifyCFGPass
+; TIME-PER-PASS-CORO-DAG:    CoroCleanupPass
 ; TIME-PER-PASS-NOT:   InstCombinePass #
 ; TIME-PER-PASS-NOT:   LICMPass #
 ; TIME-PER-PASS-NOT:   LCSSAPass #
@@ -78,3 +82,10 @@ end:
   ret void
 
 }
+
+define void @baz_coro() {
+  %unused = call ptr @llvm.coro.begin(token none, ptr null)
+  ret void
+}
+
+declare ptr @llvm.coro.begin(token, ptr)

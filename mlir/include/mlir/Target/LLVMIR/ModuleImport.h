@@ -23,6 +23,7 @@
 namespace llvm {
 class BasicBlock;
 class CallBase;
+class DbgVariableIntrinsic;
 class Function;
 class Instruction;
 class Value;
@@ -45,7 +46,8 @@ class LoopAnnotationImporter;
 /// that are introduced at the beginning of the region.
 class ModuleImport {
 public:
-  ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule);
+  ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -55,6 +57,10 @@ public:
 
   /// Converts all functions of the LLVM module to MLIR functions.
   LogicalResult convertFunctions();
+
+  /// Converts all comdat selectors of the LLVM module to MLIR comdat
+  /// operations.
+  LogicalResult convertComdats();
 
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
@@ -143,9 +149,20 @@ public:
   /// fails.
   DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
 
-  /// Converts `value` to an array of symbol references pointing to alias scope
-  /// operations, or returns failure if the conversion fails.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Converts `value` to a label attribute. Asserts if the matching fails.
+  DILabelAttr matchLabelAttr(llvm::Value *value);
+
+  /// Converts `value` to a FP exception behavior attribute. Asserts if the
+  /// matching fails.
+  FPExceptionBehaviorAttr matchFPExceptionBehaviorAttr(llvm::Value *value);
+
+  /// Converts `value` to a rounding mode attribute. Asserts if the matching
+  /// fails.
+  RoundingModeAttr matchRoundingModeAttr(llvm::Value *value);
+
+  /// Converts `value` to an array of alias scopes or returns failure if the
+  /// conversion fails.
+  FailureOr<SmallVector<AliasScopeAttr>>
   matchAliasScopeAttrs(llvm::Value *value);
 
   /// Translates the debug location.
@@ -163,30 +180,36 @@ public:
   /// attributes of LLVMFuncOp `funcOp`.
   void processFunctionAttributes(llvm::Function *func, LLVMFuncOp funcOp);
 
+  /// Sets the integer overflow flags (nsw/nuw) attribute for the imported
+  /// operation `op` given the original instruction `inst`. Asserts if the
+  /// operation does not implement the integer overflow flag interface.
+  void setIntegerOverflowFlags(llvm::Instruction *inst, Operation *op) const;
+
   /// Sets the fastmath flags attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
-  /// Converts all LLVM metadata nodes that translate to operations nested in a
-  /// global metadata operation, such as alias analysis or access group
-  /// metadata, and builds a map from the metadata nodes to the symbols pointing
-  /// to the converted operations. Returns success if all conversions succeed
-  /// and failure otherwise.
-  // Note: All metadata is nested inside a single global metadata operation to
-  // minimize the number of symbols that pollute the global namespace.
+  /// Converts !llvm.linker.options metadata to the llvm.linker.options
+  /// LLVM dialect operation.
+  LogicalResult convertLinkerOptionsMetadata();
+
+  /// Converts all LLVM metadata nodes that translate to attributes such as
+  /// alias analysis or access group metadata, and builds a map from the
+  /// metadata nodes to the converted attributes.
+  /// Returns success if all conversions succeed and failure otherwise.
   LogicalResult convertMetadata();
 
-  /// Returns the MLIR symbol reference mapped to the given LLVM TBAA
+  /// Returns the MLIR attribute mapped to the given LLVM TBAA
   /// metadata `node`.
-  SymbolRefAttr lookupTBAAAttr(const llvm::MDNode *node) const {
+  Attribute lookupTBAAAttr(const llvm::MDNode *node) const {
     return tbaaMapping.lookup(node);
   }
 
-  /// Returns the symbol references pointing to the access group operations that
-  /// map to the access group nodes starting from the access group metadata
-  /// `node`. Returns failure, if any of the symbol references cannot be found.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Returns the access group attributes that map to the access group nodes
+  /// starting from the access group metadata `node`. Returns failure, if any of
+  /// the attributes cannot be found.
+  FailureOr<SmallVector<AccessGroupAttr>>
   lookupAccessGroupAttrs(const llvm::MDNode *node) const;
 
   /// Returns the loop annotation attribute that corresponds to the given LLVM
@@ -194,18 +217,35 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
-  /// Returns the symbol references pointing to the alias scope operations that
-  /// map to the alias scope nodes starting from the metadata `node`. Returns
-  /// failure, if any of the symbol references cannot be found.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Returns the alias scope attributes that map to the alias scope nodes
+  /// starting from the metadata `node`. Returns failure, if any of the
+  /// attributes cannot be found.
+  FailureOr<SmallVector<AliasScopeAttr>>
   lookupAliasScopeAttrs(const llvm::MDNode *node) const;
 
+  /// Adds a debug intrinsics to the list of intrinsics that should be converted
+  /// after the function conversion has finished.
+  void addDebugIntrinsic(llvm::CallInst *intrinsic);
+
+  /// Converts the LLVM values for an intrinsic to mixed MLIR values and
+  /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
+  /// list `immArgPositions` contains the positions of immargs on the LLVM
+  /// intrinsic, and `immArgAttrNames` list (of the same length) contains the
+  /// corresponding MLIR attribute names.
+  LogicalResult
+  convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
+                            ArrayRef<unsigned> immArgPositions,
+                            ArrayRef<StringLiteral> immArgAttrNames,
+                            SmallVectorImpl<Value> &valuesOut,
+                            SmallVectorImpl<NamedAttribute> &attrsOut);
+
 private:
-  /// Clears the block and value mapping before processing a new region.
-  void clearBlockAndValueMapping() {
+  /// Clears the accumulated state before processing a new region.
+  void clearRegionState() {
     valueMapping.clear();
     noResultOpMapping.clear();
     blockMapping.clear();
+    debugIntrinsics.clear();
   }
   /// Sets the constant insertion point to the start of the given block.
   void setConstantInsertionPointToStart(Block *block) {
@@ -222,6 +262,12 @@ private:
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
   LogicalResult processBasicBlock(llvm::BasicBlock *bb, Block *block);
+  /// Converts all debug intrinsics in `debugIntrinsics`. Assumes that the
+  /// function containing the intrinsics has been fully converted to MLIR.
+  LogicalResult processDebugIntrinsics();
+  /// Converts a single debug intrinsic.
+  LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
+                                      DominanceInfo &domInfo);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
   LogicalResult convertIntrinsic(llvm::CallInst *inst);
@@ -280,10 +326,10 @@ private:
   /// them fails. All operations are inserted at the start of the current
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
-  /// Returns a global metadata operation that serves as a container for LLVM
-  /// metadata that converts to MLIR operations. Creates the global metadata
-  /// operation on the first invocation.
-  MetadataOp getGlobalMetadataOp();
+  /// Returns a global comdat operation that serves as a container for LLVM
+  /// comdat selectors. Creates the global comdat operation on the first
+  /// invocation.
+  ComdatOp getGlobalComdatOp();
   /// Performs conversion of LLVM TBAA metadata starting from
   /// `node`. On exit from this function all nodes reachable
   /// from `node` are converted, and tbaaMapping map is updated
@@ -292,15 +338,18 @@ private:
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
   /// Converts all LLVM access groups starting from `node` to MLIR access group
   /// operations and stores a mapping from every nested access group node to the
-  /// symbol pointing to the translated operation. Returns success if all
-  /// conversions succeed and failure otherwise.
+  /// translated attribute. Returns success if all conversions succeed and
+  /// failure otherwise.
   LogicalResult processAccessGroupMetadata(const llvm::MDNode *node);
   /// Converts all LLVM alias scopes and domains starting from `node` to MLIR
-  /// alias scope and domain operations and stores a mapping from every nested
-  /// alias scope or alias domain node to the symbol pointing to the translated
-  /// operation. Returns success if all conversions succeed and failure
-  /// otherwise.
+  /// alias scope and domain attributes and stores a mapping from every nested
+  /// alias scope or alias domain node to the translated attribute. Returns
+  /// success if all conversions succeed and failure otherwise.
   LogicalResult processAliasScopeMetadata(const llvm::MDNode *node);
+  /// Converts the given LLVM comdat struct to an MLIR comdat selector operation
+  /// and stores a mapping from the struct to the symbol pointing to the
+  /// translated operation.
+  void processComdat(const llvm::Comdat *comdat);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -310,8 +359,8 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
-  /// Operation to insert metadata operations into.
-  MetadataOp globalMetadataOp = nullptr;
+  /// Operation to insert comdat selector operations into.
+  ComdatOp globalComdatOp = nullptr;
   /// The current context.
   MLIRContext *context;
   /// The MLIR module being created.
@@ -331,18 +380,29 @@ private:
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.
   DenseMap<llvm::Instruction *, Operation *> noResultOpMapping;
-  /// Mapping between LLVM alias scope and domain metadata nodes and symbol
-  /// references to the LLVM dialect operations corresponding to these nodes.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> aliasScopeMapping;
-  /// Mapping between LLVM TBAA metadata nodes and symbol references to the LLVM
-  /// dialect TBAA operations corresponding to these nodes.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
+  /// Function-local list of debug intrinsics that need to be imported after the
+  /// function conversion has finished.
+  SetVector<llvm::Instruction *> debugIntrinsics;
+  /// Mapping between LLVM alias scope and domain metadata nodes and
+  /// attributes in the LLVM dialect corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;
+  /// Mapping between LLVM TBAA metadata nodes and LLVM dialect TBAA attributes
+  /// corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, Attribute> tbaaMapping;
+  /// Mapping between LLVM comdat structs and symbol references to LLVM dialect
+  /// comdat selector operations corresponding to these structs.
+  DenseMap<const llvm::Comdat *, SymbolRefAttr> comdatMapping;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.
   std::unique_ptr<detail::DebugImporter> debugImporter;
   /// Loop annotation importer.
   std::unique_ptr<detail::LoopAnnotationImporter> loopAnnotationImporter;
+
+  /// An option to control if expensive but uncritical diagnostics should be
+  /// emitted. Avoids generating warnings for unhandled debug intrinsics and
+  /// metadata that otherwise dominate the translation time for large inputs.
+  bool emitExpensiveWarnings;
 };
 
 } // namespace LLVM

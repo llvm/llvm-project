@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// When the debug mode is enabled, we don't unwrap iterators in `std::copy` and similar algorithms so we don't get this
-// optimization.
-// UNSUPPORTED: libcpp-has-debug-mode
 // In the modules build, adding another overload of `memmove` doesn't work.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 // GCC complains about "ambiguating" `__builtin_memmove`.
 // UNSUPPORTED: gcc
 
@@ -158,26 +155,6 @@ void test_one(Func func) {
           return lhs == static_cast<From>(rhs);
         }
     }));
-  }
-
-  // Empty input sequence.
-  {
-    const std::size_t N = 0;
-
-    From input[1]  = {make<From>(1)};
-    To output[1] = {make<To>(2)};
-
-    auto in     = InIter(input);
-    auto in_end = InIter(input + N);
-    auto sent   = SentWrapper<decltype(in_end)>(in_end);
-    auto out    = OutIter(output);
-
-    assert(!memmove_called);
-    func(in, sent, out, N);
-
-    assert(memmove_called);
-    memmove_called = false;
-    assert(output[0] == make<To>(2));
   }
 }
 

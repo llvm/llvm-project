@@ -2,7 +2,6 @@
 Test display and Python APIs on file and class static variables.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -107,16 +106,23 @@ class StaticVariableTestCase(TestBase):
         )
 
     def build_value_check(self, var_name, values):
-        children_1 = [ValueCheck(name = "x", value = values[0], type = "int"),
-                      ValueCheck(name = "y", value = values[1], type = "int")]
-        children_2 = [ValueCheck(name = "x", value = values[2], type = "int"),
-                      ValueCheck(name = "y", value = values[3], type = "int")]
-        elem_0 = ValueCheck(name = "[0]", value=None, type = "PointType",
-                            children=children_1)
-        elem_1 = ValueCheck(name = "[1]", value=None, type = "PointType",
-                            children=children_2)
-        value_check = ValueCheck(name=var_name, value = None, type = "PointType[2]",
-                                 children = [elem_0, elem_1])
+        children_1 = [
+            ValueCheck(name="x", value=values[0], type="int"),
+            ValueCheck(name="y", value=values[1], type="int"),
+        ]
+        children_2 = [
+            ValueCheck(name="x", value=values[2], type="int"),
+            ValueCheck(name="y", value=values[3], type="int"),
+        ]
+        elem_0 = ValueCheck(
+            name="[0]", value=None, type="PointType", children=children_1
+        )
+        elem_1 = ValueCheck(
+            name="[1]", value=None, type="PointType", children=children_2
+        )
+        value_check = ValueCheck(
+            name=var_name, value=None, type="PointType[2]", children=[elem_0, elem_1]
+        )
 
         return value_check
 
@@ -161,7 +167,7 @@ class StaticVariableTestCase(TestBase):
         value_check_none = self.build_value_check("g_points", ["3", "4", "33", "44"])
         value_check_AA = self.build_value_check("AA::g_points", ["5", "6", "55", "66"])
 
-        for val in valList: 
+        for val in valList:
             self.DebugSBValue(val)
             name = val.GetName()
             self.assertIn(name, ["g_points", "A::g_points", "AA::g_points"])
@@ -252,17 +258,24 @@ class StaticVariableTestCase(TestBase):
             elif name == "AA::g_points":
                 value_check_AA.check_value(self, val, "A found by regex")
                 found_aa = True
-        
+
         self.assertTrue(found_a, "Regex search found A::g_points")
         self.assertTrue(found_aa, "Regex search found AA::g_points")
+
+        # Regex lowercase should find both as well.
+        val_list = target.FindGlobalVariables(
+            "a::g_points", 10, lldb.eMatchTypeRegexInsensitive
+        )
+        self.assertEqual(val_list.GetSize(), 2, "Found A & AA")
 
         # Normal search for full name should find one, but it looks like we don't match
         # on identifier boundaries here yet:
         val_list = target.FindGlobalVariables("A::g_points", 10, lldb.eMatchTypeNormal)
-        self.assertEqual(val_list.GetSize(), 2, "We aren't matching on name boundaries yet")
+        self.assertEqual(
+            val_list.GetSize(), 2, "We aren't matching on name boundaries yet"
+        )
 
         # Normal search for g_points should find 3 - FindGlobalVariables doesn't distinguish
         # between file statics and globals:
         val_list = target.FindGlobalVariables("g_points", 10, lldb.eMatchTypeNormal)
         self.assertEqual(val_list.GetSize(), 3, "Found all three g_points")
-        

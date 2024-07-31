@@ -217,19 +217,8 @@ ShapeAdaptor ValueShapeRange::getShape(int index) const {
 }
 
 LogicalResult mlir::detail::inferReturnTensorTypes(
-    function_ref<
-        LogicalResult(MLIRContext *, std::optional<Location> location,
-                      ValueShapeRange operands, DictionaryAttr attributes,
-                      OpaqueProperties properties, RegionRange regions,
-                      SmallVectorImpl<ShapedTypeComponents> &retComponents)>
-        componentTypeFn,
-    MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    ArrayRef<ShapedTypeComponents> retComponents,
     SmallVectorImpl<Type> &inferredReturnTypes) {
-  SmallVector<ShapedTypeComponents, 2> retComponents;
-  if (failed(componentTypeFn(context, location, operands, attributes,
-                             properties, regions, retComponents)))
-    return failure();
   for (const auto &shapeAndType : retComponents) {
     Type elementTy = shapeAndType.getElementType();
     assert(elementTy && "element type required to construct tensor");
@@ -251,8 +240,8 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
   auto retTypeFn = cast<InferTypeOpInterface>(op);
   auto result = retTypeFn.refineReturnTypes(
       op->getContext(), op->getLoc(), op->getOperands(),
-      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
-      op->getRegions(), inferredReturnTypes);
+      op->getRawDictionaryAttrs(), op->getPropertiesStorage(), op->getRegions(),
+      inferredReturnTypes);
   if (failed(result))
     op->emitOpError() << "failed to infer returned types";
 

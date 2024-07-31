@@ -29,10 +29,10 @@ struct IndexOpInterface
     cstr.bound(value) >= 0;
 
     // index < dim size
-    int64_t flatDimPos = linalgOp.getShapesToLoopsMap()
-                             .getResult(indexOp.getDim())
-                             .cast<AffineDimExpr>()
-                             .getPosition();
+    int64_t flatDimPos =
+        cast<AffineDimExpr>(
+            linalgOp.getShapesToLoopsMap().getResult(indexOp.getDim()))
+            .getPosition();
     // Find the `flatDimPos`-th operand dimension.
     int64_t flatDimCtr = 0;
     for (Value operand : linalgOp->getOperands()) {
@@ -47,16 +47,6 @@ struct IndexOpInterface
   }
 };
 
-/// Helper structure that iterates over all LinalgOps in `OpTys` and registers
-/// the `ValueBoundsOpInterface` with each of them.
-template <typename... Ops> struct LinalgValueBoundsOpInterfaceHelper {
-  static void registerOpInterface(MLIRContext *ctx) {
-    (Ops::template attachInterface<DstValueBoundsOpInterfaceExternalModel<Ops>>(
-         *ctx),
-     ...);
-  }
-};
-
 } // namespace
 } // namespace linalg
 } // namespace mlir
@@ -65,11 +55,7 @@ void mlir::linalg::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
     IndexOp::attachInterface<IndexOpInterface>(*ctx);
-
-    // Register all Linalg structured ops.
-    LinalgValueBoundsOpInterfaceHelper<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-        >::registerOpInterface(ctx);
+    // Note: ValueBoundsOpInterface implementation is not required for ops that
+    // implement `DestinationStyleOpInterface` (for querying shaped OpResults).
   });
 }

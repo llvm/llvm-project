@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/iterator_range.h"
 #include "gtest/gtest.h"
 
 #include <iterator>
@@ -149,10 +148,6 @@ TYPED_TEST_SUITE(RangeAdapterRValueTest, RangeAdapterRValueTestTypes, );
 
 TYPED_TEST(RangeAdapterRValueTest, TrivialOperation) {
   TestRev(reverse(TypeParam({0, 1, 2, 3})));
-}
-
-TYPED_TEST(RangeAdapterRValueTest, HasRbegin) {
-  static_assert(has_rbegin<TypeParam>::value, "rbegin() should be defined");
 }
 
 TYPED_TEST(RangeAdapterRValueTest, RangeType) {

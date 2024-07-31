@@ -14,12 +14,17 @@
 // Most macros here are exposing GCC or Clang features, and are stubbed out for
 // other compilers.
 
-#ifndef LLVM_LIBC_SUPPORT_MACROS_ATTRIBUTES_H
-#define LLVM_LIBC_SUPPORT_MACROS_ATTRIBUTES_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 
 #include "properties/architectures.h"
 
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
 #define LIBC_INLINE inline
+#define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 
@@ -29,4 +34,18 @@
 #define LIBC_THREAD_LOCAL thread_local
 #endif
 
-#endif // LLVM_LIBC_SUPPORT_MACROS_ATTRIBUTES_H
+#if __cplusplus >= 202002L
+#define LIBC_CONSTINIT constinit
+#elif __has_attribute(__require_constant_initialization__)
+#define LIBC_CONSTINIT __attribute__((__require_constant_initialization__))
+#else
+#define LIBC_CONSTINIT
+#endif
+
+#if defined(__clang__) && __has_attribute(preferred_type)
+#define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
+#else
+#define LIBC_PREFERED_TYPE(TYPE)
+#endif
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H

@@ -11,7 +11,7 @@
 
 #include "flang/Runtime/temporary-stack.h"
 #include "terminator.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/memory.h"
@@ -93,8 +93,13 @@ void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
   }
   Descriptor **newData =
       static_cast<Descriptor **>(AllocateMemoryOrCrash(terminator_, bytes));
-  memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
-  FreeMemory(data_);
+  // "memcpy" in glibc has a "nonnull" attribute on the source pointer.
+  // Avoid passing a null pointer, since it would result in an undefined
+  // behavior.
+  if (data_ != nullptr) {
+    memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
+    FreeMemory(data_);
+  }
   data_ = newData;
   capacity_ = newCapacity;
 }

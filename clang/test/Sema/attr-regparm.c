@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -verify %s
 
 __attribute((regparm(2))) int x0(void);
 __attribute((regparm(1.0))) int x1(void); // expected-error{{'regparm' attribute requires an integer constant}}

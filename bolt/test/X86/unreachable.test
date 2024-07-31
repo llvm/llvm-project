@@ -1,4 +1,4 @@
-# Check unreachable code elimination
+## Check unreachable code elimination
 
 RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -pie -shared -o %t.so
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
@@ -12,7 +12,7 @@ RUN: llvm-objdump -d %t --print-imm-hex --disassemble-symbols=foo \
 RUN:   --no-show-raw-insn | FileCheck %s
 
 BOLT: BB Layout   : .LBB{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .LLP{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}
-BOLT: BOLT-INFO: UCE removed 4 blocks and 16 bytes of code.
+BOLT: BOLT-INFO: UCE removed 4 blocks and 16 bytes of code
 BOLT: BB Layout   : .LBB{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .LLP{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}
 
 CHECK: <foo>:

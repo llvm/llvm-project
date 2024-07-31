@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: s_nop 0x3141                            ; encoding: [0x41,0x31,0x80,0xbf]
 0x41,0x31,0x80,0xbf

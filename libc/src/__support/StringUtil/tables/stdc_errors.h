@@ -6,22 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h> // For error macros
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE_DECL {
 
-inline constexpr const MsgTable<4> STDC_ERRORS = {
+LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(0, "Success"),
     MsgMapping(EDOM, "Numerical argument out of domain"),
     MsgMapping(ERANGE, "Numerical result out of range"),
     MsgMapping(EILSEQ, "Invalid or incomplete multibyte or wide character"),
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_ERRORS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_ERRORS_H
