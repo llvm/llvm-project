@@ -108,6 +108,26 @@ elseif (HAVE_LDBL_MANT_DIG_113)
   # We can use 'long double' versions from libc.
   check_library_exists(m sinl "" FOUND_LIBM)
   if (FOUND_LIBM)
+    check_cxx_source_compiles(
+      "#include <cmath>
+       int main() {
+         int n = 0;
+         long double x = 1;
+         long double Y0 = y0l(x);
+         long double Y1 = y1l(x);
+         long double Yn = ynl(n,x);
+         long double J0 = j0l(x);
+         long double J1 = j1l(x);
+         long double Jn = jnl(n,x);
+         return 0;
+       }
+      "
+    FOUND_LIBM_BESSEL)
+    if (FOUND_LIBM_BESSEL)
+     target_compile_definitions(FortranFloat128MathILib INTERFACE
+       HAS_LIBM_BESSEL
+       )
+    endif()
     target_compile_definitions(FortranFloat128MathILib INTERFACE
       HAS_LIBM
       )
