@@ -6,21 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: no-threads
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <shared_mutex>
 
-// class shared_timed_mutex;
+// class shared_mutex;
 
-// shared_timed_mutex& operator=(const shared_timed_mutex&) = delete;
+// shared_mutex(const shared_mutex&) = delete;
 
 #include <shared_mutex>
+#include <type_traits>
 
-int main(int, char**)
-{
-    std::shared_timed_mutex m0;
-    std::shared_timed_mutex m1;
-    m1 = m0;
-
-  return 0;
-}
+static_assert(!std::is_copy_constructible<std::shared_mutex>::value, "");
