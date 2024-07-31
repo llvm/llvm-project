@@ -914,6 +914,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
   const Value *Object = getUnderlyingObject(Loc.Ptr);
 
+  // Stack restore is able to modify unescaped dynamic allocas. Assume it may
+  // modify them even though the alloca is not escaped.
+  if (auto *AI = dyn_cast<AllocaInst>(Object))
+    if (!AI->isStaticAlloca() && isIntrinsicCall(Call, Intrinsic::stackrestore))
+      return ModRefInfo::Mod;
+
   // Calls marked 'tail' cannot read or write allocas from the current frame
   // because the current frame might be destroyed by the time they run. However,
   // a tail call may use an alloca with byval. Calling with byval copies the
@@ -924,12 +930,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       if (CI->isTailCall() &&
           !CI->getAttributes().hasAttrSomewhere(Attribute::ByVal))
         return ModRefInfo::NoModRef;
-
-  // Stack restore is able to modify unescaped dynamic allocas. Assume it may
-  // modify them even though the alloca is not escaped.
-  if (auto *AI = dyn_cast<AllocaInst>(Object))
-    if (!AI->isStaticAlloca() && isIntrinsicCall(Call, Intrinsic::stackrestore))
-      return ModRefInfo::Mod;
 
   // A call can access a locally allocated object either because it is passed as
   // an argument to the call, or because it has escaped prior to the call.
