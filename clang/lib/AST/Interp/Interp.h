@@ -2588,12 +2588,20 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
-  QualType DynamicType = ThisPtr.getDeclDesc()->getType();
-  const CXXRecordDecl *DynamicDecl;
-  if (DynamicType->isPointerType() || DynamicType->isReferenceType())
-    DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
-  else
-    DynamicDecl = ThisPtr.getDeclDesc()->getType()->getAsCXXRecordDecl();
+  const CXXRecordDecl *DynamicDecl = nullptr;
+  {
+    Pointer TypePtr = ThisPtr;
+    while (TypePtr.isBaseClass())
+      TypePtr = TypePtr.getBase();
+
+    QualType DynamicType = TypePtr.getType();
+    if (DynamicType->isPointerType() || DynamicType->isReferenceType())
+      DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
+    else
+      DynamicDecl = DynamicType->getAsCXXRecordDecl();
+  }
+  assert(DynamicDecl);
+
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
   const auto *InitialFunction = cast<CXXMethodDecl>(Func->getDecl());
   const CXXMethodDecl *Overrider = S.getContext().getOverridingFunction(

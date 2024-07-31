@@ -417,30 +417,6 @@ void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-static void computeUsesMSVCFloatingPoint(const Triple &TT, const Function &F,
-                                         MachineModuleInfo &MMI) {
-  // Only needed for MSVC
-  if (!TT.isWindowsMSVCEnvironment())
-    return;
-
-  // If it's already set, nothing to do.
-  if (MMI.usesMSVCFloatingPoint())
-    return;
-
-  for (const Instruction &I : instructions(F)) {
-    if (I.getType()->isFPOrFPVectorTy()) {
-      MMI.setUsesMSVCFloatingPoint(true);
-      return;
-    }
-    for (const auto &Op : I.operands()) {
-      if (Op->getType()->isFPOrFPVectorTy()) {
-        MMI.setUsesMSVCFloatingPoint(true);
-        return;
-      }
-    }
-  }
-}
-
 PreservedAnalyses
 SelectionDAGISelPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
@@ -801,9 +777,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       }
     }
   }
-
-  // Determine if floating point is used for msvc
-  computeUsesMSVCFloatingPoint(TM.getTargetTriple(), Fn, *CurDAG->getMMI());
 
   // Release function-specific state. SDB and CurDAG are already cleared
   // at this point.

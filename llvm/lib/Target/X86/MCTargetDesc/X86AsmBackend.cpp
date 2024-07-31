@@ -437,8 +437,6 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
     return cast<MCDataFragment>(*F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(*F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
   }
 }
 
@@ -873,6 +871,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
   for (const MCSymbol &S : Asm.symbols())
     LabeledFragments.insert(S.getFragment(false));
 
+  bool Changed = false;
   for (MCSection &Sec : Asm) {
     if (!Sec.isText())
       continue;
@@ -884,9 +883,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       if (LabeledFragments.count(&F))
         Relaxable.clear();
 
-      if (F.getKind() == MCFragment::FT_Data ||
-          F.getKind() == MCFragment::FT_CompactEncodedInst)
-        // Skip and ignore
+      if (F.getKind() == MCFragment::FT_Data) // Skip and ignore
         continue;
 
       if (F.getKind() == MCFragment::FT_Relaxable) {
@@ -923,7 +920,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         // Give the backend a chance to play any tricks it wishes to increase
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
-        padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
+        Changed |= padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting
@@ -936,14 +933,12 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       }
       Relaxable.clear();
 
-      // BoundaryAlign explicitly tracks it's size (unlike align)
-      if (F.getKind() == MCFragment::FT_BoundaryAlign)
-        cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
-
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
       // break the alignment of the current boundary align.
       if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(&F)) {
+        cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
+        Changed = true;
         const MCFragment *LastFragment = BF->getLastFragment();
         if (!LastFragment)
           continue;
@@ -953,7 +948,7 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
     }
   }
 
-  return true;
+  return Changed;
 }
 
 unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {
