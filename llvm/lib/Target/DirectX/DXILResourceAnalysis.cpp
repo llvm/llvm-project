@@ -18,19 +18,35 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dxil-resource-analysis"
 
-char DXILResourceWrapper::ID = 0;
-INITIALIZE_PASS_BEGIN(DXILResourceWrapper, DEBUG_TYPE,
+dxil::Resources DXILResourceMDAnalysis::run(Module &M,
+                                            ModuleAnalysisManager &AM) {
+  dxil::Resources R;
+  R.collect(M);
+  return R;
+}
+
+AnalysisKey DXILResourceMDAnalysis::Key;
+
+PreservedAnalyses DXILResourceMDPrinterPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
+  dxil::Resources Res = AM.getResult<DXILResourceMDAnalysis>(M);
+  Res.print(OS);
+  return PreservedAnalyses::all();
+}
+
+char DXILResourceMDWrapper::ID = 0;
+INITIALIZE_PASS_BEGIN(DXILResourceMDWrapper, DEBUG_TYPE,
                       "DXIL resource Information", true, true)
-INITIALIZE_PASS_END(DXILResourceWrapper, DEBUG_TYPE,
+INITIALIZE_PASS_END(DXILResourceMDWrapper, DEBUG_TYPE,
                     "DXIL resource Information", true, true)
 
-bool DXILResourceWrapper::runOnModule(Module &M) {
+bool DXILResourceMDWrapper::runOnModule(Module &M) {
   Resources.collect(M);
   return false;
 }
 
-DXILResourceWrapper::DXILResourceWrapper() : ModulePass(ID) {}
+DXILResourceMDWrapper::DXILResourceMDWrapper() : ModulePass(ID) {}
 
-void DXILResourceWrapper::print(raw_ostream &OS, const Module *) const {
+void DXILResourceMDWrapper::print(raw_ostream &OS, const Module *) const {
   Resources.print(OS);
 }
