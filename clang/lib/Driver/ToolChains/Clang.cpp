@@ -9155,7 +9155,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // If we disable the GPU C library support it needs to be forwarded to the
   // link job.
   if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, true))
-    CmdArgs.push_back("--device-linker=-nolibc");
+    CmdArgs.push_back("--device-compiler=-nolibc");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

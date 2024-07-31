@@ -362,8 +362,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.daddl
+    libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -509,6 +511,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.setpayload
+    libc.src.math.setpayloadf
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
@@ -521,6 +525,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl
@@ -611,7 +617,9 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
+    libc.src.math.dfmaf128
     libc.src.math.dsqrtf128
+    libc.src.math.dsubf128
     libc.src.math.fabsf128
     libc.src.math.fdimf128
     libc.src.math.floorf128
@@ -648,7 +656,9 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundf128
     libc.src.math.roundevenf128
     libc.src.math.scalbnf128
+    libc.src.math.setpayloadf128
     libc.src.math.sqrtf128
+    libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
@@ -724,6 +734,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr
