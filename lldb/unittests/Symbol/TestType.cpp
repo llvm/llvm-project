@@ -94,7 +94,8 @@ TEST(Type, CompilerContextPattern) {
       MatchesIgnoringModules(std::vector{make_module("B"), make_class("C")}));
   EXPECT_THAT(
       (std::vector{make_module("A"), make_module("B"), make_class("C")}),
-      Not(MatchesIgnoringModules(std::vector{make_module("A"), make_class("C")})));
+      Not(MatchesIgnoringModules(
+          std::vector{make_module("A"), make_class("C")})));
   EXPECT_THAT((std::vector{make_module("A"), make_module("B"), make_enum("C")}),
               Matches(std::vector{make_module("A"), make_module("B"),
                                   make_any_type("C")}));
