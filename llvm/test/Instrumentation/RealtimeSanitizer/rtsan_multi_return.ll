@@ -16,14 +16,15 @@ else:
 attributes #0 = { mustprogress noinline nonblocking optnone ssp uwtable(sync) }
 
 ; RealtimeSanitizer pass should insert __rtsan_realtime_enter right after function definition
-; CHECK: entry:
-; CHECK-NEXT: call{{.*}}__rtsan_realtime_enter
+; CHECK-LABEL: @example(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call{{.*}}@__rtsan_realtime_enter
 
 ; RealtimeSanitizer pass should insert the call at both function returns
-; CHECK: then:
+; CHECK-LABEL: then:
 ; CHECK-NEXT: call{{.*}}@__rtsan_realtime_exit
 ; CHECK-NEXT: ret i32 1
 
-; CHECK: else:
+; CHECK-LABEL: else:
 ; CHECK-NEXT: call{{.*}}@__rtsan_realtime_exit
 ; CHECK-NEXT: ret i32 0

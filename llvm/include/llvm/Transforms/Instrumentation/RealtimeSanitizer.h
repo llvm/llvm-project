@@ -1,4 +1,4 @@
-//===--------- Definition of the RealtimeSanitizer class ---------*- C++
+//=- RealtimeSanitizer.h - RealtimeSanitizer instrumentation ----*- C++ -*-==//
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -13,7 +13,6 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_REALTIMESANITIZER_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Instrumentation/RealtimeSanitizerOptions.h"
 
 namespace llvm {
 
