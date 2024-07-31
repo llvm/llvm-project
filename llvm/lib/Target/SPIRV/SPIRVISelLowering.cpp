@@ -220,7 +220,7 @@ static void validateLifetimeStart(const SPIRVSubtarget &STI,
       static_cast<SPIRV::StorageClass::StorageClass>(
           PtrType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
-  LLVMContext &Context = MF->getMMI().getModule()->getContext();
+  LLVMContext &Context = MF->getFunction().getContext();
   SPIRVType *ElemType =
       GR.getOrCreateSPIRVType(IntegerType::getInt8Ty(Context), MIB);
   SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ElemType, MIB, SC);
