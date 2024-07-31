@@ -1371,7 +1371,7 @@ public:
   LLVM_DUMP_METHOD void dump() const override;
 #endif
 };
-  
+
 class PHINode final : public Instruction {
   /// Use Context::createPHINode(). Don't call the constructor directly.
   PHINode(llvm::PHINode *PHI, Context &Ctx)
