@@ -3673,6 +3673,13 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
     RHSVals.pruneSubRegValues(LHS, ShrinkMask);
+  } else if (TrackSubRegLiveness && !CP.getDstIdx() && CP.getSrcIdx()) {
+    LHS.createSubRangeFrom(LIS->getVNInfoAllocator(),
+                           CP.getNewRC()->getLaneMask(), LHS);
+    mergeSubRangeInto(LHS, RHS, TRI->getSubRegIndexLaneMask(CP.getSrcIdx()), CP,
+                      CP.getDstIdx());
+    LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
+    LHSVals.pruneSubRegValues(LHS, ShrinkMask);
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
