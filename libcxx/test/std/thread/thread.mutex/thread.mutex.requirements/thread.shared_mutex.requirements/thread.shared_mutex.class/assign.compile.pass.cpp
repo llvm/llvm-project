@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14
 
@@ -16,12 +16,6 @@
 // shared_mutex& operator=(const shared_mutex&) = delete;
 
 #include <shared_mutex>
+#include <type_traits>
 
-int main(int, char**)
-{
-    std::shared_mutex m0;
-    std::shared_mutex m1;
-    m1 = m0; // expected-error {{overload resolution selected deleted operator '='}}
-
-  return 0;
-}
+static_assert(!std::is_copy_assignable<std::shared_mutex>::value, "");
