@@ -22,6 +22,7 @@
 #include <optional>
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -32,8 +33,10 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 
 using namespace lldb;
@@ -60,6 +63,9 @@ static struct option g_long_options[] = {
     {"max-gdbserver-port", required_argument, nullptr, 'M'},
     {"socket-file", required_argument, nullptr, 'f'},
     {"server", no_argument, &g_server, 1},
+#if defined(_WIN32)
+    {"accept", required_argument, nullptr, 'a'},
+#endif
     {nullptr, 0, nullptr, 0}};
 
 #if defined(__APPLE__)
@@ -114,6 +120,249 @@ static Status save_socket_id_to_file(const std::string &socket_id,
   return status;
 }
 
+static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
+                          const lldb_private::Args &args) {
+  if (!platform.IsConnected())
+    return;
+
+  if (args.GetArgumentCount() > 0) {
+    lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+    std::optional<uint16_t> port;
+    std::string socket_name;
+    Status error = platform.LaunchGDBServer(args,
+                                            "", // hostname
+                                            pid, port, socket_name);
+    if (error.Success())
+      platform.SetPendingGdbServer(pid, *port, socket_name);
+    else
+      fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
+  }
+
+  bool interrupt = false;
+  bool done = false;
+  Status error;
+  while (!interrupt && !done) {
+    if (platform.GetPacketAndSendResponse(std::nullopt, error, interrupt,
+                                          done) !=
+        GDBRemoteCommunication::PacketResult::Success)
+      break;
+  }
+
+  if (error.Fail())
+    WithColor::error() << error.AsCString() << '\n';
+}
+
+static GDBRemoteCommunicationServerPlatform::PortMap gdbserver_portmap;
+static std::mutex gdbserver_portmap_mutex;
+
+#if defined(_WIN32)
+static void spawn_process_reaped(lldb::pid_t pid, int signal, int status) {
+  std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
+  gdbserver_portmap.FreePortForProcess(pid);
+}
+
+static bool spawn_process_parent(const char *progname, Connection *conn,
+                                 uint16_t gdb_port, uint16_t port_offset,
+                                 const lldb_private::Args &args,
+                                 const std::string &log_file,
+                                 const StringRef log_channels) {
+  Log *log = GetLog(LLDBLog::Platform);
+  Pipe socket_pipe;
+  Status error = socket_pipe.CreateNew(true);
+  if (error.Fail()) {
+    LLDB_LOGF(log,
+              "lldb-platform parent: "
+              "cannot create pipe: %s",
+              error.AsCString());
+    return false;
+  }
+
+  ProcessLaunchInfo launch_info;
+  FileSpec self_spec(progname, FileSpec::Style::native);
+  launch_info.SetExecutableFile(self_spec, true);
+  Args &self_args = launch_info.GetArguments();
+  self_args.AppendArgument(llvm::StringRef("platform"));
+  self_args.AppendArgument(llvm::StringRef("--accept"));
+  self_args.AppendArgument(llvm::to_string(socket_pipe.GetReadPipe()));
+  if (gdb_port) {
+    self_args.AppendArgument(llvm::StringRef("--gdbserver-port"));
+    self_args.AppendArgument(llvm::to_string(gdb_port));
+  }
+  if (port_offset > 0) {
+    self_args.AppendArgument(llvm::StringRef("--port-offset"));
+    self_args.AppendArgument(llvm::to_string(port_offset));
+  }
+  if (!log_file.empty()) {
+    self_args.AppendArgument(llvm::StringRef("--log-file"));
+    self_args.AppendArgument(log_file);
+  }
+  if (!log_channels.empty()) {
+    self_args.AppendArgument(llvm::StringRef("--log-channels"));
+    self_args.AppendArgument(log_channels);
+  }
+  if (args.GetArgumentCount() > 0) {
+    self_args.AppendArgument("--");
+    self_args.AppendArguments(args);
+  }
+
+  launch_info.SetLaunchInSeparateProcessGroup(false);
+  launch_info.SetMonitorProcessCallback(&spawn_process_reaped);
+
+  // Copy the current environment.
+  // WSASocket(FROM_PROTOCOL_INFO) will fail in the child process
+  // with the error WSAEPROVIDERFAILEDINIT if the SystemRoot is missing
+  // in the environment.
+  launch_info.GetEnvironment() = Host::GetEnvironment();
+
+  launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
+
+  launch_info.AppendCloseFileAction(socket_pipe.GetWriteFileDescriptor());
+
+  // Close STDIN, STDOUT and STDERR.
+  launch_info.AppendCloseFileAction(STDIN_FILENO);
+  launch_info.AppendCloseFileAction(STDOUT_FILENO);
+  launch_info.AppendCloseFileAction(STDERR_FILENO);
+
+  // Redirect STDIN, STDOUT and STDERR to "/dev/null".
+  launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
+  launch_info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
+  launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
+
+  std::string cmd;
+  self_args.GetCommandString(cmd);
+
+  error = Host::LaunchProcess(launch_info);
+  if (error.Fail()) {
+    LLDB_LOGF(log,
+              "lldb-platform parent: "
+              "cannot launch child process for connection: %s",
+              error.AsCString());
+    return false;
+  }
+
+  lldb::pid_t childPid = launch_info.GetProcessID();
+  if (childPid == LLDB_INVALID_PROCESS_ID) {
+    LLDB_LOGF(log, "lldb-platform parent: "
+                   "cannot launch child process for connection: invalid pid");
+    return false;
+  }
+  LLDB_LOGF(log,
+            "lldb-platform parent: "
+            "launched '%s', pid=0x%x",
+            cmd.c_str(), childPid);
+
+  {
+    std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
+    gdbserver_portmap.AssociatePortWithProcess(gdb_port, childPid);
+  }
+
+  if (socket_pipe.CanRead())
+    socket_pipe.CloseReadFileDescriptor();
+  if (!socket_pipe.CanWrite()) {
+    LLDB_LOGF(log, "lldb-platform parent: "
+                   "cannot write to socket_pipe");
+    Host::Kill(childPid, SIGTERM);
+    return false;
+  }
+
+  const TCPSocket &socket =
+      static_cast<const TCPSocket &>(*conn->GetReadObject());
+  NativeSocket nativeSocket = socket.GetNativeSocket();
+
+  WSAPROTOCOL_INFO protocol_info;
+  if (::WSADuplicateSocket(nativeSocket, childPid, &protocol_info) ==
+      SOCKET_ERROR) {
+    LLDB_LOGF(log,
+              "lldb-platform parent: "
+              "WSADuplicateSocket() failed, error: %d",
+              ::WSAGetLastError());
+    Host::Kill(childPid, SIGTERM);
+    return false;
+  }
+
+  size_t num_bytes;
+  error = socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
+                                       std::chrono::seconds(2), num_bytes);
+  if (error.Fail()) {
+    LLDB_LOGF(log,
+              "lldb-platform parent: "
+              "socket_pipe.WriteWithTimeout(WSAPROTOCOL_INFO) failed: %s",
+              error.AsCString());
+    Host::Kill(childPid, SIGTERM);
+    return false;
+  }
+  if (num_bytes != sizeof(protocol_info)) {
+    LLDB_LOGF(log,
+              "lldb-platform parent: "
+              "socket_pipe.WriteWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
+              num_bytes);
+    Host::Kill(childPid, SIGTERM);
+    return false;
+  }
+
+  socket_pipe.Close();
+
+  return true;
+}
+
+static bool spawn_process_child(pipe_t accept_fd,
+                                const std::string &listen_host_port,
+                                uint16_t port_offset,
+                                const lldb_private::Args &args) {
+  if (accept_fd == INVALID_HANDLE_VALUE)
+    return false;
+
+  Log *log = GetLog(LLDBLog::Platform);
+  if (!listen_host_port.empty()) {
+    LLDB_LOGF(log, "lldb-platform child: "
+                   "ambiguous parameters --listen and --accept");
+    exit(SOCKET_ERROR);
+  }
+
+  Pipe socket_pipe(accept_fd, LLDB_INVALID_PIPE);
+
+  WSAPROTOCOL_INFO protocol_info;
+  size_t num_bytes;
+  Status error =
+      socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
+                                  std::chrono::seconds(2), num_bytes);
+  if (error.Fail()) {
+    LLDB_LOGF(log,
+              "lldb-platform child: "
+              "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: %s",
+              error.AsCString());
+    exit(SOCKET_ERROR);
+  }
+  if (num_bytes != sizeof(protocol_info)) {
+    LLDB_LOGF(log,
+              "lldb-platform child: "
+              "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
+              num_bytes);
+    exit(SOCKET_ERROR);
+  }
+
+  NativeSocket socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
+                                    FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
+  if (socket == INVALID_SOCKET) {
+    LLDB_LOGF(log,
+              "lldb-platform child: "
+              "WSASocket(FROM_PROTOCOL_INFO) failed: error %d",
+              ::WSAGetLastError());
+    exit(SOCKET_ERROR);
+  }
+
+  Connection *conn =
+      new ConnectionFileDescriptor(new TCPSocket(socket, true, false));
+  GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp, "tcp");
+  if (port_offset > 0)
+    platform.SetPortOffset(port_offset);
+  platform.SetPortMap(std::move(gdbserver_portmap));
+  platform.SetConnection(std::unique_ptr<Connection>(conn));
+  client_handle(platform, args);
+  return true;
+}
+#endif
+
 // main
 int main_platform(int argc, char *argv[]) {
   const char *progname = argv[0];
@@ -123,6 +372,8 @@ int main_platform(int argc, char *argv[]) {
 #if !defined(_WIN32)
   signal(SIGPIPE, SIG_IGN);
   signal(SIGHUP, signal_handler);
+#else
+  pipe_t accept_fd = INVALID_HANDLE_VALUE;
 #endif
   int long_option_index = 0;
   Status error;
@@ -133,7 +384,6 @@ int main_platform(int argc, char *argv[]) {
   StringRef
       log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
 
-  GDBRemoteCommunicationServerPlatform::PortMap gdbserver_portmap;
   int min_gdbserver_port = 0;
   int max_gdbserver_port = 0;
   uint16_t port_offset = 0;
@@ -217,6 +467,17 @@ int main_platform(int argc, char *argv[]) {
         max_gdbserver_port = portnum;
     } break;
 
+#if defined(_WIN32)
+    case 'a': {
+      uint64_t fd;
+      if (!llvm::to_integer(optarg, fd)) {
+        WithColor::error() << "invalid accept fd " << optarg << "\n";
+        option_error = 6;
+      } else
+        accept_fd = (pipe_t)fd;
+    } break;
+#endif
+
     case 'h': /* fall-through is intentional */
     case '?':
       show_usage = true;
@@ -240,7 +501,11 @@ int main_platform(int argc, char *argv[]) {
   }
 
   // Print usage and exit if no listening port is specified.
+#if !defined(_WIN32)
   if (listen_host_port.empty())
+#else
+  if (listen_host_port.empty() && accept_fd == INVALID_HANDLE_VALUE)
+#endif
     show_usage = true;
 
   if (show_usage || option_error) {
@@ -253,6 +518,13 @@ int main_platform(int argc, char *argv[]) {
   argv += optind;
   lldb_private::Args inferior_arguments;
   inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
+
+#if defined(_WIN32)
+  // Child process will handle the connection and exit.
+  if (spawn_process_child(accept_fd, listen_host_port, port_offset,
+                          inferior_arguments))
+    return 0;
+#endif
 
   const bool children_inherit_listen_socket = false;
   // the test suite makes many connections in parallel, let's not miss any.
@@ -303,32 +575,39 @@ int main_platform(int argc, char *argv[]) {
       ::pid_t waitResult;
       while ((waitResult = waitpid(-1, nullptr, WNOHANG)) > 0) {
         // waitResult is the child pid
+        std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
         gdbserver_portmap.FreePortForProcess(waitResult);
       }
 #endif
-      // TODO: Clean up portmap for Windows when children die
-      // See https://github.com/llvm/llvm-project/issues/90923
-
       // After collecting zombie ports, get the next available
-      GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
-      llvm::Expected<uint16_t> available_port =
-          gdbserver_portmap.GetNextAvailablePort();
-      if (available_port) {
-        // GetNextAvailablePort() may return 0 if gdbserver_portmap is empty.
-        if (*available_port)
-          portmap_for_child.AllowPort(*available_port);
-      } else {
-        llvm::consumeError(available_port.takeError());
+      std::optional<uint16_t> available_port;
+      {
+        std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
+        auto port = gdbserver_portmap.GetNextAvailablePort();
+        if (port)
+          available_port = *port;
+        else
+          llvm::consumeError(port.takeError());
+      }
+      if (!available_port) {
         fprintf(stderr,
                 "no available gdbserver port for connection - dropping...\n");
         delete conn;
         continue;
       }
+#if !defined(_WIN32)
+      GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
+      // GetNextAvailablePort() may return 0 if gdbserver_portmap is empty.
+      if (*available_port)
+        portmap_for_child.AllowPort(*available_port);
       platform.SetPortMap(std::move(portmap_for_child));
 
       auto childPid = fork();
       if (childPid) {
-        gdbserver_portmap.AssociatePortWithProcess(*available_port, childPid);
+        {
+          std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
+          gdbserver_portmap.AssociatePortWithProcess(*available_port, childPid);
+        }
         // Parent doesn't need a connection to the lldb client
         delete conn;
 
@@ -340,6 +619,18 @@ int main_platform(int argc, char *argv[]) {
         // Listening socket is owned by parent process.
         acceptor_up.release();
       }
+#else
+      if (!spawn_process_parent(progname, conn, *available_port, port_offset,
+                                inferior_arguments, log_file, log_channels)) {
+        std::lock_guard<std::mutex> guard(gdbserver_portmap_mutex);
+        gdbserver_portmap.FreePort(*available_port);
+      }
+      // Parent doesn't need a connection to the lldb client
+      delete conn;
+
+      // Parent will continue to listen for new connections.
+      continue;
+#endif
     } else {
       // If not running as a server, this process will not accept
       // connections while a connection is active.
@@ -350,33 +641,7 @@ int main_platform(int argc, char *argv[]) {
     }
 
     platform.SetConnection(std::unique_ptr<Connection>(conn));
-
-    if (platform.IsConnected()) {
-      if (inferior_arguments.GetArgumentCount() > 0) {
-        lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        std::optional<uint16_t> port;
-        std::string socket_name;
-        Status error = platform.LaunchGDBServer(inferior_arguments,
-                                                "", // hostname
-                                                pid, port, socket_name);
-        if (error.Success())
-          platform.SetPendingGdbServer(pid, *port, socket_name);
-        else
-          fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
-      }
-
-      bool interrupt = false;
-      bool done = false;
-      while (!interrupt && !done) {
-        if (platform.GetPacketAndSendResponse(std::nullopt, error, interrupt,
-                                              done) !=
-            GDBRemoteCommunication::PacketResult::Success)
-          break;
-      }
-
-      if (error.Fail())
-        WithColor::error() << error.AsCString() << '\n';
-    }
+    client_handle(platform, inferior_arguments);
   } while (g_server);
 
   fprintf(stderr, "lldb-server exiting...\n");
