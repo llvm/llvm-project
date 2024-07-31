@@ -424,7 +424,8 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
     }
   }
 
-  O << ']';
+
+  O << M << ']';
 }
 
 void X86IntelInstPrinter::printSrcIdx(const MCInst *MI, unsigned Op,
