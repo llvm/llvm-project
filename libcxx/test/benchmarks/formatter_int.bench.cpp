@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <array>
 #include <format>
 #include <random>
 
 #include "CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 // Tests the full range of the value.
 template <class T>
@@ -49,11 +52,13 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
+#ifndef TEST_HAS_NO_INT128
 BENCHMARK(BM_BasicLow<__uint128_t>);
 BENCHMARK(BM_BasicLow<__int128_t>);
 
 BENCHMARK(BM_Basic<__uint128_t>);
 BENCHMARK(BM_Basic<__int128_t>);
+#endif
 
 // *** Localization ***
 enum class LocalizationE { False, True };
