@@ -309,8 +309,8 @@
 // HRESET: "-target-feature" "+hreset"
 // NO-HRESET: "-target-feature" "-hreset"
 
-// RUN: %clang --target=x86_64 -march=i386 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
-// RUN: %clang --target=x86_64 -march=i386 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
+// RUN: %clang --target=x86_64 -muintr %s -### 2>&1 | FileCheck -check-prefix=UINTR %s
+// RUN: %clang --target=x86_64 -mno-uintr %s -### 2>&1 | FileCheck -check-prefix=NO-UINTR %s
 // UINTR: "-target-feature" "+uintr"
 // NO-UINTR: "-target-feature" "-uintr"
 
