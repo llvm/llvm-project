@@ -5659,7 +5659,7 @@ void CodeGenModule::EmitExternalFunctionDeclaration(const FunctionDecl *FD) {
     if (getCodeGenOpts().hasReducedDebugInfo()) {
       auto *Ty = getTypes().ConvertType(FD->getType());
       StringRef MangledName = getMangledName(FD);
-      auto *Fn = dyn_cast<llvm::Function>(
+      auto *Fn = cast<llvm::Function>(
           GetOrCreateLLVMFunction(MangledName, Ty, FD, /* ForVTable */ false));
       if (!Fn->getSubprogram())
         DI->EmitFunctionDecl(FD, FD->getLocation(), FD->getType(), Fn);
