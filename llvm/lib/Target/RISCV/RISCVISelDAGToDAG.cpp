@@ -3733,6 +3733,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   assert(!Mask || cast<RegisterSDNode>(Mask)->getReg() == RISCV::V0);
   assert(!Glue || Glue.getValueType() == MVT::Glue);
 
+  // If the EEW of True is different from vmerge's SEW, then we can't fold.
+  if (True.getSimpleValueType() != N->getSimpleValueType(0))
+    return false;
+
   // We require that either passthru and false are the same, or that passthru
   // is undefined.
   if (Passthru != False && !isImplicitDef(Passthru))

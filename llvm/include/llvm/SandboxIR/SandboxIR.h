@@ -28,7 +28,9 @@
 //                                      |
 //                                      +- BranchInst
 //                                      |
-//                                      +- CastInst
+//                                      +- CastInst -----------+- BitCastInst
+//                                      |                      |
+//                                      |                      +- PtrToIntInst
 //                                      |
 //                                      +- CallBase -----------+- CallBrInst
 //                                      |                      |
@@ -94,6 +96,9 @@ class CallInst;
 class InvokeInst;
 class CallBrInst;
 class GetElementPtrInst;
+class CastInst;
+class PtrToIntInst;
+class BitCastInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -210,6 +215,7 @@ protected:
   friend class InvokeInst;        // For getting `Val`.
   friend class CallBrInst;        // For getting `Val`.
   friend class GetElementPtrInst; // For getting `Val`.
+  friend class CastInst;          // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -525,9 +531,8 @@ public:
 class Instruction : public sandboxir::User {
 public:
   enum class Opcode {
-#define DEF_VALUE(ID, CLASS)
-#define DEF_USER(ID, CLASS)
 #define OP(OPC) OPC,
+#define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
 #include "llvm/SandboxIR/SandboxIRValues.def"
   };
@@ -551,6 +556,7 @@ protected:
   friend class InvokeInst;        // For getTopmostLLVMInstruction().
   friend class CallBrInst;        // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
+  friend class CastInst;          // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -1290,6 +1296,121 @@ public:
 #endif
 };
 
+class CastInst : public Instruction {
+  static Opcode getCastOpcode(llvm::Instruction::CastOps CastOp) {
+    switch (CastOp) {
+    case llvm::Instruction::ZExt:
+      return Opcode::ZExt;
+    case llvm::Instruction::SExt:
+      return Opcode::SExt;
+    case llvm::Instruction::FPToUI:
+      return Opcode::FPToUI;
+    case llvm::Instruction::FPToSI:
+      return Opcode::FPToSI;
+    case llvm::Instruction::FPExt:
+      return Opcode::FPExt;
+    case llvm::Instruction::PtrToInt:
+      return Opcode::PtrToInt;
+    case llvm::Instruction::IntToPtr:
+      return Opcode::IntToPtr;
+    case llvm::Instruction::SIToFP:
+      return Opcode::SIToFP;
+    case llvm::Instruction::UIToFP:
+      return Opcode::UIToFP;
+    case llvm::Instruction::Trunc:
+      return Opcode::Trunc;
+    case llvm::Instruction::FPTrunc:
+      return Opcode::FPTrunc;
+    case llvm::Instruction::BitCast:
+      return Opcode::BitCast;
+    case llvm::Instruction::AddrSpaceCast:
+      return Opcode::AddrSpaceCast;
+    case llvm::Instruction::CastOpsEnd:
+      llvm_unreachable("Bad CastOp!");
+    }
+    llvm_unreachable("Unhandled CastOp!");
+  }
+  /// Use Context::createCastInst(). Don't call the
+  /// constructor directly.
+  CastInst(llvm::CastInst *CI, Context &Ctx)
+      : Instruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI, Ctx) {}
+  friend Context; // for SBCastInstruction()
+  friend class PtrToInt; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Type *getSrcTy() const { return cast<llvm::CastInst>(Val)->getSrcTy(); }
+  Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::CastInst>(Val) && "Expected CastInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class PtrToIntInst final : public CastInst {
+public:
+  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) &&
+           cast<Instruction>(From)->getOpcode() == Opcode::PtrToInt;
+  }
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
+class BitCastInst : public CastInst {
+public:
+  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From))
+      return I->getOpcode() == Instruction::Opcode::BitCast;
+    return false;
+  }
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
 /// an OpaqueInstr.
 class OpaqueInst : public sandboxir::Instruction {
@@ -1446,6 +1567,8 @@ protected:
   friend CallBrInst; // For createCallBrInst()
   GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
+  CastInst *createCastInst(llvm::CastInst *I);
+  friend CastInst; // For createCastInst()
 
 public:
   Context(LLVMContext &LLVMCtx)
