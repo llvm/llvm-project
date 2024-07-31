@@ -37,10 +37,14 @@ func.func @xfer_write_transposing_permutation_map(
 // CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map_out_of_bounds
 // CHECK-SAME:       %[[ARG_0:.*]]: vector<4x8xi16>,
 // CHECK-SAME:       %[[MEM:.*]]: memref<2x2x?x?xi16>) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[TR:.*]] = vector.transpose %[[ARG_0]], [1, 0] : vector<4x8xi16> to vector<8x4xi16>
+// Expect the in_bounds attribute to be preserved. Since we don't print it when
+// all flags are "false", it should not appear in the output.
+// CHECK-NOT:       in_bounds
 // CHECK:           vector.transfer_write
 // CHECK-NOT:       permutation_map
-// CHECK-SAME:      %[[TR]], %[[MEM]]{{.*}} {in_bounds = [false, false]} : vector<8x4xi16>, memref<2x2x?x?xi16>
+// CHECK-SAME:      %[[TR]], %[[MEM]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] : vector<8x4xi16>, memref<2x2x?x?xi16>
 func.func @xfer_write_transposing_permutation_map_out_of_bounds(
     %arg0: vector<4x8xi16>,
     %mem: memref<2x2x?x?xi16>) {
@@ -125,7 +129,7 @@ func.func @xfer_write_non_transposing_permutation_map(
   return
 }
 
-// The broadcast dimension is in bounds, so the transformation is safe
+// Even with out-of-bounds, it is safe to apply this pattern
 // CHECK-LABEL:   func.func @xfer_write_non_transposing_permutation_map_with_mask_out_of_bounds(
 // CHECK-SAME:      %[[MEM:.*]]: memref<?x?xf32>,
 // CHECK-SAME:      %[[VEC:.*]]: vector<7xf32>,
