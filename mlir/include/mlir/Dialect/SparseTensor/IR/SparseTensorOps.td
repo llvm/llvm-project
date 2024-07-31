@@ -1759,6 +1759,12 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
       return I64BitSet(llvm::cast<IntegerAttr>(getCases()[regionIdx])
                            .getValue().getZExtValue());
     }
+    auto getRegionDefinedSpaces() {
+      return llvm::map_range(getCases().getValue(), [](Attribute attr) {
+        return I64BitSet(llvm::cast<IntegerAttr>(attr).getValue().getZExtValue());
+      });
+    }
+
     // The block arguments starts with referenced coordinates, follows by
     // user-provided iteration arguments and ends with iterators.
     Block::BlockArgListType getCrds(unsigned regionIdx) {
@@ -1776,12 +1782,11 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
       return getRegion(regionIdx).getArguments()
           .take_back(getRegionDefinedSpace(regionIdx).count());
     }
+    ValueRange getYieldedValues(unsigned regionIdx);
   }];
 
-  // TODO:
-  // let hasVerifier = 1;
-  // let hasRegionVerifier = 1;
-  // let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }
 

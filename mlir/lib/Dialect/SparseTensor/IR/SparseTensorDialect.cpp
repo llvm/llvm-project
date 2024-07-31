@@ -2497,6 +2497,21 @@ static void printInitializationList(OpAsmPrinter &p,
   p << ")";
 }
 
+template <typename SparseLoopOp>
+static LogicalResult verifySparseLoopOp(SparseLoopOp op) {
+  if (op.getInitArgs().size() != op.getNumResults()) {
+    return op.emitOpError(
+        "mismatch in number of loop-carried values and defined values");
+  }
+  if (op.getCrdUsedLvls().max() > op.getSpaceDim())
+    return op.emitOpError("required out-of-bound coordinates");
+
+  return success();
+}
+
+LogicalResult IterateOp::verify() { return verifySparseLoopOp(*this); }
+LogicalResult CoIterateOp::verify() { return verifySparseLoopOp(*this); }
+
 void IterateOp::print(OpAsmPrinter &p) {
   p << " " << getIterator() << " in " << getIterSpace();
   if (!getCrdUsedLvls().empty()) {
@@ -2513,17 +2528,6 @@ void IterateOp::print(OpAsmPrinter &p) {
   p << " ";
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-}
-
-LogicalResult IterateOp::verify() {
-  if (getInitArgs().size() != getNumResults()) {
-    return emitOpError(
-        "mismatch in number of loop-carried values and defined values");
-  }
-  if (getCrdUsedLvls().max() > getSpaceDim())
-    return emitOpError("required out-of-bound coordinates");
-
-  return success();
 }
 
 LogicalResult IterateOp::verifyRegions() {
@@ -2663,6 +2667,54 @@ void CoIterateOp::print(OpAsmPrinter &p) {
     p.printRegion(getRegion(idx), /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/!getInitArgs().empty());
   }
+}
+
+ValueRange CoIterateOp::getYieldedValues(unsigned regionIdx) {
+  return cast<sparse_tensor::YieldOp>(
+             getRegion(regionIdx).getBlocks().front().getTerminator())
+      .getResults();
+}
+
+LogicalResult CoIterateOp::verifyRegions() {
+  for (unsigned r = 0, e = getNumRegions(); r < e; r++) {
+    if (getNumRegionIterArgs(r) != getNumResults())
+      return emitOpError(
+          "mismatch in number of basic block args and defined values");
+
+    auto initArgs = getInitArgs();
+    auto iterArgs = getRegionIterArgs(r);
+    auto yieldVals = getYieldedValues(r);
+    auto opResults = getResults();
+    if (!llvm::all_equal({initArgs.size(), iterArgs.size(), yieldVals.size(),
+                          opResults.size()})) {
+      return emitOpError()
+             << "number mismatch between iter args and results on " << r
+             << "th region";
+    }
+
+    for (auto [i, init, iter, yield, ret] :
+         llvm::enumerate(initArgs, iterArgs, yieldVals, opResults)) {
+      if (init.getType() != ret.getType())
+        return emitOpError()
+               << "types mismatch between " << i
+               << "th iter operand and defined value on " << r << "th region";
+      if (iter.getType() != ret.getType())
+        return emitOpError() << "types mismatch between " << i
+                             << "th iter region arg and defined value on " << r
+                             << "th region";
+      if (yield.getType() != ret.getType())
+        return emitOpError()
+               << "types mismatch between " << i
+               << "th yield value and defined value on " << r << "th region";
+    }
+  }
+
+  auto cases = getRegionDefinedSpaces();
+  llvm::SmallSetVector<uint64_t, 8> set(cases.begin(), cases.end());
+  if (set.size() != getNumRegions())
+    return emitOpError("contains duplicated cases.");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
