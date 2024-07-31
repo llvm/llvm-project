@@ -150,33 +150,12 @@ extern "C++" template <typename T> struct FlexibleArray : T {
    * allocator used to managed memory of the data hold by the descriptor. */ \
   unsigned char extra;
 
-/* Number of bits used to encode the addendum presence flag */
-#define _CFI_ADDENDUM_BITS 1
-/* Value of the addendum presence flag */
-#define _CFI_ADDENDUM_FLAG 1
-/* Allocator index mask */
-#define _CFI_ALLOCATOR_IDX_MASK 0b00001110
-
 typedef struct CFI_cdesc_t {
   _CFI_CDESC_T_HEADER_MEMBERS
 #ifdef __cplusplus
   cfi_internal::FlexibleArray<CFI_dim_t> dim;
 #else
   CFI_dim_t dim[]; /* must appear last */
-#endif
-
-#ifdef __cplusplus
-  RT_API_ATTRS inline bool HasAddendum() const {
-    return extra & _CFI_ADDENDUM_FLAG;
-  }
-  RT_API_ATTRS inline void SetHasAddendum() { extra |= _CFI_ADDENDUM_FLAG; }
-  RT_API_ATTRS inline int GetAllocIdx() const {
-    return (extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ADDENDUM_BITS;
-  }
-  RT_API_ATTRS inline void SetAllocIdx(int pos) {
-    extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
-    extra |= (pos << _CFI_ADDENDUM_BITS);
-  }
 #endif
 } CFI_cdesc_t;
 

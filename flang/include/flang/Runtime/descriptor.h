@@ -339,14 +339,14 @@ public:
       const SubscriptValue *, const int *permutation = nullptr) const;
 
   RT_API_ATTRS DescriptorAddendum *Addendum() {
-    if (raw_.HasAddendum()) {
+    if (HasAddendum()) {
       return reinterpret_cast<DescriptorAddendum *>(&GetDimension(rank()));
     } else {
       return nullptr;
     }
   }
   RT_API_ATTRS const DescriptorAddendum *Addendum() const {
-    if (raw_.HasAddendum()) {
+    if (HasAddendum()) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
     } else {
@@ -419,6 +419,27 @@ public:
   RT_API_ATTRS void Check() const;
 
   void Dump(FILE * = stdout) const;
+
+// Number of bits used to encode the addendum presence flag.
+#define _CFI_ADDENDUM_BITS 1
+// Value of the addendum presence flag.
+#define _CFI_ADDENDUM_FLAG 1
+// Allocator index mask.
+#define _CFI_ALLOCATOR_IDX_MASK 0b00001110
+
+  RT_API_ATTRS inline bool HasAddendum() const {
+    return raw_.extra & _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline void SetHasAddendum() {
+    raw_.extra |= _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline int GetAllocIdx() const {
+    return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ADDENDUM_BITS;
+  }
+  RT_API_ATTRS inline void SetAllocIdx(int pos) {
+    raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
+    raw_.extra |= (pos << _CFI_ADDENDUM_BITS);
+  }
 
 private:
   ISO::CFI_cdesc_t raw_;
