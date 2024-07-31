@@ -1080,6 +1080,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_length: {
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
@@ -1095,9 +1097,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       RetTy = TheCall->getArg(0)->getType();
 
     TheCall->setType(RetTy);
-
-    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
-      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {

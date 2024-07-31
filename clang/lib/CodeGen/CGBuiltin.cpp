@@ -18466,11 +18466,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("length operand must have a float representation");
     // if the operand is a scalar, we can use the fabs llvm intrinsic directly
-    if (!E->getArg(0)->getType()->isVectorType()) {
-      llvm::Type *ResultType = ConvertType(E->getType());
-      Function *F = CGM.getIntrinsic(Intrinsic::fabs, ResultType);
-      return Builder.CreateCall(F, X);
-    }
+    if (!E->getArg(0)->getType()->isVectorType())
+      return EmitFAbs(*this, X);
+
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType()->getScalarType(),
         CGM.getHLSLRuntime().getLengthIntrinsic(), ArrayRef<Value *>{X},
