@@ -6,10 +6,8 @@
 
 using namespace llvm;
 
-namespace {
-
-void insertCallBeforeInstruction(Function &Fn, Instruction &Instruction,
-                                 const char *FunctionName) {
+static void insertCallBeforeInstruction(Function &Fn, Instruction &Instruction,
+                                        const char *FunctionName) {
   LLVMContext &Context = Fn.getContext();
   FunctionType *FuncType = FunctionType::get(Type::getVoidTy(Context), false);
   FunctionCallee Func =
@@ -18,12 +16,14 @@ void insertCallBeforeInstruction(Function &Fn, Instruction &Instruction,
   Builder.CreateCall(Func, {});
 }
 
-void insertCallAtFunctionEntryPoint(Function &Fn, const char *InsertFnName) {
+static void insertCallAtFunctionEntryPoint(Function &Fn,
+                                           const char *InsertFnName) {
 
   insertCallBeforeInstruction(Fn, Fn.front().front(), InsertFnName);
 }
 
-void insertCallAtAllFunctionExitPoints(Function &Fn, const char *InsertFnName) {
+static void insertCallAtAllFunctionExitPoints(Function &Fn,
+                                              const char *InsertFnName) {
   for (auto &BB : Fn) {
     for (auto &I : BB) {
       if (auto *RI = dyn_cast<ReturnInst>(&I)) {
@@ -32,7 +32,6 @@ void insertCallAtAllFunctionExitPoints(Function &Fn, const char *InsertFnName) {
     }
   }
 }
-} // namespace
 
 RealtimeSanitizerPass::RealtimeSanitizerPass(
     const RealtimeSanitizerOptions &Options)
