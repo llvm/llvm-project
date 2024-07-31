@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -361,8 +362,7 @@ struct PromoteMem2Reg {
   ///
   /// That map is used to simplify some Phi nodes as we iterate over it, so
   /// it should have deterministic iterators.  We could use a MapVector, but
-  /// since we already maintain a map from BasicBlock* to a stable numbering
-  /// (BBNumbers), the DenseMap is more efficient (also supports removal).
+  /// since basic blocks have numbers, using these are more efficient.
   DenseMap<std::pair<unsigned, unsigned>, PHINode *> NewPhiNodes;
 
   /// For each PHI node, keep track of which entry in Allocas it corresponds
@@ -384,14 +384,11 @@ struct PromoteMem2Reg {
   SmallSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
 
   /// The set of basic blocks the renamer has already visited.
-  SmallPtrSet<BasicBlock *, 16> Visited;
+  BitVector Visited;
 
-  /// Contains a stable numbering of basic blocks to avoid non-determinstic
-  /// behavior.
-  DenseMap<BasicBlock *, unsigned> BBNumbers;
-
-  /// Lazily compute the number of predecessors a block has.
-  DenseMap<const BasicBlock *, unsigned> BBNumPreds;
+  /// Lazily compute the number of predecessors a block has, indexed by block
+  /// number.
+  SmallVector<unsigned> BBNumPreds;
 
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
@@ -414,7 +411,8 @@ private:
   }
 
   unsigned getNumPreds(const BasicBlock *BB) {
-    unsigned &NP = BBNumPreds[BB];
+    // BBNumPreds is resized to getMaxBlockNumber() at the beginning.
+    unsigned &NP = BBNumPreds[BB->getNumber()];
     if (NP == 0)
       NP = pred_size(BB) + 1;
     return NP - 1;
@@ -743,6 +741,8 @@ void PromoteMem2Reg::run() {
   AllocaDbgUsers.resize(Allocas.size());
   AllocaATInfo.resize(Allocas.size());
   AllocaDPUsers.resize(Allocas.size());
+  BBNumPreds.resize(F.getMaxBlockNumber());
+  Visited.resize(F.getMaxBlockNumber());
 
   AllocaInfo Info;
   LargeBlockInfo LBI;
@@ -795,14 +795,6 @@ void PromoteMem2Reg::run() {
       continue;
     }
 
-    // If we haven't computed a numbering for the BB's in the function, do so
-    // now.
-    if (BBNumbers.empty()) {
-      unsigned ID = 0;
-      for (auto &BB : F)
-        BBNumbers[&BB] = ID++;
-    }
-
     // Remember the dbg.declare intrinsic describing this alloca, if any.
     if (!Info.DbgUsers.empty())
       AllocaDbgUsers[AllocaNum] = Info.DbgUsers;
@@ -831,8 +823,8 @@ void PromoteMem2Reg::run() {
     IDF.setDefiningBlocks(DefBlocks);
     SmallVector<BasicBlock *, 32> PHIBlocks;
     IDF.calculate(PHIBlocks);
-    llvm::sort(PHIBlocks, [this](BasicBlock *A, BasicBlock *B) {
-      return BBNumbers.find(A)->second < BBNumbers.find(B)->second;
+    llvm::sort(PHIBlocks, [](BasicBlock *A, BasicBlock *B) {
+      return A->getNumber() < B->getNumber();
     });
 
     unsigned CurrentVersion = 0;
@@ -954,8 +946,8 @@ void PromoteMem2Reg::run() {
     // Ok, now we know that all of the PHI nodes are missing entries for some
     // basic blocks.  Start by sorting the incoming predecessors for efficient
     // access.
-    auto CompareBBNumbers = [this](BasicBlock *A, BasicBlock *B) {
-      return BBNumbers.find(A)->second < BBNumbers.find(B)->second;
+    auto CompareBBNumbers = [](BasicBlock *A, BasicBlock *B) {
+      return A->getNumber() < B->getNumber();
     };
     llvm::sort(Preds, CompareBBNumbers);
 
@@ -1067,7 +1059,7 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
 bool PromoteMem2Reg::QueuePhiNode(BasicBlock *BB, unsigned AllocaNo,
                                   unsigned &Version) {
   // Look up the basic-block in question.
-  PHINode *&PN = NewPhiNodes[std::make_pair(BBNumbers[BB], AllocaNo)];
+  PHINode *&PN = NewPhiNodes[std::make_pair(BB->getNumber(), AllocaNo)];
 
   // If the BB already has a phi node added for the i'th alloca then we're done!
   if (PN)
@@ -1165,8 +1157,9 @@ NextIteration:
   }
 
   // Don't revisit blocks.
-  if (!Visited.insert(BB).second)
+  if (Visited.test(BB->getNumber()))
     return;
+  Visited.set(BB->getNumber());
 
   for (BasicBlock::iterator II = BB->begin(); !II->isTerminator();) {
     Instruction *I = &*II++; // get the instruction, increment iterator
