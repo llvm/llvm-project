@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir-flat %s -o %t.flat.cir
 // RUN: FileCheck --input-file=%t.flat.cir --check-prefix=CIR_FLAT %s
-
+// RUN_DISABLED: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
+// RUN_DISABLED: FileCheck --input-file=%t.flat.cir --check-prefix=CIR_LLVM %s
 double division(int a, int b);
 
 // CIR: cir.func @_Z2tcv()
