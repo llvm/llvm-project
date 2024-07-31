@@ -4005,7 +4005,10 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask) &&
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+          T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4056,7 +4059,21 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
   }
 
-  unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+  unsigned VecSizeInBits;
+  switch (T->getVectorKind()) {
+  case VectorKind::RVVFixedLengthMask_1:
+    VecSizeInBits = 1;
+    break;
+  case VectorKind::RVVFixedLengthMask_2:
+    VecSizeInBits = 2;
+    break;
+  case VectorKind::RVVFixedLengthMask_4:
+    VecSizeInBits = 4;
+    break;
+  default:
+    VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+    break;
+  }
 
   // Apend the LMUL suffix.
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
@@ -4112,7 +4129,10 @@ void CXXNameMangler::mangleType(const VectorType *T) {
     mangleAArch64FixedSveVectorType(T);
     return;
   } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+             T->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
