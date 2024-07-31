@@ -961,6 +961,34 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   });
 }
 
+NVPTX::Ordering NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL,
+                                                                SDValue &Chain,
+                                                                MemSDNode *N) {
+  // Some memory instructions - loads, stores, atomics - need an extra fence
+  // instruction. Get the memory order of the instruction, and that of its
+  // fence, if any.
+  auto [InstructionOrdering, FenceOrdering] =
+      getOperationOrderings(N, Subtarget);
+
+  // If a fence is required before the operation, insert it:
+  switch (NVPTX::Ordering(FenceOrdering)) {
+  case NVPTX::Ordering::NotAtomic:
+    break;
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    unsigned Op = Subtarget->hasMemoryOrdering()
+                      ? NVPTX::atomic_thread_fence_seq_cst_sys
+                      : NVPTX::INT_MEMBAR_SYS;
+    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
+    break;
+  }
+  default:
+    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
+                               toCString(NVPTX::Ordering(FenceOrdering))));
+  }
+
+  return InstructionOrdering;
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(0);
   switch (IID) {
@@ -1124,31 +1152,12 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (canLowerToLDG(LD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
-
-  // Memory Semantic Setting
-  auto [InstructionOrdering, FenceOrdering] =
-      getOperationOrderings(LD, Subtarget);
-
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(LD->getAddressSpace());
 
-  // If a fence is required before the operation, insert it:
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
-  switch (NVPTX::Ordering(FenceOrdering)) {
-  case NVPTX::Ordering::NotAtomic:
-    break;
-  case NVPTX::Ordering::SequentiallyConsistent: {
-    unsigned Op = Subtarget->hasMemoryOrdering()
-                      ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::INT_MEMBAR_SYS;
-    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
-    break;
-  }
-  default:
-    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
-                               toCString(NVPTX::Ordering(FenceOrdering))));
-  }
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, LD);
 
   // Type Setting: fromType + fromTypeWidth
   //
@@ -1261,31 +1270,12 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   if (canLowerToLDG(MemSD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
-
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
-  // Memory Semantic Setting
-  auto [InstructionOrdering, FenceOrdering] =
-      getOperationOrderings(MemSD, Subtarget);
-
-  // If a fence is required before the operation, insert it:
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
-  switch (NVPTX::Ordering(FenceOrdering)) {
-  case NVPTX::Ordering::NotAtomic:
-    break;
-  case NVPTX::Ordering::SequentiallyConsistent: {
-    unsigned Op = Subtarget->hasMemoryOrdering()
-                      ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::INT_MEMBAR_SYS;
-    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
-    break;
-  }
-  default:
-    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
-                               toCString(NVPTX::Ordering(FenceOrdering))));
-  }
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, MemSD);
 
   // Vector Setting
   MVT SimpleVT = LoadedVT.getSimpleVT();
@@ -1918,27 +1908,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(ST->getAddressSpace());
 
-  // Memory Semantic Setting
-  auto [InstructionOrdering, FenceOrdering] =
-      getOperationOrderings(ST, Subtarget);
-
-  // If a fence is required before the operation, insert it:
   SDLoc DL(N);
   SDValue Chain = ST->getChain();
-  switch (NVPTX::Ordering(FenceOrdering)) {
-  case NVPTX::Ordering::NotAtomic:
-    break;
-  case NVPTX::Ordering::SequentiallyConsistent: {
-    unsigned Op = Subtarget->hasMemoryOrdering()
-                      ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::INT_MEMBAR_SYS;
-    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
-    break;
-  }
-  default:
-    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
-                               toCString(NVPTX::Ordering(FenceOrdering))));
-  }
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
   MVT SimpleVT = StoreVT.getSimpleVT();
@@ -2036,11 +2008,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
-  SDValue Chain = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Addr, Offset, Base;
   std::optional<unsigned> Opcode;
-  SDLoc DL(N);
   SDNode *ST;
   EVT EltVT = Op1.getValueType();
   MemSDNode *MemSD = cast<MemSDNode>(N);
@@ -2055,25 +2025,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
-  // Memory Semantic Setting
-  auto [InstructionOrdering, FenceOrdering] =
-      getOperationOrderings(MemSD, Subtarget);
-
-  // If a fence is required before the operation, insert it:
-  switch (NVPTX::Ordering(FenceOrdering)) {
-  case NVPTX::Ordering::NotAtomic:
-    break;
-  case NVPTX::Ordering::SequentiallyConsistent: {
-    unsigned Op = Subtarget->hasMemoryOrdering()
-                      ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::INT_MEMBAR_SYS;
-    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
-    break;
-  }
-  default:
-    report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
-                               toCString(NVPTX::Ordering(FenceOrdering))));
-  }
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, MemSD);
 
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
