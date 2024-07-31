@@ -71,6 +71,20 @@ struct GraphTraits {
   // static unsigned       size       (GraphType *G)
   //    Return total number of nodes in the graph
 
+  // Optionally implement the following:
+  // static unsigned getNumber(NodeRef)
+  //    Return a unique number of a node. Numbers are ideally dense, these are
+  //    used to store nodes in a vector.
+  // static unsigned getMaxNumber(GraphType *G)
+  //    Return the maximum number that getNumber() will return, or 0 if this is
+  //    unknown. Intended for reserving large enough buffers.
+  // static unsigned getNumberEpoch(GraphType *G)
+  //    Return the "epoch" of the node numbers. Should return a different
+  //    number after renumbering, so users can assert that the epoch didn't
+  //    change => numbers are still valid. If renumberings are not tracked, it
+  //    is always valid to return a constant value. This is solely for to ease
+  //    debugging by having a way to detect use of outdated numbers.
+
   // If anyone tries to use this class without having an appropriate
   // specialization, make an error.  If you get this error, it's because you
   // need to include the appropriate specialization of GraphTraits<> for your

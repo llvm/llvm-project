@@ -258,14 +258,17 @@ protected:
   // Dominators always have a single root, postdominators can have more.
   SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
 
-  using DomTreeNodeMapType =
-     DenseMap<NodeT *, std::unique_ptr<DomTreeNodeBase<NodeT>>>;
-  DomTreeNodeMapType DomTreeNodes;
+  using DomTreeNodeStorageTy =
+      SmallVector<std::unique_ptr<DomTreeNodeBase<NodeT>>>;
+  DomTreeNodeStorageTy DomTreeNodes;
+  // For graphs where block don't have numbers, create a numbering here.
+  DenseMap<const NodeT *, unsigned> NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
 
   mutable bool DFSInfoValid = false;
   mutable unsigned int SlowQueries = 0;
+  unsigned BlockNumberEpoch = 0;
 
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
 
@@ -273,22 +276,22 @@ protected:
   DominatorTreeBase() = default;
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
-      : Roots(std::move(Arg.Roots)),
-        DomTreeNodes(std::move(Arg.DomTreeNodes)),
-        RootNode(Arg.RootNode),
-        Parent(Arg.Parent),
-        DFSInfoValid(Arg.DFSInfoValid),
-        SlowQueries(Arg.SlowQueries) {
+      : Roots(std::move(Arg.Roots)), DomTreeNodes(std::move(Arg.DomTreeNodes)),
+        NodeNumberMap(std::move(Arg.NodeNumberMap)), RootNode(Arg.RootNode),
+        Parent(Arg.Parent), DFSInfoValid(Arg.DFSInfoValid),
+        SlowQueries(Arg.SlowQueries), BlockNumberEpoch(Arg.BlockNumberEpoch) {
     Arg.wipe();
   }
 
   DominatorTreeBase &operator=(DominatorTreeBase &&RHS) {
     Roots = std::move(RHS.Roots);
     DomTreeNodes = std::move(RHS.DomTreeNodes);
+    NodeNumberMap = std::move(RHS.NodeNumberMap);
     RootNode = RHS.RootNode;
     Parent = RHS.Parent;
     DFSInfoValid = RHS.DFSInfoValid;
     SlowQueries = RHS.SlowQueries;
+    BlockNumberEpoch = RHS.BlockNumberEpoch;
     RHS.wipe();
     return *this;
   }
@@ -333,35 +336,80 @@ protected:
     if (!std::is_permutation(Roots.begin(), Roots.end(), Other.Roots.begin()))
       return true;
 
-    const DomTreeNodeMapType &OtherDomTreeNodes = Other.DomTreeNodes;
-    if (DomTreeNodes.size() != OtherDomTreeNodes.size())
-      return true;
-
-    for (const auto &DomTreeNode : DomTreeNodes) {
-      NodeT *BB = DomTreeNode.first;
-      typename DomTreeNodeMapType::const_iterator OI =
-          OtherDomTreeNodes.find(BB);
-      if (OI == OtherDomTreeNodes.end())
+    size_t NumNodes = 0;
+    for (const auto &Node : DomTreeNodes) {
+      if (!Node)
+        continue;
+      if (Node->compare(Other.getNode(Node->getBlock())))
         return true;
-
-      DomTreeNodeBase<NodeT> &MyNd = *DomTreeNode.second;
-      DomTreeNodeBase<NodeT> &OtherNd = *OI->second;
-
-      if (MyNd.compare(&OtherNd))
-        return true;
+      NumNodes++;
     }
+
+    size_t NumOtherNodes = 0;
+    for (const auto &OtherNode : Other.DomTreeNodes)
+      if (OtherNode)
+        NumOtherNodes++;
+    if (NumNodes != NumOtherNodes)
+      return true;
 
     return false;
   }
 
+private:
+  template <typename T>
+  using has_number_t =
+      decltype(GraphTraits<T *>::getNumber(std::declval<T *>()));
+
+  template <class T_ = NodeT>
+  std::enable_if_t<is_detected<has_number_t, T_>::value,
+                   std::optional<unsigned>>
+  getNodeIndex(const NodeT *BB) const {
+    // BB can be nullptr, map nullptr to index 0.
+    assert(BlockNumberEpoch == GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
+           "dominator tree used with outdated block numbers");
+    return BB ? GraphTraits<const NodeT *>::getNumber(BB) + 1 : 0;
+  }
+
+  template <class T_ = NodeT>
+  std::enable_if_t<!is_detected<has_number_t, T_>::value,
+                   std::optional<unsigned>>
+  getNodeIndex(const NodeT *BB) const {
+    if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  template <class T_ = NodeT>
+  std::enable_if_t<is_detected<has_number_t, T_>::value, unsigned>
+  getNodeIndexForInsert(const NodeT *BB) {
+    // getNodeIndex will never fail if nodes have getNumber().
+    unsigned Idx = *getNodeIndex(BB);
+    if (Idx >= DomTreeNodes.size()) {
+      unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent);
+      DomTreeNodes.resize(Max > Idx + 1 ? Max : Idx + 1);
+    }
+    return Idx;
+  }
+
+  template <class T_ = NodeT>
+  std::enable_if_t<!is_detected<has_number_t, T_>::value, unsigned>
+  getNodeIndexForInsert(const NodeT *BB) {
+    // We might already have a number stored for BB.
+    unsigned Idx =
+        NodeNumberMap.try_emplace(BB, DomTreeNodes.size()).first->second;
+    if (Idx >= DomTreeNodes.size())
+      DomTreeNodes.resize(Idx + 1);
+    return Idx;
+  }
+
+public:
   /// getNode - return the (Post)DominatorTree node for the specified basic
   /// block.  This is the same as using operator[] on this class.  The result
   /// may (but is not required to) be null for a forward (backwards)
   /// statically unreachable block.
   DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
-    auto I = DomTreeNodes.find(BB);
-    if (I != DomTreeNodes.end())
-      return I->second.get();
+    if (auto Idx = getNodeIndex(BB); Idx && *Idx < DomTreeNodes.size())
+      return DomTreeNodes[*Idx].get();
     return nullptr;
   }
 
@@ -678,8 +726,10 @@ protected:
   /// dominate any other blocks. Removes node from its immediate dominator's
   /// children list. Deletes dominator node associated with basic block BB.
   void eraseNode(NodeT *BB) {
-    DomTreeNodeBase<NodeT> *Node = getNode(BB);
-    assert(Node && "Removing node that isn't in dominator tree.");
+    std::optional<unsigned> IdxOpt = getNodeIndex(BB);
+    assert(IdxOpt && DomTreeNodes[*IdxOpt] &&
+           "Removing node that isn't in dominator tree.");
+    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt].get();
     assert(Node->isLeaf() && "Node is not a leaf node.");
 
     DFSInfoValid = false;
@@ -695,7 +745,8 @@ protected:
       IDom->Children.pop_back();
     }
 
-    DomTreeNodes.erase(BB);
+    DomTreeNodes[*IdxOpt] = nullptr;
+    NodeNumberMap.erase(BB);
 
     if (!IsPostDom) return;
 
@@ -786,15 +837,52 @@ public:
     DFSInfoValid = true;
   }
 
+private:
+  template <class T_ = NodeT>
+  std::enable_if_t<is_detected<has_number_t, T_>::value, void>
+  updateBlockNumberEpoch() {
+    BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
+  }
+
+  template <class T_ = NodeT>
+  std::enable_if_t<!is_detected<has_number_t, T_>::value, void>
+  updateBlockNumberEpoch() {
+    // Nothing to do for graphs that don't number their blocks.
+  }
+
+public:
   /// recalculate - compute a dominator tree for the given function
   void recalculate(ParentType &Func) {
     Parent = &Func;
+    updateBlockNumberEpoch();
     DomTreeBuilder::Calculate(*this);
   }
 
   void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates) {
     Parent = &Func;
+    updateBlockNumberEpoch();
     DomTreeBuilder::CalculateWithUpdates(*this, Updates);
+  }
+
+  /// Update dominator tree after renumbering blocks
+  template <class T_ = NodeT>
+  std::enable_if_t<is_detected<has_number_t, T_>::value, void>
+  updateBlockNumbers() {
+    updateBlockNumberEpoch();
+
+    unsigned MaxNumber = GraphTraits<ParentPtr>::getMaxNumber(Parent);
+    DomTreeNodeStorageTy NewVector;
+    NewVector.resize(MaxNumber + 1); // +1, because index 0 is for nullptr
+    for (auto &Node : DomTreeNodes) {
+      if (!Node)
+        continue;
+      unsigned Idx = *getNodeIndex(Node->getBlock());
+      // getMaxNumber is not necssarily supported
+      if (Idx >= NewVector.size())
+        NewVector.resize(Idx + 1);
+      NewVector[Idx] = std::move(Node);
+    }
+    DomTreeNodes = std::move(NewVector);
   }
 
   /// verify - checks if the tree is correct. There are 3 level of verification:
@@ -817,6 +905,7 @@ public:
 
   void reset() {
     DomTreeNodes.clear();
+    NodeNumberMap.clear();
     Roots.clear();
     RootNode = nullptr;
     Parent = nullptr;
@@ -831,7 +920,8 @@ protected:
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {
     auto Node = std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDom);
     auto *NodePtr = Node.get();
-    DomTreeNodes[BB] = std::move(Node);
+    unsigned NodeIdx = getNodeIndexForInsert(BB);
+    DomTreeNodes[NodeIdx] = std::move(Node);
     if (IDom)
       IDom->addChild(NodePtr);
     return NodePtr;
@@ -915,6 +1005,7 @@ protected:
   /// assignable and destroyable state, but otherwise invalid.
   void wipe() {
     DomTreeNodes.clear();
+    NodeNumberMap.clear();
     RootNode = nullptr;
     Parent = nullptr;
   }
