@@ -317,8 +317,11 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = GPRValueMapping;
 
     OpdsMapping[1] = GPRValueMapping;
+
+    if (Ty.isVector())
+      break;
     // Use FPR64 for s64 loads on rv32.
-    if (!Ty.isVector() && GPRSize == 32 && Size.getFixedValue() == 64) {
+    if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
@@ -345,8 +348,12 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = GPRValueMapping;
 
     OpdsMapping[1] = GPRValueMapping;
+
+    if (Ty.isVector())
+      break;
+
     // Use FPR64 for s64 stores on rv32.
-    if (!Ty.isVector() && GPRSize == 32 && Size.getFixedValue() == 64) {
+    if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
