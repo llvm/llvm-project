@@ -489,6 +489,7 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
     Found |= FindVSXSubfeature("+paired-vector-memops",
                                "-mpaired-vector-memops", "-msoft-float");
     Found |= FindVSXSubfeature("+mma", "-mmma", "-msoft-float");
+    Found |= FindVSXSubfeature("+crypto", "-mcrypto", "-msoft-float");
     Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector",
                                "-msoft-float");
   }
@@ -707,6 +708,7 @@ bool PPCTargetInfo::initFeatureMap(
     Features["power10-vector"] = false;
     Features["float128"] = false;
     Features["mma"] = false;
+    Features["crypto"] = false;
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

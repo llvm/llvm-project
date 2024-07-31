@@ -113,6 +113,10 @@
 // RUN: -std=c++11 -msoft-float -mpaired-vector-memops %s 2>&1 | \
 // RUN: FileCheck %s -check-prefix=CHECK-SOFTFLT-PAIREDVECMEMOP
 
+// RUN: not %clang -target powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: -std=c++11 -msoft-float -mcrypto %s 2>&1 | \
+// RUN: FileCheck %s -check-prefix=CHECK-SOFTFLT-CRYPTO
+
 #ifdef __VSX__
 static_assert(false, "VSX enabled");
 #endif
@@ -159,3 +163,4 @@ static_assert(false, "Neither enabled");
 // CHECK-SOFTFLT-DIRECTMOVE: error: option '-mdirect-move' cannot be specified with '-msoft-float'
 // CHECK-SOFTFLT-MMA: error: option '-mmma' cannot be specified with '-msoft-float'
 // CHECK-SOFTFLT-PAIREDVECMEMOP: error: option '-mpaired-vector-memops' cannot be specified with '-msoft-float'
+// CHECK-SOFTFLT-CRYPTO: error: option '-mcrypto' cannot be specified with '-msoft-float'
