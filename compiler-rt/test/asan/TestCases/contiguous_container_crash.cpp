@@ -1,7 +1,7 @@
 // RUN: %clangxx_asan -O %s -o %t
 // RUN: not %run %t crash 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
 // RUN: not %run %t bad-bounds 2>&1 | FileCheck --check-prefix=CHECK-BAD-BOUNDS %s
-// RUN: not %run %t unaligned-bad-bounds 2>&1 | FileCheck --check-prefix=CHECK-UNALIGNED-BAD-BOUNDS-NOT %s
+// RUN: not %run %t unaligned-bad-bounds 2>&1 | FileCheck --check-prefix=CHECK-UNALIGNED-BAD-BOUNDS %s
 // RUN: not %run %t odd-alignment 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
 // RUN: not %run %t odd-alignment-end 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
 // RUN: %env_asan_opts=detect_container_overflow=0 %run %t crash
