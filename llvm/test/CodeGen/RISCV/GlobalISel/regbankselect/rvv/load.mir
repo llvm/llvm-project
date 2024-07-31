@@ -222,8 +222,6 @@
     ret <vscale x 8 x ptr> %va
   }
 
-  attributes #0 = { "target-features"="+v" }
-
 ...
 ---
 name:            vload_nx1i8
@@ -237,9 +235,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -247,14 +243,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 1 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 1 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 1 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 1 x s8>) from %ir.pa)
     $v8 = COPY %1(<vscale x 1 x s8>)
     PseudoRET implicit $v8
 
@@ -271,9 +264,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -281,14 +272,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 2 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
     $v8 = COPY %1(<vscale x 2 x s8>)
     PseudoRET implicit $v8
 
@@ -305,9 +293,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -315,14 +301,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 4 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
     $v8 = COPY %1(<vscale x 4 x s8>)
     PseudoRET implicit $v8
 
@@ -339,9 +322,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 8 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -349,14 +330,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 8 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 8 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 8 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
     $v8 = COPY %1(<vscale x 8 x s8>)
     PseudoRET implicit $v8
 
@@ -373,9 +351,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -383,14 +359,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
     $v8m2 = COPY %1(<vscale x 16 x s8>)
     PseudoRET implicit $v8m2
 
@@ -407,9 +380,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 32 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 32 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 32 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -417,14 +388,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 32 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 32 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 32 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 32 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 32 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 32 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 32 x s8>) from %ir.pa)
     $v8m4 = COPY %1(<vscale x 32 x s8>)
     PseudoRET implicit $v8m4
 
@@ -441,9 +409,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 64 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 64 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 64 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 64 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 64 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -451,14 +417,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 64 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 64 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 64 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 64 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 64 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 64 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 64 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 64 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 64 x s8>) from %ir.pa)
     $v8m8 = COPY %1(<vscale x 64 x s8>)
     PseudoRET implicit $v8m8
 
@@ -475,9 +438,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -485,14 +446,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 1 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 1 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 1 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 1 x s16>) from %ir.pa)
     $v8 = COPY %1(<vscale x 1 x s16>)
     PseudoRET implicit $v8
 
@@ -509,9 +467,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -519,14 +475,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 2 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s16>) from %ir.pa)
     $v8 = COPY %1(<vscale x 2 x s16>)
     PseudoRET implicit $v8
 
@@ -543,9 +496,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -553,14 +504,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 4 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
     $v8 = COPY %1(<vscale x 4 x s16>)
     PseudoRET implicit $v8
 
@@ -577,9 +525,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 8 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -587,14 +533,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 8 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 8 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 8 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 8 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s16>) from %ir.pa)
     $v8m2 = COPY %1(<vscale x 8 x s16>)
     PseudoRET implicit $v8m2
 
@@ -611,9 +554,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 16 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -621,14 +562,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 16 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 16 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s16>) from %ir.pa)
     $v8m4 = COPY %1(<vscale x 16 x s16>)
     PseudoRET implicit $v8m4
 
@@ -645,9 +583,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 32 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 32 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 32 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -655,14 +591,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 32 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 32 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 32 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 32 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 32 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 32 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 32 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 32 x s16>) from %ir.pa)
     $v8m8 = COPY %1(<vscale x 32 x s16>)
     PseudoRET implicit $v8m8
 
@@ -679,9 +612,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s32>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s32>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -689,14 +620,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s32>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s32>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 1 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 1 x s32>) from %ir.pa)
+    %1:vrb(<vscale x 1 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 1 x s32>) from %ir.pa)
     $v8 = COPY %1(<vscale x 1 x s32>)
     PseudoRET implicit $v8
 
@@ -713,9 +641,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -723,14 +649,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
+    %1:vrb(<vscale x 2 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
     $v8 = COPY %1(<vscale x 2 x s32>)
     PseudoRET implicit $v8
 
@@ -747,9 +670,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s32>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s32>) from %ir.pa)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 4 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -757,14 +678,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s32>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s32>) from %ir.pa)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 4 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s32>) from %ir.pa)
+    %1:vrb(<vscale x 4 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s32>) from %ir.pa)
     $v8m2 = COPY %1(<vscale x 4 x s32>)
     PseudoRET implicit $v8m2
 
@@ -781,9 +699,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s32>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s32>) from %ir.pa)
     ; RV32I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 8 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -791,14 +707,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s32>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s32>) from %ir.pa)
     ; RV64I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 8 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 8 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 8 x s32>) from %ir.pa)
+    %1:vrb(<vscale x 8 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s32>) from %ir.pa)
     $v8m4 = COPY %1(<vscale x 8 x s32>)
     PseudoRET implicit $v8m4
 
@@ -815,9 +728,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s32>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s32>) from %ir.pa)
     ; RV32I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 16 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -825,14 +736,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s32>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s32>) from %ir.pa)
     ; RV64I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 16 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s32>) from %ir.pa)
+    %1:vrb(<vscale x 16 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s32>) from %ir.pa)
     $v8m8 = COPY %1(<vscale x 16 x s32>)
     PseudoRET implicit $v8m8
 
@@ -849,9 +757,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s64>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s64>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -859,14 +765,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x s64>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x s64>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 1 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 1 x s64>) from %ir.pa)
+    %1:vrb(<vscale x 1 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 1 x s64>) from %ir.pa)
     $v8 = COPY %1(<vscale x 1 x s64>)
     PseudoRET implicit $v8
 
@@ -883,9 +786,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -893,14 +794,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+    %1:vrb(<vscale x 2 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
     $v8m2 = COPY %1(<vscale x 2 x s64>)
     PseudoRET implicit $v8m2
 
@@ -917,9 +815,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s64>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s64>) from %ir.pa)
     ; RV32I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 4 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -927,14 +823,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s64>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s64>) from %ir.pa)
     ; RV64I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 4 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s64>) from %ir.pa)
+    %1:vrb(<vscale x 4 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s64>) from %ir.pa)
     $v8m4 = COPY %1(<vscale x 4 x s64>)
     PseudoRET implicit $v8m4
 
@@ -951,9 +844,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s64>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s64>) from %ir.pa)
     ; RV32I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 8 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -961,14 +852,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s64>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s64>) from %ir.pa)
     ; RV64I-NEXT: $v8m8 = COPY [[LOAD]](<vscale x 8 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 8 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 8 x s64>) from %ir.pa)
+    %1:vrb(<vscale x 8 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s64>) from %ir.pa)
     $v8m8 = COPY %1(<vscale x 8 x s64>)
     PseudoRET implicit $v8m8
 
@@ -985,9 +873,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -995,14 +881,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
+    %1:vrb(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 1)
     $v8m2 = COPY %1(<vscale x 16 x s8>)
     PseudoRET implicit $v8m2
 
@@ -1019,9 +902,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -1029,14 +910,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
+    %1:vrb(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 2)
     $v8m2 = COPY %1(<vscale x 16 x s8>)
     PseudoRET implicit $v8m2
 
@@ -1053,9 +931,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -1063,14 +939,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    %1:vrb(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
     $v8m2 = COPY %1(<vscale x 16 x s8>)
     PseudoRET implicit $v8m2
 
@@ -1087,9 +960,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -1097,14 +968,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 16 x s8>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 16 x s8>) = G_LOAD %2(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
+    %1:vrb(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 64)
     $v8m2 = COPY %1(<vscale x 16 x s8>)
     PseudoRET implicit $v8m2
 
@@ -1121,9 +989,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 1)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 1)
     ; RV32I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_BITCAST [[LOAD]](<vscale x 8 x s8>)
     ; RV32I-NEXT: $v8 = COPY [[BITCAST]](<vscale x 4 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
@@ -1132,15 +998,12 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 1)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 1)
     ; RV64I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_BITCAST [[LOAD]](<vscale x 8 x s8>)
     ; RV64I-NEXT: $v8 = COPY [[BITCAST]](<vscale x 4 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %3:vrb(p0) = COPY %0(p0)
-    %2:vrb(<vscale x 8 x s8>) = G_LOAD %3(p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 1)
+    %2:vrb(<vscale x 8 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 1)
     %1:vrb(<vscale x 4 x s16>) = G_BITCAST %2(<vscale x 8 x s8>)
     $v8 = COPY %1(<vscale x 4 x s16>)
     PseudoRET implicit $v8
@@ -1158,9 +1021,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1168,14 +1029,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
+    %1:vrb(<vscale x 4 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 2)
     $v8 = COPY %1(<vscale x 4 x s16>)
     PseudoRET implicit $v8
 
@@ -1192,9 +1050,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1202,14 +1058,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
+    %1:vrb(<vscale x 4 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 4)
     $v8 = COPY %1(<vscale x 4 x s16>)
     PseudoRET implicit $v8
 
@@ -1226,9 +1079,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1236,14 +1087,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
+    %1:vrb(<vscale x 4 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s16>) from %ir.pa)
     $v8 = COPY %1(<vscale x 4 x s16>)
     PseudoRET implicit $v8
 
@@ -1260,9 +1108,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 16)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 16)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1270,14 +1116,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 16)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 16)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 4 x s16>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 4 x s16>) = G_LOAD %2(p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 16)
+    %1:vrb(<vscale x 4 x s16>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s16>) from %ir.pa, align 16)
     $v8 = COPY %1(<vscale x 4 x s16>)
     PseudoRET implicit $v8
 
@@ -1294,9 +1137,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 2)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 2)
     ; RV32I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_BITCAST [[LOAD]](<vscale x 8 x s8>)
     ; RV32I-NEXT: $v8 = COPY [[BITCAST]](<vscale x 2 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
@@ -1305,15 +1146,12 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 2)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 2)
     ; RV64I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_BITCAST [[LOAD]](<vscale x 8 x s8>)
     ; RV64I-NEXT: $v8 = COPY [[BITCAST]](<vscale x 2 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %3:vrb(p0) = COPY %0(p0)
-    %2:vrb(<vscale x 8 x s8>) = G_LOAD %3(p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 2)
+    %2:vrb(<vscale x 8 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s8>) from %ir.pa, align 2)
     %1:vrb(<vscale x 2 x s32>) = G_BITCAST %2(<vscale x 8 x s8>)
     $v8 = COPY %1(<vscale x 2 x s32>)
     PseudoRET implicit $v8
@@ -1331,9 +1169,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 4)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 4)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1341,14 +1177,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 4)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 4)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 4)
+    %1:vrb(<vscale x 2 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 4)
     $v8 = COPY %1(<vscale x 2 x s32>)
     PseudoRET implicit $v8
 
@@ -1365,9 +1198,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1375,14 +1206,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
+    %1:vrb(<vscale x 2 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s32>) from %ir.pa)
     $v8 = COPY %1(<vscale x 2 x s32>)
     PseudoRET implicit $v8
 
@@ -1399,9 +1227,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1409,14 +1235,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
+    %1:vrb(<vscale x 2 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 16)
     $v8 = COPY %1(<vscale x 2 x s32>)
     PseudoRET implicit $v8
 
@@ -1433,9 +1256,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1443,14 +1264,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x s32>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s32>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
+    %1:vrb(<vscale x 2 x s32>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s32>) from %ir.pa, align 256)
     $v8 = COPY %1(<vscale x 2 x s32>)
     PseudoRET implicit $v8
 
@@ -1467,9 +1285,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 4)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 4)
     ; RV32I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_BITCAST [[LOAD]](<vscale x 16 x s8>)
     ; RV32I-NEXT: $v8m2 = COPY [[BITCAST]](<vscale x 2 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
@@ -1478,15 +1294,12 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 4)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 4)
     ; RV64I-NEXT: [[BITCAST:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_BITCAST [[LOAD]](<vscale x 16 x s8>)
     ; RV64I-NEXT: $v8m2 = COPY [[BITCAST]](<vscale x 2 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %3:vrb(p0) = COPY %0(p0)
-    %2:vrb(<vscale x 16 x s8>) = G_LOAD %3(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 4)
+    %2:vrb(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa, align 4)
     %1:vrb(<vscale x 2 x s64>) = G_BITCAST %2(<vscale x 16 x s8>)
     $v8m2 = COPY %1(<vscale x 2 x s64>)
     PseudoRET implicit $v8m2
@@ -1504,9 +1317,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -1514,14 +1325,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
+    %1:vrb(<vscale x 2 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 8)
     $v8m2 = COPY %1(<vscale x 2 x s64>)
     PseudoRET implicit $v8m2
 
@@ -1538,9 +1346,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -1548,14 +1354,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
+    %1:vrb(<vscale x 2 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s64>) from %ir.pa)
     $v8m2 = COPY %1(<vscale x 2 x s64>)
     PseudoRET implicit $v8m2
 
@@ -1572,9 +1375,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 32)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 32)
     ; RV32I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -1582,14 +1383,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 32)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 32)
     ; RV64I-NEXT: $v8m2 = COPY [[LOAD]](<vscale x 2 x s64>)
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x s64>) = G_LOAD %2(p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 32)
+    %1:vrb(<vscale x 2 x s64>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s64>) from %ir.pa, align 32)
     $v8m2 = COPY %1(<vscale x 2 x s64>)
     PseudoRET implicit $v8m2
 
@@ -1606,9 +1404,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x p0>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x p0>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x p0>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x p0>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x p0>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1616,14 +1412,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x p0>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 1 x p0>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 1 x p0>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 1 x p0>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 1 x p0>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 1 x p0>) = G_LOAD %2(p0) :: (load (<vscale x 1 x p0>) from %ir.pa)
+    %1:vrb(<vscale x 1 x p0>) = G_LOAD %0(p0) :: (load (<vscale x 1 x p0>) from %ir.pa)
     $v8 = COPY %1(<vscale x 1 x p0>)
     PseudoRET implicit $v8
 
@@ -1640,9 +1433,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x p0>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x p0>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x p0>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x p0>) from %ir.pa)
     ; RV32I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x p0>)
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -1650,14 +1441,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x p0>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 2 x p0>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 2 x p0>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 2 x p0>) from %ir.pa)
     ; RV64I-NEXT: $v8 = COPY [[LOAD]](<vscale x 2 x p0>)
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 2 x p0>) = G_LOAD %2(p0) :: (load (<vscale x 2 x p0>) from %ir.pa)
+    %1:vrb(<vscale x 2 x p0>) = G_LOAD %0(p0) :: (load (<vscale x 2 x p0>) from %ir.pa)
     $v8 = COPY %1(<vscale x 2 x p0>)
     PseudoRET implicit $v8
 
@@ -1674,9 +1462,7 @@ body:             |
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV32I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x p0>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x p0>) from %ir.pa)
+    ; RV32I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x p0>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x p0>) from %ir.pa)
     ; RV32I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 8 x p0>)
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -1684,14 +1470,11 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gprb(p0) = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:vrb(p0) = COPY [[COPY]](p0)
-    ; RV64I-NEXT: [[COPY2:%[0-9]+]]:gprb(p0) = COPY [[COPY1]](p0)
-    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x p0>) = G_LOAD [[COPY2]](p0) :: (load (<vscale x 8 x p0>) from %ir.pa)
+    ; RV64I-NEXT: [[LOAD:%[0-9]+]]:vrb(<vscale x 8 x p0>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x p0>) from %ir.pa)
     ; RV64I-NEXT: $v8m4 = COPY [[LOAD]](<vscale x 8 x p0>)
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:gprb(p0) = COPY $x10
-    %2:vrb(p0) = COPY %0(p0)
-    %1:vrb(<vscale x 8 x p0>) = G_LOAD %2(p0) :: (load (<vscale x 8 x p0>) from %ir.pa)
+    %1:vrb(<vscale x 8 x p0>) = G_LOAD %0(p0) :: (load (<vscale x 8 x p0>) from %ir.pa)
     $v8m4 = COPY %1(<vscale x 8 x p0>)
     PseudoRET implicit $v8m4
 
