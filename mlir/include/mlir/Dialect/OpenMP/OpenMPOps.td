@@ -590,13 +590,12 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     DeclareOpInterfaceMethods<LoopWrapperInterface>, RecursiveMemoryEffects,
     SingleBlock
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_FinalClause, OpenMP_UntiedClause,
-    OpenMP_MergeableClause,
-    OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
+    OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
+    OpenMP_IfClause, OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
+    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
+    OpenMP_PriorityClause, OpenMP_PrivateClause,
     OpenMP_ReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_PriorityClause, OpenMP_AllocateClause, OpenMP_GrainsizeClause,
-    OpenMP_NumTasksClause, OpenMP_NogroupClause, OpenMP_PrivateClause
+    OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
@@ -667,8 +666,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
 def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_TaskReductionClause, OpenMP_AllocateClause
+    OpenMP_AllocateClause, OpenMP_TaskReductionClause
   ], singleRegion = true> {
   let summary = "taskgroup construct";
   let description = [{
@@ -948,9 +946,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 def TargetDataOp: OpenMP_Op<"target_data", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_DeviceClause, OpenMP_UseDevicePtrClause,
-    OpenMP_UseDeviceAddrClause, OpenMP_MapClause
+    OpenMP_DeviceClause, OpenMP_IfClause, OpenMP_MapClause,
+    OpenMP_UseDeviceAddrClause, OpenMP_UseDevicePtrClause
   ], singleRegion = true> {
   let summary = "target data construct";
   let description = [{
@@ -981,9 +978,8 @@ def TargetDataOp: OpenMP_Op<"target_data", traits = [
 def TargetEnterDataOp: OpenMP_Op<"target_enter_data", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_DeviceClause, OpenMP_DependClause,
-    OpenMP_NowaitClause, OpenMP_MapClause
+    OpenMP_DependClause, OpenMP_DeviceClause, OpenMP_IfClause, OpenMP_MapClause,
+    OpenMP_NowaitClause
   ]> {
   let summary = "target enter data construct";
   let description = [{
@@ -1010,9 +1006,8 @@ def TargetEnterDataOp: OpenMP_Op<"target_enter_data", traits = [
 def TargetExitDataOp: OpenMP_Op<"target_exit_data", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_DeviceClause, OpenMP_DependClause,
-    OpenMP_NowaitClause, OpenMP_MapClause
+    OpenMP_DependClause, OpenMP_DeviceClause, OpenMP_IfClause, OpenMP_MapClause,
+    OpenMP_NowaitClause
   ]> {
   let summary = "target exit data construct";
   let description = [{
@@ -1039,9 +1034,8 @@ def TargetExitDataOp: OpenMP_Op<"target_exit_data", traits = [
 def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_DeviceClause, OpenMP_DependClause,
-    OpenMP_NowaitClause, OpenMP_MapClause
+    OpenMP_DependClause, OpenMP_DeviceClause, OpenMP_IfClause, OpenMP_MapClause,
+    OpenMP_NowaitClause
   ]> {
   let summary = "target update construct";
   let description = [{
@@ -1077,11 +1071,10 @@ def TargetOp : OpenMP_Op<"target", traits = [
     AttrSizedOperandSegments, IsolatedFromAbove, OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_DeviceClause, OpenMP_ThreadLimitClause,
-    OpenMP_DependClause, OpenMP_NowaitClause, OpenMP_IsDevicePtrClause,
-    OpenMP_HasDeviceAddrClause, OpenMP_MapClause, OpenMP_PrivateClause,
-    OpenMP_AllocateClause, OpenMP_InReductionClause
+    OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
+    OpenMP_HasDeviceAddrClause, OpenMP_IfClause, OpenMP_InReductionClause,
+    OpenMP_IsDevicePtrClause, OpenMP_MapClause, OpenMP_NowaitClause,
+    OpenMP_PrivateClause, OpenMP_ThreadLimitClause
   ], singleRegion = true> {
   let summary = "target construct";
   let description = [{
