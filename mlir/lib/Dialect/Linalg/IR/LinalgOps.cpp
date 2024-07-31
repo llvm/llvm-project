@@ -1217,9 +1217,12 @@ struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy linalgOp,
                                 PatternRewriter &rewriter) const override {
-    // Check all indexing maps are identity.
-    if (llvm::any_of(linalgOp.getIndexingMapsArray(),
-                     [](AffineMap map) { return !map.isIdentity(); }))
+    // All indexing maps must be equal permutations
+    auto indexingMaps = linalgOp.getIndexingMapsArray();
+    if (!llvm::all_equal(indexingMaps))
+      return failure();
+
+    if (!indexingMaps.empty() && !indexingMaps.front().isPermutation())
       return failure();
 
     // Check that the body of the linalg operation is just a linalg.yield
