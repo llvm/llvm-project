@@ -2058,6 +2058,17 @@ def Convergent : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def NoConvergent : InheritableAttr {
+  let Spellings = [Clang<"noconvergent">, Declspec<"noconvergent">];
+  let Subjects = SubjectList<[Function, Stmt], WarnDiag,
+                             "functions and statements">;
+  let LangOpts = [CUDA];
+  let Documentation = [NoConvergentDocs];
+  let SimpleHandler = 1;
+}
+
+def : MutualExclusions<[Convergent, NoConvergent]>;
+
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
                    CXX11<"clang", "noinline">, C23<"clang", "noinline">,
