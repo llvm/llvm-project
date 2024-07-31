@@ -5193,11 +5193,6 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
   const char *Symbols = Contents + Header.symbols_offset;
   const char *SymbolsEnd = Contents + DyldChainedFixups.datasize;
 
-  if (ImportsEnd > SymbolsEnd)
-    return malformedError("bad chained fixups: imports end " +
-                          Twine(ImportsEndOffset) + " extends past end " +
-                          Twine(DyldChainedFixups.datasize));
-
   if (ImportsEnd > Symbols)
     return malformedError("bad chained fixups: imports end " +
                           Twine(ImportsEndOffset) + " overlaps with symbols");
