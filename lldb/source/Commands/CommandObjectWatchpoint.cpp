@@ -203,7 +203,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
 
     if (target->GetProcessSP() && target->GetProcessSP()->IsAlive()) {
       std::optional<uint32_t> num_supported_hardware_watchpoints =
@@ -286,7 +286,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
     if (!CheckTargetForWatchpointOperations(target, result))
       return;
 
@@ -355,7 +355,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
     if (!CheckTargetForWatchpointOperations(target, result))
       return;
 
@@ -464,7 +464,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
     if (!CheckTargetForWatchpointOperations(target, result))
       return;
 
@@ -584,7 +584,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
     if (!CheckTargetForWatchpointOperations(target, result))
       return;
 
@@ -703,7 +703,7 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target *target = &GetTarget();
     if (!CheckTargetForWatchpointOperations(target, result))
       return;
 
@@ -804,7 +804,7 @@ protected:
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = &GetTarget();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     // If no argument is present, issue an error message.  There's no way to
@@ -991,7 +991,7 @@ protected:
     m_option_group.NotifyOptionParsingStarting(
         &exe_ctx); // This is a raw command, so notify the option group
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = &GetTarget();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     OptionsWithRaw args(raw_command);

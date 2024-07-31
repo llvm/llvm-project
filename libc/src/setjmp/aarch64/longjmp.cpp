@@ -22,7 +22,9 @@ namespace LIBC_NAMESPACE_DECL {
 // supports the MTE instructions, not whether the compiler is configured to use
 // them.)
 
-[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
+[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp,
+                                  ([[maybe_unused]] __jmp_buf * buf,
+                                   [[maybe_unused]] int val)) {
   // If BTI branch protection is in use, the compiler will automatically insert
   // a BTI here, so we don't need to make any extra effort to do so.
 
