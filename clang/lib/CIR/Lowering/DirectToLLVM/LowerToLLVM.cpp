@@ -3560,6 +3560,25 @@ class CIRUndefOpLowering
   }
 };
 
+class CIREhTypeIdOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::EhTypeIdOp> {
+public:
+  using OpConversionPattern<mlir::cir::EhTypeIdOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::EhTypeIdOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Value addrOp = rewriter.create<mlir::LLVM::AddressOfOp>(
+        op.getLoc(), mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+        op.getTypeSymAttr());
+    mlir::LLVM::CallIntrinsicOp newOp = createCallLLVMIntrinsicOp(
+        rewriter, op.getLoc(), "llvm.eh.typeid.for.p0", rewriter.getI32Type(),
+        mlir::ValueRange{addrOp});
+    rewriter.replaceOp(op, newOp);
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -3595,8 +3614,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRRintOpLowering, CIRRoundOpLowering, CIRSinOpLowering,
       CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
       CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
-      CIRClearCacheOpLowering, CIRUndefOpLowering>(converter,
-                                                   patterns.getContext());
+      CIRClearCacheOpLowering, CIRUndefOpLowering, CIREhTypeIdOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
