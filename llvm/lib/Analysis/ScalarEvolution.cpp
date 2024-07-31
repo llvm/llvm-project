@@ -9149,7 +9149,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   // behaviour), and we can prove the test sequence produced must repeat
   // the same values on self-wrap of the IV, then we can infer that IV
   // doesn't self wrap because if it did, we'd have an infinite (undefined)
-  // loop.
+  // loop.  Note that a stride of 0 is trivially no-self-wrap by definition.
   if (ControllingFiniteLoop && isLoopInvariant(RHS, L)) {
     // TODO: We can peel off any functions which are invertible *in L*.  Loop
     // invariant terms are effectively constants for our purposes here.
@@ -9158,7 +9158,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       InnerLHS = ZExt->getOperand();
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS);
         AR && !AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
-        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this))) {
+        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), true)) {
       auto Flags = AR->getNoWrapFlags();
       Flags = setFlags(Flags, SCEV::FlagNW);
       SmallVector<const SCEV*> Operands{AR->operands()};
@@ -12792,7 +12792,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (!isLoopInvariant(RHS, L))
       return false;
 
-    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this)))
+    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), true))
       return false;
 
     if (!ControlsOnlyExit || !loopHasNoAbnormalExits(L))
