@@ -9758,7 +9758,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         LastIteration.get(), UB.get());
     EUB = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, UB.get(),
                              CondOp.get());
-    EUB = SemaRef.ActOnFinishFullExpr(EUB.get(), /*DiscardedValue*/ false);
 
     // If we have a combined directive that combines 'distribute', 'for' or
     // 'simd' we need to be able to access the bounds of the schedule of the
@@ -9787,8 +9786,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                                      LastIteration.get(), CombUB.get());
       CombEUB = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, CombUB.get(),
                                    CombCondOp.get());
-      CombEUB =
-          SemaRef.ActOnFinishFullExpr(CombEUB.get(), /*DiscardedValue*/ false);
 
       const CapturedDecl *CD = cast<CapturedStmt>(AStmt)->getCapturedDecl();
       // We expect to have at least 2 more parameters than the 'parallel'
@@ -9824,7 +9821,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                     ? LB.get()
                     : SemaRef.ActOnIntegerConstant(SourceLocation(), 0).get();
     Init = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, IV.get(), RHS);
-    Init = SemaRef.ActOnFinishFullExpr(Init.get(), /*DiscardedValue*/ false);
 
     if (isOpenMPLoopBoundSharingDirective(DKind)) {
       Expr *CombRHS =
@@ -9836,8 +9832,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
               : SemaRef.ActOnIntegerConstant(SourceLocation(), 0).get();
       CombInit =
           SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, IV.get(), CombRHS);
-      CombInit =
-          SemaRef.ActOnFinishFullExpr(CombInit.get(), /*DiscardedValue*/ false);
     }
   }
 
@@ -9856,8 +9850,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             .BuildBinOp(CurScope, CondLoc, BO_Add, BoundUB,
                         SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get())
             .get();
-    BoundUB =
-        SemaRef.ActOnFinishFullExpr(BoundUB, /*DiscardedValue*/ false).get();
   }
   ExprResult Cond =
       (isOpenMPWorksharingDirective(DKind) ||
@@ -9885,9 +9877,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                   CurScope, CondLoc, BO_Add, BoundCombUB,
                   SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get())
               .get();
-      BoundCombUB =
-          SemaRef.ActOnFinishFullExpr(BoundCombUB, /*DiscardedValue*/ false)
-              .get();
     }
     CombCond =
         SemaRef.BuildBinOp(CurScope, CondLoc, UseStrictCompare ? BO_LT : BO_LE,
@@ -9901,7 +9890,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (!Inc.isUsable())
     return 0;
   Inc = SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, IV.get(), Inc.get());
-  Inc = SemaRef.ActOnFinishFullExpr(Inc.get(), /*DiscardedValue*/ false);
   if (!Inc.isUsable())
     return 0;
 
@@ -9921,8 +9909,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // LB = LB + ST
     NextLB =
         SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, LB.get(), NextLB.get());
-    NextLB =
-        SemaRef.ActOnFinishFullExpr(NextLB.get(), /*DiscardedValue*/ false);
     if (!NextLB.isUsable())
       return 0;
     // UB + ST
@@ -9932,8 +9918,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // UB = UB + ST
     NextUB =
         SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, UB.get(), NextUB.get());
-    NextUB =
-        SemaRef.ActOnFinishFullExpr(NextUB.get(), /*DiscardedValue*/ false);
     if (!NextUB.isUsable())
       return 0;
     if (isOpenMPLoopBoundSharingDirective(DKind)) {
@@ -9944,8 +9928,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       // LB = LB + ST
       CombNextLB = SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, CombLB.get(),
                                       CombNextLB.get());
-      CombNextLB = SemaRef.ActOnFinishFullExpr(CombNextLB.get(),
-                                               /*DiscardedValue*/ false);
       if (!CombNextLB.isUsable())
         return 0;
       // UB + ST
@@ -9956,8 +9938,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       // UB = UB + ST
       CombNextUB = SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, CombUB.get(),
                                       CombNextUB.get());
-      CombNextUB = SemaRef.ActOnFinishFullExpr(CombNextUB.get(),
-                                               /*DiscardedValue*/ false);
       if (!CombNextUB.isUsable())
         return 0;
     }
@@ -9979,8 +9959,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     assert(DistInc.isUsable() && "distribute inc expr was not built");
     DistInc = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, IV.get(),
                                  DistInc.get());
-    DistInc =
-        SemaRef.ActOnFinishFullExpr(DistInc.get(), /*DiscardedValue*/ false);
     assert(DistInc.isUsable() && "distribute inc expr was not built");
 
     // Build expression: UB = min(UB, prevUB) for #for in composite or combined
@@ -10002,8 +9980,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         DistEUBLoc, DistEUBLoc, IsUBGreater.get(), NewPrevUB.get(), UB.get());
     PrevEUB = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, UB.get(),
                                  CondOp.get());
-    PrevEUB =
-        SemaRef.ActOnFinishFullExpr(PrevEUB.get(), /*DiscardedValue*/ false);
 
     // Build IV <= PrevUB or IV < PrevUB + 1 for unsigned IV to be used in
     // parallel for is in combination with a distribute directive with
@@ -10015,9 +9991,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
               .BuildBinOp(
                   CurScope, CondLoc, BO_Add, BoundPrevUB,
                   SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get())
-              .get();
-      BoundPrevUB =
-          SemaRef.ActOnFinishFullExpr(BoundPrevUB, /*DiscardedValue*/ false)
               .get();
     }
     ParForInDistCond =
@@ -10144,10 +10117,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Built.IterationVarRef = IV.get();
   Built.LastIteration = LastIteration.get();
   Built.NumIterations = NumIterations.get();
-  Built.CalcLastIteration = SemaRef
-                                .ActOnFinishFullExpr(CalcLastIteration.get(),
-                                                     /*DiscardedValue=*/false)
-                                .get();
+  Built.CalcLastIteration = CalcLastIteration.get();
   Built.PreCond = PreCond.get();
   Built.PreInits = buildPreInits(C, Captures);
   Built.Cond = Cond.get();
