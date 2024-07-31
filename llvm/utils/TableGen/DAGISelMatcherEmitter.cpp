@@ -601,7 +601,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       } else {
         Child = cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
         IdxSize = GetVBRSize(cast<SwitchTypeMatcher>(N)->getCaseType(
-            i)); // size of type in table is sizeof(MVT) byte.
+            i)); // size of type in table is sizeof(VBR(MVT)) byte.
       }
 
       if (i != 0) {
@@ -622,7 +622,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
           OS << "/*" << getEnumName(cast<SwitchTypeMatcher>(N)->getCaseType(i))
              << "*/";
         EmitVBRValue(cast<SwitchTypeMatcher>(N)->getCaseType(i),
-                     OS); // size of type in table is sizeof(MVT) byte.
+                     OS);
       }
       if (!OmitComments)
         OS << "// ->" << CurrentIdx + ChildSize;
