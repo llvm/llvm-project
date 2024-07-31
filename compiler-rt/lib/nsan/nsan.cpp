@@ -444,6 +444,14 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   const InternalFT check_value = value;
   const InternalFT check_shadow = Shadow;
 
+  // We only check for NaNs in the value, not the shadow.
+  if (flags().check_nan && isnan(check_value)) {
+    Decorator D;
+    Printf("%s", D.Warning());
+    Printf("WARNING: NumericalStabilitySanitizer: NaN detected\n");
+    Printf("%s", D.Default());
+  }
+
   // See this article for an interesting discussion of how to compare floats:
   // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
   static constexpr const FT Eps = FTInfo<FT>::kEpsilon;
