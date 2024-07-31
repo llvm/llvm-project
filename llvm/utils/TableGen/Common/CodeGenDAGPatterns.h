@@ -53,10 +53,7 @@ using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 /// To reduce the allocations even further, make MachineValueTypeSet own
 /// the storage and use std::array as the bit container.
 struct MachineValueTypeSet {
-  static_assert(std::is_same<std::underlying_type_t<MVT::SimpleValueType>,
-                             uint16_t>::value,
-                "Change uint16_t here to the SimpleValueType's type");
-  static unsigned constexpr Capacity = std::numeric_limits<uint16_t>::max() + 1;
+  static unsigned constexpr Capacity = 512;
   using WordType = uint64_t;
   static unsigned constexpr WordWidth = CHAR_BIT * sizeof(WordType);
   static unsigned constexpr NumWords = Capacity / WordWidth;
@@ -84,9 +81,11 @@ struct MachineValueTypeSet {
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   unsigned count(MVT T) const {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     return (Words[T.SimpleTy / WordWidth] >> (T.SimpleTy % WordWidth)) & 1;
   }
   std::pair<MachineValueTypeSet &, bool> insert(MVT T) {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     bool V = count(T.SimpleTy);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
     return {*this, V};
@@ -98,6 +97,7 @@ struct MachineValueTypeSet {
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   void erase(MVT T) {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     Words[T.SimpleTy / WordWidth] &= ~(WordType(1) << (T.SimpleTy % WordWidth));
   }
 
