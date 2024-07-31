@@ -147,8 +147,8 @@ int main(void) {
   ldx = ldv;
 // CHECK: [[REAL_VAL:%.+]] = load i32, ptr @{{.*}}
 // CHECK: [[IMG_VAL:%.+]] = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr @{{.*}}, i32 0, i32 1)
-// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[TEMP:%.+]], i32 0, i32 0
-// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[TEMP]], i32 0, i32 1
+// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TEMP:%.+]], i32 0, i32 0
+// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TEMP]], i32 0, i32 1
 // CHECK: store i32 [[REAL_VAL]], ptr [[TEMP_REAL_REF]]
 // CHECK: store i32 [[IMG_VAL]], ptr [[TEMP_IMG_REF]]
 // CHECK: call void @__atomic_store(i64 noundef 8, ptr noundef @{{.*}}, ptr noundef [[TEMP]], i32 noundef 0)
@@ -156,8 +156,8 @@ int main(void) {
   cix = civ;
 // CHECK: [[REAL_VAL:%.+]] = load float, ptr @{{.*}}
 // CHECK: [[IMG_VAL:%.+]] = load float, ptr getelementptr inbounds ({ float, float }, ptr @{{.*}}, i32 0, i32 1)
-// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds { float, float }, ptr [[TEMP:%.+]], i32 0, i32 0
-// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds { float, float }, ptr [[TEMP]], i32 0, i32 1
+// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds nuw { float, float }, ptr [[TEMP:%.+]], i32 0, i32 0
+// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds nuw { float, float }, ptr [[TEMP]], i32 0, i32 1
 // CHECK: store float [[REAL_VAL]], ptr [[TEMP_REAL_REF]]
 // CHECK: store float [[IMG_VAL]], ptr [[TEMP_IMG_REF]]
 // CHECK: call void @__atomic_store(i64 noundef 8, ptr noundef @{{.*}}, ptr noundef [[TEMP]], i32 noundef 0)
@@ -165,8 +165,8 @@ int main(void) {
   cfx = cfv;
 // CHECK: [[REAL_VAL:%.+]] = load double, ptr @{{.*}}
 // CHECK: [[IMG_VAL:%.+]] = load double, ptr getelementptr inbounds ({ double, double }, ptr @{{.*}}, i32 0, i32 1)
-// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds { double, double }, ptr [[TEMP:%.+]], i32 0, i32 0
-// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds { double, double }, ptr [[TEMP]], i32 0, i32 1
+// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds nuw { double, double }, ptr [[TEMP:%.+]], i32 0, i32 0
+// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds nuw { double, double }, ptr [[TEMP]], i32 0, i32 1
 // CHECK: store double [[REAL_VAL]], ptr [[TEMP_REAL_REF]]
 // CHECK: store double [[IMG_VAL]], ptr [[TEMP_IMG_REF]]
 // CHECK: call void @__atomic_store(i64 noundef 16, ptr noundef @{{.*}}, ptr noundef [[TEMP]], i32 noundef 5)
@@ -205,8 +205,8 @@ int main(void) {
   ix = uiv;
 // CHECK: load i64, ptr
 // CHECK: [[VAL:%.+]] = trunc i64 %{{.*}} to i32
-// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[TEMP:%.+]], i32 0, i32 0
-// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[TEMP]], i32 0, i32 1
+// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TEMP:%.+]], i32 0, i32 0
+// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TEMP]], i32 0, i32 1
 // CHECK: store i32 [[VAL]], ptr [[TEMP_REAL_REF]]
 // CHECK: store i32 0, ptr [[TEMP_IMG_REF]]
 // CHECK: call void @__atomic_store(i64 noundef 8, ptr noundef @{{.+}}, ptr noundef [[TEMP]], i32 noundef 0)
@@ -230,8 +230,8 @@ int main(void) {
   ldx = ullv;
 // CHECK: load float, ptr
 // CHECK: [[VAL:%.+]] = fptosi float %{{.*}} to i32
-// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[TEMP:%.+]], i32 0, i32 0
-// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[TEMP]], i32 0, i32 1
+// CHECK: [[TEMP_REAL_REF:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TEMP:%.+]], i32 0, i32 0
+// CHECK: [[TEMP_IMG_REF:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TEMP]], i32 0, i32 1
 // CHECK: store i32 [[VAL]], ptr [[TEMP_REAL_REF]]
 // CHECK: store i32 0, ptr [[TEMP_IMG_REF]]
 // CHECK: call void @__atomic_store(i64 noundef 8, ptr noundef @{{.+}}, ptr noundef [[TEMP]], i32 noundef 0)

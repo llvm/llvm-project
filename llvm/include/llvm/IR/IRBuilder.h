@@ -1909,8 +1909,7 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
 
-    if (auto *V =
-            Folder.FoldGEP(Ty, Ptr, Idxs, /*IsInBounds=*/NWFlags.isInBounds()))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, NWFlags.isInBounds()))
       return V;
 
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs, NWFlags), Name);
