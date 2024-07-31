@@ -28019,13 +28019,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 
   EVT IncVT = Inc.getValueType();
   EVT IndexVT = Index.getValueType();
-  EVT MemVT = EVT::getVectorVT(*DAG.getContext(), IncVT,
-                               IndexVT.getVectorElementCount());
-  EVT IncExtVT = IndexVT.getVectorElementCount().getKnownMinValue() == 4
-                     ? MVT::i32
-                     : MVT::i64;
-  EVT IncSplatVT = EVT::getVectorVT(*DAG.getContext(), IncExtVT,
-                                    IndexVT.getVectorElementCount());
+  LLVMContext &Ctx = *DAG.getContext();
+  ElementCount EC = IndexVT.getVectorElementCount();
+  EVT MemVT = EVT::getVectorVT(Ctx, IncVT, EC);
+  EVT IncExtVT =
+      EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
+  EVT IncSplatVT = EVT::getVectorVT(Ctx, IncExtVT, EC);
   bool ExtTrunc = IncSplatVT != MemVT;
 
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
