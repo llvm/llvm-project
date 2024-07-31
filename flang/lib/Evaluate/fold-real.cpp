@@ -20,8 +20,8 @@ static Expr<T> FoldTransformationalBessel(
   /// arguments to Int4, any overflow error will be reported during the
   /// conversion folding.
   using Int4 = Type<TypeCategory::Integer, 4>;
-  if (auto args{
-          GetConstantArguments<Int4, Int4, T>(context, funcRef.arguments())}) {
+  if (auto args{GetConstantArguments<Int4, Int4, T>(
+          context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
     const std::string &name{std::get<SpecificIntrinsic>(funcRef.proc().u).name};
     if (auto elementalBessel{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
       std::vector<Scalar<T>> results;
