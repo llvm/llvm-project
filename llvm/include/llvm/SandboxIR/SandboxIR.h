@@ -534,6 +534,57 @@ public:
   pointer get() const { return getInstr(It); }
 };
 
+/// Contains a list of sandboxir::Instruction's.
+class BasicBlock : public Value {
+  /// Builds a graph that contains all values in \p BB in their original form
+  /// i.e., no vectorization is taking place here.
+  void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
+  friend class Context;     // For `buildBasicBlockFromIR`
+  friend class Instruction; // For LLVM Val.
+
+  BasicBlock(llvm::BasicBlock *BB, Context &SBCtx)
+      : Value(ClassID::Block, BB, SBCtx) {
+    buildBasicBlockFromLLVMIR(BB);
+  }
+
+public:
+  ~BasicBlock() = default;
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == Value::ClassID::Block;
+  }
+  Function *getParent() const;
+  using iterator = BBIterator;
+  iterator begin() const;
+  iterator end() const {
+    auto *BB = cast<llvm::BasicBlock>(Val);
+    return iterator(BB, BB->end(), &Ctx);
+  }
+  std::reverse_iterator<iterator> rbegin() const {
+    return std::make_reverse_iterator(end());
+  }
+  std::reverse_iterator<iterator> rend() const {
+    return std::make_reverse_iterator(begin());
+  }
+  Context &getContext() const { return Ctx; }
+  Instruction *getTerminator() const;
+  bool empty() const { return begin() == end(); }
+  Instruction &front() const;
+  Instruction &back() const;
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS, const BasicBlock &SBBB) {
+    SBBB.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 /// A sandboxir::User with operands, opcode and linked with previous/next
 /// instructions in an instruction list.
 class Instruction : public sandboxir::User {
@@ -1553,57 +1604,6 @@ public:
   }
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
-#endif
-};
-
-/// Contains a list of sandboxir::Instruction's.
-class BasicBlock : public Value {
-  /// Builds a graph that contains all values in \p BB in their original form
-  /// i.e., no vectorization is taking place here.
-  void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
-  friend class Context;     // For `buildBasicBlockFromIR`
-  friend class Instruction; // For LLVM Val.
-
-  BasicBlock(llvm::BasicBlock *BB, Context &SBCtx)
-      : Value(ClassID::Block, BB, SBCtx) {
-    buildBasicBlockFromLLVMIR(BB);
-  }
-
-public:
-  ~BasicBlock() = default;
-  /// For isa/dyn_cast.
-  static bool classof(const Value *From) {
-    return From->getSubclassID() == Value::ClassID::Block;
-  }
-  Function *getParent() const;
-  using iterator = BBIterator;
-  iterator begin() const;
-  iterator end() const {
-    auto *BB = cast<llvm::BasicBlock>(Val);
-    return iterator(BB, BB->end(), &Ctx);
-  }
-  std::reverse_iterator<iterator> rbegin() const {
-    return std::make_reverse_iterator(end());
-  }
-  std::reverse_iterator<iterator> rend() const {
-    return std::make_reverse_iterator(begin());
-  }
-  Context &getContext() const { return Ctx; }
-  Instruction *getTerminator() const;
-  bool empty() const { return begin() == end(); }
-  Instruction &front() const;
-  Instruction &back() const;
-
-#ifndef NDEBUG
-  void verify() const final {
-    assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
-  }
-  friend raw_ostream &operator<<(raw_ostream &OS, const BasicBlock &SBBB) {
-    SBBB.dump(OS);
-    return OS;
-  }
-  void dump(raw_ostream &OS) const final;
-  LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
