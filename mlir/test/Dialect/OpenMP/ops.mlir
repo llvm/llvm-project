@@ -805,16 +805,16 @@ func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i3
 func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %device_ptr: memref<i32>, %device_addr: memref<?xi32>, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 
     // Test with optional operands; if_expr, device, thread_limit, private, firstprivate and nowait.
-    // CHECK: omp.target if({{.*}}) device({{.*}}) thread_limit({{.*}}) nowait
-    "omp.target"(%if_cond, %device, %num_threads) ({
+    // CHECK: omp.target device({{.*}}) if({{.*}}) nowait thread_limit({{.*}})
+    "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 1,1,1,0,0,0,0,0,0,0,0>} : ( i1, si32, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,1,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target is_device_ptr(%[[VAL_4:.*]] : memref<i32>) has_device_addr(%[[VAL_5:.*]] : memref<?xi32>) map_entries(%[[MAP_A]] -> {{.*}}, %[[MAP_B]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
+    // CHECK: omp.target has_device_addr(%[[VAL_5:.*]] : memref<?xi32>) is_device_ptr(%[[VAL_4:.*]] : memref<i32>) map_entries(%[[MAP_A]] -> {{.*}}, %[[MAP_B]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
     %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target map_entries(%mapv1 -> %arg0, %mapv2 -> %arg1 : memref<?xi32>, memref<?xi32>) is_device_ptr(%device_ptr : memref<i32>) has_device_addr(%device_addr : memref<?xi32>) {
@@ -838,12 +838,12 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
 
 func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i32>, %device_addr: memref<?xi32>, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, from) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target_data if(%[[VAL_0:.*]]) device(%[[VAL_1:.*]] : si32) map_entries(%[[MAP_A]] : memref<?xi32>)
+    // CHECK: omp.target_data device(%[[VAL_1:.*]] : si32) if(%[[VAL_0:.*]]) map_entries(%[[MAP_A]] : memref<?xi32>)
     %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(always, from) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_data if(%if_cond) device(%device : si32) map_entries(%mapv1 : memref<?xi32>){}
 
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(close, present, to) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target_data use_device_ptr(%[[VAL_3:.*]] : memref<i32>) use_device_addr(%[[VAL_4:.*]] : memref<?xi32>) map_entries(%[[MAP_A]] : memref<?xi32>)
+    // CHECK: omp.target_data map_entries(%[[MAP_A]] : memref<?xi32>) use_device_addr(%[[VAL_4:.*]] : memref<?xi32>) use_device_ptr(%[[VAL_3:.*]] : memref<i32>)
     %mapv2 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(close, present, to) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_data use_device_ptr(%device_ptr : memref<i32>) use_device_addr(%device_addr : memref<?xi32>) map_entries(%mapv2 : memref<?xi32>) {}
 
@@ -855,12 +855,12 @@ func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i
     omp.target_data map_entries(%mapv3, %mapv4 : memref<?xi32>, memref<?xi32>) {}
 
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target_enter_data if(%[[VAL_0:.*]]) device(%[[VAL_1:.*]] : si32) nowait map_entries(%[[MAP_A]] : memref<?xi32>)
+    // CHECK: omp.target_enter_data device(%[[VAL_1:.*]] : si32) if(%[[VAL_0:.*]]) map_entries(%[[MAP_A]] : memref<?xi32>) nowait
     %mapv5 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_enter_data if(%if_cond) device(%device : si32) nowait map_entries(%mapv5 : memref<?xi32>)
 
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target_exit_data if(%[[VAL_0:.*]]) device(%[[VAL_1:.*]] : si32) nowait map_entries(%[[MAP_A]] : memref<?xi32>)
+    // CHECK: omp.target_exit_data device(%[[VAL_1:.*]] : si32) if(%[[VAL_0:.*]]) map_entries(%[[MAP_A]] : memref<?xi32>) nowait
     %mapv6 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_exit_data if(%if_cond) device(%device : si32) nowait map_entries(%mapv6 : memref<?xi32>)
 
@@ -869,12 +869,12 @@ func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i
 
 // CHECK-LABEL: omp_target_pretty
 func.func @omp_target_pretty(%if_cond : i1, %device : si32,  %num_threads : i32) -> () {
-    // CHECK: omp.target if({{.*}}) device({{.*}})
+    // CHECK: omp.target device({{.*}}) if({{.*}})
     omp.target if(%if_cond) device(%device : si32) {
       omp.terminator
     }
 
-    // CHECK: omp.target if({{.*}}) device({{.*}}) nowait
+    // CHECK: omp.target device({{.*}}) if({{.*}}) nowait
     omp.target if(%if_cond) device(%device : si32) thread_limit(%num_threads : i32) nowait {
       omp.terminator
     }
@@ -2281,7 +2281,7 @@ func.func @omp_taskgroup_multiple_tasks() -> () {
 func.func @omp_taskgroup_clauses() -> () {
   %testmemref = "test.memref"() : () -> (memref<i32>)
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
-  // CHECK: omp.taskgroup task_reduction(@add_f32 -> %{{.+}}: !llvm.ptr) allocate(%{{.+}}: memref<i32> -> %{{.+}}: memref<i32>)
+  // CHECK: omp.taskgroup allocate(%{{.+}}: memref<i32> -> %{{.+}}: memref<i32>) task_reduction(@add_f32 -> %{{.+}}: !llvm.ptr)
   omp.taskgroup allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>) task_reduction(@add_f32 -> %testf32 : !llvm.ptr) {
     // CHECK: omp.task
     omp.task {
@@ -2577,7 +2577,7 @@ func.func @omp_target_update_data (%if_cond : i1, %device : si32, %map1: memref<
 
     %mapv_to = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>) map_clauses(present, to) capture(ByRef) -> memref<?xi32> {name = ""}
 
-    // CHECK: omp.target_update if(%[[VAL_0:.*]]) device(%[[VAL_1:.*]] : si32) nowait map_entries(%{{.*}}, %{{.*}} : memref<?xi32>, memref<?xi32>)
+    // CHECK: omp.target_update device(%[[VAL_1:.*]] : si32) if(%[[VAL_0:.*]]) map_entries(%{{.*}}, %{{.*}} : memref<?xi32>, memref<?xi32>) nowait
     omp.target_update if(%if_cond) device(%device : si32) nowait map_entries(%mapv_from , %mapv_to : memref<?xi32>, memref<?xi32>)
     return
 }
@@ -2614,7 +2614,7 @@ func.func @omp_target_enter_update_exit_data_depend(%a: memref<?xi32>, %b: memre
   }
 
   // Then map that over to the target
-  // CHECK: omp.target_enter_data depend(taskdependin -> [[ARG0]] : memref<?xi32>) nowait map_entries([[MAP0]], [[MAP2]] : memref<?xi32>, memref<?xi32>)
+  // CHECK: omp.target_enter_data depend(taskdependin -> [[ARG0]] : memref<?xi32>) map_entries([[MAP0]], [[MAP2]] : memref<?xi32>, memref<?xi32>) nowait
   omp.target_enter_data depend(taskdependin ->  %a: memref<?xi32>) nowait map_entries(%map_a, %map_c: memref<?xi32>, memref<?xi32>)
 
   // Compute 'b' on the target and copy it back
@@ -2631,7 +2631,7 @@ func.func @omp_target_enter_update_exit_data_depend(%a: memref<?xi32>, %b: memre
   }
 
   // Copy the updated 'a' onto the target
-  // CHECK: omp.target_update depend(taskdependin -> [[ARG0]] : memref<?xi32>) nowait map_entries([[MAP0]] : memref<?xi32>)
+  // CHECK: omp.target_update depend(taskdependin -> [[ARG0]] : memref<?xi32>) map_entries([[MAP0]] : memref<?xi32>) nowait
   omp.target_update depend(taskdependin -> %a : memref<?xi32>) nowait map_entries(%map_a :  memref<?xi32>)
 
   // Compute 'c' on the target and copy it back
