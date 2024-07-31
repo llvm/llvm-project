@@ -449,7 +449,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 ///
 ///      export-function-declaration:
 ///         'export' function-declaration
-///
+/// 
 ///      export-declaration-group:
 ///         'export' '{' function-declaration-seq[opt] '}'
 ///
