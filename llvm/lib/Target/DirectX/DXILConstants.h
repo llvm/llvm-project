@@ -15,8 +15,15 @@
 namespace llvm {
 namespace dxil {
 
-#define DXIL_OP_ENUM
+enum class OpCode : unsigned {
+#define DXIL_OPCODE(Op, Name) Name = Op,
 #include "DXILOperation.inc"
+};
+
+enum class OpCodeClass : unsigned {
+#define DXIL_OPCLASS(Name) Name,
+#include "DXILOperation.inc"
+};
 
 } // namespace dxil
 } // namespace llvm
