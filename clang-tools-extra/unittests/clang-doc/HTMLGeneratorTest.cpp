@@ -92,13 +92,7 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
     </div>
     <h2 id="Enums">Enums</h2>
     <div>
-      <table id=\"0000000000000000000000000000000000000000\">
-         <thead>
-           <tr>
-             <th colspan=\"2\">enum OneEnum</th>
-           </tr>
-         </thead>
-       </table>
+      <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
     </div>
   </div>
   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">

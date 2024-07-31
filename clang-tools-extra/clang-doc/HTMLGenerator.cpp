@@ -635,8 +635,8 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
 
   if (I.Kind == "BlockCommandComment") {
     auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
-    auto Command = std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name);
-    BlockComment->Children.emplace_back(std::move(Command));
+    BlockComment->Children.emplace_back(
+        std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name));
     for (const auto &Child : I.Children) {
       std::unique_ptr<HTMLNode> Node = genHTML(*Child);
       if (Node)
