@@ -1,7 +1,5 @@
 ; RUN: opt -S  -dxil-intrinsic-expansion  < %s | FileCheck %s --check-prefixes=CHECK,EXPCHECK
-; RUN: opt -S  -dxil-op-lower  < %s | FileCheck %s --check-prefixes=CHECK,DOPCHECK
-
-target triple = "dxilv1.3-pc-shadermodel6.3-library"
+; RUN: opt -S  -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library < %s | FileCheck %s --check-prefixes=CHECK,DOPCHECK
 
 declare half @llvm.fabs.f16(half)
 declare half @llvm.dx.length.v2f16(<2 x half>)
