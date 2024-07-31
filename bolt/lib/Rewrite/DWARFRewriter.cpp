@@ -763,17 +763,15 @@ void DWARFRewriter::updateDebugInfo() {
           *StrOffstsWriter, *StrWriter, *CU, DwarfOutputPath, std::nullopt);
       auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
           BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
-      DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr));
-      DIEBuilder &DWODIEBuilder = *DWODIEBuildersByCU.back().get();
+      DIEBuilder &DWODIEBuilder =
+          *DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr)).get();
       if (CU->getVersion() >= 5)
         StrOffstsWriter->finalizeSection(*CU, DIEBlder);
       processSplitCU(*CU, **SplitCU, DIEBlder, *TempRangesSectionWriter,
                      AddressWriter, DWOName, DwarfOutputPath, DWODIEBuilder);
     }
-    for (std::unique_ptr<DIEBuilder> &DWODIEBuilderPtr : DWODIEBuildersByCU) {
-      DIEBuilder &DWODIEBuilder = *DWODIEBuilderPtr.get();
-      DWODIEBuilder.updateDebugNamesTable();
-    }
+    for (std::unique_ptr<DIEBuilder> &DWODIEBuilderPtr : DWODIEBuildersByCU)
+      DWODIEBuilderPtr->updateDebugNamesTable();
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
       processMainBinaryCU(*CU, DIEBlder);
     finalizeCompileUnits(DIEBlder, *Streamer, OffsetMap,
