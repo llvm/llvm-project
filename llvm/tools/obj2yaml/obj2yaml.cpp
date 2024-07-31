@@ -101,12 +101,6 @@ static void reportError(StringRef Input, Error Err) {
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
-
-  long x = 1;
-  bool debug = true;
-  while (debug) {
-    x++;
-  }
   cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(
       argc, argv, "Dump a YAML description from an object file", nullptr,

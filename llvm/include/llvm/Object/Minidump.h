@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/fallible_iterator.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
@@ -52,9 +53,6 @@ public:
   getRawData(minidump::LocationDescriptor Desc) const {
     return getDataSlice(getData(), Desc.RVA, Desc.DataSize);
   }
-
-  Expected<ArrayRef<uint8_t>>
-  getRawData(minidump::MemoryDescriptor_64 Desc) const;
 
   /// Returns the minidump string at the given offset. An error is returned if
   /// we fail to parse the string, or the string is invalid UTF16.
@@ -114,8 +112,6 @@ public:
         minidump::StreamType::Memory64List);
   }
 
-  Expected<ArrayRef<minidump::MemoryDescriptor_64>> getMemory64List();
-
   class MemoryInfoIterator
       : public iterator_facade_base<MemoryInfoIterator,
                                     std::forward_iterator_tag,
@@ -144,6 +140,68 @@ public:
     ArrayRef<uint8_t> Storage;
     size_t Stride;
   };
+
+  class Memory64ListFacade {
+    struct Memory64Iterator {
+      public:
+        Memory64Iterator(size_t Count, uint64_t BaseRVA, const Memory64ListFacade *Parent)
+          : Parent(Parent), BaseRVA(BaseRVA), Count(Count) {};
+
+      const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> operator*() {
+        return Parent->Next(this);
+      }
+
+      bool operator==(const Memory64Iterator &R) const {
+        return Parent == R.Parent && Count == R.Count;
+      }
+
+      bool operator!=(const Memory64Iterator &R) const {
+        return !(*this == R);
+      }
+
+      private:
+        friend class Memory64ListFacade;
+        const Memory64ListFacade *Parent;
+        uint64_t BaseRVA;
+        size_t Count;
+    };
+
+    public:
+      Memory64ListFacade(ArrayRef<uint8_t> Storage, std::vector<minidump::MemoryDescriptor_64> Descriptors, uint64_t BaseRVA) 
+        : BaseRVA(BaseRVA), Storage(Storage), Descriptors(std::move(Descriptors)) {
+        };
+
+    Memory64Iterator begin() const {
+      return Memory64Iterator(0, BaseRVA, this);
+    }
+
+    Memory64Iterator end() const {
+      return Memory64Iterator(Descriptors.size(), BaseRVA, this);
+    }
+
+    size_t size() const {
+      return Descriptors.size();
+    }
+    
+    private:
+      uint64_t BaseRVA;
+      ArrayRef<uint8_t> Storage;
+      std::vector<minidump::MemoryDescriptor_64> Descriptors;
+
+    const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>> Next(Memory64Iterator *Iterator) const {
+      assert(Descriptors.size() > Iterator->Count);
+      minidump::MemoryDescriptor_64 Descriptor = Descriptors[Iterator->Count];
+      ArrayRef<uint8_t> Content = Storage.slice(Iterator->BaseRVA, Descriptor.DataSize);
+      Iterator->BaseRVA += Descriptor.DataSize;
+      Iterator->Count++;
+      return std::make_pair(Descriptor, Content);
+    }
+  };
+
+  /// Returns an iterator that pairs each descriptor with it's respective content
+  /// from the Memory64List stream. An error is returned if the file does not contain
+  /// a Memory64List stream, or if the descriptor data is unreadable.
+  Expected<Memory64ListFacade> getMemory64List() const;
 
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
   /// descriptors provide properties (e.g. permissions) of interesting regions
@@ -195,13 +253,9 @@ private:
   template <typename T>
   Expected<ArrayRef<T>> getListStream(minidump::StreamType Stream) const;
 
-  void cacheMemory64RVAs(uint64_t BaseRVA,
-                         ArrayRef<minidump::MemoryDescriptor_64> Descriptors);
-
   const minidump::Header &Header;
   ArrayRef<minidump::Directory> Streams;
   DenseMap<minidump::StreamType, std::size_t> StreamMap;
-  std::unordered_map<uint64_t, uint64_t> Memory64DescriptorToRvaMap;
 };
 
 template <typename T>

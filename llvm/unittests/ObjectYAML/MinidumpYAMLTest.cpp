@@ -355,19 +355,23 @@ Streams:
 
   ASSERT_EQ(1u, File.streams().size());
 
-  Expected<ArrayRef<minidump::MemoryDescriptor_64>> ExpectedMemoryList =
+  Expected<object::MinidumpFile::Memory64ListFacade> ExpectedMemoryList =
       File.getMemory64List();
 
   ASSERT_THAT_EXPECTED(ExpectedMemoryList, Succeeded());
 
-  ArrayRef<minidump::MemoryDescriptor_64> MemoryList = *ExpectedMemoryList;
+  object::MinidumpFile::Memory64ListFacade MemoryList = *ExpectedMemoryList;
   ASSERT_EQ(2u, MemoryList.size());
 
-  const minidump::MemoryDescriptor_64 &DescOne = MemoryList[0];
+  auto Iterator = MemoryList.begin();
+
+  auto DescOnePair = *Iterator;
+  const minidump::MemoryDescriptor_64 &DescOne = DescOnePair.first;
   ASSERT_EQ(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
   ASSERT_EQ(5u, DescOne.DataSize);
 
-  const minidump::MemoryDescriptor_64 &DescTwo = MemoryList[1];
+  auto DescTwoPair = *Iterator;
+  const minidump::MemoryDescriptor_64 &DescTwo = DescTwoPair.first;
   ASSERT_EQ(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
   ASSERT_EQ(5u, DescTwo.DataSize);
 
@@ -381,12 +385,14 @@ Streams:
   ASSERT_THAT_EXPECTED(ExpectedHeader, Succeeded());
   ASSERT_EQ(ExpectedHeader->BaseRVA, 92u);
 
-  Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = File.getRawData(DescOne);
+  Expected<ArrayRef<uint8_t>> DescOneExpectedContentSlice = DescOnePair.second;
   ASSERT_THAT_EXPECTED(DescOneExpectedContentSlice, Succeeded());
   ASSERT_EQ(5u, DescOneExpectedContentSlice->size());
   ASSERT_EQ(arrayRefFromStringRef("hello"), *DescOneExpectedContentSlice);
 
-  Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = File.getRawData(DescTwo);
+  Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = DescTwoPair.second;
   ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded()); 
   ASSERT_EQ(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
+
+  ASSERT_EQ(Iterator, MemoryList.end());
 }

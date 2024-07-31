@@ -522,12 +522,11 @@ Expected<std::unique_ptr<Stream>> Stream::create(const Directory &StreamDesc,
     auto ExpectedList = File.getMemory64List();
     if (!ExpectedList)
       return ExpectedList.takeError();
+    object::MinidumpFile::Memory64ListFacade &Memory64List = *ExpectedList;
     std::vector<Memory64ListStream::entry_type> Ranges;
-    for (const MemoryDescriptor_64 &MD : *ExpectedList) {
-      auto ExpectedContent = File.getRawData(MD);
-      if (!ExpectedContent)
-        return ExpectedContent.takeError();
-      Ranges.push_back({MD, *ExpectedContent});
+    for (auto It = Memory64List.begin(); It != Memory64List.end();) {
+      std::pair<MemoryDescriptor_64, ArrayRef<uint8_t>> Pair = *It;
+      Ranges.push_back({Pair.first, Pair.second});
     }
     return std::make_unique<Memory64ListStream>(std::move(Ranges));
   }
