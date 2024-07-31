@@ -2554,7 +2554,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
               MachineInstrBuilder Add;
               if ((Add = TII->getAddNoCarry(*MBB, MI, DL, TmpResultReg, *RS))) {
-                BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
+                BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
                         TmpResultReg)
                     .addImm(ST.getWavefrontSizeLog2())
                     .addReg(FrameReg);
@@ -2588,7 +2588,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                           .addImm(ST.getWavefrontSize())
                           .addReg(FrameReg)
                           .addImm(0);
-                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHR_B32_e64),
+                BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
                         TmpResultReg)
                     .addImm(ST.getWavefrontSizeLog2())
                     .addReg(FrameReg);

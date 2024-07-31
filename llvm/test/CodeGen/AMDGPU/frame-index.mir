@@ -309,7 +309,7 @@ body:             |
     ; GFX8: liveins: $sgpr4, $sgpr5
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX8-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX8-NEXT: $sgpr4 = S_MOV_B32 64
     ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $sgpr4, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -319,7 +319,7 @@ body:             |
     ; GFX900: liveins: $sgpr4, $sgpr5
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX900-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX900-NEXT: $vgpr0 = V_ADD_U32_e32 64, killed $vgpr0, implicit $exec
     ; GFX900-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX900-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
@@ -328,7 +328,7 @@ body:             |
     ; GFX90A: liveins: $sgpr4, $sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX90A-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX90A-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = V_ADD_U32_e32 64, killed $vgpr0, implicit $exec
     ; GFX90A-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
@@ -354,7 +354,7 @@ body:             |
     ; GFX8: liveins: $sgpr4, $sgpr5
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX8-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX8-NEXT: $sgpr4 = S_MOV_B32 68
     ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $sgpr4, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -364,7 +364,7 @@ body:             |
     ; GFX900: liveins: $sgpr4, $sgpr5
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX900-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX900-NEXT: $vgpr0 = V_ADD_U32_e32 68, killed $vgpr0, implicit $exec
     ; GFX900-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX900-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
@@ -373,7 +373,7 @@ body:             |
     ; GFX90A: liveins: $sgpr4, $sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
-    ; GFX90A-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX90A-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = V_ADD_U32_e32 68, killed $vgpr0, implicit $exec
     ; GFX90A-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
@@ -427,7 +427,7 @@ body:             |
     ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, implicit $exec :: (store (s32) into %stack.17, addrspace 5)
-    ; GFX8-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX8-NEXT: $sgpr4 = S_MOV_B32 64
     ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $sgpr4, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -487,7 +487,7 @@ body:             |
     ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, implicit $exec :: (store (s32) into %stack.17, addrspace 5)
-    ; GFX900-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX900-NEXT: $vgpr0 = V_ADD_U32_e32 64, killed $vgpr0, implicit $exec
     ; GFX900-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX900-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, implicit $exec :: (load (s32) from %stack.17, addrspace 5)
@@ -641,7 +641,7 @@ body:             |
     ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 132, 0, 0, implicit $exec :: (store (s32) into %stack.18, addrspace 5)
-    ; GFX8-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX8-NEXT: $sgpr4 = S_MOV_B32 128
     ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $sgpr4, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
@@ -701,7 +701,7 @@ body:             |
     ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 132, 0, 0, implicit $exec :: (store (s32) into %stack.18, addrspace 5)
-    ; GFX900-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX900-NEXT: $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; GFX900-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX900-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 132, 0, 0, implicit $exec :: (load (s32) from %stack.18, addrspace 5)
@@ -760,7 +760,7 @@ body:             |
     ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
     ; GFX90A-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, implicit $exec :: (store (s32) into %stack.18, addrspace 5)
-    ; GFX90A-NEXT: $vgpr0 = V_LSHR_B32_e64 6, $sgpr32, implicit $exec
+    ; GFX90A-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = V_ADD_U32_e32 64, killed $vgpr0, implicit $exec
     ; GFX90A-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, implicit $exec :: (load (s32) from %stack.18, addrspace 5)
