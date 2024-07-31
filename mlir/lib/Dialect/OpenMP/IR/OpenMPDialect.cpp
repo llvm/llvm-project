@@ -1475,12 +1475,12 @@ LogicalResult TargetOp::verify() {
 
 void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
-  ParallelOp::build(
-      builder, state, /*if_expr=*/nullptr, /*num_threads=*/nullptr,
-      /*allocate_vars=*/ValueRange(), /*allocator_vars=*/ValueRange(),
-      /*reduction_vars=*/ValueRange(), /*reduction_byref=*/nullptr,
-      /*reduction_syms=*/nullptr, /*proc_bind_kind=*/nullptr,
-      /*private_vars=*/ValueRange(), /*private_syms=*/nullptr);
+  ParallelOp::build(builder, state, /*allocate_vars=*/ValueRange(),
+                    /*allocator_vars=*/ValueRange(), /*if_expr=*/nullptr,
+                    /*num_threads=*/nullptr, /*private_vars=*/ValueRange(),
+                    /*private_syms=*/nullptr, /*proc_bind_kind=*/nullptr,
+                    /*reduction_vars=*/ValueRange(),
+                    /*reduction_byref=*/nullptr, /*reduction_syms=*/nullptr);
   state.addAttributes(attributes);
 }
 
@@ -1488,12 +1488,12 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
 
-  ParallelOp::build(
-      builder, state, clauses.ifVar, clauses.numThreads, clauses.allocateVars,
-      clauses.allocatorVars, clauses.reductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.procBindKind,
-      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms));
+  ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                    clauses.ifVar, clauses.numThreads, clauses.privateVars,
+                    makeArrayAttr(ctx, clauses.privateSyms),
+                    clauses.procBindKind, clauses.reductionVars,
+                    makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                    makeArrayAttr(ctx, clauses.reductionSyms));
 }
 
 template <typename OpType>
@@ -1582,12 +1582,13 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms.
-  TeamsOp::build(builder, state, clauses.numTeamsLower, clauses.numTeamsUpper,
-                 clauses.ifVar, clauses.threadLimit, clauses.allocateVars,
-                 clauses.allocatorVars, clauses.reductionVars,
+  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                 clauses.ifVar, clauses.numTeamsLower, clauses.numTeamsUpper,
+                 /*private_vars=*/{},
+                 /*private_syms=*/nullptr, clauses.reductionVars,
                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms), /*private_vars=*/{},
-                 /*private_syms=*/nullptr);
+                 makeArrayAttr(ctx, clauses.reductionSyms),
+                 clauses.threadLimit);
 }
 
 LogicalResult TeamsOp::verify() {
@@ -1630,11 +1631,11 @@ void SectionsOp::build(OpBuilder &builder, OperationState &state,
                        const SectionsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms.
-  SectionsOp::build(builder, state, clauses.reductionVars,
+  SectionsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                    clauses.nowait, /*private_vars=*/{},
+                    /*private_syms=*/nullptr, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                    makeArrayAttr(ctx, clauses.reductionSyms),
-                    clauses.allocateVars, clauses.allocatorVars, clauses.nowait,
-                    /*private_vars=*/{}, /*private_syms=*/nullptr);
+                    makeArrayAttr(ctx, clauses.reductionSyms));
 }
 
 LogicalResult SectionsOp::verify() {
@@ -1715,14 +1716,14 @@ void printWsloop(OpAsmPrinter &p, Operation *op, Region &region,
 
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      ArrayRef<NamedAttribute> attributes) {
-  build(builder, state, /*linear_vars=*/ValueRange(),
-        /*linear_step_vars=*/ValueRange(), /*reduction_vars=*/ValueRange(),
-        /*reduction_byref=*/nullptr, /*reduction_syms=*/nullptr,
-        /*schedule_kind=*/nullptr, /*schedule_chunk=*/nullptr,
-        /*schedule_mod=*/nullptr, /*schedule_simd=*/false, /*nowait=*/false,
-        /*ordered=*/nullptr, /*order=*/nullptr, /*order_mod=*/nullptr,
-        /*allocate_vars=*/{}, /*allocator_vars=*/{}, /*private_vars=*/{},
-        /*private_syms=*/nullptr);
+  build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
+        /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
+        /*nowait=*/false, /*order=*/nullptr, /*order_mod=*/nullptr,
+        /*ordered=*/nullptr, /*private_vars=*/{}, /*private_syms=*/nullptr,
+        /*reduction_vars=*/ValueRange(), /*reduction_byref=*/nullptr,
+        /*reduction_syms=*/nullptr, /*schedule_kind=*/nullptr,
+        /*schedule_chunk=*/nullptr, /*schedule_mod=*/nullptr,
+        /*schedule_simd=*/false);
   state.addAttributes(attributes);
 }
 
@@ -1731,15 +1732,15 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO: Store clauses in op: allocateVars, allocatorVars, privateVars,
   // privateSyms.
-  WsloopOp::build(builder, state, clauses.linearVars, clauses.linearStepVars,
-                  clauses.reductionVars,
-                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                  makeArrayAttr(ctx, clauses.reductionSyms),
-                  clauses.scheduleKind, clauses.scheduleChunk,
-                  clauses.scheduleMod, clauses.scheduleSimd, clauses.nowait,
-                  clauses.ordered, clauses.order, clauses.orderMod,
-                  /*allocate_vars=*/{}, /*allocator_vars=*/{},
-                  /*private_vars=*/{}, /*private_syms=*/nullptr);
+  WsloopOp::build(
+      builder, state,
+      /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.linearVars,
+      clauses.linearStepVars, clauses.nowait, clauses.order, clauses.orderMod,
+      clauses.ordered, /*private_vars=*/{}, /*private_syms=*/nullptr,
+      clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.scheduleKind,
+      clauses.scheduleChunk, clauses.scheduleMod, clauses.scheduleSimd);
 }
 
 LogicalResult WsloopOp::verify() {
@@ -1804,10 +1805,10 @@ LogicalResult SimdOp::verify() {
 void DistributeOp::build(OpBuilder &builder, OperationState &state,
                          const DistributeOperands &clauses) {
   // TODO Store clauses in op: privateVars, privateSyms.
-  DistributeOp::build(builder, state, clauses.distScheduleStatic,
-                      clauses.distScheduleChunkSize, clauses.allocateVars,
-                      clauses.allocatorVars, clauses.order, clauses.orderMod,
-                      /*private_vars=*/{}, /*private_syms=*/nullptr);
+  DistributeOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.distScheduleStatic, clauses.distScheduleChunkSize, clauses.order,
+      clauses.orderMod, /*private_vars=*/{}, /*private_syms=*/nullptr);
 }
 
 LogicalResult DistributeOp::verify() {
@@ -1934,13 +1935,13 @@ void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms.
-  TaskOp::build(builder, state, clauses.ifVar, clauses.final, clauses.untied,
-                clauses.mergeable, clauses.inReductionVars,
-                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.priority,
+  TaskOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                 makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                clauses.allocateVars, clauses.allocatorVars,
-                /*private_vars=*/{}, /*private_syms=*/nullptr);
+                clauses.final, clauses.ifVar, clauses.inReductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+                clauses.priority, /*private_vars=*/{}, /*private_syms=*/nullptr,
+                clauses.untied);
 }
 
 LogicalResult TaskOp::verify() {
