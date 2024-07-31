@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
+#include "NVPTX.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -82,6 +83,36 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
 bool Isv2x16VT(EVT VT);
+
+namespace NVPTX {
+
+inline char const *toCString(Ordering Order) {
+  switch (Order) {
+  case Ordering::NotAtomic:
+    return "NotAtomic";
+  case Ordering::Relaxed:
+    return "Relaxed";
+  case Ordering::Acquire:
+    return "Acquire";
+  case Ordering::Release:
+    return "Release";
+  // case Ordering::AcquireRelease: return "AcquireRelease";
+  case Ordering::SequentiallyConsistent:
+    return "SequentiallyConsistent";
+  case Ordering::Volatile:
+    return "Volatile";
+  case Ordering::RelaxedMMIO:
+    return "RelaxedMMIO";
+  }
+  report_fatal_error("unknown ordering");
+}
+
+inline raw_ostream &operator<<(raw_ostream &O, Ordering Order) {
+  O << toCString(Order);
+  return O;
+}
+
+} // namespace NVPTX
 }
 
 #endif

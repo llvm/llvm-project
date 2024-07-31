@@ -123,32 +123,6 @@ enum Ordering : OrderingUnderlyingType {
   LAST = RelaxedMMIO
 };
 
-inline char const *toCString(Ordering Order) {
-  switch (Order) {
-  case Ordering::NotAtomic:
-    return "NotAtomic";
-  case Ordering::Relaxed:
-    return "Relaxed";
-  case Ordering::Acquire:
-    return "Acquire";
-  case Ordering::Release:
-    return "Release";
-  // case Ordering::AcquireRelease: return "AcquireRelease";
-  case Ordering::SequentiallyConsistent:
-    return "SequentiallyConsistent";
-  case Ordering::Volatile:
-    return "Volatile";
-  case Ordering::RelaxedMMIO:
-    return "RelaxedMMIO";
-  }
-  report_fatal_error("unknown ordering");
-}
-
-inline raw_ostream &operator<<(raw_ostream &O, Ordering Order) {
-  O << toCString(Order);
-  return O;
-}
-
 namespace PTXLdStInstCode {
 enum AddressSpace {
   GENERIC = 0,
