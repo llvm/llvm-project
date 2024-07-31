@@ -3625,8 +3625,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   LLT MemTy = MMO.getMemoryType();
   MachineFunction &MF = MIRBuilder.getMF();
 
-  TypeSize MemSizeInBits = MemTy.getSizeInBits();
-  TypeSize MemStoreSizeInBits = MemTy.getSizeInBytes().multiplyCoefficientBy(8);
+  unsigned MemSizeInBits = MemTy.getSizeInBits();
+  unsigned MemStoreSizeInBits = 8 * MemTy.getSizeInBytes();
 
   if (MemSizeInBits != MemStoreSizeInBits) {
     if (MemTy.isVector())
@@ -3690,7 +3690,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
 
   if (!isPowerOf2_32(MemSizeInBits)) {
     // This load needs splitting into power of 2 sized loads.
-    LargeSplitSize = llvm::bit_floor(MemSizeInBits.getKnownMinValue());
+    LargeSplitSize = llvm::bit_floor(MemSizeInBits);
     SmallSplitSize = MemSizeInBits - LargeSplitSize;
   } else {
     // This is already a power of 2, but we still need to split this in half.
