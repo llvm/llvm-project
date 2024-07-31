@@ -19,15 +19,37 @@
 #include <memory>
 
 namespace llvm {
+/// Analysis pass that exposes the \c DXILResource for a module.
+class DXILResourceMDAnalysis
+    : public AnalysisInfoMixin<DXILResourceMDAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceMDAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  typedef dxil::Resources Result;
+  dxil::Resources run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// Printer pass for the \c DXILResourceMDAnalysis results.
+class DXILResourceMDPrinterPass
+    : public PassInfoMixin<DXILResourceMDPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DXILResourceMDPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
+};
+
 /// The legacy pass manager's analysis pass to compute DXIL resource
 /// information.
-class DXILResourceWrapper : public ModulePass {
+class DXILResourceMDWrapper : public ModulePass {
   dxil::Resources Resources;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  DXILResourceWrapper();
+  DXILResourceMDWrapper();
 
   dxil::Resources &getDXILResource() { return Resources; }
   const dxil::Resources &getDXILResource() const { return Resources; }
