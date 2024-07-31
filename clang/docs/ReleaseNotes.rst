@@ -147,7 +147,7 @@ Clang Frontend Potentially Breaking Changes
   that ``none`` means that there is no operating system. As opposed to an unknown
   type of operating system.
 
-  This change my cause clang to not find libraries, or libraries to be built at
+  This change can cause clang to not find libraries, or libraries to be built at
   different file system locations. This can be fixed by changing your builds to
   use the new normalized triple. However, we recommend instead getting the
   normalized triple from clang itself, as this will make your builds more
