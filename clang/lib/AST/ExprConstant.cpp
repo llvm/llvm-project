@@ -3322,8 +3322,8 @@ static bool HandleLValueComplexElement(EvalInfo &Info, const Expr *E,
 static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
                                 const VarDecl *VD, CallStackFrame *Frame,
                                 unsigned Version, APValue *&Result) {
-  // P2280R4 If we have a reference type and we are in C++23 allow unknown
-  // references and pointers.
+  // C++23 [expr.const]p8 If we have a reference type allow unknown references
+  // and pointers.
   bool AllowConstexprUnknown =
       Info.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType();
 
@@ -3361,8 +3361,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return true;
   }
 
-  // P2280R4 struck the restriction that variable of referene type lifetime
+  // P2280R4 struck the restriction that variable of reference type lifetime
   // should begin within the evaluation of E
+  // Used to be C++20 [expr.const]p5.12.2:
   if (isa<ParmVarDecl>(VD) && !AllowConstexprUnknown) {
     // Assume parameters of a potential constant expression are usable in
     // constant expressions.
@@ -3387,8 +3388,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // FIXME: We should eventually check whether the variable has a reachable
   // initializing declaration.
   const Expr *Init = VD->getAnyInitializer(VD);
-  // P2280R4 struck the restriction that variable of referene type should have
+  // P2280R4 struck the restriction that variable of reference type should have
   // a preceding initialization.
+  // Used to be C++20 [expr.const]p5.12:
   if (!Init && !AllowConstexprUnknown) {
     // Don't diagnose during potential constant expression checking; an
     // initializer might be added later.
@@ -3750,8 +3752,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
   const FieldDecl *LastField = nullptr;
   const FieldDecl *VolatileField = nullptr;
 
-  // P2280R4 If we have an unknown referene or pointer and we don't have a
-  // value then bail out.
+  // C++23 [expr.const]p8 If we have an unknown reference or pointers and it
+  // does not have a value then bail out.
   if (O->allowConstexprUnknown() && !O->hasValue())
     return false;
 
@@ -5788,7 +5790,7 @@ struct CheckDynamicTypeHandler {
 static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
                              AccessKinds AK, bool Polymorphic) {
   // P2280R4 We are not allowed to invoke a virtual function whose dynamic type
-  // us constexpr-unknown, so stop early and let this fail later on if we
+  // is constexpr-unknown, so stop early and let this fail later on if we
   // attempt to do so.
   if (This.allowConstexprUnknown())
     return true;
@@ -8663,8 +8665,8 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
 
 
 bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
-  // P2280R4 if we are in C++23 track if we have an unknown reference or
-  // pointer.
+  // C++23 [expr.const]p8 If we have a reference type allow unknown references
+  // and pointers.
   bool AllowConstexprUnknown =
       Info.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType();
   // If we are within a lambda's call operator, check whether the 'VD' referred
@@ -8736,13 +8738,14 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   if (!V->hasValue()) {
     // FIXME: Is it possible for V to be indeterminate here? If so, we should
     // adjust the diagnostic to say that.
-    // P2280R4 If we are have a variable that is unknown reference or pointer
-    // it may not have a value but still be usable later on so do not diagnose.
+    // C++23 [expr.const]p8 If we have a variable that is unknown reference
+    // or pointer it may not have a value but still be usable later on so do not
+    // diagnose.
     if (!Info.checkingPotentialConstantExpression() && !AllowConstexprUnknown)
       Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
 
-    // P2280R4 If we are have a variable that is unknown reference or pointer
-    // try to recover it from the frame and set the result accordingly.
+    // C++23 [expr.const]p8 If we have a variable that is unknown reference or
+    // pointer try to recover it from the frame and set the result accordingly.
     if (VD->getType()->isReferenceType() && AllowConstexprUnknown) {
       if (Frame) {
         Result.set({VD, Frame->Index, Version});
@@ -11570,8 +11573,8 @@ public:
   }
 
   bool Success(const APValue &V, const Expr *E) {
-    // P2280R4 if we have an unknown reference or pointer allow further
-    // evaluation of the value.
+    // C++23 [expr.const]p8 If we have a variable that is unknown reference or
+    // pointer allow further evaluation of the value.
     if (V.isLValue() || V.isAddrLabelDiff() || V.isIndeterminate() ||
         V.allowConstexprUnknown()) {
       Result = V;
