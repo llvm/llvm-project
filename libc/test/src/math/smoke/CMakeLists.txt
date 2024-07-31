@@ -3763,6 +3763,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  getpayload_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayload_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayload
+)
+
+add_fp_unittest(
+  getpayloadf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayloadf_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayloadf
+)
+
+add_fp_unittest(
   getpayloadf16_test
   SUITE
     libc-math-smoke-tests
@@ -3772,6 +3796,18 @@ add_fp_unittest(
     GetPayloadTest.h
   DEPENDS
     libc.src.math.getpayloadf16
+)
+
+add_fp_unittest(
+  getpayloadf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayloadf128_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayloadf128
 )
 
 add_fp_unittest(
