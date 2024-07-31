@@ -217,6 +217,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
     libc.src.stdio.vsnprintf
@@ -383,8 +384,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
