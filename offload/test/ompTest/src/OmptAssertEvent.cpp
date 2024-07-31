@@ -10,11 +10,11 @@ OmptAssertEvent::OmptAssertEvent(const std::string &Name,
 
 OmptAssertEvent OmptAssertEvent::AssertionSyncPoint(
     const std::string &Name, const std::string &Group,
-    const ObserveState &Expected, const std::string &MarkerName) {
+    const ObserveState &Expected, const std::string &SyncPointName) {
   auto EName = getName(Name);
   auto EGroup = getGroup(Group);
   return OmptAssertEvent(EName, EGroup, Expected,
-                         new internal::AssertionSyncPoint(MarkerName));
+                         new internal::AssertionSyncPoint(SyncPointName));
 }
 
 OmptAssertEvent
@@ -462,6 +462,15 @@ OmptAssertEvent OmptAssertEvent::BufferRecord(
   return BufferRecord(Name, Group, Expected, Type,
                       {MinimumTimeDelta, expectedDefault(ompt_device_time_t)},
                       RequestedNumTeams, GrantedNumTeams, TargetId, HostOpId);
+}
+
+OmptAssertEvent OmptAssertEvent::BufferRecordDeallocation(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, ompt_buffer_t *Buffer) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, Expected,
+                         new internal::BufferRecordDeallocation(Buffer));
 }
 
 std::string OmptAssertEvent::getEventName() const { return Name; }

@@ -36,7 +36,7 @@ public:
   /// Special asserter callback which checks that upon encountering the
   /// synchronization point, all expected events have been processed. That is:
   /// there are currently no remaining expected events for any asserter.
-  void handleAssertionSyncPoint(const std::string &MarkerName);
+  void handleAssertionSyncPoint(const std::string &SyncPointName);
 
   void handleThreadBegin(ompt_thread_t ThreadType, ompt_data_t *ThreadData);
 
@@ -114,6 +114,8 @@ public:
                             ompt_buffer_cursor_t Begin, int BufferOwned);
 
   void handleBufferRecord(ompt_record_ompt_t *Record);
+
+  void handleBufferRecordDeallocation(ompt_buffer_t *Buffer);
 
   /// Not needed for a conforming minimal OMPT implementation
   void handleWorkBegin(ompt_work_t work_type, ompt_scope_endpoint_t endpoint,

@@ -175,8 +175,8 @@ private:
 };
 
 /// This class provides the members and methods to manage event groups and
-/// markers in conjunction with asserters. Most importantly it maintains a
-/// coherent view of active and past events or markers.
+/// SyncPoints in conjunction with asserters. Most importantly it maintains a
+/// coherent view of active and past events or SyncPoints.
 class OmptEventGroupInterface {
 public:
   OmptEventGroupInterface()
@@ -208,7 +208,7 @@ private:
   std::mutex GroupMutex;
   std::map<std::string, omptest::AssertEventGroup> ActiveEventGroups{};
   std::map<std::string, omptest::AssertEventGroup> DeprecatedEventGroups{};
-  std::set<std::string> EncounteredMarkers{};
+  std::set<std::string> EncounteredSyncPoints{};
 };
 
 } // namespace omptest

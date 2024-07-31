@@ -48,12 +48,6 @@ typedef std::unordered_set<ompt_device_t *> OmptDeviceSetTy;
 typedef std::unique_ptr<OmptDeviceSetTy> OmptDeviceSetPtrTy;
 static OmptDeviceSetPtrTy TracedDevices;
 
-// Tracing buffer helper function
-static void delete_buffer_ompt(ompt_buffer_t *buffer) {
-  free(buffer);
-  printf("Deallocated %p\n", buffer);
-}
-
 // OMPT callbacks
 
 // Trace record callbacks
@@ -89,8 +83,10 @@ static void on_ompt_callback_buffer_complete(
     Status = ompt_advance_buffer_cursor(/*device=*/NULL, buffer, bytes,
                                         CurrentPos, &CurrentPos);
   }
-  if (buffer_owned)
-    delete_buffer_ompt(buffer);
+  if (buffer_owned) {
+    OmptCallbackHandler::get().handleBufferRecordDeallocation(buffer);
+    free(buffer);
+  }
 }
 
 static ompt_set_result_t set_trace_ompt(ompt_device_t *Device) {

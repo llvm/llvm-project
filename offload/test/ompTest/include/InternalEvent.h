@@ -206,6 +206,12 @@ event_class_w_custom_body(BufferRecord,                                        \
   ompt_record_ompt_t Record;                                                   \
   ompt_record_ompt_t *RecordPtr;                                               \
 )
+event_class_w_custom_body(BufferRecordDeallocation,                            \
+  BufferRecordDeallocation(ompt_buffer_t *Buffer)                              \
+    : InternalEvent(EventTy::BufferRecordDeallocation), Buffer(Buffer) {}      \
+                                                                               \
+  ompt_buffer_t *Buffer;                                                       \
+)
 // clang-format on
 
 } // namespace internal

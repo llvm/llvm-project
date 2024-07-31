@@ -137,6 +137,7 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
   case EventTy::DeviceUnload:
   case EventTy::BufferRequest:
   case EventTy::BufferComplete:
+  case EventTy::BufferRecordDeallocation:
     return true;
   // Observed events should be part of the OpenMP spec
   case EventTy::None:
@@ -164,15 +165,16 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
   if (AE.getEventType() == EventTy::AssertionSyncPoint) {
     auto NumRemainingEvents = getRemainingEventCount();
-    // Upon encountering a marker, all events should have been processed
+    // Upon encountering a SyncPoint, all events should have been processed
     if (NumRemainingEvents == 0)
       return;
 
     reportError(
-        AE, "[OmptSequencedAsserter] Encountered marker while still awaiting " +
-                std::to_string(NumRemainingEvents) + " events. Asserted " +
-                std::to_string(NumAssertSuccesses) + "/" +
-                std::to_string(Events.size()) + " events successfully.");
+        AE,
+        "[OmptSequencedAsserter] Encountered SyncPoint while still awaiting " +
+            std::to_string(NumRemainingEvents) + " events. Asserted " +
+            std::to_string(NumAssertSuccesses) + "/" +
+            std::to_string(Events.size()) + " events successfully.");
     State = AssertState::fail;
     return;
   }
@@ -273,12 +275,12 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
   if (AE.getEventType() == EventTy::AssertionSyncPoint) {
     auto NumRemainingEvents = getRemainingEventCount();
-    // Upon encountering a marker, all events should have been processed
+    // Upon encountering a SyncPoint, all events should have been processed
     if (NumRemainingEvents == 0)
       return;
 
     reportError(
-        AE, "[OmptEventAsserter] Encountered marker while still awaiting " +
+        AE, "[OmptEventAsserter] Encountered SyncPoint while still awaiting " +
                 std::to_string(NumRemainingEvents) + " events. Asserted " +
                 std::to_string(NumAssertSuccesses) + " events successfully.");
     State = AssertState::fail;

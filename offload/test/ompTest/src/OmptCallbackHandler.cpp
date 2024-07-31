@@ -346,6 +346,19 @@ void OmptCallbackHandler::handleBufferRecord(ompt_record_ompt_t *Record) {
                                             ObserveState::generated, Record));
 }
 
+void OmptCallbackHandler::handleBufferRecordDeallocation(
+    ompt_buffer_t *Buffer) {
+  if (RecordAndReplay) {
+    recordEvent(OmptAssertEvent::BufferRecordDeallocation(
+        "Buffer Deallocation", "", ObserveState::generated, Buffer));
+    return;
+  }
+
+  for (const auto &S : Subscribers)
+    S->notify(OmptAssertEvent::BufferRecordDeallocation(
+        "Buffer Deallocation", "", ObserveState::generated, Buffer));
+}
+
 void OmptCallbackHandler::handleWorkBegin(ompt_work_t work_type,
                                           ompt_scope_endpoint_t endpoint,
                                           ompt_data_t *parallel_data,
@@ -360,16 +373,16 @@ void OmptCallbackHandler::handleWorkEnd(ompt_work_t work_type,
                                         const void *codeptr_ra) {}
 
 void OmptCallbackHandler::handleAssertionSyncPoint(
-    const std::string &MarkerName) {
+    const std::string &SyncPointName) {
   if (RecordAndReplay) {
     recordEvent(OmptAssertEvent::AssertionSyncPoint(
-        "Assertion SyncPoint", "", ObserveState::generated, MarkerName));
+        "Assertion SyncPoint", "", ObserveState::generated, SyncPointName));
     return;
   }
 
   for (const auto &S : Subscribers)
     S->notify(OmptAssertEvent::AssertionSyncPoint(
-        "Assertion SyncPoint", "", ObserveState::generated, MarkerName));
+        "Assertion SyncPoint", "", ObserveState::generated, SyncPointName));
 }
 
 void OmptCallbackHandler::recordEvent(OmptAssertEvent &&Event) {

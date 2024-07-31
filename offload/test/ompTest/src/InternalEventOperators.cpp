@@ -225,6 +225,7 @@ event_class_operator_w_body(BufferRecord,                                      \
   }                                                                            \
   return isEqual;                                                              \
 )
+event_class_operator_stub(BufferRecordDeallocation)
 
 define_cast_func(AssertionSyncPoint)
 define_cast_func(AssertionSuspend)
@@ -249,6 +250,7 @@ define_cast_func(DeviceUnload)
 define_cast_func(BufferRequest)
 define_cast_func(BufferComplete)
 define_cast_func(BufferRecord)
+define_cast_func(BufferRecordDeallocation)
 
 class_equals_op(AssertionSyncPoint)
 class_equals_op(AssertionSuspend)
@@ -273,6 +275,7 @@ class_equals_op(DeviceUnload)
 class_equals_op(BufferRequest)
 class_equals_op(BufferComplete)
 class_equals_op(BufferRecord)
+class_equals_op(BufferRecordDeallocation)
 // clang-format on
 
 } // namespace internal

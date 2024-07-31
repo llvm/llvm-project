@@ -18,7 +18,7 @@ struct OmptAssertEvent {
   static OmptAssertEvent AssertionSyncPoint(const std::string &Name,
                                             const std::string &Group,
                                             const ObserveState &Expected,
-                                            const std::string &MarkerName);
+                                            const std::string &SyncPointName);
 
   static OmptAssertEvent AssertionSuspend(const std::string &Name,
                                           const std::string &Group,
@@ -245,6 +245,11 @@ struct OmptAssertEvent {
       unsigned int GrantedNumTeams = expectedDefault(unsigned int),
       ompt_id_t TargetId = expectedDefault(ompt_id_t),
       ompt_id_t HostOpId = expectedDefault(ompt_id_t));
+
+  static OmptAssertEvent BufferRecordDeallocation(const std::string &Name,
+                                                  const std::string &Group,
+                                                  const ObserveState &Expected,
+                                                  ompt_buffer_t *Buffer);
 
   /// Allow move construction (due to std::unique_ptr)
   OmptAssertEvent(OmptAssertEvent &&o) = default;

@@ -271,3 +271,9 @@ std::string internal::BufferRecord::toString() const {
 
   return S;
 }
+
+std::string internal::BufferRecordDeallocation::toString() const {
+  std::string S{"Deallocated "};
+  S.append(makeHexString((uint64_t)Buffer));
+  return S;
+}
