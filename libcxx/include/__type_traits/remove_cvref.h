@@ -20,26 +20,21 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_COMPILER_GCC)
-template <class _Tp>
-struct __remove_cvref_gcc {
-  using type = __remove_cvref(_Tp);
-};
-
-template <class _Tp>
-using __remove_cvref_t _LIBCPP_NODEBUG = typename __remove_cvref_gcc<_Tp>::type;
-#else
+#if __has_builtin(__remove_cvref) && !defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp>
 using __remove_cvref_t _LIBCPP_NODEBUG = __remove_cvref(_Tp);
+#else
+template <class _Tp>
+using __remove_cvref_t _LIBCPP_NODEBUG = __remove_cv_t<__libcpp_remove_reference_t<_Tp> >;
 #endif // __has_builtin(__remove_cvref)
 
 template <class _Tp, class _Up>
-using __is_same_uncvref = _IsSame<__remove_cvref_t<_Tp>, __remove_cvref_t<_Up> >;
+struct __is_same_uncvref : _IsSame<__remove_cvref_t<_Tp>, __remove_cvref_t<_Up> > {};
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct remove_cvref {
-  using type _LIBCPP_NODEBUG = __remove_cvref(_Tp);
+  using type _LIBCPP_NODEBUG = __remove_cvref_t<_Tp>;
 };
 
 template <class _Tp>
