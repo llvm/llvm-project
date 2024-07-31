@@ -165,6 +165,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.div
+)
 
 add_entrypoint_object(
   dfmaf128
