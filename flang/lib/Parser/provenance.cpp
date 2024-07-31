@@ -321,14 +321,19 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
 }
 
 const SourceFile *AllSources::GetSourceFile(
-    Provenance at, std::size_t *offset) const {
+    Provenance at, std::size_t *offset, bool topLevel) const {
   const Origin &origin{MapToOrigin(at)};
   return common::visit(common::visitors{
                            [&](const Inclusion &inc) {
-                             if (offset) {
-                               *offset = origin.covers.MemberOffset(at);
+                             if (topLevel && !origin.replaces.empty()) {
+                               return GetSourceFile(
+                                   origin.replaces.start(), offset, topLevel);
+                             } else {
+                               if (offset) {
+                                 *offset = origin.covers.MemberOffset(at);
+                               }
+                               return &inc.source;
                              }
-                             return &inc.source;
                            },
                            [&](const Macro &) {
                              return GetSourceFile(
@@ -380,9 +385,9 @@ std::optional<ProvenanceRange> AllSources::GetFirstFileProvenance() const {
   return std::nullopt;
 }
 
-std::string AllSources::GetPath(Provenance at) const {
+std::string AllSources::GetPath(Provenance at, bool topLevel) const {
   std::size_t offset{0};
-  const SourceFile *source{GetSourceFile(at, &offset)};
+  const SourceFile *source{GetSourceFile(at, &offset, topLevel)};
   return source ? *source->GetSourcePosition(offset).path : ""s;
 }
 

@@ -231,7 +231,8 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZbb],
                                       [TuneSiFive7,
                                        FeaturePostRAScheduler,
-                                       TuneDLenFactor2]>;
+                                       TuneDLenFactor2,
+                                       TuneOptimizedZeroStrideLoad]>;
 
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [Feature64Bit,
@@ -327,7 +328,7 @@ def SYNTACORE_SCR1_MAX : RISCVProcessorModel<"syntacore-scr1-max",
                                              [TuneNoDefaultUnroll]>;
 
 def SYNTACORE_SCR3_RV32 : RISCVProcessorModel<"syntacore-scr3-rv32",
-                                              NoSchedModel,
+                                              SyntacoreSCR3RV32Model,
                                               [Feature32Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,
@@ -337,7 +338,7 @@ def SYNTACORE_SCR3_RV32 : RISCVProcessorModel<"syntacore-scr3-rv32",
                                               [TuneNoDefaultUnroll, FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR3_RV64 : RISCVProcessorModel<"syntacore-scr3-rv64",
-                                              NoSchedModel,
+                                              SyntacoreSCR3RV64Model,
                                               [Feature64Bit,
                                                FeatureStdExtI,
                                                FeatureStdExtZicsr,

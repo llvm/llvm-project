@@ -2,10 +2,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX940 %s
 
 
-define protected amdgpu_kernel void @test(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+define protected amdgpu_kernel void @test(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 ; GFX940-LABEL: test:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX940-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX940-NEXT:    v_mov_b32_e32 v3, v0
@@ -51,3 +51,5 @@ entry:
   ret void
 }
 declare <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x64.i8(<2 x i32>, <4 x i32>, <4 x i32>, i32, i32 immarg, i32 immarg)
+
+attributes #0 = { "amdgpu-no-agpr" }

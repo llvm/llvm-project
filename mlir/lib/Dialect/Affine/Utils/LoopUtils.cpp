@@ -12,10 +12,8 @@
 
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -2082,8 +2080,8 @@ static LogicalResult generateCopy(
 
   auto numElementsSSA = top.create<arith::ConstantIndexOp>(loc, *numElements);
 
-  Value dmaStride = nullptr;
-  Value numEltPerDmaStride = nullptr;
+  Value dmaStride;
+  Value numEltPerDmaStride;
   if (copyOptions.generateDma) {
     SmallVector<StrideInfo, 4> dmaStrideInfos;
     getMultiLevelStrides(region, fastBufferShape, &dmaStrideInfos);

@@ -846,7 +846,7 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
     SPIRVType *ValTy = GR.getOrCreateSPIRVIntegerType(8, I, TII);
     SPIRVType *ArrTy = GR.getOrCreateSPIRVArrayType(ValTy, Num, I, TII);
-    Register Const = GR.getOrCreateConsIntArray(Val, I, ArrTy, TII);
+    Register Const = GR.getOrCreateConstIntArray(Val, Num, I, ArrTy, TII);
     SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
         ArrTy, I, TII, SPIRV::StorageClass::UniformConstant);
     // TODO: check if we have such GV, add init, use buildGlobalVariable.
@@ -1802,15 +1802,18 @@ bool SPIRVInstructionSelector::selectOpUndef(Register ResVReg,
 static bool isImm(const MachineOperand &MO, MachineRegisterInfo *MRI) {
   assert(MO.isReg());
   const SPIRVType *TypeInst = MRI->getVRegDef(MO.getReg());
-  if (TypeInst->getOpcode() != SPIRV::ASSIGN_TYPE)
-    return false;
-  assert(TypeInst->getOperand(1).isReg());
-  MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
-  return ImmInst->getOpcode() == TargetOpcode::G_CONSTANT;
+  if (TypeInst->getOpcode() == SPIRV::ASSIGN_TYPE) {
+    assert(TypeInst->getOperand(1).isReg());
+    MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
+    return ImmInst->getOpcode() == TargetOpcode::G_CONSTANT;
+  }
+  return TypeInst->getOpcode() == SPIRV::OpConstantI;
 }
 
 static int64_t foldImm(const MachineOperand &MO, MachineRegisterInfo *MRI) {
   const SPIRVType *TypeInst = MRI->getVRegDef(MO.getReg());
+  if (TypeInst->getOpcode() == SPIRV::OpConstantI)
+    return TypeInst->getOperand(2).getImm();
   MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
   assert(ImmInst->getOpcode() == TargetOpcode::G_CONSTANT);
   return ImmInst->getOperand(1).getCImm()->getZExtValue();
@@ -2187,7 +2190,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   // FIXME: don't use MachineIRBuilder here, replace it with BuildMI.
   MachineIRBuilder MIRBuilder(I);
   const GlobalValue *GV = I.getOperand(1).getGlobal();
-  Type *GVType = GR.getDeducedGlobalValueType(GV);
+  Type *GVType = toTypedPointer(GR.getDeducedGlobalValueType(GV));
   SPIRVType *PointerBaseType;
   if (GVType->isArrayTy()) {
     SPIRVType *ArrayElementType =

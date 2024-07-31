@@ -36,7 +36,9 @@ VALUE_CODEGENOPT(Name, Bits, Default)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
+CODEGENOPT(Crel, 1, 0) ///< -Wa,--crel
 CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
+CODEGENOPT(SSE2AVX          , 1, 0)   ///< -msse2avx
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
@@ -188,6 +190,7 @@ CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enable
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
 CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(DisableBlockSignatureString, 1, 0) ///< Set when -fdisable-block-signature-string is enabled.
 CODEGENOPT(HIPSaveKernelArgName, 1, 0) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
@@ -232,6 +235,7 @@ ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Defa
 
 CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
+CODEGENOPT(PointerTBAA, 1, 0)        ///< Whether or not to use distinct TBAA tags for pointers.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
 CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-path TBAA.
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.

@@ -57,9 +57,9 @@ Pointer::~Pointer() {
   if (isIntegralPointer())
     return;
 
-  if (PointeeStorage.BS.Pointee) {
-    PointeeStorage.BS.Pointee->removePointer(this);
-    PointeeStorage.BS.Pointee->cleanup();
+  if (Block *Pointee = PointeeStorage.BS.Pointee) {
+    Pointee->removePointer(this);
+    Pointee->cleanup();
   }
 }
 
@@ -143,7 +143,7 @@ APValue Pointer::toAPValue() const {
 
   if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
     return APValue(Base, CharUnits::Zero(), Path,
-                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+                   /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
 
   // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();
@@ -152,8 +152,9 @@ APValue Pointer::toAPValue() const {
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
     if (Ptr.isArrayRoot()) {
-        Path.push_back(APValue::LValuePathEntry::ArrayIndex(0));
-        Ptr = Ptr.getBase();
+      Path.push_back(APValue::LValuePathEntry(
+          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+      Ptr = Ptr.getBase();
     } else if (Ptr.isArrayElement()) {
       if (Ptr.isOnePastEnd())
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getArray().getNumElems()));
@@ -181,12 +182,14 @@ APValue Pointer::toAPValue() const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/isOnePastEnd(),
+                 /*IsNullPtr=*/false);
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
   OS << PointeeStorage.BS.Pointee << " (";
   if (isBlockPointer()) {
+    const Block *B = PointeeStorage.BS.Pointee;
     OS << "Block) {";
 
     if (isRoot())
@@ -199,8 +202,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     else
       OS << Offset << ", ";
 
-    if (PointeeStorage.BS.Pointee)
-      OS << PointeeStorage.BS.Pointee->getSize();
+    if (B)
+      OS << B->getSize();
     else
       OS << "nullptr";
   } else {
@@ -339,7 +342,9 @@ bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
          A.getFieldDesc()->IsArray;
 }
 
-std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
+std::optional<APValue> Pointer::toRValue(const Context &Ctx,
+                                         QualType ResultType) const {
+  assert(!ResultType.isNull());
   // Method to recursively traverse composites.
   std::function<bool(QualType, const Pointer &, APValue &)> Composite;
   Composite = [&Composite, &Ctx](QualType Ty, const Pointer &Ptr, APValue &R) {
@@ -347,8 +352,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
       Ty = AT->getValueType();
 
     // Invalid pointers.
-    if (Ptr.isDummy() || !Ptr.isLive() ||
-        (!Ptr.isUnknownSizeArray() && Ptr.isOnePastEnd()))
+    if (Ptr.isDummy() || !Ptr.isLive() || !Ptr.isBlockPointer() ||
+        Ptr.isPastEnd())
       return false;
 
     // Primitive values.
@@ -482,12 +487,18 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     llvm_unreachable("invalid value to return");
   };
 
-  if (isZero())
-    return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {}, false,
-                   true);
-
-  if (isDummy() || !isLive())
+  // Invalid to read from.
+  if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;
+
+  // We can return these as rvalues, but we can't deref() them.
+  if (isZero() || isIntegralPointer())
+    return toAPValue();
+
+  // Just load primitive types.
+  if (std::optional<PrimType> T = Ctx.classify(ResultType)) {
+    TYPE_SWITCH(*T, return this->deref<T>().toAPValue());
+  }
 
   // Return the composite type.
   APValue Result;

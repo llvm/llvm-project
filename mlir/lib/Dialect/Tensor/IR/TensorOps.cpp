@@ -135,40 +135,40 @@ bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
                                            ArrayRef<OpFoldResult> mixedSizes) {
   llvm::SmallBitVector droppedDims(mixedSizes.size());
-  int64_t shapePos = 0;
+  int64_t shapePos = reducedShape.size() - 1;
 
-  for (const auto &size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(llvm::reverse(mixedSizes))) {
+    size_t idx = mixedSizes.size() - size.index() - 1;
     // Rank-reduced dims must have a static unit dimension.
     bool isStaticUnitSize =
         size.value().is<Attribute>() &&
         llvm::cast<IntegerAttr>(size.value().get<Attribute>()).getInt() == 1;
 
-    if (shapePos == static_cast<int64_t>(reducedShape.size())) {
+    if (shapePos < 0) {
       // There are no more dims in the reduced shape. All remaining sizes must
       // be rank-reduced dims.
       assert(isStaticUnitSize && "expected unit dim");
-      droppedDims.set(size.index());
+      droppedDims.set(idx);
       continue;
     }
 
     // Dim is preserved if the size is not a static 1.
     if (!isStaticUnitSize) {
-      ++shapePos;
+      --shapePos;
       continue;
     }
 
     // Dim is preserved if the reduced shape dim is also 1.
     if (reducedShape[shapePos] == 1) {
-      ++shapePos;
+      --shapePos;
       continue;
     }
 
     // Otherwise: Dim is dropped.
-    droppedDims.set(size.index());
+    droppedDims.set(idx);
   }
 
-  assert(shapePos == static_cast<int64_t>(reducedShape.size()) &&
-         "dimension mismatch");
+  assert(shapePos < 0 && "dimension mismatch");
   return droppedDims;
 }
 
@@ -1585,12 +1585,24 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
           getResult().getType()))
     return reshapedSource;
 
+  // If the producer of operand 'source' is another 'tensor.reshape' op, use the
+  // producer's input instead as the original tensor to reshape. This could
+  // render such producer dead code.
+  if (auto reshapeOpProducer = getSource().getDefiningOp<ReshapeOp>()) {
+    getSourceMutable().assign(reshapeOpProducer.getSource());
+    return getResult();
+  }
+
   auto source = getSource();
   auto sourceTy = dyn_cast<RankedTensorType>(source.getType());
   auto resultTy = dyn_cast<RankedTensorType>(getType());
-
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
+
+  // If the source and result are both 1D tensors and have the same type, the
+  // reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() == 1)
+    return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
     auto elements = fromElements.getElements();

@@ -87,6 +87,7 @@ LANGOPT(C99               , 1, 0, "C99")
 LANGOPT(C11               , 1, 0, "C11")
 LANGOPT(C17               , 1, 0, "C17")
 LANGOPT(C23               , 1, 0, "C23")
+LANGOPT(C2y               , 1, 0, "C2y")
 LANGOPT(MSVCCompat        , 1, 0, "Microsoft Visual C++ full compatibility mode")
 LANGOPT(Kernel            , 1, 0, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, "Microsoft C++ extensions")
@@ -168,6 +169,8 @@ LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
 LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, "incorporate address discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, "incorporate type discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
+BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
+               "Use type discrimination when signing function pointers")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
@@ -464,6 +467,8 @@ LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
 
 LANGOPT(CXXAssumptions, 1, 1, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
 
+LANGOPT(RawStringLiterals, 1, 1, "Enable or disable raw string literals")
+
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default,
              "Rely on strict definition of flexible arrays")
@@ -515,6 +520,9 @@ BENIGN_LANGOPT(CheckNew, 1, 0, "Do not assume C++ operator new may not return NU
 BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
                "Emit diagnostics for a constexpr function body that can never "
                "be used in a constant expression.")
+
+LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

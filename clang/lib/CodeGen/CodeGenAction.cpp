@@ -226,15 +226,10 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
     HandleTopLevelDecl(D);
 }
 
-// Links each entry in LinkModules into our module.  Returns true on error.
-bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
+// Links each entry in LinkModules into our module. Returns true on error.
+bool BackendConsumer::LinkInModules(llvm::Module *M) {
   for (auto &LM : LinkModules) {
     assert(LM.Module && "LinkModule does not actually have a module");
-
-    // If ShouldLinkFiles is not set, skip files added via the
-    // -mlink-bitcode-files, only linking -mlink-builtin-bitcode
-    if (!LM.Internalize && !ShouldLinkFiles)
-      continue;
 
     if (LM.PropagateAttrs)
       for (Function &F : *LM.Module) {
@@ -298,6 +293,9 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
     Ctx.getDiagnosticHandler();
   Ctx.setDiagnosticHandler(std::make_unique<ClangDiagnosticHandler>(
       CodeGenOpts, this));
+
+  Ctx.setDefaultTargetCPU(TargetOpts.CPU);
+  Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
 
   Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
     setupLLVMOptimizationRemarks(
@@ -382,7 +380,7 @@ void BackendConsumer::CompleteTentativeDefinition(VarDecl *D) {
   Gen->CompleteTentativeDefinition(D);
 }
 
-void BackendConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void BackendConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   Gen->CompleteExternalDeclaration(D);
 }
 
@@ -1208,6 +1206,9 @@ void CodeGenAction::ExecuteAction() {
   Ctx.setDiscardValueNames(false);
   Ctx.setDiagnosticHandler(
       std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
+
+  Ctx.setDefaultTargetCPU(TargetOpts.CPU);
+  Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
 
   Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(

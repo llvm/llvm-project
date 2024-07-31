@@ -245,6 +245,16 @@ public:
            VK == LoongArchMCExpr::VK_LoongArch_None;
   }
 
+  bool isTPRelAddSymbol() const {
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    // Must be of 'immediate' type but not a constant.
+    if (!isImm() || evaluateConstantImm(getImm(), Imm, VK))
+      return false;
+    return LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R;
+  }
+
   bool isUImm1() const { return isUImm<1>(); }
   bool isUImm2() const { return isUImm<2>(); }
   bool isUImm2plus1() const { return isUImm<2, 1>(); }
@@ -276,6 +286,7 @@ public:
                        VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
                        VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
     return IsConstantImm
@@ -391,6 +402,7 @@ public:
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20_R ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20;
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
@@ -1685,6 +1697,10 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a bare symbol name");
+  }
+  case Match_InvalidTPRelAddSymbol: {
+    SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a symbol with %le_add_r modifier");
   }
   }
   llvm_unreachable("Unknown match type detected!");

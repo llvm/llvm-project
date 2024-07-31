@@ -109,8 +109,11 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
   return Cost;
 }
 
-InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                            TTI::TargetCostKind CostKind) {
+static InstructionCost getIntImmCostImpl(const DataLayout &DL,
+                                         const RISCVSubtarget *ST,
+                                         const APInt &Imm, Type *Ty,
+                                         TTI::TargetCostKind CostKind,
+                                         bool FreeZeroes) {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -119,8 +122,13 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
     return TTI::TCC_Free;
 
   // Otherwise, we check how many instructions it will take to materialise.
-  const DataLayout &DL = getDataLayout();
-  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *getST());
+  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *ST,
+                                    /*CompressionCost=*/false, FreeZeroes);
+}
+
+InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                            TTI::TargetCostKind CostKind) {
+  return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind, false);
 }
 
 // Look for patterns of shift followed by AND that can be turned into a pair of
@@ -172,11 +180,24 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
-  case Instruction::Store:
-    // If the address is a constant, use the materialization cost.
-    if (Idx == 1)
-      return getIntImmCost(Imm, Ty, CostKind);
-    return TTI::TCC_Free;
+  case Instruction::Store: {
+    // Use the materialization cost regardless of if it's the address or the
+    // value that is constant, except for if the store is misaligned and
+    // misaligned accesses are not legal (experience shows constant hoisting
+    // can sometimes be harmful in such cases).
+    if (Idx == 1 || !Inst)
+      return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind,
+                               /*FreeZeroes=*/true);
+
+    StoreInst *ST = cast<StoreInst>(Inst);
+    if (!getTLI()->allowsMemoryAccessForAlignment(
+            Ty->getContext(), DL, getTLI()->getValueType(DL, Ty),
+            ST->getPointerAddressSpace(), ST->getAlign()))
+      return TTI::TCC_Free;
+
+    return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind,
+                             /*FreeZeroes=*/true);
+  }
   case Instruction::Load:
     // If the address is a constant, use the materialization cost.
     return getIntImmCost(Imm, Ty, CostKind);
@@ -957,6 +978,32 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
+    break;
+  }
+  // vp integer arithmetic ops.
+  case Intrinsic::vp_add:
+  case Intrinsic::vp_and:
+  case Intrinsic::vp_ashr:
+  case Intrinsic::vp_lshr:
+  case Intrinsic::vp_mul:
+  case Intrinsic::vp_or:
+  case Intrinsic::vp_sdiv:
+  case Intrinsic::vp_shl:
+  case Intrinsic::vp_srem:
+  case Intrinsic::vp_sub:
+  case Intrinsic::vp_udiv:
+  case Intrinsic::vp_urem:
+  case Intrinsic::vp_xor:
+  // vp float arithmetic ops.
+  case Intrinsic::vp_fadd:
+  case Intrinsic::vp_fsub:
+  case Intrinsic::vp_fmul:
+  case Intrinsic::vp_fdiv:
+  case Intrinsic::vp_frem: {
+    std::optional<unsigned> FOp =
+        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+    if (FOp)
+      return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
   }

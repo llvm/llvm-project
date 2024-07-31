@@ -21,9 +21,32 @@ class FindInMemoryTestCase(TestBase):
             self.thread,
             self.bp,
         ) = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.cpp")
+            self,
+            "break here",
+            lldb.SBFileSpec("main.cpp"),
         )
         self.assertTrue(self.bp.IsValid())
+
+    def test_check_stack_pointer(self):
+        """Make sure the 'stack_pointer' variable lives on the stack"""
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+
+        frame = self.thread.GetSelectedFrame()
+        ex = frame.EvaluateExpression("&stack_pointer")
+        variable_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            self.process.GetMemoryRegionInfo(
+                ex.GetValueAsUnsigned(), variable_region
+            ).Success(),
+        )
+
+        stack_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            self.process.GetMemoryRegionInfo(frame.GetSP(), stack_region).Success(),
+        )
+
+        self.assertEqual(variable_region, stack_region)
 
     def test_find_in_memory_ok(self):
         """Make sure a match exists in the heap memory and the right address ranges are provided"""

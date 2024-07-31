@@ -258,9 +258,13 @@ add_entrypoint_object(
 add_header_library(
   qsort_util
   HDRS
+    qsort_data.h
     qsort_util.h
+    heap_sort.h
+    quick_sort.h
   DEPENDS
     libc.include.stdlib
+    libc.src.__support.CPP.cstddef
 )
 
 add_entrypoint_object(
@@ -304,6 +308,7 @@ add_entrypoint_object(
   DEPENDS
     .rand_util
     libc.include.stdlib
+    libc.src.__support.threads.sleep
 )
 
 add_entrypoint_object(
@@ -496,6 +501,16 @@ add_entrypoint_object(
     .exit_handler
 )
 
+list(APPEND exit_deps
+  libc.src.__support.OSUtil.osutil
+  ._Exit
+)
+if (NOT LIBC_TARGET_OS_IS_BAREMETAL)
+  list(APPEND exit_deps
+    .atexit
+  )
+endif()
+
 add_entrypoint_object(
   exit
   SRCS
@@ -503,10 +518,7 @@ add_entrypoint_object(
   HDRS
     exit.h
   DEPENDS
-    ._Exit
-    .atexit
-    libc.src.__support.OSUtil.osutil
-    .exit_handler
+    ${exit_deps}
 )
 
 add_entrypoint_object(

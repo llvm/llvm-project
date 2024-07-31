@@ -630,6 +630,17 @@ bool MemRegion::canPrintPrettyAsExpr() const {
   return false;
 }
 
+StringRef MemRegion::getKindStr() const {
+  switch (getKind()) {
+#define REGION(Id, Parent)                                                     \
+  case Id##Kind:                                                               \
+    return #Id;
+#include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
+#undef REGION
+  }
+  llvm_unreachable("Unkown kind!");
+}
+
 void MemRegion::printPretty(raw_ostream &os) const {
   assert(canPrintPretty() && "This region cannot be printed pretty.");
   os << "'";

@@ -865,6 +865,13 @@ public:
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  /// Match FPOWI if it's safe to extend it into a series of multiplications.
+  bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent);
+
+  /// Expands FPOWI into a series of multiplications and a division if the
+  /// exponent is negative.
+  void applyExpandFPowI(MachineInstr &MI, int64_t Exponent);
+
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
 
