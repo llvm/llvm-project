@@ -2428,9 +2428,11 @@ add_fp_unittest(
   SRCS
     ffmal_test.cpp
   HDRS
-    DivTest.h
+    FmaTest.h
   DEPENDS
     libc.src.math.ffmal
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 
