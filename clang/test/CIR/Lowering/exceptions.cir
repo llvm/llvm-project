@@ -52,12 +52,13 @@ module @"try-catch.cpp" attributes {cir.lang = #cir.lang<cxx>, cir.sob = #cir.si
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
     // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 0, !dbg !29
     // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 1, !dbg !29
+    cir.br ^bb5(%exception_ptr, %type_id : !cir.ptr<!void>, !u32i)
+  ^bb5(%16: !cir.ptr<!void>, %17: !u32i):
+    %18 = cir.eh.typeid @_ZTIi
+    // LLVM: call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
+    %19 = cir.cmp(eq, %17, %18) : !u32i, !cir.bool
     cir.br ^bb10
     // TODO: TBD
-    //   cir.br ^bb5(%exception_ptr, %type_id : !cir.ptr<!void>, !u32i)
-    // ^bb5(%16: !cir.ptr<!void>, %17: !u32):
-    //   %18 = cir.eh.typeid @_ZTIi
-    //   %19 = cir.cmp(eq, %17, %18) : !u32i, !cir.bool
     //   cir.brcond %19 ^bb6(%16 : !cir.ptr<!void>), ^bb7(%16, %17 : !cir.ptr<!void>, !u32i)
     // ^bb6(%20: !cir.ptr<!void>):
     //   %21 = cir.catch_param begin %20 -> !cir.ptr<!s32i>
