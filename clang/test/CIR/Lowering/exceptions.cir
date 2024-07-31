@@ -50,44 +50,51 @@ module @"try-catch.cpp" attributes {cir.lang = #cir.lang<cxx>, cir.sob = #cir.si
     // LLVM:     catch ptr @_ZTIi
     // LLVM:     catch ptr @_ZTIPKc
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
-    // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 0, !dbg !29
-    // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 1, !dbg !29
+    // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 0
+    // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 1
     cir.br ^bb5(%exception_ptr, %type_id : !cir.ptr<!void>, !u32i)
   ^bb5(%16: !cir.ptr<!void>, %17: !u32i):
     %18 = cir.eh.typeid @_ZTIi
     // LLVM: call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
     %19 = cir.cmp(eq, %17, %18) : !u32i, !cir.bool
+    cir.brcond %19 ^bb6(%16 : !cir.ptr<!void>), ^bb7(%16, %17 : !cir.ptr<!void>, !u32i)
+  ^bb6(%20: !cir.ptr<!void>):
+    %21 = cir.catch_param begin %20 -> !cir.ptr<!s32i>
+    // LLVM: %[[EH_IDX:.*]] = phi ptr
+    // LLVM: call ptr @__cxa_begin_catch(ptr %[[EH_IDX]])
+    %22 = cir.load %21 : !cir.ptr<!s32i>, !s32i
+    cir.store %22, %7 : !s32i, !cir.ptr<!s32i>
+    %23 = cir.const #cir.int<98> : !s32i
+    %24 = cir.cast(integral, %23 : !s32i), !u64i
+    cir.store %24, %3 : !u64i, !cir.ptr<!u64i>
+    %25 = cir.load %7 : !cir.ptr<!s32i>, !s32i
+    %26 = cir.unary(inc, %25) : !s32i, !s32i
+    cir.store %26, %7 : !s32i, !cir.ptr<!s32i>
+    cir.catch_param end
+    // LLVM: call void @__cxa_end_catch()
     cir.br ^bb10
-    // TODO: TBD
-    //   cir.brcond %19 ^bb6(%16 : !cir.ptr<!void>), ^bb7(%16, %17 : !cir.ptr<!void>, !u32i)
-    // ^bb6(%20: !cir.ptr<!void>):
-    //   %21 = cir.catch_param begin %20 -> !cir.ptr<!s32i>
-    //   %22 = cir.load %21 : !cir.ptr<!s32i>, !s32i
-    //   cir.store %22, %7 : !s32i, !cir.ptr<!s32i>
-    //   %23 = cir.const #cir.int<98> : !s32i
-    //   %24 = cir.cast(integral, %23 : !s32i), !u64i
-    //   cir.store %24, %3 : !u64i, !cir.ptr<!u64i>
-    //   %25 = cir.load %7 : !cir.ptr<!s32i>, !s32i
-    //   %26 = cir.unary(inc, %25) : !s32i, !s32i
-    //   cir.store %26, %7 : !s32i, !cir.ptr<!s32i>
-    //   cir.catch_param end
-    //   cir.br ^bb10
-    // ^bb7(%27: !cir.ptr<!void>, %28: !u32i):
-    //   %29 = cir.eh.typeid @_ZTIPKc
-    //   %30 = cir.cmp(eq, %28, %29) : !u32i, !cir.bool
-    //   cir.brcond %30 ^bb8(%27 : !cir.ptr<!void>), ^bb9(%27, %28 : !cir.ptr<!void>, !u32i)
-    // ^bb8(%31: !cir.ptr<!void>):
-    //   %32 = cir.catch_param begin %31 -> !cir.ptr<!s8i>
-    //   cir.store %32, %6 : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
-    //   %33 = cir.const #cir.int<99> : !s32i
-    //   %34 = cir.cast(integral, %33 : !s32i), !u64i
-    //   cir.store %34, %3 : !u64i, !cir.ptr<!u64i>
-    //   %35 = cir.load %6 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-    //   %36 = cir.const #cir.int<0> : !s32i
-    //   %37 = cir.ptr_stride(%35 : !cir.ptr<!s8i>, %36 : !s32i), !cir.ptr<!s8i>
-    //   cir.catch_param end
-    //   cir.br ^bb10
-    // ^bb9(%38: !cir.ptr<!void>, %39: !u32i):
+  ^bb7(%27: !cir.ptr<!void>, %28: !u32i):
+    %29 = cir.eh.typeid @_ZTIPKc
+    // LLVM: call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIPKc)
+    %30 = cir.cmp(eq, %28, %29) : !u32i, !cir.bool
+    cir.brcond %30 ^bb8(%27 : !cir.ptr<!void>), ^bb9(%27, %28 : !cir.ptr<!void>, !u32i)
+  ^bb8(%31: !cir.ptr<!void>):
+    %32 = cir.catch_param begin %31 -> !cir.ptr<!s8i>
+    // LLVM: %[[EH_MSG:.*]] = phi ptr
+    // LLVM: call ptr @__cxa_begin_catch(ptr %[[EH_MSG]])
+    cir.store %32, %6 : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+    %33 = cir.const #cir.int<99> : !s32i
+    %34 = cir.cast(integral, %33 : !s32i), !u64i
+    cir.store %34, %3 : !u64i, !cir.ptr<!u64i>
+    %35 = cir.load %6 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+    %36 = cir.const #cir.int<0> : !s32i
+    %37 = cir.ptr_stride(%35 : !cir.ptr<!s8i>, %36 : !s32i), !cir.ptr<!s8i>
+    cir.catch_param end
+    // LLVM: call void @__cxa_end_catch()
+    cir.br ^bb10
+  ^bb9(%38: !cir.ptr<!void>, %39: !u32i):
+    cir.br ^bb10
+    // TODO: support resume.
     //   cir.resume
   ^bb10:
     %40 = cir.load %3 : !cir.ptr<!u64i>, !u64i

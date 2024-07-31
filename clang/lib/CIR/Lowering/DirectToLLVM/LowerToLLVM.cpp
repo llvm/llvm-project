@@ -3579,6 +3579,61 @@ public:
   }
 };
 
+class CIRCatchParamOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::CatchParamOp> {
+public:
+  using OpConversionPattern<mlir::cir::CatchParamOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::CatchParamOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (op.isBegin()) {
+      // Get or create `declare ptr @__cxa_begin_catch(ptr)`
+      llvm::StringRef cxaBeginCatch = "__cxa_begin_catch";
+      auto *sourceSymbol = mlir::SymbolTable::lookupSymbolIn(
+          op->getParentOfType<mlir::ModuleOp>(), cxaBeginCatch);
+      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+      if (!sourceSymbol) {
+        auto catchFnTy =
+            mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {llvmPtrTy},
+                                              /*isVarArg=*/false);
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPoint(
+            op->getParentOfType<mlir::LLVM::LLVMFuncOp>());
+        auto catchFn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+            op.getLoc(), cxaBeginCatch, catchFnTy);
+        sourceSymbol = catchFn;
+      }
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+          op, mlir::TypeRange{llvmPtrTy}, cxaBeginCatch,
+          mlir::ValueRange{adaptor.getExceptionPtr()});
+      return mlir::success();
+    } else if (op.isEnd()) {
+      // Get or create `declare void @__cxa_end_catch()`
+      llvm::StringRef cxaEndCatch = "__cxa_end_catch";
+      auto *sourceSymbol = mlir::SymbolTable::lookupSymbolIn(
+          op->getParentOfType<mlir::ModuleOp>(), cxaEndCatch);
+      auto llvmVoidTy = mlir::LLVM::LLVMVoidType::get(rewriter.getContext());
+      if (!sourceSymbol) {
+        auto catchFnTy = mlir::LLVM::LLVMFunctionType::get(llvmVoidTy, {},
+                                                           /*isVarArg=*/false);
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPoint(
+            op->getParentOfType<mlir::LLVM::LLVMFuncOp>());
+        auto catchFn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+            op.getLoc(), cxaEndCatch, catchFnTy);
+        sourceSymbol = catchFn;
+      }
+      rewriter.create<mlir::LLVM::CallOp>(op.getLoc(), mlir::TypeRange{},
+                                          cxaEndCatch, mlir::ValueRange{});
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+    llvm_unreachable("only begin/end supposed to make to lowering stage");
+    return mlir::failure();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -3614,8 +3669,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRRintOpLowering, CIRRoundOpLowering, CIRSinOpLowering,
       CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
       CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
-      CIRClearCacheOpLowering, CIRUndefOpLowering, CIREhTypeIdOpLowering>(
-      converter, patterns.getContext());
+      CIRClearCacheOpLowering, CIRUndefOpLowering, CIREhTypeIdOpLowering,
+      CIRCatchParamOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
