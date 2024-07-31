@@ -1673,13 +1673,12 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
     [AttrSizedOperandSegments,
      SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">,
      RecursiveMemoryEffects]> {
-  let summary = "CoIterates over a set of sparse iteration spaces";
+  let summary = "Co-iterates over a set of sparse iteration spaces";
   let description = [{
       The `sparse_tensor.coiterate` operation represents a loop (nest) over
-      the a set of iteration spaces.
-      The operation can have multiple regions, with each of them defining a
-      case to compute a result at the current iterations. The case condition
-      is defined solely based on the pattern of specified iterators.
+      a set of iteration spaces. The operation can have multiple regions,
+      with each of them defining a case to compute a result at the current iterations.
+      The case condition is defined solely based on the pattern of specified iterators.
       For example:
       ```mlir
       %ret = sparse_tensor.coiterate (%sp1, %sp2) at(%coord) iter_args(%arg = %init)
@@ -1695,7 +1694,7 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
       ```
 
       `sparse_tensor.coiterate` can also operate on loop-carried variables.
-      It returns the final values after loop termination.
+      It returns the final value for each loop-carried variable after loop termination.
       The initial values of the variables are passed as additional SSA operands
       to the iterator SSA value and used coordinate SSA values.
       Each operation region has variadic arguments for specified (used), one argument
