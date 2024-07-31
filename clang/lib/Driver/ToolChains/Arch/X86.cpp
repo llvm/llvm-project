@@ -266,19 +266,29 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
 
     bool IsNegative = Name.starts_with("no-");
+
+    bool Not64Bit = ArchType != llvm::Triple::x86_64;
+    if (Not64Bit && Name == "uintr")
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
 
+      if (Not64Bit && !IsNegative)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef(A->getSpelling().str() + "|-mapxf")
+            << Triple.getTriple();
+
       for (StringRef Value : A->getValues()) {
-        if (Value == "egpr" || Value == "push2pop2" || Value == "ppx" ||
-            Value == "ndd" || Value == "ccmp" || Value == "nf" ||
-            Value == "cf" || Value == "zu") {
-          Features.push_back(
-              Args.MakeArgString((IsNegative ? "-" : "+") + Value));
-          continue;
-        }
-        D.Diag(clang::diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << Value;
+        if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
+            Value != "ndd" && Value != "ccmp" && Value != "nf" &&
+            Value != "cf" && Value != "zu")
+          D.Diag(clang::diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Value;
+
+        Features.push_back(
+            Args.MakeArgString((IsNegative ? "-" : "+") + Value));
       }
       continue;
     }

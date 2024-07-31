@@ -127,3 +127,18 @@ llvm.func @unsupported_func_op_interface() {
   // CHECK: llvm.return
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: func @test_signature_conversion_no_converter()
+func.func @test_signature_conversion_no_converter() {
+  // CHECK: "test.signature_conversion_no_converter"() ({
+  // CHECK: ^{{.*}}(%[[arg0:.*]]: f64):
+  "test.signature_conversion_no_converter"() ({
+  ^bb0(%arg0: f32):
+    // CHECK: "test.legal_op_d"(%[[arg0]]) : (f64) -> ()
+    "test.replace_with_legal_op"(%arg0) : (f32) -> ()
+    "test.return"() : () -> ()
+  }) : () -> ()
+  return
+}
