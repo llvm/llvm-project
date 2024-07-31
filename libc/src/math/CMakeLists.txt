@@ -97,6 +97,7 @@ add_math_entrypoint_object(erff)
 
 add_math_entrypoint_object(exp)
 add_math_entrypoint_object(expf)
+add_math_entrypoint_object(expf16)
 
 add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
@@ -405,7 +406,10 @@ add_math_entrypoint_object(scalbnl)
 add_math_entrypoint_object(scalbnf16)
 add_math_entrypoint_object(scalbnf128)
 
+add_math_entrypoint_object(setpayload)
+add_math_entrypoint_object(setpayloadf)
 add_math_entrypoint_object(setpayloadf16)
+add_math_entrypoint_object(setpayloadf128)
 
 add_math_entrypoint_object(setpayloadsigf16)
 
@@ -433,7 +437,10 @@ add_math_entrypoint_object(tanhf)
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
 
+add_math_entrypoint_object(totalorder)
+add_math_entrypoint_object(totalorderf)
 add_math_entrypoint_object(totalorderf16)
+add_math_entrypoint_object(totalorderf128)
 
 add_math_entrypoint_object(totalordermag)
 add_math_entrypoint_object(totalordermagf)
