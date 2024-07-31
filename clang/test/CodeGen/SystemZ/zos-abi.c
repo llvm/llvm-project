@@ -122,7 +122,7 @@ struct complexlike_struct_with_union {
   union two_float_union b;
 };
 struct complexlike_struct_with_union pass_complexlike_struct_with_union(struct complexlike_struct_with_union arg) { return arg; }
-// CHECK-LABEL: define inreg i64 @pass_complexlike_struct_with_union(i64 %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complexlike_struct_with_union({ float, float } %{{.*}})
 
 // structures with one field as complex type are not considered complex types.
 
@@ -245,3 +245,56 @@ char * pass_pointer(char * arg) { return arg; }
 typedef int vecint __attribute__ ((vector_size(16)));
 vecint pass_vector_type(vecint arg) { return arg; }
 // CHECK-LABEL: define <4 x i32> @pass_vector_type(<4 x i32> %{{.*}})
+
+// Union with just a single float element are treated as float inside a struct.
+union u1 {
+  float m1, m2;
+};
+
+union u2 {
+  float m1;
+  union u1 m2;
+};
+
+union u3 {
+  float m1;
+  int m2;
+};
+
+struct complexlike_union1 {
+  float m1;
+  union u1 m2;
+};
+
+struct complexlike_union2 {
+  float m1;
+  union u2 m2;
+};
+
+struct complexlike_union3 {
+  union u1 m1;
+  union u2 m2;
+};
+
+struct normal_struct {
+  float m1;
+  union u3 m2;
+};
+
+struct complexlike_union1 pass_complexlike_union1(struct complexlike_union1 arg) { return arg; }
+// CHECK-LABEL: define { float, float } @pass_complexlike_union1({ float, float } %{{.*}})
+
+struct complexlike_union2 pass_complexlike_union2(struct complexlike_union2 arg) { return arg; }
+// CHECK-LABEL: define { float, float } @pass_complexlike_union2({ float, float } %{{.*}})
+
+struct complexlike_union3 pass_complexlike_union3(struct complexlike_union3 arg) { return arg; }
+// CHECK-LABEL: define { float, float } @pass_complexlike_union3({ float, float } %{{.*}})
+
+union u1 pass_union1(union u1 arg) { return arg; }
+// CHECK-LABEL: define inreg i64 @pass_union1(i64 %{{.*}})
+
+union u2 pass_union2(union u2 arg) { return arg; }
+// CHECK-LABEL: define inreg i64 @pass_union2(i64 %{{.*}})
+
+struct normal_struct pass_normal_struct(struct normal_struct arg) { return arg; }
+// CHECK-LABEL: define inreg i64 @pass_normal_struct(i64 %{{.*}})

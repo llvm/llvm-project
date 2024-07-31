@@ -10,7 +10,6 @@
 #include "TargetInfo.h"
 #include "clang/Basic/Builtins.h"
 #include "llvm/IR/IntrinsicsS390.h"
-#include <optional>
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -549,7 +548,8 @@ public:
   bool isPromotableIntegerType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
   bool isFPArgumentType(QualType Ty) const;
-  std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
+  QualType getSingleElementType(QualType Ty) const;
+  QualType getFPTypeOfComplexLikeType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType ArgTy, bool IsNamedArg) const;
@@ -631,8 +631,76 @@ bool ZOSXPLinkABIInfo::isFPArgumentType(QualType Ty) const {
   return false;
 }
 
-std::optional<QualType>
-ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
+QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
+  // Unions just containing a floating point type, e.g. union { float f1, f2; };
+  // are treated as a single floating point number. Check if the union only
+  // consists of a single type (handling embedded unions recursively), and
+  // return that type.
+  if (const RecordType *RT = Ty->getAsUnionType()) {
+    QualType Found;
+    // Check the fields.
+    const RecordDecl *RD = RT->getDecl();
+    for (const auto *FD : RD->fields()) {
+      if (Found.isNull())
+        Found = getSingleElementType(FD->getType());
+      else if (Found != getSingleElementType(FD->getType()))
+        return Ty;
+    }
+    return Found.isNull() ? Ty : Found;
+  }
+
+  const RecordType *RT = Ty->getAs<RecordType>();
+
+  if (RT && RT->isStructureOrClassType()) {
+    const RecordDecl *RD = RT->getDecl();
+    QualType Found;
+
+    // If this is a C++ record, check the bases first.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+      if (CXXRD->hasDefinition())
+        for (const auto &I : CXXRD->bases()) {
+          QualType Base = I.getType();
+
+          // Empty bases don't affect things either way.
+          if (isEmptyRecord(getContext(), Base, true))
+            continue;
+
+          if (!Found.isNull())
+            return Ty;
+          Found = getSingleElementType(Base);
+        }
+
+    // Check the fields.
+    for (const auto *FD : RD->fields()) {
+      QualType FT = FD->getType();
+
+      // Ignore empty fields.
+      if (isEmptyField(getContext(), FD, true))
+        continue;
+
+      if (!Found.isNull())
+        return Ty;
+
+      // Treat single element arrays as the element.
+      while (const ConstantArrayType *AT =
+                 getContext().getAsConstantArrayType(FT)) {
+        if (AT->getZExtSize() != 1)
+          break;
+        FT = AT->getElementType();
+      }
+
+      Found = getSingleElementType(FT);
+    }
+
+    // Unlike isSingleElementStruct(), trailing padding is allowed.
+    if (!Found.isNull())
+      return Found;
+  }
+
+  return Ty;
+}
+
+QualType ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
   if (const RecordType *RT = Ty->getAsStructureType()) {
     const RecordDecl *RD = RT->getDecl();
 
@@ -642,7 +710,7 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
         for (const auto &I : CXXRD->bases()) {
           QualType Base = I.getType();
           if (!isEmptyRecord(getContext(), Base, true))
-            return std::nullopt;
+            return QualType();
         }
 
     // Check for exactly two elements with exactly the same floating point type.
@@ -655,14 +723,14 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
     QualType RetTy;
     for (const auto *FD : RD->fields()) {
       if (Count >= 2)
-        return std::nullopt;
+        return QualType();
 
       QualType FTSingleTy = FD->getType();
       if (isAggregateTypeForABI(FTSingleTy)) {
-        const Type *Ty = isSingleElementStruct(FTSingleTy, getContext());
-        if (!Ty)
-          return std::nullopt;
-        FTSingleTy = QualType(Ty, 0);
+        QualType Ty = getSingleElementType(FTSingleTy);
+        if (Ty.isNull())
+          return QualType();
+        FTSingleTy = Ty;
       }
 
       if (isFPArgumentType(FTSingleTy)) {
@@ -672,9 +740,9 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
           ElemKind = Kind;
           RetTy = FTSingleTy;
         } else if (ElemKind != Kind)
-          return std::nullopt;
+          return QualType();
       } else
-        return std::nullopt;
+        return QualType();
 
       Count++;
     }
@@ -685,11 +753,11 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       unsigned RecordSize = getContext().getTypeSize(RT);
       unsigned ElemSize = getContext().getTypeSize(RetTy);
       if (RecordSize > 2 * ElemSize)
-        return std::nullopt;
+        return QualType();
       return RetTy;
     }
   }
-  return std::nullopt;
+  return QualType();
 }
 
 ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy) const {
@@ -710,8 +778,9 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy) const {
   // Complex LIKE structures are returned by value as per the XPLINK docs.
   // Their members will be placed in FPRs.
   if (RetTy->getAs<RecordType>()) {
-    if (auto CompTy = getFPTypeOfComplexLikeType(RetTy)) {
-      llvm::Type *FPTy = CGT.ConvertType(*CompTy);
+    auto CompTy = getFPTypeOfComplexLikeType(RetTy);
+    if (!CompTy.isNull()) {
+      llvm::Type *FPTy = CGT.ConvertType(CompTy);
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
       auto AI = ABIArgInfo::getDirect(CoerceTy);
       AI.setCanBeFlattened(false);
@@ -766,8 +835,9 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
       return AI;
     }
 
-    if (auto CompTy = getFPTypeOfComplexLikeType(Ty)) {
-      llvm::Type *FPTy = CGT.ConvertType(*CompTy);
+    auto CompTy = getFPTypeOfComplexLikeType(Ty);
+    if (!CompTy.isNull()) {
+      llvm::Type *FPTy = CGT.ConvertType(CompTy);
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
       auto AI = ABIArgInfo::getDirect(CoerceTy);
       AI.setCanBeFlattened(false);
