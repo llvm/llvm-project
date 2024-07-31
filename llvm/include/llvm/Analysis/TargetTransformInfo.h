@@ -1587,7 +1587,7 @@ public:
   /// \returns The type to use in a loop expansion of a memcpy call.
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize = std::nullopt) const;
 
   /// \param[out] OpsOut The operand types to copy RemainingBytes of memory.
@@ -1599,7 +1599,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize = std::nullopt) const;
 
   /// \returns True if the two functions have compatible attributes for inlining
@@ -2133,13 +2133,13 @@ public:
                                                    Type *ExpectedType) = 0;
   virtual Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize) const = 0;
 
   virtual void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
@@ -2838,7 +2838,7 @@ public:
   }
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicElementSize) const override {
     return Impl.getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
                                           DestAddrSpace, SrcAlign, DestAlign,
@@ -2847,7 +2847,7 @@ public:
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const override {
     Impl.getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
                                            SrcAddrSpace, DestAddrSpace,

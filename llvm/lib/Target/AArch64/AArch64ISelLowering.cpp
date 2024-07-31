@@ -1080,6 +1080,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
 
+  // llvm.init.trampoline and llvm.adjust.trampoline
+  setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
+  setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
+
   // Vector add and sub nodes may conceal a high-half opportunity.
   // Also, try to fold ADD into CSINC/CSINV..
   setTargetDAGCombine({ISD::ADD, ISD::ABS, ISD::SUB, ISD::XOR, ISD::SINT_TO_FP,
@@ -4504,11 +4508,19 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT SrcElementVT = SrcVT.getVectorElementType();
 
   // In the absence of FP16 support, promote f16 to f32 and saturate the result.
+  SDLoc DL(Op);
+  SDValue SrcVal2;
   if ((SrcElementVT == MVT::f16 &&
        (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
       SrcElementVT == MVT::bf16) {
     MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
-    SrcVal = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal);
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
+    // If we are extending to a v8f32, split into two v4f32 to produce legal
+    // types.
+    if (F32VT.getSizeInBits() > 128) {
+      std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
+      F32VT = F32VT.getHalfNumVectorElementsVT();
+    }
     SrcVT = F32VT;
     SrcElementVT = MVT::f32;
     SrcElementWidth = 32;
@@ -4516,9 +4528,8 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
              SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
     return SDValue();
 
-  SDLoc DL(Op);
-  // Expand to f64 if we are saturating to i64, to help produce keep the lanes
-  // the same width and produce a fcvtzu.
+  // Expand to f64 if we are saturating to i64, to help keep the lanes the same
+  // width and produce a fcvtzu.
   if (SatWidth == 64 && SrcElementWidth < 64) {
     MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
@@ -4527,9 +4538,16 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcElementWidth = 64;
   }
   // Cases that we can emit directly.
-  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
-    return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
-                       DAG.getValueType(DstVT.getScalarType()));
+  if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth) {
+    SDValue Res = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+                              DAG.getValueType(DstVT.getScalarType()));
+    if (SrcVal2) {
+      SDValue Res2 = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal2,
+                                 DAG.getValueType(DstVT.getScalarType()));
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Res, Res2);
+    }
+    return Res;
+  }
 
   // Otherwise we emit a cvt that saturates to a higher BW, and saturate the
   // result. This is only valid if the legal cvt is larger than the saturate
@@ -4541,19 +4559,31 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT IntVT = SrcVT.changeVectorElementTypeToInteger();
   SDValue NativeCvt = DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal,
                                   DAG.getValueType(IntVT.getScalarType()));
-  SDValue Sat;
+  SDValue NativeCvt2 =
+      SrcVal2 ? DAG.getNode(Op.getOpcode(), DL, IntVT, SrcVal2,
+                            DAG.getValueType(IntVT.getScalarType()))
+              : SDValue();
+  SDValue Sat, Sat2;
   if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
         APInt::getSignedMaxValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
+    SDValue Min2 = SrcVal2 ? DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt2, MinC) : SDValue();
     SDValue MaxC = DAG.getConstant(
         APInt::getSignedMinValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
+    Sat2 = SrcVal2 ? DAG.getNode(ISD::SMAX, DL, IntVT, Min2, MaxC) : SDValue();
   } else {
     SDValue MinC = DAG.getConstant(
         APInt::getAllOnes(SatWidth).zext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
+    Sat2 = SrcVal2 ? DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt2, MinC) : SDValue();
   }
+
+  if (SrcVal2)
+    Sat = DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                      IntVT.getDoubleNumVectorElementsVT(*DAG.getContext()),
+                      Sat, Sat2);
 
   return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Sat);
 }
@@ -6688,6 +6718,56 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
   return Final;
 }
 
+SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+    report_fatal_error(
+        "ADJUST_TRAMPOLINE operation is only supported on Linux.");
+
+  return Op.getOperand(0);
+}
+
+SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+
+  // Note: x18 cannot be used for the Nest parameter on Windows and macOS.
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+    report_fatal_error("INIT_TRAMPOLINE operation is only supported on Linux.");
+
+  SDValue Chain = Op.getOperand(0);
+  SDValue Trmp = Op.getOperand(1); // trampoline
+  SDValue FPtr = Op.getOperand(2); // nested function
+  SDValue Nest = Op.getOperand(3); // 'nest' parameter value
+  SDLoc dl(Op);
+
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+
+  Entry.Ty = IntPtrTy;
+  Entry.Node = Trmp;
+  Args.push_back(Entry);
+  Entry.Node = DAG.getConstant(20, dl, MVT::i64);
+  Args.push_back(Entry);
+
+  Entry.Node = FPtr;
+  Args.push_back(Entry);
+  Entry.Node = Nest;
+  Args.push_back(Entry);
+
+  // Lower to a call to __trampoline_setup(Trmp, TrampSize, FPtr, ctx_reg)
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
+      CallingConv::C, Type::getVoidTy(*DAG.getContext()),
+      DAG.getExternalSymbol("__trampoline_setup", PtrVT), std::move(Args));
+
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  return CallResult.second;
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -6705,6 +6785,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGlobalTLSAddress(Op, DAG);
   case ISD::PtrAuthGlobalAddress:
     return LowerPtrAuthGlobalAddress(Op, DAG);
+  case ISD::ADJUST_TRAMPOLINE:
+    return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::INIT_TRAMPOLINE:
+    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:

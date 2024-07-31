@@ -32,7 +32,7 @@ using namespace lldb_private;
 using namespace lldb_private::python;
 using Locker = ScriptInterpreterPythonImpl::Locker;
 
-LLDB_PLUGIN_DEFINE(ScriptedProcessPythonInterface)
+LLDB_PLUGIN_DEFINE_ADV(ScriptedProcessPythonInterface, ScriptInterpreterPythonScriptedProcessPythonInterface)
 
 ScriptedProcessPythonInterface::ScriptedProcessPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)

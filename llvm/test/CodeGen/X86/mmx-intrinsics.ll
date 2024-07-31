@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+mmx,+ssse3,-avx | FileCheck %s --check-prefixes=ALL,X64
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+mmx,+avx | FileCheck %s --check-prefixes=ALL,X64
 
-declare x86_mmx @llvm.x86.ssse3.phadd.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.phadd.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test1(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test1:
@@ -32,24 +32,24 @@ define i64 @test1(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phaddw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phaddw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %2 = bitcast <4 x i16> %1 to x86_mmx
-  %3 = bitcast <4 x i16> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.phadd.w(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <4 x i16>
+  %2 = bitcast <4 x i16> %1 to <1 x i64>
+  %3 = bitcast <4 x i16> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.phadd.w(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <4 x i16>
   %6 = bitcast <4 x i16> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.mmx.pcmpgt.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pcmpgt.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test88(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test88:
@@ -77,24 +77,24 @@ define i64 @test88(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test88:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpgtd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpgtd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpgt.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pcmpgt.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test87(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test87:
@@ -122,24 +122,24 @@ define i64 @test87(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test87:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpgtw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpgtw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pcmpgt.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pcmpgt.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test86(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test86:
@@ -167,24 +167,24 @@ define i64 @test86(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test86:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpgtb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpgtb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpgt.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pcmpeq.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pcmpeq.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test85(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test85:
@@ -212,24 +212,24 @@ define i64 @test85(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test85:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpeqd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpeqd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpeq.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpeq.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pcmpeq.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pcmpeq.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test84(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test84:
@@ -257,24 +257,24 @@ define i64 @test84(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test84:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpeqw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpeqw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpeq.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpeq.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pcmpeq.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pcmpeq.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test83(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test83:
@@ -302,24 +302,24 @@ define i64 @test83(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test83:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpeqb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpeqb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpeq.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpeq.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.punpckldq(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.punpckldq(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test82(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test82:
@@ -347,24 +347,24 @@ define i64 @test82(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test82:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.punpckldq(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.punpckldq(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.punpcklwd(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test81(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test81:
@@ -392,24 +392,24 @@ define i64 @test81(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test81:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpcklwd %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.punpcklwd(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.punpcklbw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test80(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test80:
@@ -437,24 +437,24 @@ define i64 @test80(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test80:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpcklbw %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.punpcklbw(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test79(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test79:
@@ -482,24 +482,24 @@ define i64 @test79(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test79:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckhdq %mm1, %mm0 # mm0 = mm0[1],mm1[1]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckhdq %mm0, %mm1 # mm1 = mm1[1],mm0[1]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.punpckhwd(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test78(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test78:
@@ -527,24 +527,24 @@ define i64 @test78(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test78:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckhwd %mm1, %mm0 # mm0 = mm0[2],mm1[2],mm0[3],mm1[3]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckhwd %mm0, %mm1 # mm1 = mm1[2],mm0[2],mm1[3],mm0[3]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.punpckhwd(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.punpckhbw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.punpckhbw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test77(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test77:
@@ -572,24 +572,24 @@ define i64 @test77(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test77:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckhbw %mm1, %mm0 # mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckhbw %mm0, %mm1 # mm1 = mm1[4],mm0[4],mm1[5],mm0[5],mm1[6],mm0[6],mm1[7],mm0[7]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.punpckhbw(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.punpckhbw(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.packuswb(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.packuswb(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test76(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test76:
@@ -617,24 +617,24 @@ define i64 @test76(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test76:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    packuswb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    packuswb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.packuswb(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.packuswb(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.packssdw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.packssdw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test75(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test75:
@@ -662,24 +662,24 @@ define i64 @test75(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test75:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    packssdw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    packssdw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.packssdw(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.packssdw(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.packsswb(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test74(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test74:
@@ -707,24 +707,24 @@ define i64 @test74(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test74:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    packsswb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    packsswb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.packsswb(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrai.d(<1 x i64>, i32) nounwind readnone
 
 define i64 @test73(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test73:
@@ -754,15 +754,15 @@ define i64 @test73(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrai.d(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to <2 x i32>
   %3 = bitcast <2 x i32> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
 }
 
-declare x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64>, i32) nounwind readnone
 
 define i64 @test72(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test72:
@@ -792,9 +792,9 @@ define i64 @test72(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
@@ -825,15 +825,15 @@ define i64 @test72_2(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx %mmx_var.i, i32 0) nounwind
-  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64> %mmx_var.i, i32 0) nounwind
+  %2 = bitcast <1 x i64> %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
 }
 
-declare x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64>, i32) nounwind readnone
 
 define i64 @test71(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test71:
@@ -859,13 +859,13 @@ define i64 @test71(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var.i = bitcast i64 %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to i64
+  %mmx_var.i = bitcast i64 %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to i64
   ret i64 %2
 }
 
-declare x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64>, i32) nounwind readnone
 
 define i64 @test70(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test70:
@@ -895,9 +895,9 @@ define i64 @test70(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to <2 x i32>
   %3 = bitcast <2 x i32> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
@@ -928,15 +928,15 @@ define i64 @test70_2(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx %mmx_var.i, i32 0) nounwind
-  %2 = bitcast x86_mmx %1 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64> %mmx_var.i, i32 0) nounwind
+  %2 = bitcast <1 x i64> %1 to <2 x i32>
   %3 = bitcast <2 x i32> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
 }
 
-declare x86_mmx @llvm.x86.mmx.psrli.w(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrli.w(<1 x i64>, i32) nounwind readnone
 
 define i64 @test69(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test69:
@@ -966,15 +966,15 @@ define i64 @test69(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.psrli.w(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.psrli.w(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
 }
 
-declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64>, i32) nounwind readnone
 
 define i64 @test68(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test68:
@@ -1000,13 +1000,13 @@ define i64 @test68(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var.i = bitcast i64 %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to i64
+  %mmx_var.i = bitcast i64 %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to i64
   ret i64 %2
 }
 
-declare x86_mmx @llvm.x86.mmx.pslli.d(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pslli.d(<1 x i64>, i32) nounwind readnone
 
 define i64 @test67(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test67:
@@ -1036,15 +1036,15 @@ define i64 @test67(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.pslli.d(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pslli.d(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to <2 x i32>
   %3 = bitcast <2 x i32> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
 }
 
-declare x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64>, i32) nounwind readnone
 
 define i64 @test66(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test66:
@@ -1074,9 +1074,9 @@ define i64 @test66(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx %mmx_var.i, i32 3) nounwind
-  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64> %mmx_var.i, i32 3) nounwind
+  %2 = bitcast <1 x i64> %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
@@ -1107,15 +1107,15 @@ define i64 @test66_2(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx %mmx_var.i, i32 0) nounwind
-  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64> %mmx_var.i, i32 0) nounwind
+  %2 = bitcast <1 x i64> %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
   ret i64 %4
 }
 
-declare x86_mmx @llvm.x86.mmx.psra.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psra.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test65(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test65:
@@ -1146,17 +1146,17 @@ define i64 @test65(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psra.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psra.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psra.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psra.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test64(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test64:
@@ -1187,17 +1187,17 @@ define i64 @test64(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psra.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psra.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrl.q(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test63(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test63:
@@ -1224,15 +1224,15 @@ define i64 @test63(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var.i = bitcast i64 %0 to x86_mmx
+  %mmx_var.i = bitcast i64 %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psrl.q(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.mmx.psrl.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrl.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test62(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test62:
@@ -1263,17 +1263,17 @@ define i64 @test62(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psrl.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psrl.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psrl.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrl.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test61(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test61:
@@ -1304,17 +1304,17 @@ define i64 @test61(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psrl.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psrl.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psll.q(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psll.q(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test60(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test60:
@@ -1341,15 +1341,15 @@ define i64 @test60(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var.i = bitcast i64 %0 to x86_mmx
+  %mmx_var.i = bitcast i64 %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psll.q(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psll.q(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.mmx.psll.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psll.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test59(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test59:
@@ -1380,17 +1380,17 @@ define i64 @test59(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
+  %mmx_var.i = bitcast <2 x i32> %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psll.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psll.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psll.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test58(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test58:
@@ -1421,17 +1421,17 @@ define i64 @test58(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
+  %mmx_var.i = bitcast <4 x i16> %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1.i = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psll.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var1.i = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pxor(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pxor(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test56(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test56:
@@ -1459,24 +1459,24 @@ define i64 @test56(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test56:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pxor %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pxor(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pxor(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.por(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.por(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test55(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test55:
@@ -1504,24 +1504,24 @@ define i64 @test55(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test55:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    por %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.por(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.por(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pandn(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pandn(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test54(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test54:
@@ -1549,24 +1549,24 @@ define i64 @test54(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test54:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pandn %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pandn %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pandn(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pandn(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pand(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pand(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test53(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test53:
@@ -1594,24 +1594,24 @@ define i64 @test53(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test53:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pand %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pand(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pand(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pmull.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmull.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test52(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test52:
@@ -1639,18 +1639,18 @@ define i64 @test52(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test52:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmullw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmull.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmull.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
@@ -1682,24 +1682,24 @@ define i64 @test51(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test51:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmullw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmull.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmull.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pmulh.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmulh.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test50(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test50:
@@ -1727,24 +1727,24 @@ define i64 @test50(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test50:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmulhw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmulh.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmulh.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pmadd.wd(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test49(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test49:
@@ -1772,24 +1772,24 @@ define i64 @test49(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test49:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmaddwd %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmadd.wd(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psubus.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psubus.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test48(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test48:
@@ -1817,24 +1817,24 @@ define i64 @test48(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test48:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubusw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubusw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psubus.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psubus.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psubus.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psubus.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test47(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test47:
@@ -1862,24 +1862,24 @@ define i64 @test47(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test47:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubusb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubusb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psubus.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psubus.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psubs.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psubs.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test46(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test46:
@@ -1907,24 +1907,24 @@ define i64 @test46(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test46:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psubs.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psubs.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psubs.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psubs.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test45(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test45:
@@ -1952,18 +1952,18 @@ define i64 @test45(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test45:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubsb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubsb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psubs.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psubs.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
@@ -1994,17 +1994,17 @@ define i64 @test44(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var = bitcast i64 %0 to x86_mmx
+  %mmx_var = bitcast i64 %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1 = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psub.q(x86_mmx %mmx_var, x86_mmx %mmx_var1)
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var1 = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psub.q(<1 x i64> %mmx_var, <1 x i64> %mmx_var1)
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.mmx.psub.q(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psub.q(<1 x i64>, <1 x i64>) nounwind readnone
 
-declare x86_mmx @llvm.x86.mmx.psub.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psub.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test43(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test43:
@@ -2032,24 +2032,24 @@ define i64 @test43(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test43:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psub.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psub.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psub.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psub.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test42(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test42:
@@ -2077,24 +2077,24 @@ define i64 @test42(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test42:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psub.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psub.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psub.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psub.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test41(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test41:
@@ -2122,24 +2122,24 @@ define i64 @test41(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test41:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psub.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psub.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.paddus.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test40(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test40:
@@ -2167,24 +2167,24 @@ define i64 @test40(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test40:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddusw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.paddus.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.paddus.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.paddus.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test39(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test39:
@@ -2212,24 +2212,24 @@ define i64 @test39(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test39:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddusb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.paddus.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.paddus.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.padds.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.padds.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test38(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test38:
@@ -2257,24 +2257,24 @@ define i64 @test38(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test38:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.padds.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.padds.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.padds.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.padds.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test37(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test37:
@@ -2302,24 +2302,24 @@ define i64 @test37(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test37:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddsb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.padds.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.padds.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.padd.q(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.padd.q(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test36(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test36:
@@ -2346,15 +2346,15 @@ define i64 @test36(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var = bitcast i64 %0 to x86_mmx
+  %mmx_var = bitcast i64 %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1 = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.padd.q(x86_mmx %mmx_var, x86_mmx %mmx_var1)
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var1 = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.padd.q(<1 x i64> %mmx_var, <1 x i64> %mmx_var1)
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test35(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test35:
@@ -2382,24 +2382,24 @@ define i64 @test35(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test35:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddd %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.padd.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test34(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test34:
@@ -2427,24 +2427,24 @@ define i64 @test34(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test34:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.padd.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.padd.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test33(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test33:
@@ -2472,24 +2472,24 @@ define i64 @test33(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test33:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.padd.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.padd.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.psad.bw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psad.bw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test32(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test32:
@@ -2517,22 +2517,22 @@ define i64 @test32(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    psadbw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.psad.bw(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.psad.bw(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.mmx.pmins.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmins.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test31(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test31:
@@ -2560,24 +2560,24 @@ define i64 @test31(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test31:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pminsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmins.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmins.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pminu.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pminu.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test30(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test30:
@@ -2605,24 +2605,24 @@ define i64 @test30(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test30:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pminub %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pminu.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pminu.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pmaxs.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmaxs.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test29(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test29:
@@ -2650,24 +2650,24 @@ define i64 @test29(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test29:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmaxsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmaxs.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmaxs.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pmaxu.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmaxu.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test28(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test28:
@@ -2695,24 +2695,24 @@ define i64 @test28(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test28:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmaxub %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmaxu.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmaxu.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pavg.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pavg.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test27(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test27:
@@ -2740,24 +2740,24 @@ define i64 @test27(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test27:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pavgw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pavg.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pavg.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pavg.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pavg.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test26(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test26:
@@ -2785,24 +2785,24 @@ define i64 @test26(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test26:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pavgb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pavg.b(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pavg.b(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare void @llvm.x86.mmx.movnt.dq(ptr, x86_mmx) nounwind
+declare void @llvm.x86.mmx.movnt.dq(ptr, <1 x i64>) nounwind
 
 define void @test25(ptr %p, <1 x i64> %a) nounwind optsize ssp {
 ; X86-LABEL: test25:
@@ -2819,12 +2819,12 @@ define void @test25(ptr %p, <1 x i64> %a) nounwind optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var.i = bitcast i64 %0 to x86_mmx
-  tail call void @llvm.x86.mmx.movnt.dq(ptr %p, x86_mmx %mmx_var.i) nounwind
+  %mmx_var.i = bitcast i64 %0 to <1 x i64>
+  tail call void @llvm.x86.mmx.movnt.dq(ptr %p, <1 x i64> %mmx_var.i) nounwind
   ret void
 }
 
-declare i32 @llvm.x86.mmx.pmovmskb(x86_mmx) nounwind readnone
+declare i32 @llvm.x86.mmx.pmovmskb(<1 x i64>) nounwind readnone
 
 define i32 @test24(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test24:
@@ -2850,12 +2850,12 @@ define i32 @test24(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %0 to x86_mmx
-  %1 = tail call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %mmx_var.i) nounwind
+  %mmx_var.i = bitcast <8 x i8> %0 to <1 x i64>
+  %1 = tail call i32 @llvm.x86.mmx.pmovmskb(<1 x i64> %mmx_var.i) nounwind
   ret i32 %1
 }
 
-declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, ptr) nounwind
+declare void @llvm.x86.mmx.maskmovq(<1 x i64>, <1 x i64>, ptr) nounwind
 
 define void @test23(<1 x i64> %d, <1 x i64> %n, ptr %p) nounwind optsize ssp {
 ; X86-LABEL: test23:
@@ -2884,21 +2884,21 @@ define void @test23(<1 x i64> %d, <1 x i64> %n, ptr %p) nounwind optsize ssp {
 ;
 ; X64-LABEL: test23:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    movq %rdx, %rdi
-; X64-NEXT:    maskmovq %mm1, %mm0
+; X64-NEXT:    maskmovq %mm0, %mm1
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %n to <8 x i8>
   %1 = bitcast <1 x i64> %d to <8 x i8>
-  %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
-  %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  tail call void @llvm.x86.mmx.maskmovq(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i, ptr %p) nounwind
+  %mmx_var.i = bitcast <8 x i8> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <8 x i8> %0 to <1 x i64>
+  tail call void @llvm.x86.mmx.maskmovq(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i, ptr %p) nounwind
   ret void
 }
 
-declare x86_mmx @llvm.x86.mmx.pmulhu.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmulhu.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test22(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test22:
@@ -2926,24 +2926,24 @@ define i64 @test22(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test22:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmulhuw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %mmx_var.i = bitcast <4 x i16> %1 to x86_mmx
-  %mmx_var1.i = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmulhu.w(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmulhu.w(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8) nounwind readnone
+declare <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64>, i8) nounwind readnone
 
 define i64 @test21(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test21:
@@ -2972,9 +2972,9 @@ define i64 @test21(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %1 = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %1, i8 3) nounwind readnone
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %1 = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %1, i8 3) nounwind readnone
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
@@ -3005,15 +3005,15 @@ define i32 @test21_2(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %1 = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %1, i8 3) nounwind readnone
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %1 = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %1, i8 3) nounwind readnone
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <2 x i32>
   %5 = extractelement <2 x i32> %4, i32 0
   ret i32 %5
 }
 
-declare x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test20(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test20:
@@ -3041,22 +3041,22 @@ define i64 @test20(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test20:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmuludq %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %mmx_var.i = bitcast <2 x i32> %1 to x86_mmx
-  %mmx_var1.i = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i) nounwind
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var.i = bitcast <2 x i32> %1 to <1 x i64>
+  %mmx_var1.i = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> %mmx_var.i, <1 x i64> %mmx_var1.i) nounwind
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare <2 x double> @llvm.x86.sse.cvtpi2pd(x86_mmx) nounwind readnone
+declare <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64>) nounwind readnone
 
 define <2 x double> @test19(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test19:
@@ -3081,12 +3081,12 @@ define <2 x double> @test19(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %1 = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call <2 x double> @llvm.x86.sse.cvtpi2pd(x86_mmx %1) nounwind readnone
+  %1 = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64> %1) nounwind readnone
   ret <2 x double> %2
 }
 
-declare x86_mmx @llvm.x86.sse.cvttpd2pi(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.x86.sse.cvttpd2pi(<2 x double>) nounwind readnone
 
 define i64 @test18(<2 x double> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test18:
@@ -3109,14 +3109,14 @@ define i64 @test18(<2 x double> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call x86_mmx @llvm.x86.sse.cvttpd2pi(<2 x double> %a) nounwind readnone
-  %1 = bitcast x86_mmx %0 to <2 x i32>
+  %0 = tail call <1 x i64> @llvm.x86.sse.cvttpd2pi(<2 x double> %a) nounwind readnone
+  %1 = bitcast <1 x i64> %0 to <2 x i32>
   %2 = bitcast <2 x i32> %1 to <1 x i64>
   %3 = extractelement <1 x i64> %2, i32 0
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.sse.cvtpd2pi(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double>) nounwind readnone
 
 define i64 @test17(<2 x double> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test17:
@@ -3139,14 +3139,14 @@ define i64 @test17(<2 x double> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call x86_mmx @llvm.x86.sse.cvtpd2pi(<2 x double> %a) nounwind readnone
-  %1 = bitcast x86_mmx %0 to <2 x i32>
+  %0 = tail call <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double> %a) nounwind readnone
+  %1 = bitcast <1 x i64> %0 to <2 x i32>
   %2 = bitcast <2 x i32> %1 to <1 x i64>
   %3 = extractelement <1 x i64> %2, i32 0
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.mmx.palignr.b(x86_mmx, x86_mmx, i8) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.palignr.b(<1 x i64>, <1 x i64>, i8) nounwind readnone
 
 define i64 @test16(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test16:
@@ -3173,15 +3173,15 @@ define i64 @test16(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = extractelement <1 x i64> %a, i32 0
-  %mmx_var = bitcast i64 %0 to x86_mmx
+  %mmx_var = bitcast i64 %0 to <1 x i64>
   %1 = extractelement <1 x i64> %b, i32 0
-  %mmx_var1 = bitcast i64 %1 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.mmx.palignr.b(x86_mmx %mmx_var, x86_mmx %mmx_var1, i8 16)
-  %3 = bitcast x86_mmx %2 to i64
+  %mmx_var1 = bitcast i64 %1 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.mmx.palignr.b(<1 x i64> %mmx_var, <1 x i64> %mmx_var1, i8 16)
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.ssse3.pabs.d(x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pabs.d(<1 x i64>) nounwind readnone
 
 define i64 @test15(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test15:
@@ -3210,15 +3210,15 @@ define i64 @test15(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
-  %1 = bitcast <2 x i32> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.ssse3.pabs.d(x86_mmx %1) nounwind readnone
-  %3 = bitcast x86_mmx %2 to <2 x i32>
+  %1 = bitcast <2 x i32> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.ssse3.pabs.d(<1 x i64> %1) nounwind readnone
+  %3 = bitcast <1 x i64> %2 to <2 x i32>
   %4 = bitcast <2 x i32> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.ssse3.pabs.w(x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pabs.w(<1 x i64>) nounwind readnone
 
 define i64 @test14(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test14:
@@ -3247,15 +3247,15 @@ define i64 @test14(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
-  %1 = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.ssse3.pabs.w(x86_mmx %1) nounwind readnone
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %1 = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.ssse3.pabs.w(<1 x i64> %1) nounwind readnone
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.ssse3.pabs.b(x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pabs.b(<1 x i64>) nounwind readnone
 
 define i64 @test13(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X86-LABEL: test13:
@@ -3284,15 +3284,15 @@ define i64 @test13(<1 x i64> %a) nounwind readnone optsize ssp {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %a to <8 x i8>
-  %1 = bitcast <8 x i8> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.ssse3.pabs.b(x86_mmx %1) nounwind readnone
-  %3 = bitcast x86_mmx %2 to <8 x i8>
+  %1 = bitcast <8 x i8> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.ssse3.pabs.b(<1 x i64> %1) nounwind readnone
+  %3 = bitcast <1 x i64> %2 to <8 x i8>
   %4 = bitcast <8 x i8> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   ret i64 %5
 }
 
-declare x86_mmx @llvm.x86.ssse3.psign.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.psign.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test12(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test12:
@@ -3320,24 +3320,24 @@ define i64 @test12(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test12:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psignd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psignd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %2 = bitcast <2 x i32> %1 to x86_mmx
-  %3 = bitcast <2 x i32> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.psign.d(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <2 x i32>
+  %2 = bitcast <2 x i32> %1 to <1 x i64>
+  %3 = bitcast <2 x i32> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.psign.d(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <2 x i32>
   %6 = bitcast <2 x i32> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.psign.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.psign.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test11(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test11:
@@ -3365,24 +3365,24 @@ define i64 @test11(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test11:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psignw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psignw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %2 = bitcast <4 x i16> %1 to x86_mmx
-  %3 = bitcast <4 x i16> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.psign.w(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <4 x i16>
+  %2 = bitcast <4 x i16> %1 to <1 x i64>
+  %3 = bitcast <4 x i16> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.psign.w(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <4 x i16>
   %6 = bitcast <4 x i16> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.psign.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.psign.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test10(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test10:
@@ -3410,24 +3410,24 @@ define i64 @test10(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test10:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psignb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psignb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %2 = bitcast <8 x i8> %1 to x86_mmx
-  %3 = bitcast <8 x i8> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.psign.b(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <8 x i8>
+  %2 = bitcast <8 x i8> %1 to <1 x i64>
+  %3 = bitcast <8 x i8> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.psign.b(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <8 x i8>
   %6 = bitcast <8 x i8> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.pshuf.b(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pshuf.b(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test9(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test9:
@@ -3455,24 +3455,24 @@ define i64 @test9(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test9:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pshufb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pshufb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %2 = bitcast <8 x i8> %1 to x86_mmx
-  %3 = bitcast <8 x i8> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.pshuf.b(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <8 x i8>
+  %2 = bitcast <8 x i8> %1 to <1 x i64>
+  %3 = bitcast <8 x i8> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.pshuf.b(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <8 x i8>
   %6 = bitcast <8 x i8> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.pmul.hr.sw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pmul.hr.sw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test8(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test8:
@@ -3500,24 +3500,24 @@ define i64 @test8(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmulhrsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %2 = bitcast <4 x i16> %1 to x86_mmx
-  %3 = bitcast <4 x i16> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.pmul.hr.sw(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <4 x i16>
+  %2 = bitcast <4 x i16> %1 to <1 x i64>
+  %3 = bitcast <4 x i16> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.pmul.hr.sw(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <4 x i16>
   %6 = bitcast <4 x i16> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.pmadd.ub.sw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test7(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test7:
@@ -3545,24 +3545,24 @@ define i64 @test7(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pmaddubsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pmaddubsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
   %1 = bitcast <1 x i64> %a to <8 x i8>
-  %2 = bitcast <8 x i8> %1 to x86_mmx
-  %3 = bitcast <8 x i8> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.pmadd.ub.sw(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <8 x i8>
+  %2 = bitcast <8 x i8> %1 to <1 x i64>
+  %3 = bitcast <8 x i8> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <8 x i8>
   %6 = bitcast <8 x i8> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.phsub.sw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.phsub.sw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test6(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test6:
@@ -3590,24 +3590,24 @@ define i64 @test6(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test6:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phsubsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phsubsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %2 = bitcast <4 x i16> %1 to x86_mmx
-  %3 = bitcast <4 x i16> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.phsub.sw(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <4 x i16>
+  %2 = bitcast <4 x i16> %1 to <1 x i64>
+  %3 = bitcast <4 x i16> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.phsub.sw(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <4 x i16>
   %6 = bitcast <4 x i16> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.phsub.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.phsub.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test5(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test5:
@@ -3635,24 +3635,24 @@ define i64 @test5(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test5:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phsubd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phsubd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %2 = bitcast <2 x i32> %1 to x86_mmx
-  %3 = bitcast <2 x i32> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.phsub.d(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <2 x i32>
+  %2 = bitcast <2 x i32> %1 to <1 x i64>
+  %3 = bitcast <2 x i32> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.phsub.d(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <2 x i32>
   %6 = bitcast <2 x i32> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.phsub.w(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.phsub.w(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test4(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test4:
@@ -3680,24 +3680,24 @@ define i64 @test4(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phsubw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phsubw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %2 = bitcast <4 x i16> %1 to x86_mmx
-  %3 = bitcast <4 x i16> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.phsub.w(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <4 x i16>
+  %2 = bitcast <4 x i16> %1 to <1 x i64>
+  %3 = bitcast <4 x i16> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.phsub.w(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <4 x i16>
   %6 = bitcast <4 x i16> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.phadd.sw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.phadd.sw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test3(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test3:
@@ -3725,24 +3725,24 @@ define i64 @test3(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phaddsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phaddsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
   %1 = bitcast <1 x i64> %a to <4 x i16>
-  %2 = bitcast <4 x i16> %1 to x86_mmx
-  %3 = bitcast <4 x i16> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.phadd.sw(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <4 x i16>
+  %2 = bitcast <4 x i16> %1 to <1 x i64>
+  %3 = bitcast <4 x i16> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.phadd.sw(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <4 x i16>
   %6 = bitcast <4 x i16> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-declare x86_mmx @llvm.x86.ssse3.phadd.d(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.phadd.d(<1 x i64>, <1 x i64>) nounwind readnone
 
 define i64 @test2(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ; X86-LABEL: test2:
@@ -3770,33 +3770,49 @@ define i64 @test2(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phaddd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phaddd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
   %1 = bitcast <1 x i64> %a to <2 x i32>
-  %2 = bitcast <2 x i32> %1 to x86_mmx
-  %3 = bitcast <2 x i32> %0 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.ssse3.phadd.d(x86_mmx %2, x86_mmx %3) nounwind readnone
-  %5 = bitcast x86_mmx %4 to <2 x i32>
+  %2 = bitcast <2 x i32> %1 to <1 x i64>
+  %3 = bitcast <2 x i32> %0 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.ssse3.phadd.d(<1 x i64> %2, <1 x i64> %3) nounwind readnone
+  %5 = bitcast <1 x i64> %4 to <2 x i32>
   %6 = bitcast <2 x i32> %5 to <1 x i64>
   %7 = extractelement <1 x i64> %6, i32 0
   ret i64 %7
 }
 
-define <4 x float> @test89(<4 x float> %a, x86_mmx %b) nounwind {
-; ALL-LABEL: test89:
-; ALL:       # %bb.0:
-; ALL-NEXT:    cvtpi2ps %mm0, %xmm0
-; ALL-NEXT:    ret{{[l|q]}}
-  %c = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %a, x86_mmx %b)
+define <4 x float> @test89(<4 x float> %a, <1 x i64> %b) nounwind {
+; X86-LABEL: test89:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    cvtpi2ps (%esp), %xmm0
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: test89:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %mm0
+; X64-NEXT:    cvtpi2ps %mm0, %xmm0
+; X64-NEXT:    retq
+  %c = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %a, <1 x i64> %b)
   ret <4 x float> %c
 }
 
-declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, x86_mmx) nounwind readnone
+declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>) nounwind readnone
 
 define void @test90() {
 ; ALL-LABEL: test90:
@@ -3836,13 +3852,11 @@ define <1 x i64> @test_mm_insert_pi16(<1 x i64> %a.coerce, i32 %d) nounwind {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast <1 x i64> %a.coerce to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.pinsr.w(x86_mmx %0, i32 %d, i32 2)
-  %2 = bitcast x86_mmx %1 to <1 x i64>
-  ret <1 x i64> %2
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64> %a.coerce, i32 %d, i32 2)
+  ret <1 x i64> %1
 }
 
-declare x86_mmx @llvm.x86.mmx.pinsr.w(x86_mmx, i32, i32 immarg)
+declare <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64>, i32, i32 immarg)
 
 define i32 @test_mm_extract_pi16(<1 x i64> %a.coerce) nounwind {
 ; X86-LABEL: test_mm_extract_pi16:
@@ -3867,9 +3881,8 @@ define i32 @test_mm_extract_pi16(<1 x i64> %a.coerce) nounwind {
 ; X64-NEXT:    pextrw $2, %mm0, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast <1 x i64> %a.coerce to x86_mmx
-  %1 = tail call i32 @llvm.x86.mmx.pextr.w(x86_mmx %0, i32 2)
+  %1 = tail call i32 @llvm.x86.mmx.pextr.w(<1 x i64> %a.coerce, i32 2)
   ret i32 %1
 }
 
-declare i32 @llvm.x86.mmx.pextr.w(x86_mmx, i32 immarg)
+declare i32 @llvm.x86.mmx.pextr.w(<1 x i64>, i32 immarg)

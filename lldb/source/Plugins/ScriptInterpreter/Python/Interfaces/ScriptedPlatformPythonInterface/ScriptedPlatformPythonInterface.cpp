@@ -29,7 +29,7 @@ using namespace lldb_private;
 using namespace lldb_private::python;
 using Locker = ScriptInterpreterPythonImpl::Locker;
 
-LLDB_PLUGIN_DEFINE(ScriptedPlatformPythonInterface)
+LLDB_PLUGIN_DEFINE_ADV(ScriptedPlatformPythonInterface, ScriptInterpreterPythonScriptedPlatformPythonInterface)
 
 ScriptedPlatformPythonInterface::ScriptedPlatformPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)

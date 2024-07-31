@@ -801,7 +801,8 @@ public:
       return (M == OMPC_DEFAULTMAP_MODIFIER_alloc) ||
              (M == OMPC_DEFAULTMAP_MODIFIER_to) ||
              (M == OMPC_DEFAULTMAP_MODIFIER_from) ||
-             (M == OMPC_DEFAULTMAP_MODIFIER_tofrom);
+             (M == OMPC_DEFAULTMAP_MODIFIER_tofrom) ||
+             (M == OMPC_DEFAULTMAP_MODIFIER_present);
     }
     return true;
   }
@@ -2830,7 +2831,7 @@ static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
         S.Diag(InscanLoc, diag::note_omp_previous_inscan_reduction);
         continue;
       }
-      for (Expr *Ref : RC->varlists()) {
+      for (Expr *Ref : RC->varlist()) {
         assert(Ref && "NULL expr in OpenMP nontemporal clause.");
         SourceLocation ELoc;
         SourceRange ERange;
@@ -2870,7 +2871,7 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
     for (OMPClause *C : D->clauses()) {
       if (auto *Clause = dyn_cast<OMPLastprivateClause>(C)) {
         SmallVector<Expr *, 8> PrivateCopies;
-        for (Expr *DE : Clause->varlists()) {
+        for (Expr *DE : Clause->varlist()) {
           if (DE->isValueDependent() || DE->isTypeDependent()) {
             PrivateCopies.push_back(nullptr);
             continue;
@@ -2908,7 +2909,7 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
       // Finalize nontemporal clause by handling private copies, if any.
       if (auto *Clause = dyn_cast<OMPNontemporalClause>(C)) {
         SmallVector<Expr *, 8> PrivateRefs;
-        for (Expr *RefExpr : Clause->varlists()) {
+        for (Expr *RefExpr : Clause->varlist()) {
           assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
           SourceLocation ELoc;
           SourceRange ERange;
@@ -3078,11 +3079,11 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
     if (TypoCorrection Corrected =
             SemaRef.CorrectTypo(Id, Sema::LookupOrdinaryName, CurScope, nullptr,
                                 CCC, Sema::CTK_ErrorRecovery)) {
-      SemaRef.diagnoseTypo(Corrected,
-                           PDiag(Lookup.empty()
-                                     ? diag::err_undeclared_var_use_suggest
-                                     : diag::err_omp_expected_var_arg_suggest)
-                               << Id.getName());
+      SemaRef.diagnoseTypo(
+          Corrected,
+          SemaRef.PDiag(Lookup.empty() ? diag::err_undeclared_var_use_suggest
+                                       : diag::err_omp_expected_var_arg_suggest)
+              << Id.getName());
       VD = Corrected.getCorrectionDeclAs<VarDecl>();
     } else {
       Diag(Id.getLoc(), Lookup.empty() ? diag::err_undeclared_var_use
@@ -3751,7 +3752,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
         !isOpenMPTaskLoopDirective(S->getDirectiveKind())) {
       for (OMPClause *C : S->clauses())
         if (auto *FC = dyn_cast<OMPFirstprivateClause>(C)) {
-          for (Expr *Ref : FC->varlists())
+          for (Expr *Ref : FC->varlist())
             Visit(Ref);
         }
     }
@@ -4728,7 +4729,7 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
               SemaRef.MarkDeclarationsReferencedInExpr(E);
         }
         if (auto *AC = dyn_cast<OMPAlignedClause>(C)) {
-          for (Expr *E : AC->varlists())
+          for (Expr *E : AC->varlist())
             SemaRef.MarkDeclarationsReferencedInExpr(E);
         }
       }
@@ -5310,7 +5311,7 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
              diag::warn_omp_allocate_thread_on_task_target_directive)
           << getOpenMPDirectiveName(Stack->getCurrentDirective());
     }
-    for (Expr *E : AC->varlists()) {
+    for (Expr *E : AC->varlist()) {
       SourceLocation ELoc;
       SourceRange ERange;
       Expr *SimpleRefExpr = E;
@@ -6134,7 +6135,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       SmallVector<Expr *, 4> ImplicitExprs;
       for (OMPClause *C : Clauses) {
         if (auto *RC = dyn_cast<OMPReductionClause>(C))
-          for (Expr *E : RC->varlists())
+          for (Expr *E : RC->varlist())
             if (!isa<DeclRefExpr>(E->IgnoreParenImpCasts()))
               ImplicitExprs.emplace_back(E);
       }
@@ -7500,9 +7501,9 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
                               PartialDiagnostic::NullDiagnostic()),
           PartialDiagnosticAt(
               VariantRef->getExprLoc(),
-              PDiag(diag::err_omp_declare_variant_doesnt_support)),
+              SemaRef.PDiag(diag::err_omp_declare_variant_doesnt_support)),
           PartialDiagnosticAt(VariantRef->getExprLoc(),
-                              PDiag(diag::err_omp_declare_variant_diff)
+                              SemaRef.PDiag(diag::err_omp_declare_variant_diff)
                                   << FD->getLocation()),
           /*TemplatesSupported=*/true, /*ConstexprSupported=*/false,
           /*CLinkageMayDiffer=*/true))
@@ -10242,13 +10243,15 @@ StmtResult SemaOpenMP::ActOnOpenMPSimdDirective(
   if (!AStmt)
     return StmtError();
 
+  CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_simd, AStmt);
+
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
   OMPLoopBasedDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount = checkOpenMPLoop(
       OMPD_simd, getCollapseNumberExpr(Clauses), getOrderedNumberExpr(Clauses),
-      AStmt, SemaRef, *DSAStack, VarsWithImplicitDSA, B);
+      CS, SemaRef, *DSAStack, VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
 
@@ -10258,7 +10261,6 @@ StmtResult SemaOpenMP::ActOnOpenMPSimdDirective(
   if (checkSimdlenSafelenSpecified(SemaRef, Clauses))
     return StmtError();
 
-  SemaRef.setFunctionHasBranchProtectedScope();
   auto *SimdDirective = OMPSimdDirective::Create(
       getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
   return SimdDirective;
@@ -10295,13 +10297,15 @@ StmtResult SemaOpenMP::ActOnOpenMPForSimdDirective(
   if (!AStmt)
     return StmtError();
 
+  CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_for_simd, AStmt);
+
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
   OMPLoopBasedDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount =
       checkOpenMPLoop(OMPD_for_simd, getCollapseNumberExpr(Clauses),
-                      getOrderedNumberExpr(Clauses), AStmt, SemaRef, *DSAStack,
+                      getOrderedNumberExpr(Clauses), CS, SemaRef, *DSAStack,
                       VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
@@ -10312,7 +10316,6 @@ StmtResult SemaOpenMP::ActOnOpenMPForSimdDirective(
   if (checkSimdlenSafelenSpecified(SemaRef, Clauses))
     return StmtError();
 
-  SemaRef.setFunctionHasBranchProtectedScope();
   return OMPForSimdDirective::Create(getASTContext(), StartLoc, EndLoc,
                                      NestedLoopCount, Clauses, AStmt, B);
 }
@@ -10442,7 +10445,7 @@ static bool checkGenericLoopLastprivate(Sema &S, ArrayRef<OMPClause *> Clauses,
   bool ErrorFound = false;
   for (OMPClause *C : Clauses) {
     if (auto *LPC = dyn_cast<OMPLastprivateClause>(C)) {
-      for (Expr *RefExpr : LPC->varlists()) {
+      for (Expr *RefExpr : LPC->varlist()) {
         SourceLocation ELoc;
         SourceRange ERange;
         Expr *SimpleRefExpr = RefExpr;
@@ -10764,14 +10767,15 @@ StmtResult SemaOpenMP::ActOnOpenMPParallelForSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  setBranchProtectedScope(SemaRef, OMPD_parallel_for_simd, AStmt);
+  CapturedStmt *CS =
+      setBranchProtectedScope(SemaRef, OMPD_parallel_for_simd, AStmt);
 
   OMPLoopBasedDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount =
       checkOpenMPLoop(OMPD_parallel_for_simd, getCollapseNumberExpr(Clauses),
-                      getOrderedNumberExpr(Clauses), AStmt, SemaRef, *DSAStack,
+                      getOrderedNumberExpr(Clauses), CS, SemaRef, *DSAStack,
                       VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
@@ -13121,14 +13125,17 @@ StmtResult SemaOpenMP::ActOnOpenMPTaskLoopSimdDirective(
   if (!AStmt)
     return StmtError();
 
+  CapturedStmt *CS =
+      setBranchProtectedScope(SemaRef, OMPD_taskloop_simd, AStmt);
+
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
   OMPLoopBasedDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount =
       checkOpenMPLoop(OMPD_taskloop_simd, getCollapseNumberExpr(Clauses),
-                      /*OrderedLoopCountExpr=*/nullptr, AStmt, SemaRef,
-                      *DSAStack, VarsWithImplicitDSA, B);
+                      /*OrderedLoopCountExpr=*/nullptr, CS, SemaRef, *DSAStack,
+                      VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
 
@@ -13149,7 +13156,6 @@ StmtResult SemaOpenMP::ActOnOpenMPTaskLoopSimdDirective(
   if (checkSimdlenSafelenSpecified(SemaRef, Clauses))
     return StmtError();
 
-  SemaRef.setFunctionHasBranchProtectedScope();
   return OMPTaskLoopSimdDirective::Create(getASTContext(), StartLoc, EndLoc,
                                           NestedLoopCount, Clauses, AStmt, B);
 }
@@ -13236,14 +13242,17 @@ StmtResult SemaOpenMP::ActOnOpenMPMasterTaskLoopSimdDirective(
   if (!AStmt)
     return StmtError();
 
+  CapturedStmt *CS =
+      setBranchProtectedScope(SemaRef, OMPD_master_taskloop_simd, AStmt);
+
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
   OMPLoopBasedDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount =
       checkOpenMPLoop(OMPD_master_taskloop_simd, getCollapseNumberExpr(Clauses),
-                      /*OrderedLoopCountExpr=*/nullptr, AStmt, SemaRef,
-                      *DSAStack, VarsWithImplicitDSA, B);
+                      /*OrderedLoopCountExpr=*/nullptr, CS, SemaRef, *DSAStack,
+                      VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
 
@@ -13264,7 +13273,6 @@ StmtResult SemaOpenMP::ActOnOpenMPMasterTaskLoopSimdDirective(
   if (checkSimdlenSafelenSpecified(SemaRef, Clauses))
     return StmtError();
 
-  SemaRef.setFunctionHasBranchProtectedScope();
   return OMPMasterTaskLoopSimdDirective::Create(
       getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
@@ -13275,14 +13283,17 @@ StmtResult SemaOpenMP::ActOnOpenMPMaskedTaskLoopSimdDirective(
   if (!AStmt)
     return StmtError();
 
+  CapturedStmt *CS =
+      setBranchProtectedScope(SemaRef, OMPD_masked_taskloop_simd, AStmt);
+
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
   OMPLoopBasedDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount =
       checkOpenMPLoop(OMPD_masked_taskloop_simd, getCollapseNumberExpr(Clauses),
-                      /*OrderedLoopCountExpr=*/nullptr, AStmt, SemaRef,
-                      *DSAStack, VarsWithImplicitDSA, B);
+                      /*OrderedLoopCountExpr=*/nullptr, CS, SemaRef, *DSAStack,
+                      VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
 
@@ -13303,7 +13314,6 @@ StmtResult SemaOpenMP::ActOnOpenMPMaskedTaskLoopSimdDirective(
   if (checkSimdlenSafelenSpecified(SemaRef, Clauses))
     return StmtError();
 
-  SemaRef.setFunctionHasBranchProtectedScope();
   return OMPMaskedTaskLoopSimdDirective::Create(
       getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
@@ -19113,7 +19123,7 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
   auto CurInit = Clause.inits().begin();
   auto CurPrivate = Clause.privates().begin();
   OpenMPLinearClauseKind LinKind = Clause.getModifier();
-  for (Expr *RefExpr : Clause.varlists()) {
+  for (Expr *RefExpr : Clause.varlist()) {
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
@@ -21883,7 +21893,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
     bool isDefaultmapKind = (Kind != OMPC_DEFAULTMAP_unknown) ||
                             (getLangOpts().OpenMP >= 50 && KindLoc.isInvalid());
     if (!isDefaultmapKind || !isDefaultmapModifier) {
-      StringRef KindValue = "'scalar', 'aggregate', 'pointer'";
+      StringRef KindValue = getLangOpts().OpenMP < 52
+                                ? "'scalar', 'aggregate', 'pointer'"
+                                : "'scalar', 'aggregate', 'pointer', 'all'";
       if (getLangOpts().OpenMP == 50) {
         StringRef ModifierValue = "'alloc', 'from', 'to', 'tofrom', "
                                   "'firstprivate', 'none', 'default'";
@@ -21927,7 +21939,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
       return nullptr;
     }
   }
-  if (Kind == OMPC_DEFAULTMAP_unknown) {
+  if (Kind == OMPC_DEFAULTMAP_unknown || Kind == OMPC_DEFAULTMAP_all) {
     // Variable category is not specified - mark all categories.
     DSAStack->setDefaultDMAAttr(M, OMPC_DEFAULTMAP_aggregate, StartLoc);
     DSAStack->setDefaultDMAAttr(M, OMPC_DEFAULTMAP_scalar, StartLoc);
@@ -22000,7 +22012,7 @@ NamedDecl *SemaOpenMP::lookupOpenMPDeclareTargetName(
             SemaRef.CorrectTypo(Id, Sema::LookupOrdinaryName, CurScope, nullptr,
                                 CCC, Sema::CTK_ErrorRecovery)) {
       SemaRef.diagnoseTypo(Corrected,
-                           PDiag(diag::err_undeclared_var_use_suggest)
+                           SemaRef.PDiag(diag::err_undeclared_var_use_suggest)
                                << Id.getName());
       checkDeclIsAllowedInOpenMPTarget(nullptr, Corrected.getCorrectionDecl());
       return nullptr;
@@ -23075,8 +23087,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDoacrossClause(
   if (DSAStack->getCurrentDirective() == OMPD_ordered &&
       DepType != OMPC_DOACROSS_source && DepType != OMPC_DOACROSS_sink &&
       DepType != OMPC_DOACROSS_sink_omp_cur_iteration &&
-      DepType != OMPC_DOACROSS_source_omp_cur_iteration &&
-      DepType != OMPC_DOACROSS_source) {
+      DepType != OMPC_DOACROSS_source_omp_cur_iteration) {
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
         << "'source' or 'sink'" << getOpenMPClauseName(OMPC_doacross);
     return nullptr;

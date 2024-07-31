@@ -1246,9 +1246,7 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       SmallVector<Value *> Values(It->Values.location_ops());
       if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
                             It->Values.hasArgList())) {
-        SmallVector<Value *, 4> Vals;
-        for (Value *V : It->Values.location_ops())
-          Vals.push_back(V);
+        SmallVector<Value *, 4> Vals(It->Values.location_ops());
         addDanglingDebugInfo(Vals,
                              FnVarLocs->getDILocalVariable(It->VariableID),
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
@@ -6707,11 +6705,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0))));
     return;
   case Intrinsic::eh_sjlj_callsite: {
-    MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
     ConstantInt *CI = cast<ConstantInt>(I.getArgOperand(0));
-    assert(MMI.getCurrentCallSite() == 0 && "Overlapping call sites!");
+    assert(FuncInfo.getCurrentCallSite() == 0 && "Overlapping call sites!");
 
-    MMI.setCurrentCallSite(CI->getZExtValue());
+    FuncInfo.setCurrentCallSite(CI->getZExtValue());
     return;
   }
   case Intrinsic::eh_sjlj_functioncontext: {
@@ -8619,7 +8616,6 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
                                           const BasicBlock *EHPadBB,
                                           MCSymbol *&BeginLabel) {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
 
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
@@ -8627,13 +8623,13 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // For SjLj, keep track of which landing pads go with which invokes
   // so as to maintain the ordering of pads in the LSDA.
-  unsigned CallSiteIndex = MMI.getCurrentCallSite();
+  unsigned CallSiteIndex = FuncInfo.getCurrentCallSite();
   if (CallSiteIndex) {
     MF.setCallSiteBeginLabel(BeginLabel, CallSiteIndex);
     LPadToCallSiteMap[FuncInfo.MBBMap[EHPadBB]].push_back(CallSiteIndex);
 
     // Now that the call site is handled, stop tracking it.
-    MMI.setCurrentCallSite(0);
+    FuncInfo.setCurrentCallSite(0);
   }
 
   return DAG.getEHLabel(getCurSDLoc(), Chain, BeginLabel);

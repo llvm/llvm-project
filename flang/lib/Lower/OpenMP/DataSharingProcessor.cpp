@@ -13,6 +13,7 @@
 #include "DataSharingProcessor.h"
 
 #include "Utils.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -117,6 +118,11 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
+
+  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  if (!isFirstPrivate &&
+      Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
+    Fortran::lower::defaultInitializeAtRuntime(converter, *sym, *symTable);
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
@@ -267,8 +273,9 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       mlir::Value cmpOp;
       llvm::SmallVector<mlir::Value> vs;
       vs.reserve(loopOp.getIVs().size());
-      for (auto [iv, ub, step] : llvm::zip_equal(
-               loopOp.getIVs(), loopOp.getUpperBound(), loopOp.getStep())) {
+      for (auto [iv, ub, step] :
+           llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
+                           loopOp.getLoopSteps())) {
         // v = iv + step
         // cmp = step < 0 ? v < ub : v > ub
         mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
@@ -587,7 +594,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   }();
 
   if (clauseOps) {
-    clauseOps->privatizers.push_back(mlir::SymbolRefAttr::get(privatizerOp));
+    clauseOps->privateSyms.push_back(mlir::SymbolRefAttr::get(privatizerOp));
     clauseOps->privateVars.push_back(hsb.getAddr());
   }
 

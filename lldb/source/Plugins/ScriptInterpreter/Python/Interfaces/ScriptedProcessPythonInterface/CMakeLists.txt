@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginScriptedProcessPythonInterface PLUGIN
+add_lldb_library(lldbPluginScriptInterpreterPythonScriptedProcessPythonInterface PLUGIN
 
   ScriptedProcessPythonInterface.cpp
 
@@ -7,6 +7,7 @@ add_lldb_library(lldbPluginScriptedProcessPythonInterface PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
+    lldbPluginScriptInterpreterPython
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
 

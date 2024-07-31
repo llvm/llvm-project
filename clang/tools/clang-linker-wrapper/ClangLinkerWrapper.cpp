@@ -297,7 +297,8 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
 /// supported by the toolchain.
 bool linkerSupportsLTO(const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  return Triple.isNVPTX() || Triple.isAMDGPU();
+  return Triple.isNVPTX() || Triple.isAMDGPU() ||
+         Args.getLastArgValue(OPT_linker_path_EQ).ends_with("ld.lld");
 }
 
 /// Returns the hashed value for a constant string.
@@ -524,6 +525,13 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
       Args.MakeArgString("-" + OptLevel),
   };
 
+  // Forward all of the `--offload-opt` and similar options to the device.
+  if (linkerSupportsLTO(Args)) {
+    for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
+      CmdArgs.push_back(
+          Args.MakeArgString("-Wl,--plugin-opt=" + StringRef(Arg->getValue())));
+  }
+
   if (!Triple.isNVPTX())
     CmdArgs.push_back("-Wl,--no-undefined");
 
@@ -591,6 +599,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
         std::back_inserter(CmdArgs));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
+    CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
+  for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_builtin_bitcode_EQ)) {
@@ -1214,11 +1224,32 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   // Forward '-Xoffload-linker' options to the appropriate backend.
   for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ)) {
     auto [Triple, Value] = Arg.split('=');
-    if (Value.empty())
+    llvm::Triple TT(Triple);
+    // If this isn't a recognized triple then it's an `arg=value` option.
+    if (TT.getArch() == Triple::ArchType::UnknownArch)
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+                       Args.MakeArgString(Arg));
+    else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Triple));
     else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+                       Args.MakeArgString(Value));
+  }
+
+  // Forward '-Xoffload-compiler' options to the appropriate backend.
+  for (StringRef Arg : Args.getAllArgValues(OPT_device_compiler_args_EQ)) {
+    auto [Triple, Value] = Arg.split('=');
+    llvm::Triple TT(Triple);
+    // If this isn't a recognized triple then it's an `arg=value` option.
+    if (TT.getArch() == Triple::ArchType::UnknownArch)
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
+                       Args.MakeArgString(Arg));
+    else if (Value.empty())
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
+                       Args.MakeArgString(Triple));
+    else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
                        Args.MakeArgString(Value));
   }
 
@@ -1750,7 +1781,7 @@ int main(int Argc, char **Argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_mllvm))
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
-    NewArgv.push_back(Args.MakeArgString(StringRef("-") + Arg->getValue()));
+    NewArgv.push_back(Arg->getValue());
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);

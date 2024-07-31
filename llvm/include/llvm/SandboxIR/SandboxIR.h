@@ -18,17 +18,25 @@
 //
 // namespace sandboxir {
 //
-//        +- Argument                   +- BinaryOperator
-//        |                             |
-// Value -+- BasicBlock                 +- BranchInst
-//        |                             |
-//        +- Function   +- Constant     +- CastInst
-//        |             |               |
-//        +- User ------+- Instruction -+- CallInst
+// Value -+- Argument
+//        |
+//        +- BasicBlock
+//        |
+//        +- User ------+- Constant ------ Function
+//                      |
+//                      +- Instruction -+- BinaryOperator
 //                                      |
-//                                      +- CmpInst
+//                                      +- BranchInst
 //                                      |
-//                                      +- ExtractElementInst
+//                                      +- CastInst -----------+- BitCastInst
+//                                      |                      |
+//                                      |                      +- PtrToIntInst
+//                                      |
+//                                      +- CallBase -----------+- CallBrInst
+//                                      |                      |
+//                                      +- CmpInst             +- CallInst
+//                                      |                      |
+//                                      +- ExtractElementInst  +- InvokeInst
 //                                      |
 //                                      +- GetElementPtrInst
 //                                      |
@@ -60,6 +68,7 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Tracker.h"
@@ -76,11 +85,20 @@ class Context;
 class Function;
 class Instruction;
 class SelectInst;
+class BranchInst;
 class LoadInst;
 class ReturnInst;
 class StoreInst;
 class User;
 class Value;
+class CallBase;
+class CallInst;
+class InvokeInst;
+class CallBrInst;
+class GetElementPtrInst;
+class CastInst;
+class PtrToIntInst;
+class BitCastInst;
 
 /// Iterator for the `Use` edges of a User's operands.
 /// \Returns the operand `Use` when dereferenced.
@@ -102,12 +120,20 @@ public:
   OperandUseIterator() = default;
   value_type operator*() const;
   OperandUseIterator &operator++();
+  OperandUseIterator operator++(int) {
+    auto Copy = *this;
+    this->operator++();
+    return Copy;
+  }
   bool operator==(const OperandUseIterator &Other) const {
     return Use == Other.Use;
   }
   bool operator!=(const OperandUseIterator &Other) const {
     return !(*this == Other);
   }
+  OperandUseIterator operator+(unsigned Num) const;
+  OperandUseIterator operator-(unsigned Num) const;
+  int operator-(const OperandUseIterator &Other) const;
 };
 
 /// Iterator for the `Use` edges of a Value's users.
@@ -134,6 +160,7 @@ public:
   bool operator!=(const UserUseIterator &Other) const {
     return !(*this == Other);
   }
+  const sandboxir::Use &getUse() const { return Use; }
 };
 
 /// A SandboxIR Value has users. This is the base class.
@@ -175,13 +202,20 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context;    // For getting `Val`.
-  friend class User;       // For getting `Val`.
-  friend class Use;        // For getting `Val`.
-  friend class SelectInst; // For getting `Val`.
-  friend class LoadInst;   // For getting `Val`.
-  friend class StoreInst;  // For getting `Val`.
-  friend class ReturnInst; // For getting `Val`.
+  friend class Context;           // For getting `Val`.
+  friend class User;              // For getting `Val`.
+  friend class Use;               // For getting `Val`.
+  friend class SelectInst;        // For getting `Val`.
+  friend class BranchInst;        // For getting `Val`.
+  friend class LoadInst;          // For getting `Val`.
+  friend class StoreInst;         // For getting `Val`.
+  friend class ReturnInst;        // For getting `Val`.
+  friend class CallBase;          // For getting `Val`.
+  friend class CallInst;          // For getting `Val`.
+  friend class InvokeInst;        // For getting `Val`.
+  friend class CallBrInst;        // For getting `Val`.
+  friend class GetElementPtrInst; // For getting `Val`.
+  friend class CastInst;          // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -343,6 +377,14 @@ protected:
   virtual unsigned getUseOperandNo(const Use &Use) const = 0;
   friend unsigned Use::getOperandNo() const; // For getUseOperandNo()
 
+  void swapOperandsInternal(unsigned OpIdxA, unsigned OpIdxB) {
+    assert(OpIdxA < getNumOperands() && "OpIdxA out of bounds!");
+    assert(OpIdxB < getNumOperands() && "OpIdxB out of bounds!");
+    auto UseA = getOperandUse(OpIdxA);
+    auto UseB = getOperandUse(OpIdxB);
+    UseA.swap(UseB);
+  }
+
 #ifndef NDEBUG
   void verifyUserOfLLVMUse(const llvm::Use &Use) const;
 #endif // NDEBUG
@@ -407,7 +449,10 @@ public:
 class Constant : public sandboxir::User {
   Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
-  friend class Context; // For constructor.
+  Constant(ClassID ID, llvm::Constant *C, sandboxir::Context &SBCtx)
+      : sandboxir::User(ID, C, SBCtx) {}
+  friend class Function; // For constructor
+  friend class Context;  // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
   }
@@ -425,7 +470,7 @@ public:
     return getUseOperandNoDefault(Use);
   }
 #ifndef NDEBUG
-  void verify() const final {
+  void verify() const override {
     assert(isa<llvm::Constant>(Val) && "Expected Constant!");
   }
   friend raw_ostream &operator<<(raw_ostream &OS,
@@ -486,9 +531,8 @@ public:
 class Instruction : public sandboxir::User {
 public:
   enum class Opcode {
-#define DEF_VALUE(ID, CLASS)
-#define DEF_USER(ID, CLASS)
 #define OP(OPC) OPC,
+#define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
 #include "llvm/SandboxIR/SandboxIRValues.def"
   };
@@ -503,10 +547,16 @@ protected:
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
   llvm::Instruction *getTopmostLLVMInstruction() const;
-  friend class SelectInst; // For getTopmostLLVMInstruction().
-  friend class LoadInst;   // For getTopmostLLVMInstruction().
-  friend class StoreInst;  // For getTopmostLLVMInstruction().
-  friend class ReturnInst; // For getTopmostLLVMInstruction().
+  friend class SelectInst;        // For getTopmostLLVMInstruction().
+  friend class BranchInst;        // For getTopmostLLVMInstruction().
+  friend class LoadInst;          // For getTopmostLLVMInstruction().
+  friend class StoreInst;         // For getTopmostLLVMInstruction().
+  friend class ReturnInst;        // For getTopmostLLVMInstruction().
+  friend class CallInst;          // For getTopmostLLVMInstruction().
+  friend class InvokeInst;        // For getTopmostLLVMInstruction().
+  friend class CallBrInst;        // For getTopmostLLVMInstruction().
+  friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
+  friend class CastInst;          // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -617,6 +667,100 @@ public:
 #endif
 };
 
+class BranchInst : public Instruction {
+  /// Use Context::createBranchInst(). Don't call the constructor directly.
+  BranchInst(llvm::BranchInst *BI, Context &Ctx)
+      : Instruction(ClassID::Br, Opcode::Br, BI, Ctx) {}
+  friend Context; // for BranchInst()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static BranchInst *create(BasicBlock *IfTrue, Instruction *InsertBefore,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *InsertAtEnd,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, Instruction *InsertBefore,
+                            Context &Ctx);
+  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                            Value *Cond, BasicBlock *InsertAtEnd, Context &Ctx);
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  bool isUnconditional() const {
+    return cast<llvm::BranchInst>(Val)->isUnconditional();
+  }
+  bool isConditional() const {
+    return cast<llvm::BranchInst>(Val)->isConditional();
+  }
+  Value *getCondition() const;
+  void setCondition(Value *V) { setOperand(0, V); }
+  unsigned getNumSuccessors() const { return 1 + isConditional(); }
+  BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  void swapSuccessors() { swapOperandsInternal(1, 2); }
+
+private:
+  struct LLVMBBToSBBB {
+    Context &Ctx;
+    LLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
+    BasicBlock *operator()(llvm::BasicBlock *BB) const;
+  };
+
+  struct ConstLLVMBBToSBBB {
+    Context &Ctx;
+    ConstLLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
+    const BasicBlock *operator()(const llvm::BasicBlock *BB) const;
+  };
+
+public:
+  using sb_succ_op_iterator =
+      mapped_iterator<llvm::BranchInst::succ_op_iterator, LLVMBBToSBBB>;
+  iterator_range<sb_succ_op_iterator> successors() {
+    iterator_range<llvm::BranchInst::succ_op_iterator> LLVMRange =
+        cast<llvm::BranchInst>(Val)->successors();
+    LLVMBBToSBBB BBMap(Ctx);
+    sb_succ_op_iterator MappedBegin = map_iterator(LLVMRange.begin(), BBMap);
+    sb_succ_op_iterator MappedEnd = map_iterator(LLVMRange.end(), BBMap);
+    return make_range(MappedBegin, MappedEnd);
+  }
+
+  using const_sb_succ_op_iterator =
+      mapped_iterator<llvm::BranchInst::const_succ_op_iterator,
+                      ConstLLVMBBToSBBB>;
+  iterator_range<const_sb_succ_op_iterator> successors() const {
+    iterator_range<llvm::BranchInst::const_succ_op_iterator> ConstLLVMRange =
+        static_cast<const llvm::BranchInst *>(cast<llvm::BranchInst>(Val))
+            ->successors();
+    ConstLLVMBBToSBBB ConstBBMap(Ctx);
+    const_sb_succ_op_iterator ConstMappedBegin =
+        map_iterator(ConstLLVMRange.begin(), ConstBBMap);
+    const_sb_succ_op_iterator ConstMappedEnd =
+        map_iterator(ConstLLVMRange.end(), ConstBBMap);
+    return make_range(ConstMappedBegin, ConstMappedEnd);
+  }
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::BranchInst>(Val) && "Expected BranchInst!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS, const BranchInst &BI) {
+    BI.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
 class LoadInst final : public Instruction {
   /// Use LoadInst::create() instead of calling the constructor.
   LoadInst(llvm::LoadInst *LI, Context &Ctx)
@@ -630,6 +774,9 @@ class LoadInst final : public Instruction {
   }
 
 public:
+  /// Return true if this is a load from a volatile memory location.
+  bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }
+
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
@@ -639,8 +786,15 @@ public:
                           Instruction *InsertBefore, Context &Ctx,
                           const Twine &Name = "");
   static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          Instruction *InsertBefore, bool IsVolatile,
+                          Context &Ctx, const Twine &Name = "");
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
                           BasicBlock *InsertAtEnd, Context &Ctx,
                           const Twine &Name = "");
+  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                          BasicBlock *InsertAtEnd, bool IsVolatile,
+                          Context &Ctx, const Twine &Name = "");
+
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
   Value *getPointerOperand() const;
@@ -669,6 +823,8 @@ class StoreInst final : public Instruction {
   }
 
 public:
+  /// Return true if this is a store from a volatile memory location.
+  bool isVolatile() const { return cast<llvm::StoreInst>(Val)->isVolatile(); }
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
@@ -676,7 +832,13 @@ public:
   static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
                            Instruction *InsertBefore, Context &Ctx);
   static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           Instruction *InsertBefore, bool IsVolatile,
+                           Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
                            BasicBlock *InsertAtEnd, Context &Ctx);
+  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                           BasicBlock *InsertAtEnd, bool IsVolatile,
+                           Context &Ctx);
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
   Value *getValueOperand() const;
@@ -725,6 +887,525 @@ public:
   Value *getReturnValue() const;
 #ifndef NDEBUG
   void verify() const final {}
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class CallBase : public Instruction {
+  CallBase(ClassID ID, Opcode Opc, llvm::Instruction *I, Context &Ctx)
+      : Instruction(ID, Opc, I, Ctx) {}
+  friend class CallInst;   // For constructor.
+  friend class InvokeInst; // For constructor.
+  friend class CallBrInst; // For constructor.
+
+public:
+  static bool classof(const Value *From) {
+    auto Opc = From->getSubclassID();
+    return Opc == Instruction::ClassID::Call ||
+           Opc == Instruction::ClassID::Invoke ||
+           Opc == Instruction::ClassID::CallBr;
+  }
+
+  FunctionType *getFunctionType() const {
+    return cast<llvm::CallBase>(Val)->getFunctionType();
+  }
+
+  op_iterator data_operands_begin() { return op_begin(); }
+  const_op_iterator data_operands_begin() const {
+    return const_cast<CallBase *>(this)->data_operands_begin();
+  }
+  op_iterator data_operands_end() {
+    auto *LLVMCB = cast<llvm::CallBase>(Val);
+    auto Dist = LLVMCB->data_operands_end() - LLVMCB->data_operands_begin();
+    return op_begin() + Dist;
+  }
+  const_op_iterator data_operands_end() const {
+    auto *LLVMCB = cast<llvm::CallBase>(Val);
+    auto Dist = LLVMCB->data_operands_end() - LLVMCB->data_operands_begin();
+    return op_begin() + Dist;
+  }
+  iterator_range<op_iterator> data_ops() {
+    return make_range(data_operands_begin(), data_operands_end());
+  }
+  iterator_range<const_op_iterator> data_ops() const {
+    return make_range(data_operands_begin(), data_operands_end());
+  }
+  bool data_operands_empty() const {
+    return data_operands_end() == data_operands_begin();
+  }
+  unsigned data_operands_size() const {
+    return std::distance(data_operands_begin(), data_operands_end());
+  }
+  bool isDataOperand(Use U) const {
+    assert(this == U.getUser() &&
+           "Only valid to query with a use of this instruction!");
+    return cast<llvm::CallBase>(Val)->isDataOperand(U.LLVMUse);
+  }
+  unsigned getDataOperandNo(Use U) const {
+    assert(isDataOperand(U) && "Data operand # out of range!");
+    return cast<llvm::CallBase>(Val)->getDataOperandNo(U.LLVMUse);
+  }
+
+  /// Return the total number operands (not operand bundles) used by
+  /// every operand bundle in this OperandBundleUser.
+  unsigned getNumTotalBundleOperands() const {
+    return cast<llvm::CallBase>(Val)->getNumTotalBundleOperands();
+  }
+
+  op_iterator arg_begin() { return op_begin(); }
+  const_op_iterator arg_begin() const { return op_begin(); }
+  op_iterator arg_end() {
+    return data_operands_end() - getNumTotalBundleOperands();
+  }
+  const_op_iterator arg_end() const {
+    return const_cast<CallBase *>(this)->arg_end();
+  }
+  iterator_range<op_iterator> args() {
+    return make_range(arg_begin(), arg_end());
+  }
+  iterator_range<const_op_iterator> args() const {
+    return make_range(arg_begin(), arg_end());
+  }
+  bool arg_empty() const { return arg_end() == arg_begin(); }
+  unsigned arg_size() const { return arg_end() - arg_begin(); }
+
+  Value *getArgOperand(unsigned OpIdx) const {
+    assert(OpIdx < arg_size() && "Out of bounds!");
+    return getOperand(OpIdx);
+  }
+  void setArgOperand(unsigned OpIdx, Value *NewOp) {
+    assert(OpIdx < arg_size() && "Out of bounds!");
+    setOperand(OpIdx, NewOp);
+  }
+
+  Use getArgOperandUse(unsigned Idx) const {
+    assert(Idx < arg_size() && "Out of bounds!");
+    return getOperandUse(Idx);
+  }
+  Use getArgOperandUse(unsigned Idx) {
+    assert(Idx < arg_size() && "Out of bounds!");
+    return getOperandUse(Idx);
+  }
+
+  bool isArgOperand(Use U) const {
+    return cast<llvm::CallBase>(Val)->isArgOperand(U.LLVMUse);
+  }
+  unsigned getArgOperandNo(Use U) const {
+    return cast<llvm::CallBase>(Val)->getArgOperandNo(U.LLVMUse);
+  }
+  bool hasArgument(const Value *V) const { return is_contained(args(), V); }
+
+  Value *getCalledOperand() const;
+  Use getCalledOperandUse() const;
+
+  Function *getCalledFunction() const;
+  bool isIndirectCall() const {
+    return cast<llvm::CallBase>(Val)->isIndirectCall();
+  }
+  bool isCallee(Use U) const {
+    return cast<llvm::CallBase>(Val)->isCallee(U.LLVMUse);
+  }
+  Function *getCaller();
+  const Function *getCaller() const {
+    return const_cast<CallBase *>(this)->getCaller();
+  }
+  bool isMustTailCall() const {
+    return cast<llvm::CallBase>(Val)->isMustTailCall();
+  }
+  bool isTailCall() const { return cast<llvm::CallBase>(Val)->isTailCall(); }
+  Intrinsic::ID getIntrinsicID() const {
+    return cast<llvm::CallBase>(Val)->getIntrinsicID();
+  }
+  void setCalledOperand(Value *V) { getCalledOperandUse().set(V); }
+  void setCalledFunction(Function *F);
+  CallingConv::ID getCallingConv() const {
+    return cast<llvm::CallBase>(Val)->getCallingConv();
+  }
+  bool isInlineAsm() const { return cast<llvm::CallBase>(Val)->isInlineAsm(); }
+};
+
+class CallInst final : public CallBase {
+  /// Use Context::createCallInst(). Don't call the
+  /// constructor directly.
+  CallInst(llvm::Instruction *I, Context &Ctx)
+      : CallBase(ClassID::Call, Opcode::Call, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static CallInst *create(FunctionType *FTy, Value *Func,
+                          ArrayRef<Value *> Args, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx,
+                          const Twine &NameStr = "");
+  static CallInst *create(FunctionType *FTy, Value *Func,
+                          ArrayRef<Value *> Args, Instruction *InsertBefore,
+                          Context &Ctx, const Twine &NameStr = "");
+  static CallInst *create(FunctionType *FTy, Value *Func,
+                          ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                          Context &Ctx, const Twine &NameStr = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Call;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+#ifndef NDEBUG
+  void verify() const final {}
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class InvokeInst final : public CallBase {
+  /// Use Context::createInvokeInst(). Don't call the
+  /// constructor directly.
+  InvokeInst(llvm::Instruction *I, Context &Ctx)
+      : CallBase(ClassID::Invoke, Opcode::Invoke, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static InvokeInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *IfNormal, BasicBlock *IfException,
+                            ArrayRef<Value *> Args, BBIterator WhereIt,
+                            BasicBlock *WhereBB, Context &Ctx,
+                            const Twine &NameStr = "");
+  static InvokeInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *IfNormal, BasicBlock *IfException,
+                            ArrayRef<Value *> Args, Instruction *InsertBefore,
+                            Context &Ctx, const Twine &NameStr = "");
+  static InvokeInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *IfNormal, BasicBlock *IfException,
+                            ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                            Context &Ctx, const Twine &NameStr = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::Invoke;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  BasicBlock *getNormalDest() const;
+  BasicBlock *getUnwindDest() const;
+  void setNormalDest(BasicBlock *BB);
+  void setUnwindDest(BasicBlock *BB);
+  // TODO: Return a `LandingPadInst` once implemented.
+  Instruction *getLandingPadInst() const;
+  BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  void setSuccessor(unsigned SuccIdx, BasicBlock *NewSucc) {
+    assert(SuccIdx < 2 && "Successor # out of range for invoke!");
+    if (SuccIdx == 0)
+      setNormalDest(NewSucc);
+    else
+      setUnwindDest(NewSucc);
+  }
+  unsigned getNumSuccessors() const {
+    return cast<llvm::InvokeInst>(Val)->getNumSuccessors();
+  }
+#ifndef NDEBUG
+  void verify() const final {}
+  friend raw_ostream &operator<<(raw_ostream &OS, const InvokeInst &I) {
+    I.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class CallBrInst final : public CallBase {
+  /// Use Context::createCallBrInst(). Don't call the
+  /// constructor directly.
+  CallBrInst(llvm::Instruction *I, Context &Ctx)
+      : CallBase(ClassID::CallBr, Opcode::CallBr, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static CallBrInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, BBIterator WhereIt,
+                            BasicBlock *WhereBB, Context &Ctx,
+                            const Twine &NameStr = "");
+  static CallBrInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, Instruction *InsertBefore,
+                            Context &Ctx, const Twine &NameStr = "");
+  static CallBrInst *create(FunctionType *FTy, Value *Func,
+                            BasicBlock *DefaultDest,
+                            ArrayRef<BasicBlock *> IndirectDests,
+                            ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                            Context &Ctx, const Twine &NameStr = "");
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::CallBr;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  unsigned getNumIndirectDests() const {
+    return cast<llvm::CallBrInst>(Val)->getNumIndirectDests();
+  }
+  Value *getIndirectDestLabel(unsigned Idx) const;
+  Value *getIndirectDestLabelUse(unsigned Idx) const;
+  BasicBlock *getDefaultDest() const;
+  BasicBlock *getIndirectDest(unsigned Idx) const;
+  SmallVector<BasicBlock *, 16> getIndirectDests() const;
+  void setDefaultDest(BasicBlock *BB);
+  void setIndirectDest(unsigned Idx, BasicBlock *BB);
+  BasicBlock *getSuccessor(unsigned Idx) const;
+  unsigned getNumSuccessors() const {
+    return cast<llvm::CallBrInst>(Val)->getNumSuccessors();
+  }
+#ifndef NDEBUG
+  void verify() const final {}
+  friend raw_ostream &operator<<(raw_ostream &OS, const CallBrInst &I) {
+    I.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class GetElementPtrInst final : public Instruction {
+  /// Use Context::createGetElementPtrInst(). Don't call
+  /// the constructor directly.
+  GetElementPtrInst(llvm::Instruction *I, Context &Ctx)
+      : Instruction(ClassID::GetElementPtr, Opcode::GetElementPtr, I, Ctx) {}
+  GetElementPtrInst(ClassID SubclassID, llvm::Instruction *I, Context &Ctx)
+      : Instruction(SubclassID, Opcode::GetElementPtr, I, Ctx) {}
+  friend class Context; // For accessing the constructor in
+                        // create*()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &NameStr = "");
+  static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &NameStr = "");
+  static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &NameStr = "");
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::GetElementPtr;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+
+  Type *getSourceElementType() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getSourceElementType();
+  }
+  Type *getResultElementType() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getResultElementType();
+  }
+  unsigned getAddressSpace() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getAddressSpace();
+  }
+
+  inline op_iterator idx_begin() { return op_begin() + 1; }
+  inline const_op_iterator idx_begin() const {
+    return const_cast<GetElementPtrInst *>(this)->idx_begin();
+  }
+  inline op_iterator idx_end() { return op_end(); }
+  inline const_op_iterator idx_end() const {
+    return const_cast<GetElementPtrInst *>(this)->idx_end();
+  }
+  inline iterator_range<op_iterator> indices() {
+    return make_range(idx_begin(), idx_end());
+  }
+  inline iterator_range<const_op_iterator> indices() const {
+    return const_cast<GetElementPtrInst *>(this)->indices();
+  }
+
+  Value *getPointerOperand() const;
+  static unsigned getPointerOperandIndex() {
+    return llvm::GetElementPtrInst::getPointerOperandIndex();
+  }
+  Type *getPointerOperandType() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getPointerOperandType();
+  }
+  unsigned getPointerAddressSpace() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getPointerAddressSpace();
+  }
+  unsigned getNumIndices() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getNumIndices();
+  }
+  bool hasIndices() const {
+    return cast<llvm::GetElementPtrInst>(Val)->hasIndices();
+  }
+  bool hasAllConstantIndices() const {
+    return cast<llvm::GetElementPtrInst>(Val)->hasAllConstantIndices();
+  }
+  GEPNoWrapFlags getNoWrapFlags() const {
+    return cast<llvm::GetElementPtrInst>(Val)->getNoWrapFlags();
+  }
+  bool isInBounds() const {
+    return cast<llvm::GetElementPtrInst>(Val)->isInBounds();
+  }
+  bool hasNoUnsignedSignedWrap() const {
+    return cast<llvm::GetElementPtrInst>(Val)->hasNoUnsignedSignedWrap();
+  }
+  bool hasNoUnsignedWrap() const {
+    return cast<llvm::GetElementPtrInst>(Val)->hasNoUnsignedWrap();
+  }
+  bool accumulateConstantOffset(const DataLayout &DL, APInt &Offset) const {
+    return cast<llvm::GetElementPtrInst>(Val)->accumulateConstantOffset(DL,
+                                                                        Offset);
+  }
+  // TODO: Add missing member functions.
+
+#ifndef NDEBUG
+  void verify() const final {}
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class CastInst : public Instruction {
+  static Opcode getCastOpcode(llvm::Instruction::CastOps CastOp) {
+    switch (CastOp) {
+    case llvm::Instruction::ZExt:
+      return Opcode::ZExt;
+    case llvm::Instruction::SExt:
+      return Opcode::SExt;
+    case llvm::Instruction::FPToUI:
+      return Opcode::FPToUI;
+    case llvm::Instruction::FPToSI:
+      return Opcode::FPToSI;
+    case llvm::Instruction::FPExt:
+      return Opcode::FPExt;
+    case llvm::Instruction::PtrToInt:
+      return Opcode::PtrToInt;
+    case llvm::Instruction::IntToPtr:
+      return Opcode::IntToPtr;
+    case llvm::Instruction::SIToFP:
+      return Opcode::SIToFP;
+    case llvm::Instruction::UIToFP:
+      return Opcode::UIToFP;
+    case llvm::Instruction::Trunc:
+      return Opcode::Trunc;
+    case llvm::Instruction::FPTrunc:
+      return Opcode::FPTrunc;
+    case llvm::Instruction::BitCast:
+      return Opcode::BitCast;
+    case llvm::Instruction::AddrSpaceCast:
+      return Opcode::AddrSpaceCast;
+    case llvm::Instruction::CastOpsEnd:
+      llvm_unreachable("Bad CastOp!");
+    }
+    llvm_unreachable("Unhandled CastOp!");
+  }
+  /// Use Context::createCastInst(). Don't call the
+  /// constructor directly.
+  CastInst(llvm::CastInst *CI, Context &Ctx)
+      : Instruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI, Ctx) {}
+  friend Context; // for SBCastInstruction()
+  friend class PtrToInt; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                       Instruction *InsertBefore, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+  Type *getSrcTy() const { return cast<llvm::CastInst>(Val)->getSrcTy(); }
+  Type *getDestTy() const { return cast<llvm::CastInst>(Val)->getDestTy(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::CastInst>(Val) && "Expected CastInst!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class PtrToIntInst final : public CastInst {
+public:
+  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    return isa<Instruction>(From) &&
+           cast<Instruction>(From)->getOpcode() == Opcode::PtrToInt;
+  }
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
+class BitCastInst : public CastInst {
+public:
+  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                       BasicBlock *WhereBB, Context &Ctx,
+                       const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                       Context &Ctx, const Twine &Name = "");
+
+  static bool classof(const Value *From) {
+    if (auto *I = dyn_cast<Instruction>(From))
+      return I->getOpcode() == Instruction::Opcode::BitCast;
+    return false;
+  }
+#ifndef NDEBUG
   void dump(raw_ostream &OS) const override;
   LLVM_DUMP_METHOD void dump() const override;
 #endif
@@ -870,12 +1551,24 @@ protected:
 
   SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
+  BranchInst *createBranchInst(llvm::BranchInst *I);
+  friend BranchInst; // For createBranchInst()
   LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
   StoreInst *createStoreInst(llvm::StoreInst *SI);
   friend StoreInst; // For createStoreInst()
   ReturnInst *createReturnInst(llvm::ReturnInst *I);
   friend ReturnInst; // For createReturnInst()
+  CallInst *createCallInst(llvm::CallInst *I);
+  friend CallInst; // For createCallInst()
+  InvokeInst *createInvokeInst(llvm::InvokeInst *I);
+  friend InvokeInst; // For createInvokeInst()
+  CallBrInst *createCallBrInst(llvm::CallBrInst *I);
+  friend CallBrInst; // For createCallBrInst()
+  GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
+  friend GetElementPtrInst; // For createGetElementPtrInst()
+  CastInst *createCastInst(llvm::CastInst *I);
+  friend CastInst; // For createCastInst()
 
 public:
   Context(LLVMContext &LLVMCtx)
@@ -903,7 +1596,7 @@ public:
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
 };
 
-class Function : public sandboxir::Value {
+class Function : public Constant {
   /// Helper for mapped_iterator.
   struct LLVMBBToBB {
     Context &Ctx;
@@ -914,7 +1607,7 @@ class Function : public sandboxir::Value {
   };
   /// Use Context::createFunction() instead.
   Function(llvm::Function *F, sandboxir::Context &Ctx)
-      : sandboxir::Value(ClassID::Function, F, Ctx) {}
+      : Constant(ClassID::Function, F, Ctx) {}
   friend class Context; // For constructor.
 
 public:
@@ -939,6 +1632,9 @@ public:
   iterator end() const {
     LLVMBBToBB BBGetter(Ctx);
     return iterator(cast<llvm::Function>(Val)->end(), BBGetter);
+  }
+  FunctionType *getFunctionType() const {
+    return cast<llvm::Function>(Val)->getFunctionType();
   }
 
 #ifndef NDEBUG

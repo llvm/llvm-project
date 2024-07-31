@@ -35,6 +35,11 @@ void UseSet::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+
+void UseSwap::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 #endif // NDEBUG
 
 Tracker::~Tracker() {
@@ -119,6 +124,37 @@ void RemoveFromParent::revert() {
 
 #ifndef NDEBUG
 void RemoveFromParent::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CallBrInstSetDefaultDest::CallBrInstSetDefaultDest(CallBrInst *CallBr,
+                                                   Tracker &Tracker)
+    : IRChangeBase(Tracker), CallBr(CallBr) {
+  OrigDefaultDest = CallBr->getDefaultDest();
+}
+void CallBrInstSetDefaultDest::revert() {
+  CallBr->setDefaultDest(OrigDefaultDest);
+}
+#ifndef NDEBUG
+void CallBrInstSetDefaultDest::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
+                                                     unsigned Idx,
+                                                     Tracker &Tracker)
+    : IRChangeBase(Tracker), CallBr(CallBr), Idx(Idx) {
+  OrigIndirectDest = CallBr->getIndirectDest(Idx);
+}
+void CallBrInstSetIndirectDest::revert() {
+  CallBr->setIndirectDest(Idx, OrigIndirectDest);
+}
+#ifndef NDEBUG
+void CallBrInstSetIndirectDest::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
