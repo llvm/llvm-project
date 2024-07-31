@@ -602,6 +602,12 @@ static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   llvm::sort(DXILOps, [](DXILOperationDesc &A, DXILOperationDesc &B) {
     return A.OpCode < B.OpCode;
   });
+  int PrevOp = -1;
+  for (DXILOperationDesc &Desc : DXILOps) {
+    if (Desc.OpCode == PrevOp)
+      PrintFatalError(Twine("Duplicate opcode: ") + Twine(Desc.OpCode));
+    PrevOp = Desc.OpCode;
+  }
 
   emitDXILOpCodes(DXILOps, OS);
   emitDXILOpClasses(Records, OS);
