@@ -56,6 +56,7 @@
     __cpp_lib_complex_udls                                  201309L [C++14]
     __cpp_lib_concepts                                      202002L [C++20]
     __cpp_lib_constexpr_algorithms                          201806L [C++20]
+    __cpp_lib_constexpr_atomic                              202406L [C++26]
     __cpp_lib_constexpr_bitset                              202207L [C++23]
     __cpp_lib_constexpr_charconv                            202207L [C++23]
     __cpp_lib_constexpr_cmath                               202202L [C++23]
@@ -400,6 +401,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_bitset
@@ -1264,6 +1269,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_bitset
@@ -2230,6 +2239,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_bitset
@@ -3436,6 +3449,10 @@
 # endif
 # if __cpp_lib_constexpr_algorithms != 201806L
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_bitset
@@ -4855,6 +4872,10 @@
 # endif
 # if __cpp_lib_constexpr_algorithms != 201806L
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++23"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_constexpr_bitset
@@ -6490,6 +6511,19 @@
 # endif
 # if __cpp_lib_constexpr_algorithms != 201806L
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++26"
+# endif
+
+# if __has_constexpr_builtin(__c11_atomic_load)
+#   ifndef __cpp_lib_constexpr_atomic
+#     error "__cpp_lib_constexpr_atomic should be defined in c++26"
+#   endif
+#   if __cpp_lib_constexpr_atomic != 202406L
+#     error "__cpp_lib_constexpr_atomic should have the value 202406L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_constexpr_atomic
+#     error "__cpp_lib_constexpr_atomic should not be defined when the requirement '__has_constexpr_builtin(__c11_atomic_load)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_constexpr_bitset
