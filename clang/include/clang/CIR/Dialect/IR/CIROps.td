@@ -3333,6 +3333,11 @@ def CatchParamOp : CIR_Op<"catch_param"> {
     attr-dict
   }];
 
+  let extraClassDeclaration = [{
+    bool isBegin() { return getKind() ==  mlir::cir::CatchParamKind::begin; }
+    bool isEnd() { return getKind() ==  mlir::cir::CatchParamKind::end; }
+  }];
+
   let hasVerifier = 1;
 }
 
