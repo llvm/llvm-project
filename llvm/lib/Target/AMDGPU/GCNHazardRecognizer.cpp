@@ -883,6 +883,12 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
   return WaitStatesNeeded;
 }
 
+/// Dest sel forwarding issue occurs if additional logic is needed to swizzle /
+/// pack the computed value into correct bit position of the dest register. This
+/// occurs if we have SDWA with dst_sel != DWORD or if we have op_sel with
+/// dst_sel that is not aligned to the register. This function analayzes the \p
+/// MI and \returns an operand with dst setl forwarding issue, or nullptr if
+/// none exists.
 static const MachineOperand *
 getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
   if (!SIInstrInfo::isVALU(MI))
@@ -893,17 +899,17 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
   unsigned Opcode = MI.getOpcode();
 
   // There are three different types of instructions
-  // which produce forwarded dest: 1. SDWA with dst_sel != DWORD, 2. VOP3 with
-  // op_sel[3] != 0, and 3. CVR_SR_FP8_F32 and CVT_SR_BF8_F32 with op_sel[3:2]
+  // which produce forwarded dest: 1. SDWA with dst_sel != DWORD, 2. VOP3
+  // which write hi bits (e.g. op_sel[3] == 1), and 3. CVR_SR_FP8_F32 and
+  // CVT_SR_BF8_F32 with op_sel[3:2]
   // != 0
-
   if (SIInstrInfo::isSDWA(MI)) {
     // Type 1: SDWA with dst_sel != DWORD
     if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
       if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
         return nullptr;
   } else {
-    // Type 2 && Type 3: (VOP3 with op_sel[3] != 0) || (CVT_SR_FP8_F32 and
+    // Type 2 && Type 3: (VOP3 which write the hi bits) || (CVT_SR_FP8_F32 and
     // CVT_SR_BF8_F32 with op_sel[3:2] != 0)
     if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
         !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
