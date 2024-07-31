@@ -166,20 +166,22 @@ static StringRef extractArgAndUpdateOptions(StringRef &options,
                                             size_t argSize) {
   StringRef str = options.take_front(argSize).trim();
   options = options.drop_front(argSize).ltrim();
-  // Handle escape sequences
-  if (str.size() > 2) {
-    const auto escapePairs = {std::make_pair('\'', '\''),
-                              std::make_pair('"', '"'),
-                              std::make_pair('{', '}')};
-    for (const auto &escape : escapePairs) {
-      if (str.front() == escape.first && str.back() == escape.second) {
-        // Drop the escape characters and trim.
-        str = str.drop_front().drop_back().trim();
-        // Don't process additional escape sequences.
-        break;
-      }
+
+  // Early exit if there's no escape sequence.
+  if (str.size() <= 2)
+    return str;
+
+  const auto escapePairs = {std::make_pair('\'', '\''),
+                            std::make_pair('"', '"'), std::make_pair('{', '}')};
+  for (const auto &escape : escapePairs) {
+    if (str.front() == escape.first && str.back() == escape.second) {
+      // Drop the escape characters and trim.
+      str = str.drop_front().drop_back().trim();
+      // Don't process additional escape sequences.
+      break;
     }
   }
+
   return str;
 }
 
@@ -189,7 +191,7 @@ LogicalResult detail::pass_options::parseCommaSeparatedList(
   // Functor used for finding a character in a string, and skipping over
   // various "range" characters.
   llvm::unique_function<size_t(StringRef, size_t, char)> findChar =
-      [&findChar](StringRef str, size_t index, char c) -> size_t {
+      [&](StringRef str, size_t index, char c) -> size_t {
     for (size_t i = index, e = str.size(); i < e; ++i) {
       if (str[i] == c)
         return i;
@@ -215,7 +217,8 @@ LogicalResult detail::pass_options::parseCommaSeparatedList(
             elementParseFn(extractArgAndUpdateOptions(optionStr, nextElePos))))
       return failure();
 
-    optionStr = optionStr.drop_front(); // drop the leading ','
+    // Drop the leading ','
+    optionStr = optionStr.drop_front();
     nextElePos = findChar(optionStr, 0, ',');
   }
   return elementParseFn(

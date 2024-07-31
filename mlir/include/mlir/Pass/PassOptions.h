@@ -173,11 +173,8 @@ private:
   }
 
 public:
-  /// The specific parser to use depending on llvm::cl parser used. This is only
-  /// necessary because we need to provide additional methods for certain data
-  /// type parsers.
-  /// TODO: We should upstream the methods in GenericOptionParser to avoid the
-  /// need to do this.
+  /// The specific parser to use. This is necessary because we need to provide
+  /// additional methods for certain data type parsers.
   template <typename DataType>
   using OptionParser = std::conditional_t<
       // If the data type is derived from PassOptions, use the
@@ -185,6 +182,8 @@ public:
       std::is_base_of_v<PassOptions, DataType>, PassOptionsParser<DataType>,
       // Otherwise, use GenericOptionParser where it is well formed, and fall
       // back to llvm::cl::parser otherwise.
+      // TODO: We should upstream the methods in GenericOptionParser to avoid
+      // the  need to do this.
       std::conditional_t<std::is_base_of<llvm::cl::generic_parser_base,
                                          llvm::cl::parser<DataType>>::value,
                          GenericOptionParser<DataType>,
