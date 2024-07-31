@@ -1169,6 +1169,37 @@ void PtrToIntInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+Value *BitCastInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                           BasicBlock *WhereBB, Context &Ctx,
+                           const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::BitCast, Src, WhereIt,
+                          WhereBB, Ctx, Name);
+}
+
+Value *BitCastInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                           Context &Ctx, const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::BitCast, Src,
+                          InsertBefore, Ctx, Name);
+}
+
+Value *BitCastInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                           Context &Ctx, const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::BitCast, Src,
+                          InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void BitCastInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void BitCastInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);

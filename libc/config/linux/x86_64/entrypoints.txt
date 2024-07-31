@@ -530,6 +530,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.setpayload
+    libc.src.math.setpayloadf
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
@@ -691,6 +693,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.roundevenf128
     libc.src.math.roundf128
     libc.src.math.scalbnf128
+    libc.src.math.setpayloadf128
     libc.src.math.sqrtf128
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
