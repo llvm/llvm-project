@@ -277,10 +277,8 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
     return 0;
   }
   const FEnv::FPState *state = reinterpret_cast<const FEnv::FPState *>(envp);
-  uint32_t control_word = static_cast<uint32_t>(state->ControlWord);
-  uint32_t status_word = static_cast<uint32_t>(state->StatusWord);
-  FEnv::set_control_word(control_word);
-  FEnv::set_status_word(status_word);
+  FEnv::set_control_word(static_cast<uint32_t>(state->ControlWord));
+  FEnv::set_status_word(static_cast<uint32_t>(state->StatusWord));
   return 0;
 }
 
