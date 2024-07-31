@@ -80,7 +80,7 @@ static int getPosixProtectionFlags(unsigned Flags) {
 #define MFD_EXEC 0x0010U
 #endif
 
-static inline int memfd_create(const char *name, int flags) {
+static inline int memfd_create(const char *name, unsigned int flags) {
 #ifdef SYS_memfd_create
   return syscall(SYS_memfd_create, name, flags);
 #else
