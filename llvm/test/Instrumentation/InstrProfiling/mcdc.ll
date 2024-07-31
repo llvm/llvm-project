@@ -1,9 +1,7 @@
 ; Check that MC/DC intrinsics are properly lowered
 ; RUN: opt < %s -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,BASIC
 ; RUN: opt < %s -passes=instrprof -S -instrprof-atomic-counter-update-all | FileCheck %s --check-prefixes=CHECK,ATOMIC
-; RUN: opt < %s -passes=instrprof -runtime-counter-relocation -S 2>&1 | FileCheck %s --check-prefix RELOC
-
-; RELOC: Runtime counter relocation is presently not supported for MC/DC bitmaps
+; RUN: opt < %s -passes=instrprof -S -runtime-counter-relocation | FileCheck %s --check-prefixes=CHECK,RELOC
 
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -14,10 +12,15 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @test(i32 noundef %A) {
 entry:
+  ; RELOC: %profbm_bias = load i64, ptr @__llvm_profile_bitmap_bias, align 8, !invariant.load !0
+  ; RELOC: %profc_bias = load i64, ptr @__llvm_profile_counter_bias, align 8
   %A.addr = alloca i32, align 4
   %mcdc.addr = alloca i32, align 4
   call void @llvm.instrprof.cover(ptr @__profn_test, i64 99278, i32 5, i32 0)
   ; BASIC: store i8 0, ptr @__profc_test, align 1
+  ; RELOC: %[[PROFC_INTADDR:.+]] = add i64 ptrtoint (ptr @__profc_test to i64), %profc_bias
+  ; RELOC: %[[PROFC_ADDR:.+]] = inttoptr i64 %[[PROFC_INTADDR]] to ptr
+  ; RELOC: store i8 0, ptr %[[PROFC_ADDR]], align 1
 
   call void @llvm.instrprof.mcdc.parameters(ptr @__profn_test, i64 99278, i32 1)
   store i32 0, ptr %mcdc.addr, align 4
@@ -25,6 +28,7 @@ entry:
   %tobool = icmp ne i32 %0, 0
 
   call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 99278, i32 0, ptr %mcdc.addr)
+  ; RELOC:      [[PROFBM_ADDR:%.+]] = getelementptr i8, ptr @__profbm_test, i64 %profbm_bias
   ; CHECK:      %[[TEMP0:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
   ; CHECK-NEXT: %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
   ; CHECK-NEXT: %[[LAB4:[0-9]+]] = lshr i32 %[[TEMP]], 3
@@ -39,7 +43,9 @@ entry:
 ; CHECK: define private void @[[RMW_OR]](ptr %[[ARGPTR:.+]], i8 %[[ARGVAL:.+]])
 ; CHECK:      %[[BITS:.+]] = load i8, ptr %[[ARGPTR]], align 1
 ; BASIC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[ARGVAL]]
+; RELOC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[ARGVAL]]
 ; BASIC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
+; RELOC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
 ; ATOMIC-NEXT: %[[MASKED:.+]] = and i8 %[[BITS]], %[[ARGVAL]]
 ; ATOMIC-NEXT: %[[SHOULDWRITE:.+]] = icmp ne i8 %[[MASKED]], %[[ARGVAL]]
 ; ATOMIC-NEXT: br i1 %[[SHOULDWRITE]], label %[[WRITE:.+]], label %[[SKIP:.+]], !prof ![[MDPROF:[0-9]+]]
