@@ -429,34 +429,26 @@ static std::string getAttributeMaskString(const SmallVector<Record *> Recs) {
   return MaskString;
 }
 
-/// Emit Enums of DXIL Ops
-/// \param A vector of DXIL Ops
-/// \param Output stream
-static void emitDXILEnums(std::vector<DXILOperationDesc> &Ops,
-                          raw_ostream &OS) {
-  OS << "#ifdef DXIL_OP_ENUM\n\n";
-  OS << "// Enumeration for operations specified by DXIL\n";
-  OS << "enum class OpCode : unsigned {\n";
+/// Emit a mapping of DXIL opcode to opname
+static void emitDXILOpCodes(std::vector<DXILOperationDesc> &Ops,
+                            raw_ostream &OS) {
+  OS << "#ifdef DXIL_OPCODE\n";
+  for (const DXILOperationDesc &Op : Ops)
+    OS << "DXIL_OPCODE(" << Op.OpCode << ", " << Op.OpName << ")\n";
+  OS << "#undef DXIL_OPCODE\n";
+  OS << "\n";
+  OS << "#endif\n\n";
+}
 
-  for (auto &Op : Ops) {
-    // Name = ID, // Doc
-    OS << Op.OpName << " = " << Op.OpCode << ", // " << Op.Doc << "\n";
-  }
-
-  OS << "\n};\n\n";
-
-  OS << "// Groups for DXIL operations with equivalent function templates\n";
-  OS << "enum class OpCodeClass : unsigned {\n";
-  // Build an OpClass set to print
-  SmallSet<StringRef, 2> OpClassSet;
-  for (auto &Op : Ops) {
-    OpClassSet.insert(Op.OpClass);
-  }
-  for (auto &C : OpClassSet) {
-    OS << C << ",\n";
-  }
-  OS << "\n};\n\n";
-  OS << "#undef DXIL_OP_ENUM\n";
+/// Emit a list of DXIL op classes
+static void emitDXILOpClasses(RecordKeeper &Records,
+                              raw_ostream &OS) {
+  OS << "#ifdef DXIL_OPCLASS\n";
+  std::vector<Record *> OpClasses =
+      Records.getAllDerivedDefinitions("DXILOpClass");
+  for (Record *OpClass : OpClasses)
+    OS << "DXIL_OPCLASS(" << OpClass->getName() << ")\n";
+  OS << "#undef DXIL_OPCLASS\n";
   OS << "#endif\n\n";
 }
 
@@ -652,7 +644,8 @@ static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
     PrevOp = Desc.OpCode;
   }
 
-  emitDXILEnums(DXILOps, OS);
+  emitDXILOpCodes(DXILOps, OS);
+  emitDXILOpClasses(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
   OS << "#ifdef DXIL_OP_OPERATION_TABLE\n\n";
   emitDXILOperationTableDataStructs(Records, OS);
