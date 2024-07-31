@@ -522,9 +522,18 @@ public:
                  sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access,
                  sys::fs::OpenFlags Flags);
 
-  /// FD is the file descriptor that this writes to.  If ShouldClose is true,
-  /// this closes the file when the stream is destroyed. If FD is for stdout or
-  /// stderr, it will not be closed.
+  /// Create a stream based of a given file descriptor.
+  ///
+  /// \param fd is the file descriptor that this writes to.
+  /// \param shouldClose If true, this closes the file when the stream is
+  ///                    destroyed. If \p fd is for stdout or stderr, it will
+  ///                    not be closed.
+  /// \param unbuffered If true, writes will be passed on as-is to write_impl(),
+  ///                   bypassing any buffering.
+  /// \param simpleStream If true, the passed file descriptor isn't queried for
+  ///                     its current location nor its file type, disabling
+  ///                     seek support.  It's intended for very basic file
+  ///                     descriptor streams not needing such functionality.
   raw_fd_ostream(int fd, bool shouldClose, bool unbuffered = false,
                  bool simpleStream = false,
                  OStreamKind K = OStreamKind::OK_OStream);
