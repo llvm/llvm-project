@@ -51,8 +51,7 @@ struct Stream {
 
   /// Create a stream from the given stream directory entry.
   static Expected<std::unique_ptr<Stream>>
-  create(const minidump::Directory &StreamDesc,
-         const object::MinidumpFile &File);
+  create(const minidump::Directory &StreamDesc, object::MinidumpFile &File);
 };
 
 namespace detail {
@@ -99,29 +98,28 @@ struct ParsedMemoryDescriptor {
   minidump::MemoryDescriptor Entry;
   yaml::BinaryRef Content;
 };
+
+struct ParsedMemory64Descriptor {
+  static constexpr Stream::StreamKind Kind = Stream::StreamKind::Memory64List;
+  static constexpr minidump::StreamType Type =
+      minidump::StreamType::Memory64List;
+
+  minidump::MemoryDescriptor_64 Entry;
+  yaml::BinaryRef Content;
+};
 } // namespace detail
 
 using ModuleListStream = detail::ListStream<detail::ParsedModule>;
 using ThreadListStream = detail::ListStream<detail::ParsedThread>;
 using MemoryListStream = detail::ListStream<detail::ParsedMemoryDescriptor>;
 
-/// Memory64ListStream minidump stream.
-struct Memory64ListStream : public Stream {
+struct Memory64ListStream
+    : public detail::ListStream<detail::ParsedMemory64Descriptor> {
   minidump::Memory64ListHeader Header;
-  std::vector<minidump::MemoryDescriptor_64> Entries;
-  yaml::BinaryRef Content;
-
-  Memory64ListStream()
-      : Stream(StreamKind::Memory64List, minidump::StreamType::Memory64List) {}
 
   explicit Memory64ListStream(
-      std::vector<minidump::MemoryDescriptor_64> Entries)
-      : Stream(StreamKind::Memory64List, minidump::StreamType::Memory64List),
-        Entries(Entries) {}
-
-  static bool classof(const Stream *S) {
-    return S->Kind == StreamKind::Memory64List;
-  }
+      std::vector<detail::ParsedMemory64Descriptor> Entries = {})
+      : ListStream(Entries){};
 };
 
 /// ExceptionStream minidump stream.
@@ -235,7 +233,7 @@ struct Object {
   /// The list of streams in this minidump object.
   std::vector<std::unique_ptr<Stream>> Streams;
 
-  static Expected<Object> create(const object::MinidumpFile &File);
+  static Expected<Object> create(object::MinidumpFile &File);
 };
 
 } // namespace MinidumpYAML
@@ -288,7 +286,6 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::X86Info)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::Exception)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::MemoryInfo)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::VSFixedFileInfo)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::MemoryDescriptor_64)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::MemoryListStream::entry_type)
@@ -296,13 +293,15 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::ModuleListStream::entry_type)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(
     llvm::MinidumpYAML::ThreadListStream::entry_type)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(
+    llvm::MinidumpYAML::Memory64ListStream::entry_type)
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::MinidumpYAML::Stream>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::MemoryListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ModuleListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::ThreadListStream::entry_type)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MinidumpYAML::Memory64ListStream::entry_type)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::minidump::MemoryInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::minidump::MemoryDescriptor_64)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::MinidumpYAML::Object)
 

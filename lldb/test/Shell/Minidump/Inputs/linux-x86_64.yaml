@@ -1,7 +1,7 @@
 --- !minidump
-Streams:         
+Streams:
   - Type:            ModuleList
-    Modules:         
+    Modules:
       - Base of Image:   0x0000000000400000
         Size of Image:   0x00001000
         Module Name:     '/tmp/test/linux-x86_64'
@@ -13,7 +13,7 @@ Streams:
     Number of Processors: 40
     Platform ID:     Linux
     CSD Version:     'Linux 3.13.0-91-generic #138-Ubuntu SMP Fri Jun 24 17:00:34 UTC 2016 x86_64'
-    CPU:             
+    CPU:
       Vendor ID:       GenuineIntel
       Version Info:    0x00000000
       Feature Info:    0x00000000

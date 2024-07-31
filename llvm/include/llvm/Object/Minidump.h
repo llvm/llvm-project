@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
+#include <map>
 
 namespace llvm {
 namespace object {
@@ -51,6 +52,9 @@ public:
   getRawData(minidump::LocationDescriptor Desc) const {
     return getDataSlice(getData(), Desc.RVA, Desc.DataSize);
   }
+
+  Expected<ArrayRef<uint8_t>>
+  getRawData(minidump::MemoryDescriptor_64 Desc) const;
 
   /// Returns the minidump string at the given offset. An error is returned if
   /// we fail to parse the string, or the string is invalid UTF16.
@@ -110,7 +114,7 @@ public:
         minidump::StreamType::Memory64List);
   }
 
-  Expected<ArrayRef<minidump::MemoryDescriptor_64>> getMemory64List() const;
+  Expected<ArrayRef<minidump::MemoryDescriptor_64>> getMemory64List();
 
   class MemoryInfoIterator
       : public iterator_facade_base<MemoryInfoIterator,
@@ -191,9 +195,13 @@ private:
   template <typename T>
   Expected<ArrayRef<T>> getListStream(minidump::StreamType Stream) const;
 
+  void cacheMemory64RVAs(uint64_t BaseRVA,
+                         ArrayRef<minidump::MemoryDescriptor_64> Descriptors);
+
   const minidump::Header &Header;
   ArrayRef<minidump::Directory> Streams;
   DenseMap<minidump::StreamType, std::size_t> StreamMap;
+  std::unordered_map<uint64_t, uint64_t> Memory64DescriptorToRvaMap;
 };
 
 template <typename T>

@@ -156,16 +156,46 @@ MinidumpFile::create(MemoryBufferRef Source) {
       new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
 }
 
-Expected<ArrayRef<MemoryDescriptor_64>> MinidumpFile::getMemory64List() const {
-  Expected<minidump::Memory64ListHeader> MemoryList64 = getMemoryList64Header();
-  if (!MemoryList64)
-    return MemoryList64.takeError();
+void MinidumpFile::cacheMemory64RVAs(
+    uint64_t BaseRVA, ArrayRef<minidump::MemoryDescriptor_64> Descriptors) {
+  // Check if we've already cached the RVAs for this list.
+  if (!Memory64DescriptorToRvaMap.empty())
+    return;
+
+  for (const auto &MD : Descriptors) {
+    Memory64DescriptorToRvaMap[MD.StartOfMemoryRange] = BaseRVA;
+    BaseRVA += MD.DataSize;
+  }
+}
+
+Expected<ArrayRef<MemoryDescriptor_64>> MinidumpFile::getMemory64List() {
+  Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
+  if (!ListHeader)
+    return ListHeader.takeError();
 
   std::optional<ArrayRef<uint8_t>> Stream =
       getRawStream(StreamType::Memory64List);
   if (!Stream)
     return createError("No such stream");
 
-  return getDataSliceAs<minidump::MemoryDescriptor_64>(
-      *Stream, sizeof(Memory64ListHeader), MemoryList64->NumberOfMemoryRanges);
+  Expected<ArrayRef<minidump::MemoryDescriptor_64>> Descriptors =
+      getDataSliceAs<minidump::MemoryDescriptor_64>(
+          *Stream, sizeof(Memory64ListHeader),
+          ListHeader->NumberOfMemoryRanges);
+
+  if (!Descriptors)
+    return Descriptors.takeError();
+
+  cacheMemory64RVAs(ListHeader->NumberOfMemoryRanges, *Descriptors);
+  return Descriptors;
+}
+
+Expected<ArrayRef<uint8_t>>
+MinidumpFile::getRawData(MemoryDescriptor_64 MD) const {
+  if (Memory64DescriptorToRvaMap.count(MD.StartOfMemoryRange) > 0) {
+    uint64_t RVA = Memory64DescriptorToRvaMap.at(MD.StartOfMemoryRange);
+    return getDataSlice(getData(), RVA, MD.DataSize);
+  }
+
+  return createError("No such Memory Descriptor64.");
 }

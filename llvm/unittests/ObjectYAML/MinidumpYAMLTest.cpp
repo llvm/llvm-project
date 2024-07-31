@@ -336,3 +336,51 @@ Streams:
                                0xab, 0xad, 0xca, 0xfe}),
             *ExpectedContext);
 }
+
+TEST(MinidumpYAML, MemoryRegion_64bit) {
+  SmallString<0> Storage;
+  auto ExpectedFile = toBinary(Storage, R"(
+--- !minidump
+Streams:
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x7FFFFFCF0818283
+        Data Size:             8
+        Content:               '68656c6c6f'
+      - Start of Memory Range: 0x7FFFFFFF0818283
+        Data Size:             8
+        Content:               '776f726c64'
+        )");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  object::MinidumpFile &File = **ExpectedFile;
+
+  ASSERT_EQ(1u, File.streams().size());
+
+  Expected<ArrayRef<minidump::MemoryDescriptor_64>> ExpectedMemoryList =
+      File.getMemory64List();
+
+  ASSERT_THAT_EXPECTED(ExpectedMemoryList, Succeeded());
+
+  ArrayRef<minidump::MemoryDescriptor_64> MemoryList = *ExpectedMemoryList;
+  ASSERT_EQ(2u, MemoryList.size());
+
+  const minidump::MemoryDescriptor_64 &DescOne = MemoryList[0];
+  ASSERT_EQ(0x7FFFFFCF0818283u, DescOne.StartOfMemoryRange);
+  ASSERT_EQ(8u, DescOne.DataSize);
+
+  const minidump::MemoryDescriptor_64 &DescTwo = MemoryList[1];
+  ASSERT_EQ(0x7FFFFFFF0818283u, DescTwo.StartOfMemoryRange);
+  ASSERT_EQ(8u, DescTwo.DataSize);
+
+  const std::optional<ArrayRef<uint8_t>> ExpectedContent =
+      File.getRawStream(StreamType::Memory64List);
+  ASSERT_TRUE(ExpectedContent);
+  const ArrayRef<uint8_t> Content = *ExpectedContent;
+  const size_t offset =
+      sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
+  const uint64_t *Array =
+      reinterpret_cast<const uint64_t *>(Content.slice(offset, 16).data(), 16);
+  ASSERT_EQ(0x7000000000002Au, Array[0]);
+  ASSERT_EQ(0x7000A00000000Au, Array[1]);
+}

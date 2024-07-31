@@ -260,10 +260,10 @@ void yaml::MappingTraits<MemoryInfo>::mapping(IO &IO, MemoryInfo &Info) {
   mapOptionalHex(IO, "Reserved1", Info.Reserved1, 0);
 }
 
-void yaml::MappingTraits<MemoryDescriptor_64>::mapping(
-    IO &IO, MemoryDescriptor_64 &Mem) {
-  mapRequiredHex(IO, "Start of memory range", Mem.StartOfMemoryRange);
-  mapRequiredHex(IO, "Data Size", Mem.DataSize);
+void yaml::MappingTraits<Memory64ListStream::entry_type>::mapping(
+    IO &IO, Memory64ListStream::entry_type &Mem) {
+  MappingContextTraits<MemoryDescriptor_64, yaml::BinaryRef>::mapping(
+      IO, Mem.Entry, Mem.Content);
 }
 
 void yaml::MappingTraits<VSFixedFileInfo>::mapping(IO &IO,
@@ -373,6 +373,7 @@ void yaml::MappingContextTraits<MemoryDescriptor, yaml::BinaryRef>::mapping(
 void yaml::MappingContextTraits<MemoryDescriptor_64, yaml::BinaryRef>::mapping(
     IO &IO, MemoryDescriptor_64 &Memory, BinaryRef &Content) {
   mapRequiredHex(IO, "Start of Memory Range", Memory.StartOfMemoryRange);
+  mapRequiredHex(IO, "Data Size", Memory.DataSize);
   IO.mapRequired("Content", Content);
 }
 
@@ -483,8 +484,8 @@ void yaml::MappingTraits<Object>::mapping(IO &IO, Object &O) {
   IO.mapRequired("Streams", O.Streams);
 }
 
-Expected<std::unique_ptr<Stream>>
-Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
+Expected<std::unique_ptr<Stream>> Stream::create(const Directory &StreamDesc,
+                                                 object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
   case StreamKind::Exception: {
@@ -522,9 +523,12 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     auto ExpectedList = File.getMemory64List();
     if (!ExpectedList)
       return ExpectedList.takeError();
-    std::vector<MemoryDescriptor_64> Ranges;
+    std::vector<Memory64ListStream::entry_type> Ranges;
     for (const MemoryDescriptor_64 &MD : *ExpectedList) {
-      Ranges.push_back(MD);
+      auto ExpectedContent = File.getRawData(MD);
+      if (!ExpectedContent)
+        return ExpectedContent.takeError();
+      Ranges.push_back({MD, *ExpectedContent});
     }
     return std::make_unique<Memory64ListStream>(std::move(Ranges));
   }
@@ -584,7 +588,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   llvm_unreachable("Unhandled stream kind!");
 }
 
-Expected<Object> Object::create(const object::MinidumpFile &File) {
+Expected<Object> Object::create(object::MinidumpFile &File) {
   std::vector<std::unique_ptr<Stream>> Streams;
   Streams.reserve(File.streams().size());
   for (const Directory &StreamDesc : File.streams()) {
