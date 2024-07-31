@@ -1,14 +1,14 @@
 // RUN: llvm-mc -filetype=obj -triple i386 %s -o - | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
-/// This is a case where the computed layout is not optimal. The
+// This is a case where llvm-mc computes a better layout than Darwin 'as'. This
 // issue is that after the first jmp slides, the .align size must be
 // recomputed -- otherwise the second jump will appear to be out-of-range for a
 // 1-byte jump.
 
 // CHECK:            int3
-// CHECK-NEXT:  d2:  int3
-// CHECK:       e0:  pushal
-// CHECK:      140:  jl      0xe0
+// CHECK-NEXT:  ce:  int3
+// CHECK:       d0:  pushal
+// CHECK:      130:  jl      0xd0
 
 L0:
         .space 0x8a, 0x90
