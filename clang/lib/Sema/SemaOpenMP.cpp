@@ -5763,8 +5763,6 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
   if (S.getLangOpts().OpenMP < 50)
     return;
   SmallVector<OMPClause *, 4> ImplicitMaps;
-  SmallVector<OMPClause *, 4> ClausesNeedImplicitMapper;
-  llvm::DenseMap<const Expr *, QualType> ExprsNeedMapper;
   for (int Cnt = 0, EndCnt = Clauses.size(); Cnt < EndCnt; ++Cnt) {
     auto *C = dyn_cast<OMPMapClause>(Clauses[Cnt]);
     if (!C)
