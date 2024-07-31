@@ -24,13 +24,10 @@ static void insertCallAtFunctionEntryPoint(Function &Fn,
 
 static void insertCallAtAllFunctionExitPoints(Function &Fn,
                                               const char *InsertFnName) {
-  for (auto &BB : Fn) {
-    for (auto &I : BB) {
-      if (auto *RI = dyn_cast<ReturnInst>(&I)) {
+  for (auto &BB : Fn)
+    for (auto &I : BB)
+      if (auto *RI = dyn_cast<ReturnInst>(&I))
         insertCallBeforeInstruction(Fn, I, InsertFnName);
-      }
-    }
-  }
 }
 
 RealtimeSanitizerPass::RealtimeSanitizerPass(

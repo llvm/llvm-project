@@ -1,5 +1,4 @@
-//=- RealtimeSanitizer.h - RealtimeSanitizer instrumentation ----*- C++ -*-==//
-//-*-===//
+//===- RealtimeSanitizer.h - RealtimeSanitizer instrumentation --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// This file is a part of the RealtimeSanitizer, an LLVM transformation for
+// detecting and reporting realtime safety violations.
+//
+// The instrumentation pass inserts calls to __rtsan_realtime_enter and
+// __rtsan_realtime_exit at the entry and exit points of functions that are
+// marked with the appropriate attribute.
+//
+// See also: llvm-project/compiler-rt/lib/rtsan/
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_REALTIMESANITIZER_H
