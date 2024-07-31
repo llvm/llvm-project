@@ -8097,7 +8097,7 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 } // let Visibility = [CC1Option]
 
 defm err_pragma_mc_func_aix : BoolFOption<"err-pragma-mc-func-aix",
-  PreprocessorOpts<"ErrorOnPragmaMcfuncOnAIX">, DefaultFalse,
+  PreprocessorOpts<"ErrorOnPragmaMcfuncOnAIX">, DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Treat uses of #pragma mc_func as errors">,
   NegFlag<SetFalse,[], [ClangOption, CC1Option],
