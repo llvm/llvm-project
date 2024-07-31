@@ -1193,18 +1193,22 @@ CallInst *InstrLowerer::getRMWOrCall(Value *Addr, Value *Val) {
 
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
+  if (!isRuntimeCounterRelocationEnabled())
+    return Bitmaps;
+
+  // Put BiasLI onto the entry block.
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  Function *Fn = I->getFunction();
+  IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
+  auto *Bias = getOrCreateBiasVar(getInstrProfBitmapBiasVarName());
+  auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");
+  // Assume BiasLI invariant (in the function at least)
+  BiasLI->setMetadata(LLVMContext::MD_invariant_load,
+                      MDNode::get(M.getContext(), std::nullopt));
+
+  // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);
-
-  if (isRuntimeCounterRelocationEnabled()) {
-    LLVMContext &Ctx = M.getContext();
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M.getName().data(),
-        Twine("Runtime counter relocation is presently not supported for MC/DC "
-              "bitmaps."),
-        DS_Warning));
-  }
-
-  return Bitmaps;
+  return Builder.CreatePtrAdd(Bitmaps, BiasLI, "profbm_addr");
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {

@@ -1453,3 +1453,16 @@ if (NOT ROCM_LLVM_BACKWARD_COMPAT_LINK STREQUAL "" AND
                 ${ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET} \
                 ${ROCM_LLVM_BACKWARD_COMPAT_LINK})")
 endif()
+
+if (XCODE)
+  # For additional targets that you would like to add schemes, specify e.g:
+  #
+  #   -DLLVM_XCODE_EXTRA_TARGET_SCHEMES="TargetParserTests;SupportTests"
+  #
+  # at CMake configure time.
+  set(LLVM_XCODE_EXTRA_TARGET_SCHEMES "" CACHE STRING "Specifies an extra list of targets to turn into schemes")
+
+  foreach(target ${LLVM_XCODE_EXTRA_TARGET_SCHEMES})
+    set_target_properties(${target} PROPERTIES XCODE_GENERATE_SCHEME ON)
+  endforeach()
+endif()
