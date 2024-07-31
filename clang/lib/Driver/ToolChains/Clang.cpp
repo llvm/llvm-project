@@ -7381,7 +7381,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdelayed-template-parsing");
   }
 
-  // -fno-ms-reference-binding is the default.
   if (Args.hasFlag(options::OPT_fms_reference_binding,
                    options::OPT_fno_ms_reference_binding,
                    IsWindowsMSVC && !HaveCxx20))
