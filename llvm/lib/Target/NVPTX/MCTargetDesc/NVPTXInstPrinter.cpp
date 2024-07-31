@@ -229,8 +229,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     const MCOperand &MO = MI->getOperand(OpNum);
     int Imm = (int) MO.getImm();
     if (!strcmp(Modifier, "sem")) {
-      auto Ordering =
-          NVPTX::Ordering(static_cast<NVPTX::OrderingUnderlyingType>(Imm));
+      auto Ordering = NVPTX::Ordering(Imm);
       switch (Ordering) {
       case NVPTX::Ordering::NotAtomic:
         break;

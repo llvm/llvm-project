@@ -718,12 +718,10 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
 namespace {
 
 struct OperationOrderings {
-  NVPTX::OrderingUnderlyingType InstrOrdering;
-  NVPTX::OrderingUnderlyingType FenceOrdering;
-  OperationOrderings(NVPTX::Ordering O = NVPTX::Ordering::NotAtomic,
-                     NVPTX::Ordering F = NVPTX::Ordering::NotAtomic)
-      : InstrOrdering(static_cast<NVPTX::OrderingUnderlyingType>(O)),
-        FenceOrdering(static_cast<NVPTX::OrderingUnderlyingType>(F)) {}
+  NVPTX::Ordering InstructionOrdering, FenceOrdering;
+  OperationOrderings(NVPTX::Ordering IO = NVPTX::Ordering::NotAtomic,
+                     NVPTX::Ordering FO = NVPTX::Ordering::NotAtomic)
+      : InstructionOrdering(IO), FenceOrdering(FO) {}
 };
 
 static OperationOrderings

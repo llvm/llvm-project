@@ -106,9 +106,10 @@ enum LoadStore {
   isStoreShift = 6
 };
 
-// Extends LLVM AtomicOrdering with PTX Orderings:
+// Extends LLVM AtomicOrdering with PTX Orderings.
+// Values match LLVM AtomicOrdering for common orderings.
 using OrderingUnderlyingType = unsigned int;
-enum class Ordering : OrderingUnderlyingType {
+enum Ordering : OrderingUnderlyingType {
   NotAtomic = 0, // PTX calls these: "Weak"
   // Unordered = 1, // NVPTX maps LLVM Unorderd to Relaxed
   Relaxed = 2,
