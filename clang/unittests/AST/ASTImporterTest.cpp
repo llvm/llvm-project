@@ -9376,29 +9376,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, VaListCpp) {
       ToVaList->getUnderlyingType(), ToBuiltinVaList->getUnderlyingType()));
 }
 
-TEST_P(ASTImporterOptionSpecificTestBase,
-       ImportDefinitionOfEmptyClassWithNoUniqueAddressField) {
-  Decl *FromTU = getTuDecl(
-      R"(
-      struct B {};
-      struct A { B b; };
-      )",
-      Lang_CXX20);
-
-  CXXRecordDecl *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
-      FromTU, cxxRecordDecl(hasName("A")));
-
-  for (auto *FD : FromD->fields())
-    FD->addAttr(clang::NoUniqueAddressAttr::Create(FromD->getASTContext(),
-                                                   clang::SourceRange()));
-  FromD->markEmpty();
-
-  CXXRecordDecl *ToD = Import(FromD, Lang_CXX20);
-  EXPECT_TRUE(ToD->isEmpty());
-  for (auto *FD : ToD->fields())
-    EXPECT_EQ(true, FD->hasAttr<NoUniqueAddressAttr>());
-}
-
 TEST_P(ASTImporterOptionSpecificTestBase, ImportExistingTypedefToRecord) {
   const char *Code =
       R"(
@@ -9820,6 +9797,128 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportMultipleAnonymousEnumDecls) {
   ASSERT_NE(ToEnumDeclA, ToEnumDeclB);
 }
 
+struct ImportTemplateParmDeclDefaultValue
+    : public ASTImporterOptionSpecificTestBase {
+protected:
+  void checkTemplateParams(RedeclarableTemplateDecl *D) {
+    auto *CanD = cast<RedeclarableTemplateDecl>(D->getCanonicalDecl());
+    auto *CanNonTypeP = cast<NonTypeTemplateParmDecl>(
+        CanD->getTemplateParameters()->getParam(0));
+    auto *CanTypeP =
+        cast<TemplateTypeParmDecl>(CanD->getTemplateParameters()->getParam(1));
+    auto *CanTemplateP = cast<TemplateTemplateParmDecl>(
+        CanD->getTemplateParameters()->getParam(2));
+    EXPECT_FALSE(CanNonTypeP->getDefaultArgStorage().isInherited());
+    EXPECT_FALSE(CanTypeP->getDefaultArgStorage().isInherited());
+    EXPECT_FALSE(CanTemplateP->getDefaultArgStorage().isInherited());
+    for (Decl *Redecl : D->redecls()) {
+      auto *ReD = cast<RedeclarableTemplateDecl>(Redecl);
+      if (ReD != CanD) {
+        auto *NonTypeP = cast<NonTypeTemplateParmDecl>(
+            ReD->getTemplateParameters()->getParam(0));
+        auto *TypeP = cast<TemplateTypeParmDecl>(
+            ReD->getTemplateParameters()->getParam(1));
+        auto *TemplateP = cast<TemplateTemplateParmDecl>(
+            ReD->getTemplateParameters()->getParam(2));
+        EXPECT_TRUE(NonTypeP->getDefaultArgStorage().isInherited());
+        EXPECT_TRUE(TypeP->getDefaultArgStorage().isInherited());
+        EXPECT_TRUE(TemplateP->getDefaultArgStorage().isInherited());
+        EXPECT_EQ(NonTypeP->getDefaultArgStorage().getInheritedFrom(),
+                  CanNonTypeP);
+        EXPECT_EQ(TypeP->getDefaultArgStorage().getInheritedFrom(), CanTypeP);
+        EXPECT_EQ(TemplateP->getDefaultArgStorage().getInheritedFrom(),
+                  CanTemplateP);
+      }
+    }
+  }
+
+  void testImport(RedeclarableTemplateDecl *FromD) {
+    RedeclarableTemplateDecl *ToD = Import(FromD, Lang_CXX14);
+    checkTemplateParams(ToD);
+  }
+
+  const char *CodeFunction =
+      R"(
+      template <class> struct X;
+
+      template <int A = 2, typename B = int, template<class> class C = X>
+      void f();
+      template <int A, typename B, template<class> class C>
+      void f();
+      template <int A, typename B, template<class> class C>
+      void f() {}
+      )";
+
+  const char *CodeClass =
+      R"(
+      template <class> struct X;
+
+      template <int A = 2, typename B = int, template<class> class C = X>
+      struct S;
+      template <int A, typename B, template<class> class C>
+      struct S;
+      template <int A, typename B, template<class> class C>
+      struct S {};
+      )";
+
+  const char *CodeVar =
+      R"(
+      template <class> struct X;
+
+      template <int A = 2, typename B = int, template<class> class C = X>
+      extern int V;
+      template <int A, typename B, template<class> class C>
+      extern int V;
+      template <int A, typename B, template<class> class C>
+      int V = A;
+      )";
+};
+
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportFunctionTemplate) {
+  Decl *FromTU = getTuDecl(CodeFunction, Lang_CXX14);
+  auto *FromLastD = LastDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(hasName("f")));
+  testImport(FromLastD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingFunctionTemplate) {
+  getToTuDecl(CodeFunction, Lang_CXX14);
+  Decl *FromTU = getTuDecl(CodeFunction, Lang_CXX14);
+  auto *FromLastD = LastDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(hasName("f")));
+  testImport(FromLastD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportClassTemplate) {
+  Decl *FromTU = getTuDecl(CodeClass, Lang_CXX14);
+  auto *FromLastD = LastDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("S")));
+  testImport(FromLastD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingClassTemplate) {
+  getToTuDecl(CodeClass, Lang_CXX14);
+  Decl *FromTU = getTuDecl(CodeClass, Lang_CXX14);
+  auto *FromLastD = LastDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("S")));
+  testImport(FromLastD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportVarTemplate) {
+  Decl *FromTU = getTuDecl(CodeVar, Lang_CXX14);
+  auto *FromLastD = LastDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("V")));
+  testImport(FromLastD);
+}
+
+TEST_P(ImportTemplateParmDeclDefaultValue, ImportExistingVarTemplate) {
+  getToTuDecl(CodeVar, Lang_CXX14);
+  Decl *FromTU = getTuDecl(CodeVar, Lang_CXX14);
+  auto *FromLastD = LastDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("V")));
+  testImport(FromLastD);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
@@ -9901,6 +10000,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportInjectedClassNameType,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,
                          DefaultTestValuesForRunOptions);
 
 // FIXME: Make ImportOpenCLPipe test work.

@@ -24,14 +24,14 @@ namespace dxil {
 
 class ResourceInfo {
   struct ResourceBinding {
-    uint32_t UniqueID;
+    uint32_t RecordID;
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t Size;
 
     bool operator==(const ResourceBinding &RHS) const {
-      return std::tie(UniqueID, Space, LowerBound, Size) ==
-             std::tie(RHS.UniqueID, RHS.Space, RHS.LowerBound, RHS.Size);
+      return std::tie(RecordID, Space, LowerBound, Size) ==
+             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool operator!=(const ResourceBinding &RHS) const {
       return !(*this == RHS);
@@ -52,10 +52,14 @@ class ResourceInfo {
 
   struct StructInfo {
     uint32_t Stride;
-    MaybeAlign Alignment;
+    // Note: we store an integer here rather than using `MaybeAlign` because in
+    // GCC 7 MaybeAlign isn't trivial so having one in this union would delete
+    // our move constructor.
+    // See https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0602r4.html
+    uint32_t AlignLog2;
 
     bool operator==(const StructInfo &RHS) const {
-      return std::tie(Stride, Alignment) == std::tie(RHS.Stride, RHS.Alignment);
+      return std::tie(Stride, AlignLog2) == std::tie(RHS.Stride, RHS.AlignLog2);
     }
     bool operator!=(const StructInfo &RHS) const { return !(*this == RHS); }
   };
@@ -125,9 +129,9 @@ public:
   bool isFeedback() const;
   bool isMultiSample() const;
 
-  void bind(uint32_t UniqueID, uint32_t Space, uint32_t LowerBound,
+  void bind(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
             uint32_t Size) {
-    Binding.UniqueID = UniqueID;
+    Binding.RecordID = RecordID;
     Binding.Space = Space;
     Binding.LowerBound = LowerBound;
     Binding.Size = Size;
@@ -142,13 +146,11 @@ public:
     assert(isCBuffer() && "Not a CBuffer");
     CBufferSize = Size;
   }
-  void setSampler(dxil::SamplerType Ty) {
-    SamplerTy = Ty;
-  }
+  void setSampler(dxil::SamplerType Ty) { SamplerTy = Ty; }
   void setStruct(uint32_t Stride, MaybeAlign Alignment) {
     assert(isStruct() && "Not a Struct");
     Struct.Stride = Stride;
-    Struct.Alignment = Alignment;
+    Struct.AlignLog2 = Alignment ? Log2(*Alignment) : 0;
   }
   void setTyped(dxil::ElementType ElementTy, uint32_t ElementCount) {
     assert(isTyped() && "Not Typed");

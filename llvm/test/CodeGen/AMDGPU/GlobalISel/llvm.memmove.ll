@@ -9,56 +9,71 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[0:1]
 ; LOOP-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; LOOP-NEXT:    s_xor_b64 s[4:5], exec, s[0:1]
-; LOOP-NEXT:    s_cbranch_execz .LBB0_3
-; LOOP-NEXT:  ; %bb.1: ; %copy_forward
-; LOOP-NEXT:    s_mov_b64 s[6:7], 0
-; LOOP-NEXT:    s_mov_b32 s2, 0
-; LOOP-NEXT:    s_mov_b32 s3, 0xf000
-; LOOP-NEXT:    s_mov_b64 s[0:1], 0
-; LOOP-NEXT:    v_mov_b32_e32 v4, s6
-; LOOP-NEXT:    v_mov_b32_e32 v5, s7
-; LOOP-NEXT:  .LBB0_2: ; %copy_forward_loop
-; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4
-; LOOP-NEXT:    v_addc_u32_e32 v7, vcc, v3, v5, vcc
-; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    buffer_load_ubyte v8, v[6:7], s[0:3], 0 addr64
-; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v0, v4
-; LOOP-NEXT:    v_addc_u32_e32 v7, vcc, v1, v5, vcc
-; LOOP-NEXT:    v_add_i32_e32 v4, vcc, 1, v4
-; LOOP-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
-; LOOP-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v4
-; LOOP-NEXT:    s_waitcnt vmcnt(0)
-; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64
-; LOOP-NEXT:    s_cbranch_vccnz .LBB0_2
-; LOOP-NEXT:  .LBB0_3: ; %Flow17
-; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[4:5]
-; LOOP-NEXT:    s_cbranch_execz .LBB0_6
-; LOOP-NEXT:  ; %bb.4: ; %copy_backwards
-; LOOP-NEXT:    v_add_i32_e32 v0, vcc, 3, v0
-; LOOP-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; LOOP-NEXT:    v_add_i32_e32 v2, vcc, 3, v2
-; LOOP-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; LOOP-NEXT:    s_mov_b32 s0, -4
+; LOOP-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
+; LOOP-NEXT:    s_cbranch_execnz .LBB0_3
+; LOOP-NEXT:  ; %bb.1: ; %Flow
+; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
+; LOOP-NEXT:    s_cbranch_execnz .LBB0_4
+; LOOP-NEXT:  .LBB0_2: ; %memmove_done
+; LOOP-NEXT:    s_endpgm
+; LOOP-NEXT:  .LBB0_3:
 ; LOOP-NEXT:    s_mov_b32 s6, 0
 ; LOOP-NEXT:    s_mov_b32 s7, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[4:5], 0
-; LOOP-NEXT:    v_mov_b32_e32 v4, s0
-; LOOP-NEXT:  .LBB0_5: ; %copy_backwards_loop
-; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    buffer_load_ubyte v5, v[2:3], s[4:7], 0 addr64
-; LOOP-NEXT:    v_add_i32_e32 v4, vcc, 1, v4
-; LOOP-NEXT:    s_and_b64 vcc, vcc, exec
+; LOOP-NEXT:    buffer_load_ubyte v4, v[2:3], s[4:7], 0 addr64 offset:1
+; LOOP-NEXT:    buffer_load_ubyte v5, v[2:3], s[4:7], 0 addr64 offset:3
+; LOOP-NEXT:    buffer_load_ubyte v6, v[2:3], s[4:7], 0 addr64 offset:2
+; LOOP-NEXT:    buffer_load_ubyte v2, v[2:3], s[4:7], 0 addr64
+; LOOP-NEXT:    s_waitcnt vmcnt(3)
+; LOOP-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
+; LOOP-NEXT:    s_waitcnt vmcnt(2)
+; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 24, v5
+; LOOP-NEXT:    s_waitcnt vmcnt(1)
+; LOOP-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
 ; LOOP-NEXT:    s_waitcnt vmcnt(0)
-; LOOP-NEXT:    buffer_store_byte v5, v[0:1], s[4:7], 0 addr64
-; LOOP-NEXT:    v_add_i32_e64 v0, s[0:1], -1, v0
-; LOOP-NEXT:    v_addc_u32_e64 v1, s[0:1], -1, v1, s[0:1]
-; LOOP-NEXT:    v_add_i32_e64 v2, s[0:1], -1, v2
-; LOOP-NEXT:    v_addc_u32_e64 v3, s[0:1], -1, v3, s[0:1]
-; LOOP-NEXT:    s_cbranch_vccz .LBB0_5
-; LOOP-NEXT:  .LBB0_6: ; %memmove_done
+; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
+; LOOP-NEXT:    v_or_b32_e32 v3, v4, v5
+; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; LOOP-NEXT:    v_bfe_u32 v4, v2, 8, 8
+; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64
+; LOOP-NEXT:    s_waitcnt expcnt(0)
+; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
+; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[4:7], 0 addr64 offset:1
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[4:7], 0 addr64 offset:2
+; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64 offset:3
+; LOOP-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; LOOP-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
+; LOOP-NEXT:    s_cbranch_execz .LBB0_2
+; LOOP-NEXT:  .LBB0_4: ; %memmove_bwd_residual
+; LOOP-NEXT:    s_mov_b32 s2, 0
+; LOOP-NEXT:    s_mov_b32 s3, 0xf000
+; LOOP-NEXT:    s_mov_b64 s[0:1], 0
+; LOOP-NEXT:    s_waitcnt expcnt(2)
+; LOOP-NEXT:    buffer_load_ubyte v4, v[2:3], s[0:3], 0 addr64 offset:1
+; LOOP-NEXT:    buffer_load_ubyte v5, v[2:3], s[0:3], 0 addr64 offset:3
+; LOOP-NEXT:    buffer_load_ubyte v6, v[2:3], s[0:3], 0 addr64 offset:2
+; LOOP-NEXT:    s_waitcnt expcnt(0)
+; LOOP-NEXT:    buffer_load_ubyte v2, v[2:3], s[0:3], 0 addr64
+; LOOP-NEXT:    s_waitcnt vmcnt(3)
+; LOOP-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
+; LOOP-NEXT:    s_waitcnt vmcnt(2)
+; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 24, v5
+; LOOP-NEXT:    s_waitcnt vmcnt(1)
+; LOOP-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; LOOP-NEXT:    s_waitcnt vmcnt(0)
+; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
+; LOOP-NEXT:    v_or_b32_e32 v3, v4, v5
+; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; LOOP-NEXT:    v_bfe_u32 v4, v2, 8, 8
+; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64
+; LOOP-NEXT:    s_waitcnt expcnt(0)
+; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
+; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:1
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:2
+; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
 ; LOOP-NEXT:    s_endpgm
 ;
 ; UNROLL-LABEL: memmove_p1i8:

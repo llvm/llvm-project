@@ -23,6 +23,131 @@
 using namespace llvm;
 using namespace dxil;
 
+static constexpr StringRef getResourceClassName(ResourceClass RC) {
+  switch (RC) {
+  case ResourceClass::SRV:
+    return "SRV";
+  case ResourceClass::UAV:
+    return "UAV";
+  case ResourceClass::CBuffer:
+    return "CBuffer";
+  case ResourceClass::Sampler:
+    return "Sampler";
+  }
+  llvm_unreachable("Unhandled ResourceClass");
+}
+
+static constexpr StringRef getResourceKindName(ResourceKind RK) {
+  switch (RK) {
+  case ResourceKind::Texture1D:
+    return "Texture1D";
+  case ResourceKind::Texture2D:
+    return "Texture2D";
+  case ResourceKind::Texture2DMS:
+    return "Texture2DMS";
+  case ResourceKind::Texture3D:
+    return "Texture3D";
+  case ResourceKind::TextureCube:
+    return "TextureCube";
+  case ResourceKind::Texture1DArray:
+    return "Texture1DArray";
+  case ResourceKind::Texture2DArray:
+    return "Texture2DArray";
+  case ResourceKind::Texture2DMSArray:
+    return "Texture2DMSArray";
+  case ResourceKind::TextureCubeArray:
+    return "TextureCubeArray";
+  case ResourceKind::TypedBuffer:
+    return "TypedBuffer";
+  case ResourceKind::RawBuffer:
+    return "RawBuffer";
+  case ResourceKind::StructuredBuffer:
+    return "StructuredBuffer";
+  case ResourceKind::CBuffer:
+    return "CBuffer";
+  case ResourceKind::Sampler:
+    return "Sampler";
+  case ResourceKind::TBuffer:
+    return "TBuffer";
+  case ResourceKind::RTAccelerationStructure:
+    return "RTAccelerationStructure";
+  case ResourceKind::FeedbackTexture2D:
+    return "FeedbackTexture2D";
+  case ResourceKind::FeedbackTexture2DArray:
+    return "FeedbackTexture2DArray";
+  case ResourceKind::NumEntries:
+  case ResourceKind::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ResourceKind");
+}
+
+static constexpr StringRef getElementTypeName(ElementType ET) {
+  switch (ET) {
+  case ElementType::I1:
+    return "i1";
+  case ElementType::I16:
+    return "i16";
+  case ElementType::U16:
+    return "u16";
+  case ElementType::I32:
+    return "i32";
+  case ElementType::U32:
+    return "u32";
+  case ElementType::I64:
+    return "i64";
+  case ElementType::U64:
+    return "u64";
+  case ElementType::F16:
+    return "f16";
+  case ElementType::F32:
+    return "f32";
+  case ElementType::F64:
+    return "f64";
+  case ElementType::SNormF16:
+    return "snorm_f16";
+  case ElementType::UNormF16:
+    return "unorm_f16";
+  case ElementType::SNormF32:
+    return "snorm_f32";
+  case ElementType::UNormF32:
+    return "unorm_f32";
+  case ElementType::SNormF64:
+    return "snorm_f64";
+  case ElementType::UNormF64:
+    return "unorm_f64";
+  case ElementType::PackedS8x32:
+    return "p32i8";
+  case ElementType::PackedU8x32:
+    return "p32u8";
+  case ElementType::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ElementType");
+}
+
+static constexpr StringRef getSamplerTypeName(SamplerType ST) {
+  switch (ST) {
+  case SamplerType::Default:
+    return "Default";
+  case SamplerType::Comparison:
+    return "Comparison";
+  case SamplerType::Mono:
+    return "Mono";
+  }
+  llvm_unreachable("Unhandled SamplerType");
+}
+
+static constexpr StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
+  switch (SFT) {
+  case SamplerFeedbackType::MinMip:
+    return "MinMip";
+  case SamplerFeedbackType::MipRegionUsed:
+    return "MipRegionUsed";
+  }
+  llvm_unreachable("Unhandled SamplerFeedbackType");
+}
+
 bool ResourceInfo::isUAV() const { return RC == ResourceClass::UAV; }
 
 bool ResourceInfo::isCBuffer() const { return RC == ResourceClass::CBuffer; }
@@ -245,7 +370,7 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
         Constant::getIntegerValue(I1Ty, APInt(1, V)));
   };
 
-  MDVals.push_back(getIntMD(Binding.UniqueID));
+  MDVals.push_back(getIntMD(Binding.RecordID));
   MDVals.push_back(ValueAsMetadata::get(Symbol));
   MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
@@ -295,8 +420,7 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
 
 std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   uint32_t ResourceKind = llvm::to_underlying(Kind);
-  uint32_t AlignLog2 =
-      isStruct() && Struct.Alignment ? Log2(*Struct.Alignment) : 0;
+  uint32_t AlignLog2 = isStruct() ? Struct.AlignLog2 : 0;
   bool IsUAV = isUAV();
   bool IsROV = IsUAV && UAVFlags.IsROV;
   bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
@@ -343,17 +467,17 @@ void ResourceInfo::print(raw_ostream &OS) const {
 
   OS << "  Name: \"" << Name << "\"\n"
      << "  Binding:\n"
-     << "    Unique ID: " << Binding.UniqueID << "\n"
+     << "    Record ID: " << Binding.RecordID << "\n"
      << "    Space: " << Binding.Space << "\n"
      << "    Lower Bound: " << Binding.LowerBound << "\n"
      << "    Size: " << Binding.Size << "\n"
-     << "  Class: " << static_cast<unsigned>(RC) << "\n"
-     << "  Kind: " << static_cast<unsigned>(Kind) << "\n";
+     << "  Class: " << getResourceClassName(RC) << "\n"
+     << "  Kind: " << getResourceKindName(Kind) << "\n";
 
   if (isCBuffer()) {
     OS << "  CBuffer size: " << CBufferSize << "\n";
   } else if (isSampler()) {
-    OS << "  Sampler Type: " << static_cast<unsigned>(SamplerTy) << "\n";
+    OS << "  Sampler Type: " << getSamplerTypeName(SamplerTy) << "\n";
   } else {
     if (isUAV()) {
       OS << "  Globally Coherent: " << UAVFlags.GloballyCoherent << "\n"
@@ -365,14 +489,13 @@ void ResourceInfo::print(raw_ostream &OS) const {
 
     if (isStruct()) {
       OS << "  Buffer Stride: " << Struct.Stride << "\n";
-      uint32_t AlignLog2 = Struct.Alignment ? Log2(*Struct.Alignment) : 0;
-      OS << "  Alignment: " << AlignLog2 << "\n";
+      OS << "  Alignment: " << Struct.AlignLog2 << "\n";
     } else if (isTyped()) {
-      OS << "  Element Type: " << static_cast<unsigned>(Typed.ElementTy) << "\n"
-         << "  Element Count: " << static_cast<unsigned>(Typed.ElementCount)
-         << "\n";
+      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy) << "\n"
+         << "  Element Count: " << Typed.ElementCount << "\n";
     } else if (isFeedback())
-      OS << "  Feedback Type: " << static_cast<unsigned>(Feedback.Type) << "\n";
+      OS << "  Feedback Type: " << getSamplerFeedbackTypeName(Feedback.Type)
+         << "\n";
   }
 }
 
@@ -413,7 +536,7 @@ class ResourceMapper {
   LLVMContext &Context;
   DXILResourceMap &Resources;
 
-  // Unique ID is per resource type to match DXC.
+  // In DXC, Record ID is unique per resource type. Match that.
   uint32_t NextUAV = 0;
   uint32_t NextSRV = 0;
   uint32_t NextCBuf = 0;

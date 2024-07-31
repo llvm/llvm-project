@@ -11,16 +11,16 @@ define void @test_typedbuffer() {
   ; CHECK:   Symbol: ptr undef
   ; CHECK:   Name: ""
   ; CHECK:   Binding:
-  ; CHECK:     Unique ID: 0
+  ; CHECK:     Record ID: 0
   ; CHECK:     Space: 3
   ; CHECK:     Lower Bound: 5
   ; CHECK:     Size: 1
-  ; CHECK:   Class: 1
-  ; CHECK:   Kind: 10
+  ; CHECK:   Class: UAV
+  ; CHECK:   Kind: TypedBuffer
   ; CHECK:   Globally Coherent: 0
   ; CHECK:   HasCounter: 0
   ; CHECK:   IsROV: 0
-  ; CHECK:   Element Type: 9
+  ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
 
   ; RWBuffer<int> Buf : register(u7, space2)
@@ -31,16 +31,16 @@ define void @test_typedbuffer() {
   ; CHECK:   Symbol: ptr undef
   ; CHECK:   Name: ""
   ; CHECK:   Binding:
-  ; CHECK:     Unique ID: 1
+  ; CHECK:     Record ID: 1
   ; CHECK:     Space: 2
   ; CHECK:     Lower Bound: 7
   ; CHECK:     Size: 1
-  ; CHECK:   Class: 1
-  ; CHECK:   Kind: 10
+  ; CHECK:   Class: UAV
+  ; CHECK:   Kind: TypedBuffer
   ; CHECK:   Globally Coherent: 0
   ; CHECK:   HasCounter: 0
   ; CHECK:   IsROV: 0
-  ; CHECK:   Element Type: 4
+  ; CHECK:   Element Type: i32
   ; CHECK:   Element Count: 1
 
   ; Buffer<uint4> Buf[24] : register(t3, space5)
@@ -51,13 +51,13 @@ define void @test_typedbuffer() {
   ; CHECK:   Symbol: ptr undef
   ; CHECK:   Name: ""
   ; CHECK:   Binding:
-  ; CHECK:     Unique ID: 0
+  ; CHECK:     Record ID: 0
   ; CHECK:     Space: 2
   ; CHECK:     Lower Bound: 7
   ; CHECK:     Size: 24
-  ; CHECK:   Class: 0
-  ; CHECK:   Kind: 10
-  ; CHECK:   Element Type: 5
+  ; CHECK:   Class: SRV
+  ; CHECK:   Kind: TypedBuffer
+  ; CHECK:   Element Type: u32
   ; CHECK:   Element Count: 4
 
   ret void
@@ -73,12 +73,12 @@ define void @test_structbuffer() {
   ; CHECK:   Symbol: ptr undef
   ; CHECK:   Name: ""
   ; CHECK:   Binding:
-  ; CHECK:     Unique ID: 1
+  ; CHECK:     Record ID: 1
   ; CHECK:     Space: 4
   ; CHECK:     Lower Bound: 2
   ; CHECK:     Size: 1
-  ; CHECK:   Class: 0
-  ; CHECK:   Kind: 12
+  ; CHECK:   Class: SRV
+  ; CHECK:   Kind: StructuredBuffer
   ; CHECK:   Buffer Stride: 32
   ; CHECK:   Alignment: 4
 
@@ -94,12 +94,12 @@ define void @test_bytebuffer() {
   ; CHECK:   Symbol: ptr undef
   ; CHECK:   Name: ""
   ; CHECK:   Binding:
-  ; CHECK:     Unique ID: 2
+  ; CHECK:     Record ID: 2
   ; CHECK:     Space: 1
   ; CHECK:     Lower Bound: 8
   ; CHECK:     Size: 1
-  ; CHECK:   Class: 0
-  ; CHECK:   Kind: 11
+  ; CHECK:   Class: SRV
+  ; CHECK:   Kind: RawBuffer
 
   ret void
 }
