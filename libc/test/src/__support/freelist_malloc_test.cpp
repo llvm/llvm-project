@@ -29,8 +29,8 @@ TEST(LlvmLibcFreeListMalloc, Malloc) {
   EXPECT_GE(block->inner_size(), kAllocSize);
 
   LIBC_NAMESPACE::free(ptr1);
-  ASSERT_NE(block->next(), static_cast<Block*>(nullptr));
-  ASSERT_EQ(block->next()->next(), static_cast<Block*>(nullptr));
+  ASSERT_NE(block->next(), static_cast<Block *>(nullptr));
+  ASSERT_EQ(block->next()->next(), static_cast<Block *>(nullptr));
   size_t heap_size = block->inner_size();
 
   void *ptr2 = LIBC_NAMESPACE::calloc(kCallocNum, kCallocSize);
@@ -47,7 +47,7 @@ TEST(LlvmLibcFreeListMalloc, Malloc) {
   void *ptr3 = LIBC_NAMESPACE::aligned_alloc(ALIGN, kAllocSize);
   EXPECT_NE(ptr3, static_cast<void *>(nullptr));
   EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr3) % ALIGN, size_t(0));
-  auto *aligned_block = reinterpret_cast<Block*>(ptr3);
+  auto *aligned_block = reinterpret_cast<Block *>(ptr3);
   EXPECT_GE(aligned_block->inner_size(), kAllocSize);
 
   LIBC_NAMESPACE::free(ptr3);

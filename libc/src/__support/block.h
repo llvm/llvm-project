@@ -353,7 +353,7 @@ Block<OffsetType, kAlign>::init(ByteSpan region) {
     return {};
 
   region = result.value();
-  if (region.size() < 2*BLOCK_OVERHEAD)
+  if (region.size() < 2 * BLOCK_OVERHEAD)
     return {};
 
   if (cpp::numeric_limits<OffsetType>::max() < region.size())
@@ -404,8 +404,8 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
                 "two blocks.");
 
     if (Block *prev = original->prev_free()) {
-      // If there is a free block before this, we can merge the current one with the
-      // newly created one.
+      // If there is a free block before this, we can merge the current one with
+      // the newly created one.
       prev->merge_next();
     } else {
       info.prev = original;
@@ -429,14 +429,14 @@ optional<Block<OffsetType, kAlign> *>
 Block<OffsetType, kAlign>::split(size_t new_inner_size) {
   if (used())
     return {};
-  // The prev_ field of the next block is always available, so there is a minimum size to
-  // a block created through splitting.
+  // The prev_ field of the next block is always available, so there is a
+  // minimum size to a block created through splitting.
   if (new_inner_size < sizeof(prev_))
     return {};
 
   size_t old_inner_size = inner_size();
-  new_inner_size = align_up(new_inner_size - sizeof(prev_), ALIGNMENT) +
-                   sizeof(prev_);
+  new_inner_size =
+      align_up(new_inner_size - sizeof(prev_), ALIGNMENT) + sizeof(prev_);
   if (old_inner_size < new_inner_size)
     return {};
 
@@ -496,8 +496,7 @@ constexpr Block<OffsetType, kAlign>::Block(size_t outer_size)
 }
 
 template <typename OffsetType, size_t kAlign>
-Block<OffsetType, kAlign> *
-Block<OffsetType, kAlign>::as_block(ByteSpan bytes) {
+Block<OffsetType, kAlign> *Block<OffsetType, kAlign>::as_block(ByteSpan bytes) {
   return ::new (bytes.data()) Block(bytes.size());
 }
 

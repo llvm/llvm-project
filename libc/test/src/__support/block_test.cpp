@@ -113,7 +113,8 @@ TEST_FOR_EACH_BLOCK_TYPE(CanSplitBlock) {
   auto *block2 = *result;
 
   EXPECT_EQ(block1->inner_size(), kSplitN);
-  EXPECT_EQ(block1->outer_size(), kSplitN - prev_field_size + BlockType::BLOCK_OVERHEAD);
+  EXPECT_EQ(block1->outer_size(),
+            kSplitN - prev_field_size + BlockType::BLOCK_OVERHEAD);
 
   EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
@@ -408,7 +409,7 @@ TEST_FOR_EACH_BLOCK_TYPE(CanAllocate) {
   constexpr size_t kN = 1024 + BlockType::BLOCK_OVERHEAD;
 
   // Ensure we can allocate everything up to the block size within this block.
-  for (size_t i = 0; i < kN - 2*BlockType::BLOCK_OVERHEAD; ++i) {
+  for (size_t i = 0; i < kN - 2 * BlockType::BLOCK_OVERHEAD; ++i) {
     alignas(BlockType::ALIGNMENT) array<byte, kN> bytes{};
     auto result = BlockType::init(bytes);
     ASSERT_TRUE(result.has_value());
