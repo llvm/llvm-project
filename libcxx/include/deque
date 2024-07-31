@@ -276,7 +276,7 @@ private:
   __map_iterator __m_iter_;
   pointer __ptr_;
 
-  static const difference_type __block_size;
+  static const difference_type __block_size = __deque_block_size<_ValueType, _DiffType>::value;
 
 public:
   typedef _ValueType value_type;
@@ -462,10 +462,6 @@ public:
   }
 };
 
-template <class _ValueType, class _Pointer, class _Reference, class _MapPointer, class _DiffType, _DiffType _BlockSize>
-const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, _DiffType, _BlockSize>::__block_size =
-    __deque_block_size<_ValueType, _DiffType>::value;
-
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS deque {
 public:
@@ -578,7 +574,7 @@ private:
     deque* const __base_;
   };
 
-  static const difference_type __block_size;
+  static const difference_type __block_size = __deque_block_size<value_type, difference_type>::value;
 
   __map __map_;
   size_type __start_;
@@ -1224,10 +1220,6 @@ private:
       _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
   _LIBCPP_HIDE_FROM_ABI void __move_assign(deque& __c, false_type);
 };
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR const typename allocator_traits<_Alloc>::difference_type deque<_Tp, _Alloc>::__block_size =
-    __deque_block_size<value_type, difference_type>::value;
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
