@@ -862,7 +862,9 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
       // Struct types up to 8 bytes are passed as integer type (which will be
       // properly aligned in the argument save area doubleword).
       CoerceTy = llvm::IntegerType::get(getVMContext(), GPRBits);
-    } else {
+    } else if (Bits > 64)
+      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+    else {
       // Larger types are passed as arrays, with the base type selected
       // according to the required alignment in the save area.
       uint64_t NumRegs = llvm::alignTo(Bits, GPRBits) / GPRBits;

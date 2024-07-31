@@ -58,7 +58,7 @@ vector unsigned int pass_vector(vector unsigned int arg) { return arg; };
 
 struct SingleVec { vector unsigned int v; };
 struct SingleVec pass_SingleVec_agg(struct SingleVec arg) { return arg; };
-// CHECKVEC-LABEL: define inreg [2 x i64] @pass_SingleVec_agg([2 x i64] %{{.*}})
+// CHECKVEC-LABEL: define inreg [2 x i64] @pass_SingleVec_agg(ptr byval(%struct.SingleVec) align 8 %{{.*}})
 #endif
 
 // Complex types
@@ -138,14 +138,14 @@ struct complexlike_float_padded1 {
   float y __attribute__((aligned(8)));
 };
 struct complexlike_float_padded1 pass_complexlike_float_padded1(struct complexlike_float_padded1 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded1([2 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded1(ptr byval(%struct.complexlike_float_padded1) align 8 %{{.*}})
 
 struct complexlike_float_padded2 {
   float x;
   float y;
 } __attribute__((aligned(16)));
 struct complexlike_float_padded2 pass_complexlike_float_padded2(struct complexlike_float_padded2 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded2([2 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded2(ptr byval(%struct.complexlike_float_padded2) align 16 %{{.*}})
 
 struct single_padded_struct {
   float f;
@@ -156,7 +156,7 @@ struct complexlike_float_padded3 {
   struct single_padded_struct y;
 };
 struct complexlike_float_padded3 pass_complexlike_float_padded3(struct complexlike_float_padded3 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded3([2 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded3(ptr byval(%struct.complexlike_float_padded3) align 4 %{{.*}})
 
 struct multi_element_float_arr { float f[2]; };
 struct complexlike_struct4 {
@@ -164,7 +164,7 @@ struct complexlike_struct4 {
   struct multi_element_float_arr y;
 };
 struct complexlike_struct4 pass_complexlike_struct4(struct complexlike_struct4 arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_struct4([2 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_struct4(ptr byval(%struct.complexlike_struct4) align 4 %{{.*}})
 
 typedef double align32_double __attribute__((aligned(32)));
 struct complexlike_double_padded {
@@ -172,7 +172,7 @@ struct complexlike_double_padded {
   double y;
 };
 struct complexlike_double_padded pass_complexlike_double_padded(struct complexlike_double_padded arg) { return arg; }
-// CHECK-LABEL: define void @pass_complexlike_double_padded(ptr {{.*}} sret(%struct.complexlike_double_padded) align 32 %{{.*}}, [4 x i64] %{{.*}})
+// CHECK-LABEL: define void @pass_complexlike_double_padded(ptr {{.*}} sret(%struct.complexlike_double_padded) align 32 %agg.result, ptr byval(%struct.complexlike_double_padded) align 32 %{{.*}}
 
 // Aggregate types
 
@@ -210,19 +210,19 @@ struct agg_8byte pass_agg_8byte(struct agg_8byte arg) { return arg; }
 
 struct agg_9byte { char a[9]; };
 struct agg_9byte pass_agg_9byte(struct agg_9byte arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_agg_9byte([2 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [2 x i64] @pass_agg_9byte(ptr byval(%struct.agg_9byte) align 1 %{{.*}})
 
 struct agg_16byte { char a[16]; };
 struct agg_16byte pass_agg_16byte(struct agg_16byte arg) { return arg; }
-// CHECK-LABEL: define inreg [2 x i64] @pass_agg_16byte([2 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [2 x i64] @pass_agg_16byte(ptr byval(%struct.agg_16byte) align 1 %{{.*}})
 
 struct agg_24byte { char a[24]; };
 struct agg_24byte pass_agg_24byte(struct agg_24byte arg) { return arg; }
-// CHECK-LABEL: define inreg [3 x i64] @pass_agg_24byte([3 x i64] %{{.*}})
+// CHECK-LABEL: define inreg [3 x i64] @pass_agg_24byte(ptr byval(%struct.agg_24byte) align 1 %{{.*}})
 
 struct agg_25byte { char a[25]; };
 struct agg_25byte pass_agg_25byte(struct agg_25byte arg) { return arg; }
-// CHECK-LABEL: define void @pass_agg_25byte(ptr dead_on_unwind noalias writable sret{{.*}} align 1 %{{.*}}, [4 x i64] %{{.*}})
+// CHECK-LABEL: define void @pass_agg_25byte(ptr {{.*}} sret(%struct.agg_25byte) align 1 %agg.result, ptr byval(%struct.agg_25byte) align 1 %{{.*}})
 
 // Check that a float-like aggregate type is really passed as aggregate
 struct agg_float { float a; };
