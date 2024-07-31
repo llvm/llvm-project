@@ -468,7 +468,6 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
                        "implemented for big-endian targets",
                        false);
 
-  // To start with, let's assume SetValue is an i128 and bail out if it's not.
   if (!isPowerOf2_32(SetValue->getType()->getScalarSizeInBits()))
     report_fatal_error("Pattern width for memset_pattern must be a power of 2",
                        false);
