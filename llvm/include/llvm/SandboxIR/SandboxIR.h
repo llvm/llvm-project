@@ -828,7 +828,9 @@ public:
   /// Return true if this is a store from a volatile memory location.
   bool isVolatile() const { return cast<llvm::StoreInst>(Val)->isVolatile(); }
   /// Specify whether this is a volatile store or not.
-  void setVolatile(bool V) { return cast<llvm::StoreInst>(Val)->setVolatile(V); }
+  void setVolatile(bool V) {
+    return cast<llvm::StoreInst>(Val)->setVolatile(V);
+  }
 
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
