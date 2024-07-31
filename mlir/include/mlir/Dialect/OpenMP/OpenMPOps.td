@@ -132,13 +132,12 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
     RecursiveMemoryEffects
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
+    OpenMP_AllocateClauseSkip<assemblyFormat = true>,
     OpenMP_IfClauseSkip<assemblyFormat = true>,
     OpenMP_NumThreadsClauseSkip<assemblyFormat = true>,
-    OpenMP_AllocateClauseSkip<assemblyFormat = true>,
-    OpenMP_ReductionClauseSkip<assemblyFormat = true>,
+    OpenMP_PrivateClauseSkip<assemblyFormat = true>,
     OpenMP_ProcBindClauseSkip<assemblyFormat = true>,
-    OpenMP_PrivateClauseSkip<assemblyFormat = true>
+    OpenMP_ReductionClauseSkip<assemblyFormat = true>
   ], singleRegion = true> {
   let summary = "parallel construct";
   let description = [{
@@ -195,9 +194,8 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 def TeamsOp : OpenMP_Op<"teams", traits = [
     AttrSizedOperandSegments, RecursiveMemoryEffects
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_NumTeamsClause, OpenMP_IfClause, OpenMP_ThreadLimitClause,
-    OpenMP_AllocateClause, OpenMP_ReductionClause, OpenMP_PrivateClause
+    OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
+    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
   ], singleRegion = true> {
   let summary = "teams construct";
   let description = [{
@@ -237,9 +235,8 @@ def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">],
 def SectionsOp : OpenMP_Op<"sections", traits = [
     AttrSizedOperandSegments
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_ReductionClause, OpenMP_AllocateClause, OpenMP_NowaitClause,
-    OpenMP_PrivateClause
+    OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
+    OpenMP_ReductionClause
   ], singleRegion = true> {
   let summary = "sections construct";
   let description = [{
@@ -362,15 +359,14 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_LinearClauseSkip<assemblyFormat = true>,
-    OpenMP_ReductionClauseSkip<assemblyFormat = true>,
-    OpenMP_ScheduleClauseSkip<assemblyFormat = true>,
-    OpenMP_NowaitClauseSkip<assemblyFormat = true>,
-    OpenMP_OrderedClauseSkip<assemblyFormat = true>,
-    OpenMP_OrderClauseSkip<assemblyFormat = true>,
     OpenMP_AllocateClauseSkip<assemblyFormat = true>,
-    OpenMP_PrivateClauseSkip<assemblyFormat = true>
+    OpenMP_LinearClauseSkip<assemblyFormat = true>,
+    OpenMP_NowaitClauseSkip<assemblyFormat = true>,
+    OpenMP_OrderClauseSkip<assemblyFormat = true>,
+    OpenMP_OrderedClauseSkip<assemblyFormat = true>,
+    OpenMP_PrivateClauseSkip<assemblyFormat = true>,
+    OpenMP_ReductionClauseSkip<assemblyFormat = true>,
+    OpenMP_ScheduleClauseSkip<assemblyFormat = true>
   ], singleRegion = true> {
   let summary = "worksharing-loop construct";
   let description = [{
@@ -506,8 +502,7 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    // TODO: Sort clauses alphabetically.
-    OpenMP_DistScheduleClause, OpenMP_AllocateClause, OpenMP_OrderClause,
+    OpenMP_AllocateClause, OpenMP_DistScheduleClause, OpenMP_OrderClause,
     OpenMP_PrivateClause
   ], singleRegion = true> {
   let summary = "distribute construct";
@@ -560,11 +555,9 @@ def TaskOp : OpenMP_Op<"task", traits = [
     OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (affinity, detach).
-    // TODO: Sort clauses alphabetically.
-    OpenMP_IfClause, OpenMP_FinalClause, OpenMP_UntiedClause,
-    OpenMP_MergeableClause, OpenMP_InReductionClause,
-    OpenMP_PriorityClause, OpenMP_DependClause, OpenMP_AllocateClause,
-    OpenMP_PrivateClause
+    OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_FinalClause,
+    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
+    OpenMP_PriorityClause, OpenMP_PrivateClause, OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "task construct";
   let description = [{
