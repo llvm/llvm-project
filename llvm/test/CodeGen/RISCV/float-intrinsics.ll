@@ -1611,12 +1611,12 @@ define i1 @fpclass(float %x) {
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    and a2, a2, a0
 ; RV32I-NEXT:    seqz a3, a1
-; RV32I-NEXT:    lui a4, 522240
-; RV32I-NEXT:    xor a5, a1, a4
-; RV32I-NEXT:    seqz a5, a5
-; RV32I-NEXT:    or a3, a3, a5
 ; RV32I-NEXT:    or a2, a3, a2
-; RV32I-NEXT:    slt a3, a4, a1
+; RV32I-NEXT:    lui a3, 522240
+; RV32I-NEXT:    xor a4, a1, a3
+; RV32I-NEXT:    seqz a4, a4
+; RV32I-NEXT:    or a2, a2, a4
+; RV32I-NEXT:    slt a3, a3, a1
 ; RV32I-NEXT:    or a2, a2, a3
 ; RV32I-NEXT:    lui a3, 1046528
 ; RV32I-NEXT:    add a1, a1, a3
@@ -1638,12 +1638,12 @@ define i1 @fpclass(float %x) {
 ; RV64I-NEXT:    slti a1, a1, 0
 ; RV64I-NEXT:    and a2, a2, a1
 ; RV64I-NEXT:    seqz a3, a0
-; RV64I-NEXT:    lui a4, 522240
-; RV64I-NEXT:    xor a5, a0, a4
-; RV64I-NEXT:    seqz a5, a5
-; RV64I-NEXT:    or a3, a3, a5
 ; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    slt a3, a4, a0
+; RV64I-NEXT:    lui a3, 522240
+; RV64I-NEXT:    xor a4, a0, a3
+; RV64I-NEXT:    seqz a4, a4
+; RV64I-NEXT:    or a2, a2, a4
+; RV64I-NEXT:    slt a3, a3, a0
 ; RV64I-NEXT:    or a2, a2, a3
 ; RV64I-NEXT:    lui a3, 1046528
 ; RV64I-NEXT:    add a0, a0, a3

@@ -227,8 +227,8 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    addi a5, a5, 1
 ; RV32IA-NEXT:    sltu a7, a7, a1
 ; RV32IA-NEXT:    neg a7, a7
-; RV32IA-NEXT:    and a5, a5, a3
 ; RV32IA-NEXT:    and a5, a7, a5
+; RV32IA-NEXT:    and a5, a5, a3
 ; RV32IA-NEXT:    sll a5, a5, a0
 ; RV32IA-NEXT:    and a7, a6, a4
 ; RV32IA-NEXT:    or a7, a7, a5
@@ -307,8 +307,8 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:    addi a6, a6, 1
 ; RV64IA-NEXT:    sltu t0, t0, a1
 ; RV64IA-NEXT:    negw t0, t0
-; RV64IA-NEXT:    and a6, a6, a3
 ; RV64IA-NEXT:    and a6, t0, a6
+; RV64IA-NEXT:    and a6, a6, a3
 ; RV64IA-NEXT:    sllw a6, a6, a0
 ; RV64IA-NEXT:    and a4, a4, a5
 ; RV64IA-NEXT:    or a6, a4, a6

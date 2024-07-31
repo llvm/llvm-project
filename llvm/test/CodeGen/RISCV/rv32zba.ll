@@ -673,8 +673,8 @@ define i32 @mul_neg3(i32 %a) {
 ; RV32I-LABEL: mul_neg3:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a0, 1
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: mul_neg3:
@@ -700,8 +700,8 @@ define i32 @mul_neg5(i32 %a) {
 ; RV32I-LABEL: mul_neg5:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a0, 2
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: mul_neg5:

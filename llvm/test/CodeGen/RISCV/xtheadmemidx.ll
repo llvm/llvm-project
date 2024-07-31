@@ -324,8 +324,8 @@ define ptr @ldib(ptr %base, i64 %a) {
 ; RV32XTHEADMEMIDX-NEXT:    lw a4, 4(a0)
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a3, a1
 ; RV32XTHEADMEMIDX-NEXT:    sltu a3, a1, a3
-; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a3
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a4, a2
+; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a3
 ; RV32XTHEADMEMIDX-NEXT:    sw a1, 8(a0)
 ; RV32XTHEADMEMIDX-NEXT:    sw a2, 12(a0)
 ; RV32XTHEADMEMIDX-NEXT:    ret

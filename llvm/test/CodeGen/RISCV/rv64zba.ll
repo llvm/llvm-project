@@ -2407,8 +2407,8 @@ define i8 @array_index_sh1_sh0(ptr %p, i64 %idx1, i64 %idx2) {
 ; RV64I-LABEL: array_index_sh1_sh0:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 1
-; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    ret
 ;
@@ -2490,8 +2490,8 @@ define i8 @array_index_sh2_sh0(ptr %p, i64 %idx1, i64 %idx2) {
 ; RV64I-LABEL: array_index_sh2_sh0:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 2
-; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    ret
 ;
@@ -2573,8 +2573,8 @@ define i8 @array_index_sh3_sh0(ptr %p, i64 %idx1, i64 %idx2) {
 ; RV64I-LABEL: array_index_sh3_sh0:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 3
-; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    ret
 ;
@@ -2659,17 +2659,18 @@ define i64 @array_index_lshr_sh3_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a1, 58
 ; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a2, a2, 3
 ; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld a0, 0(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: array_index_lshr_sh3_sh3:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srli a1, a1, 58
-; RV64ZBA-NEXT:    sh3add a1, a1, a2
-; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    slli a1, a1, 6
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    sh3add a0, a2, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %shr = lshr i64 %idx1, 58
@@ -2682,8 +2683,8 @@ define i8 @array_index_sh4_sh0(ptr %p, i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: array_index_sh4_sh0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    lbu a0, 0(a0)
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds [16 x i8], ptr %p, i64 %idx1, i64 %idx2
@@ -2762,15 +2763,16 @@ define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a2, a2, 6
 ; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    slli a1, a1, 3
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: test_gep_gep_dont_crash:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a2, a2, 6
-; RV64ZBA-NEXT:    add a1, a2, a1
+; RV64ZBA-NEXT:    slli a2, a2, 3
+; RV64ZBA-NEXT:    add a0, a0, a2
 ; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ret
   %lshr = lshr i64 %a2, 6
@@ -2825,8 +2827,8 @@ define i64 @mul_neg3(i64 %a) {
 ; RV64I-LABEL: mul_neg3:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    neg a0, a0
-; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul_neg3:
@@ -2852,8 +2854,8 @@ define i64 @mul_neg5(i64 %a) {
 ; RV64I-LABEL: mul_neg5:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 2
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    neg a0, a0
-; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul_neg5:

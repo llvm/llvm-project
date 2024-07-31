@@ -9,10 +9,10 @@ define i64 @exhausted(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld t0, 0(sp)
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    add a0, a2, a0
-; CHECK-NEXT:    add a4, a5, a4
+; CHECK-NEXT:    add a0, a3, a0
 ; CHECK-NEXT:    add a0, a4, a0
+; CHECK-NEXT:    add a0, a5, a0
 ; CHECK-NEXT:    add a0, t0, a0
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, %b

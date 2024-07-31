@@ -441,8 +441,8 @@ define i32 @reduce_sum_4xi32_reduce_order(<4 x i32> %v) {
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vmv.x.s a3, v8
 ; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    add a0, a0, a3
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: reduce_sum_4xi32_reduce_order:
@@ -456,8 +456,8 @@ define i32 @reduce_sum_4xi32_reduce_order(<4 x i32> %v) {
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vmv.x.s a3, v8
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    add a0, a0, a3
-; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    addw a0, a0, a3
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1
@@ -891,8 +891,8 @@ define float @reduce_fadd_4xi32_non_associative2(ptr %p) {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    vfmv.f.s fa2, v8
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fadd.s fa4, fa3, fa2
-; CHECK-NEXT:    fadd.s fa0, fa5, fa4
+; CHECK-NEXT:    fadd.s fa5, fa5, fa3
+; CHECK-NEXT:    fadd.s fa0, fa5, fa2
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %p, align 256
   %e0 = extractelement <4 x float> %v, i32 0

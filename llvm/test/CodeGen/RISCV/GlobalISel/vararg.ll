@@ -1252,8 +1252,8 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-NEXT:    sw a3, 16(sp)
 ; RV32-NEXT:    lw a2, 0(a2)
 ; RV32-NEXT:    add a0, a0, s1
-; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1308,8 +1308,8 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-NEXT:    sd a3, 16(sp)
 ; RV64-NEXT:    ld a2, 0(a2)
 ; RV64-NEXT:    add a0, a0, s1
-; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -1363,8 +1363,8 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a3, -20(s0)
 ; RV32-WITHFP-NEXT:    lw a2, 0(a2)
 ; RV32-WITHFP-NEXT:    add a0, a0, s2
-; RV32-WITHFP-NEXT:    add a1, a1, a2
 ; RV32-WITHFP-NEXT:    add a0, a0, a1
+; RV32-WITHFP-NEXT:    add a0, a0, a2
 ; RV32-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1422,8 +1422,8 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a3, -40(s0)
 ; RV64-WITHFP-NEXT:    ld a2, 0(a2)
 ; RV64-WITHFP-NEXT:    add a0, a0, s2
-; RV64-WITHFP-NEXT:    add a1, a1, a2
 ; RV64-WITHFP-NEXT:    add a0, a0, a1
+; RV64-WITHFP-NEXT:    add a0, a0, a2
 ; RV64-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload

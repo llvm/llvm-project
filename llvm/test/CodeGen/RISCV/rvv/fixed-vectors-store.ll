@@ -93,12 +93,12 @@ define void @store_v6i1(ptr %p, <6 x i1> %v) {
 ; CHECK-NEXT:    andi a3, a2, 2
 ; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    andi a3, a2, 4
-; CHECK-NEXT:    andi a4, a2, 8
-; CHECK-NEXT:    or a3, a3, a4
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    andi a3, a2, 8
 ; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    andi a3, a2, 16
+; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    andi a2, a2, -32
-; CHECK-NEXT:    or a2, a3, a2
 ; CHECK-NEXT:    or a1, a1, a2
 ; CHECK-NEXT:    andi a1, a1, 63
 ; CHECK-NEXT:    sb a1, 0(a0)

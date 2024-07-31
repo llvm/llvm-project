@@ -540,8 +540,8 @@ define void @reverse_strided_runtime_4xv2f32(ptr %x, ptr %z, i64 %s) {
 ; CHECK-LABEL: reverse_strided_runtime_4xv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a3, a2, a2
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    neg a2, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a2

@@ -79,27 +79,27 @@ define i32 @f3(i32 %a0) #0 {
 ; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    shll $7, %eax
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shll $13, %ecx
 ; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    shll $13, %edx
-; CHECK-NEXT:    orl %eax, %edx
+; CHECK-NEXT:    shll $19, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $19, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl $2, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
-; CHECK-NEXT:    movl %edi, %esi
-; CHECK-NEXT:    shrl $15, %esi
-; CHECK-NEXT:    orl %ecx, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    shrl $23, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $15, %eax
+; CHECK-NEXT:    movl %edi, %edx
+; CHECK-NEXT:    shrl $23, %edx
+; CHECK-NEXT:    orl %eax, %edx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    shrl $25, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    orl %edx, %eax
 ; CHECK-NEXT:    shrl $30, %edi
 ; CHECK-NEXT:    orl %edi, %eax
-; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    retq
 b0:
   %v0 = shl i32 %a0, 3

@@ -234,7 +234,7 @@ define void @test_compresstore_v256i8(ptr %p, <256 x i1> %mask, <256 x i8> %data
 ; RV64-NEXT:    vcpop.m a2, v8
 ; RV64-NEXT:    cpop a3, a3
 ; RV64-NEXT:    cpop a1, a1
-; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    add a1, a3, a1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; RV64-NEXT:    vse8.v v16, (a0)
