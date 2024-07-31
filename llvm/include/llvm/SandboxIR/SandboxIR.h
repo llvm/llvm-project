@@ -226,6 +226,7 @@ protected:
   friend class CallBrInst;        // For getting `Val`.
   friend class GetElementPtrInst; // For getting `Val`.
   friend class CastInst;          // For getting `Val`.
+  friend class PHINode;           // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -618,6 +619,7 @@ protected:
   friend class CallBrInst;        // For getTopmostLLVMInstruction().
   friend class GetElementPtrInst; // For getTopmostLLVMInstruction().
   friend class CastInst;          // For getTopmostLLVMInstruction().
+  friend class PHINode;           // For getTopmostLLVMInstruction().
 
   /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
   /// order.
@@ -1515,6 +1517,100 @@ public:
 #endif // NDEBUG
 };
 
+class PHINode final : public Instruction {
+  /// Use Context::createPHINode(). Don't call the constructor directly.
+  PHINode(llvm::PHINode *PHI, Context &Ctx)
+      : Instruction(ClassID::PHI, Opcode::PHI, PHI, Ctx) {}
+  friend Context; // for PHINode()
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
+  }
+  /// Helper for mapped_iterator.
+  struct LLVMBBToBB {
+    Context &Ctx;
+    LLVMBBToBB(Context &Ctx) : Ctx(Ctx) {}
+    BasicBlock *operator()(llvm::BasicBlock *LLVMBB) const;
+  };
+
+public:
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+  static PHINode *create(Type *Ty, unsigned NumReservedValues,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name = "");
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From);
+
+  using const_block_iterator =
+      mapped_iterator<llvm::PHINode::const_block_iterator, LLVMBBToBB>;
+
+  const_block_iterator block_begin() const {
+    LLVMBBToBB BBGetter(Ctx);
+    return const_block_iterator(cast<llvm::PHINode>(Val)->block_begin(),
+                                BBGetter);
+  }
+  const_block_iterator block_end() const {
+    LLVMBBToBB BBGetter(Ctx);
+    return const_block_iterator(cast<llvm::PHINode>(Val)->block_end(),
+                                BBGetter);
+  }
+  iterator_range<const_block_iterator> blocks() const {
+    return make_range(block_begin(), block_end());
+  }
+
+  op_range incoming_values() { return operands(); }
+
+  const_op_range incoming_values() const { return operands(); }
+
+  unsigned getNumIncomingValues() const {
+    return cast<llvm::PHINode>(Val)->getNumIncomingValues();
+  }
+  Value *getIncomingValue(unsigned Idx) const;
+  void setIncomingValue(unsigned Idx, Value *V);
+  static unsigned getOperandNumForIncomingValue(unsigned Idx) {
+    return llvm::PHINode::getOperandNumForIncomingValue(Idx);
+  }
+  static unsigned getIncomingValueNumForOperand(unsigned Idx) {
+    return llvm::PHINode::getIncomingValueNumForOperand(Idx);
+  }
+  BasicBlock *getIncomingBlock(unsigned Idx) const;
+  BasicBlock *getIncomingBlock(const Use &U) const;
+
+  void setIncomingBlock(unsigned Idx, BasicBlock *BB);
+
+  void addIncoming(Value *V, BasicBlock *BB);
+
+  Value *removeIncomingValue(unsigned Idx);
+  Value *removeIncomingValue(BasicBlock *BB);
+
+  int getBasicBlockIndex(const BasicBlock *BB) const;
+  Value *getIncomingValueForBlock(const BasicBlock *BB) const;
+
+  Value *hasConstantValue() const;
+
+  bool hasConstantOrUndefValue() const {
+    return cast<llvm::PHINode>(Val)->hasConstantOrUndefValue();
+  }
+  bool isComplete() const { return cast<llvm::PHINode>(Val)->isComplete(); }
+  // TODO: Implement the below functions:
+  // void replaceIncomingBlockWith (const BasicBlock *Old, BasicBlock *New);
+  // void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,
+  //                         uint32_t ToIdx = 0)
+  // void removeIncomingValueIf(function_ref< bool(unsigned)> Predicate,
+  //                            bool DeletePHIIfEmpty=true)
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::PHINode>(Val) && "Expected PHINode!");
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
 class PtrToIntInst final : public CastInst {
 public:
   static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
@@ -1700,6 +1796,8 @@ protected:
   friend GetElementPtrInst; // For createGetElementPtrInst()
   CastInst *createCastInst(llvm::CastInst *I);
   friend CastInst; // For createCastInst()
+  PHINode *createPHINode(llvm::PHINode *I);
+  friend PHINode; // For createPHINode()
 
 public:
   Context(LLVMContext &LLVMCtx)
