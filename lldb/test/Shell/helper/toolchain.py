@@ -11,6 +11,7 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+import posixpath
 
 def _get_lldb_init_path(config):
     return os.path.join(config.test_exec_root, "lit-lldb-init-quiet")
@@ -24,7 +25,7 @@ def _disallow(config, execName):
     config.substitutions.append((" {0} ".format(execName), warning.format(execName)))
 
 
-def get_lldb_args(config, suffix=None):
+def get_lldb_args(config, suffix=""):
     lldb_args = []
     if "remote-linux" in config.available_features:
         lldb_args += [
@@ -34,9 +35,9 @@ def get_lldb_args(config, suffix=None):
             f'"platform connect {config.lldb_platform_url}"',
         ]
         if config.lldb_platform_working_dir:
-            dir = f"{config.lldb_platform_working_dir}/shell"
+            dir = posixpath.join(f"{config.lldb_platform_working_dir}", "shell")
             if suffix:
-                dir += f"/{suffix}"
+                dir += posixpath.join(dir, f"{suffix}")
             lldb_args += [
                 "-O",
                 f'"platform shell mkdir -p {dir}"',
@@ -54,22 +55,27 @@ class ShTestLldb(ShTest):
         super().__init__(execute_external, extra_substitutions, preamble_commands)
 
     def execute(self, test, litConfig):
+        # Run each Shell test in a separate directory (on remote).
+
+        # Find directory change command in %lldb substitution.
         for i, t in enumerate(test.config.substitutions):
-            try:
-                if re.match(t[0], "%lldb"):
-                    cmd = t[1]
-                    if '-O "platform settings -w ' in cmd:
-                        args_def = " ".join(get_lldb_args(test.config))
-                        args_unique = " ".join(
-                            get_lldb_args(test.config, "/".join(test.path_in_suite))
+            if re.match(t[0], "%lldb"):
+                cmd = t[1]
+                if '-O "platform settings -w ' in cmd:
+                    # If command is present, it is added by get_lldb_args.
+                    # Replace the path with the tests' path in suite.
+                    args_def = " ".join(get_lldb_args(test.config))
+                    args_unique = " ".join(
+                        get_lldb_args(
+                            test.config,
+                            posixpath.join(*test.path_in_suite),
                         )
-                        test.config.substitutions[i] = (
-                            t[0],
-                            cmd.replace(args_def, args_unique),
-                        )
-                    break
-            except:
-                pass
+                    )
+                    test.config.substitutions[i] = (
+                        t[0],
+                        cmd.replace(args_def, args_unique),
+                    )
+                break
         return super().execute(test, litConfig)
 
 
