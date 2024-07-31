@@ -420,10 +420,10 @@ public:
 
   void Dump(FILE * = stdout) const;
 
-// Number of bits used to encode the addendum presence flag.
-#define _CFI_ADDENDUM_BITS 1
 // Value of the addendum presence flag.
 #define _CFI_ADDENDUM_FLAG 1
+// Number of bits needed to be shifted when manipulating the allocator index.
+#define _CFI_ALLOCATOR_IDX_SHIFT 1
 // Allocator index mask.
 #define _CFI_ALLOCATOR_IDX_MASK 0b00001110
 
@@ -434,11 +434,11 @@ public:
     raw_.extra |= _CFI_ADDENDUM_FLAG;
   }
   RT_API_ATTRS inline int GetAllocIdx() const {
-    return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ADDENDUM_BITS;
+    return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ALLOCATOR_IDX_SHIFT;
   }
   RT_API_ATTRS inline void SetAllocIdx(int pos) {
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
-    raw_.extra |= (pos << _CFI_ADDENDUM_BITS);
+    raw_.extra |= (pos << _CFI_ALLOCATOR_IDX_SHIFT);
   }
 
 private:
