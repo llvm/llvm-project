@@ -41,6 +41,8 @@ public:
                                      MachineBranchProbabilityInfo &MBPI,
                                      MachineLoopInfo &MLI);
   MachineBlockFrequencyInfo(MachineBlockFrequencyInfo &&);
+  MachineBlockFrequencyInfo &
+  operator=(const MachineBlockFrequencyInfo &) = delete;
   ~MachineBlockFrequencyInfo();
 
   /// Handle invalidation explicitly.
