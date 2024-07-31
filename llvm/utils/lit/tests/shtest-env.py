@@ -12,13 +12,13 @@
 # CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
 # CHECK: # executed command: env FOO=1
-# CHECK-NOT: {{^[^#]}} 
+# CHECK-NOT: {{^[^#]}}
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-args-last-is-u-arg.txt ({{[^)]*}})
 # CHECK: env -u FOO
 # CHECK: # executed command: env -u FOO
-# CHECK-NOT: {{^[^#]}} 
+# CHECK-NOT: {{^[^#]}}
 # CHECK: --
 
 # CHECK: PASS: shtest-env :: env-args-last-is-u.txt ({{[^)]*}})
