@@ -13,7 +13,7 @@ void trunc_Param(inout int X) {}
 // CHECK: [[FVal:%.*]] = load float, ptr {{.*}}
 // CHECK: [[IVal:%.*]] = fptosi float [[FVal]] to i32
 // CHECK: store i32 [[IVal]], ptr [[ArgTmp]]
-// CHECK: call void {{.*}}trunc_Param{{.*}}(ptr noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
+// CHECK: call void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
 // CHECK: [[IRet:%.*]] = load i32, ptr [[ArgTmp]]
 // CHECK: [[FRet:%.*]] = sitofp i32 [[IRet]] to float
 // CHECK: store float [[FRet]], ptr [[F]]
@@ -35,7 +35,7 @@ void undef(out int Z) { }
 // CHECK: [[V:%.*]] = alloca i32
 // CHECK: [[ArgTmp:%.*]] = alloca i32
 // CHECK-NOT: store {{.*}}, ptr [[ArgTmp]]
-// CHECK: call void {{.*}}unde{{.*}}(ptr noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
+// CHECK: call void {{.*}}unde{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
 // CHECK-NOT: store {{.*}}, ptr [[ArgTmp]]
 // CHECK: [[Res:%.*]] = load i32, ptr [[ArgTmp]]
 // CHECK: store i32 [[Res]], ptr [[V]], align 4
@@ -54,7 +54,7 @@ void zero(out int Z) { Z = 0; }
 // CHECK: [[V:%.*]] = alloca i32
 // CHECK: [[ArgTmp:%.*]] = alloca i32
 // CHECK-NOT: store {{.*}}, ptr [[ArgTmp]]
-// CHECK: call void {{.*}}zero{{.*}}(ptr noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
+// CHECK: call void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
 // CHECK-NOT: store {{.*}}, ptr [[ArgTmp]]
 // CHECK: [[Res:%.*]] = load i32, ptr [[ArgTmp]]
 // CHECK: store i32 [[Res]], ptr [[V]], align 4
@@ -90,7 +90,7 @@ void funky(inout int3 X) {
 // CHECK:  store <3 x i32> [[Vyzx]], ptr [[ArgTmp]]
 
 // Call the function with the temporary.
-// CHECK: call void {{.*}}funky{{.*}}(ptr noundef nonnull align 16 dereferenceable(16) [[ArgTmp]])
+// CHECK: call void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[ArgTmp]])
 
 // Shuffle it back.
 // CHECK:  [[RetVal:%.*]] = load <3 x i32>, ptr [[ArgTmp]]
@@ -117,7 +117,7 @@ void increment(inout int I) {
 // CHECK: store i32 4, ptr [[I]]
 // CHECK: [[IInit:%.*]] = load i32, ptr [[I]]
 // CHECK: store i32 [[IInit:%.*]], ptr [[ArgTmp]], align 4
-// CHECK: call void {{.*}}increment{{.*}}(ptr noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
+// CHECK: call void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
 // CHECK: [[RetVal:%.*]] = load i32, ptr [[ArgTmp]]
 // CHECK: store i32 [[RetVal]], ptr [[I]], align 4
 // OPT: ret i32 5
@@ -142,7 +142,7 @@ void init(out S s) {
 
 // CHECK: [[S:%.*]] = alloca %struct.S
 // CHECK: [[Tmp:%.*]] = alloca %struct.S
-// CHECK: call void {{.*}}init{{.*}}(ptr noundef nonnull align 4 dereferenceable(8) [[Tmp]])
+// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
 // CHECK: [[RetVal:%.*]] = load %struct.S, ptr [[Tmp]]
 // CHECK: [[XAddr:%.*]] = getelementptr inbounds %struct.S, ptr [[S]], i32 0, i32 0
 // CHECK: [[XVal:%.*]] = extractvalue %struct.S [[RetVal]], 0
@@ -168,7 +168,7 @@ void trunc_vec(inout int3 V) {}
 // CHECK: [[FVal:%.*]] = load <3 x float>, ptr [[V]]
 // CHECK: [[IVal:%.*]] = fptosi <3 x float> [[FVal]] to <3 x i32>
 // CHECK: store <3 x i32> [[IVal]], ptr [[Tmp]]
-// CHECK: call void {{.*}}trunc_vec{{.*}}(ptr noundef nonnull align 16 dereferenceable(16) [[Tmp]])
+// CHECK: call void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[Tmp]])
 // CHECK: [[IRet:%.*]] = load <3 x i32>, ptr [[Tmp]]
 // CHECK: [[FRet:%.*]] = sitofp <3 x i32> [[IRet]] to <3 x float>
 // CHECK: store <3 x float> [[FRet]], ptr [[V]]

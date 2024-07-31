@@ -2832,7 +2832,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     switch (FI.getExtParameterInfo(ArgNo).getABI()) {
     case ParameterABI::HLSLOut:
     case ParameterABI::HLSLInOut:
-      // FIXME: Do this...
+      Attrs.addAttribute(llvm::Attribute::NoAlias);
+      break;
     case ParameterABI::Ordinary:
       break;
 
@@ -4739,7 +4740,6 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     llvm::Value *LifetimeSize = EmitLifetimeStart(Sz, BaseAddr);
 
     Address TmpAddr(Addr, ElTy, LV.getAlignment());
-    // TODO-HLSLOutArgExp: Fix me!!!
     args.addWriteback(EmitLValue(OE->getBase()->IgnoreImpCasts()), TmpAddr,
                       nullptr, OE->getWriteback(), LifetimeSize);
     return args.add(RValue::get(TmpAddr, *this), type);
