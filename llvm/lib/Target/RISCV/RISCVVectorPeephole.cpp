@@ -373,6 +373,12 @@ lookupActiveElementsAffectsResult(const MachineInstr &MI) {
   return Info->ActiveElementsAffectResult;
 }
 
+static unsigned getSEWLMULRatio(const MachineInstr &MI) {
+  RISCVII::VLMUL LMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
+  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  return RISCVVType::getSEWLMULRatio(1 << Log2SEW, LMUL);
+}
+
 /// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
 /// into it.
 ///
@@ -397,6 +403,10 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
       !RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) ||
       !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
       !RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags))
+    return false;
+
+  // Src needs to have the same VLMAX as MI
+  if (getSEWLMULRatio(MI) != getSEWLMULRatio(*Src))
     return false;
 
   // Src needs to have the same passthru as VMV_V_V
