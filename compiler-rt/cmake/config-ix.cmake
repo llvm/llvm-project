@@ -1,6 +1,5 @@
 include(CMakePushCheckState)
 include(AddLLVM)
-include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
@@ -15,7 +14,7 @@ include(TestBigEndian)
 # in tree version of runtimes, we'd be linking against the just-built
 # libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
 # built libunwind isn't installed yet). For those cases, it'd be good to
-# link with --uwnindlib=none. Check if that option works.
+# link with --unwindlib=none. Check if that option works.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_NONE_FLAG)
 
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)

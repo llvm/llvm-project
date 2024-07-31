@@ -1200,6 +1200,39 @@ void BitCastInst::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
+#endif // NDEBUG
+
+Value *AddrSpaceCastInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                                 BasicBlock *WhereBB, Context &Ctx,
+                                 const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::AddrSpaceCast, Src,
+                          WhereIt, WhereBB, Ctx, Name);
+}
+
+Value *AddrSpaceCastInst::create(Value *Src, Type *DestTy,
+                                 Instruction *InsertBefore, Context &Ctx,
+                                 const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::AddrSpaceCast, Src,
+                          InsertBefore, Ctx, Name);
+}
+
+Value *AddrSpaceCastInst::create(Value *Src, Type *DestTy,
+                                 BasicBlock *InsertAtEnd, Context &Ctx,
+                                 const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::AddrSpaceCast, Src,
+                          InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void AddrSpaceCastInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void AddrSpaceCastInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
 
 void OpaqueInst::dump(raw_ostream &OS) const {
   dumpCommonPrefix(OS);
