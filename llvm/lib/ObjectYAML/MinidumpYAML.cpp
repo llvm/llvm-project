@@ -483,8 +483,8 @@ void yaml::MappingTraits<Object>::mapping(IO &IO, Object &O) {
   IO.mapRequired("Streams", O.Streams);
 }
 
-Expected<std::unique_ptr<Stream>> Stream::create(const Directory &StreamDesc,
-                                                 const object::MinidumpFile &File) {
+Expected<std::unique_ptr<Stream>>
+Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
   case StreamKind::Exception: {

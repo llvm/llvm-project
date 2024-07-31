@@ -156,8 +156,8 @@ MinidumpFile::create(MemoryBufferRef Source) {
       new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
 }
 
-
-Expected<MinidumpFile::Memory64ListFacade> MinidumpFile::getMemory64List() const {
+Expected<MinidumpFile::Memory64ListFacade>
+MinidumpFile::getMemory64List() const {
   Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
   if (!ListHeader)
     return ListHeader.takeError();

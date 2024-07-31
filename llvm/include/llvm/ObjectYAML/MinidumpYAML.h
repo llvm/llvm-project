@@ -51,7 +51,8 @@ struct Stream {
 
   /// Create a stream from the given stream directory entry.
   static Expected<std::unique_ptr<Stream>>
-  create(const minidump::Directory &StreamDesc, const object::MinidumpFile &File);
+  create(const minidump::Directory &StreamDesc,
+         const object::MinidumpFile &File);
 };
 
 namespace detail {

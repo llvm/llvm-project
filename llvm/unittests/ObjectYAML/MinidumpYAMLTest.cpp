@@ -378,10 +378,12 @@ Streams:
   const std::optional<ArrayRef<uint8_t>> ExpectedContent =
       File.getRawStream(StreamType::Memory64List);
   ASSERT_TRUE(ExpectedContent);
-  const size_t ExpectedStreamSize = sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
+  const size_t ExpectedStreamSize =
+      sizeof(Memory64ListHeader) + (sizeof(MemoryDescriptor_64) * 2);
   ASSERT_EQ(ExpectedStreamSize, ExpectedContent->size());
 
-  Expected<minidump::Memory64ListHeader> ExpectedHeader = File.getMemoryList64Header();
+  Expected<minidump::Memory64ListHeader> ExpectedHeader =
+      File.getMemoryList64Header();
   ASSERT_THAT_EXPECTED(ExpectedHeader, Succeeded());
   ASSERT_EQ(ExpectedHeader->BaseRVA, 92u);
 
@@ -391,7 +393,7 @@ Streams:
   ASSERT_EQ(arrayRefFromStringRef("hello"), *DescOneExpectedContentSlice);
 
   Expected<ArrayRef<uint8_t>> DescTwoExpectedContentSlice = DescTwoPair.second;
-  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded()); 
+  ASSERT_THAT_EXPECTED(DescTwoExpectedContentSlice, Succeeded());
   ASSERT_EQ(arrayRefFromStringRef("world"), *DescTwoExpectedContentSlice);
 
   ASSERT_EQ(Iterator, MemoryList.end());
