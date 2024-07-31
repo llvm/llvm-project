@@ -12,8 +12,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @test(i32 noundef %A) {
 entry:
-  ; RELOC: %profbm_bias = load i64, ptr @__llvm_profile_bitmap_bias, align 8, !invariant.load !0
-  ; RELOC: %profc_bias = load i64, ptr @__llvm_profile_counter_bias, align 8
+  ; RELOC: %profbm_bias = load i64, ptr @__llvm_profile_bitmap_bias, align [[#]], !invariant.load !0
+  ; RELOC: %profc_bias = load i64, ptr @__llvm_profile_counter_bias, align [[#]]
   %A.addr = alloca i32, align 4
   %mcdc.addr = alloca i32, align 4
   call void @llvm.instrprof.cover(ptr @__profn_test, i64 99278, i32 5, i32 0)
