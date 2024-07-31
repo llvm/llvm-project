@@ -40,19 +40,20 @@ constexpr bool test_all() {
     constexpr auto operator<=>(const A&) const = default;
   };
 
-  std::array in = {1, 2, 3};
-  std::array in2 = {A{4}, A{5}, A{6}};
+  const std::array in  = {1, 2, 3};
+  const std::array in2 = {A{4}, A{5}, A{6}};
 
   std::array output = {7, 8, 9, 10, 11, 12};
   auto out = output.begin();
   std::array output2 = {A{7}, A{8}, A{9}, A{10}, A{11}, A{12}};
   auto out2 = output2.begin();
 
-  std::ranges::equal_to eq;
-  std::ranges::less less;
-  auto sum = [](int lhs, A rhs) { return lhs + rhs.x; };
-  auto proj1 = [](int x) { return x * -1; };
-  auto proj2 = [](A a) { return a.x * -1; };
+  const std::ranges::equal_to eq;
+  const std::ranges::less less;
+  const std::ranges::greater greater;
+  const auto sum   = [](int lhs, A rhs) { return lhs + rhs.x; };
+  const auto proj1 = [](int x) { return x * -1; };
+  const auto proj2 = [](A a) { return a.x * -1; };
 
 #if TEST_STD_VER >= 23
   test(std::ranges::ends_with, in, in2, eq, proj1, proj2);
@@ -67,17 +68,17 @@ constexpr bool test_all() {
   test(std::ranges::find_end, in, in2, eq, proj1, proj2);
   test(std::ranges::transform, in, in2, out, sum, proj1, proj2);
   test(std::ranges::transform, in, in2, out2, sum, proj1, proj2);
-  test(std::ranges::partial_sort_copy, in, in2, less, proj1, proj2);
-  test(std::ranges::merge, in, in2, out, less, proj1, proj2);
-  test(std::ranges::merge, in, in2, out2, less, proj1, proj2);
-  test(std::ranges::set_intersection, in, in2, out, less, proj1, proj2);
-  test(std::ranges::set_intersection, in, in2, out2, less, proj1, proj2);
-  test(std::ranges::set_difference, in, in2, out, less, proj1, proj2);
-  test(std::ranges::set_difference, in, in2, out2, less, proj1, proj2);
-  test(std::ranges::set_symmetric_difference, in, in2, out, less, proj1, proj2);
-  test(std::ranges::set_symmetric_difference, in, in2, out2, less, proj1, proj2);
-  test(std::ranges::set_union, in, in2, out, less, proj1, proj2);
-  test(std::ranges::set_union, in, in2, out2, less, proj1, proj2);
+  test(std::ranges::partial_sort_copy, in, output, less, proj1, proj2);
+  test(std::ranges::merge, in, in2, out, greater, proj1, proj2);
+  test(std::ranges::merge, in, in2, out2, greater, proj1, proj2);
+  test(std::ranges::set_intersection, in, in2, out, greater, proj1, proj2);
+  test(std::ranges::set_intersection, in, in2, out2, greater, proj1, proj2);
+  test(std::ranges::set_difference, in, in2, out, greater, proj1, proj2);
+  test(std::ranges::set_difference, in, in2, out2, greater, proj1, proj2);
+  test(std::ranges::set_symmetric_difference, in, in2, out, greater, proj1, proj2);
+  test(std::ranges::set_symmetric_difference, in, in2, out2, greater, proj1, proj2);
+  test(std::ranges::set_union, in, in2, out, greater, proj1, proj2);
+  test(std::ranges::set_union, in, in2, out2, greater, proj1, proj2);
 #if TEST_STD_VER > 20
   test(std::ranges::starts_with, in, in2, eq, proj1, proj2);
 #endif

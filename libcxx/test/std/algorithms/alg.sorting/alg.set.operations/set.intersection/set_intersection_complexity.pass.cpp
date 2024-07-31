@@ -43,16 +43,15 @@
 
 #include "test_iterators.h"
 
-namespace {
-
-// __debug_less will perform an additional comparison in an assertion
-static constexpr unsigned std_less_comparison_count_multiplier() noexcept {
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-  return 2;
+// debug mode provides no complexity guarantees, testing them would be a waste of effort
+// but we still want to run this test, to ensure we don't trigger any assertions
+#ifdef _LIBCPP_HARDENING_MODE_DEBUG
+#  define ASSERT_COMPLEXITY(expression)
 #else
-  return 1;
+#  define ASSERT_COMPLEXITY(expression) assert(expression)
 #endif
-}
+
+namespace {
 
 struct [[nodiscard]] OperationCounts {
   std::size_t comparisons{};
@@ -60,16 +59,16 @@ struct [[nodiscard]] OperationCounts {
     std::size_t proj{};
     IteratorOpCounts iterops;
 
-    [[nodiscard]] constexpr bool isNotBetterThan(const PerInput& other) {
+    [[nodiscard]] constexpr bool isNotBetterThan(const PerInput& other) const noexcept {
       return proj >= other.proj && iterops.increments + iterops.decrements + iterops.zero_moves >=
                                        other.iterops.increments + other.iterops.decrements + other.iterops.zero_moves;
     }
   };
   std::array<PerInput, 2> in;
 
-  [[nodiscard]] constexpr bool isNotBetterThan(const OperationCounts& expect) {
-    return std_less_comparison_count_multiplier() * comparisons >= expect.comparisons &&
-           in[0].isNotBetterThan(expect.in[0]) && in[1].isNotBetterThan(expect.in[1]);
+  [[nodiscard]] constexpr bool isNotBetterThan(const OperationCounts& expect) const noexcept {
+    return comparisons >= expect.comparisons && in[0].isNotBetterThan(expect.in[0]) &&
+           in[1].isNotBetterThan(expect.in[1]);
   }
 };
 
@@ -80,16 +79,17 @@ struct counted_set_intersection_result {
 
   constexpr counted_set_intersection_result() = default;
 
-  constexpr explicit counted_set_intersection_result(std::array<int, ResultSize>&& contents) : result{contents} {}
+  constexpr explicit counted_set_intersection_result(std::array<int, ResultSize>&& contents) noexcept
+      : result{contents} {}
 
-  constexpr void assertNotBetterThan(const counted_set_intersection_result& other) {
+  constexpr void assertNotBetterThan(const counted_set_intersection_result& other) const noexcept {
     assert(result == other.result);
-    assert(opcounts.isNotBetterThan(other.opcounts));
+    ASSERT_COMPLEXITY(opcounts.isNotBetterThan(other.opcounts));
   }
 };
 
 template <std::size_t ResultSize>
-counted_set_intersection_result(std::array<int, ResultSize>) -> counted_set_intersection_result<ResultSize>;
+counted_set_intersection_result(std::array<int, ResultSize>) noexcept -> counted_set_intersection_result<ResultSize>;
 
 template <template <class...> class InIterType1,
           template <class...>
@@ -306,7 +306,7 @@ constexpr bool testComplexityBasic() {
   std::array<int, 5> r2{2, 4, 6, 8, 10};
   std::array<int, 0> expected{};
 
-  const std::size_t maxOperation = std_less_comparison_count_multiplier() * (2 * (r1.size() + r2.size()) - 1);
+  [[maybe_unused]] const std::size_t maxOperation = 2 * (r1.size() + r2.size()) - 1;
 
   // std::set_intersection
   {
@@ -321,7 +321,7 @@ constexpr bool testComplexityBasic() {
     std::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp);
 
     assert(std::ranges::equal(out, expected));
-    assert(numberOfComp <= maxOperation);
+    ASSERT_COMPLEXITY(numberOfComp <= maxOperation);
   }
 
   // ranges::set_intersection iterator overload
@@ -349,9 +349,9 @@ constexpr bool testComplexityBasic() {
     std::ranges::set_intersection(r1.begin(), r1.end(), r2.begin(), r2.end(), out.data(), comp, proj1, proj2);
 
     assert(std::ranges::equal(out, expected));
-    assert(numberOfComp <= maxOperation);
-    assert(numberOfProj1 <= maxOperation);
-    assert(numberOfProj2 <= maxOperation);
+    ASSERT_COMPLEXITY(numberOfComp <= maxOperation);
+    ASSERT_COMPLEXITY(numberOfProj1 <= maxOperation);
+    ASSERT_COMPLEXITY(numberOfProj2 <= maxOperation);
   }
 
   // ranges::set_intersection range overload
@@ -379,9 +379,9 @@ constexpr bool testComplexityBasic() {
     std::ranges::set_intersection(r1, r2, out.data(), comp, proj1, proj2);
 
     assert(std::ranges::equal(out, expected));
-    assert(numberOfComp < maxOperation);
-    assert(numberOfProj1 < maxOperation);
-    assert(numberOfProj2 < maxOperation);
+    ASSERT_COMPLEXITY(numberOfComp < maxOperation);
+    ASSERT_COMPLEXITY(numberOfProj1 < maxOperation);
+    ASSERT_COMPLEXITY(numberOfProj2 < maxOperation);
   }
   return true;
 }

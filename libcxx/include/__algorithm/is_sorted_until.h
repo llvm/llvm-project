@@ -20,18 +20,18 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Compare, class _ForwardIterator>
+template <class _Compare, class _ForwardIterator, class _Sent>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
-__is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
+__is_sorted_until(_ForwardIterator __first, _Sent __last, _Compare&& __comp) {
   if (__first != __last) {
     _ForwardIterator __i = __first;
-    while (++__i != __last) {
-      if (__comp(*__i, *__first))
-        return __i;
-      __first = __i;
+    while (++__first != __last) {
+      if (__comp(*__first, *__i))
+        return __first;
+      __i = __first;
     }
   }
-  return __last;
+  return __first;
 }
 
 template <class _ForwardIterator, class _Compare>

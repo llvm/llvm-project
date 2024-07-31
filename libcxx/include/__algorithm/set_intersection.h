@@ -11,12 +11,15 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
+#include <__algorithm/is_sorted_until.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/lower_bound.h>
+#include <__assert>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
@@ -95,6 +98,14 @@ __set_intersection(
     _Compare&& __comp,
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+  if (!__libcpp_is_constant_evaluated()) {
+    _LIBCPP_ASSERT_INTERNAL(
+        std::__is_sorted_until(__first1, __last1, __comp) == __last1, "set_intersection: input range 1 must be sorted");
+    _LIBCPP_ASSERT_INTERNAL(
+        std::__is_sorted_until(__first2, __last2, __comp) == __last2, "set_intersection: input range 2 must be sorted");
+  }
+#endif
   _LIBCPP_CONSTEXPR std::__identity __proj;
   bool __prev_may_be_equal = false;
 
