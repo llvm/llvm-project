@@ -2569,14 +2569,14 @@ void PruneThreadPlans();
   ///     A StructuredDataSP object which, if non-empty, will contain the
   ///     information related to the process.
   virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
-  
+
   /// Fetch extended crash information held by the process.  This will never be
   /// an empty shared pointer, it will always have a dict, though it may be
   /// empty.
   StructuredData::DictionarySP GetExtendedCrashInfoDict() {
-    return m_crash_info_dict_sp; 
+    return m_crash_info_dict_sp;
   }
-  
+
   void ResetExtendedCrashInfoDict() {
     // StructuredData::Dictionary is add only, so we have to make a new one:
     m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
@@ -3197,8 +3197,8 @@ protected:
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;
-  
-  /// A repository for extra crash information, consulted in 
+
+  /// A repository for extra crash information, consulted in
   /// GetExtendedCrashInformation.
   StructuredData::DictionarySP m_crash_info_dict_sp;
 

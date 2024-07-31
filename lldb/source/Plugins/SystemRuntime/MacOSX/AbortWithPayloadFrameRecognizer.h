@@ -21,17 +21,17 @@ void RegisterAbortWithPayloadFrameRecognizer(Process *process);
 
 class AbortWithPayloadRecognizedStackFrame : public RecognizedStackFrame {
 public:
-  AbortWithPayloadRecognizedStackFrame(lldb::StackFrameSP &frame_sp, 
+  AbortWithPayloadRecognizedStackFrame(lldb::StackFrameSP &frame_sp,
                                        lldb::ValueObjectListSP &args_sp);
 };
 
-class AbortWithPayloadFrameRecognizer: public StackFrameRecognizer {
- public:
-  std::string GetName() override { 
-      return "abort_with_payload StackFrame Recognizer"; }
+class AbortWithPayloadFrameRecognizer : public StackFrameRecognizer {
+public:
+  std::string GetName() override {
+    return "abort_with_payload StackFrame Recognizer";
+  }
   lldb::RecognizedStackFrameSP
-    RecognizeFrame(lldb::StackFrameSP frame_sp) override;
-
+  RecognizeFrame(lldb::StackFrameSP frame_sp) override;
 };
 } // namespace lldb_private
 
