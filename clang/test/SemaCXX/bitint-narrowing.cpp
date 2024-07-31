@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -triple x86_64-linux-pc -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -triple x86_64-windows-pc -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -triple i386-linux-pc -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -triple i386-windows-pc -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple i386 -fsyntax-only -verify -std=c++11 %s
 
 struct {
   _BitInt(35) i : 33;
