@@ -75,7 +75,6 @@ chrono ctime
 chrono format
 chrono forward_list
 chrono limits
-chrono ostream
 chrono ratio
 chrono sstream
 chrono stdexcept
@@ -457,7 +456,6 @@ ranges cwchar
 ranges initializer_list
 ranges iterator
 ranges limits
-ranges new
 ranges optional
 ranges span
 ranges tuple
@@ -600,7 +598,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map

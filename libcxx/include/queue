@@ -341,10 +341,10 @@ public:
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI queue(queue&& __q) _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
+  _LIBCPP_HIDE_FROM_ABI queue(queue&& __q) noexcept(is_nothrow_move_constructible<container_type>::value)
       : c(std::move(__q.c)) {}
 
-  _LIBCPP_HIDE_FROM_ABI queue& operator=(queue&& __q) _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI queue& operator=(queue&& __q) noexcept(is_nothrow_move_assignable<container_type>::value) {
     c = std::move(__q.c);
     return *this;
   }
@@ -398,13 +398,13 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI
 #  if _LIBCPP_STD_VER >= 17
-      decltype(auto)
-      emplace(_Args&&... __args) {
+  decltype(auto)
+  emplace(_Args&&... __args) {
     return c.emplace_back(std::forward<_Args>(__args)...);
   }
 #  else
-      void
-      emplace(_Args&&... __args) {
+  void
+  emplace(_Args&&... __args) {
     c.emplace_back(std::forward<_Args>(__args)...);
   }
 #  endif
@@ -539,12 +539,12 @@ public:
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI priority_queue(priority_queue&& __q) _NOEXCEPT_(
-      is_nothrow_move_constructible<container_type>::value&& is_nothrow_move_constructible<value_compare>::value)
+  _LIBCPP_HIDE_FROM_ABI priority_queue(priority_queue&& __q) noexcept(
+      is_nothrow_move_constructible<container_type>::value && is_nothrow_move_constructible<value_compare>::value)
       : c(std::move(__q.c)), comp(std::move(__q.comp)) {}
 
-  _LIBCPP_HIDE_FROM_ABI priority_queue& operator=(priority_queue&& __q)
-      _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value&& is_nothrow_move_assignable<value_compare>::value) {
+  _LIBCPP_HIDE_FROM_ABI priority_queue& operator=(priority_queue&& __q) noexcept(
+      is_nothrow_move_assignable<container_type>::value && is_nothrow_move_assignable<value_compare>::value) {
     c    = std::move(__q.c);
     comp = std::move(__q.comp);
     return *this;

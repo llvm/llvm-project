@@ -109,10 +109,9 @@ void CSKYMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
 
-bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                           const MCAsmLayout *Layout,
+bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                            const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
 
   // Some custom fixup types are not valid with symbol difference expressions

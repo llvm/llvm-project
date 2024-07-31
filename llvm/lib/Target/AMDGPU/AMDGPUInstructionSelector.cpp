@@ -768,10 +768,6 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
   return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectG_PTR_ADD(MachineInstr &I) const {
-  return selectG_ADD_SUB(I);
-}
-
 bool AMDGPUInstructionSelector::selectG_IMPLICIT_DEF(MachineInstr &I) const {
   const MachineOperand &MO = I.getOperand(0);
 
@@ -1059,8 +1055,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectIntrinsicCmp(I);
   case Intrinsic::amdgcn_ballot:
     return selectBallot(I);
-  case Intrinsic::amdgcn_inverse_ballot:
-    return selectInverseBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
     return selectRelocConstant(I);
   case Intrinsic::amdgcn_groupstaticsize:
@@ -1449,17 +1443,6 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   } else
     BuildCopy(I.getOperand(2).getReg());
 
-  I.eraseFromParent();
-  return true;
-}
-
-bool AMDGPUInstructionSelector::selectInverseBallot(MachineInstr &I) const {
-  MachineBasicBlock *BB = I.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
-  const Register DstReg = I.getOperand(0).getReg();
-  const Register MaskReg = I.getOperand(2).getReg();
-
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(MaskReg);
   I.eraseFromParent();
   return true;
 }
@@ -1887,6 +1870,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       VDataIn = MI.getOperand(1).getReg();
       VDataTy = MRI->getType(VDataIn);
       NumVDataDwords = (VDataTy.getSizeInBits() + 31) / 32;
+    } else if (BaseOpcode->NoReturn) {
+      NumVDataDwords = 0;
     } else {
       VDataOut = MI.getOperand(0).getReg();
       VDataTy = MRI->getType(VDataOut);
@@ -2079,21 +2064,6 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectPOPSExitingWaveID(
-    MachineInstr &MI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineBasicBlock *MBB = MI.getParent();
-
-  // TODO: Select this with a tablegen pattern. This is tricky because the
-  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
-  // mayLoad/mayStore and tablegen complains about the mismatch.
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
-                 .addReg(AMDGPU::SRC_POPS_EXITING_WAVE_ID);
-  MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
@@ -2144,8 +2114,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_leave:
     return selectSBarrierLeave(I);
-  case Intrinsic::amdgcn_pops_exiting_wave_id:
-    return selectPOPSExitingWaveID(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -2199,27 +2167,6 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   bool Ret = constrainSelectedInstRegOperands(*Select, TII, TRI, RBI);
   I.eraseFromParent();
   return Ret;
-}
-
-static int sizeToSubRegIndex(unsigned Size) {
-  switch (Size) {
-  case 32:
-    return AMDGPU::sub0;
-  case 64:
-    return AMDGPU::sub0_sub1;
-  case 96:
-    return AMDGPU::sub0_sub1_sub2;
-  case 128:
-    return AMDGPU::sub0_sub1_sub2_sub3;
-  case 256:
-    return AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7;
-  default:
-    if (Size < 32)
-      return AMDGPU::sub0;
-    if (Size > 256)
-      return -1;
-    return sizeToSubRegIndex(llvm::bit_ceil(Size));
-  }
 }
 
 bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
@@ -2325,8 +2272,9 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     return false;
 
   if (SrcSize > 32) {
-    int SubRegIdx = sizeToSubRegIndex(DstSize);
-    if (SubRegIdx == -1)
+    unsigned SubRegIdx =
+        DstSize < 32 ? AMDGPU::sub0 : TRI.getSubRegFromChannel(0, DstSize / 32);
+    if (SubRegIdx == AMDGPU::NoSubRegister)
       return false;
 
     // Deal with weird cases where the class only partially supports the subreg
@@ -2553,89 +2501,6 @@ bool AMDGPUInstructionSelector::selectG_FPEXT(MachineInstr &I) const {
   }
 
   return false;
-}
-
-bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
-  MachineBasicBlock *BB = I.getParent();
-  MachineOperand &ImmOp = I.getOperand(1);
-  Register DstReg = I.getOperand(0).getReg();
-  unsigned Size = MRI->getType(DstReg).getSizeInBits();
-  bool IsFP = false;
-
-  // The AMDGPU backend only supports Imm operands and not CImm or FPImm.
-  if (ImmOp.isFPImm()) {
-    const APInt &Imm = ImmOp.getFPImm()->getValueAPF().bitcastToAPInt();
-    ImmOp.ChangeToImmediate(Imm.getZExtValue());
-    IsFP = true;
-  } else if (ImmOp.isCImm()) {
-    ImmOp.ChangeToImmediate(ImmOp.getCImm()->getSExtValue());
-  } else {
-    llvm_unreachable("Not supported by g_constants");
-  }
-
-  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
-  const bool IsSgpr = DstRB->getID() == AMDGPU::SGPRRegBankID;
-
-  unsigned Opcode;
-  if (DstRB->getID() == AMDGPU::VCCRegBankID) {
-    Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-  } else if (Size == 64 &&
-             AMDGPU::isValid32BitLiteral(I.getOperand(1).getImm(), IsFP)) {
-    Opcode = IsSgpr ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::V_MOV_B64_PSEUDO;
-    I.setDesc(TII.get(Opcode));
-    I.addImplicitDefUseOperands(*MF);
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  } else {
-    Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
-
-    // We should never produce s1 values on banks other than VCC. If the user of
-    // this already constrained the register, we may incorrectly think it's VCC
-    // if it wasn't originally.
-    if (Size == 1)
-      return false;
-  }
-
-  if (Size != 64) {
-    I.setDesc(TII.get(Opcode));
-    I.addImplicitDefUseOperands(*MF);
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
-  const DebugLoc &DL = I.getDebugLoc();
-
-  APInt Imm(Size, I.getOperand(1).getImm());
-
-  MachineInstr *ResInst;
-  if (IsSgpr && TII.isInlineConstant(Imm)) {
-    ResInst = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B64), DstReg)
-      .addImm(I.getOperand(1).getImm());
-  } else {
-    const TargetRegisterClass *RC = IsSgpr ?
-      &AMDGPU::SReg_32RegClass : &AMDGPU::VGPR_32RegClass;
-    Register LoReg = MRI->createVirtualRegister(RC);
-    Register HiReg = MRI->createVirtualRegister(RC);
-
-    BuildMI(*BB, &I, DL, TII.get(Opcode), LoReg)
-      .addImm(Imm.trunc(32).getZExtValue());
-
-    BuildMI(*BB, &I, DL, TII.get(Opcode), HiReg)
-      .addImm(Imm.ashr(32).getZExtValue());
-
-    ResInst = BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
-      .addReg(LoReg)
-      .addImm(AMDGPU::sub0)
-      .addReg(HiReg)
-      .addImm(AMDGPU::sub1);
-  }
-
-  // We can't call constrainSelectedInstRegOperands here, because it doesn't
-  // work for target independent opcodes
-  I.eraseFromParent();
-  const TargetRegisterClass *DstRC =
-    TRI.getConstrainedRegClassForOperand(ResInst->getOperand(0), *MRI);
-  if (!DstRC)
-    return true;
-  return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI);
 }
 
 bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
@@ -3547,6 +3412,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_AND_OR_XOR(I);
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_PTR_ADD:
     if (selectImpl(I, *CoverageInfo))
       return true;
     return selectG_ADD_SUB(I);
@@ -3561,10 +3427,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_FREEZE:
     return selectCOPY(I);
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_FCONSTANT:
-    return selectG_CONSTANT(I);
   case TargetOpcode::G_FNEG:
     if (selectImpl(I, *CoverageInfo))
       return true;
@@ -3583,14 +3447,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return selectG_BUILD_VECTOR(I);
-  case TargetOpcode::G_PTR_ADD:
-    if (selectImpl(I, *CoverageInfo))
-      return true;
-    return selectG_PTR_ADD(I);
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectG_IMPLICIT_DEF(I);
-  case TargetOpcode::G_FREEZE:
-    return selectCOPY(I);
   case TargetOpcode::G_INSERT:
     return selectG_INSERT(I);
   case TargetOpcode::G_INTRINSIC:
@@ -3620,8 +3478,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ATOMICRMW_UINC_WRAP:
   case TargetOpcode::G_ATOMICRMW_UDEC_WRAP:
   case TargetOpcode::G_ATOMICRMW_FADD:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMIN:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMAX:
+  case TargetOpcode::G_ATOMICRMW_FMIN:
+  case TargetOpcode::G_ATOMICRMW_FMAX:
     return selectG_LOAD_STORE_ATOMICRMW(I);
   case TargetOpcode::G_SELECT:
     return selectG_SELECT(I);
@@ -3654,6 +3512,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_INSERT_VECTOR_ELT(I);
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_NORET:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
     const AMDGPU::ImageDimIntrinsicInfo *Intr =
@@ -3675,6 +3534,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectStackRestore(I);
   case AMDGPU::G_PHI:
     return selectPHI(I);
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -4216,10 +4077,11 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
     return false;
 
   const GEPInfo &GEPI = AddrInfo[0];
-  std::optional<int64_t> EncodedImm =
-      AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, false);
+  std::optional<int64_t> EncodedImm;
 
   if (SOffset && Offset) {
+    EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, /*IsBuffer=*/false,
+                                              /*HasSOffset=*/true);
     if (GEPI.SgprParts.size() == 1 && GEPI.Imm != 0 && EncodedImm &&
         AddrInfo.size() > 1) {
       const GEPInfo &GEPI2 = AddrInfo[1];
@@ -4229,6 +4091,17 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
           Base = GEPI2.SgprParts[0];
           *SOffset = OffsetReg;
           *Offset = *EncodedImm;
+          if (*Offset >= 0 || !AMDGPU::hasSMRDSignedImmOffset(STI))
+            return true;
+
+          // For unbuffered smem loads, it is illegal for the Immediate Offset
+          // to be negative if the resulting (Offset + (M0 or SOffset or zero)
+          // is negative. Handle the case where the Immediate Offset + SOffset
+          // is negative.
+          auto SKnown = KB->getKnownBits(*SOffset);
+          if (*Offset + SKnown.getMinValue().getSExtValue() < 0)
+            return false;
+
           return true;
         }
       }
@@ -4236,6 +4109,8 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
     return false;
   }
 
+  EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, /*IsBuffer=*/false,
+                                            /*HasSOffset=*/false);
   if (Offset && GEPI.SgprParts.size() == 1 && EncodedImm) {
     Base = GEPI.SgprParts[0];
     *Offset = *EncodedImm;
@@ -5647,18 +5522,12 @@ void AMDGPUInstructionSelector::renderNegateImm(MachineInstrBuilder &MIB,
   MIB.addImm(-MI.getOperand(1).getCImm()->getSExtValue());
 }
 
-void AMDGPUInstructionSelector::renderBitcastImm(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
-  assert(OpIdx == -1);
-
+void AMDGPUInstructionSelector::renderBitcastFPImm(MachineInstrBuilder &MIB,
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
   const MachineOperand &Op = MI.getOperand(1);
-  if (MI.getOpcode() == TargetOpcode::G_FCONSTANT)
-    MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
-  else {
-    assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
-    MIB.addImm(Op.getCImm()->getSExtValue());
-  }
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1);
+  MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
 }
 
 void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,

@@ -50,10 +50,14 @@ struct DbgVariableLocation {
 
 /// Base class for debug information backends. Common functionality related to
 /// tracking which variables and scopes are alive at a given PC live here.
-class DebugHandlerBase : public AsmPrinterHandler {
+class DebugHandlerBase {
 protected:
   DebugHandlerBase(AsmPrinter *A);
 
+public:
+  virtual ~DebugHandlerBase();
+
+protected:
   /// Target of debug info emission.
   AsmPrinter *Asm = nullptr;
 
@@ -116,18 +120,24 @@ protected:
 private:
   InstructionOrdering InstOrdering;
 
-  // AsmPrinterHandler overrides.
 public:
-  void beginModule(Module *M) override;
+  /// For symbols that have a size designated (e.g. common symbols),
+  /// this tracks that size. Only used by DWARF.
+  virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) {}
 
-  void beginInstruction(const MachineInstr *MI) override;
-  void endInstruction() override;
+  virtual void beginModule(Module *M);
+  virtual void endModule() = 0;
 
-  void beginFunction(const MachineFunction *MF) override;
-  void endFunction(const MachineFunction *MF) override;
+  virtual void beginInstruction(const MachineInstr *MI);
+  virtual void endInstruction();
 
-  void beginBasicBlockSection(const MachineBasicBlock &MBB) override;
-  void endBasicBlockSection(const MachineBasicBlock &MBB) override;
+  void beginFunction(const MachineFunction *MF);
+  void endFunction(const MachineFunction *MF);
+
+  void beginBasicBlockSection(const MachineBasicBlock &MBB);
+  void endBasicBlockSection(const MachineBasicBlock &MBB);
+
+  virtual void beginCodeAlignment(const MachineBasicBlock &MBB) {}
 
   /// Return Label preceding the instruction.
   MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);

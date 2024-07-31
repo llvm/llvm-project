@@ -25,11 +25,11 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Errc.h"
@@ -37,6 +37,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -60,19 +61,21 @@ ALWAYS_ENABLED_STATISTIC(NumSubFrameworkLookups,
 
 const IdentifierInfo *
 HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
-  if (ControllingMacro) {
-    if (ControllingMacro->isOutOfDate()) {
-      assert(External && "We must have an external source if we have a "
-                         "controlling macro that is out of date.");
-      External->updateOutOfDateIdentifier(*ControllingMacro);
-    }
-    return ControllingMacro;
+  if (LazyControllingMacro.isID()) {
+    if (!External)
+      return nullptr;
+
+    LazyControllingMacro =
+        External->GetIdentifier(LazyControllingMacro.getID());
+    return LazyControllingMacro.getPtr();
   }
 
-  if (!ControllingMacroID || !External)
-    return nullptr;
-
-  ControllingMacro = External->GetIdentifier(ControllingMacroID);
+  IdentifierInfo *ControllingMacro = LazyControllingMacro.getPtr();
+  if (ControllingMacro && ControllingMacro->isOutOfDate()) {
+    assert(External && "We must have an external source if we have a "
+                       "controlling macro that is out of date.");
+    External->updateOutOfDateIdentifier(*ControllingMacro);
+  }
   return ControllingMacro;
 }
 
@@ -280,10 +283,10 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     if (getModuleMap().canonicalizeModuleMapPath(CanonicalPath))
       return {};
 
-    llvm::hash_code Hash = llvm::hash_combine(CanonicalPath.str().lower());
+    auto Hash = llvm::xxh3_64bits(CanonicalPath.str().lower());
 
     SmallString<128> HashStr;
-    llvm::APInt(64, size_t(Hash)).toStringUnsigned(HashStr, /*Radix*/36);
+    llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);
     llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
   }
   return Result.str().str();
@@ -375,20 +378,22 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
         break;
     }
 
-    // If we've already performed the exhaustive search for module maps in this
-    // search directory, don't do it again.
-    if (Dir.haveSearchedAllModuleMaps())
-      continue;
+    if (HSOpts->AllowModuleMapSubdirectorySearch) {
+      // If we've already performed the exhaustive search for module maps in
+      // this search directory, don't do it again.
+      if (Dir.haveSearchedAllModuleMaps())
+        continue;
 
-    // Load all module maps in the immediate subdirectories of this search
-    // directory if ModuleName was from @import.
-    if (AllowExtraModuleMapSearch)
-      loadSubdirectoryModuleMaps(Dir);
+      // Load all module maps in the immediate subdirectories of this search
+      // directory if ModuleName was from @import.
+      if (AllowExtraModuleMapSearch)
+        loadSubdirectoryModuleMaps(Dir);
 
-    // Look again for the module.
-    Module = ModMap.findModule(ModuleName);
-    if (Module)
-      break;
+      // Look again for the module.
+      Module = ModMap.findModule(ModuleName);
+      if (Module)
+        break;
+    }
   }
 
   return Module;
@@ -1348,10 +1353,8 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
   mergeHeaderFileInfoModuleBits(HFI, OtherHFI.isModuleHeader,
                                 OtherHFI.isTextualModuleHeader);
 
-  if (!HFI.ControllingMacro && !HFI.ControllingMacroID) {
-    HFI.ControllingMacro = OtherHFI.ControllingMacro;
-    HFI.ControllingMacroID = OtherHFI.ControllingMacroID;
-  }
+  if (!HFI.LazyControllingMacro.isValid())
+    HFI.LazyControllingMacro = OtherHFI.LazyControllingMacro;
 
   HFI.DirInfo = OtherHFI.DirInfo;
   HFI.External = (!HFI.IsValid || HFI.External);
@@ -1426,8 +1429,7 @@ bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
   // once. Note that we dor't check for #import, because that's not a property
   // of the file itself.
   if (auto *HFI = getExistingFileInfo(File))
-    return HFI->isPragmaOnce || HFI->ControllingMacro ||
-           HFI->ControllingMacroID;
+    return HFI->isPragmaOnce || HFI->LazyControllingMacro.isValid();
   return false;
 }
 

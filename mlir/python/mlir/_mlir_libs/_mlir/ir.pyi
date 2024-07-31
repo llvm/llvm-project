@@ -123,6 +123,7 @@ __all__ = [
     "Float8E4M3B11FNUZType",
     "Float8E4M3FNType",
     "Float8E4M3FNUZType",
+    "Float8E4M3Type",
     "Float8E5M2FNUZType",
     "Float8E5M2Type",
     "FloatAttr",
@@ -209,6 +210,7 @@ class _OperationBase:
         print_generic_op_form: bool = False,
         use_local_scope: bool = False,
         assume_verified: bool = False,
+        skip_regions: bool = False,
     ) -> Union[io.BytesIO, io.StringIO]:
         """
         Gets the assembly form of the operation with all options available.
@@ -256,6 +258,7 @@ class _OperationBase:
         assume_verified: bool = False,
         file: Optional[Any] = None,
         binary: bool = False,
+        skip_regions: bool = False,
     ) -> None:
         """
         Prints the assembly form of the operation to a file like object.
@@ -281,6 +284,7 @@ class _OperationBase:
             and report failures in a more robust fashion. Set this to True if doing this
             in order to avoid running a redundant verification. If the IR is actually
             invalid, behavior is undefined.
+          skip_regions: Whether to skip printing regions. Defaults to False.
         """
     def verify(self) -> bool:
         """
@@ -1565,6 +1569,19 @@ class Float8E4M3FNUZType(FloatType):
     def get(context: Optional[Context] = None) -> Float8E4M3FNUZType:
         """
         Create a float8_e4m3fnuz type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float8E4M3Type(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Optional[Context] = None) -> Float8E4M3Type:
+        """
+        Create a float8_e4m3 type.
         """
     @staticmethod
     def isinstance(other: Type) -> bool: ...

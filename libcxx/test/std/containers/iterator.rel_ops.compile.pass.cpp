@@ -8,6 +8,8 @@
 
 // XFAIL: availability-filesystem-missing
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // Make sure the various containers' iterators are not broken by the use of `std::rel_ops`.
 
 #include <utility> // for std::rel_ops

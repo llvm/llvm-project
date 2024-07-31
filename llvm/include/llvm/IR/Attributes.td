@@ -47,6 +47,9 @@ class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 /// ConstantRange attribute.
 class ConstantRangeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
+/// ConstantRangeList attribute.
+class ConstantRangeListAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+
 /// Target-independent enum attributes.
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
@@ -109,8 +112,14 @@ def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
 /// symbol.
 def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
 
+/// Function has a hybrid patchable thunk.
+def HybridPatchable : EnumAttr<"hybrid_patchable", [FnAttr]>;
+
 /// Pass structure in an alloca.
 def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
+
+/// Pointer argument memory is initialized.
+def Initializes : ConstantRangeListAttr<"initializes", [ParamAttr]>;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;

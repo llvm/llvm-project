@@ -35,7 +35,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
@@ -55,6 +55,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -2513,6 +2514,10 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
   const IndirectBrInst *BI = cast<IndirectBrInst>(I);
   Register AddrReg = getRegForValue(BI->getOperand(0));
   if (AddrReg == 0)
+    return false;
+
+  // Authenticated indirectbr is not implemented yet.
+  if (FuncInfo.MF->getFunction().hasFnAttribute("ptrauth-indirect-gotos"))
     return false;
 
   // Emit the indirect branch.

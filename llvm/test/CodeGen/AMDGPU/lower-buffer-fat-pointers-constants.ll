@@ -143,8 +143,9 @@ define ptr addrspace(7) @gep_p7_from_p7() {
 define i160 @ptrtoint() {
 ; CHECK-LABEL: define i160 @ptrtoint
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = or i160 shl nuw (i160 ptrtoint (ptr addrspace(8) @buf to i160), i160 32), 12
-; CHECK-NEXT:    ret i160 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 ptrtoint (ptr addrspace(8) @buf to i160), 32
+; CHECK-NEXT:    [[TMP2:%.*]] = or i160 [[TMP1]], 12
+; CHECK-NEXT:    ret i160 [[TMP2]]
 ;
   ret i160 ptrtoint(
   ptr addrspace(7) getelementptr(
@@ -155,8 +156,9 @@ define i160 @ptrtoint() {
 define i256 @ptrtoint_long() {
 ; CHECK-LABEL: define i256 @ptrtoint_long
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = or i256 shl nuw nsw (i256 ptrtoint (ptr addrspace(8) @buf to i256), i256 32), 12
-; CHECK-NEXT:    ret i256 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i256 ptrtoint (ptr addrspace(8) @buf to i256), 32
+; CHECK-NEXT:    [[TMP2:%.*]] = or i256 [[TMP1]], 12
+; CHECK-NEXT:    ret i256 [[TMP2]]
 ;
   ret i256 ptrtoint(
   ptr addrspace(7) getelementptr(
@@ -167,8 +169,9 @@ define i256 @ptrtoint_long() {
 define i64 @ptrtoint_short() {
 ; CHECK-LABEL: define i64 @ptrtoint_short
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 shl (i64 ptrtoint (ptr addrspace(8) @buf to i64), i64 32), 12
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 ptrtoint (ptr addrspace(8) @buf to i64), 32
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 12
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   ret i64 ptrtoint(
   ptr addrspace(7) getelementptr(

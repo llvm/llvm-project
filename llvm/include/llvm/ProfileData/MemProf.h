@@ -124,6 +124,13 @@ struct PortableMemInfoBlock {
   OS << "        " << #Name << ": " << Name << "\n";
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+    if (AccessHistogramSize > 0) {
+      OS << "        " << "AccessHistogramValues" << ":";
+      for (uint32_t I = 0; I < AccessHistogramSize; ++I) {
+        OS << " " << ((uint64_t *)AccessHistogram)[I];
+      }
+      OS << "\n";
+    }
   }
 
   // Return the schema, only for unit tests.
@@ -921,15 +928,15 @@ struct LinearCallStackIdConverter {
 struct IndexedMemProfData {
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
-  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> RecordData;
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> Records;
 
   // A map to hold frame id to frame mappings. The mappings are used to
   // convert IndexedMemProfRecord to MemProfRecords with frame information
   // inline.
-  llvm::MapVector<FrameId, Frame> FrameData;
+  llvm::MapVector<FrameId, Frame> Frames;
 
   // A map to hold call stack id to call stacks.
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
 };
 
 struct FrameStat {

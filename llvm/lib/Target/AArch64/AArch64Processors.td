@@ -525,6 +525,7 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureUseFixedOverScalableIfEqualCost,
                                       FeaturePredictableSelectIsExpensive]>;
 
 def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3",
@@ -681,241 +682,344 @@ def ProcessorFeatures {
                                  FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
   list<SubtargetFeature> A55  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
-                                 FeatureRCPC, FeaturePerfMon];
+                                 FeatureRCPC, FeaturePerfMon, FeatureCRC,
+                                 FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> A510 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML,
-                                 FeatureSB, FeaturePAuth, FeatureSSBS, FeatureSVE, FeatureSVE2];
+                                 FeatureSB, FeaturePAuth, FeatureSSBS, FeatureSVE, FeatureSVE2,
+                                 FeatureComplxNum, FeatureCRC, FeatureDotProd,
+                                 FeatureFPARMv8,FeatureFullFP16, FeatureJS, FeatureLSE,
+                                 FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML,
-                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes,
+                                 FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                 FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS,
+                                 FeatureNEON, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                 FeatureDotProd];
   list<SubtargetFeature> A520AE = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML,
-                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes,
+                                 FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                 FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS,
+                                 FeatureNEON, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                 FeatureDotProd];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeatureSSBS, FeatureRAS,
-                                 FeaturePerfMon];
+                                 FeaturePerfMon, FeatureCRC, FeatureLSE, FeatureRDM];
   list<SubtargetFeature> A76  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
-                                 FeatureRCPC, FeatureSSBS, FeaturePerfMon];
+                                 FeatureRCPC, FeatureSSBS, FeaturePerfMon,
+                                 FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> A77  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
-                                 FeatureRCPC, FeaturePerfMon, FeatureSSBS];
+                                 FeatureRCPC, FeaturePerfMon, FeatureSSBS,
+                                 FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> A78  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeaturePerfMon, FeatureSPE,
-                                 FeatureSSBS];
+                                 FeatureSSBS, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> A78AE = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                   FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                   FeatureRCPC, FeaturePerfMon, FeatureSPE,
-                                  FeatureSSBS];
+                                  FeatureSSBS, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureFlagM, FeaturePAuth,
                                  FeaturePerfMon, FeatureRCPC, FeatureSPE,
-                                 FeatureSSBS];
+                                 FeatureSSBS, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureETE, FeatureMTE, FeatureFP16FML,
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureMatMulInt8,
-                                 FeaturePAuth, FeatureFlagM, FeatureSB, FeatureSVE, FeatureSVE2];
+                                 FeaturePAuth, FeatureFlagM, FeatureSB, FeatureSVE, FeatureSVE2,
+                                 FeatureComplxNum, FeatureCRC, FeatureDotProd, FeatureFPARMv8,
+                                 FeatureFullFP16, FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A715 = [HasV9_0aOps, FeatureNEON, FeatureMTE,
                                  FeatureFP16FML, FeatureSVE, FeatureTRBE,
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureETE,
                                  FeaturePerfMon, FeatureMatMulInt8, FeatureSPE,
-                                 FeatureSB, FeatureSSBS, FeatureFullFP16, FeaturePAuth, FeaturePredRes, FeatureFlagM];
+                                 FeatureSB, FeatureSSBS, FeatureFullFP16, FeaturePAuth, FeaturePredRes, FeatureFlagM,
+                                 FeatureSVE2, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureFPARMv8,
+                                 FeatureJS, FeatureLSE, FeatureRAS,
+                                 FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A720 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
                                  FeaturePerfMon, FeatureSPE, FeatureSPE_EEF,
-                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes,
+                                 FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
+                                 FeatureJS, FeatureLSE, FeatureNEON, FeatureRAS,
+                                 FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A720AE = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
                                  FeaturePerfMon, FeatureSPE, FeatureSPE_EEF,
-                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes,
+                                 FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
+                                 FeatureJS, FeatureLSE, FeatureNEON, FeatureRAS,
+                                 FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A725 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureETE, FeaturePerfMon, FeatureSPE,
                                  FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE,
-                                 FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS];
+                                 FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                 FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
+                                 FeatureJS, FeatureLSE, FeatureNEON, FeaturePAuth, FeatureRAS,
+                                 FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
                                  FeatureComplxNum, FeatureJS,
                                  FeatureCacheDeepPersist,
-                                 FeatureLSE, FeatureFlagM];
+                                 FeatureFlagM, FeatureCRC, FeatureLSE, FeatureRAS, FeatureFPARMv8,
+                                 FeatureNEON, FeaturePAuth, FeatureRCPC];
   list<SubtargetFeature> R82AE = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                   FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                   FeatureSB, FeatureRDM, FeatureDotProd,
                                   FeatureComplxNum, FeatureJS,
                                   FeatureCacheDeepPersist,
-                                  FeatureLSE, FeatureFlagM];
+                                  FeatureLSE, FeatureFlagM, FeatureCRC, FeatureFPARMv8, FeatureNEON,
+                                  FeaturePAuth, FeatureRAS, FeatureRCPC];
   list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
-                                 FeatureSSBS];
+                                 FeatureSSBS, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> X1C  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC_IMMO, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
                                  FeaturePAuth, FeatureSSBS, FeatureFlagM,
                                  FeatureLSE2,
-                                 FeatureRCPC];
+                                 FeatureRCPC, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> X2   = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML,
-                                 FeaturePAuth, FeatureSSBS, FeatureSB, FeatureSVE, FeatureSVE2, FeatureFlagM];
+                                 FeaturePAuth, FeatureSSBS, FeatureSB, FeatureSVE, FeatureSVE2, FeatureFlagM,
+                                 FeatureComplxNum, FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureFullFP16,
+                                 FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> X3 =   [HasV9_0aOps, FeatureSVE, FeatureNEON,
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
                                  FeatureSPE, FeatureBF16, FeatureMatMulInt8,
                                  FeatureMTE, FeatureSVE2BitPerm, FeatureFullFP16,
                                  FeatureFP16FML,
-                                 FeatureSB, FeaturePAuth, FeaturePredRes, FeatureFlagM, FeatureSSBS];
+                                 FeatureSB, FeaturePAuth, FeaturePredRes, FeatureFlagM, FeatureSSBS,
+                                 FeatureSVE2, FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS,
+                                 FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureDotProd];
   list<SubtargetFeature> X4 =   [HasV9_2aOps,
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
                                  FeatureSPE, FeatureMTE, FeatureSVE2BitPerm,
                                  FeatureFP16FML, FeatureSPE_EEF,
-                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes,
+                                 FeatureSVE, FeatureSVE2, FeatureComplxNum, FeatureCRC, FeatureDotProd,
+                                 FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS, FeatureLSE,
+                                 FeatureNEON, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureBF16];
   list<SubtargetFeature> X925 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureETE, FeaturePerfMon, FeatureSPE,
                                  FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE,
-                                 FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS];
+                                 FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                 FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
+                                 FeatureJS, FeatureLSE, FeatureNEON, FeaturePAuth, FeatureRAS,
+                                 FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
-                                     FeatureAES];
+                                     FeatureAES, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
-                                     FeatureFullFP16];
+                                     FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
+                                     FeatureFPARMv8];
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON,FeaturePerfMon, FeatureAppleA7SysReg];
   list<SubtargetFeature> AppleA10 = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureCRC,
                                      FeatureRDM, FeaturePAN, FeatureLOR, FeatureVH];
   list<SubtargetFeature> AppleA11 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
-                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16];
+                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16, FeatureCRC,
+                                     FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> AppleA12 = [HasV8_3aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
-                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16];
+                                     FeatureNEON, FeaturePerfMon, FeatureFullFP16,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
-                                     FeatureFP16FML, FeatureSHA3];
+                                     FeatureFP16FML, FeatureSHA3, FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureDotProd];
   list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
                                      // ArmV8.5-a extensions, excluding BTI:
                                      FeatureAltFPCmp, FeatureFRInt3264,
                                      FeatureSpecRestrict, FeatureSSBS, FeatureSB,
-                                     FeaturePredRes, FeatureCacheDeepPersist];
+                                     FeaturePredRes, FeatureCacheDeepPersist,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureDotProd];
   list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
-                                     FeatureFullFP16, FeatureFP16FML];
+                                     FeatureFullFP16, FeatureFP16FML,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureBF16, FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX];
+                                     FeatureHCX,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureBF16, FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX];
-  // Technically apple-m4 is ARMv9.2a, but a quirk of LLVM defines v9.0 as
-  // requiring SVE, which is optional according to the Arm ARM and not
-  // supported by the core. ARMv8.7a is the next closest choice.
-  list<SubtargetFeature> AppleM4 = [HasV8_7aOps, FeatureSHA2, FeatureFPARMv8,
+                                     FeatureHCX,
+                                     FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                     FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                     FeatureBF16, FeatureDotProd, FeatureMatMulInt8];
+  list<SubtargetFeature> AppleM4 = [HasV9_2aOps, FeatureSHA2, FeatureFPARMv8,
                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                     FeatureFullFP16, FeatureFP16FML,
                                     FeatureAES, FeatureBF16,
                                     FeatureSME, FeatureSME2,
-                                    FeatureSMEF64F64, FeatureSMEI16I64];
+                                    FeatureSMEF64F64, FeatureSMEI16I64,
+                                    FeatureComplxNum, FeatureCRC, FeatureJS, FeatureLSE,
+                                    FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                    FeatureDotProd, FeatureMatMulInt8];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
-                                     FeaturePerfMon];
+                                     FeaturePerfMon, FeatureNEON, FeatureFPARMv8];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureDotProd,
-                                     FeatureFullFP16, FeaturePerfMon];
+                                     FeatureFullFP16, FeaturePerfMon, FeatureCRC, FeatureFPARMv8,
+                                     FeatureLSE, FeatureNEON, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> Falkor   = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                      FeatureFPARMv8, FeatureNEON, FeaturePerfMon,
                                      FeatureRDM];
   list<SubtargetFeature> NeoverseE1 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureDotProd,
                                        FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
-                                       FeatureRCPC, FeatureSSBS, FeaturePerfMon];
+                                       FeatureRCPC, FeatureSSBS, FeaturePerfMon, FeatureCRC,
+                                       FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> NeoverseN1 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureDotProd,
                                        FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
                                        FeatureRCPC, FeatureSPE, FeatureSSBS,
-                                       FeaturePerfMon];
+                                       FeaturePerfMon, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
   list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE, FeatureFP16FML,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
                                        FeatureSVE2BitPerm, FeatureTRBE,
                                        FeaturePerfMon,
-                                       FeatureDotProd, FeatureFullFP16, FeatureSB, FeatureSSBS, FeatureSVE];
+                                       FeatureDotProd, FeatureFullFP16, FeatureSB, FeatureSSBS, FeatureSVE,
+                                       FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
+                                       FeatureNEON, FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> NeoverseN3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureMTE, FeaturePerfMon,
                                       FeatureRandGen, FeatureSPE, FeatureSPE_EEF,
                                       FeatureSVE2BitPerm,
-                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM];
+                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM,
+                                      FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum,
+                                      FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
+                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                      FeatureNEON];
   list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                            FeatureSHA2, FeatureAES, FeatureFPARMv8, FeatureFP16FML,
                                            FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
                                            FeaturePerfMon, FeatureRandGen, FeatureSPE,
                                            FeatureSSBS, FeatureSVE,
-                                           FeatureSHA3, FeatureSM4, FeatureDotProd];
+                                           FeatureSHA3, FeatureSM4, FeatureDotProd, FeatureComplxNum,
+                                           FeatureCRC, FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS,
+                                           FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> NeoverseV1 = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                        FeatureSHA2, FeatureAES, FeatureFPARMv8, FeatureFP16FML,
                                        FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
                                        FeaturePerfMon, FeatureRandGen, FeatureSPE,
                                        FeatureSSBS, FeatureSVE,
-                                       FeatureSHA3, FeatureSM4, FeatureDotProd];
+                                       FeatureSHA3, FeatureSM4, FeatureDotProd, FeatureComplxNum,
+                                       FeatureCRC, FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS,
+                                       FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> NeoverseV2 = [HasV9_0aOps, FeatureBF16, FeatureSPE,
                                        FeaturePerfMon, FeatureETE, FeatureMatMulInt8,
                                        FeatureNEON, FeatureSVE2BitPerm, FeatureFP16FML,
                                        FeatureMTE, FeatureRandGen,
-                                       FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd];
+                                       FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd,
+                                       FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
+                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
                                       FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE,
-                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM];
+                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM,
+                                      FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8, FeatureJS, FeatureLSE,
+                                      FeatureNEON, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureRME];
   list<SubtargetFeature> NeoverseV3AE = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
                                       FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE,
-                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM];
+                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM,
+                                      FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8, FeatureJS,
+                                      FeatureLSE, FeatureNEON, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                      FeatureRME];
   list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
-                                       FeatureNEON, FeatureSPE, FeaturePerfMon];
+                                       FeatureNEON, FeatureSPE, FeaturePerfMon, FeatureCRC,
+                                       FeatureLSE, FeatureRDM, FeatureRAS, FeatureRCPC];
   list<SubtargetFeature> ThunderX   = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                        FeatureFPARMv8, FeaturePerfMon, FeatureNEON];
   list<SubtargetFeature> ThunderX2T99  = [HasV8_1aOps, FeatureCRC, FeatureSHA2, FeatureAES,
-                                          FeatureFPARMv8, FeatureNEON, FeatureLSE];
+                                          FeatureFPARMv8, FeatureNEON, FeatureLSE,
+                                          FeatureRDM];
   list<SubtargetFeature> ThunderX3T110 = [HasV8_3aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                           FeatureFPARMv8, FeatureNEON, FeatureLSE,
-                                          FeaturePAuth, FeaturePerfMon];
+                                          FeaturePAuth, FeaturePerfMon, FeatureComplxNum,
+                                          FeatureJS, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
-                                   FeatureJS, FeatureComplxNum];
+                                   FeatureJS, FeatureComplxNum, FeatureCRC, FeatureLSE,
+                                   FeatureRAS, FeatureRDM];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRandGen, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES,
-                                    FeatureFullFP16];
+                                    FeatureFullFP16, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                    FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8, FeatureJS,
+                                    FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> Ampere1A = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES,
-                                     FeatureFullFP16];
+                                     FeatureFullFP16, FeatureBF16, FeatureComplxNum,
+                                     FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
+                                     FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
+                                     FeatureRDM];
   list<SubtargetFeature> Ampere1B = [HasV8_7aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES, FeatureCSSC,
-                                     FeatureWFxT, FeatureFullFP16];
+                                     FeatureWFxT, FeatureFullFP16, FeatureBF16, FeatureComplxNum,
+                                     FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
+                                     FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
+                                     FeatureRDM];
 
   list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureRandGen,
                                      FeaturePAuth, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES,
-                                     FeatureSPE];
+                                     FeatureSPE, FeatureBF16, FeatureComplxNum, FeatureCRC,
+                                     FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
+                                     FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
   // affect code generated by the compiler and can be used only by explicitly
   // mentioning the new system register names in assembly.
   list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeatureETE];
+}
+
+// Define an alternative name for a given Processor.
+class ProcessorAlias<string n, string alias> {
+  string Name = n;
+  string Alias = alias;
 }
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
@@ -993,6 +1097,7 @@ def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
                      ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
 def : ProcessorModel<"neoverse-n2", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
+def : ProcessorAlias<"cobalt-100", "neoverse-n2">;
 def : ProcessorModel<"neoverse-n3", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN3, [TuneNeoverseN3]>;
 def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model,
@@ -1001,6 +1106,7 @@ def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
+def : ProcessorAlias<"grace", "neoverse-v2">;
 def : ProcessorModel<"neoverse-v3", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model,
@@ -1038,15 +1144,12 @@ def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
 
 // Apple CPUs
 
-// Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
-def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7]>;
 def : ProcessorModel<"apple-a7", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
-def : ProcessorModel<"apple-a8", CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7]>;
-def : ProcessorModel<"apple-a9", CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7]>;
+// Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
+def : ProcessorAlias<"cyclone", "apple-a7">;
+def : ProcessorAlias<"apple-a8", "apple-a7">;
+def : ProcessorAlias<"apple-a9", "apple-a7">;
 
 def : ProcessorModel<"apple-a10", CycloneModel, ProcessorFeatures.AppleA10,
                      [TuneAppleA10]>;
@@ -1056,28 +1159,23 @@ def : ProcessorModel<"apple-a11", CycloneModel, ProcessorFeatures.AppleA11,
 
 def : ProcessorModel<"apple-a12", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
-def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12]>;
-def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12]>;
+def : ProcessorAlias<"apple-s4", "apple-a12">;
+def : ProcessorAlias<"apple-s5", "apple-a12">;
 
 def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
                      [TuneAppleA13]>;
 
 def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
-def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14]>;
+def : ProcessorAlias<"apple-m1", "apple-a14">;
 
 def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
-def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
-                     [TuneAppleA15]>;
+def : ProcessorAlias<"apple-m2", "apple-a15">;
 
 def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
-def : ProcessorModel<"apple-m3", CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16]>;
+def : ProcessorAlias<"apple-m3", "apple-a16">;
 
 def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
                      [TuneAppleA17]>;
@@ -1086,8 +1184,7 @@ def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
                      [TuneAppleM4]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleM4,
-                     [TuneAppleM4]>;
+def : ProcessorAlias<"apple-latest", "apple-m4">;
 
 
 // Fujitsu A64FX

@@ -300,9 +300,9 @@ def Vector_MultiDimReductionOp :
 
     ```mlir
     %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
-      vector<4x8x16x32xf32> into vector<4x16xf32>
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
-      vector<4x16xf32> into f32
+      vector<4x16xf32> to f32
     ```
   }];
   let builders = [
@@ -421,7 +421,7 @@ def Vector_ShuffleOp :
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
      Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
-                    I64ArrayAttr:$mask)>,
+                    DenseI64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
   let description = [{
@@ -459,11 +459,7 @@ def Vector_ShuffleOp :
                : vector<f32>, vector<f32>           ; yields vector<2xf32>
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayRef<int64_t>")>
-  ];
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
@@ -475,7 +471,10 @@ def Vector_ShuffleOp :
       return ::llvm::cast<VectorType>(getVector().getType());
     }
   }];
+
   let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
+
+  let hasFolder = 1;
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
@@ -680,6 +679,10 @@ def Vector_ExtractOp :
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
     the proper position. Degenerates to an element type if n-k is zero.
 
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
+
     Example:
 
     ```mlir
@@ -720,10 +723,9 @@ def Vector_ExtractOp :
       return getStaticPosition().size();
     }
 
+    /// Return "true" if the op has at least one dynamic position.
     bool hasDynamicPosition() {
-      auto dynPos = getDynamicPosition();
-      return std::any_of(dynPos.begin(), dynPos.end(),
-                         [](Value operand) { return operand != nullptr; });
+      return !getDynamicPosition().empty();
     }
   }];
 
@@ -767,6 +769,41 @@ def Vector_FMAOp :
   let extraClassDeclaration = [{
     VectorType getVectorType() { return ::llvm::cast<VectorType>(getLhs().getType()); }
   }];
+}
+
+def Vector_FromElementsOp : Vector_Op<"from_elements", [
+    Pure,
+    TypesMatchWith<"operand types match result element type",
+                   "result", "elements", "SmallVector<Type>("
+                   "::llvm::cast<VectorType>($_self).getNumElements(), "
+                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+  let summary = "operation that defines a vector from scalar elements";
+  let description = [{
+    This operation defines a vector from one or multiple scalar elements. The
+    number of elements must match the number of elements in the result type.
+    All elements must have the same type, which must match the element type of
+    the result vector type.
+
+    `elements` are a flattened version of the result vector in row-major order.
+
+    Example:
+
+    ```mlir
+    // %f1
+    %0 = vector.from_elements %f1 : vector<f32>
+    // [%f1, %f2]
+    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
+    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
+    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
+    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
+    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs AnyVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_InsertElementOp :
@@ -827,6 +864,10 @@ def Vector_InsertOp :
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
     and inserts the n-D source into the (n+k)-D destination at the proper
     position. Degenerates to a scalar or a 0-d vector source type when n = 0.
+
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
 
     Example:
 
@@ -1321,7 +1362,7 @@ def Vector_TransferReadOp :
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
                    Optional<VectorOf<[I1]>>:$mask,
-                   OptionalAttr<BoolArrayAttr>:$in_bounds)>,
+                   BoolArrayAttr:$in_bounds)>,
     Results<(outs AnyVectorOfAnyRank:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
@@ -1359,16 +1400,19 @@ def Vector_TransferReadOp :
     permutation or broadcasting. Elements whose corresponding mask element is
     `0` are masked out and replaced with `padding`.
 
-    An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds. If
-    specified, the `in_bounds` array length has to be equal to the vector rank.
-    If set to "false", accesses (including the starting point) may run
+    For every vector dimension, the boolean array attribute `in_bounds`
+    specifies if the transfer is guaranteed to be within the source bounds. If
+    set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Broadcast dimensions must always be in-bounds. In absence of the attribute,
-    accesses along all vector dimensions (except for broadcasts) may run
-    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
-    all dimensions are specified to be within bounds and no `mask` was
-    specified. Note that non-vector dimensions *must* always be in-bounds.
+    Non-vector and broadcast dimensions *must* always be in-bounds. The
+    `in_bounds` array length has to be equal to the vector rank. This attribute
+    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
+    textual IR, the default value is assumed. Similarly, the OP printer will
+    omit this attribute when all dimensions are out-of-bounds (i.e. the default
+    value is used).
+
+    A `vector.transfer_read` can be lowered to a simple load if all dimensions
+    are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1565,7 +1609,7 @@ def Vector_TransferWriteOp :
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOf<[I1]>>:$mask,
-                   OptionalAttr<BoolArrayAttr>:$in_bounds)>,
+                   BoolArrayAttr:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
@@ -1601,15 +1645,19 @@ def Vector_TransferWriteOp :
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
 
-    An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds. If
-    specified, the `in_bounds` array length has to be equal to the vector rank.
-    If set to "false", accesses (including the starting point) may run
+    For every vector dimension, the boolean array attribute `in_bounds`
+    specifies if the transfer is guaranteed to be within the source bounds. If
+    set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    In absence of the attribute, accesses along all vector dimensions may run
-    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store if
-    all dimensions are specified to be within bounds and no `mask` was
-    specified. Note that non-vector dimensions *must* always be in-bounds.
+    Non-vector and broadcast dimensions *must* always be in-bounds. The
+    `in_bounds` array length has to be equal to the vector rank. This attribute
+    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
+    textual IR, the default value is assumed. Similarly, the OP printer will
+    omit this attribute when all dimensions are out-of-bounds (i.e. the default
+    value is used).
+
+     A `vector.transfer_write` can be lowered to a simple store if all
+     dimensions are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -2394,7 +2442,7 @@ def Vector_TypeCastOp :
 
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [Pure]>,
-    Arguments<(ins I64ArrayAttr:$mask_dim_sizes)>,
+    Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
   let description = [{
@@ -2973,6 +3021,31 @@ def Vector_ScanOp :
     "$kind `,` $source `,` $initial_value attr-dict `:` "
     "type($source) `,` type($initial_value) ";
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VectorStepOp
+//===----------------------------------------------------------------------===//
+
+def Vector_StepOp : Vector_Op<"step", [Pure]> {
+  let summary = "A linear sequence of values from 0 to N";
+  let description = [{
+    A `step` operation produces an index vector, i.e. a 1-D vector of values of
+    index type that represents a linear sequence from 0 to N-1, where N is the
+    number of elements in the `result` vector.
+
+    Supports fixed-width and scalable vectors.
+
+    Examples:
+
+    ```mlir
+    %0 = vector.step : vector<4xindex> ; [0, 1, 2, 3]
+    %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
+    ```
+  }];
+  let hasFolder = 1;
+  let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def Vector_YieldOp : Vector_Op<"yield", [

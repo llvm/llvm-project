@@ -573,8 +573,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::FP128TyID:     OS << "fp128"; return;
   case Type::PPC_FP128TyID: OS << "ppc_fp128"; return;
   case Type::LabelTyID:     OS << "label"; return;
-  case Type::MetadataTyID:  OS << "metadata"; return;
-  case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
+  case Type::MetadataTyID:
+    OS << "metadata";
+    return;
   case Type::X86_AMXTyID:   OS << "x86_amx"; return;
   case Type::TokenTyID:     OS << "token"; return;
   case Type::IntegerTyID:
@@ -1021,8 +1022,8 @@ void SlotTracker::processModule() {
 
   // Add metadata used by named metadata.
   for (const NamedMDNode &NMD : TheModule->named_metadata()) {
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      CreateMetadataSlot(NMD.getOperand(i));
+    for (const MDNode *N : NMD.operands())
+      CreateMetadataSlot(N);
   }
 
   for (const Function &F : *TheModule) {
@@ -2122,9 +2123,9 @@ static void writeDIEnumerator(raw_ostream &Out, const DIEnumerator *N,
 }
 
 static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
-                             AsmWriterContext &WriterCtx) {
+                             AsmWriterContext &) {
   Out << "!DIBasicType(";
-  MDFieldPrinter Printer(Out, WriterCtx);
+  MDFieldPrinter Printer(Out);
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
@@ -2133,7 +2134,6 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printDIFlags("flags", N->getFlags());
-  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
@@ -2229,7 +2229,6 @@ static void writeDISubroutineType(raw_ostream &Out, const DISubroutineType *N,
   Printer.printDwarfEnum("cc", N->getCC(), dwarf::ConventionString);
   Printer.printMetadata("types", N->getRawTypeArray(),
                         /* ShouldSkipNull */ false);
-  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 

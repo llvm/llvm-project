@@ -18,8 +18,12 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK:       for.body.preheader10:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER13:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       for.body.preheader13:
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[N_VEC:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; CHECK-NEXT:    [[SUM_07_PH:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[TMP7:%.*]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 4294967288
+; CHECK-NEXT:    [[N_VEC]] = and i64 [[TMP0]], 4294967288
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -33,16 +37,12 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[TMP5]] = add <4 x i32> [[WIDE_LOAD12]], [[VEC_PHI11]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[TMP7]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER13]]
-; CHECK:       for.body.preheader13:
-; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SUM_07_PH:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
@@ -129,12 +129,16 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i64 [[TMP0]], [[S_COERCE1]]
-; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[ENTRY:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER8:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       for.body.preheader8:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER11:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       for.body.preheader11:
+; CHECK-NEXT:    [[I_07_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER8]] ], [ [[N_VEC:%.*]], [[SPAN_CHECKED_ACCESS_EXIT:%.*]] ]
+; CHECK-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER8]] ], [ [[ADD:%.*]], [[SPAN_CHECKED_ACCESS_EXIT]] ]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
+; CHECK-NEXT:    [[N_VEC]] = and i64 [[N]], -8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
@@ -148,16 +152,12 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD10]], [[VEC_PHI9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SPAN_CHECKED_ACCESS_EXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SPAN_CHECKED_ACCESS_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[ADD]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER11]]
-; CHECK:       for.body.preheader11:
-; CHECK-NEXT:    [[I_07_PH:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[N_VEC]], [[SPAN_CHECKED_ACCESS_EXIT]] ]
-; CHECK-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ]
-; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[RET_0_LCSSA1:%.*]] = phi i32 [ 0, [[ENTRY1:%.*]] ], [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ [[ADD1:%.*]], [[FOR_BODY1]] ]
 ; CHECK-NEXT:    ret i32 [[RET_0_LCSSA1]]

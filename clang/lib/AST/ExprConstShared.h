@@ -62,5 +62,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 void HandleComplexComplexMul(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
                              llvm::APFloat D, llvm::APFloat &ResR,
                              llvm::APFloat &ResI);
+void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
+                             llvm::APFloat D, llvm::APFloat &ResR,
+                             llvm::APFloat &ResI);
 
 #endif

@@ -177,9 +177,10 @@ mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
 // explicit.
 static Fortran::evaluate::characteristics::DummyDataObject
 asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
-  Fortran::evaluate::Shape shape =
-      dummy.type.attrs().none() ? dummy.type.shape()
-                                : Fortran::evaluate::Shape(dummy.type.Rank());
+  std::optional<Fortran::evaluate::Shape> shape =
+      dummy.type.attrs().none()
+          ? dummy.type.shape()
+          : std::make_optional<Fortran::evaluate::Shape>(dummy.type.Rank());
   return Fortran::evaluate::characteristics::DummyDataObject(
       Fortran::evaluate::characteristics::TypeAndShape(dummy.type.type(),
                                                        std::move(shape)));
@@ -615,7 +616,7 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
     func->setAttr(fir::getFuncPureAttrName(),
                   mlir::UnitAttr::get(&mlirContext));
   if (IsElementalProcedure(sym))
-    func->setAttr(fir::getFuncElementAttrName(),
+    func->setAttr(fir::getFuncElementalAttrName(),
                   mlir::UnitAttr::get(&mlirContext));
   if (sym.attrs().test(Fortran::semantics::Attr::RECURSIVE))
     func->setAttr(fir::getFuncRecursiveAttrName(),
@@ -1308,18 +1309,17 @@ private:
   // with the shape (may contain unknown extents) for arrays.
   std::optional<fir::SequenceType::Shape> getBounds(
       const Fortran::evaluate::characteristics::TypeAndShape &typeAndShape) {
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    if (typeAndShape.shape().empty() &&
-        !typeAndShape.attrs().test(ShapeAttr::AssumedRank))
+    if (typeAndShape.shape() && typeAndShape.shape()->empty())
       return std::nullopt;
     fir::SequenceType::Shape bounds;
-    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
-         typeAndShape.shape()) {
-      fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
-      if (std::optional<std::int64_t> i = toInt64(extent))
-        bound = *i;
-      bounds.emplace_back(bound);
-    }
+    if (typeAndShape.shape())
+      for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
+           *typeAndShape.shape()) {
+        fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
+        if (std::optional<std::int64_t> i = toInt64(extent))
+          bound = *i;
+        bounds.emplace_back(bound);
+      }
     return bounds;
   }
   std::optional<std::int64_t>

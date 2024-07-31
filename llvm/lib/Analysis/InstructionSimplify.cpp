@@ -88,7 +88,7 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   else
     return nullptr;
 
-  CmpInst::Predicate ExpectedPred, Pred1, Pred2;
+  CmpInst::Predicate ExpectedPred;
   if (BinOpCode == BinaryOperator::Or) {
     ExpectedPred = ICmpInst::ICMP_NE;
   } else if (BinOpCode == BinaryOperator::And) {
@@ -110,10 +110,10 @@ static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
   // -->
   // %TV
   Value *X, *Y;
-  if (!match(Cond, m_c_BinOp(m_c_ICmp(Pred1, m_Specific(TrueVal),
-                                      m_Specific(FalseVal)),
-                             m_ICmp(Pred2, m_Value(X), m_Value(Y)))) ||
-      Pred1 != Pred2 || Pred1 != ExpectedPred)
+  if (!match(Cond,
+             m_c_BinOp(m_c_SpecificICmp(ExpectedPred, m_Specific(TrueVal),
+                                        m_Specific(FalseVal)),
+                       m_SpecificICmp(ExpectedPred, m_Value(X), m_Value(Y)))))
     return nullptr;
 
   if (X == TrueVal || X == FalseVal || Y == TrueVal || Y == FalseVal)
@@ -1226,13 +1226,29 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     return V;
 
   // (X << Y) % X -> 0
-  if (Q.IIQ.UseInstrInfo &&
-      ((Opcode == Instruction::SRem &&
-        match(Op0, m_NSWShl(m_Specific(Op1), m_Value()))) ||
-       (Opcode == Instruction::URem &&
-        match(Op0, m_NUWShl(m_Specific(Op1), m_Value())))))
-    return Constant::getNullValue(Op0->getType());
+  if (Q.IIQ.UseInstrInfo) {
+    if ((Opcode == Instruction::SRem &&
+         match(Op0, m_NSWShl(m_Specific(Op1), m_Value()))) ||
+        (Opcode == Instruction::URem &&
+         match(Op0, m_NUWShl(m_Specific(Op1), m_Value()))))
+      return Constant::getNullValue(Op0->getType());
 
+    const APInt *C0;
+    if (match(Op1, m_APInt(C0))) {
+      // (srem (mul nsw X, C1), C0) -> 0 if C1 s% C0 == 0
+      // (urem (mul nuw X, C1), C0) -> 0 if C1 u% C0 == 0
+      if (Opcode == Instruction::SRem
+              ? match(Op0,
+                      m_NSWMul(m_Value(), m_CheckedInt([C0](const APInt &C) {
+                                 return C.srem(*C0).isZero();
+                               })))
+              : match(Op0,
+                      m_NUWMul(m_Value(), m_CheckedInt([C0](const APInt &C) {
+                                 return C.urem(*C0).isZero();
+                               }))))
+        return Constant::getNullValue(Op0->getType());
+    }
+  }
   return nullptr;
 }
 
@@ -1856,14 +1872,11 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
   if ((PredL == FCmpInst::FCMP_ORD || PredL == FCmpInst::FCMP_UNO) &&
       ((FCmpInst::isOrdered(PredR) && IsAnd) ||
        (FCmpInst::isUnordered(PredR) && !IsAnd))) {
-    // (fcmp ord X, NNAN) & (fcmp o** X, Y) --> fcmp o** X, Y
-    // (fcmp uno X, NNAN) & (fcmp o** X, Y) --> false
-    // (fcmp uno X, NNAN) | (fcmp u** X, Y) --> fcmp u** X, Y
-    // (fcmp ord X, NNAN) | (fcmp u** X, Y) --> true
-    if (((LHS1 == RHS0 || LHS1 == RHS1) &&
-         isKnownNeverNaN(LHS0, /*Depth=*/0, Q)) ||
-        ((LHS0 == RHS0 || LHS0 == RHS1) &&
-         isKnownNeverNaN(LHS1, /*Depth=*/0, Q)))
+    // (fcmp ord X, 0) & (fcmp o** X, Y) --> fcmp o** X, Y
+    // (fcmp uno X, 0) & (fcmp o** X, Y) --> false
+    // (fcmp uno X, 0) | (fcmp u** X, Y) --> fcmp u** X, Y
+    // (fcmp ord X, 0) | (fcmp u** X, Y) --> true
+    if ((LHS0 == RHS0 || LHS0 == RHS1) && match(LHS1, m_PosZeroFP()))
       return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
                  ? static_cast<Value *>(RHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
@@ -1872,14 +1885,11 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
   if ((PredR == FCmpInst::FCMP_ORD || PredR == FCmpInst::FCMP_UNO) &&
       ((FCmpInst::isOrdered(PredL) && IsAnd) ||
        (FCmpInst::isUnordered(PredL) && !IsAnd))) {
-    // (fcmp o** X, Y) & (fcmp ord X, NNAN) --> fcmp o** X, Y
-    // (fcmp o** X, Y) & (fcmp uno X, NNAN) --> false
-    // (fcmp u** X, Y) | (fcmp uno X, NNAN) --> fcmp u** X, Y
-    // (fcmp u** X, Y) | (fcmp ord X, NNAN) --> true
-    if (((RHS1 == LHS0 || RHS1 == LHS1) &&
-         isKnownNeverNaN(RHS0, /*Depth=*/0, Q)) ||
-        ((RHS0 == LHS0 || RHS0 == LHS1) &&
-         isKnownNeverNaN(RHS1, /*Depth=*/0, Q)))
+    // (fcmp o** X, Y) & (fcmp ord X, 0) --> fcmp o** X, Y
+    // (fcmp o** X, Y) & (fcmp uno X, 0) --> false
+    // (fcmp u** X, Y) | (fcmp uno X, 0) --> fcmp u** X, Y
+    // (fcmp u** X, Y) | (fcmp ord X, 0) --> true
+    if ((RHS0 == LHS0 || RHS0 == LHS1) && match(RHS1, m_PosZeroFP()))
       return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
                  ? static_cast<Value *>(LHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
@@ -1965,13 +1975,16 @@ static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
     return nullptr;
   };
 
-  if (Value *Res =
-          simplifyWithOpReplaced(Op1, A, B, Q, /* AllowRefinement */ true,
-                                 /* DropFlags */ nullptr, MaxRecurse))
+  // In the final case (Res == Absorber with inverted predicate), it is safe to
+  // refine poison during simplification, but not undef. For simplicity always
+  // disable undef-based folds here.
+  if (Value *Res = simplifyWithOpReplaced(Op1, A, B, Q.getWithoutUndef(),
+                                          /* AllowRefinement */ true,
+                                          /* DropFlags */ nullptr, MaxRecurse))
     return Simplify(Res);
-  if (Value *Res =
-          simplifyWithOpReplaced(Op1, B, A, Q, /* AllowRefinement */ true,
-                                 /* DropFlags */ nullptr, MaxRecurse))
+  if (Value *Res = simplifyWithOpReplaced(Op1, B, A, Q.getWithoutUndef(),
+                                          /* AllowRefinement */ true,
+                                          /* DropFlags */ nullptr, MaxRecurse))
     return Simplify(Res);
 
   return nullptr;
@@ -4101,9 +4114,17 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    if (FMF.noNaNs() || (isKnownNeverNaN(RHS, /*Depth=*/0, Q) &&
-                         isKnownNeverNaN(LHS, /*Depth=*/0, Q)))
+    KnownFPClass RHSClass =
+        computeKnownFPClass(RHS, fcAllFlags, /*Depth=*/0, Q);
+    KnownFPClass LHSClass =
+        computeKnownFPClass(LHS, fcAllFlags, /*Depth=*/0, Q);
+
+    if (FMF.noNaNs() ||
+        (RHSClass.isKnownNeverNaN() && LHSClass.isKnownNeverNaN()))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
+
+    if (RHSClass.isKnownAlwaysNaN() || LHSClass.isKnownAlwaysNaN())
+      return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
   }
 
   const APFloat *C = nullptr;
@@ -4282,6 +4303,9 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                      bool AllowRefinement,
                                      SmallVectorImpl<Instruction *> *DropFlags,
                                      unsigned MaxRecurse) {
+  assert((AllowRefinement || !Q.CanUseUndef) &&
+         "If AllowRefinement=false then CanUseUndef=false");
+
   // Trivial replacement.
   if (V == Op)
     return RepOp;
@@ -4329,6 +4353,11 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     } else {
       NewOps.push_back(InstOp);
     }
+
+    // Bail out if any operand is undef and SimplifyQuery disables undef
+    // simplification. Constant folding currently doesn't respect this option.
+    if (isa<UndefValue>(NewOps.back()) && !Q.CanUseUndef)
+      return nullptr;
   }
 
   if (!AnyReplaced)
@@ -4449,6 +4478,11 @@ Value *llvm::simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                     const SimplifyQuery &Q,
                                     bool AllowRefinement,
                                     SmallVectorImpl<Instruction *> *DropFlags) {
+  // If refinement is disabled, also disable undef simplifications (which are
+  // always refinements) in SimplifyQuery.
+  if (!AllowRefinement)
+    return ::simplifyWithOpReplaced(V, Op, RepOp, Q.getWithoutUndef(),
+                                    AllowRefinement, DropFlags, RecursionLimit);
   return ::simplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement, DropFlags,
                                   RecursionLimit);
 }
@@ -4588,7 +4622,7 @@ static Value *simplifySelectWithICmpEq(Value *CmpLHS, Value *CmpRHS,
                                        Value *TrueVal, Value *FalseVal,
                                        const SimplifyQuery &Q,
                                        unsigned MaxRecurse) {
-  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
+  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
                              /* AllowRefinement */ false,
                              /* DropFlags */ nullptr, MaxRecurse) == TrueVal)
     return FalseVal;
@@ -5248,11 +5282,16 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
   // If all of the PHI's incoming values are the same then replace the PHI node
   // with the common value.
   Value *CommonValue = nullptr;
+  bool HasPoisonInput = false;
   bool HasUndefInput = false;
   for (Value *Incoming : IncomingValues) {
     // If the incoming value is the phi node itself, it can safely be skipped.
     if (Incoming == PN)
       continue;
+    if (isa<PoisonValue>(Incoming)) {
+      HasPoisonInput = true;
+      continue;
+    }
     if (Q.isUndefValue(Incoming)) {
       // Remember that we saw an undef value, but otherwise ignore them.
       HasUndefInput = true;
@@ -5263,12 +5302,13 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
     CommonValue = Incoming;
   }
 
-  // If CommonValue is null then all of the incoming values were either undef or
-  // equal to the phi node itself.
+  // If CommonValue is null then all of the incoming values were either undef,
+  // poison or equal to the phi node itself.
   if (!CommonValue)
-    return UndefValue::get(PN->getType());
+    return HasUndefInput ? UndefValue::get(PN->getType())
+                         : PoisonValue::get(PN->getType());
 
-  if (HasUndefInput) {
+  if (HasPoisonInput || HasUndefInput) {
     // If we have a PHI node like phi(X, undef, X), where X is defined by some
     // instruction, we cannot return X as the result of the PHI node unless it
     // dominates the PHI block.
@@ -5308,6 +5348,14 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   if (CastOpc == Instruction::BitCast)
     if (Op->getType() == Ty)
       return Op;
+
+  // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
+  Value *Ptr, *X;
+  if (CastOpc == Instruction::PtrToInt &&
+      match(Op, m_PtrAdd(m_Value(Ptr),
+                         m_Sub(m_Value(X), m_PtrToInt(m_Deferred(Ptr))))) &&
+      X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
+    return X;
 
   return nullptr;
 }
@@ -7155,7 +7203,7 @@ Value *llvm::simplifyInstruction(Instruction *I, const SimplifyQuery &SQ) {
   /// If called on unreachable code, the instruction may simplify to itself.
   /// Make life easier for users by detecting that case here, and returning a
   /// safe value instead.
-  return Result == I ? UndefValue::get(I->getType()) : Result;
+  return Result == I ? PoisonValue::get(I->getType()) : Result;
 }
 
 /// Implementation of recursive simplification through an instruction's
@@ -7177,7 +7225,7 @@ static bool replaceAndRecursivelySimplifyImpl(
     SmallSetVector<Instruction *, 8> *UnsimplifiedUsers = nullptr) {
   bool Simplified = false;
   SmallSetVector<Instruction *, 8> Worklist;
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
 
   // If we have an explicit value to collapse to, do that round of the
   // simplification loop by hand initially.
@@ -7242,7 +7290,7 @@ const SimplifyQuery getBestSimplifyQuery(Pass &P, Function &F) {
   auto *TLI = TLIWP ? &TLIWP->getTLI(F) : nullptr;
   auto *ACWP = P.getAnalysisIfAvailable<AssumptionCacheTracker>();
   auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
-  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+  return {F.getDataLayout(), TLI, DT, AC};
 }
 
 const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &AR,
@@ -7256,7 +7304,7 @@ const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
   auto *DT = AM.template getCachedResult<DominatorTreeAnalysis>(F);
   auto *TLI = AM.template getCachedResult<TargetLibraryAnalysis>(F);
   auto *AC = AM.template getCachedResult<AssumptionAnalysis>(F);
-  return {F.getParent()->getDataLayout(), TLI, DT, AC};
+  return {F.getDataLayout(), TLI, DT, AC};
 }
 template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
                                                   Function &);

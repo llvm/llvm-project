@@ -42,7 +42,8 @@ static int FindLenParameterIndex(
     if (&*ref == &symbol) {
       return lenIndex;
     }
-    if (ref->get<TypeParamDetails>().attr() == common::TypeParamAttr::Len) {
+    if (auto attr{ref->get<TypeParamDetails>().attr()};
+        attr && *attr == common::TypeParamAttr::Len) {
       ++lenIndex;
     }
   }
@@ -371,7 +372,7 @@ static std::optional<std::string> GetSuffixIfTypeKindParameters(
     std::optional<std::string> suffix;
     for (SymbolRef ref : *parameters) {
       const auto &tpd{ref->get<TypeParamDetails>()};
-      if (tpd.attr() == common::TypeParamAttr::Kind) {
+      if (tpd.attr() && *tpd.attr() == common::TypeParamAttr::Kind) {
         if (const auto *pv{derivedTypeSpec.FindParameter(ref->name())}) {
           if (pv->GetExplicit()) {
             if (auto instantiatedValue{evaluate::ToInt64(*pv->GetExplicit())}) {
@@ -497,7 +498,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     for (SymbolRef ref : *parameters) {
       if (const auto *inst{dtScope.FindComponent(ref->name())}) {
         const auto &tpd{inst->get<TypeParamDetails>()};
-        if (tpd.attr() == common::TypeParamAttr::Kind) {
+        if (tpd.attr() && *tpd.attr() == common::TypeParamAttr::Kind) {
           auto value{evaluate::ToInt64(tpd.init()).value_or(0)};
           if (derivedTypeSpec) {
             if (const auto *pv{derivedTypeSpec->FindParameter(inst->name())}) {
@@ -748,7 +749,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
       symbol, foldingContext)};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
-  const auto &shape{typeAndShape->shape()};
+  int rank{typeAndShape->Rank()};
   AddValue(values, componentSchema_, "name"s,
       SaveNameAsPointerTarget(scope, symbol.name().ToString()));
   AddValue(values, componentSchema_, "category"s,
@@ -799,7 +800,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
           specParams{GetTypeParameters(spec.typeSymbol())}) {
         for (SymbolRef ref : *specParams) {
           const auto &tpd{ref->get<TypeParamDetails>()};
-          if (tpd.attr() == common::TypeParamAttr::Len) {
+          if (tpd.attr() && *tpd.attr() == common::TypeParamAttr::Len) {
             if (const ParamValue *
                 paramValue{spec.FindParameter(ref->name())}) {
               lenParams.emplace_back(GetValue(*paramValue, parameters));
@@ -830,7 +831,6 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SomeExpr{evaluate::NullPointer{}});
   }
   // Shape information
-  int rank{evaluate::GetRank(shape)};
   AddValue(values, componentSchema_, "rank"s, IntExpr<1>(rank));
   if (rank > 0 && !IsAllocatable(symbol) && !IsPointer(symbol)) {
     std::vector<evaluate::StructureConstructor> bounds;
@@ -1143,7 +1143,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
           isArgDescriptorSet |= 1;
         } else {
           which = scalarFinalEnum_;
-          if (int rank{evaluate::GetRank(typeAndShape.shape())}; rank > 0) {
+          if (int rank{typeAndShape.Rank()}; rank > 0) {
             which = IntExpr<1>(ToInt64(which).value() + rank);
             if (dummyData.IsPassedByDescriptor(proc->IsBindC())) {
               argThatMightBeDescriptor = 1;

@@ -601,10 +601,16 @@ static bool isRelroSection(const OutputSection *sec) {
   // ELF in spirit. But in reality many linker features depend on
   // magic section names.
   StringRef s = sec->name;
-  return s == ".data.rel.ro" || s == ".bss.rel.ro" || s == ".ctors" ||
-         s == ".dtors" || s == ".jcr" || s == ".eh_frame" ||
-         s == ".fini_array" || s == ".init_array" ||
-         s == ".openbsd.randomdata" || s == ".preinit_array";
+
+  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+                     s == ".ctors" || s == ".dtors" || s == ".jcr" ||
+                     s == ".eh_frame" || s == ".fini_array" ||
+                     s == ".init_array" || s == ".preinit_array";
+
+  bool abiSpecific =
+      config->osabi == ELFOSABI_OPENBSD && s == ".openbsd.randomdata";
+
+  return abiAgnostic || abiSpecific;
 }
 
 // We compute a rank for each section. The rank indicates where the
@@ -1458,9 +1464,33 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
-      changed |= part.relaDyn->updateAllocSize();
+      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
+      // encode the signing schema. We've put relocations in .relr.auth.dyn
+      // during RelocationScanner::processAux, but the target VA for some of
+      // them might be wider than 32 bits. We can only know the final VA at this
+      // point, so move relocations with large values from .relr.auth.dyn to
+      // .rela.dyn. See also AArch64::relocate.
+      if (part.relrAuthDyn) {
+        auto it = llvm::remove_if(
+            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+                return false;
+              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
+                                      reloc.offset,
+                                      DynamicReloc::AddendOnlyWithTargetVA,
+                                      *reloc.sym, reloc.addend, R_ABS});
+              return true;
+            });
+        changed |= (it != part.relrAuthDyn->relocs.end());
+        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
+      }
+      if (part.relaDyn)
+        changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.relrAuthDyn)
+        changed |= part.relrAuthDyn->updateAllocSize();
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
@@ -1624,6 +1654,14 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
+        // .relr.auth.dyn relocations may be moved to .rela.dyn in
+        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
+        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
+        // we would fail to remove it here.
+        if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
+          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
+            if (relSec == mainPart->relaDyn.get())
+              return false;
         unused.insert(sec);
         return true;
       });
@@ -1837,13 +1875,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   sortSections();
 
   // Create a list of OutputSections, assign sectionIndex, and populate
-  // in.shStrTab.
+  // in.shStrTab. If -z nosectionheader is specified, drop non-ALLOC sections.
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
+      if (!in.shStrTab && !(osec->flags & SHF_ALLOC))
+        continue;
       outputSections.push_back(osec);
       osec->sectionIndex = outputSections.size();
-      osec->shName = in.shStrTab->addString(osec->name);
+      if (in.shStrTab)
+        osec->shName = in.shStrTab->addString(osec->name);
     }
 
   // Prefer command line supplied address over other constraints.
@@ -1905,6 +1946,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // have the headers, we can find out which sections they point to.
   setReservedSymbolSections();
 
+  if (script->noCrossRefs.size()) {
+    llvm::TimeTraceScope timeScope("Check NOCROSSREFS");
+    checkNoCrossRefs<ELFT>();
+  }
+
   {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections");
 
@@ -1935,6 +1981,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
         finalizeSynthetic(part.relrDyn.get());
+      }
+      if (part.relrAuthDyn) {
+        part.relrAuthDyn->mergeRels();
+        finalizeSynthetic(part.relrAuthDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());
@@ -2028,33 +2078,21 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
 // The linker is expected to define SECNAME_start and SECNAME_end
 // symbols for a few sections. This function defines them.
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
-  // If a section does not exist, there's ambiguity as to how we
-  // define _start and _end symbols for an init/fini section. Since
-  // the loader assume that the symbols are always defined, we need to
-  // always define them. But what value? The loader iterates over all
-  // pointers between _start and _end to run global ctors/dtors, so if
-  // the section is empty, their symbol values don't actually matter
-  // as long as _start and _end point to the same location.
-  //
-  // That said, we don't want to set the symbols to 0 (which is
-  // probably the simplest value) because that could cause some
-  // program to fail to link due to relocation overflow, if their
-  // program text is above 2 GiB. We use the address of the .text
-  // section instead to prevent that failure.
-  //
-  // In rare situations, the .text section may not exist. If that's the
-  // case, use the image base address as a last resort.
-  OutputSection *Default = findSection(".text");
-  if (!Default)
-    Default = Out::elfHeader;
-
+  // If the associated output section does not exist, there is ambiguity as to
+  // how we define _start and _end symbols for an init/fini section. Users
+  // expect no "undefined symbol" linker errors and loaders expect equal
+  // st_value but do not particularly care whether the symbols are defined or
+  // not. We retain the output section so that the section indexes will be
+  // correct.
   auto define = [=](StringRef start, StringRef end, OutputSection *os) {
-    if (os && !script->isDiscarded(os)) {
-      addOptionalRegular(start, os, 0);
-      addOptionalRegular(end, os, -1);
+    if (os) {
+      Defined *startSym = addOptionalRegular(start, os, 0);
+      Defined *stopSym = addOptionalRegular(end, os, -1);
+      if (startSym || stopSym)
+        os->usedInExpression = true;
     } else {
-      addOptionalRegular(start, Default, 0);
-      addOptionalRegular(end, Default, 0);
+      addOptionalRegular(start, Out::elfHeader, 0);
+      addOptionalRegular(end, Out::elfHeader, 0);
     }
   };
 
@@ -2062,6 +2100,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   define("__init_array_start", "__init_array_end", Out::initArray);
   define("__fini_array_start", "__fini_array_end", Out::finiArray);
 
+  // As a special case, don't unnecessarily retain .ARM.exidx, which would
+  // create an empty PT_ARM_EXIDX.
   if (OutputSection *sec = findSection(".ARM.exidx"))
     define("__exidx_start", "__exidx_end", sec);
 }
@@ -2076,10 +2116,12 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  addOptionalRegular(saver().save("__start_" + s), &osec, 0,
-                     config->zStartStopVisibility);
-  addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
-                     config->zStartStopVisibility);
+  Defined *startSym = addOptionalRegular(saver().save("__start_" + s), &osec, 0,
+                                         config->zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
+                                        config->zStartStopVisibility);
+  if (startSym || stopSym)
+    osec.usedInExpression = true;
 }
 
 static bool needsPtLoad(OutputSection *sec) {
@@ -2245,10 +2287,22 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());
 
-  // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
-  // the dynamic linker fill the segment with random data.
-  if (OutputSection *cmd = findSection(".openbsd.randomdata", partNo))
-    addHdr(PT_OPENBSD_RANDOMIZE, cmd->getPhdrFlags())->add(cmd);
+  if (config->osabi == ELFOSABI_OPENBSD) {
+    // PT_OPENBSD_MUTABLE makes the dynamic linker fill the segment with
+    // zero data, like bss, but it can be treated differently.
+    if (OutputSection *cmd = findSection(".openbsd.mutable", partNo))
+      addHdr(PT_OPENBSD_MUTABLE, cmd->getPhdrFlags())->add(cmd);
+
+    // PT_OPENBSD_RANDOMIZE makes the dynamic linker fill the segment
+    // with random data.
+    if (OutputSection *cmd = findSection(".openbsd.randomdata", partNo))
+      addHdr(PT_OPENBSD_RANDOMIZE, cmd->getPhdrFlags())->add(cmd);
+
+    // PT_OPENBSD_SYSCALLS makes the kernel and dynamic linker register
+    // system call sites.
+    if (OutputSection *cmd = findSection(".openbsd.syscalls", partNo))
+      addHdr(PT_OPENBSD_SYSCALLS, cmd->getPhdrFlags())->add(cmd);
+  }
 
   if (config->zGnustack != GnuStackKind::None) {
     // PT_GNU_STACK is a special section to tell the loader to make the
@@ -2652,6 +2706,10 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   auto *eHdr = reinterpret_cast<Elf_Ehdr *>(Out::bufferStart);
   eHdr->e_type = getELFType();
   eHdr->e_entry = getEntryAddr();
+
+  // If -z nosectionheader is specified, omit the section header table.
+  if (!in.shStrTab)
+    return;
   eHdr->e_shoff = sectionHeaderOff;
 
   // Write the section header table.

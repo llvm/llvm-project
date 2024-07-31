@@ -187,7 +187,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     KnownBits ScalarKnown(32);
     if (IC.SimplifyDemandedBits(&II, 0, APInt::getLowBitsSet(32, 16),
-                                ScalarKnown, 0)) {
+                                ScalarKnown)) {
       return &II;
     }
     break;
@@ -199,17 +199,21 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                        PatternMatch::m_Value(ArgArg)))) {
       return IC.replaceInstUsesWith(II, ArgArg);
     }
-    if (!II.getMetadata(LLVMContext::MD_range)) {
-      Type *IntTy32 = Type::getInt32Ty(II.getContext());
-      Metadata *M[] = {
-          ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0)),
-          ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0x10000))};
-      II.setMetadata(LLVMContext::MD_range, MDNode::get(II.getContext(), M));
-      II.setMetadata(LLVMContext::MD_noundef,
-                     MDNode::get(II.getContext(), std::nullopt));
-      return &II;
+
+    if (II.getMetadata(LLVMContext::MD_range))
+      break;
+
+    ConstantRange Range(APInt(32, 0), APInt(32, 0x10000));
+
+    if (auto CurrentRange = II.getRange()) {
+      Range = Range.intersectWith(*CurrentRange);
+      if (Range == CurrentRange)
+        break;
     }
-    break;
+
+    II.addRangeRetAttr(Range);
+    II.addRetAttr(Attribute::NoUndef);
+    return &II;
   }
   case Intrinsic::arm_mve_vadc:
   case Intrinsic::arm_mve_vadc_predicated: {
@@ -1959,7 +1963,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits())
       return LT.first * ST->getMVEVectorCostFactor(CostKind);
 
-    // Otherwise we use a legal convert followed by a min+max
+    // If we can we use a legal convert followed by a min+max
     if (((ST->hasVFP2Base() && LT.second == MVT::f32) ||
          (ST->hasFP64() && LT.second == MVT::f64) ||
          (ST->hasFullFP16() && LT.second == MVT::f16) ||
@@ -1980,7 +1984,25 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       Cost += getIntrinsicInstrCost(Attrs2, CostKind);
       return LT.first * Cost;
     }
-    break;
+    // Otherwise we need to follow the default expansion that clamps the value
+    // using a float min/max with a fcmp+sel for nan handling when signed.
+    Type *FPTy = ICA.getArgTypes()[0];
+    Type *RetTy = ICA.getReturnType();
+    IntrinsicCostAttributes Attrs1(Intrinsic::minnum, FPTy, {FPTy, FPTy});
+    InstructionCost Cost = getIntrinsicInstrCost(Attrs1, CostKind);
+    IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, FPTy, {FPTy, FPTy});
+    Cost += getIntrinsicInstrCost(Attrs2, CostKind);
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, FPTy, TTI::CastContextHint::None, CostKind);
+    if (IsSigned) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      Cost += getCmpSelInstrCost(BinaryOperator::FCmp, FPTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+    }
+    return Cost;
   }
   }
 

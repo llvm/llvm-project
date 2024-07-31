@@ -64,7 +64,7 @@ void __attribute__((target("avx10.1-512"))) avx10_1_512(void) {}
 // CHECK: #4 = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-avx,-avx10.1-256,-avx10.1-512,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-sha512,-sm3,-sm4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
 // CHECK: #5 = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes,-avx10.1-256,-avx10.1-512,-vaes"
 // CHECK-NOT: tune-cpu
-// CHECK: #6 = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-3dnow,-3dnowa,-mmx"
+// CHECK: #6 = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-mmx"
 // CHECK: #7 = {{.*}}"target-cpu"="lakemont" "target-features"="+cx8,+mmx"
 // CHECK-NOT: tune-cpu
 // CHECK: #8 = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="sandybridge"

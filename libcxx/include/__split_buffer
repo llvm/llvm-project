@@ -211,8 +211,8 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__split_buffer&, false_type) _NOEXCEPT {}
 
   struct _ConstructTransaction {
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(
-        pointer* __p, size_type __n) _NOEXCEPT
+    _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(pointer* __p, size_type __n) _NOEXCEPT
         : __pos_(*__p),
           __end_(*__p + __n),
           __dest_(__p) {}

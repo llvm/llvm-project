@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -421,7 +422,8 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
   if (isPositionIndependent() &&
-      getTargetMachine().getCodeModel() == CodeModel::Large)
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !Subtarget.isTargetCOFF())
     return MachineJumpTableInfo::EK_LabelDifference64;
 
   // Otherwise, use the normal jump table encoding heuristics.
@@ -1242,7 +1244,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
   return DAG.getMemcpy(
       Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
       /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -2018,7 +2020,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool HasNoCfCheck = (CB && CB->doesNoCfCheck());
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
   bool IsCFICall = IsIndirectCall && CLI.CFIType;
-  const Module *M = MF.getMMI().getModule();
+  const Module *M = MF.getFunction().getParent();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
 
   MachineFunction::CallSiteInfo CSInfo;

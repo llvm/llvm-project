@@ -98,6 +98,9 @@ template <typename T> bool IsAssumedRank(const Expr<T> &expr) {
 template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
   return x && IsAssumedRank(*x);
 }
+template <typename A> bool IsAssumedRank(const A *x) {
+  return x && IsAssumedRank(*x);
+}
 
 // Predicate: true when an expression is a coarray (corank > 0)
 bool IsCoarray(const ActualArgument &);
@@ -1070,6 +1073,16 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
+// Collects Symbols of interest for the CUDA data transfer in an expression
+template <typename A>
+semantics::UnorderedSymbolSet CollectCudaSymbols(const A &);
+extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeInteger> &);
+extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SubscriptInteger> &);
+
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
 
@@ -1230,24 +1243,33 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-// Get the number of distinct symbols with CUDA attribute in the expression.
-template <typename A> inline int GetNbOfCUDASymbols(const A &expr) {
+inline bool IsCUDADeviceSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Get the number of distinct symbols with CUDA device
+// attribute in the expression.
+template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   semantics::UnorderedSymbolSet symbols;
-  for (const Symbol &sym : CollectSymbols(expr)) {
-    if (const auto *details =
-            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-      if (details->cudaDataAttr()) {
-        symbols.insert(sym);
-      }
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDADeviceSymbol(sym)) {
+      symbols.insert(sym);
     }
   }
   return symbols.size();
 }
 
-// Check if any of the symbols part of the expression has a CUDA data
+// Check if any of the symbols part of the expression has a CUDA device
 // attribute.
-template <typename A> inline bool HasCUDAAttrs(const A &expr) {
-  return GetNbOfCUDASymbols(expr) > 0;
+template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
+  return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
@@ -1255,25 +1277,16 @@ template <typename A> inline bool HasCUDAAttrs(const A &expr) {
 inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   unsigned hostSymbols{0};
   unsigned deviceSymbols{0};
-  for (const Symbol &sym : CollectSymbols(expr)) {
-    if (const auto *details =
-            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-      if (details->cudaDataAttr()) {
-        ++deviceSymbols;
-      } else {
-        if (sym.owner().IsDerivedType()) {
-          if (const auto *details =
-                  sym.owner()
-                      .GetSymbol()
-                      ->GetUltimate()
-                      .detailsIf<semantics::ObjectEntityDetails>()) {
-            if (details->cudaDataAttr()) {
-              ++deviceSymbols;
-            }
-          }
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDADeviceSymbol(sym)) {
+      ++deviceSymbols;
+    } else {
+      if (sym.owner().IsDerivedType()) {
+        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
+          ++deviceSymbols;
         }
-        ++hostSymbols;
       }
+      ++hostSymbols;
     }
   }
   return hostSymbols > 0 && deviceSymbols > 0;
@@ -1320,6 +1333,10 @@ bool IsBuiltinCPtr(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
 bool IsNotifyType(const DerivedTypeSpec *);
+// Is this derived type IEEE_FLAG_TYPE from module ISO_IEEE_EXCEPTIONS?
+bool IsIeeeFlagType(const DerivedTypeSpec *);
+// Is this derived type IEEE_ROUND_TYPE from module ISO_IEEE_ARITHMETIC?
+bool IsIeeeRoundType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV?
 bool IsTeamType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE, C_PTR, or C_FUNPTR?

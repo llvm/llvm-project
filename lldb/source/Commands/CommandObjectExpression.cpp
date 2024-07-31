@@ -461,7 +461,11 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
-        result_valobj_sp->Dump(output_stream, options);
+        if (llvm::Error error =
+                result_valobj_sp->Dump(output_stream, options)) {
+          result.AppendError(toString(std::move(error)));
+          return false;
+        }
 
         if (suppress_result)
           if (auto result_var_sp =
@@ -601,7 +605,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
       return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target &target = GetSelectedOrDummyTarget();
+      Target &target = GetTarget();
       // Drop into REPL
       m_expr_lines.clear();
       m_expr_line_count = 0;
@@ -661,7 +665,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     }
   }
 
-  Target &target = GetSelectedOrDummyTarget();
+  Target &target = GetTarget();
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 

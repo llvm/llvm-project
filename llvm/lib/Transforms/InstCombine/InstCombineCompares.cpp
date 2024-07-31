@@ -3933,6 +3933,52 @@ foldICmpUSubSatOrUAddSatWithConstant(ICmpInst::Predicate Pred,
       ConstantInt::get(Op1->getType(), EquivInt));
 }
 
+static Instruction *
+foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
+                                   const APInt &C,
+                                   InstCombiner::BuilderTy &Builder) {
+  std::optional<ICmpInst::Predicate> NewPredicate = std::nullopt;
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_NE:
+    if (C.isZero())
+      NewPredicate = Pred;
+    else if (C.isOne())
+      NewPredicate =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
+    else if (C.isAllOnes())
+      NewPredicate =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
+    break;
+
+  case ICmpInst::ICMP_SGT:
+    if (C.isAllOnes())
+      NewPredicate = ICmpInst::ICMP_UGE;
+    else if (C.isZero())
+      NewPredicate = ICmpInst::ICMP_UGT;
+    break;
+
+  case ICmpInst::ICMP_SLT:
+    if (C.isZero())
+      NewPredicate = ICmpInst::ICMP_ULT;
+    else if (C.isOne())
+      NewPredicate = ICmpInst::ICMP_ULE;
+    break;
+
+  default:
+    break;
+  }
+
+  if (!NewPredicate)
+    return nullptr;
+
+  if (I->getIntrinsicID() == Intrinsic::scmp)
+    NewPredicate = ICmpInst::getSignedPredicate(*NewPredicate);
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  return new ICmpInst(*NewPredicate, LHS, RHS);
+}
+
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
 Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                                                              IntrinsicInst *II,
@@ -3954,6 +4000,11 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     if (Instruction *R = foldCtpopPow2Test(Cmp, II, C, Builder, Q))
       return R;
   } break;
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    if (auto *Folded = foldICmpOfCmpIntrinsicWithConstant(Pred, II, C, Builder))
+      return Folded;
+    break;
   }
 
   if (Cmp.isEquality())
@@ -5721,8 +5772,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   //    -> icmp eq/ne X, rotate-left(X)
   // We generally try to convert rotate-right -> rotate-left, this just
   // canonicalizes another case.
-  CmpInst::Predicate PredUnused = Pred;
-  if (match(&I, m_c_ICmp(PredUnused, m_Value(A),
+  if (match(&I, m_c_ICmp(m_Value(A),
                          m_OneUse(m_Intrinsic<Intrinsic::fshr>(
                              m_Deferred(A), m_Deferred(A), m_Value(B))))))
     return new ICmpInst(
@@ -5732,8 +5782,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   // Canonicalize:
   // icmp eq/ne OneUse(A ^ Cst), B --> icmp eq/ne (A ^ B), Cst
   Constant *Cst;
-  if (match(&I, m_c_ICmp(PredUnused,
-                         m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
+  if (match(&I, m_c_ICmp(m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
                          m_CombineAnd(m_Value(B), m_Unless(m_ImmConstant())))))
     return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
 
@@ -5744,13 +5793,12 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                                 m_c_Xor(m_Value(B), m_Deferred(A))),
                     m_Sub(m_Value(B), m_Deferred(A)));
     std::optional<bool> IsZero = std::nullopt;
-    if (match(&I, m_c_ICmp(PredUnused, m_OneUse(m_c_And(m_Value(A), m_Matcher)),
+    if (match(&I, m_c_ICmp(m_OneUse(m_c_And(m_Value(A), m_Matcher)),
                            m_Deferred(A))))
       IsZero = false;
     // (icmp eq/ne (and (add/sub/xor X, P2), P2), 0)
     else if (match(&I,
-                   m_ICmp(PredUnused, m_OneUse(m_c_And(m_Value(A), m_Matcher)),
-                          m_Zero())))
+                   m_ICmp(m_OneUse(m_c_And(m_Value(A), m_Matcher)), m_Zero())))
       IsZero = true;
 
     if (IsZero && isKnownToBeAPowerOfTwo(A, /* OrZero */ true, /*Depth*/ 0, &I))
@@ -6400,13 +6448,13 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     // Don't use dominating conditions when folding icmp using known bits. This
     // may convert signed into unsigned predicates in ways that other passes
     // (especially IndVarSimplify) may not be able to reliably undo.
-    SQ.DC = nullptr;
-    auto _ = make_scope_exit([&]() { SQ.DC = &DC; });
+    SimplifyQuery Q = SQ.getWithoutDomCondCache().getWithInstruction(&I);
     if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
-                             Op0Known, 0))
+                             Op0Known, /*Depth=*/0, Q))
       return &I;
 
-    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
+    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known,
+                             /*Depth=*/0, Q))
       return &I;
   }
 
@@ -7951,6 +7999,53 @@ static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   return new FCmpInst(Pred, Op0, Zero, "", &I);
 }
 
+static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
+                                         Constant *RHSC, InstCombinerImpl &CI) {
+  const CmpInst::Predicate Pred = I.getPredicate();
+  Value *X = LHSI->getOperand(0);
+  Value *Y = LHSI->getOperand(1);
+  switch (Pred) {
+  default:
+    break;
+  case FCmpInst::FCMP_UGT:
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_UNE:
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_OLE:
+    // The optimization is not valid if X and Y are infinities of the same
+    // sign, i.e. the inf - inf = nan case. If the fsub has the ninf or nnan
+    // flag then we can assume we do not have that case. Otherwise we might be
+    // able to prove that either X or Y is not infinity.
+    if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
+        !isKnownNeverInfinity(Y, /*Depth=*/0,
+                              CI.getSimplifyQuery().getWithInstruction(&I)) &&
+        !isKnownNeverInfinity(X, /*Depth=*/0,
+                              CI.getSimplifyQuery().getWithInstruction(&I)))
+      break;
+
+    [[fallthrough]];
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UEQ:
+  case FCmpInst::FCMP_UGE:
+  case FCmpInst::FCMP_ULE:
+    // fcmp pred (x - y), 0 --> fcmp pred x, y
+    if (match(RHSC, m_AnyZeroFP()) &&
+        I.getFunction()->getDenormalMode(
+            LHSI->getType()->getScalarType()->getFltSemantics()) ==
+            DenormalMode::getIEEE()) {
+      CI.replaceOperand(I, 0, X);
+      CI.replaceOperand(I, 1, Y);
+      return &I;
+    }
+    break;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -8120,6 +8215,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;
+      break;
+    case Instruction::FSub:
+      if (LHSI->hasOneUse())
+        if (Instruction *NV = foldFCmpFSubIntoFCmp(I, LHSI, RHSC, *this))
+          return NV;
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))

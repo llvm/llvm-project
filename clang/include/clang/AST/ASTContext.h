@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
@@ -467,6 +468,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is the top-level (C++20) Named module we are building.
   Module *CurrentCXXNamedModule = nullptr;
 
+  /// Help structures to decide whether two `const Module *` belongs
+  /// to the same conceptual module to avoid the expensive to string comparison
+  /// if possible.
+  ///
+  /// Not serialized intentionally.
+  llvm::StringMap<const Module *> PrimaryModuleNameMap;
+  llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
+
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
   static constexpr unsigned FunctionProtoTypesLog2InitSize = 12;
@@ -634,6 +643,9 @@ private:
   /// address spaces (e.g. OpenCL/CUDA)
   bool AddrSpaceMapMangling;
 
+  /// For performance, track whether any function effects are in use.
+  mutable bool AnyFunctionEffects = false;
+
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
@@ -725,6 +737,12 @@ public:
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
   void Deallocate(void *Ptr) const {}
+
+  llvm::StringRef backupStr(llvm::StringRef S) const {
+    char *Buf = new (*this) char[S.size()];
+    std::copy(S.begin(), S.end(), Buf);
+    return llvm::StringRef(Buf, S.size());
+  }
 
   /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList
   /// pool.
@@ -1073,6 +1091,12 @@ public:
   /// Get module under construction, nullptr if this is not a C++20 module.
   Module *getCurrentNamedModule() const { return CurrentCXXNamedModule; }
 
+  /// If the two module \p M1 and \p M2 are in the same module.
+  ///
+  /// FIXME: The signature may be confusing since `clang::Module` means to
+  /// a module fragment or a module unit but not a C++20 module.
+  bool isInSameModule(const Module *M1, const Module *M2);
+
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
   }
@@ -1147,6 +1171,8 @@ public:
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/AMDGPUTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1261,6 +1287,14 @@ public:
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
 
+  /// Return the "other" discriminator used for the pointer auth schema used for
+  /// vtable pointers in instances of the requested type.
+  uint16_t
+  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+
+  /// Return the "other" type-specific discriminator for the given type.
+  uint16_t getPointerAuthTypeDiscriminator(QualType T);
+
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
   /// qualifiers on ObjCObjectPointerType. It can be set to true when
@@ -1335,7 +1369,7 @@ public:
                            bool AsWritten = false);
 
   /// Get a function type and produce the equivalent function type where
-  /// pointer size address spaces in the return type and parameter tyeps are
+  /// pointer size address spaces in the return type and parameter types are
   /// replaced with the default address space.
   QualType getFunctionTypeWithoutPtrSizes(QualType T);
 
@@ -2628,6 +2662,10 @@ public:
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
   QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
+  QualType getUnqualifiedArrayType(QualType T) const {
+    Qualifiers Quals;
+    return getUnqualifiedArrayType(T, Quals);
+  }
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
@@ -2879,6 +2917,8 @@ public:
   bool addressSpaceMapManglingFor(LangAS AS) const {
     return AddrSpaceMapMangling || isTargetAddressSpace(AS);
   }
+
+  bool hasAnyFunctionEffects() const { return AnyFunctionEffects; }
 
   // Merges two exception specifications, such that the resulting
   // exception spec is the union of both. For example, if either
@@ -3210,9 +3250,6 @@ public:
   /// valid feature names.
   ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD) const;
 
-  std::vector<std::string>
-  filterFunctionTargetVersionAttrs(const TargetVersionAttr *TV) const;
-
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              const FunctionDecl *) const;
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
@@ -3425,12 +3462,21 @@ public:
   /// Whether a C++ static variable or CUDA/HIP kernel should be externalized.
   bool shouldExternalize(const Decl *D) const;
 
+  /// Resolve the root record to be used to derive the vtable pointer
+  /// authentication policy for the specified record.
+  const CXXRecordDecl *
+  baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+  bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                               StringRef MangledName);
+
   StringRef getCUIDHash() const;
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
+
+  llvm::DenseMap<GlobalDecl, llvm::StringSet<>> ThunksToBeAbbreviated;
 };
 
 /// Insertion operator for diagnostics.

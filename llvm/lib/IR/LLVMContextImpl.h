@@ -57,6 +57,7 @@ class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
+class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -465,29 +466,25 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   uint32_t AlignInBits;
   unsigned Encoding;
   unsigned Flags;
-  Metadata *Annotations;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding, unsigned Flags,
-                Metadata *Annotations)
+                uint32_t AlignInBits, unsigned Encoding, unsigned Flags)
       : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        Encoding(Encoding), Flags(Flags), Annotations(Annotations) {}
+        Encoding(Encoding), Flags(Flags) {}
   MDNodeKeyImpl(const DIBasicType *N)
       : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
         AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()),
-        Flags(N->getFlags()), Annotations(N->getRawAnnotations()) {}
+        Flags(N->getFlags()) {}
 
   bool isKeyOf(const DIBasicType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           Encoding == RHS->getEncoding() && Flags == RHS->getFlags() &&
-           Annotations == RHS->getRawAnnotations();
+           Encoding == RHS->getEncoding() && Flags == RHS->getFlags();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding,
-                        Annotations);
+    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding);
   }
 };
 
@@ -716,24 +713,18 @@ template <> struct MDNodeKeyImpl<DISubroutineType> {
   unsigned Flags;
   uint8_t CC;
   Metadata *TypeArray;
-  Metadata *Annotations;
 
-  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray,
-                Metadata *Annotations)
-      : Flags(Flags), CC(CC), TypeArray(TypeArray), Annotations(Annotations) {}
+  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray)
+      : Flags(Flags), CC(CC), TypeArray(TypeArray) {}
   MDNodeKeyImpl(const DISubroutineType *N)
-      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()),
-        Annotations(N->getRawAnnotations()) {}
+      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()) {}
 
   bool isKeyOf(const DISubroutineType *RHS) const {
     return Flags == RHS->getFlags() && CC == RHS->getCC() &&
-           TypeArray == RHS->getRawTypeArray() &&
-           Annotations == RHS->getRawAnnotations();
+           TypeArray == RHS->getRawTypeArray();
   }
 
-  unsigned getHashValue() const {
-    return hash_combine(Flags, CC, TypeArray, Annotations);
-  }
+  unsigned getHashValue() const { return hash_combine(Flags, CC, TypeArray); }
 };
 
 template <> struct MDNodeKeyImpl<DIFile> {
@@ -1544,6 +1535,13 @@ public:
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
 
+  // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
+  // ConstantRange. Since this is a dynamically sized class, it's not
+  // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
+  // for allocation and record all allocated pointers in this vector. In the
+  // LLVMContext destructor, call the destuctors of everything in the vector.
+  std::vector<ConstantRangeListAttributeImpl *> ConstantRangeListAttributes;
+
   DenseMap<Type *, std::unique_ptr<ConstantAggregateZero>> CAZConstants;
 
   using ArrayConstantsTy = ConstantUniqueMap<ConstantArray>;
@@ -1584,7 +1582,7 @@ public:
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
-  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy, X86_AMXTy;
+  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
@@ -1725,6 +1723,9 @@ public:
   }
 
   void deleteTrailingDbgRecords(BasicBlock *B) { TrailingDbgRecords.erase(B); }
+
+  std::string DefaultTargetCPU;
+  std::string DefaultTargetFeatures;
 };
 
 } // end namespace llvm

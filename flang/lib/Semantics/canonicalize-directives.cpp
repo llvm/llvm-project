@@ -104,7 +104,7 @@ void CanonicalizationOfDirectives::CheckLoopDirective(
     std::string s{parser::ToUpperCaseLetters(dir.source.ToString())};
     s.pop_back(); // Remove trailing newline from source string
     messages_.Say(
-        dir.source, "A DO loop must follow the %s directive"_err_en_US, s);
+        dir.source, "A DO loop must follow the %s directive"_warn_en_US, s);
   }
 }
 

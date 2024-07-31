@@ -139,7 +139,7 @@ void mlir::transform::ChangeCallTargetOp::getEffects(
   // Indicate that the `call` handle is only read by this operation because the
   // associated operation is not erased but rather modified in-place, so the
   // reference to it remains valid.
-  onlyReadsHandle(getCall(), effects);
+  onlyReadsHandle(getCallMutable(), effects);
 
   // Indicate that the payload is modified by this operation.
   modifiesPayload(effects);

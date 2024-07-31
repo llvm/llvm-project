@@ -68,81 +68,81 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdbit.h entrypoints
-    libc.src.stdbit.stdc_leading_zeros_uc
-    libc.src.stdbit.stdc_leading_zeros_us
-    libc.src.stdbit.stdc_leading_zeros_ui
-    libc.src.stdbit.stdc_leading_zeros_ul
-    libc.src.stdbit.stdc_leading_zeros_ull
-    libc.src.stdbit.stdc_leading_ones_uc
-    libc.src.stdbit.stdc_leading_ones_us
-    libc.src.stdbit.stdc_leading_ones_ui
-    libc.src.stdbit.stdc_leading_ones_ul
-    libc.src.stdbit.stdc_leading_ones_ull
-    libc.src.stdbit.stdc_trailing_zeros_uc
-    libc.src.stdbit.stdc_trailing_zeros_us
-    libc.src.stdbit.stdc_trailing_zeros_ui
-    libc.src.stdbit.stdc_trailing_zeros_ul
-    libc.src.stdbit.stdc_trailing_zeros_ull
-    libc.src.stdbit.stdc_trailing_ones_uc
-    libc.src.stdbit.stdc_trailing_ones_us
-    libc.src.stdbit.stdc_trailing_ones_ui
-    libc.src.stdbit.stdc_trailing_ones_ul
-    libc.src.stdbit.stdc_trailing_ones_ull
-    libc.src.stdbit.stdc_first_leading_zero_uc
-    libc.src.stdbit.stdc_first_leading_zero_us
-    libc.src.stdbit.stdc_first_leading_zero_ui
-    libc.src.stdbit.stdc_first_leading_zero_ul
-    libc.src.stdbit.stdc_first_leading_zero_ull
-    libc.src.stdbit.stdc_first_leading_one_uc
-    libc.src.stdbit.stdc_first_leading_one_us
-    libc.src.stdbit.stdc_first_leading_one_ui
-    libc.src.stdbit.stdc_first_leading_one_ul
-    libc.src.stdbit.stdc_first_leading_one_ull
-    libc.src.stdbit.stdc_first_trailing_zero_uc
-    libc.src.stdbit.stdc_first_trailing_zero_us
-    libc.src.stdbit.stdc_first_trailing_zero_ui
-    libc.src.stdbit.stdc_first_trailing_zero_ul
-    libc.src.stdbit.stdc_first_trailing_zero_ull
-    libc.src.stdbit.stdc_first_trailing_one_uc
-    libc.src.stdbit.stdc_first_trailing_one_us
-    libc.src.stdbit.stdc_first_trailing_one_ui
-    libc.src.stdbit.stdc_first_trailing_one_ul
-    libc.src.stdbit.stdc_first_trailing_one_ull
-    libc.src.stdbit.stdc_count_zeros_uc
-    libc.src.stdbit.stdc_count_zeros_us
-    libc.src.stdbit.stdc_count_zeros_ui
-    libc.src.stdbit.stdc_count_zeros_ul
-    libc.src.stdbit.stdc_count_zeros_ull
-    libc.src.stdbit.stdc_count_ones_uc
-    libc.src.stdbit.stdc_count_ones_us
-    libc.src.stdbit.stdc_count_ones_ui
-    libc.src.stdbit.stdc_count_ones_ul
-    libc.src.stdbit.stdc_count_ones_ull
-    libc.src.stdbit.stdc_has_single_bit_uc
-    libc.src.stdbit.stdc_has_single_bit_us
-    libc.src.stdbit.stdc_has_single_bit_ui
-    libc.src.stdbit.stdc_has_single_bit_ul
-    libc.src.stdbit.stdc_has_single_bit_ull
-    libc.src.stdbit.stdc_bit_width_uc
-    libc.src.stdbit.stdc_bit_width_us
-    libc.src.stdbit.stdc_bit_width_ui
-    libc.src.stdbit.stdc_bit_width_ul
-    libc.src.stdbit.stdc_bit_width_ull
-    libc.src.stdbit.stdc_bit_floor_uc
-    libc.src.stdbit.stdc_bit_floor_us
-    libc.src.stdbit.stdc_bit_floor_ui
-    libc.src.stdbit.stdc_bit_floor_ul
-    libc.src.stdbit.stdc_bit_floor_ull
     libc.src.stdbit.stdc_bit_ceil_uc
-    libc.src.stdbit.stdc_bit_ceil_us
     libc.src.stdbit.stdc_bit_ceil_ui
     libc.src.stdbit.stdc_bit_ceil_ul
     libc.src.stdbit.stdc_bit_ceil_ull
+    libc.src.stdbit.stdc_bit_ceil_us
+    libc.src.stdbit.stdc_bit_floor_uc
+    libc.src.stdbit.stdc_bit_floor_ui
+    libc.src.stdbit.stdc_bit_floor_ul
+    libc.src.stdbit.stdc_bit_floor_ull
+    libc.src.stdbit.stdc_bit_floor_us
+    libc.src.stdbit.stdc_bit_width_uc
+    libc.src.stdbit.stdc_bit_width_ui
+    libc.src.stdbit.stdc_bit_width_ul
+    libc.src.stdbit.stdc_bit_width_ull
+    libc.src.stdbit.stdc_bit_width_us
+    libc.src.stdbit.stdc_count_ones_uc
+    libc.src.stdbit.stdc_count_ones_ui
+    libc.src.stdbit.stdc_count_ones_ul
+    libc.src.stdbit.stdc_count_ones_ull
+    libc.src.stdbit.stdc_count_ones_us
+    libc.src.stdbit.stdc_count_zeros_uc
+    libc.src.stdbit.stdc_count_zeros_ui
+    libc.src.stdbit.stdc_count_zeros_ul
+    libc.src.stdbit.stdc_count_zeros_ull
+    libc.src.stdbit.stdc_count_zeros_us
+    libc.src.stdbit.stdc_first_leading_one_uc
+    libc.src.stdbit.stdc_first_leading_one_ui
+    libc.src.stdbit.stdc_first_leading_one_ul
+    libc.src.stdbit.stdc_first_leading_one_ull
+    libc.src.stdbit.stdc_first_leading_one_us
+    libc.src.stdbit.stdc_first_leading_zero_uc
+    libc.src.stdbit.stdc_first_leading_zero_ui
+    libc.src.stdbit.stdc_first_leading_zero_ul
+    libc.src.stdbit.stdc_first_leading_zero_ull
+    libc.src.stdbit.stdc_first_leading_zero_us
+    libc.src.stdbit.stdc_first_trailing_one_uc
+    libc.src.stdbit.stdc_first_trailing_one_ui
+    libc.src.stdbit.stdc_first_trailing_one_ul
+    libc.src.stdbit.stdc_first_trailing_one_ull
+    libc.src.stdbit.stdc_first_trailing_one_us
+    libc.src.stdbit.stdc_first_trailing_zero_uc
+    libc.src.stdbit.stdc_first_trailing_zero_ui
+    libc.src.stdbit.stdc_first_trailing_zero_ul
+    libc.src.stdbit.stdc_first_trailing_zero_ull
+    libc.src.stdbit.stdc_first_trailing_zero_us
+    libc.src.stdbit.stdc_has_single_bit_uc
+    libc.src.stdbit.stdc_has_single_bit_ui
+    libc.src.stdbit.stdc_has_single_bit_ul
+    libc.src.stdbit.stdc_has_single_bit_ull
+    libc.src.stdbit.stdc_has_single_bit_us
+    libc.src.stdbit.stdc_leading_ones_uc
+    libc.src.stdbit.stdc_leading_ones_ui
+    libc.src.stdbit.stdc_leading_ones_ul
+    libc.src.stdbit.stdc_leading_ones_ull
+    libc.src.stdbit.stdc_leading_ones_us
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_trailing_ones_uc
+    libc.src.stdbit.stdc_trailing_ones_ui
+    libc.src.stdbit.stdc_trailing_ones_ul
+    libc.src.stdbit.stdc_trailing_ones_ull
+    libc.src.stdbit.stdc_trailing_ones_us
+    libc.src.stdbit.stdc_trailing_zeros_uc
+    libc.src.stdbit.stdc_trailing_zeros_ui
+    libc.src.stdbit.stdc_trailing_zeros_ul
+    libc.src.stdbit.stdc_trailing_zeros_ull
+    libc.src.stdbit.stdc_trailing_zeros_us
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
-    libc.src.stdlib.atoi
     libc.src.stdlib.atof
+    libc.src.stdlib.atoi
     libc.src.stdlib.atol
     libc.src.stdlib.atoll
     libc.src.stdlib.bsearch
@@ -161,6 +161,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
 
+    # stdlib.h external entrypoints
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
+    libc.src.stdlib.malloc
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
@@ -176,6 +181,14 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 )
 
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
@@ -186,11 +199,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fegetexceptflag
     libc.src.fenv.fegetround
     libc.src.fenv.feholdexcept
+    libc.src.fenv.feraiseexcept
     libc.src.fenv.fesetenv
     libc.src.fenv.fesetexcept
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
-    libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
     libc.src.fenv.fetestexceptflag
     libc.src.fenv.feupdateenv
@@ -200,17 +213,24 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.cbrt
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
+    libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.dfmal
+    libc.src.math.dsqrtl
+    libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -223,6 +243,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
+    libc.src.math.fadd 
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -233,37 +254,37 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
-    libc.src.math.fmaxl
-    libc.src.math.fmin
-    libc.src.math.fminf
-    libc.src.math.fminl
     libc.src.math.fmaximum
-    libc.src.math.fmaximumf
-    libc.src.math.fmaximuml
-    libc.src.math.fmaximum_num
-    libc.src.math.fmaximum_numf
-    libc.src.math.fmaximum_numl
     libc.src.math.fmaximum_mag
-    libc.src.math.fmaximum_magf
-    libc.src.math.fmaximum_magl
     libc.src.math.fmaximum_mag_num
     libc.src.math.fmaximum_mag_numf
     libc.src.math.fmaximum_mag_numl
+    libc.src.math.fmaximum_magf
+    libc.src.math.fmaximum_magl
+    libc.src.math.fmaximum_num
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numl
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximuml
+    libc.src.math.fmaxl
+    libc.src.math.fmin
+    libc.src.math.fminf
     libc.src.math.fminimum
-    libc.src.math.fminimumf
-    libc.src.math.fminimuml
-    libc.src.math.fminimum_num
-    libc.src.math.fminimum_numf
-    libc.src.math.fminimum_numl
     libc.src.math.fminimum_mag
-    libc.src.math.fminimum_magf
-    libc.src.math.fminimum_magl
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
     libc.src.math.fminimum_mag_numl
-    libc.src.math.fmul
+    libc.src.math.fminimum_magf
+    libc.src.math.fminimum_magl
+    libc.src.math.fminimum_num
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numl
+    libc.src.math.fminimumf
+    libc.src.math.fminimuml
+    libc.src.math.fminl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmul
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
@@ -344,14 +365,24 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.setpayload
+    libc.src.math.setpayloadf
+    libc.src.math.sin
+    libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sinhf
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

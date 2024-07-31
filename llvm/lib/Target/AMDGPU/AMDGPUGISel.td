@@ -271,11 +271,8 @@ def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 // FIXME: Check MMO is atomic
 def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap_glue>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, SIatomic_fmin>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, SIatomic_fmax>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, atomic_load_fmin_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, atomic_load_fmax_glue>;
-
+def : GINodeEquiv<G_ATOMICRMW_FMIN, atomic_load_fmin_glue>;
+def : GINodeEquiv<G_ATOMICRMW_FMAX, atomic_load_fmax_glue>;
 
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SWAP, SIbuffer_atomic_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_ADD, SIbuffer_atomic_add>;
@@ -401,8 +398,10 @@ def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
 
-def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
+def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm32">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;
+def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm64">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
 
 def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
   GISDNodeXFormEquiv<IMMPopCount>;

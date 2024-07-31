@@ -190,29 +190,31 @@ TEST_F(MapAllocatorTest, SecondaryIterate) {
   Str.output();
 }
 
-TEST_F(MapAllocatorTest, SecondaryOptions) {
+TEST_F(MapAllocatorTest, SecondaryCacheOptions) {
+  if (!Allocator->canCache(0U))
+    TEST_SKIP("Secondary Cache disabled");
+
   // Attempt to set a maximum number of entries higher than the array size.
   EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
 
   // Attempt to set an invalid (negative) number of entries
   EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
-  if (Allocator->canCache(0U)) {
-    // Various valid combinations.
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
-    EXPECT_TRUE(Allocator->canCache(1UL << 18));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
-    EXPECT_FALSE(Allocator->canCache(1UL << 18));
-    EXPECT_TRUE(Allocator->canCache(1UL << 16));
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
-    EXPECT_FALSE(Allocator->canCache(1UL << 16));
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
-    EXPECT_TRUE(Allocator->canCache(1UL << 16));
-  }
+
+  // Various valid combinations.
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+  EXPECT_TRUE(
+      Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Allocator->canCache(1UL << 18));
+  EXPECT_TRUE(
+      Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
+  EXPECT_FALSE(Allocator->canCache(1UL << 18));
+  EXPECT_TRUE(Allocator->canCache(1UL << 16));
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
+  EXPECT_FALSE(Allocator->canCache(1UL << 16));
+  EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+  EXPECT_TRUE(
+      Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Allocator->canCache(1UL << 16));
 }
 
 struct MapAllocatorWithReleaseTest : public MapAllocatorTest {

@@ -132,21 +132,21 @@ __attribute__((target("+sve")))
 void plussve() {}
 __attribute__((target("+sve+nosve2")))
 // CHECK-LABEL: define {{[^@]+}}@plussveplussve2
-// CHECK-SAME: () #[[ATTR13:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR12]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 void plussveplussve2() {}
 __attribute__((target("sve,no-sve2")))
 // CHECK-LABEL: define {{[^@]+}}@plussveminusnosve2
-// CHECK-SAME: () #[[ATTR13]] {
+// CHECK-SAME: () #[[ATTR12]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 void plussveminusnosve2() {}
 __attribute__((target("+fp16")))
 // CHECK-LABEL: define {{[^@]+}}@plusfp16
-// CHECK-SAME: () #[[ATTR14:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -154,44 +154,29 @@ void plusfp16() {}
 
 __attribute__((target("cpu=neoverse-n1,tune=cortex-a710,arch=armv8.6-a+sve2")))
 // CHECK-LABEL: define {{[^@]+}}@all
-// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 void all() {}
 __attribute__((target("cpu=neoverse-n1,tune=cortex-a710,arch=armv8.6-a+sve2,branch-protection=standard")))
 // CHECK-LABEL: define {{[^@]+}}@allplusbranchprotection
-// CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 void allplusbranchprotection() {}
 
-// These tests check that the user facing and internal llvm name are both accepted.
-__attribute__((target("+noneon")))
-// CHECK-LABEL: define {{[^@]+}}@plusnoneon
-// CHECK-SAME: () #[[ATTR17:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret void
-//
-void plusnoneon() {}
 __attribute__((target("+nosimd")))
 // CHECK-LABEL: define {{[^@]+}}@plusnosimd
-// CHECK-SAME: () #[[ATTR17]] {
+// CHECK-SAME: () #[[ATTR16:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 void plusnosimd() {}
-__attribute__((target("no-neon")))
-// CHECK-LABEL: define {{[^@]+}}@noneon
-// CHECK-SAME: () #[[ATTR17]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret void
-//
-void noneon() {}
 __attribute__((target("no-simd")))
 // CHECK-LABEL: define {{[^@]+}}@nosimd
-// CHECK-SAME: () #[[ATTR17]] {
+// CHECK-SAME: () #[[ATTR16]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -200,7 +185,7 @@ void nosimd() {}
 // This isn't part of the standard interface, but test that -arch features should not apply anything else.
 __attribute__((target("no-v9.3a")))
 // CHECK-LABEL: define {{[^@]+}}@minusarch
-// CHECK-SAME: () #[[ATTR18:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -210,22 +195,21 @@ void minusarch() {}
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc,+fp-armv8,+lse,+neon,+ras,+rdm,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sve,+v8.1a,+v8.2a,+v8a" }
 // CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8a" }
-// CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" }
-// CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a710" "target-features"="+bf16,+complxnum,+crc,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+perfmon,+ras,+rcpc,+rdm,+sb,+sve,+sve2,+sve2-bitperm" }
+// CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" }
+// CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a710" "target-features"="+bf16,+complxnum,+crc,+dotprod,+ete,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+perfmon,+ras,+rcpc,+rdm,+sb,+sve,+sve2,+sve2-bitperm,+trbe,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a" }
 // CHECK: attributes #[[ATTR5]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+ete,+fp-armv8,+neon,+trbe,+v8a" }
 // CHECK: attributes #[[ATTR7]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }
-// CHECK: attributes #[[ATTR8]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+perfmon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #[[ATTR9]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #[[ATTR10]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2" }
-// CHECK: attributes #[[ATTR11]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,-sve" }
-// CHECK: attributes #[[ATTR12]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
-// CHECK: attributes #[[ATTR13]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve,-sve2" }
-// CHECK: attributes #[[ATTR14]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16" }
-// CHECK: attributes #[[ATTR15]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #[[ATTR16]] = { noinline nounwind optnone "branch-protection-pauth-lr"="false" "branch-target-enforcement"="true" "guarded-control-stack"="true" "no-trapping-math"="true" "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #[[ATTR17]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-neon" }
-// CHECK: attributes #[[ATTR18]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-v9.3a" }
+// CHECK: attributes #[[ATTR8]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+perfmon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+v8.1a,+v8.2a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #[[ATTR9]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #[[ATTR10]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+ccdp,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
+// CHECK: attributes #[[ATTR11]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+ccdp,+complxnum,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,-sve" }
+// CHECK: attributes #[[ATTR12]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
+// CHECK: attributes #[[ATTR13]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16" }
+// CHECK: attributes #[[ATTR14]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #[[ATTR15]] = { noinline nounwind optnone "branch-target-enforcement" "guarded-control-stack" "no-trapping-math"="true" "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "stack-protector-buffer-size"="8" "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #[[ATTR16]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR17]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-v9.3a" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

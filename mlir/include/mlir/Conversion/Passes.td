@@ -32,6 +32,29 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
+  let summary = "Convert to SPIR-V";
+  let description = [{
+    This is a generic pass to convert to SPIR-V.
+  }];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "vector::VectorDialect",
+  ];
+  let options = [
+    Option<"runSignatureConversion", "run-signature-conversion", "bool",
+    /*default=*/"true",
+    "Run function signature conversion to convert vector types">,
+    Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
+    /*default=*/"true",
+    "Run vector unrolling to convert vector types in function bodies">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 
@@ -478,7 +501,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
-           >
+          >
   ];
 
   let dependentDialects = [
@@ -718,6 +741,23 @@ def ConvertMathToLLVMPass : Pass<"convert-math-to-llvm"> {
   let options = [
     Option<"approximateLog1p", "approximate-log1p", "bool", "true",
            "Enable approximation of Log1p.">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToLibm
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
+  let summary = "Convert Math dialect to ROCDL library calls";
+  let description = [{
+    This pass converts supported Math ops to ROCDL library calls.
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "func::FuncDialect",
+    "ROCDL::ROCDLDialect",
+    "vector::VectorDialect",
   ];
 }
 
@@ -1276,7 +1316,7 @@ def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.
   }];
-  let dependentDialects = ["arm_sme::ArmSMEDialect"];
+  let dependentDialects = ["arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect"];
 }
 
 //===----------------------------------------------------------------------===//

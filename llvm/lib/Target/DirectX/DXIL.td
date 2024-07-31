@@ -13,14 +13,32 @@
 
 include "llvm/IR/Intrinsics.td"
 
-class DXILOpClass;
+// Abstract class to represent major and minor version values
+class Version<int major, int minor> {
+  int Major = major;
+  int Minor = minor;
+}
 
-// Following is a set of DXIL Operation classes whose names appear to be
-// arbitrary, yet need to be a substring of the function name used during
-// lowering to DXIL Operation calls. These class name strings are specified
-// as the third argument of add_dixil_op in utils/hct/hctdb.py and case converted
-// in utils/hct/hctdb_instrhelp.py of DirectXShaderCompiler repo. The function
-// name has the format "dx.op.<class-name>.<return-type>".
+// Valid DXIL Version records
+foreach i = 0...8 in {
+  def DXIL1_ #i : Version<1, i>;
+}
+
+// Overload type alias of llvm_any_ty
+defvar overloadTy = llvm_any_ty;
+
+// Type aliases for DXIL Op types to LLVM Types.
+// TODO: Define DXIL Types independent of LLVM types
+defvar i1Ty = llvm_i1_ty;
+defvar i8Ty = llvm_i8_ty;
+defvar i16Ty = llvm_i16_ty;
+defvar i32Ty = llvm_i32_ty;
+defvar i64Ty = llvm_i64_ty;
+defvar halfTy = llvm_half_ty;
+defvar floatTy = llvm_float_ty;
+defvar doubleTy = llvm_double_ty;
+
+class DXILOpClass;
 
 defset list<DXILOpClass> OpClasses = {
   def acceptHitAndEndSearch : DXILOpClass;
@@ -206,141 +224,482 @@ defset list<DXILOpClass> OpClasses = {
   def writeSamplerFeedbackGrad : DXILOpClass;
   def writeSamplerFeedbackLevel: DXILOpClass;
 
-  // This is a sentinel definition. Hence placed at the end of the list
-  // and not as part of the above alphabetically sorted valid definitions.
+  // This is a sentinel definition. Hence placed at the end here and
+  // not as part of the above alphabetically sorted valid definitions.
+  // It is never used to construct the name of DXIL Op call name.
   // Additionally it is capitalized unlike all the others.
-  def UnknownOpClass: DXILOpClass;
+  def UnknownOpClass : DXILOpClass;
 }
 
-// Several of the overloaded DXIL Operations support for data types
-// that are a subset of the overloaded LLVM intrinsics that they map to.
-// For e.g., llvm.sin.* intrinsic operates on any floating-point type and
-// maps for lowering to DXIL Op Sin. However, valid overloads of DXIL Sin
-// operation overloads are half (f16) and float (f32) only.
-//
-// The following abstracts overload types specific to DXIL operations.
+class DXILShaderStage;
 
-class DXILType : LLVMType<OtherVT> {
-  let isAny = 1;
-  int isI16OrI32 = 0;
-  int isHalfOrFloat = 0;
+def compute : DXILShaderStage;
+def domain : DXILShaderStage;
+def hull : DXILShaderStage;
+def pixel : DXILShaderStage;
+def vertex : DXILShaderStage;
+def geometry : DXILShaderStage;
+def library : DXILShaderStage;
+def amplification : DXILShaderStage;
+def mesh : DXILShaderStage;
+def node : DXILShaderStage;
+def raygeneration : DXILShaderStage;
+def intersection : DXILShaderStage;
+def anyhit : DXILShaderStage;
+def closesthit : DXILShaderStage;
+def callable : DXILShaderStage;
+def miss : DXILShaderStage;
+
+// Pseudo-stages
+// Denote DXIL Op to be supported in all stages
+def all_stages : DXILShaderStage;
+// Denote support for DXIL Op to have been removed
+def removed : DXILShaderStage;
+// DXIL Op attributes
+
+class DXILAttribute;
+
+def ReadOnly : DXILAttribute;
+def ReadNone : DXILAttribute;
+def IsDerivative : DXILAttribute;
+def IsGradient : DXILAttribute;
+def IsFeedback : DXILAttribute;
+def IsWave : DXILAttribute;
+def NeedsUniformInputs : DXILAttribute;
+def IsBarrier : DXILAttribute;
+
+class Overloads<Version ver, list<LLVMType> ols> {
+  Version dxil_version = ver;
+  list<LLVMType> overload_types = ols;
 }
 
-// Concrete records for various overload types supported specifically by
-// DXIL Operations.
-let isI16OrI32 = 1 in
-  def llvm_i16ori32_ty : DXILType;
-
-let isHalfOrFloat = 1 in
-  def llvm_halforfloat_ty : DXILType;
-
-// Abstraction DXIL Operation to LLVM intrinsic
-class DXILOpMappingBase {
-  int OpCode = 0;                      // Opcode of DXIL Operation
-  DXILOpClass OpClass = UnknownOpClass;// Class of DXIL Operation.
-  Intrinsic LLVMIntrinsic = ?;         // LLVM Intrinsic DXIL Operation maps to
-  string Doc = "";                     // A short description of the operation
-  list<LLVMType> OpTypes = ?;          // Valid types of DXIL Operation in the
-                                       // format [returnTy, param1ty, ...]
+class Stages<Version ver, list<DXILShaderStage> st> {
+  Version dxil_version = ver;
+  list<DXILShaderStage> shader_stages = st;
 }
 
-class DXILOpMapping<int opCode, DXILOpClass opClass,
-                    Intrinsic intrinsic, string doc,
-                    list<LLVMType> opTys = []> : DXILOpMappingBase {
-  int OpCode = opCode;                 // Opcode corresponding to DXIL Operation
-  DXILOpClass OpClass = opClass;       // Class of DXIL Operation.
-  Intrinsic LLVMIntrinsic = intrinsic; // LLVM Intrinsic the DXIL Operation maps
-  string Doc = doc;                    // to a short description of the operation
-  list<LLVMType> OpTypes = !if(!eq(!size(opTys), 0), LLVMIntrinsic.Types, opTys);
+class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
+  Version dxil_version = ver;
+  list<DXILAttribute> op_attrs = attrs;
 }
 
-// Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
-def Abs : DXILOpMapping<6, unary, int_fabs,
-                         "Returns the absolute value of the input.">;
-def IsInf : DXILOpMapping<9, isSpecialFloat, int_dx_isinf,
-                         "Determines if the specified value is infinite.",
-                         [llvm_i1_ty, llvm_halforfloat_ty]>;
-def Cos  : DXILOpMapping<12, unary, int_cos,
-                         "Returns cosine(theta) for theta in radians.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Sin  : DXILOpMapping<13, unary, int_sin,
-                         "Returns sine(theta) for theta in radians.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Tan  : DXILOpMapping<14, unary, int_tan,
-                         "Returns tangent(theta) for theta in radians.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Exp2 : DXILOpMapping<21, unary, int_exp2,
-                         "Returns the base 2 exponential, or 2**x, of the specified value."
-                         "exp2(x) = 2**x.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Frac : DXILOpMapping<22, unary, int_dx_frac,
-                         "Returns a fraction from 0 to 1 that represents the "
-                         "decimal part of the input.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Log2 : DXILOpMapping<23, unary, int_log2,
-                         "Returns the base-2 logarithm of the specified value.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Sqrt : DXILOpMapping<24, unary, int_sqrt,
-                         "Returns the square root of the specified floating-point"
-                         "value, per component.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
-                         "Returns the reciprocal of the square root of the specified value."
-                         "rsqrt(x) = 1 / sqrt(x).",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Round : DXILOpMapping<26, unary, int_roundeven,
-                         "Returns the input rounded to the nearest integer"
-                         "within a floating-point type.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Floor : DXILOpMapping<27, unary, int_floor,
-                         "Returns the largest integer that is less than or equal to the input.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Ceil : DXILOpMapping<28, unary, int_ceil,
-                         "Returns the smallest integer that is greater than or equal to the input.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Trunc : DXILOpMapping<29, unary, int_trunc,
-                         "Returns the specified value truncated to the integer component.",
-                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Rbits : DXILOpMapping<30, unary, int_bitreverse,
-                         "Returns the specified value with its bits reversed.",
-                         [llvm_anyint_ty, LLVMMatchType<0>]>;
-def FMax : DXILOpMapping<35, binary, int_maxnum,
-                         "Float maximum. FMax(a,b) = a > b ? a : b">;
-def FMin : DXILOpMapping<36, binary, int_minnum,
-                         "Float minimum. FMin(a,b) = a < b ? a : b">;
-def SMax : DXILOpMapping<37, binary, int_smax,
-                         "Signed integer maximum. SMax(a,b) = a > b ? a : b">;
-def SMin : DXILOpMapping<38, binary, int_smin,
-                         "Signed integer minimum. SMin(a,b) = a < b ? a : b">;
-def UMax : DXILOpMapping<39, binary, int_umax,
-                         "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
-def UMin : DXILOpMapping<40, binary, int_umin,
-                         "Unsigned integer minimum. UMin(a,b) = a < b ? a : b">;
-def FMad : DXILOpMapping<46, tertiary, int_fmuladd,
-                         "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m * a + b.">;
-def IMad : DXILOpMapping<48, tertiary, int_dx_imad,
-                         "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m * a + b.">;
-def UMad : DXILOpMapping<49, tertiary, int_dx_umad,
-                         "Unsigned integer arithmetic multiply/add operation. umad(m,a,b) = m * a + b.">;
-let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 4)) in
-  def Dot2 : DXILOpMapping<54, dot2, int_dx_dot2,
-                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 1">;
-let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 6)) in
-  def Dot3 : DXILOpMapping<55, dot3, int_dx_dot3,
-                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 2">;
-let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 8)) in
-  def Dot4 : DXILOpMapping<56, dot4, int_dx_dot4,
-                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 3">;
-def ThreadId : DXILOpMapping<93, threadId, int_dx_thread_id,
-                             "Reads the thread ID">;
-def GroupId  : DXILOpMapping<94, groupId, int_dx_group_id,
-                             "Reads the group ID (SV_GroupID)">;
-def ThreadIdInGroup : DXILOpMapping<95, threadIdInGroup,
-                                    int_dx_thread_id_in_group,
-                                    "Reads the thread ID within the group "
-                                    "(SV_GroupThreadID)">;
-def FlattenedThreadIdInGroup : DXILOpMapping<96, flattenedThreadIdInGroup,
-                                             int_dx_flattened_thread_id_in_group,
-                                             "Provides a flattened index for a "
-                                             "given thread within a given "
-                                             "group (SV_GroupIndex)">;
+// Abstraction DXIL Operation
+class DXILOp<int opcode, DXILOpClass opclass> {
+  // A short description of the operation
+  string Doc = "";
+
+  // Opcode of DXIL Operation
+  int OpCode = opcode;
+
+  // Class of DXIL Operation.
+  DXILOpClass OpClass = opclass;
+
+  // LLVM Intrinsic DXIL Operation maps to
+  Intrinsic LLVMIntrinsic = ?;
+
+  // Result type of the op
+  LLVMType result;
+
+  // List of argument types of the op. Default to 0 arguments.
+  list<LLVMType> arguments = [];
+
+  // List of valid overload types predicated by DXIL version
+  list<Overloads> overloads = [];
+
+  // List of valid shader stages predicated by DXIL version
+  list<Stages> stages;
+
+  // Versioned attributes of operation
+  list<Attributes> attributes = [];
+}
+
+// Concrete definitions of DXIL Operations
+
+def Abs :  DXILOp<6, unary> {
+  let Doc = "Returns the absolute value of the input.";
+  let LLVMIntrinsic = int_fabs;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IsInf :  DXILOp<9, isSpecialFloat> {
+  let Doc = "Determines if the specified value is infinite.";
+  let LLVMIntrinsic = int_dx_isinf;
+  let arguments = [overloadTy];
+  let result = i1Ty;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Cos :  DXILOp<12, unary> {
+  let Doc = "Returns cosine(theta) for theta in radians.";
+  let LLVMIntrinsic = int_cos;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Sin :  DXILOp<13, unary> {
+  let Doc = "Returns sine(theta) for theta in radians.";
+  let LLVMIntrinsic = int_sin;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Tan :  DXILOp<14, unary> {
+  let Doc = "Returns tangent(theta) for theta in radians.";
+  let LLVMIntrinsic = int_tan;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def ACos :  DXILOp<15, unary> {
+  let Doc = "Returns the arccosine of the specified value.";
+  let LLVMIntrinsic = int_acos;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def ASin :  DXILOp<16, unary> {
+  let Doc = "Returns the arcsine of the specified value.";
+  let LLVMIntrinsic = int_asin;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def ATan :  DXILOp<17, unary> {
+  let Doc = "Returns the arctangent of the specified value.";
+  let LLVMIntrinsic = int_atan;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def HCos :  DXILOp<18, unary> {
+  let Doc = "Returns the hyperbolic cosine of the specified value.";
+  let LLVMIntrinsic = int_cosh;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def HSin :  DXILOp<19, unary> {
+  let Doc = "Returns the hyperbolic sine of the specified value.";
+  let LLVMIntrinsic = int_sinh;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def HTan :  DXILOp<20, unary> {
+  let Doc = "Returns the hyperbolic tan of the specified value.";
+  let LLVMIntrinsic = int_tanh;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Exp2 :  DXILOp<21, unary> {
+  let Doc = "Returns the base 2 exponential, or 2**x, of the specified value. "
+            "exp2(x) = 2**x.";
+  let LLVMIntrinsic = int_exp2;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Frac :  DXILOp<22, unary> {
+  let Doc = "Returns a fraction from 0 to 1 that represents the decimal part "
+            "of the input.";
+  let LLVMIntrinsic = int_dx_frac;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Log2 :  DXILOp<23, unary> {
+  let Doc = "Returns the base-2 logarithm of the specified value.";
+  let LLVMIntrinsic = int_log2;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Sqrt :  DXILOp<24, unary> {
+  let Doc = "Returns the square root of the specified floating-point value, "
+            "per component.";
+  let LLVMIntrinsic = int_sqrt;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def RSqrt :  DXILOp<25, unary> {
+  let Doc = "Returns the reciprocal of the square root of the specified value. "
+            "rsqrt(x) = 1 / sqrt(x).";
+  let LLVMIntrinsic = int_dx_rsqrt;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Round :  DXILOp<26, unary> {
+  let Doc = "Returns the input rounded to the nearest integer within a "
+            "floating-point type.";
+  let LLVMIntrinsic = int_roundeven;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Floor :  DXILOp<27, unary> {
+  let Doc =
+      "Returns the largest integer that is less than or equal to the input.";
+  let LLVMIntrinsic = int_floor;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Ceil :  DXILOp<28, unary> {
+  let Doc = "Returns the smallest integer that is greater than or equal to the "
+            "input.";
+  let LLVMIntrinsic = int_ceil;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Trunc :  DXILOp<29, unary> {
+  let Doc = "Returns the specified value truncated to the integer component.";
+  let LLVMIntrinsic = int_trunc;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Rbits :  DXILOp<30, unary> {
+  let Doc = "Returns the specified value with its bits reversed.";
+  let LLVMIntrinsic = int_bitreverse;
+  let arguments = [LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def FMax :  DXILOp<35, binary> {
+  let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
+  let LLVMIntrinsic = int_maxnum;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def FMin :  DXILOp<36, binary> {
+  let Doc = "Float minimum. FMin(a,b) = a < b ? a : b";
+  let LLVMIntrinsic = int_minnum;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def SMax :  DXILOp<37, binary> {
+  let Doc = "Signed integer maximum. SMax(a,b) = a > b ? a : b";
+  let LLVMIntrinsic = int_smax;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def SMin :  DXILOp<38, binary> {
+  let Doc = "Signed integer minimum. SMin(a,b) = a < b ? a : b";
+  let LLVMIntrinsic = int_smin;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMax :  DXILOp<39, binary> {
+  let Doc = "Unsigned integer maximum. UMax(a,b) = a > b ? a : b";
+  let LLVMIntrinsic = int_umax;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMin :  DXILOp<40, binary> {
+  let Doc = "Unsigned integer minimum. UMin(a,b) = a < b ? a : b";
+  let LLVMIntrinsic = int_umin;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def FMad :  DXILOp<46, tertiary> {
+  let Doc = "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m "
+            "* a + b.";
+  let LLVMIntrinsic = int_fmuladd;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def IMad :  DXILOp<48, tertiary> {
+  let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
+            "* a + b.";
+  let LLVMIntrinsic = int_dx_imad;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMad :  DXILOp<49, tertiary> {
+  let Doc = "Unsigned integer arithmetic multiply/add operation. umad(m,a, = m "
+            "* a + b.";
+  let LLVMIntrinsic = int_dx_umad;
+  let arguments = [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>];
+  let result = overloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [i16Ty, i32Ty, i64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Dot2 :  DXILOp<54, dot2> {
+  let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
+            "a[n]*b[n] where n is between 0 and 1";
+  let LLVMIntrinsic = int_dx_dot2;
+  let arguments = !listsplat(overloadTy, 4);
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Dot3 :  DXILOp<55, dot3> {
+  let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
+            "a[n]*b[n] where n is between 0 and 2";
+  let LLVMIntrinsic = int_dx_dot3;
+  let arguments = !listsplat(overloadTy, 6);
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Dot4 :  DXILOp<56, dot4> {
+  let Doc = "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + "
+            "a[n]*b[n] where n is between 0 and 3";
+  let LLVMIntrinsic = int_dx_dot4;
+  let arguments = !listsplat(overloadTy, 8);
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def ThreadId :  DXILOp<93, threadId> {
+  let Doc = "Reads the thread ID";
+  let LLVMIntrinsic = int_dx_thread_id;
+  let arguments = [i32Ty];
+  let result = i32Ty;
+  let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def GroupId :  DXILOp<94, groupId> {
+  let Doc = "Reads the group ID (SV_GroupID)";
+  let LLVMIntrinsic = int_dx_group_id;
+  let arguments = [i32Ty];
+  let result = i32Ty;
+  let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def ThreadIdInGroup :  DXILOp<95, threadIdInGroup> {
+  let Doc = "Reads the thread ID within the group  (SV_GroupThreadID)";
+  let LLVMIntrinsic = int_dx_thread_id_in_group;
+  let arguments = [i32Ty];
+  let result = i32Ty;
+  let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
+  let Doc = "Provides a flattened index for a given thread within a given "
+            "group (SV_GroupIndex)";
+  let LLVMIntrinsic = int_dx_flattened_thread_id_in_group;
+  let result = i32Ty;
+  let stages = [Stages<DXIL1_0, [compute, mesh, amplification, node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
