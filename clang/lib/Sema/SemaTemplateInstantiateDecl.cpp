@@ -1431,6 +1431,9 @@ Decl *TemplateDeclInstantiator::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
 }
 
 Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
+  assert(D->getEllipsisLoc().isInvalid() &&
+         "TODO: Instantiate variadic friend decl");
+
   // Handle friend type expressions by simply substituting template
   // parameters into the pattern type and checking the result.
   if (TypeSourceInfo *Ty = D->getFriendType()) {

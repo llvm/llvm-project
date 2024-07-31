@@ -1738,6 +1738,8 @@ def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
   InGroup<MicrosoftUnqualifiedFriend>;
 def err_pure_friend : Error<"friend declaration cannot have a pure-specifier">;
+def err_friend_template_decl_multiple_specifiers: Error<
+  "a friend declaration that befriends a template must contain exactly one type-specifier">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "

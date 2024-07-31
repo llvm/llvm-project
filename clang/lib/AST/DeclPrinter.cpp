@@ -885,6 +885,9 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
+
+  if (D->isVariadic())
+    Out << "...";
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {

@@ -3800,7 +3800,8 @@ public:
                                    const ParsedAttributesView &DeclAttrs,
                                    MultiTemplateParamsArg TemplateParams,
                                    bool IsExplicitInstantiation,
-                                   RecordDecl *&AnonRecord);
+                                   RecordDecl *&AnonRecord,
+                                   SourceLocation FriendEllipsisLoc = {});
 
   /// BuildAnonymousStructOrUnion - Handle the declaration of an
   /// anonymous structure or union. Anonymous unions are a C++ feature
@@ -5538,7 +5539,8 @@ public:
   /// parameters present at all, require proper matching, i.e.
   ///   template <> template \<class T> friend class A<int>::B;
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
-                            MultiTemplateParamsArg TemplateParams);
+                            MultiTemplateParamsArg TemplateParams,
+                            SourceLocation FriendEllipsisLoc);
   NamedDecl *ActOnFriendFunctionDecl(Scope *S, Declarator &D,
                                      MultiTemplateParamsArg TemplateParams);
 
