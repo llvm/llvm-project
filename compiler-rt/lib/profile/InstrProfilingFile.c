@@ -308,6 +308,8 @@ static const int UseBiasVar = 0;
 static const char *FileOpenMode = "a+b";
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
+static void *BitmapBiasAddr = NULL;
+static void *BitmapBiasDefaultAddr = NULL;
 static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   return 0;
 }
