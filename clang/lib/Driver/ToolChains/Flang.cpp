@@ -342,6 +342,9 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
   }
+
+  const ToolChain &TC = getToolChain();
+  TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
 }
 
 void Flang::addTargetOptions(const ArgList &Args,

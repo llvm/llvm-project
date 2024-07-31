@@ -290,8 +290,7 @@ MDTuple *ResourceInfo::getAsMetadata(LLVMContext &Ctx) const {
 
 std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps() const {
   uint32_t ResourceKind = llvm::to_underlying(Kind);
-  uint32_t AlignLog2 =
-      isStruct() && Struct.Alignment ? Log2(*Struct.Alignment) : 0;
+  uint32_t AlignLog2 = isStruct() ? Struct.AlignLog2 : 0;
   bool IsUAV = isUAV();
   bool IsROV = IsUAV && UAVFlags.IsROV;
   bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
