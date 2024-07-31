@@ -834,7 +834,7 @@ mlir::LogicalResult
 rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                       mlir::ConversionPatternRewriter &rewriter,
                       const mlir::TypeConverter *converter,
-                      mlir::FlatSymbolRefAttr calleeAttr, bool invoke = false,
+                      mlir::FlatSymbolRefAttr calleeAttr,
                       mlir::Block *continueBlock = nullptr,
                       mlir::Block *landingPadBlock = nullptr) {
   llvm::SmallVector<mlir::Type, 8> llvmResults;
@@ -844,7 +844,7 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     return mlir::failure();
 
   if (calleeAttr) { // direct call
-    if (invoke)
+    if (landingPadBlock)
       rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
           op, llvmResults, calleeAttr, callOperands, continueBlock,
           mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
@@ -860,7 +860,7 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     auto ftyp = dyn_cast<mlir::cir::FuncType>(ptyp.getPointee());
     assert(ftyp && "expected a pointer to a function as the first operand");
 
-    if (invoke) {
+    if (landingPadBlock) {
       auto llvmFnTy =
           dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp));
       rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
@@ -896,9 +896,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::TryCallOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return rewriteToCallOrInvoke(op.getOperation(), adaptor.getOperands(),
-                                 rewriter, getTypeConverter(),
-                                 op.getCalleeAttr());
+    return rewriteToCallOrInvoke(
+        op.getOperation(), adaptor.getOperands(), rewriter, getTypeConverter(),
+        op.getCalleeAttr(), op.getCont(), op.getLandingPad());
   }
 };
 
@@ -910,7 +910,76 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::EhInflightOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return mlir::failure();
+    mlir::Location loc = op.getLoc();
+    // Create the landing pad type: struct { ptr, i32 }
+    mlir::MLIRContext *ctx = rewriter.getContext();
+    auto llvmPtr = mlir::LLVM::LLVMPointerType::get(ctx);
+    llvm::SmallVector<mlir::Type> structFields;
+    structFields.push_back(llvmPtr);
+    structFields.push_back(rewriter.getI32Type());
+
+    auto llvmLandingPadStructTy =
+        mlir::LLVM::LLVMStructType::getLiteral(ctx, structFields);
+    mlir::ArrayAttr symListAttr = op.getSymTypeListAttr();
+    mlir::SmallVector<mlir::Value, 4> symAddrs;
+
+    auto llvmFn = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+    assert(llvmFn && "expected LLVM function parent");
+    mlir::Block *entryBlock = &llvmFn.getRegion().front();
+    assert(entryBlock->isEntryBlock());
+
+    // %x = landingpad { ptr, i32 }
+    if (symListAttr) {
+      //   catch ptr @_ZTIi
+      //   catch ptr @_ZTIPKc
+      for (mlir::Attribute attr : op.getSymTypeListAttr()) {
+        auto symAttr = cast<mlir::FlatSymbolRefAttr>(attr);
+        // Generate `llvm.mlir.addressof` for each symbol, and place those
+        // operations in the LLVM function entry basic block.
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(entryBlock);
+        mlir::Value addrOp = rewriter.create<mlir::LLVM::AddressOfOp>(
+            loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+            symAttr.getValue());
+        symAddrs.push_back(addrOp);
+      }
+    } else {
+      //   catch ptr null
+      mlir::Value nullOp = rewriter.create<mlir::LLVM::ZeroOp>(
+          loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()));
+      symAddrs.push_back(nullOp);
+    }
+
+    // %slot = extractvalue { ptr, i32 } %x, 0
+    // %selector = extractvalue { ptr, i32 } %x, 1
+    auto padOp = rewriter.create<mlir::LLVM::LandingpadOp>(
+        loc, llvmLandingPadStructTy, symAddrs);
+    SmallVector<int64_t> slotIdx = {0};
+    SmallVector<int64_t> selectorIdx = {1};
+
+    mlir::Value slot =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, padOp, slotIdx);
+    mlir::Value selector =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, padOp, selectorIdx);
+
+    rewriter.replaceOp(op, mlir::ValueRange{slot, selector});
+
+    // Landing pads are required to be in LLVM functions with personality
+    // attribute. FIXME: for now hardcode personality creation in order to start
+    // adding exception tests, once we annotate CIR with such information,
+    // change it to be in FuncOp lowering instead.
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      // Insert personality decl before the current function.
+      rewriter.setInsertionPoint(llvmFn);
+      auto personalityFnTy =
+          mlir::LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {},
+                                            /*isVarArg=*/true);
+      auto personalityFn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+          loc, "__gxx_personality_v0", personalityFnTy);
+      llvmFn.setPersonality(personalityFn.getName());
+    }
+    return mlir::success();
   }
 };
 

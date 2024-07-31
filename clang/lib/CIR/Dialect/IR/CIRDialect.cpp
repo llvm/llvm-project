@@ -2349,11 +2349,60 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
   return success();
 }
 
-static ::mlir::ParseResult
-parseTryCallBranches(::mlir::OpAsmParser &parser,
-                     ::mlir::OperationState &result) {
-  parser.emitError(parser.getCurrentLocation(), "NYI");
-  return failure();
+static mlir::ParseResult
+parseTryCallBranches(mlir::OpAsmParser &parser, mlir::OperationState &result,
+                     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand>
+                         &continueOperands,
+                     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand>
+                         &landingPadOperands,
+                     llvm::SmallVectorImpl<mlir::Type> &continueTypes,
+                     llvm::SmallVectorImpl<mlir::Type> &landingPadTypes,
+                     llvm::SMLoc &continueOperandsLoc,
+                     llvm::SMLoc &landingPadOperandsLoc) {
+  mlir::Block *continueSuccessor = nullptr;
+  mlir::Block *landingPadSuccessor = nullptr;
+
+  if (parser.parseSuccessor(continueSuccessor))
+    return mlir::failure();
+  if (mlir::succeeded(parser.parseOptionalLParen())) {
+    continueOperandsLoc = parser.getCurrentLocation();
+    if (parser.parseOperandList(continueOperands))
+      return mlir::failure();
+    if (parser.parseColon())
+      return mlir::failure();
+
+    if (parser.parseTypeList(continueTypes))
+      return mlir::failure();
+    if (parser.parseRParen())
+      return mlir::failure();
+  }
+  if (parser.parseComma())
+    return mlir::failure();
+
+  if (parser.parseSuccessor(landingPadSuccessor))
+    return mlir::failure();
+  if (mlir::succeeded(parser.parseOptionalLParen())) {
+
+    landingPadOperandsLoc = parser.getCurrentLocation();
+    if (parser.parseOperandList(landingPadOperands))
+      return mlir::failure();
+    if (parser.parseColon())
+      return mlir::failure();
+
+    if (parser.parseTypeList(landingPadTypes))
+      return mlir::failure();
+    if (parser.parseRParen())
+      return mlir::failure();
+  }
+  {
+    auto loc = parser.getCurrentLocation();
+    (void)loc;
+    if (parser.parseOptionalAttrDict(result.attributes))
+      return mlir::failure();
+  }
+  result.addSuccessors(continueSuccessor);
+  result.addSuccessors(landingPadSuccessor);
+  return mlir::success();
 }
 
 static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
@@ -2366,6 +2415,14 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
   (void)opsLoc;
   llvm::ArrayRef<::mlir::Type> operandsTypes;
   llvm::ArrayRef<::mlir::Type> allResultTypes;
+
+  // Control flow related
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> continueOperands;
+  llvm::SMLoc continueOperandsLoc;
+  llvm::SmallVector<mlir::Type, 1> continueTypes;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> landingPadOperands;
+  llvm::SMLoc landingPadOperandsLoc;
+  llvm::SmallVector<mlir::Type, 1> landingPadTypes;
 
   if (::mlir::succeeded(parser.parseOptionalKeyword("exception")))
     result.addAttribute("exception", parser.getBuilder().getUnitAttr());
@@ -2390,7 +2447,10 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
     return ::mlir::failure();
 
   if (hasDestinationBlocks)
-    if (parseTryCallBranches(parser, result).failed())
+    if (parseTryCallBranches(parser, result, continueOperands,
+                             landingPadOperands, continueTypes, landingPadTypes,
+                             continueOperandsLoc, landingPadOperandsLoc)
+            .failed())
       return ::mlir::failure();
 
   auto &builder = parser.getBuilder();
@@ -2423,6 +2483,23 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
 
   if (parser.resolveOperands(ops, operandsTypes, opsLoc, result.operands))
     return ::mlir::failure();
+
+  if (hasDestinationBlocks) {
+    // The TryCall ODS layout is: cont, landing_pad, operands.
+    llvm::copy(::llvm::ArrayRef<int32_t>(
+                   {static_cast<int32_t>(continueOperands.size()),
+                    static_cast<int32_t>(landingPadOperands.size()),
+                    static_cast<int32_t>(ops.size())}),
+               result.getOrAddProperties<TryCallOp::Properties>()
+                   .operandSegmentSizes.begin());
+    if (parser.resolveOperands(continueOperands, continueTypes,
+                               continueOperandsLoc, result.operands))
+      return ::mlir::failure();
+    if (parser.resolveOperands(landingPadOperands, landingPadTypes,
+                               landingPadOperandsLoc, result.operands))
+      return ::mlir::failure();
+  }
+
   return ::mlir::success();
 }
 
@@ -2553,7 +2630,8 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 ::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result) {
 
-  return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name));
+  return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name),
+                         /*hasDestinationBlocks=*/true);
 }
 
 void TryCallOp::print(::mlir::OpAsmPrinter &state) {
