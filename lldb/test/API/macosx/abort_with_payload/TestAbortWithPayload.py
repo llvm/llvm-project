@@ -5,6 +5,7 @@ works properly
 
 
 import lldb
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
@@ -12,11 +13,13 @@ from lldbsuite.test.lldbtest import *
 class TestAbortWithPayload(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin
     def test_abort_with_payload(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()
         self.abort_with_test(True)
 
+    @skipUnlessDarwin
     def test_abort_with_reason(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()
