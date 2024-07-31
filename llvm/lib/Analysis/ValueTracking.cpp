@@ -526,10 +526,6 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
     return AllowEphemerals || !isEphemeralValueOf(Inv, CxtI);
   }
 
-  // Inv and CxtI are in different functions.
-  if (Inv->getFunction() != CxtI->getFunction())
-    return false;
-
   // Inv and CxtI are in different blocks.
   if (DT) {
     if (DT->dominates(Inv, CxtI))
