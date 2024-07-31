@@ -1,33 +1,39 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2c %s
 // RUN: %clang_cc1 -fsyntax-only -ast-dump -std=c++2c %s | FileCheck %s
+// RUN: %clang_cc1 -ast-print -std=c++2c %s | FileCheck %s --check-prefix=PRINT
 // expected-no-diagnostics
 
 struct S;
 template <typename> struct TS; // #template
 
 // CHECK-LABEL: CXXRecordDecl {{.*}} struct Friends
+// PRINT-LABEL: struct Friends {
 struct Friends {
   // CHECK: FriendDecl {{.*}} 'int'
   // CHECK-NEXT: FriendDecl {{.*}} 'long'
+  // PRINT-NEXT: friend int, long;
   friend int, long;
 
   // CHECK-NEXT: FriendDecl {{.*}} 'int'
   // CHECK-NEXT: FriendDecl {{.*}} 'long'
   // CHECK-NEXT: FriendDecl {{.*}} 'char'
+  // PRINT-NEXT: friend int, long, char;
   friend int, long, char;
 
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
+  // PRINT-NEXT: friend S;
   friend S;
 
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
   // CHECK-NEXT: FriendDecl {{.*}} 'S'
+  // PRINT-NEXT: friend S, S, S;
   friend S, S, S;
 
   // CHECK-NEXT: FriendDecl
   // CHECK-NEXT: ClassTemplateDecl {{.*}} friend TS
-  template <typename>
-  friend struct TS;
+  // PRINT-NEXT: friend template <typename> struct TS;
+  template <typename> friend struct TS;
 };
 
 namespace specialisations {
@@ -41,20 +47,28 @@ struct N {
 };
 
 // CHECK-LABEL: ClassTemplateDecl {{.*}} Variadic
-// CHECK: FriendDecl {{.*}} 'Pack' variadic
-// CHECK-NEXT: FriendDecl {{.*}} 'TS<Pack>' variadic
-template <typename ...Pack>
-struct Variadic {
-  friend Pack...;
+// PRINT-LABEL: template <typename ...Pack> struct Variadic {
+template <typename ...Pack> struct Variadic {
+  // CHECK: FriendDecl {{.*}} 'Pack' variadic
+  // CHECK-NEXT: FriendDecl {{.*}} 'long'
+  // CHECK-NEXT: FriendDecl {{.*}} 'Pack' variadic
+  // PRINT-NEXT: friend Pack..., long, Pack...;
+  friend Pack..., long, Pack...;
+
+  // CHECK-NEXT: FriendDecl {{.*}} 'TS<Pack>' variadic
+  // PRINT-NEXT: friend TS<Pack>...;
   friend TS<Pack>...;
 };
 
 // CHECK-LABEL: ClassTemplateDecl {{.*}} S2
-// CHECK: FriendDecl {{.*}} 'class C<Ts>':'C<Ts>' variadic
-// CHECK-NEXT: FriendDecl {{.*}} 'class N::C<Ts>':'C<Ts>' variadic
-template<class... Ts>
-struct S2 {
+// PRINT-LABEL: template <class ...Ts> struct S2 {
+template<class ...Ts> struct S2 {
+  // CHECK: FriendDecl {{.*}} 'class C<Ts>':'C<Ts>' variadic
+  // PRINT-NEXT: friend class C<Ts>...;
   friend class C<Ts>...;
+
+  // CHECK-NEXT: FriendDecl {{.*}} 'class N::C<Ts>':'C<Ts>' variadic
+  // PRINT-NEXT: friend class N::C<Ts>...
   friend class N::C<Ts>...;
 };
 }

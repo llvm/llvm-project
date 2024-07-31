@@ -67,7 +67,7 @@ namespace {
     void VisitEnumConstantDecl(EnumConstantDecl *D);
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
-    void VisitFriendDecl(FriendDecl *D);
+    void VisitFriendDecl(FriendDecl *D, bool FirstInGroup = true);
     void VisitFieldDecl(FieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitLabelDecl(LabelDecl *D);
@@ -487,7 +487,26 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     }
 
     this->Indent();
-    Visit(*D);
+
+    // Group friend declarations if need be.
+    if (isa<FriendDecl>(*D)) {
+      auto *FD = cast<FriendDecl>(*D);
+      VisitFriendDecl(FD);
+      SourceLocation FriendLoc = FD->getFriendLoc();
+
+      // Use a separate iterator; 'D' is always one declaration 'behind' in
+      // this loop; the last friend printed here (or the first printed just
+      // now before this loop if there are no subsequent friends) will be
+      // skipped by the '++D' of the outer loop.
+      for (DeclContext::decl_iterator It; It = std::next(D), It != DEnd; ++D) {
+        auto NextFriend = dyn_cast<FriendDecl>(*It);
+        if (!NextFriend || NextFriend->getFriendLoc() != FriendLoc)
+          break;
+        VisitFriendDecl(NextFriend, false);
+      }
+    } else {
+      Visit(*D);
+    }
 
     // FIXME: Need to be able to tell the DeclPrinter when
     const char *Terminator = nullptr;
@@ -862,13 +881,21 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   }
 }
 
-void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
+void DeclPrinter::VisitFriendDecl(FriendDecl *D, bool FirstInGroup) {
   if (TypeSourceInfo *TSI = D->getFriendType()) {
     unsigned NumTPLists = D->getFriendTypeNumTemplateParameterLists();
     for (unsigned i = 0; i < NumTPLists; ++i)
       printTemplateParameters(D->getFriendTypeTemplateParameterList(i));
-    Out << "friend ";
-    Out << " " << TSI->getType().getAsString(Policy);
+
+    // Hack to print friend declarations declared as a group, e.g.
+    // 'friend int, long;', instead of printing them as two separate
+    // FriendDecls, which they are in the AST.
+    if (FirstInGroup)
+      Out << "friend ";
+    else
+      Out << ", ";
+
+    Out << TSI->getType().getAsString(Policy);
   }
   else if (FunctionDecl *FD =
       dyn_cast<FunctionDecl>(D->getFriendDecl())) {

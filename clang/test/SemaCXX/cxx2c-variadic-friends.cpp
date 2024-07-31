@@ -1,4 +1,4 @@
-// %clang_cc1 -fsyntax-only -verify -std=c++2c %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2c %s
 
 struct A;
 struct B;
