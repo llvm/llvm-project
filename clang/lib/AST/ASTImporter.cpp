@@ -536,6 +536,7 @@ namespace clang {
     ExpectedDecl VisitFieldDecl(FieldDecl *D);
     ExpectedDecl VisitIndirectFieldDecl(IndirectFieldDecl *D);
     ExpectedDecl VisitFriendDecl(FriendDecl *D);
+    ExpectedDecl VisitFriendPackDecl(FriendPackDecl *D);
     ExpectedDecl VisitObjCIvarDecl(ObjCIvarDecl *D);
     ExpectedDecl VisitVarDecl(VarDecl *D);
     ExpectedDecl VisitImplicitParamDecl(ImplicitParamDecl *D);
@@ -4438,6 +4439,31 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   FrD->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(FrD);
   return FrD;
+}
+
+ExpectedDecl ASTNodeImporter::VisitFriendPackDecl(FriendPackDecl *D) {
+  // Import the major distinguishing characteristics of a declaration.
+  DeclContext *DC, *LexicalDC;
+  if (Error Err = ImportDeclContext(D, DC, LexicalDC))
+    return std::move(Err);
+
+  auto ToInstantiatedFromFriendOrErr =
+      Importer.Import(D->getInstantiatedFromFriendDecl());
+  if (!ToInstantiatedFromFriendOrErr)
+    return ToInstantiatedFromFriendOrErr.takeError();
+  SmallVector<FriendDecl *, 4> Expansions(D->expansions().size());
+  if (Error Err = ImportArrayChecked(D->expansions(), Expansions.begin()))
+    return std::move(Err);
+
+  FriendPackDecl *ToFriendPack;
+  if (GetImportedOrCreateDecl(ToFriendPack, D, Importer.getToContext(), DC,
+                              cast<FriendDecl>(*ToInstantiatedFromFriendOrErr),
+                              Expansions))
+    return ToFriendPack;
+
+  addDeclToContexts(D, ToFriendPack);
+
+  return ToFriendPack;
 }
 
 ExpectedDecl ASTNodeImporter::VisitObjCIvarDecl(ObjCIvarDecl *D) {

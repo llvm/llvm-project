@@ -69,6 +69,26 @@ FriendDecl *FriendDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
   return new (C, ID, Extra) FriendDecl(EmptyShell(), FriendTypeNumTPLists);
 }
 
+FriendPackDecl *FriendPackDecl::Create(ASTContext &C, DeclContext *DC,
+                                       FriendDecl *InstantiatedFrom,
+                                       ArrayRef<FriendDecl *> FriendDecls) {
+  size_t Extra = additionalSizeToAlloc<FriendDecl *>(FriendDecls.size());
+  return new (C, DC, Extra) FriendPackDecl(DC, InstantiatedFrom, FriendDecls);
+}
+
+FriendPackDecl *FriendPackDecl::CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID,
+                                                   unsigned NumExpansions) {
+  size_t Extra = additionalSizeToAlloc<FriendDecl *>(NumExpansions);
+  auto *Result =
+      new (C, ID, Extra) FriendPackDecl(nullptr, nullptr, std::nullopt);
+  Result->NumExpansions = NumExpansions;
+  auto *Trail = Result->getTrailingObjects<FriendDecl *>();
+  for (unsigned I = 0; I != NumExpansions; ++I)
+    new (Trail + I) FriendDecl *(nullptr);
+  return Result;
+}
+
 FriendDecl *CXXRecordDecl::getFirstFriend() const {
   ExternalASTSource *Source = getParentASTContext().getExternalSource();
   Decl *First = data().FirstFriend.get(Source);

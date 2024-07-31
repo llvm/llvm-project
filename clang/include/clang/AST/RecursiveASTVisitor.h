@@ -1606,6 +1606,8 @@ DEF_TRAVERSE_DECL(FriendDecl, {
   }
 })
 
+DEF_TRAVERSE_DECL(FriendPackDecl, {})
+
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
   if (D->getFriendType())
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));

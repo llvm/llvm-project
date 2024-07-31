@@ -152,6 +152,19 @@ public:
 
   /// Retrieves the source range for the friend declaration.
   SourceRange getSourceRange() const override LLVM_READONLY {
+    if (TypeSourceInfo *TInfo = getFriendType()) {
+      SourceLocation StartL =
+          (NumTPLists == 0) ? getFriendLoc()
+                            : getTrailingObjects<TemplateParameterList *>()[0]
+                                  ->getTemplateLoc();
+      SourceLocation EndL =
+          isVariadic() ? getEllipsisLoc() : TInfo->getTypeLoc().getEndLoc();
+      return SourceRange(StartL, EndL);
+    }
+
+    if (isVariadic())
+      return SourceRange(getFriendLoc(), getEllipsisLoc());
+
     if (NamedDecl *ND = getFriendDecl()) {
       if (const auto *FD = dyn_cast<FunctionDecl>(ND))
         return FD->getSourceRange();
@@ -165,15 +178,8 @@ public:
       }
       return SourceRange(getFriendLoc(), ND->getEndLoc());
     }
-    else if (TypeSourceInfo *TInfo = getFriendType()) {
-      SourceLocation StartL =
-          (NumTPLists == 0) ? getFriendLoc()
-                            : getTrailingObjects<TemplateParameterList *>()[0]
-                                  ->getTemplateLoc();
-      return SourceRange(StartL, TInfo->getTypeLoc().getEndLoc());
-    }
-    else
-      return SourceRange(getFriendLoc(), getLocation());
+
+    return SourceRange(getFriendLoc(), getLocation());
   }
 
   /// Determines if this friend kind is unsupported.
@@ -189,6 +195,50 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::Friend; }
+};
+
+class FriendPackDecl final
+    : public Decl,
+      private llvm::TrailingObjects<FriendPackDecl, FriendDecl *> {
+  FriendDecl *InstantiatedFrom;
+
+  /// The number of friend-declarations created by this pack expansion.
+  unsigned NumExpansions;
+
+  FriendPackDecl(DeclContext *DC, FriendDecl *InstantiatedFrom,
+                 ArrayRef<FriendDecl *> FriendDecls)
+      : Decl(FriendPack, DC,
+             InstantiatedFrom ? InstantiatedFrom->getLocation()
+                              : SourceLocation()),
+        InstantiatedFrom(InstantiatedFrom), NumExpansions(FriendDecls.size()) {
+    std::uninitialized_copy(FriendDecls.begin(), FriendDecls.end(),
+                            getTrailingObjects<FriendDecl *>());
+  }
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  FriendDecl *getInstantiatedFromFriendDecl() const { return InstantiatedFrom; }
+
+  ArrayRef<FriendDecl *> expansions() const {
+    return llvm::ArrayRef(getTrailingObjects<FriendDecl *>(), NumExpansions);
+  }
+
+  static FriendPackDecl *Create(ASTContext &C, DeclContext *DC,
+                                FriendDecl *InstantiatedFrom,
+                                ArrayRef<FriendDecl *> FriendDecls);
+
+  static FriendPackDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                            unsigned NumExpansions);
+
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    return InstantiatedFrom->getSourceRange();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == FriendPack; }
 };
 
 /// An iterator over the friend declarations of a class.

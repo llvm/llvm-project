@@ -60,4 +60,7 @@ template<class... Ts> // expected-note {{template parameter is declared here}}
 struct S2 {
   friend class Ts...; // expected-error {{declaration of 'Ts' shadows template parameter}}
                       // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
+
+  // TODO: Fix-it hint to insert '...'.
+  friend Ts; // expected-error {{friend declaration contains unexpanded parameter pack}}
 };

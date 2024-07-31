@@ -98,6 +98,7 @@ def FileScopeAsm : DeclNode<Decl>;
 def TopLevelStmt : DeclNode<Decl>, DeclContext;
 def AccessSpec : DeclNode<Decl>;
 def Friend : DeclNode<Decl>;
+def FriendPack : DeclNode<Decl>;
 def FriendTemplate : DeclNode<Decl>;
 def StaticAssert : DeclNode<Decl>;
 def Block : DeclNode<Decl, "blocks">, DeclContext;
