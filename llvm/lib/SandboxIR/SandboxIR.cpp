@@ -1143,6 +1143,34 @@ void CastInst::dump() const {
 }
 #endif // NDEBUG
 
+Value *FPToUIInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
+                          BasicBlock *WhereBB, Context &Ctx,
+                          const Twine &Name) {
+  return CastInst::create(DestTy, Instruction::Opcode::FPToUI, Src, WhereIt,
+                          WhereBB, Ctx, Name);
+}
+Value *FPToUIInst::create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertBefore->getIterator(),
+                InsertBefore->getParent(), Ctx, Name);
+}
+Value *FPToUIInst::create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
+                          Context &Ctx, const Twine &Name) {
+  return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+}
+
+#ifndef NDEBUG
+void FPToUIInst::dump(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void FPToUIInst::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 Value *FPToSIInst::create(Value *Src, Type *DestTy, BBIterator WhereIt,
                           BasicBlock *WhereBB, Context &Ctx,
                           const Twine &Name) {
