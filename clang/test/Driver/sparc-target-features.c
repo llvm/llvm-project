@@ -34,6 +34,4 @@
 // SOFT-QUAD-FLOAT: "-target-feature" "-hard-quad-float"
 
 // RUN: %clang --target=sparc -mv8plus %s -### 2>&1 | FileCheck -check-prefix=V8PLUS %s
-// RUN: %clang --target=sparc -mno-v8plus %s -### 2>&1 | FileCheck -check-prefix=NO-V8PLUS %s
-// V8PLUS: "-target-feature" "+v9"
-// NO-V8PLUS: "-target-feature" "-v9"
+// V8PLUS: "-target-feature" "+v8plus"
