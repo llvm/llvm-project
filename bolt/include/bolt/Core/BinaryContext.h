@@ -32,6 +32,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -246,6 +247,9 @@ class BinaryContext {
   /// DWP Context.
   std::shared_ptr<DWARFContext> DWPContext;
 
+  /// Decoded pseudo probes.
+  std::shared_ptr<MCPseudoProbeDecoder> PseudoProbeDecoder;
+
   /// A map of DWO Ids to CUs.
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
   DWOIdToCUMapType DWOCUs;
@@ -377,6 +381,15 @@ public:
     RtLibrary = std::move(Lib);
   }
 
+  const MCPseudoProbeDecoder *getPseudoProbeDecoder() const {
+    return PseudoProbeDecoder.get();
+  }
+
+  void setPseudoProbeDecoder(std::shared_ptr<MCPseudoProbeDecoder> Decoder) {
+    assert(!PseudoProbeDecoder && "Cannot set pseudo probe decoder twice.");
+    PseudoProbeDecoder = Decoder;
+  }
+
   /// Return BinaryFunction containing a given \p Address or nullptr if
   /// no registered function contains the \p Address.
   ///
@@ -430,6 +443,9 @@ public:
       return JTI->second;
     return nullptr;
   }
+
+  /// Deregister JumpTable registered at a given \p Address and delete it.
+  void deleteJumpTable(uint64_t Address);
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
@@ -698,10 +714,6 @@ public:
 
   /// Binary-wide aggregated stats.
   struct BinaryStats {
-    /// Stats for macro-fusion.
-    uint64_t MissedMacroFusionPairs{0};
-    uint64_t MissedMacroFusionExecCount{0};
-
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};

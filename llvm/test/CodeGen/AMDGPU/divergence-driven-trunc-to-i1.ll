@@ -4,9 +4,9 @@
 define amdgpu_kernel void @uniform_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x, i1 %z) {
   ; GCN-LABEL: name: uniform_trunc_i16_to_i1
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 11, 0 :: (dereferenceable invariant load (s32) from %ir.z.kernarg.offset.align.down, addrspace 4)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -55,9 +55,9 @@ define i1 @divergent_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x, i1 %z) {
 define amdgpu_kernel void @uniform_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x, i1 %z) {
   ; GCN-LABEL: name: uniform_trunc_i32_to_i1
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 11, 0 :: (dereferenceable invariant load (s64) from %ir.x.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
@@ -106,9 +106,9 @@ define i1 @divergent_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x, i1 %z) {
 define amdgpu_kernel void @uniform_trunc_i64_to_i1(ptr addrspace(1) %out, i64 %x, i1 %z) {
   ; GCN-LABEL: name: uniform_trunc_i64_to_i1
   ; GCN: bb.0 (%ir-block.0):
-  ; GCN-NEXT:   liveins: $sgpr0_sgpr1
+  ; GCN-NEXT:   liveins: $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s32) from %ir.z.kernarg.offset.align.down, addrspace 4)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1

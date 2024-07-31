@@ -32,6 +32,7 @@ namespace llvm {
 
 class AssemblyAnnotationWriter;
 class CallInst;
+class DataLayout;
 class Function;
 class LandingPadInst;
 class LLVMContext;
@@ -217,6 +218,11 @@ public:
     return const_cast<Module *>(
                             static_cast<const BasicBlock *>(this)->getModule());
   }
+
+  /// Get the data layout of the module this basic block belongs to.
+  ///
+  /// Requires the basic block to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// Returns the terminator instruction if the block is well formed or null
   /// if the block is not well formed.

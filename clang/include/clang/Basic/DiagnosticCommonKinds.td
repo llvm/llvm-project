@@ -367,6 +367,15 @@ def warn_target_unrecognized_env : Warning<
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
 
+def err_ppc_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "long calls can not be tail called on PPC|"
+  "indirect calls can not be tail called on PPC|"
+  "external calls can not be tail called on PPC}0"
+  >;
+def err_aix_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on AIX">;
+
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
 def err_file_modified : Error<

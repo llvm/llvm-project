@@ -571,7 +571,7 @@ CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                                       VPIntrinsic &VPI) {
   assert(VPI.canIgnoreVectorLengthParam());
 
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
 
   Value *MaskParam = VPI.getMaskParam();
   Value *PtrParam = VPI.getMemoryPointerParam();

@@ -466,6 +466,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case G_GET_FPENV:
   case G_SET_FPENV:
+  case G_GET_FPMODE:
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;

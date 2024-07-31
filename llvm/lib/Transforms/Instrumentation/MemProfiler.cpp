@@ -77,6 +77,8 @@ constexpr char MemProfShadowMemoryDynamicAddress[] =
 
 constexpr char MemProfFilenameVar[] = "__memprof_profile_filename";
 
+constexpr char MemProfHistogramFlagVar[] = "__memprof_histogram";
+
 // Command-line flags.
 
 static cl::opt<bool> ClInsertVersionCheck(
@@ -145,15 +147,21 @@ static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
 // override these hints anyway.
 static cl::opt<bool> ClMemProfMatchHotColdNew(
     "memprof-match-hot-cold-new",
-    cl::desc(
+ cl::desc(
         "Match allocation profiles onto existing hot/cold operator new calls"),
     cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClHistogram("memprof-histogram",
+                                 cl::desc("Collect access count histograms"),
+                                 cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClPrintMemProfMatchInfo("memprof-print-match-info",
                             cl::desc("Print matching stats for each allocation "
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
+
+extern cl::opt<bool> MemProfReportHintedSizes;
 
 // Instrumentation statistics
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
@@ -279,6 +287,11 @@ ModuleMemProfilerPass::ModuleMemProfilerPass() = default;
 
 PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
                                              AnalysisManager<Module> &AM) {
+
+  assert((!ClHistogram || (ClHistogram && ClUseCalls)) &&
+         "Cannot use -memprof-histogram without Callbacks. Set "
+         "memprof-use-callbacks");
+
   ModuleMemProfiler Profiler(M);
   if (Profiler.instrumentModule(M))
     return PreservedAnalyses::none();
@@ -508,7 +521,24 @@ void createProfileFileNameVar(Module &M) {
   }
 }
 
+// Set MemprofHistogramFlag as a Global veriable in IR. This makes it accessible
+// to the runtime, changing shadow count behavior.
+void createMemprofHistogramFlagVar(Module &M) {
+  const StringRef VarName(MemProfHistogramFlagVar);
+  Type *IntTy1 = Type::getInt1Ty(M.getContext());
+  auto MemprofHistogramFlag = new GlobalVariable(
+      M, IntTy1, true, GlobalValue::WeakAnyLinkage,
+      Constant::getIntegerValue(IntTy1, APInt(1, ClHistogram)), VarName);
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    MemprofHistogramFlag->setLinkage(GlobalValue::ExternalLinkage);
+    MemprofHistogramFlag->setComdat(M.getOrInsertComdat(VarName));
+  }
+  appendToCompilerUsed(M, MemprofHistogramFlag);
+}
+
 bool ModuleMemProfiler::instrumentModule(Module &M) {
+
   // Create a module constructor.
   std::string MemProfVersion = std::to_string(LLVM_MEM_PROFILER_VERSION);
   std::string VersionCheckName =
@@ -524,6 +554,8 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   createProfileFileNameVar(M);
 
+  createMemprofHistogramFlagVar(M);
+
   return true;
 }
 
@@ -532,11 +564,12 @@ void MemProfiler::initializeCallbacks(Module &M) {
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
+    const std::string HistPrefix = ClHistogram ? "hist_" : "";
 
     SmallVector<Type *, 2> Args1{1, IntptrTy};
-    MemProfMemoryAccessCallback[AccessIsWrite] =
-        M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr,
-                              FunctionType::get(IRB.getVoidTy(), Args1, false));
+    MemProfMemoryAccessCallback[AccessIsWrite] = M.getOrInsertFunction(
+        ClMemoryAccessCallbackPrefix + HistPrefix + TypeStr,
+        FunctionType::get(IRB.getVoidTy(), Args1, false));
   }
   MemProfMemmove = M.getOrInsertFunction(
       ClMemoryAccessCallbackPrefix + "memmove", PtrTy, PtrTy, PtrTy, IntptrTy);
@@ -621,7 +654,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
       std::optional<InterestingMemoryAccess> Access =
           isInterestingMemoryAccess(Inst);
       if (Access)
-        instrumentMop(Inst, F.getParent()->getDataLayout(), *Access);
+        instrumentMop(Inst, F.getDataLayout(), *Access);
       else
         instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
     }
@@ -681,7 +714,12 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  AllocTrie.addCallStack(AllocType, StackIds);
+  uint64_t TotalSize = 0;
+  if (MemProfReportHintedSizes) {
+    TotalSize = AllocInfo->Info.getTotalSize();
+    assert(TotalSize);
+  }
+  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
   return AllocType;
 }
 

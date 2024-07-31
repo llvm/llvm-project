@@ -1034,16 +1034,16 @@ void StreamChecker::preWrite(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(State);
 }
 
-static std::optional<QualType> getPointeeType(const MemRegion *R) {
+static QualType getPointeeType(const MemRegion *R) {
   if (!R)
-    return std::nullopt;
+    return {};
   if (const auto *ER = dyn_cast<ElementRegion>(R))
     return ER->getElementType();
   if (const auto *TR = dyn_cast<TypedValueRegion>(R))
     return TR->getValueType();
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     return SR->getPointeeStaticType();
-  return std::nullopt;
+  return {};
 }
 
 static std::optional<NonLoc> getStartIndex(SValBuilder &SVB,
@@ -1073,7 +1073,8 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   const auto *Buffer =
       dyn_cast_or_null<SubRegion>(Call.getArgSVal(0).getAsRegion());
 
-  std::optional<QualType> ElemTy = getPointeeType(Buffer);
+  const ASTContext &Ctx = C.getASTContext();
+  QualType ElemTy = getPointeeType(Buffer);
   std::optional<SVal> StartElementIndex =
       getStartIndex(C.getSValBuilder(), Buffer);
 
@@ -1086,10 +1087,12 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
   std::optional<int64_t> StartIndexVal =
       getKnownValue(State, StartElementIndex.value_or(UnknownVal()));
 
-  if (ElemTy && CountVal && Size && StartIndexVal) {
+  if (!ElemTy.isNull() && CountVal && Size && StartIndexVal) {
     int64_t NumBytesRead = Size.value() * CountVal.value();
-    int64_t ElemSizeInChars =
-        C.getASTContext().getTypeSizeInChars(*ElemTy).getQuantity();
+    int64_t ElemSizeInChars = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+    if (ElemSizeInChars == 0)
+      return nullptr;
+
     bool IncompleteLastElement = (NumBytesRead % ElemSizeInChars) != 0;
     int64_t NumCompleteOrIncompleteElementsRead =
         NumBytesRead / ElemSizeInChars + IncompleteLastElement;
@@ -1097,7 +1100,7 @@ tryToInvalidateFReadBufferByElements(ProgramStateRef State, CheckerContext &C,
     constexpr int MaxInvalidatedElementsLimit = 64;
     if (NumCompleteOrIncompleteElementsRead <= MaxInvalidatedElementsLimit) {
       return escapeByStartIndexAndCount(State, Call, C.blockCount(), Buffer,
-                                        *ElemTy, *StartIndexVal,
+                                        ElemTy, *StartIndexVal,
                                         NumCompleteOrIncompleteElementsRead);
     }
   }

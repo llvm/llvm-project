@@ -927,7 +927,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
-  RECORD(VTABLES_TO_EMIT);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -1969,9 +1968,15 @@ namespace {
         llvm::PointerIntPair<Module *, 2, ModuleMap::ModuleHeaderRole>;
 
     struct data_type {
-      const HeaderFileInfo &HFI;
+      data_type(const HeaderFileInfo &HFI, bool AlreadyIncluded,
+                ArrayRef<ModuleMap::KnownHeader> KnownHeaders,
+                UnresolvedModule Unresolved)
+          : HFI(HFI), AlreadyIncluded(AlreadyIncluded),
+            KnownHeaders(KnownHeaders), Unresolved(Unresolved) {}
+
+      HeaderFileInfo HFI;
       bool AlreadyIncluded;
-      ArrayRef<ModuleMap::KnownHeader> KnownHeaders;
+      SmallVector<ModuleMap::KnownHeader, 1> KnownHeaders;
       UnresolvedModule Unresolved;
     };
     using data_type_ref = const data_type &;
@@ -3956,10 +3961,6 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     Stream.EmitRecord(INTERESTING_IDENTIFIERS, InterestingIdents);
 }
 
-void ASTWriter::handleVTable(CXXRecordDecl *RD) {
-  PendingEmittingVTables.push_back(RD);
-}
-
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -5162,13 +5163,6 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Write all of the DeclsToCheckForDeferredDiags.
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
-
-  // Write all classes need to emit the vtable definitions if required.
-  if (isWritingStdCXXNamedModules())
-    for (CXXRecordDecl *RD : PendingEmittingVTables)
-      GetDeclRef(RD);
-  else
-    PendingEmittingVTables.clear();
 }
 
 void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
@@ -5323,17 +5317,6 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
-
-  RecordData VTablesToEmit;
-  for (CXXRecordDecl *RD : PendingEmittingVTables) {
-    if (!wasDeclEmitted(RD))
-      continue;
-
-    AddDeclRef(RD, VTablesToEmit);
-  }
-
-  if (!VTablesToEmit.empty())
-    Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
@@ -5354,6 +5337,20 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   computeNonAffectingInputFiles();
 
   writeUnhashedControlBlock(PP, Context);
+
+  // Don't reuse type ID and Identifier ID from readers for C++ standard named
+  // modules since we want to support no-transitive-change model for named
+  // modules. The theory for no-transitive-change model is,
+  // for a user of a named module, the user can only access the indirectly
+  // imported decls via the directly imported module. So that it is possible to
+  // control what matters to the users when writing the module. It would be
+  // problematic if the users can reuse the type IDs and identifier IDs from
+  // indirectly imported modules arbitrarily. So we choose to clear these ID
+  // here.
+  if (isWritingStdCXXNamedModules()) {
+    TypeIdxs.clear();
+    IdentifierIDs.clear();
+  }
 
   // Look for any identifiers that were named while processing the
   // headers, but are otherwise not needed. We add these to the hash
@@ -6546,9 +6543,6 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
-  DefinitionBits.addBit(ShouldSkipCheckingODR);
-
 #define FIELD(Name, Width, Merge)                                              \
   if (!DefinitionBits.canWriteNextNBits(Width)) {                              \
     Record->push_back(DefinitionBits);                                         \
@@ -6561,18 +6555,14 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   Record->push_back(DefinitionBits);
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!ShouldSkipCheckingODR)
-    // getODRHash will compute the ODRHash if it has not been previously
-    // computed.
-    Record->push_back(D->getODRHash());
+  // getODRHash will compute the ODRHash if it has not been previously
+  // computed.
+  Record->push_back(D->getODRHash());
 
-  bool ModulesCodegen =
-      !D->isDependentType() &&
-     (Writer->Context->getLangOpts().ModulesDebugInfo ||
-      D->isInNamedModule());
-  Record->push_back(ModulesCodegen);
-  if (ModulesCodegen)
+  bool ModulesDebugInfo =
+      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
+  Record->push_back(ModulesDebugInfo);
+  if (ModulesDebugInfo)
     Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
 
   // IsLambda bit is already saved.
@@ -6686,6 +6676,11 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 }
 
 void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   IdentifierID &StoredID = IdentifierIDs[II];
   unsigned OriginalModuleFileIndex = StoredID >> 32;
 
@@ -6708,6 +6703,11 @@ void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
 }
 
 void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   // Always take the type index that comes in later module files.
   // This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,

@@ -98,7 +98,7 @@ void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
 MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      DbgLoc(std::move(DL)), DebugInstrNum(0) {
+      DbgLoc(std::move(DL)), DebugInstrNum(0), Opcode(TID.Opcode) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
@@ -117,7 +117,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
 /// uniqueness.
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0) {
+      Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0),
+      Opcode(MI.getOpcode()) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -143,6 +144,7 @@ void MachineInstr::setDesc(const MCInstrDesc &TID) {
   if (getParent())
     getMF()->handleChangeDesc(*this, TID);
   MCID = &TID;
+  Opcode = TID.Opcode;
 }
 
 void MachineInstr::moveBefore(MachineInstr *MovePos) {
@@ -1039,8 +1041,7 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = getOperand(i);
+  for (const MachineOperand &MO : operands()) {
     if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == Reg)
       return true;
   }
@@ -2215,7 +2216,7 @@ void MachineInstr::emitError(StringRef Msg) const {
 
   if (const MachineBasicBlock *MBB = getParent())
     if (const MachineFunction *MF = MBB->getParent())
-      return MF->getMMI().getModule()->getContext().emitError(LocCookie, Msg);
+      return MF->getFunction().getContext().emitError(LocCookie, Msg);
   report_fatal_error(Msg);
 }
 

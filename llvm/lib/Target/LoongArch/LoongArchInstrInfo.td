@@ -456,6 +456,19 @@ def bare_symbol : Operand<GRLenVT> {
   let ParserMatchClass = BareSymbol;
 }
 
+def TPRelAddSymbol : AsmOperandClass {
+  let Name = "TPRelAddSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTPRelAddSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %le_add_r variant.
+def tprel_add_symbol : Operand<GRLenVT> {
+  let ParserMatchClass = TPRelAddSymbol;
+}
+
+
 // Standalone (codegen-only) immleaf patterns.
 
 // A 12-bit signed immediate plus one where the imm range will be [-2047, 2048].
@@ -1570,6 +1583,21 @@ def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
                           "tail36", "$tmp, $dst">,
                    Requires<[IsLA64]>;
 
+// This is a special case of the ADD_W/D instruction used to facilitate the use
+// of a fourth operand to emit a relocation on a symbol relating to this
+// instruction. The relocation does not affect any bits of the instruction itself
+// but is used as a hint to the linker.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in {
+def PseudoAddTPRel_W : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.w", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA32]>;
+def PseudoAddTPRel_D : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.d", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA64]>;
+}
+
 /// Load address (la*) macro instructions.
 
 // Define isCodeGenOnly = 0 to expose them to tablegened assembly parser.
@@ -1582,13 +1610,26 @@ def PseudoLA_ABS_LARGE : Pseudo<(outs GPR:$dst),
                                 "la.abs", "$dst, $src">;
 def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                             "la.pcrel", "$dst, $src">;
-let Defs = [R20], Size = 20 in
+def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ld", "$dst, $src">;
+def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.gd", "$dst, $src">;
+let Defs = [R20], Size = 20 in {
 def PseudoLA_PCREL_LARGE : Pseudo<(outs GPR:$dst),
                                   (ins GPR:$tmp, bare_symbol:$src), [],
                                   "la.pcrel", "$dst, $tmp, $src">,
                            Requires<[IsLA64]>;
 def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.le", "$dst, $src">;
+def PseudoLA_TLS_LD_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.ld", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
+                                   (ins GPR:$tmp, bare_symbol:$src), [],
+                                   "la.tls.gd", "$dst, $tmp, $src">,
+                            Requires<[IsLA64]>;
+} // Defs = [R20], Size = 20
 }
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in {
@@ -1596,10 +1637,6 @@ def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                           "la.got", "$dst, $src">;
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
-def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tls.ld", "$dst, $src">;
-def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tls.gd", "$dst, $src">;
 let Defs = [R20], Size = 20 in {
 def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
                                 (ins GPR:$tmp, bare_symbol:$src), [],
@@ -1608,14 +1645,6 @@ def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
 def PseudoLA_TLS_IE_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.ie", "$dst, $tmp, $src">,
-                            Requires<[IsLA64]>;
-def PseudoLA_TLS_LD_LARGE : Pseudo<(outs GPR:$dst),
-                                   (ins GPR:$tmp, bare_symbol:$src), [],
-                                   "la.tls.ld", "$dst, $tmp, $src">,
-                            Requires<[IsLA64]>;
-def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
-                                   (ins GPR:$tmp, bare_symbol:$src), [],
-                                   "la.tls.gd", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
 } // Defs = [R20], Size = 20
 }

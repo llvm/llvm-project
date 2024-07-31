@@ -1,7 +1,9 @@
-// RUN: printf "\0" > %S/Inputs/null_byte.bin
-// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,cxx -Wno-c23-extensions
-// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,c
-// RUN: rm %S/Inputs/null_byte.bin
+// RUN: rm -rf %t && mkdir -p %t/media
+// RUN: cp %S/Inputs/single_byte.txt %S/Inputs/jk.txt %S/Inputs/numbers.txt %t/
+// RUN: cp %S/Inputs/media/empty %t/media/
+// RUN: printf "\0" > %t/null_byte.bin
+// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%t -verify=expected,c
 #embed <media/empty>
 ;
 
@@ -25,7 +27,7 @@ _Static_assert(
 _Static_assert(sizeof(
 #embed <single_byte.txt>
 ) ==
-sizeof(unsigned char)
+sizeof(int)
 , ""
 );
 _Static_assert(sizeof
@@ -33,9 +35,9 @@ _Static_assert(sizeof
 , ""
 );
 _Static_assert(sizeof(
-#embed <jk.txt> // expected-warning {{left operand of comma operator has no effect}}
+#embed <jk.txt>
 ) ==
-sizeof(unsigned char)
+sizeof(int)
 , ""
 );
 
@@ -71,10 +73,10 @@ void do_stuff() {
 // Ensure that we don't accidentally allow you to initialize an unsigned char *
 // from embedded data; the data is modeled as a string literal internally, but
 // is not actually a string literal.
-const unsigned char *ptr =
+const unsigned char *ptr = (
 #embed <jk.txt> // expected-warning {{left operand of comma operator has no effect}}
-; // c-error@-2 {{incompatible integer to pointer conversion initializing 'const unsigned char *' with an expression of type 'unsigned char'}} \
-     cxx-error@-2 {{cannot initialize a variable of type 'const unsigned char *' with an rvalue of type 'unsigned char'}}
+    ); // c-error@-2 {{incompatible integer to pointer conversion initializing 'const unsigned char *' with an expression of type 'int'}} \
+     cxx-error@-2 {{cannot initialize a variable of type 'const unsigned char *' with an rvalue of type 'int'}}
 
 // However, there are some cases where this is fine and should work.
 const unsigned char *null_ptr_1 =
@@ -99,11 +101,10 @@ constexpr unsigned char ch =
 ;
 static_assert(ch == 0);
 
-void foobar(float x, char y, char z); // cxx-note {{candidate function not viable: requires 3 arguments, but 1 was provided}}
-                                      // c-note@-1 {{declared here}}
-void g1() { foobar((float) // cxx-error {{no matching function for call to 'foobar'}}
-#embed "numbers.txt" limit(3) // expected-warning {{left operand of comma operator has no effect}}
-); // c-error {{too few arguments to function call, expected 3, have 1}}
+void foobar(float x, char y, char z);
+void g1() { foobar((float)
+#embed "numbers.txt" limit(3)
+);
 }
 
 #if __cplusplus
@@ -114,3 +115,14 @@ void f1() {
   };
 }
 #endif
+
+struct HasChar {
+  signed char ch;
+};
+
+constexpr struct HasChar c = {
+#embed "Inputs/big_char.txt" // cxx-error {{constant expression evaluates to 255 which cannot be narrowed to type 'signed char'}} \
+                                cxx-note {{insert an explicit cast to silence this issue}} \
+                                c-error {{constexpr initializer evaluates to 255 which is not exactly representable in type 'signed char'}}
+
+};

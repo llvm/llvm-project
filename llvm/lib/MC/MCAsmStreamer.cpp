@@ -254,7 +254,7 @@ public:
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
 
-  void emitAlignmentDirective(unsigned ByteAlignment,
+  void emitAlignmentDirective(uint64_t ByteAlignment,
                               std::optional<int64_t> Value, unsigned ValueSize,
                               unsigned MaxBytesToEmit);
 
@@ -356,6 +356,7 @@ public:
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
+  void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
 
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
@@ -511,13 +512,13 @@ void MCAsmStreamer::emitExplicitComments() {
 }
 
 void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  assert(Section && "Cannot switch to a null section!");
   if (MCTargetStreamer *TS = getTargetStreamer()) {
-    TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
+    TS->changeSection(getCurrentSection().first, Section, Subsection, OS);
   } else {
     Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
                                   Subsection);
   }
+  MCStreamer::changeSection(Section, Subsection);
 }
 
 void MCAsmStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
@@ -1080,7 +1081,7 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                  uint64_t Size, Align ByteAlignment,
                                  SMLoc Loc) {
   if (Symbol)
-    assignFragment(Symbol, &Section->getDummyFragment());
+    Symbol->setFragment(&Section->getDummyFragment());
 
   // Note: a .zerofill directive does not switch sections.
   OS << ".zerofill ";
@@ -1106,9 +1107,8 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 // e.g. _a.
 void MCAsmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, Align ByteAlignment) {
-  assignFragment(Symbol, &Section->getDummyFragment());
+  Symbol->setFragment(&Section->getDummyFragment());
 
-  assert(Symbol && "Symbol shouldn't be NULL!");
   // Instead of using the Section we'll just use the shortcut.
 
   assert(Section->getVariant() == MCSection::SV_MachO &&
@@ -1478,23 +1478,23 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
+void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
                                            std::optional<int64_t> Value,
                                            unsigned ValueSize,
                                            unsigned MaxBytesToEmit) {
   if (MAI->useDotAlignForAlignment()) {
-    if (!isPowerOf2_32(ByteAlignment))
+    if (!isPowerOf2_64(ByteAlignment))
       report_fatal_error("Only power-of-two alignments are supported "
                          "with .align.");
     OS << "\t.align\t";
-    OS << Log2_32(ByteAlignment);
+    OS << Log2_64(ByteAlignment);
     EmitEOL();
     return;
   }
 
   // Some assemblers don't support non-power of two alignments, so we always
   // emit alignments as a power of two if possible.
-  if (isPowerOf2_32(ByteAlignment)) {
+  if (isPowerOf2_64(ByteAlignment)) {
     switch (ValueSize) {
     default:
       llvm_unreachable("Invalid size for machine code value!");
@@ -1511,7 +1511,7 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
       llvm_unreachable("Unsupported alignment size!");
     }
 
-    OS << Log2_32(ByteAlignment);
+    OS << Log2_64(ByteAlignment);
 
     if (Value.has_value() || MaxBytesToEmit) {
       if (Value.has_value()) {
@@ -2127,6 +2127,12 @@ void MCAsmStreamer::emitCFIReturnColumn(int64_t Register) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCStreamer::emitCFILabelDirective(Loc, Name);
+  OS << "\t.cfi_label " << Name;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIBKeyFrame() {
   MCStreamer::emitCFIBKeyFrame();
   OS << "\t.cfi_b_key_frame";
@@ -2208,7 +2214,7 @@ void MCAsmStreamer::emitWinEHHandlerData(SMLoc Loc) {
 
   MCSection *TextSec = &CurFrame->Function->getSection();
   MCSection *XData = getAssociatedXDataSection(TextSec);
-  switchSectionNoChange(XData);
+  switchSectionNoPrint(XData);
 
   OS << "\t.seh_handlerdata";
   EmitEOL();
@@ -2625,7 +2631,7 @@ void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
   if (MAI->usesDwarfFileAndLocDirectives())
     return;
 
-  switchSectionNoChange(Section);
+  switchSectionNoPrint(Section);
 
   MCSymbol *Sym = getCurrentSectionOnly()->getEndSymbol(getContext());
 

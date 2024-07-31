@@ -70,9 +70,7 @@ void DwarfUnit::emitDwarfAbbrevEntry(const DIEAbbrev &Abbrev,
 
   // For each attribute description.
   const SmallVectorImpl<DIEAbbrevData> &Data = Abbrev.getData();
-  for (unsigned i = 0, N = Data.size(); i < N; ++i) {
-    const DIEAbbrevData &AttrData = Data[i];
-
+  for (const DIEAbbrevData &AttrData : Data) {
     // Emit attribute type.
     encodeULEB128(AttrData.getAttribute(), AbbrevSection.OS);
 

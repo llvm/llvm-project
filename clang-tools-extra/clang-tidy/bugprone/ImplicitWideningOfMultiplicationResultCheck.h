@@ -41,6 +41,7 @@ public:
 private:
   const bool UseCXXStaticCastsInCppSources;
   const bool UseCXXHeadersInCppSources;
+  const bool IgnoreConstantIntExpr;
   utils::IncludeInserter IncludeInserter;
 };
 

@@ -34,15 +34,15 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = mul nuw nsw <32 x i64> %vec.ind, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
   store <32 x i8> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -76,7 +76,7 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = mul nuw nsw <32 x i64> %vec.ind, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
   %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> %maskedoff)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
@@ -84,7 +84,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
   store <32 x i8> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -118,15 +118,15 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <32 x i64> [ <i64 31, i64 30, i64 29, i64 28, i64 27, i64 26, i64 25, i64 24, i64 23, i64 22, i64 21, i64 20, i64 19, i64 18, i64 17, i64 16, i64 15, i64 14, i64 13, i64 12, i64 11, i64 10, i64 9, i64 8, i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = mul nuw nsw <32 x i64> %vec.ind, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
   store <32 x i8> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -160,15 +160,15 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <32 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = mul nuw nsw <32 x i64> %vec.ind, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
   store <32 x i8> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -208,13 +208,13 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = getelementptr inbounds i8, ptr %B, i64 %index
   %wide.load = load <32 x i8>, ptr %i, align 1
-  %i2 = mul nuw nsw <32 x i64> %vec.ind, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i2 = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i3 = getelementptr inbounds i8, ptr %A, <32 x i64> %i2
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
   %i4 = add <32 x i8> %wide.masked.gather, %wide.load
-  call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> %i4, <32 x ptr> %i3, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> %i4, <32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
   %i5 = icmp eq i64 %index.next, 1024
   br i1 %i5, label %for.cond.cleanup, label %vector.body
 
@@ -250,13 +250,13 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = getelementptr inbounds i8, ptr %B, i64 %index
   %wide.load = load <32 x i8>, ptr %i, align 1
-  %i2 = mul nuw nsw <32 x i64> %vec.ind, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i2 = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i3 = getelementptr inbounds i8, ptr %A, <32 x i64> %i2
   %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> %maskedoff)
   %i4 = add <32 x i8> %wide.masked.gather, %wide.load
   call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> %i4, <32 x ptr> %i3, i32 1, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
   %i5 = icmp eq i64 %index.next, 1024
   br i1 %i5, label %for.cond.cleanup, label %vector.body
 
@@ -294,15 +294,15 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = shl nsw <8 x i64> %vec.ind, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %i = shl nsw <8 x i64> %vec.ind, splat (i64 2)
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
   store <8 x i32> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 8
-  %vec.ind.next = add <8 x i64> %vec.ind, <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+  %vec.ind.next = add <8 x i64> %vec.ind, splat (i64 8)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -343,13 +343,13 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nsw <8 x i64> %vec.ind, %.splat
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
   store <8 x i32> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 8
-  %vec.ind.next = add <8 x i64> %vec.ind, <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+  %vec.ind.next = add <8 x i64> %vec.ind, splat (i64 8)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -390,13 +390,13 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nsw <8 x i64> %.splat, %vec.ind
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
   store <8 x i32> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 8
-  %vec.ind.next = add <8 x i64> %vec.ind, <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+  %vec.ind.next = add <8 x i64> %vec.ind, splat (i64 8)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 
@@ -436,13 +436,13 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = getelementptr inbounds i32, ptr %B, i64 %index
   %wide.load = load <8 x i32>, ptr %i, align 1
-  %i2 = shl nuw nsw <8 x i64> %vec.ind, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %i2 = shl nuw nsw <8 x i64> %vec.ind, splat (i64 2)
   %i3 = getelementptr inbounds i32, ptr %A, <8 x i64> %i2
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i3, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i4 = add <8 x i32> %wide.masked.gather, %wide.load
-  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i4, <8 x ptr> %i3, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i4, <8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 8
-  %vec.ind.next = add <8 x i64> %vec.ind, <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+  %vec.ind.next = add <8 x i64> %vec.ind, splat (i64 8)
   %i5 = icmp eq i64 %index.next, 1024
   br i1 %i5, label %for.cond.cleanup, label %vector.body
 
@@ -492,11 +492,11 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
-  %step.add = add <8 x i64> %vec.ind, <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+  %step.add = add <8 x i64> %vec.ind, splat (i64 8)
   %i = getelementptr inbounds %struct.foo, ptr %B, <8 x i64> %vec.ind, i32 1
   %i1 = getelementptr inbounds %struct.foo, ptr %B, <8 x i64> %step.add, i32 1
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
-  %wide.masked.gather9 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather9 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 4
   %i4 = getelementptr inbounds i32, ptr %i2, i64 8
@@ -506,7 +506,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   store <8 x i32> %i6, ptr %i2, align 4
   store <8 x i32> %i7, ptr %i4, align 4
   %index.next = add nuw i64 %index, 16
-  %vec.ind.next = add <8 x i64> %vec.ind, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+  %vec.ind.next = add <8 x i64> %vec.ind, splat (i64 16)
   %i10 = icmp eq i64 %index.next, 1024
   br i1 %i10, label %for.cond.cleanup, label %vector.body
 
@@ -580,39 +580,39 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <8 x i64> [ <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = shl nuw nsw <8 x i64> %vec.ind, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %i = shl nuw nsw <8 x i64> %vec.ind, splat (i64 2)
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i2 = getelementptr inbounds i32, ptr %A, <8 x i64> %vec.ind
-  %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i3 = add nsw <8 x i32> %wide.masked.gather52, %wide.masked.gather
-  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i3, <8 x ptr> %i2, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-  %i4 = or disjoint <8 x i64> %vec.ind, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
-  %i5 = shl nsw <8 x i64> %i4, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i3, <8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true))
+  %i4 = or disjoint <8 x i64> %vec.ind, splat (i64 1)
+  %i5 = shl nsw <8 x i64> %i4, splat (i64 2)
   %i6 = getelementptr inbounds i32, ptr %B, <8 x i64> %i5
-  %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i7 = getelementptr inbounds i32, ptr %A, <8 x i64> %i4
-  %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i8 = add nsw <8 x i32> %wide.masked.gather54, %wide.masked.gather53
-  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i8, <8 x ptr> %i7, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-  %i9 = or disjoint <8 x i64> %vec.ind, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
-  %i10 = shl nsw <8 x i64> %i9, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i8, <8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true))
+  %i9 = or disjoint <8 x i64> %vec.ind, splat (i64 2)
+  %i10 = shl nsw <8 x i64> %i9, splat (i64 2)
   %i11 = getelementptr inbounds i32, ptr %B, <8 x i64> %i10
-  %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i12 = getelementptr inbounds i32, ptr %A, <8 x i64> %i9
-  %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i13 = add nsw <8 x i32> %wide.masked.gather56, %wide.masked.gather55
-  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i13, <8 x ptr> %i12, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-  %i14 = or disjoint <8 x i64> %vec.ind, <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
-  %i15 = shl nsw <8 x i64> %i14, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i13, <8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true))
+  %i14 = or disjoint <8 x i64> %vec.ind, splat (i64 3)
+  %i15 = shl nsw <8 x i64> %i14, splat (i64 2)
   %i16 = getelementptr inbounds i32, ptr %B, <8 x i64> %i15
-  %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i17 = getelementptr inbounds i32, ptr %A, <8 x i64> %i14
-  %wide.masked.gather58 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i17, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %wide.masked.gather58 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
   %i18 = add nsw <8 x i32> %wide.masked.gather58, %wide.masked.gather57
-  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i18, <8 x ptr> %i17, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i18, <8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 8
-  %vec.ind.next = add <8 x i64> %vec.ind, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vec.ind.next = add <8 x i64> %vec.ind, splat (i64 32)
   %i19 = icmp eq i64 %index.next, 256
   br i1 %i19, label %for.cond.cleanup, label %vector.body
 
@@ -680,13 +680,13 @@ bb:
 bb2:                                              ; preds = %bb2, %bb
   %i = phi i64 [ 0, %bb ], [ %i15, %bb2 ]
   %i3 = phi <2 x i64> [ <i64 0, i64 1>, %bb ], [ %i16, %bb2 ]
-  %i4 = mul nuw nsw <2 x i64> %i3, <i64 5, i64 5>
-  %i5 = mul <2 x i64> %i3, <i64 5, i64 5>
+  %i4 = mul nuw nsw <2 x i64> %i3, splat (i64 5)
+  %i5 = mul <2 x i64> %i3, splat (i64 5)
   %i6 = add <2 x i64> %i5, <i64 10, i64 10>
   %i7 = getelementptr inbounds ptr, ptr %arg1, <2 x i64> %i4
   %i8 = getelementptr inbounds ptr, ptr %arg1, <2 x i64> %i6
-  %i9 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i7, i32 8, <2 x i1> <i1 true, i1 true>, <2 x ptr> undef)
-  %i10 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i8, i32 8, <2 x i1> <i1 true, i1 true>, <2 x ptr> undef)
+  %i9 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i7, i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
+  %i10 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i8, i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
   %i11 = getelementptr inbounds ptr, ptr %arg, i64 %i
   store <2 x ptr> %i9, ptr %i11, align 8
   %i13 = getelementptr inbounds ptr, ptr %i11, i64 2
@@ -761,13 +761,13 @@ bb2:                                              ; preds = %bb2, %bb
   %i6 = load <2 x ptr>, ptr %i4, align 8
   %i7 = getelementptr inbounds ptr, ptr %i4, i64 2
   %i9 = load <2 x ptr>, ptr %i7, align 8
-  %i10 = mul nuw nsw <2 x i64> %i3, <i64 5, i64 5>
-  %i11 = mul <2 x i64> %i3, <i64 5, i64 5>
+  %i10 = mul nuw nsw <2 x i64> %i3, splat (i64 5)
+  %i11 = mul <2 x i64> %i3, splat (i64 5)
   %i12 = add <2 x i64> %i11, <i64 10, i64 10>
   %i13 = getelementptr inbounds ptr, ptr %arg, <2 x i64> %i10
   %i14 = getelementptr inbounds ptr, ptr %arg, <2 x i64> %i12
-  call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> %i6, <2 x ptr> %i13, i32 8, <2 x i1> <i1 true, i1 true>)
-  call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> %i9, <2 x ptr> %i14, i32 8, <2 x i1> <i1 true, i1 true>)
+  call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> %i6, <2 x ptr> %i13, i32 8, <2 x i1> splat (i1 true))
+  call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> %i9, <2 x ptr> %i14, i32 8, <2 x i1> splat (i1 true))
   %i15 = add nuw i64 %i, 4
   %i16 = add <2 x i64> %i3, <i64 4, i64 4>
   %i17 = icmp eq i64 %i15, 1024
@@ -856,15 +856,15 @@ bb15:                                             ; preds = %bb15, %bb9
   %i16 = phi i64 [ 0, %bb9 ], [ %i27, %bb15 ]
   %i17 = phi <32 x i64> [ %i14, %bb9 ], [ %i28, %bb15 ]
   %i18 = add i64 %i16, %i4
-  %i19 = mul nsw <32 x i64> %i17, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i19 = mul nsw <32 x i64> %i17, splat (i64 5)
   %i20 = getelementptr inbounds i8, ptr %arg1, <32 x i64> %i19
-  %i21 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i20, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %i21 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i20, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
   %i22 = getelementptr inbounds i8, ptr %arg, i64 %i18
   %i24 = load <32 x i8>, ptr %i22, align 1
   %i25 = add <32 x i8> %i24, %i21
   store <32 x i8> %i25, ptr %i22, align 1
   %i27 = add nuw i64 %i16, 32
-  %i28 = add <32 x i64> %i17, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %i28 = add <32 x i64> %i17, splat (i64 32)
   %i29 = icmp eq i64 %i27, %i10
   br i1 %i29, label %bb30, label %bb15
 
@@ -932,15 +932,15 @@ bb2:                                              ; preds = %bb
 bb4:                                              ; preds = %bb4, %bb2
   %i5 = phi i64 [ %i13, %bb4 ], [ 0, %bb2 ]
   %i6 = phi <16 x i64> [ %i14, %bb4 ], [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, %bb2 ]
-  %i7 = mul <16 x i64> %i6, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i7 = mul <16 x i64> %i6, splat (i64 5)
   %i8 = getelementptr inbounds i8, ptr %arg1, <16 x i64> %i7
-  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %i8, i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> undef)
+  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %i8, i32 1, <16 x i1> splat (i1 true), <16 x i8> undef)
   %i10 = getelementptr inbounds i8, ptr %arg, i64 %i5
   %i11 = load <16 x i8>, ptr %i10, align 1
   %i12 = add <16 x i8> %i11, %i9
   store <16 x i8> %i12, ptr %i10, align 1
   %i13 = add nuw i64 %i5, 16
-  %i14 = add <16 x i64> %i6, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+  %i14 = add <16 x i64> %i6, splat (i64 16)
   %i15 = icmp eq i64 %i13, %i
   br i1 %i15, label %bb16, label %bb4
 
@@ -958,7 +958,7 @@ entry:
   %0 = insertelement <8 x ptr> poison, ptr %a, i64 0
   %1 = shufflevector <8 x ptr> %0, <8 x ptr> poison, <8 x i32> zeroinitializer
   %2 = getelementptr i8, <8 x ptr> %1, <8 x i64> <i64 0, i64 64, i64 128, i64 192, i64 256, i64 320, i64 384, i64 448>
-  %3 = tail call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %2, i32 1, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i8> poison)
+  %3 = tail call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %2, i32 1, <8 x i1> splat (i1 true), <8 x i8> poison)
   ret <8 x i8> %3
 }
 
@@ -991,15 +991,15 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %vec.ind = phi <32 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 20, i16 21, i16 22, i16 23, i16 24, i16 25, i16 26, i16 27, i16 28, i16 29, i16 30, i16 31>, %entry ], [ %vec.ind.next, %vector.body ]
-  %i = mul nuw nsw <32 x i16> %vec.ind, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+  %i = mul nuw nsw <32 x i16> %vec.ind, splat (i16 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i16> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
   store <32 x i8> %i4, ptr %i2, align 1
   %index.next = add nuw i64 %index, 32
-  %vec.ind.next = add <32 x i16> %vec.ind, <i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32, i16 32>
+  %vec.ind.next = add <32 x i16> %vec.ind, splat (i16 32)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
 

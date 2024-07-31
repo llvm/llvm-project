@@ -406,9 +406,9 @@ char &llvm::RegisterCoalescerID = RegisterCoalescer::ID;
 
 INITIALIZE_PASS_BEGIN(RegisterCoalescer, "register-coalescer",
                       "Register Coalescer", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescer, "register-coalescer",
                     "Register Coalescer", false, false)
@@ -588,11 +588,11 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
 void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<AAResultsWrapperPass>();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreservedID(MachineDominatorsID);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -1855,8 +1855,8 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
     // Replace SrcReg with DstReg in all UseMI operands.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-      MachineOperand &MO = UseMI->getOperand(Ops[i]);
+    for (unsigned Op : Ops) {
+      MachineOperand &MO = UseMI->getOperand(Op);
 
       // Adjust <undef> flags in case of sub-register joins. We don't want to
       // turn a full def into a read-modify-write sub-register def and vice
@@ -4136,9 +4136,9 @@ RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
 
 void RegisterCoalescer::coalesceLocals() {
   copyCoalesceWorkList(LocalWorkList);
-  for (unsigned j = 0, je = LocalWorkList.size(); j != je; ++j) {
-    if (LocalWorkList[j])
-      WorkList.push_back(LocalWorkList[j]);
+  for (MachineInstr *MI : LocalWorkList) {
+    if (MI)
+      WorkList.push_back(MI);
   }
   LocalWorkList.clear();
 }
@@ -4206,9 +4206,9 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   const TargetSubtargetInfo &STI = fn.getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   if (EnableGlobalCopies == cl::BOU_UNSET)
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
@@ -4298,5 +4298,5 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 }
 
 void RegisterCoalescer::print(raw_ostream &O, const Module* m) const {
-   LIS->print(O, m);
+  LIS->print(O);
 }
