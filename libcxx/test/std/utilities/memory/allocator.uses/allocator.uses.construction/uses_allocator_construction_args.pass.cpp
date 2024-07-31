@@ -167,6 +167,7 @@ constexpr void testOne() {
           test_uses_allocator_construction_args<PairType>(a, std::move(p));
       (void)ret;
     }
+#if TEST_STD_VER >= 23
     {
       using PairType = const std::pair<int, int>;
       PairType p(1, 2);
@@ -175,6 +176,7 @@ constexpr void testOne() {
           test_uses_allocator_construction_args<PairType>(a, std::move(p));
       (void)ret;
     }
+#endif
   }
 #if TEST_STD_VER >= 23
   {
