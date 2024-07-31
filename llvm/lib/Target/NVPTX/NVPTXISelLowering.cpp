@@ -2232,18 +2232,13 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDLoc DL(Op.getNode());
 
   // The size for ptx alloca instruction is 64-bit for m64 and 32-bit for m32.
-  if (nvTM->is64Bit())
-    Size = DAG.getZExtOrTrunc(Size, DL, MVT::i64);
-  else
-    Size = DAG.getZExtOrTrunc(Size, DL, MVT::i32);
+  MVT ValueSizeTy = nvTM->is64Bit() ? MVT::i64 : MVT::i32;
 
-  SDValue AllocOps[] = {Chain, Size,
+  SDValue AllocOps[] = {Chain, DAG.getZExtOrTrunc(Size, DL, ValueSizeTy),
                         DAG.getTargetConstant(Align, DL, MVT::i32)};
-  SDValue Alloca = DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL,
-                               nvTM->is64Bit() ? MVT::i64 : MVT::i32, AllocOps);
-
-  SDValue MergeOps[] = {Alloca, Chain};
-  return DAG.getMergeValues(MergeOps, DL);
+  EVT RetTypes[] = {ValueSizeTy, MVT::Other};  
+  return DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL,
+                               RetTypes, AllocOps);
 }
 
 // By default CONCAT_VECTORS is lowered by ExpandVectorBuildThroughStack()
