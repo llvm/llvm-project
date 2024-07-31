@@ -75,11 +75,8 @@ static int getPosixProtectionFlags(unsigned Flags) {
 #if defined(__linux__)
 #ifndef MFD_CLOEXEC
 #define MFD_CLOEXEC 0x0001U
-#endif
-#ifndef MFD_EXEC
-#define MFD_EXEC 0x0010U
-#endif
 
+// Assume if MFD_CLOEXEC is defined, so is the libc function
 static inline int memfd_create(const char *name, unsigned int flags) {
 #ifdef SYS_memfd_create
   return syscall(SYS_memfd_create, name, flags);
@@ -88,6 +85,10 @@ static inline int memfd_create(const char *name, unsigned int flags) {
   return -1;
 #endif
 }
+#endif // MFD_CLOEXEC
+#ifndef MFD_EXEC
+#define MFD_EXEC 0x0010U
+#endif
 #endif
 
 namespace llvm {
