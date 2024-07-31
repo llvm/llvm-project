@@ -213,6 +213,25 @@ public:
 #endif
 };
 
+class SetVolatile : public IRChangeBase {
+  Instruction *Inst;
+  bool WasVolatile;
+  /// This could either be StoreInst or LoadInst
+  PointerUnion<StoreInst *, LoadInst *> InstUnion;
+
+public:
+  SetVolatile(Instruction *I, bool WasVolatile, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "SetVolatile";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 class MoveInstr : public IRChangeBase {
   /// The instruction that moved.
   Instruction *MovedI;

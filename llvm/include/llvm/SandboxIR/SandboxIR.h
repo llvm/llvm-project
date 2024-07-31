@@ -776,6 +776,8 @@ class LoadInst final : public Instruction {
 public:
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }
+  /// Specify whether this is a volatile load or not.
+  void setVolatile(bool V) { return cast<llvm::LoadInst>(Val)->setVolatile(V); }
 
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
@@ -825,6 +827,11 @@ class StoreInst final : public Instruction {
 public:
   /// Return true if this is a store from a volatile memory location.
   bool isVolatile() const { return cast<llvm::StoreInst>(Val)->isVolatile(); }
+  /// Specify whether this is a volatile store or not.
+  void setVolatile(bool V) {
+    return cast<llvm::StoreInst>(Val)->setVolatile(V);
+  }
+
   unsigned getUseOperandNo(const Use &Use) const final {
     return getUseOperandNoDefault(Use);
   }
@@ -1334,7 +1341,7 @@ class CastInst : public Instruction {
   /// constructor directly.
   CastInst(llvm::CastInst *CI, Context &Ctx)
       : Instruction(ClassID::Cast, getCastOpcode(CI->getOpcode()), CI, Ctx) {}
-  friend Context; // for SBCastInstruction()
+  friend Context;        // for SBCastInstruction()
   friend class PtrToInt; // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);

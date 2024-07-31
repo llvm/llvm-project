@@ -160,6 +160,34 @@ void CallBrInstSetIndirectDest::dump() const {
 }
 #endif
 
+SetVolatile::SetVolatile(Instruction *I, bool WasBool, Tracker &Tracker)
+    : IRChangeBase(Tracker), Inst(I) {
+  if (auto *Load = cast<llvm::LoadInst>(Inst)) {
+    WasVolatile = Load->isVolatile();
+    InstUnion = Load;
+  }
+  if (auto *Store = cast<llvm::StoreInst>(Inst)) {
+    WasVolatile = Store->isVolatile();
+    InstUnion = Store;
+  }
+}
+
+void SetVolatile::revert() {
+  if (llvm::LoadInst *Load = InstUnion.dyn_cast<llvm::LoadInst *>()) {
+    // It's a LoadInst
+    Load->setVolatile(WasVolatile);
+  } else if (llvm::StoreInst *Store = InstUnion.dyn_cast<llvm::StoreInst *>()) {
+    // It's a StoreInst
+    Store->setVolatile(WasVolatile);
+  }
+}
+#ifndef NDEBUG
+void SetVolatile::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 MoveInstr::MoveInstr(Instruction *MovedI, Tracker &Tracker)
     : IRChangeBase(Tracker), MovedI(MovedI) {
   if (auto *NextI = MovedI->getNextNode())
