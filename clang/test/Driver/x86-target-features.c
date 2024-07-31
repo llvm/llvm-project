@@ -410,8 +410,10 @@
 // NONX86-NEXT: error: unsupported option '-mno-sgx' for target 'aarch64'
 
 // RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
+// RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
 // RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
 // RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
 // NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
 // NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=

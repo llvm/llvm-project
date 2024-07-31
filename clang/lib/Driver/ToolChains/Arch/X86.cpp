@@ -248,10 +248,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
-  llvm::StringSet<> SubFeaturesOfAPX = {"egpr", "push2pop2", "ppx", "ndd",
-                                        "ccmp", "nf",        "cf",  "zu"};
-  llvm::StringSet<> FeaturesIn64BitOnly = {"uintr"};
-  FeaturesIn64BitOnly.insert(SubFeaturesOfAPX.begin(), SubFeaturesOfAPX.end());
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   for (const Arg *A : Args.filtered(options::OPT_m_x86_Features_Group,
@@ -272,28 +268,27 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     bool IsNegative = Name.starts_with("no-");
 
     bool Not64Bit = ArchType != llvm::Triple::x86_64;
-    if (Not64Bit && FeaturesIn64BitOnly.contains(Name))
+    if (Not64Bit && Name == "uintr")
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
 
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
 
-      for (StringRef Value : A->getValues()) {
-        if (SubFeaturesOfAPX.contains(Value)) {
-          if (Not64Bit && FeaturesIn64BitOnly.contains(Value)) {
-            std::string ArgOrAlias = A->getSpelling().str() + "|-mapxf";
-            D.Diag(diag::err_drv_unsupported_opt_for_target)
-                << ArgOrAlias << Triple.getTriple();
-            break;
-          }
+      if (Not64Bit && !IsNegative)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef(A->getSpelling().str() + "|-mapxf")
+            << Triple.getTriple();
 
-          Features.push_back(
-              Args.MakeArgString((IsNegative ? "-" : "+") + Value));
-          continue;
-        }
-        D.Diag(clang::diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << Value;
+      for (StringRef Value : A->getValues()) {
+        if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
+            Value != "ndd" && Value != "ccmp" && Value != "nf" &&
+            Value != "cf" && Value != "zu")
+          D.Diag(clang::diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Value;
+
+        Features.push_back(
+            Args.MakeArgString((IsNegative ? "-" : "+") + Value));
       }
       continue;
     }
