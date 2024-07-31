@@ -126,11 +126,11 @@ resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
     for (int64_t i = 0; i < groupSize; i++)
       dynamicIndices[i] = indices[groups[i]];
 
-    // Supply suffix product results followed by load op indices as operands
+    // Supply load op indices as operands followed by suffix product results
     // to the map.
     SmallVector<OpFoldResult> mapOperands;
-    llvm::append_range(mapOperands, suffixProduct);
     llvm::append_range(mapOperands, dynamicIndices);
+    llvm::append_range(mapOperands, suffixProduct);
 
     // Creating maximally folded and composed affine.apply composes better
     // with other transformations without interleaving canonicalization
