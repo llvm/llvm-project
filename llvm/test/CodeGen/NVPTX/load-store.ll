@@ -3,6 +3,12 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | FileCheck %s -check-prefixes=CHECK,SM70
 ; RUN: %if ptxas-12.2 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
 
+; TODO: add i1, <8 x i8>, and <6 x i8> vector tests.
+
+; TODO: add test for vectors that exceed 128-bit length
+; Per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
+; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
+
 ; generic statespace
 
 ; CHECK-LABEL: generic_plain
@@ -90,9 +96,6 @@ define void @generic_plain(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
   %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
   ; CHECK: st.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store <2 x i64> %n.add, ptr %d
-
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
 
   ; CHECK: ld.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load <2 x float>, ptr %d
@@ -213,9 +216,6 @@ define void @generic_volatile(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr
   %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
   ; CHECK: st.volatile.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store volatile <2 x i64> %n.add, ptr %d
-
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
 
   ; CHECK: ld.volatile.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load volatile <2 x float>, ptr %d
@@ -508,9 +508,6 @@ define void @global_plain(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspac
   ; CHECK: st.global.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store <2 x i64> %n.add, ptr addrspace(1) %d
 
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
-
   ; CHECK: ld.global.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load <2 x float>, ptr addrspace(1) %d
   %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
@@ -611,9 +608,6 @@ define void @global_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrs
   %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
   ; CHECK: st.volatile.global.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store volatile<2 x i64> %n.add, ptr addrspace(1) %d
-
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
 
   ; CHECK: ld.volatile.global.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load volatile <2 x float>, ptr addrspace(1) %d
@@ -930,9 +924,6 @@ define void @shared_plain(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspac
   ; CHECK: st.shared.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store <2 x i64> %n.add, ptr addrspace(3) %d
 
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
-
   ; CHECK: ld.shared.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load <2 x float>, ptr addrspace(3) %d
   %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
@@ -1033,9 +1024,6 @@ define void @shared_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrs
   %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
   ; CHECK: st.volatile.shared.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store volatile <2 x i64> %n.add, ptr addrspace(3) %d
-
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
 
   ; CHECK: ld.volatile.shared.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load volatile <2 x float>, ptr addrspace(3) %d
@@ -1332,9 +1320,6 @@ define void @local_plain(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace
   ; CHECK: st.local.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store <2 x i64> %n.add, ptr addrspace(5) %d
 
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
-
   ; CHECK: ld.local.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load <2 x float>, ptr addrspace(5) %d
   %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
@@ -1438,9 +1423,6 @@ define void @local_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrsp
   %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
   ; CHECK: st.local.v2.u64 [%rd{{[0-9]+}}], {%rd{{[0-9]+}}, %rd{{[0-9]+}}}
   store volatile <2 x i64> %n.add, ptr addrspace(5) %d
-
-  ; Note: per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
-  ; vectors cannot exceed 128-bit in length, i.e., .v4.u64 is not allowed.
 
   ; CHECK: ld.local.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}, [%rd{{[0-9]+}}]
   %o.load = load volatile <2 x float>, ptr addrspace(5) %d
