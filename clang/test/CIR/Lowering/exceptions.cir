@@ -1,0 +1,97 @@
+// RUN: cir-translate %s -cir-to-llvmir -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module @"try-catch.cpp" attributes {cir.lang = #cir.lang<cxx>, cir.sob = #cir.signed_overflow_behavior<undefined>, cir.triple = "x86_64-unknown-linux-gnu", dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>, #dlti.dl_entry<"dlti.endianness", "little">>, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"} {
+  cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+  cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+  cir.func private @_Z8divisionii(!s32i, !s32i) -> !cir.double
+  // LLVM: @_Z2tcv() personality ptr @__gxx_personality_v0
+  cir.func @_Z2tcv() -> !u64i {
+    %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    %3 = cir.alloca !u64i, !cir.ptr<!u64i>, ["z"] {alignment = 8 : i64}
+    %4 = cir.const #cir.int<50> : !s32i
+    cir.store %4, %1 : !s32i, !cir.ptr<!s32i>
+    %5 = cir.const #cir.int<3> : !s32i
+    cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
+    cir.br ^bb1
+  ^bb1:
+    %6 = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"] {alignment = 8 : i64}
+    %7 = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx"] {alignment = 4 : i64}
+    cir.br ^bb2
+  ^bb2:
+    %8 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %9 = cir.const #cir.int<4> : !s32i
+    cir.store %9, %8 : !s32i, !cir.ptr<!s32i>
+    %10 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    %11 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    %12 = cir.try_call @_Z8divisionii(%10, %11) ^bb3, ^bb4 : (!s32i, !s32i) -> !cir.double
+    // LLVM: invoke double @_Z8divisionii
+    // LLVM:     to label %[[CONT:.*]] unwind label %[[UNWIND:.*]],
+  ^bb3:
+    // LLVM: [[CONT]]:
+    %13 = cir.cast(float_to_int, %12 : !cir.double), !u64i
+    cir.store %13, %3 : !u64i, !cir.ptr<!u64i>
+    %14 = cir.load %8 : !cir.ptr<!s32i>, !s32i
+    %15 = cir.unary(inc, %14) : !s32i, !s32i
+    cir.store %15, %8 : !s32i, !cir.ptr<!s32i>
+    cir.br ^bb10
+  ^bb4:
+    // LLVM: [[UNWIND]]:
+    // LLVM: %[[EHINFO:.*]] = landingpad { ptr, i32 }
+    // LLVM:     catch ptr @_ZTIi
+    // LLVM:     catch ptr @_ZTIPKc
+    %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
+    // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 0, !dbg !29
+    // LLVM: extractvalue { ptr, i32 } %[[EHINFO]], 1, !dbg !29
+    cir.br ^bb10
+    // TODO: TBD
+    //   cir.br ^bb5(%exception_ptr, %type_id : !cir.ptr<!void>, !u32i)
+    // ^bb5(%16: !cir.ptr<!void>, %17: !u32):
+    //   %18 = cir.eh.typeid @_ZTIi
+    //   %19 = cir.cmp(eq, %17, %18) : !u32i, !cir.bool
+    //   cir.brcond %19 ^bb6(%16 : !cir.ptr<!void>), ^bb7(%16, %17 : !cir.ptr<!void>, !u32i)
+    // ^bb6(%20: !cir.ptr<!void>):
+    //   %21 = cir.catch_param begin %20 -> !cir.ptr<!s32i>
+    //   %22 = cir.load %21 : !cir.ptr<!s32i>, !s32i
+    //   cir.store %22, %7 : !s32i, !cir.ptr<!s32i>
+    //   %23 = cir.const #cir.int<98> : !s32i
+    //   %24 = cir.cast(integral, %23 : !s32i), !u64i
+    //   cir.store %24, %3 : !u64i, !cir.ptr<!u64i>
+    //   %25 = cir.load %7 : !cir.ptr<!s32i>, !s32i
+    //   %26 = cir.unary(inc, %25) : !s32i, !s32i
+    //   cir.store %26, %7 : !s32i, !cir.ptr<!s32i>
+    //   cir.catch_param end
+    //   cir.br ^bb10
+    // ^bb7(%27: !cir.ptr<!void>, %28: !u32i):
+    //   %29 = cir.eh.typeid @_ZTIPKc
+    //   %30 = cir.cmp(eq, %28, %29) : !u32i, !cir.bool
+    //   cir.brcond %30 ^bb8(%27 : !cir.ptr<!void>), ^bb9(%27, %28 : !cir.ptr<!void>, !u32i)
+    // ^bb8(%31: !cir.ptr<!void>):
+    //   %32 = cir.catch_param begin %31 -> !cir.ptr<!s8i>
+    //   cir.store %32, %6 : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+    //   %33 = cir.const #cir.int<99> : !s32i
+    //   %34 = cir.cast(integral, %33 : !s32i), !u64i
+    //   cir.store %34, %3 : !u64i, !cir.ptr<!u64i>
+    //   %35 = cir.load %6 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+    //   %36 = cir.const #cir.int<0> : !s32i
+    //   %37 = cir.ptr_stride(%35 : !cir.ptr<!s8i>, %36 : !s32i), !cir.ptr<!s8i>
+    //   cir.catch_param end
+    //   cir.br ^bb10
+    // ^bb9(%38: !cir.ptr<!void>, %39: !u32i):
+    //   cir.resume
+  ^bb10:
+    %40 = cir.load %3 : !cir.ptr<!u64i>, !u64i
+    cir.store %40, %0 : !u64i, !cir.ptr<!u64i>
+    %41 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+    cir.return %41 : !u64i
+  }
+}
