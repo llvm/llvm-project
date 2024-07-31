@@ -123,9 +123,7 @@ llvm::Type *CGHLSLRuntime::convertHLSLSpecificType(const Type *T) {
   if (llvm::Type *TargetTy = CGM.getTargetCodeGenInfo().getHLSLType(CGM, T))
     return TargetTy;
 
-  // TODO: What do we actually want to do generically here? OpenCL uses a
-  // pointer in a particular address space.
-  llvm_unreachable("Generic handling of HLSL types is not implemented yet");
+  llvm_unreachable("Generic handling of HLSL types is not supported.");
 }
 
 llvm::Triple::ArchType CGHLSLRuntime::getArch() {

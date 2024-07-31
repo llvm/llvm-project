@@ -28,6 +28,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-HLSL_INTANGIBLE_TYPE(__builtin_hlsl_resource_t, HLSLResource, HLSLResourceTy)
+HLSL_INTANGIBLE_TYPE(__hlsl_resource_t, HLSLResource, HLSLResourceTy)
 
 #undef HLSL_INTANGIBLE_TYPE

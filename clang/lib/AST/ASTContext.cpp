@@ -3366,6 +3366,10 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case BuiltinType::Id:                                                        \
     return;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    return;
+#include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
     case BuiltinType::AMDGPUBufferRsrc:

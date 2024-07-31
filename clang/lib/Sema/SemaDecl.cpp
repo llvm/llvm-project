@@ -8021,12 +8021,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  if (getLangOpts().HLSL) {
-    if (R->isHLSLSpecificType() && !NewVD->isImplicit()) {
-      Diag(D.getBeginLoc(), diag::err_hlsl_intangible_type_cannot_be_declared);
-    }
-  }
-
   // Diagnose shadowed variables iff this isn't a redeclaration.
   if (!IsPlaceholderVariable && ShadowedDecl && !D.isRedeclaration())
     CheckShadow(NewVD, ShadowedDecl, Previous);
@@ -10608,18 +10602,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   if (getLangOpts().HLSL) {
-    // Diagnose HLSL intangible types as function argument or return value
-    if (NewFD->getReturnType()->isHLSLSpecificType())
-      Diag(NewFD->getReturnTypeSourceRange().getBegin(),
-           diag::err_hlsl_intangible_type_as_function_arg_or_return)
-          << 1 /* return value */;
-    for (const ParmVarDecl *Parm : NewFD->parameters()) {
-      if (Parm->getType()->isHLSLSpecificType())
-        Diag(Parm->getTypeSpecStartLoc(),
-             diag::err_hlsl_intangible_type_as_function_arg_or_return)
-            << 0 /* argument */;
-    }
-
     if (D.isFunctionDefinition()) {
       // Any top level function could potentially be specified as an entry.
       if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
@@ -18334,8 +18316,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   QualType EltTy = Context.getBaseElementType(T);
   if (!EltTy->isDependentType() && !EltTy->containsErrors()) {
-    if (RequireCompleteSizedType(Loc, EltTy,
-                                 diag::err_field_incomplete_or_sizeless)) {
+    bool isIncomplete =
+        LangOpts.HLSL // HLSL allows sizeless builtin types
+            ? RequireCompleteType(Loc, EltTy, diag::err_incomplete_type)
+            : RequireCompleteSizedType(Loc, EltTy,
+                                       diag::err_field_incomplete_or_sizeless);
+    if (isIncomplete) {
       // Fields of incomplete type force their record to be invalid.
       Record->setInvalidDecl();
       InvalidDecl = true;
@@ -18950,9 +18936,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // elsewhere, after synthesized ivars are known.
       }
     } else if (!FDTy->isDependentType() &&
-               RequireCompleteSizedType(
-                   FD->getLocation(), FD->getType(),
-                   diag::err_field_incomplete_or_sizeless)) {
+               (LangOpts.HLSL // HLSL allows sizeless builtin types
+                    ? RequireCompleteType(FD->getLocation(), FD->getType(),
+                                          diag::err_incomplete_type)
+                    : RequireCompleteSizedType(
+                          FD->getLocation(), FD->getType(),
+                          diag::err_field_incomplete_or_sizeless))) {
       // Incomplete type
       FD->setInvalidDecl();
       EnclosingDecl->setInvalidDecl();
