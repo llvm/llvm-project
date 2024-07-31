@@ -169,12 +169,21 @@ public:
   /// @returns The total size of the block in bytes, including the header.
   size_t outer_size() const { return next_ & SIZE_MASK; }
 
+  static size_t outer_size(size_t inner_size) {
+    // The usable region includes the prev_ field of the next block.
+    return inner_size - sizeof(prev_) + BLOCK_OVERHEAD;
+  }
+
   /// @returns The number of usable bytes inside the block.
   size_t inner_size() const {
     if (!next())
       return 0;
+    return inner_size(outer_size());
+  }
+
+  static size_t inner_size(size_t outer_size) {
     // The usable region includes the prev_ field of the next block.
-    return outer_size() - BLOCK_OVERHEAD + sizeof(prev_);
+    return outer_size - BLOCK_OVERHEAD + sizeof(prev_);
   }
 
   /// @returns A pointer to the usable space inside this block.
@@ -353,6 +362,7 @@ Block<OffsetType, kAlign>::init(ByteSpan region) {
     return {};
 
   region = result.value();
+  // Two blocks are allocated: a free block and a sentinel last block.
   if (region.size() < 2 * BLOCK_OVERHEAD)
     return {};
 
@@ -449,7 +459,7 @@ Block<OffsetType, kAlign>::split(size_t new_inner_size) {
 template <typename OffsetType, size_t kAlign>
 Block<OffsetType, kAlign> *
 Block<OffsetType, kAlign>::split_impl(size_t new_inner_size) {
-  size_t outer_size1 = new_inner_size - sizeof(prev_) + BLOCK_OVERHEAD;
+  size_t outer_size1 = outer_size(new_inner_size);
   LIBC_ASSERT(outer_size1 % ALIGNMENT == 0 && "new size must be aligned");
   ByteSpan new_region = region().subspan(outer_size1);
   next_ &= ~SIZE_MASK;
