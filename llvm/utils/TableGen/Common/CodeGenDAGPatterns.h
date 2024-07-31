@@ -193,8 +193,6 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
   TypeSetByHwMode(MVT::SimpleValueType VT)
       : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
-  TypeSetByHwMode(ValueTypeByHwMode VT)
-      : TypeSetByHwMode(ArrayRef<ValueTypeByHwMode>(&VT, 1)) {}
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
