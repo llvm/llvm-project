@@ -10851,7 +10851,7 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero) {
     return isa<SCEVVScale>(S) && F.hasFnAttribute(Attribute::VScaleRange);
   };
 
-  if (nonRecursive(S))
+  if (NonRecursive(S))
     return true;
 
   auto *Mul = dyn_cast<SCEVMulExpr>(S);
