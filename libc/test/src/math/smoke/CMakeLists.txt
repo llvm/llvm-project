@@ -4238,18 +4238,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  ddivl
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    ddivl_test.cpp
-  HDRS
-    DivTest.h
-  DEPENDS
-    libc.src.math.ddivl
-)
-
-add_fp_unittest(
   ddivf128
   SUITE
     libc-math-smoke-tests

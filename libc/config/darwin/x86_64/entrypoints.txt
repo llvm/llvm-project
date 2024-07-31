@@ -120,7 +120,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.coshf
     #libc.src.math.cosf
     #libc.src.math.daddl
-    #libc.src.math.ddivl
     #libc.src.math.dsqrtl
     #libc.src.math.expf
     #libc.src.math.exp2f

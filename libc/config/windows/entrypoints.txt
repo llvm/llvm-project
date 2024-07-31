@@ -134,7 +134,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.daddl
-    libc.src.math.ddivl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf
