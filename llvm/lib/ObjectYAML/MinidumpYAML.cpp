@@ -484,7 +484,7 @@ void yaml::MappingTraits<Object>::mapping(IO &IO, Object &O) {
 }
 
 Expected<std::unique_ptr<Stream>> Stream::create(const Directory &StreamDesc,
-                                                 object::MinidumpFile &File) {
+                                                 const object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
   case StreamKind::Exception: {
@@ -586,7 +586,7 @@ Expected<std::unique_ptr<Stream>> Stream::create(const Directory &StreamDesc,
   llvm_unreachable("Unhandled stream kind!");
 }
 
-Expected<Object> Object::create(object::MinidumpFile &File) {
+Expected<Object> Object::create(const object::MinidumpFile &File) {
   std::vector<std::unique_ptr<Stream>> Streams;
   Streams.reserve(File.streams().size());
   for (const Directory &StreamDesc : File.streams()) {

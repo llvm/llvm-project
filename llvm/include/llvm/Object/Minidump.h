@@ -16,7 +16,6 @@
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
-#include <map>
 
 namespace llvm {
 namespace object {

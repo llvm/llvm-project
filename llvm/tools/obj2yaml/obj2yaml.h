@@ -28,7 +28,7 @@ llvm::Error elf2yaml(llvm::raw_ostream &Out,
 llvm::Error macho2yaml(llvm::raw_ostream &Out, const llvm::object::Binary &Obj,
                        unsigned RawSegments);
 llvm::Error minidump2yaml(llvm::raw_ostream &Out,
-                          llvm::object::MinidumpFile &Obj);
+                          const llvm::object::MinidumpFile &Obj);
 llvm::Error xcoff2yaml(llvm::raw_ostream &Out,
                        const llvm::object::XCOFFObjectFile &Obj);
 std::error_code wasm2yaml(llvm::raw_ostream &Out,
