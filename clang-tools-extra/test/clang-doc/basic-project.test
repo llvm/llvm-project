@@ -124,7 +124,6 @@
 // HTML-CIRCLE: <p>public double perimeter()</p>
 // HTML-CIRCLE: <p>Defined at line 9 of file {{.*}}Circle.cpp</p>
 
-
 // MD-CALC: # class Calculator
 // MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
 // MD-CALC: **brief** A simple calculator class.

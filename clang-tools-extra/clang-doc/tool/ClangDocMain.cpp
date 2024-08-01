@@ -303,7 +303,7 @@ Example usage for a project using a compile commands database:
         auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
         R.first->second.emplace_back(Value);
       });
-  
+
   // Collects all Infos according to their unique USR value. This map is added
   // to from the thread pool below and is protected by the USRToInfoMutex.
   llvm::sys::Mutex USRToInfoMutex;
