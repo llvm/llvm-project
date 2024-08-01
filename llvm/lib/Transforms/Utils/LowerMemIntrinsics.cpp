@@ -45,8 +45,7 @@ void llvm::createMemCpyLoopKnownSize(
 
   Type *TypeOfCopyLen = CopyLen->getType();
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value(),
-      AtomicElementSize);
+      Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
 
@@ -111,8 +110,8 @@ void llvm::createMemCpyLoopKnownSize(
 
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, SrcAlign.value(),
-                                          DstAlign.value(), AtomicElementSize);
+                                          SrcAS, DstAS, SrcAlign, DstAlign,
+                                          AtomicElementSize);
 
     for (auto *OpTy : RemainingOps) {
       Align PartSrcAlign(commonAlignment(SrcAlign, BytesCopied));
@@ -197,8 +196,7 @@ void llvm::createMemCpyLoopUnknownSize(
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value(),
-      AtomicElementSize);
+      Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
@@ -411,8 +409,8 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value());
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
+                                                   SrcAlign, DstAlign);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
@@ -668,8 +666,8 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
-      Ctx, CopyLen, SrcAS, DstAS, SrcAlign.value(), DstAlign.value());
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
+                                                   SrcAlign, DstAlign);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
 
   // Calculate the loop trip count and remaining bytes to copy after the loop.
@@ -737,8 +735,8 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHI());
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, PartSrcAlign.value(),
-                                          PartDstAlign.value());
+                                          SrcAS, DstAS, PartSrcAlign,
+                                          PartDstAlign);
     for (auto *OpTy : RemainingOps) {
       // reverse the order of the emitted operations
       BwdResBuilder.SetInsertPoint(CopyBackwardsBB->getFirstNonPHI());
@@ -818,8 +816,8 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     IRBuilder<> FwdResBuilder(FwdResidualBB->getTerminator());
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                          SrcAS, DstAS, PartSrcAlign.value(),
-                                          PartDstAlign.value());
+                                          SrcAS, DstAS, PartSrcAlign,
+                                          PartDstAlign);
     for (auto *OpTy : RemainingOps)
       GenerateResidualLdStPair(OpTy, FwdResBuilder, BytesCopied);
   }

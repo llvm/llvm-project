@@ -1,11 +1,11 @@
 // RUN: %clang_analyze_cc1 -triple=x86_64-pc-linux-gnu -analyzer-checker=core,unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
 // RUN: %clang_analyze_cc1 -triple=armv8-none-linux-eabi -analyzer-checker=core,unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
 // RUN: %clang_analyze_cc1 -triple=aarch64-linux-gnu -analyzer-checker=core,unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
 // RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN:   -analyzer-config eagerly-assume=false,unix.Stream:Pedantic=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
 #include "Inputs/system-header-simulator-for-malloc.h"
@@ -499,14 +499,34 @@ void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
   fclose(f);
 }
 
-extern FILE *stdout_like_ptr;
-void no_aliasing(void) {
+extern FILE *non_standard_stream_ptr;
+void test_fopen_does_not_alias_with_standard_streams(void) {
   FILE *f = fopen("file", "r");
-  clang_analyzer_eval(f == stdin);           // expected-warning {{FALSE}} no-TRUE
-  clang_analyzer_eval(f == stdout);          // expected-warning {{FALSE}} no-TRUE
-  clang_analyzer_eval(f == stderr);          // expected-warning {{FALSE}} no-TRUE
-  clang_analyzer_eval(f == stdout_like_ptr); // expected-warning {{FALSE}} expected-warning {{TRUE}}
-  if (f && f != stdout) {
+  if (!f) return;
+  clang_analyzer_eval(f == stdin);  // expected-warning {{FALSE}} no-TRUE
+  clang_analyzer_eval(f == stdout); // expected-warning {{FALSE}} no-TRUE
+  clang_analyzer_eval(f == stderr); // expected-warning {{FALSE}} no-TRUE
+  clang_analyzer_eval(f == non_standard_stream_ptr); // expected-warning {{UNKNOWN}}
+  if (f != stdout) {
     fclose(f);
   }
 } // no-leak: 'fclose()' is always called because 'f' cannot be 'stdout'.
+
+void reopen_std_stream(void) {
+  FILE *oldStdout = stdout;
+  fclose(stdout);
+  FILE *fp = fopen("blah", "w");
+  if (!fp) return;
+
+  stdout = fp; // Let's make them alias.
+  clang_analyzer_eval(fp == oldStdout);     // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(fp == stdout);        // expected-warning {{TRUE}} no-FALSE
+  clang_analyzer_eval(oldStdout == stdout); // expected-warning {{UNKNOWN}}
+}
+
+void only_success_path_does_not_alias_with_stdout(void) {
+  if (stdout) return;
+  FILE *f = fopen("/tmp/foof", "r"); // no-crash
+  if (!f) return;
+  fclose(f);
+}

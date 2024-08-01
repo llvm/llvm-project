@@ -1560,3 +1560,19 @@ namespace ArrayInitChain {
   static_assert(A[1].Width == 12, "");
   static_assert(A[1].Mask == 13, "");
 }
+
+#if __cplusplus >= 202002L
+namespace ctorOverrider {
+  // Ensure that we pick the right final overrider during construction.
+  struct A {
+    virtual constexpr char f() const { return 'A'; }
+    char a = f();
+  };
+
+  struct Covariant1 {
+    A d;
+  };
+
+  constexpr Covariant1 cb;
+}
+#endif
