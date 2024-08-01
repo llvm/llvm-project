@@ -2554,7 +2554,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         const bool DoubleParens =
             Prev && Prev->is(tok::l_paren) && Next && Next->is(tok::r_paren);
         const auto *PrevPrev = Prev ? Prev->getPreviousNonComment() : nullptr;
-        const bool Blacklisted =
+        const bool Disallowed =
             PrevPrev &&
             (PrevPrev->isOneOf(tok::kw___attribute, tok::kw_decltype) ||
              (SeenEqual &&
@@ -2566,7 +2566,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
              (!NestedLambdas.empty() && !NestedLambdas.back())) &&
             Prev && Prev->isOneOf(tok::kw_return, tok::kw_co_return) && Next &&
             Next->is(tok::semi);
-        if ((DoubleParens && !Blacklisted) || ReturnParens) {
+        if ((DoubleParens && !Disallowed) || ReturnParens) {
           LeftParen->Optional = true;
           FormatTok->Optional = true;
         }

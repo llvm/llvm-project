@@ -109,7 +109,7 @@ public:
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, std::nullopt,
         std::nullopt, std::nullopt, std::nullopt, embox.getTypeparams(),
-        embox.getSourceBox());
+        embox.getSourceBox(), embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -145,7 +145,7 @@ public:
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, shiftOpers,
         sliceOpers, subcompOpers, substrOpers, embox.getTypeparams(),
-        embox.getSourceBox());
+        embox.getSourceBox(), embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();

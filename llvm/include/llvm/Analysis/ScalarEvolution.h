@@ -1028,6 +1028,11 @@ public:
   /// Test if the given expression is known to be non-zero.
   bool isKnownNonZero(const SCEV *S);
 
+  /// Test if the given expression is known to be a power of 2.  OrNegative
+  /// allows matching negative power of 2s, and OrZero allows matching 0.
+  bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
+                              bool OrNegative = false);
+
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
   /// with initial value of that SCEV. The second is obtained from \p S by
