@@ -1069,8 +1069,8 @@ define <2 x i32> @intrinsic_lround_v2i32_v2f32(<2 x float> %arg) {
 ; GFX11-GISEL-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %0 = tail call <2 x i32> @llvm.lround.v2i32.v2f32(<2 x float> %arg)
-  ret <2 x i32> %0
+  %res = tail call <2 x i32> @llvm.lround.v2i32.v2f32(<2 x float> %arg)
+  ret <2 x i32> %res
 }
 
 define <2 x i64> @intrinsic_lround_v2i64_v2f32(<2 x float> %arg) {
@@ -1334,6 +1334,6 @@ define <2 x i64> @intrinsic_lround_v2i64_v2f32(<2 x float> %arg) {
 ; GFX11-GISEL-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v4, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %0 = tail call <2 x i64> @llvm.lround.v2i64.v2f32(<2 x float> %arg)
-  ret <2 x i64> %0
+  %res = tail call <2 x i64> @llvm.lround.v2i64.v2f32(<2 x float> %arg)
+  ret <2 x i64> %res
 }
