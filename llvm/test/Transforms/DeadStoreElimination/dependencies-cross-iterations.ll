@@ -123,4 +123,42 @@ exit:                                                ; preds = %loop
   ret i64 %rv
 }
 
+; Used final read after clobbering %ptr.iv.2.
+define i64 @test4() {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAY:%.*]] = alloca [20 x i64], align 16
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = getelementptr inbounds [20 x i64], ptr [[ARRAY]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = getelementptr inbounds [20 x i64], ptr [[ARRAY]], i64 0, i64 [[ADD]]
+; CHECK-NEXT:    store i64 10, ptr [[PTR_IV_2]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV]], 4
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RV:%.*]] = load i64, ptr [[PTR_IV]], align 4
+; CHECK-NEXT:    ret i64 [[RV]]
+;
+entry:
+  %array = alloca [20 x i64], align 16
+  br label %loop
+
+loop:                                                ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = getelementptr inbounds [20 x i64], ptr %array, i64 0, i64 %iv
+  %add = add nsw i64 %iv, 1
+  %ptr.iv.2 = getelementptr inbounds [20 x i64], ptr %array, i64 0, i64 %add
+  store i64 10, ptr %ptr.iv.2, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp ult i64 %iv, 4
+  br i1 %cond, label %loop, label %exit
+
+exit:                                                ; preds = %loop
+  %rv = load i64, ptr %ptr.iv
+  ret i64 %rv
+}
+
 attributes #0 = { mustprogress }
