@@ -128,6 +128,9 @@ defvar TAIL_AGNOSTIC = 1;
 defvar TU_MU = 0;
 defvar TA_MU = 1;
 defvar TA_MA = 3;
+defvar DONT_CARE_ALTFMT = 0;
+defvar IS_NOT_ALTFMT = 1;
+defvar IS_ALTFMT = 2;
 
 //===----------------------------------------------------------------------===//
 // Utilities.
@@ -159,7 +162,8 @@ class PseudoToVInst<string PseudoInst> {
                         ["_M4", ""],
                         ["_M8", ""],
                         ["_SE", ""],
-                        ["_RM", ""]
+                        ["_RM", ""],
+                        ["_ALT", ""]
                        ];
   string VInst = !foldl(PseudoInst, AffixSubsts, Acc, AffixSubst,
                         !subst(AffixSubst[0], AffixSubst[1], Acc));
@@ -364,7 +368,7 @@ defset list<VTypeInfo> AllVectors = {
         def VF16M4: GroupVTypeInfo<vfloat16m4_t, vfloat16m1_t, vbool4_t, 16,
                                    V_M4, f16, FPR16>;
         def VF16M8: GroupVTypeInfo<vfloat16m8_t, vfloat16m1_t, vbool2_t, 16,
-                                   V_M8, f16, FPR16>;
+                                       V_M8, f16, FPR16>;
 
         def VF32M2: GroupVTypeInfo<vfloat32m2_t, vfloat32m1_t, vbool16_t, 32,
                                    V_M2, f32, FPR32>;
@@ -382,16 +386,16 @@ defset list<VTypeInfo> AllVectors = {
       }
     }
 
-    defset list<VTypeInfo> AllBFloatVectors = {
-      defset list<VTypeInfo> NoGroupBFloatVectors = {
-        defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+    defset list<VTypeInfo> AllBF16Vectors = {
+      defset list<VTypeInfo> NoGroupBF16Vectors = {
+        defset list<VTypeInfo> FractionalGroupBF16Vectors = {
           def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
           def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
         }
         def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
       }
 
-      defset list<GroupVTypeInfo> GroupBFloatVectors = {
+      defset list<GroupVTypeInfo> GroupBF16Vectors = {
         def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
                                     V_M2, bf16, FPR16>;
         def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
@@ -6403,7 +6407,7 @@ let Defs = [VXSAT] in {
 // 13. Vector Floating-Point Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
@@ -6600,7 +6604,7 @@ defm PseudoVWREDSUM    : VPseudoVWRED_VS;
 }
 } // Predicates = [HasVInstructions]
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
 //===----------------------------------------------------------------------===//
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
@@ -6710,7 +6714,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.2. Floating-Point Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach f = FPList in {
     let HasSEWOp = 1, BaseInstr = VFMV_F_S in
@@ -6738,7 +6742,7 @@ let Predicates = [HasVInstructions] in {
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]
 
-let Predicates = [HasVInstructionsAnyF] in {
+let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
   defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF<"@earlyclobber $rd">;
   defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF;
 } // Predicates = [HasVInstructionsAnyF]

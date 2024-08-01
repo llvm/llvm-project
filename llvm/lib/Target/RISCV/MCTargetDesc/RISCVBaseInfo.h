@@ -142,6 +142,12 @@ enum {
 
   ReadsPastVLShift = DestEEWShift + 2,
   ReadsPastVLMask = 1ULL << ReadsPastVLShift,
+
+  // 0 -> Don't care about altfmt bit in VTYPE.
+  // 1 -> Is not altfmt.
+  // 2 -> Is altfmt(BF16).
+  AltFmtTypeShift = ReadsPastVLShift + 1,
+  AltFmtTypeMask = 3ULL << AltFmtTypeShift,
 };
 
 // Helper functions to read TSFlags.
@@ -181,6 +187,11 @@ static inline bool usesMaskPolicy(uint64_t TSFlags) {
 /// \returns true if there is a rounding mode operand for this instruction
 static inline bool hasRoundModeOp(uint64_t TSFlags) {
   return TSFlags & HasRoundModeOpMask;
+}
+
+enum class AltFmtType { DontCare, IsNotAltFmt, IsAltFmt };
+static inline AltFmtType getAltFmtType(uint64_t TSFlags) {
+  return static_cast<AltFmtType>((TSFlags & AltFmtTypeMask) >> AltFmtTypeShift);
 }
 
 /// \returns true if this instruction uses vxrm
