@@ -17,6 +17,9 @@
 #include "llvm/CodeGenData/CodeGenDataWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
@@ -27,43 +30,57 @@
 using namespace llvm;
 using namespace llvm::object;
 
-// TODO: https://llvm.org/docs/CommandGuide/llvm-cgdata.html has documentations
-// on each subcommand.
-cl::SubCommand DumpSubcommand(
-    "dump",
-    "Dump the (indexed) codegen data file in either text or binary format.");
-cl::SubCommand MergeSubcommand(
-    "merge", "Takes binary files having raw codegen data in custom sections, "
-             "and merge them into an index codegen data file.");
-cl::SubCommand
-    ShowSubcommand("show", "Show summary of the (indexed) codegen data file.");
-
 enum CGDataFormat {
-  CD_None = 0,
-  CD_Text,
-  CD_Binary,
+  Invalid,
+  Text,
+  Binary,
 };
 
-cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                    cl::init("-"), cl::desc("Output file"),
-                                    cl::sub(DumpSubcommand),
-                                    cl::sub(MergeSubcommand));
-cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
-                          cl::aliasopt(OutputFilename));
+enum CGDataAction {
+  Convert,
+  Merge,
+  Show,
+};
 
-cl::opt<std::string> Filename(cl::Positional, cl::desc("<cgdata-file>"),
-                              cl::sub(DumpSubcommand), cl::sub(ShowSubcommand));
-cl::list<std::string> InputFilenames(cl::Positional, cl::sub(MergeSubcommand),
-                                     cl::desc("<binary-files...>"));
-cl::opt<CGDataFormat> OutputFormat(
-    cl::desc("Format of output data"), cl::sub(DumpSubcommand),
-    cl::init(CD_Text),
-    cl::values(clEnumValN(CD_Text, "text", "Text encoding"),
-               clEnumValN(CD_Binary, "binary", "Binary encoding")));
+// Command-line option boilerplate.
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-cl::opt<bool> ShowCGDataVersion("cgdata-version",
-                                cl::desc("Show cgdata version."),
-                                cl::sub(ShowSubcommand));
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
+
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+class CGDataOptTable : public opt::GenericOptTable {
+public:
+  CGDataOptTable() : GenericOptTable(InfoTable) {}
+};
+} // end anonymous namespace
+
+// Options
+static std::string ToolName;
+static std::string OutputFilename = "-";
+static std::string Filename;
+static bool ShowCGDataVersion;
+static CGDataAction Action;
+static std::optional<CGDataFormat> OutputFormat;
+static std::vector<std::string> InputFilenames;
+
+// TODO: Add a doc, https://llvm.org/docs/CommandGuide/llvm-cgdata.html
 
 static void exitWithError(Twine Message, std::string Whence = "",
                           std::string Hint = "") {
@@ -91,17 +108,12 @@ static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
   exitWithError(EC.message(), std::string(Whence));
 }
 
-static int dump_main(int argc, const char *argv[]) {
-  if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0]) << " " << argv[1]
-           << ": Input file name cannot be the same as the output file name!\n";
-    return 1;
-  }
-
+static int convert_main(int argc, const char *argv[]) {
   std::error_code EC;
-  raw_fd_ostream OS(OutputFilename.data(), EC,
-                    OutputFormat == CD_Text ? sys::fs::OF_TextWithCRLF
-                                            : sys::fs::OF_None);
+  raw_fd_ostream OS(OutputFilename, EC,
+                    OutputFormat == CGDataFormat::Text
+                        ? sys::fs::OF_TextWithCRLF
+                        : sys::fs::OF_None);
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 
@@ -117,7 +129,7 @@ static int dump_main(int argc, const char *argv[]) {
     Writer.addRecord(Record);
   }
 
-  if (OutputFormat == CD_Text) {
+  if (OutputFormat == CGDataFormat::Text) {
     if (Error E = Writer.writeText(OS))
       exitWithError(std::move(E));
   } else {
@@ -152,7 +164,8 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          OutlinedHashTreeRecord &GlobalOutlineRecord) {
-  Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
+  Expected<std::unique_ptr<object::Binary>> BinOrErr =
+      object::createBinary(Buffer);
   if (Error E = BinOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -187,33 +200,33 @@ static int merge_main(int argc, const char *argv[]) {
   for (auto &Filename : InputFilenames)
     Result &= handleFile(Filename, GlobalOutlineRecord);
 
-  if (!Result) {
-    errs() << "Error: failed to merge codegen data files.\n";
-    return 1;
-  }
+  if (!Result)
+    exitWithError("failed to merge codegen data files.");
 
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
     Writer.addRecord(GlobalOutlineRecord);
 
   std::error_code EC;
-  raw_fd_ostream Output(OutputFilename, EC, sys::fs::OF_None);
+  raw_fd_ostream OS(OutputFilename, EC,
+                    OutputFormat == CGDataFormat::Text
+                        ? sys::fs::OF_TextWithCRLF
+                        : sys::fs::OF_None);
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 
-  if (auto E = Writer.write(Output))
-    exitWithError(std::move(E));
+  if (OutputFormat == CGDataFormat::Text) {
+    if (Error E = Writer.writeText(OS))
+      exitWithError(std::move(E));
+  } else {
+    if (Error E = Writer.write(OS))
+      exitWithError(std::move(E));
+  }
 
   return 0;
 }
 
 static int show_main(int argc, const char *argv[]) {
-  if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0]) << " " << argv[1]
-           << ": Input file name cannot be the same as the output file name!\n";
-    return 1;
-  }
-
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -240,29 +253,100 @@ static int show_main(int argc, const char *argv[]) {
   return 0;
 }
 
-int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {
-  const char **argv = const_cast<const char **>(argvNonConst);
+static void parseArgs(int argc, char **argv) {
+  CGDataOptTable Tbl;
+  ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
 
-  StringRef ProgName(sys::path::filename(argv[0]));
-
-  if (argc < 2) {
-    errs() << ProgName
-           << ": No subcommand specified! Run llvm-cgdata --help for usage.\n";
-    return 1;
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(
+        llvm::outs(),
+        "llvm-cgdata [options] <action> (<binary files>|<.cgdata file>)",
+        ToolName.c_str());
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
+    std::exit(0);
   }
 
-  cl::ParseCommandLineOptions(argc, argv, "LLVM codegen data\n");
+  ShowCGDataVersion = Args.hasArg(OPT_cgdata_version);
 
-  if (DumpSubcommand)
-    return dump_main(argc, argv);
+  auto parseFormat = [](const StringRef FT) {
+    return StringSwitch<CGDataFormat>(FT)
+        .Case("text", CGDataFormat::Text)
+        .Case("binary", CGDataFormat::Binary)
+        .Default(CGDataFormat::Invalid);
+  };
+  if (opt::Arg *A = Args.getLastArg(OPT_format)) {
+    StringRef OF = A->getValue();
+    OutputFormat = parseFormat(OF);
+    if (OutputFormat == CGDataFormat::Invalid)
+      exitWithError("unsupported format '" + OF + "'");
+  }
 
-  if (MergeSubcommand)
+  InputFilenames = Args.getAllArgValues(OPT_INPUT);
+  if (InputFilenames.empty())
+    exitWithError("No input file is specified.");
+  Filename = InputFilenames[0];
+
+  if (Args.hasArg(OPT_output)) {
+    OutputFilename = Args.getLastArgValue(OPT_output);
+    for (auto &Filename : InputFilenames)
+      if (Filename == OutputFilename)
+        exitWithError(
+            "Input file name cannot be the same as the output file name!\n");
+  }
+
+  SmallVector<opt::Arg *, 1> ActionArgs(Args.filtered(OPT_action_group));
+  if (ActionArgs.size() != 1)
+    exitWithError("Only one action is required.");
+
+  switch (ActionArgs[0]->getOption().getID()) {
+  case OPT_show:
+    if (InputFilenames.size() != 1)
+      exitWithError("only one input file is allowed.");
+    Action = CGDataAction::Show;
+    break;
+  case OPT_convert:
+    // The default output format is text for convert.
+    if (!OutputFormat)
+      OutputFormat = CGDataFormat::Text;
+    if (InputFilenames.size() != 1)
+      exitWithError("only one input file is allowed.");
+    Action = CGDataAction::Convert;
+    break;
+  case OPT_merge:
+    // The default output format is binary for merge.
+    if (!OutputFormat)
+      OutputFormat = CGDataFormat::Binary;
+    Action = CGDataAction::Merge;
+    break;
+  default:
+    llvm_unreachable("unrecognized action");
+  }
+}
+
+int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {
+  const char **argv = const_cast<const char **>(argvNonConst);
+  parseArgs(argc, argvNonConst);
+
+  switch (Action) {
+  case CGDataAction::Convert:
+    return convert_main(argc, argv);
+  case CGDataAction::Merge:
     return merge_main(argc, argv);
-
-  if (ShowSubcommand)
+  case CGDataAction::Show:
     return show_main(argc, argv);
+  default:
+    llvm_unreachable("unrecognized action");
+  }
 
-  errs() << ProgName
-         << ": Unknown command. Run llvm-cgdata --help for usage.\n";
   return 1;
 }

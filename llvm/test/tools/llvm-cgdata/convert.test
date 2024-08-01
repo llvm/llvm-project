@@ -2,10 +2,10 @@
 
 RUN: split-file %s %t
 
-RUN: llvm-cgdata dump -binary %t/dump.cgtext -o %t/dump.cgdata
-RUN: llvm-cgdata dump -text %t/dump.cgdata -o %t/dump-round.cgtext
-RUN: llvm-cgdata dump -binary %t/dump-round.cgtext -o %t/dump-round.cgdata
-RUN: llvm-cgdata dump -text %t/dump-round.cgtext -o %t/dump-round-round.cgtext
+RUN: llvm-cgdata -convert -format binary %t/dump.cgtext -o %t/dump.cgdata
+RUN: llvm-cgdata -convert -format text %t/dump.cgdata -o %t/dump-round.cgtext
+RUN: llvm-cgdata -convert -format binary %t/dump-round.cgtext -o %t/dump-round.cgdata
+RUN: llvm-cgdata -convert -format text %t/dump-round.cgtext -o %t/dump-round-round.cgtext
 RUN: diff %t/dump.cgdata %t/dump-round.cgdata
 RUN: diff %t/dump-round.cgtext %t/dump-round-round.cgtext
 
