@@ -377,7 +377,7 @@ static int readPrefixes(struct InternalInstruction *insn) {
         // We simulate the REX2 prefix for simplicity's sake
         insn->rex2ExtensionPrefix[1] =
             (r2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 6) |
-            (x2FromEVEX3of4(insn->vectorExtensionPrefix[2]) << 5) |
+            (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) << 5) |
             (b2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4);
       }
 
@@ -1217,11 +1217,12 @@ static int getInstructionID(struct InternalInstruction *insn,
 
       if (zFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXKZ;
-      if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+      if (bFromEVEX4of4(insn->vectorExtensionPrefix[3])) {
         attrMask |= ATTR_EVEXB;
-      if (x2FromEVEX3of4(insn->vectorExtensionPrefix[2]) &&
-          (insn->opcodeType != MAP4))
-        attrMask |= ATTR_EVEXU;
+        if (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) &&
+            (insn->opcodeType != MAP4))
+          attrMask |= ATTR_EVEXU;
+      }
       if (isNF(insn) && !readModRM(insn) &&
           !isCCMPOrCTEST(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
