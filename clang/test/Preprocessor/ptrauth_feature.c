@@ -25,7 +25,7 @@
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-init-fini | \
 // RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,INITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS
 
-// RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-init-fini | \
+// RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-init-fini-address-discrimination | \
 // RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,INITFINI_ADDR_DISCR,NOGOTOS
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-indirect-gotos | \
