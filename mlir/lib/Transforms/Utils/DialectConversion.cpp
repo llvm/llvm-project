@@ -1316,43 +1316,37 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       continue;
     }
 
-    // This is a 1->1+ mapping.
+    // This is a 1->1+ mapping. 1->N mappings are not fully supported in the
+    // dialect conversion. Therefore, we need an argument materialization to
+    // turn the replacement block arguments into a single SSA value that can be
+    // used as a replacement.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
-    
-    // When there is no type converter, assume that the new block argument
-    // types are legal. This is reasonable to assume because they were
-    // specified by the user.
-    // FIXME: This won't work for 1->N conversions because multiple output
-    // types are not supported in parts of the dialect conversion. In such a
-    // case, we currently use the original block argument type (produced by
-    // the argument materialization).
-    if (!converter && replArgs.size() == 1) {
-      mapping.map(origArg, replArgs[0]);
-      appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
-      continue;
-    }
-
-    // 1->N mappings are not fully supported in the dialect conversion.
-    // Therefore, we need an argument materialization to turn the replacement
-    // block arguments into a single SSA value (of the original type) that can
-    // be used as a replacement.
     Value argMat = buildUnresolvedMaterialization(
         MaterializationKind::Argument, newBlock, newBlock->begin(),
         origArg.getLoc(), /*inputs=*/replArgs, origArgType, converter);
     mapping.map(origArg, argMat);
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
 
-    // Now legalize the type by building a target materialization.
     Type legalOutputType;
-    if (converter)
+    if (converter) {
       legalOutputType = converter->convertType(origArgType);
+    } else if (replArgs.size() == 1) {
+      // When there is no type converter, assume that the new block argument
+      // types are legal. This is reasonable to assume because they were
+      // specified by the user.
+      // FIXME: This won't work for 1->N conversions because multiple output
+      // types are not supported in parts of the dialect conversion. In such a
+      // case, we currently use the original block argument type (produced by
+      // the argument materialization).
+      legalOutputType = replArgs[0].getType();
+    }
     if (legalOutputType && legalOutputType != origArgType) {
       Value targetMat = buildUnresolvedTargetMaterialization(
           origArg.getLoc(), argMat, legalOutputType, converter);
       mapping.map(argMat, targetMat);
-      appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
     }
+    appendRewrite<ReplaceBlockArgRewrite>(block, origArg);
   }
 
   appendRewrite<BlockTypeConversionRewrite>(newBlock, block, converter);
