@@ -22,5 +22,5 @@ runs:
       id: version
       run: |
         for v in major minor patch; do
-          echo echo "$v=`llvm/utils/release/get-llvm-version.sh -$v`" >> $GITHUB_OUTPUT
+          echo "$v=`llvm/utils/release/get-llvm-version.sh --$v`" >> $GITHUB_OUTPUT
         done
