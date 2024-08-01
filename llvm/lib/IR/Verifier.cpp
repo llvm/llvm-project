@@ -3496,7 +3496,7 @@ void Verifier::visitFunction(const Function &F) {
     std::string ErrMsg;
     raw_string_ostream ErrOS(ErrMsg);
     SmallVector<Type *, 4> OverloadTys;
-    bool IsValid = Intrinsic::isSignatureValid(IID, FT, OverloadTys, ErrOS);
+    bool IsValid = Intrinsic::isSignatureValid(DL, IID, FT, OverloadTys, ErrOS);
     Printable PrintDecl([&F](raw_ostream &OS) { F.print(OS); });
     Check(IsValid, ErrMsg, PrintDecl);
 

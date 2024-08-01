@@ -844,7 +844,7 @@ external intrinsic_id : llvalue -> int = "llvm_intrinsic_id"
 let is_intrinsic v = intrinsic_id v <> 0
 external intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
                                = "llvm_intrinsic_declaration"
-external intrinsic_type : llcontext -> int -> lltype array -> lltype
+external intrinsic_type : llmodule -> int -> lltype array -> lltype
                         = "llvm_intrinsic_type"
 external intrinsic_name : int -> string = "llvm_intrinsic_name"
 external intrinsic_overloaded_name : llmodule -> int -> lltype array -> string

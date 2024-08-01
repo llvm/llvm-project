@@ -1602,12 +1602,12 @@ value llvm_intrinsic_declaration(value M, value ID, value OverloadTypes) {
   return to_val(Intrinsic);
 }
 
-/* llcontext -> int -> lltype array -> lltype */
-value llvm_intrinsic_type(value C, value ID, value OverloadTypes) {
+/* llmodule -> int -> lltype array -> lltype */
+value llvm_intrinsic_type(value M, value ID, value OverloadTypes) {
   mlsize_t Length = Wosize_val(OverloadTypes);
   LLVMTypeRef *Temp = from_val_array(OverloadTypes);
   LLVMTypeRef Type =
-      LLVMIntrinsicGetType(Context_val(C), Int_val(ID), Temp, Length);
+      LLVMIntrinsicGetType(Module_val(M), Int_val(ID), Temp, Length);
   free(Temp);
   return to_val(Type);
 }

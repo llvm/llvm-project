@@ -1572,7 +1572,7 @@ val intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
 (** [intrinsic_type c id overload_types] returns the type of intrinsic [id] in
     context [c]. For overloaded intrinsics, types must be provided to uniquely
     identify an overload. See the method [llvm::Intrinsic::getType]. *)
-val intrinsic_type : llcontext -> int -> lltype array -> lltype
+val intrinsic_type : llmodule -> int -> lltype array -> lltype
 
 (** [intrinsic_name id] returns the name of intrinsic [id]. See the method
     [llvm::Intrinsic::getName()]. *)
