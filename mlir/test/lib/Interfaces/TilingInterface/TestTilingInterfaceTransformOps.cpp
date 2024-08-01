@@ -386,6 +386,9 @@ class TestTilingInterfaceDialectExtension
     : public transform::TransformDialectExtension<
           TestTilingInterfaceDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestTilingInterfaceDialectExtension)
+
   using Base::Base;
 
   void init() {

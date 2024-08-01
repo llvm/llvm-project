@@ -1135,6 +1135,8 @@ class NVGPUTransformDialectExtension
     : public transform::TransformDialectExtension<
           NVGPUTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(NVGPUTransformDialectExtension)
+
   NVGPUTransformDialectExtension() {
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<affine::AffineDialect>();

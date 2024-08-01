@@ -212,6 +212,8 @@ class VectorTransformDialectExtension
     : public transform::TransformDialectExtension<
           VectorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorTransformDialectExtension)
+
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();
