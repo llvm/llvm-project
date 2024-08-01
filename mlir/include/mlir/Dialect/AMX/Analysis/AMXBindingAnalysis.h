@@ -95,7 +95,7 @@ private:
 
   void addParallelOp(Operation *op) { parallelOps.insert(op); }
   bool isParallelOp(Operation *op) {
-    return parallelOps.find(op) == parallelOps.end();
+    return parallelOps.find(op) != parallelOps.end();
   }
 
   void setTileUsage(Operation *op, BlockSeg seg) {

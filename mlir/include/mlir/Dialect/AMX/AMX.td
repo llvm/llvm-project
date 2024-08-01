@@ -92,7 +92,7 @@ class AMX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
 
 
 def TileRegisterIndexAttr : OptionalAttr<
-	ConfinedAttr<SI8Attr, [IntMinValue<0>, IntMaxValue<7>]>>;
+	ConfinedAttr<I8Attr, [IntMinValue<0>, IntMaxValue<7>]>>;
 
 //
 // Tile reset.

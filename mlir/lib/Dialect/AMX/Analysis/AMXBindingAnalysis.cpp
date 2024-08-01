@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 
 #define DEBUG_TYPE "amx-binding-analysis"
@@ -217,6 +218,7 @@ TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
     if (llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op)) {
       while (op != root) {
         addParallelOp(op);
+        LLVM_DEBUG(llvm::dbgs() << ">>>>> add parallel op: " << op << "\n");
         op = op->getParentOp();
       }
     }
@@ -305,6 +307,7 @@ TileScopeAnalysis::collectPaletteForScf(Operation *op) {
     pi.merge(beforePalette);
     pi.merge(afterPalette);
   }
+  LLVM_DEBUG(llvm::dbgs() << ">>>>> set needed palette for op: " << op << "\n");
   neededPalette[op] = pi;
   return pi;
 }
@@ -363,6 +366,7 @@ TileScopeAnalysis::collectPaletteForTile(Operation *op) {
   } else if (auto tileZeroOp = dyn_cast<TileZeroOp>(op)) {
     PROCESS_UNARY_TILE_OP(tileZeroOp, getDstRegIndex);
   }
+  LLVM_DEBUG(llvm::dbgs() << ">>>>> set needed palette for op: " << op << "\n");
   neededPalette[op] = pi;
   return pi;
 }
@@ -397,8 +401,10 @@ void TileScopeAnalysis::doTileScope(Block &block) {
 void TileScopeAnalysis::doTileScope(BlockSeg seg) {
   if (!isValidAnalysis)
     return;
+  LLVM_DEBUG(llvm::dbgs() << ">>>>> doTileScope A\n");
   if (seg.empty())
     return;
+  LLVM_DEBUG(llvm::dbgs() << ">>>>> doTileScope B\n");
   SmallVector<BlockSeg, 3> blockSegs;
   SmallVector<Operation *, 3> paraOps;
   auto currBegin = seg.begin();
@@ -412,6 +418,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
     }
   }
   if (paraOps.size()) {
+    LLVM_DEBUG(llvm::dbgs() << ">>>>> doTileScope BB\n");
     assert(blockSegs.size() == paraOps.size());
     for (size_t idx = 0; idx < paraOps.size(); idx++) {
       doTileScope(blockSegs[idx]);
@@ -420,6 +427,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
     doTileScope(BlockSeg(currBegin, seg.end()));
     return;
   }
+  LLVM_DEBUG(llvm::dbgs() << ">>>>> doTileScope C\n");
 
   // Do tile scope on parallel-free BlockSeg.
   TileScope currScope;
@@ -428,6 +436,8 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
   // Traverse BlockSeg and greedily do tile scoping without look ahead.
   while (currIter != seg.end()) {
     Operation *currOp = &(*currIter);
+    LLVM_DEBUG(llvm::dbgs()
+               << ">>>>> doTileScope Checking op: " << *currOp << "\n");
     if (!currSegStart)
       currSegStart = currIter;
 
@@ -486,6 +496,7 @@ void TileScopeAnalysis::doTileScope(BlockSeg seg) {
     }
   }
 
+  LLVM_DEBUG(llvm::dbgs() << ">>>>> out of doTileScope\n");
   TRY_ADD_PREVIOUS_SCOPE();
 }
 

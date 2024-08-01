@@ -90,11 +90,12 @@ public:
   matchAndRewrite(TileZeroOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (enablingAnalysis && enablingAnalysis->get().isValid()) {
+      rewriter.setInsertionPoint(op);
       // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
-      rewriter.replaceOpWithNewOp<amx::x86_amx_tilezero_plain>(op,
-                                                               *dstRegIndex);
+      rewriter.create<amx::x86_amx_tilezero_plain>(op.getLoc(), *dstRegIndex);
+      rewriter.eraseOp(op);
       return success();
     }
 
@@ -136,11 +137,13 @@ public:
                                      adaptor.getIndices(), rewriter);
 
     if (enablingAnalysis && enablingAnalysis->get().isValid()) {
+      rewriter.setInsertionPoint(op);
       // Routine for lowering tile Ops with binding info.
       auto dstRegIndex = op.getDstRegIndex();
       assert(dstRegIndex && "Incomplete operation attribute for tile binding");
-      rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64_plain>(
-          op, *dstRegIndex, ptr, stride);
+      rewriter.create<amx::x86_amx_tileloadd64_plain>(op.getLoc(), *dstRegIndex,
+                                                      ptr, stride);
+      rewriter.eraseOp(op);
       return success();
     }
 
@@ -182,11 +185,13 @@ public:
                                      adaptor.getIndices(), rewriter);
 
     if (enablingAnalysis && enablingAnalysis->get().isValid()) {
+      rewriter.setInsertionPoint(op);
       // Routine for lowering tile Ops with binding info.
       auto srcRegIndex = op.getSrcRegIndex();
       assert(srcRegIndex && "Incomplete operation attribute for tile binding");
-      rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64_plain>(
-          op, *srcRegIndex, ptr, stride);
+      rewriter.create<amx::x86_amx_tilestored64_plain>(
+          op.getLoc(), *srcRegIndex, ptr, stride);
+      rewriter.eraseOp(op);
       return success();
     }
 
@@ -218,6 +223,7 @@ public:
   matchAndRewrite(TileMulFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (enablingAnalysis && enablingAnalysis->get().isValid()) {
+      rewriter.setInsertionPoint(op);
       // Routine for lowering tile Ops with binding info.
       auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
@@ -225,8 +231,9 @@ public:
 
       assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
              "Incomplete operation attribute for tile binding");
-      rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbf16ps_plain>(
-          op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+      rewriter.create<amx::x86_amx_tdpbf16ps_plain>(op.getLoc(), *accRegIndex,
+                                                    *lhsRegIndex, *rhsRegIndex);
+      rewriter.eraseOp(op);
       return success();
     }
 
@@ -267,6 +274,7 @@ public:
     bool zextb = op.getIsZextRhs();
 
     if (enablingAnalysis && enablingAnalysis->get().isValid()) {
+      rewriter.setInsertionPoint(op);
       // Routine for lowering tile Ops with binding info.
       auto lhsRegIndex = op.getLhsRegIndex();
       auto rhsRegIndex = op.getRhsRegIndex();
@@ -275,17 +283,18 @@ public:
       assert(lhsRegIndex && rhsRegIndex && accRegIndex &&
              "Incomplete operation attribute for tile binding");
       if (zexta && zextb)
-        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbuud_plain>(
-            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+        rewriter.create<amx::x86_amx_tdpbuud_plain>(op.getLoc(), *accRegIndex,
+                                                    *lhsRegIndex, *rhsRegIndex);
       else if (zexta && !zextb)
-        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbusd_plain>(
-            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+        rewriter.create<amx::x86_amx_tdpbusd_plain>(op.getLoc(), *accRegIndex,
+                                                    *lhsRegIndex, *rhsRegIndex);
       else if (!zexta && zextb)
-        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbsud_plain>(
-            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+        rewriter.create<amx::x86_amx_tdpbsud_plain>(op.getLoc(), *accRegIndex,
+                                                    *lhsRegIndex, *rhsRegIndex);
       else
-        rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbssd_plain>(
-            op, *accRegIndex, *lhsRegIndex, *rhsRegIndex);
+        rewriter.create<amx::x86_amx_tdpbssd_plain>(op.getLoc(), *accRegIndex,
+                                                    *lhsRegIndex, *rhsRegIndex);
+      rewriter.eraseOp(op);
       return success();
     }
 

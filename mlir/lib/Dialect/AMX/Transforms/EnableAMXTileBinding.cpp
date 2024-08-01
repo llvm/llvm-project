@@ -213,6 +213,7 @@ public:
     if (!bindingAna.isValid())
       return;
 
+    LLVM_DEBUG(llvm::dbgs() << ">>> After binding analysis\n");
     // 1. Set propagated binding info to AMX Ops.
     RewritePatternSet patterns(&getContext());
     patterns.add<TileStoreBindingRewriter>(&getContext(), bindingAna);
@@ -220,17 +221,26 @@ public:
     patterns.add<TileMulIBindingRewriter>(&getContext(), bindingAna);
     FrozenRewritePatternSet patternSet(std::move(patterns));
 
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet)))
+    GreedyRewriteConfig config;
+    config.strictMode = GreedyRewriteStrictness::ExistingOps;
+    if (failed(
+            applyPatternsAndFoldGreedily(getOperation(), patternSet, config)))
       return;
+
+    LLVM_DEBUG(llvm::dbgs() << ">>> After propagating binding info\n");
 
     // 2. Analyse tile scopes & expand them maximally.
     TileScopeAnalysis &scopeAna = getAnalysis<TileScopeAnalysis>();
     if (!scopeAna.isValid())
       return;
 
+    LLVM_DEBUG(llvm::dbgs() << ">>> After tile scope analysis\n");
+
     // 3. Insert tile config/release according to tile scopes.
     OpBuilder builder(getOperation());
     for (auto &scope : scopeAna.getTileScopes()) {
+      LLVM_DEBUG(llvm::dbgs() << ">>> Processing tile scope: "
+                              << *scope.seg.begin() << "\n");
       assert(!scope.pi.overflow && "Expecting legal AMX palette info");
       auto paletteGlobal = getOrCreateGlobalPalette(scope.pi);
       assert(paletteGlobal && "Failed to create global palette");

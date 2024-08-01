@@ -16,6 +16,7 @@
 
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
+#include "mlir/Dialect/AMX/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
@@ -93,6 +94,7 @@ inline void registerAllPasses() {
   arm_sve::registerArmSVEPasses();
   emitc::registerEmitCPasses();
   xegpu::registerXeGPUPasses();
+  amx::registerAMXPasses();
 
   // Dialect pipelines
   bufferization::registerBufferizationPipelines();
