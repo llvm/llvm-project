@@ -191,6 +191,19 @@ add_libc_test(
     libc.src.stdio.printf
 )
 
+add_libc_test(
+   asprintf_test
+   SUITE
+     libc_stdio_unittests
+   SRCS
+     asprintf_test.cpp
+   DEPENDS
+     libc.src.stdio.asprintf
+     libc.src.string.memset
+     libc.include.stdlib
+     libc.src.stdio.sprintf
+ )
+
 add_fp_unittest(
   vsprintf_test
   UNIT_TEST_ONLY
@@ -236,6 +249,18 @@ add_libc_test(
     libc.src.stdio.vprintf
 )
 
+add_libc_test(
+   vasprintf_test
+   SUITE
+     libc_stdio_unittests
+   SRCS
+     vasprintf_test.cpp
+   DEPENDS
+     libc.src.stdio.vasprintf
+     libc.src.string.memset
+     libc.include.stdlib
+     libc.src.stdio.sprintf
+ )
 
 if(LLVM_LIBC_FULL_BUILD)
   # In fullbuild mode, fscanf's tests use the internal FILE for other functions.
@@ -276,6 +301,20 @@ add_libc_test(
     sscanf_test.cpp
   DEPENDS
     libc.src.stdio.sscanf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+  COMPILE_OPTIONS
+    ${sscanf_test_copts}
+)
+
+add_libc_test(
+  vsscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vsscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.vsscanf
   LINK_LIBRARIES
     LibcFPTestHelpers
   COMPILE_OPTIONS

@@ -4843,25 +4843,43 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
     return false;
 
   // If we have a better order, also sort the base pointers by increasing
-  // (variable) values if possible, to try and keep the order more regular.
-  SmallVector<std::pair<Value *, Value *>> SortedBases;
-  for (auto &Base : Bases)
-    SortedBases.emplace_back(Base.first,
-                             Base.first->stripInBoundsConstantOffsets());
-  llvm::stable_sort(SortedBases, [](std::pair<Value *, Value *> V1,
-                                    std::pair<Value *, Value *> V2) {
-    const Value *V = V2.second;
-    while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
-      if (Gep->getOperand(0) == V1.second)
-        return true;
-      V = Gep->getOperand(0);
+  // (variable) values if possible, to try and keep the order more regular. In
+  // order to create a valid strict-weak order we cluster by the Root of gep
+  // chains and sort within each.
+  SmallVector<std::tuple<Value *, Value *, Value *>> SortedBases;
+  for (auto &Base : Bases) {
+    Value *Strip = Base.first->stripInBoundsConstantOffsets();
+    Value *Root = Strip;
+    while (auto *Gep = dyn_cast<GetElementPtrInst>(Root))
+      Root = Gep->getOperand(0);
+    SortedBases.emplace_back(Base.first, Strip, Root);
+  }
+  auto *Begin = SortedBases.begin();
+  auto *End = SortedBases.end();
+  while (Begin != End) {
+    Value *Root = std::get<2>(*Begin);
+    auto *Mid = std::stable_partition(
+        Begin, End, [&Root](auto V) { return std::get<2>(V) == Root; });
+    DenseMap<Value *, DenseMap<Value *, bool>> LessThan;
+    for (auto I = Begin; I < Mid; ++I)
+      LessThan.try_emplace(std::get<1>(*I));
+    for (auto I = Begin; I < Mid; ++I) {
+      Value *V = std::get<1>(*I);
+      while (auto *Gep = dyn_cast<GetElementPtrInst>(V)) {
+        V = Gep->getOperand(0);
+        if (LessThan.contains(V))
+          LessThan[V][std::get<1>(*I)] = true;
+      }
     }
-    return false;
-  });
+    std::stable_sort(Begin, Mid, [&LessThan](auto &V1, auto &V2) {
+      return LessThan[std::get<1>(V1)][std::get<1>(V2)];
+    });
+    Begin = Mid;
+  }
 
   // Collect the final order of sorted indices
   for (auto Base : SortedBases)
-    for (auto &T : Bases[Base.first])
+    for (auto &T : Bases[std::get<0>(Base)])
       SortedIndices.push_back(std::get<2>(T));
 
   assert(SortedIndices.size() == VL.size() &&
@@ -9736,6 +9754,23 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         }
         VecCost = std::min(VecCost, IntrinsicCost);
       }
+      if (auto *SI = dyn_cast<SelectInst>(VL0)) {
+        auto *CondType =
+            getWidenedType(SI->getCondition()->getType(), VL.size());
+        unsigned CondNumElements = CondType->getNumElements();
+        unsigned VecTyNumElements = getNumElements(VecTy);
+        assert(VecTyNumElements >= CondNumElements &&
+               VecTyNumElements % CondNumElements == 0 &&
+               "Cannot vectorize Instruction::Select");
+        if (CondNumElements != VecTyNumElements) {
+          // When the return type is i1 but the source is fixed vector type, we
+          // need to duplicate the condition value.
+          VecCost += TTI->getShuffleCost(
+              TTI::SK_PermuteSingleSrc, CondType,
+              createReplicatedMask(VecTyNumElements / CondNumElements,
+                                   CondNumElements));
+        }
+      }
       return VecCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -13258,6 +13293,22 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           False = Builder.CreateIntCast(False, VecTy, GetOperandSignedness(2));
       }
 
+      unsigned CondNumElements = getNumElements(Cond->getType());
+      unsigned TrueNumElements = getNumElements(True->getType());
+      assert(TrueNumElements >= CondNumElements &&
+             TrueNumElements % CondNumElements == 0 &&
+             "Cannot vectorize Instruction::Select");
+      assert(TrueNumElements == getNumElements(False->getType()) &&
+             "Cannot vectorize Instruction::Select");
+      if (CondNumElements != TrueNumElements) {
+        // When the return type is i1 but the source is fixed vector type, we
+        // need to duplicate the condition value.
+        Cond = Builder.CreateShuffleVector(
+            Cond, createReplicatedMask(TrueNumElements / CondNumElements,
+                                       CondNumElements));
+      }
+      assert(getNumElements(Cond->getType()) == TrueNumElements &&
+             "Cannot vectorize Instruction::Select");
       Value *V = Builder.CreateSelect(Cond, True, False);
       V = FinalShuffle(V, E, VecTy);
 
@@ -13958,11 +14009,18 @@ Value *BoUpSLP::vectorizeTree(
             if (Inst->hasName())
               CloneInst->takeName(Inst);
             Ex = CloneInst;
-          } else if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
+          } else if (auto *ES = dyn_cast<ExtractElementInst>(Scalar);
+                     ES && isa<Instruction>(Vec)) {
             Value *V = ES->getVectorOperand();
+            auto *IVec = cast<Instruction>(Vec);
             if (const TreeEntry *ETE = getTreeEntry(V))
               V = ETE->VectorizedValue;
-            Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+            if (auto *IV = dyn_cast<Instruction>(V);
+                !IV || IV == Vec || IV->getParent() != IVec->getParent() ||
+                IV->comesBefore(IVec))
+              Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+            else
+              Ex = Builder.CreateExtractElement(Vec, Lane);
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }

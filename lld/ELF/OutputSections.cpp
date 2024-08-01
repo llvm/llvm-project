@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -115,7 +116,19 @@ void OutputSection::recordSection(InputSectionBase *isec) {
 // other InputSections.
 void OutputSection::commitSection(InputSection *isec) {
   if (LLVM_UNLIKELY(type != isec->type)) {
-    if (hasInputSections || typeIsSet) {
+    if (!hasInputSections && !typeIsSet) {
+      type = isec->type;
+    } else if (isStaticRelSecType(type) && isStaticRelSecType(isec->type) &&
+               (type == SHT_CREL) != (isec->type == SHT_CREL)) {
+      // Combine mixed SHT_REL[A] and SHT_CREL to SHT_CREL.
+      type = SHT_CREL;
+      if (type == SHT_REL) {
+        if (name.consume_front(".rel"))
+          name = saver().save(".crel" + name);
+      } else if (name.consume_front(".rela")) {
+        name = saver().save(".crel" + name);
+      }
+    } else {
       if (typeIsSet || !canMergeToProgbits(type) ||
           !canMergeToProgbits(isec->type)) {
         // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
@@ -133,8 +146,6 @@ void OutputSection::commitSection(InputSection *isec) {
       }
       if (!typeIsSet)
         type = SHT_PROGBITS;
-    } else {
-      type = isec->type;
     }
   }
   if (!hasInputSections) {
@@ -470,6 +481,11 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   llvm::TimeTraceScope timeScope("Write sections", name);
   if (type == SHT_NOBITS)
     return;
+  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
+    buf += encodeULEB128(crelHeader, buf);
+    memcpy(buf, crelBody.data(), crelBody.size());
+    return;
+  }
 
   // If the section is compressed due to
   // --compress-debug-section/--compress-sections, the content is already known.
@@ -504,6 +520,12 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   bool nonZeroFiller = read32(filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
+
+  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
+    buf += encodeULEB128(crelHeader, buf);
+    memcpy(buf, crelBody.data(), crelBody.size());
+    return;
+  }
 
   auto fn = [=](size_t begin, size_t end) {
     size_t numSections = sections.size();
@@ -592,6 +614,103 @@ static void finalizeShtGroup(OutputSection *os, InputSection *section) {
   os->size = (1 + seen.size()) * sizeof(uint32_t);
 }
 
+template <class uint>
+LLVM_ATTRIBUTE_ALWAYS_INLINE static void
+encodeOneCrel(raw_svector_ostream &os, Elf_Crel<sizeof(uint) == 8> &out,
+              uint offset, const Symbol &sym, uint32_t type, uint addend) {
+  const auto deltaOffset = static_cast<uint64_t>(offset - out.r_offset);
+  out.r_offset = offset;
+  int64_t symidx = in.symTab->getSymbolIndex(sym);
+  if (sym.type == STT_SECTION) {
+    auto *d = dyn_cast<Defined>(&sym);
+    if (d) {
+      SectionBase *section = d->section;
+      assert(section->isLive());
+      addend = sym.getVA(addend) - section->getOutputSection()->addr;
+    } else {
+      // Encode R_*_NONE(symidx=0).
+      symidx = type = addend = 0;
+    }
+  }
+
+  // Similar to llvm::ELF::encodeCrel.
+  uint8_t b = deltaOffset * 8 + (out.r_symidx != symidx) +
+              (out.r_type != type ? 2 : 0) +
+              (uint(out.r_addend) != addend ? 4 : 0);
+  if (deltaOffset < 0x10) {
+    os << char(b);
+  } else {
+    os << char(b | 0x80);
+    encodeULEB128(deltaOffset >> 4, os);
+  }
+  if (b & 1) {
+    encodeSLEB128(static_cast<int32_t>(symidx - out.r_symidx), os);
+    out.r_symidx = symidx;
+  }
+  if (b & 2) {
+    encodeSLEB128(static_cast<int32_t>(type - out.r_type), os);
+    out.r_type = type;
+  }
+  if (b & 4) {
+    encodeSLEB128(std::make_signed_t<uint>(addend - out.r_addend), os);
+    out.r_addend = addend;
+  }
+}
+
+template <class ELFT>
+static size_t relToCrel(raw_svector_ostream &os, Elf_Crel<ELFT::Is64Bits> &out,
+                        InputSection *relSec, InputSectionBase *sec) {
+  const auto &file = *cast<ELFFileBase>(relSec->file);
+  if (relSec->type == SHT_REL) {
+    // REL conversion is complex and unsupported yet.
+    errorOrWarn(toString(relSec) + ": REL cannot be converted to CREL");
+    return 0;
+  }
+  auto rels = relSec->getDataAs<typename ELFT::Rela>();
+  for (auto rel : rels) {
+    encodeOneCrel<typename ELFT::uint>(
+        os, out, sec->getVA(rel.r_offset), file.getRelocTargetSym(rel),
+        rel.getType(config->isMips64EL), getAddend<ELFT>(rel));
+  }
+  return rels.size();
+}
+
+// Compute the content of a non-alloc CREL section due to -r or --emit-relocs.
+// Input CREL sections are decoded while REL[A] need to be converted.
+template <bool is64> void OutputSection::finalizeNonAllocCrel() {
+  using uint = typename Elf_Crel_Impl<is64>::uint;
+  raw_svector_ostream os(crelBody);
+  uint64_t totalCount = 0;
+  Elf_Crel<is64> out{};
+  assert(commands.size() == 1);
+  auto *isd = cast<InputSectionDescription>(commands[0]);
+  for (InputSection *relSec : isd->sections) {
+    const auto &file = *cast<ELFFileBase>(relSec->file);
+    InputSectionBase *sec = relSec->getRelocatedSection();
+    if (relSec->type == SHT_CREL) {
+      RelocsCrel<is64> entries(relSec->content_);
+      totalCount += entries.size();
+      for (Elf_Crel_Impl<is64> r : entries) {
+        encodeOneCrel<uint>(os, out, uint(sec->getVA(r.r_offset)),
+                            file.getSymbol(r.r_symidx), r.r_type, r.r_addend);
+      }
+      continue;
+    }
+
+    // Convert REL[A] to CREL.
+    if constexpr (is64) {
+      totalCount += config->isLE ? relToCrel<ELF64LE>(os, out, relSec, sec)
+                                 : relToCrel<ELF64BE>(os, out, relSec, sec);
+    } else {
+      totalCount += config->isLE ? relToCrel<ELF32LE>(os, out, relSec, sec)
+                                 : relToCrel<ELF32BE>(os, out, relSec, sec);
+    }
+  }
+
+  crelHeader = totalCount * 8 + 4;
+  size = getULEB128Size(crelHeader) + crelBody.size();
+}
+
 void OutputSection::finalize() {
   InputSection *first = getFirstInputSection(this);
 
@@ -628,6 +747,13 @@ void OutputSection::finalize() {
   InputSectionBase *s = first->getRelocatedSection();
   info = s->getOutputSection()->sectionIndex;
   flags |= SHF_INFO_LINK;
+  // Finalize the content of non-alloc CREL.
+  if (type == SHT_CREL) {
+    if (config->is64)
+      finalizeNonAllocCrel<true>();
+    else
+      finalizeNonAllocCrel<false>();
+  }
 }
 
 // Returns true if S is in one of the many forms the compiler driver may pass

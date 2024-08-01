@@ -273,7 +273,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb())
+  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
+      !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
   if (Subtarget.is64Bit()) {
@@ -374,20 +375,24 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Subtarget.hasStdExtZbkb() ? Custom : Expand);
   }
 
-  if (Subtarget.hasStdExtZbb()) {
+  if (Subtarget.hasStdExtZbb() ||
+      (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, XLenVT,
                        Legal);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, MVT::i32,
                          Promote);
+  }
 
+  if (Subtarget.hasStdExtZbb() ||
+      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
     if (Subtarget.is64Bit()) {
       if (RV64LegalI32)
         setOperationAction(ISD::CTTZ, MVT::i32, Legal);
       else
         setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
     }
-  } else if (!(Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  } else {
     setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTPOP}, MVT::i32, Expand);
@@ -412,13 +417,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTLZ, MVT::i32, Expand);
   }
 
-  if (!RV64LegalI32 && Subtarget.is64Bit() &&
-      !Subtarget.hasShortForwardBranchOpt())
-    setOperationAction(ISD::ABS, MVT::i32, Custom);
-
-  // We can use PseudoCCSUB to implement ABS.
-  if (Subtarget.hasShortForwardBranchOpt())
+  if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
+  } else {
+    if (!RV64LegalI32 && Subtarget.is64Bit() &&
+        !Subtarget.hasShortForwardBranchOpt())
+      setOperationAction(ISD::ABS, MVT::i32, Custom);
+
+    // We can use PseudoCCSUB to implement ABS.
+    if (Subtarget.hasShortForwardBranchOpt())
+      setOperationAction(ISD::ABS, XLenVT, Legal);
+  }
 
   if (!Subtarget.hasVendorXTHeadCondMov()) {
     setOperationAction(ISD::SELECT, XLenVT, Custom);
@@ -1447,16 +1456,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setIndexedStoreAction(ISD::POST_INC, MVT::i8, Legal);
     setIndexedStoreAction(ISD::POST_INC, MVT::i16, Legal);
     setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
-  }
-
-  if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
-    setOperationAction(ISD::ABS, XLenVT, Legal);
-    setOperationAction(ISD::SMIN, XLenVT, Legal);
-    setOperationAction(ISD::UMIN, XLenVT, Legal);
-    setOperationAction(ISD::SMAX, XLenVT, Legal);
-    setOperationAction(ISD::UMAX, XLenVT, Legal);
-    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Legal);
-    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Legal);
   }
 
   // Function alignments.
@@ -8858,14 +8857,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
         I32VL = DAG.getConstant(2 * AVLInt, DL, XLenVT);
       } else if (AVLInt >= 2 * MaxVLMAX) {
         // Just set vl to VLMAX in this situation
-        RISCVII::VLMUL Lmul = RISCVTargetLowering::getLMUL(I32VT);
-        SDValue LMUL = DAG.getConstant(Lmul, DL, XLenVT);
-        unsigned Sew = RISCVVType::encodeSEW(I32VT.getScalarSizeInBits());
-        SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
-        SDValue SETVLMAX = DAG.getTargetConstant(
-            Intrinsic::riscv_vsetvlimax, DL, MVT::i32);
-        I32VL = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, SETVLMAX, SEW,
-                            LMUL);
+        I32VL = DAG.getRegister(RISCV::X0, XLenVT);
       } else {
         // For AVL between (MinVLMAX, 2 * MaxVLMAX), the actual working vl
         // is related to the hardware implementation.

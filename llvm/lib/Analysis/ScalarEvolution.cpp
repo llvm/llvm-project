@@ -9149,23 +9149,22 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   // behaviour), and we can prove the test sequence produced must repeat
   // the same values on self-wrap of the IV, then we can infer that IV
   // doesn't self wrap because if it did, we'd have an infinite (undefined)
-  // loop.
+  // loop.  Note that a stride of 0 is trivially no-self-wrap by definition.
   if (ControllingFiniteLoop && isLoopInvariant(RHS, L)) {
     // TODO: We can peel off any functions which are invertible *in L*.  Loop
     // invariant terms are effectively constants for our purposes here.
     auto *InnerLHS = LHS;
     if (auto *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS))
       InnerLHS = ZExt->getOperand();
-    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
-      auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
-      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
-          StrideC && StrideC->getAPInt().isPowerOf2()) {
-        auto Flags = AR->getNoWrapFlags();
-        Flags = setFlags(Flags, SCEV::FlagNW);
-        SmallVector<const SCEV*> Operands{AR->operands()};
-        Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
-      }
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS);
+        AR && !AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
+        isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
+                               /*OrNegative=*/true)) {
+      auto Flags = AR->getNoWrapFlags();
+      Flags = setFlags(Flags, SCEV::FlagNW);
+      SmallVector<const SCEV *> Operands{AR->operands()};
+      Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
     }
   }
 
@@ -10843,6 +10842,26 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
   if (const auto *SExt = dyn_cast<SCEVSignExtendExpr>(S))
     return isKnownNonZero(SExt->getOperand(0));
   return getUnsignedRangeMin(S) != 0;
+}
+
+bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
+                                             bool OrNegative) {
+  auto NonRecursive = [this, OrNegative](const SCEV *S) {
+    if (auto *C = dyn_cast<SCEVConstant>(S))
+      return C->getAPInt().isPowerOf2() ||
+             (OrNegative && C->getAPInt().isNegatedPowerOf2());
+
+    // The vscale_range indicates vscale is a power-of-two.
+    return isa<SCEVVScale>(S) && F.hasFnAttribute(Attribute::VScaleRange);
+  };
+
+  if (NonRecursive(S))
+    return true;
+
+  auto *Mul = dyn_cast<SCEVMulExpr>(S);
+  if (!Mul)
+    return false;
+  return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
 std::pair<const SCEV *, const SCEV *>
@@ -12775,8 +12794,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (!isLoopInvariant(RHS, L))
       return false;
 
-    auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
-    if (!StrideC || !StrideC->getAPInt().isPowerOf2())
+    if (!isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
+                                /*OrNegative*/ true))
       return false;
 
     if (!ControlsOnlyExit || !loopHasNoAbnormalExits(L))
@@ -13132,52 +13151,50 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // "(Start - End) + (Stride - 1)" has unsigned overflow.
       const SCEV *One = getOne(Stride->getType());
       bool MayAddOverflow = [&] {
-        if (auto *StrideC = dyn_cast<SCEVConstant>(Stride)) {
-          if (StrideC->getAPInt().isPowerOf2()) {
-            // Suppose Stride is a power of two, and Start/End are unsigned
-            // integers.  Let UMAX be the largest representable unsigned
-            // integer.
-            //
-            // By the preconditions of this function, we know
-            // "(Start + Stride * N) >= End", and this doesn't overflow.
-            // As a formula:
-            //
-            //   End <= (Start + Stride * N) <= UMAX
-            //
-            // Subtracting Start from all the terms:
-            //
-            //   End - Start <= Stride * N <= UMAX - Start
-            //
-            // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
-            //
-            //   End - Start <= Stride * N <= UMAX
-            //
-            // Stride * N is a multiple of Stride. Therefore,
-            //
-            //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
-            //
-            // Since Stride is a power of two, UMAX + 1 is divisible by
-            // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
-            // write:
-            //
-            //   End - Start <= Stride * N <= UMAX - Stride - 1
-            //
-            // Dropping the middle term:
-            //
-            //   End - Start <= UMAX - Stride - 1
-            //
-            // Adding Stride - 1 to both sides:
-            //
-            //   (End - Start) + (Stride - 1) <= UMAX
-            //
-            // In other words, the addition doesn't have unsigned overflow.
-            //
-            // A similar proof works if we treat Start/End as signed values.
-            // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
-            // to use signed max instead of unsigned max. Note that we're
-            // trying to prove a lack of unsigned overflow in either case.
-            return false;
-          }
+        if (isKnownToBeAPowerOfTwo(Stride)) {
+          // Suppose Stride is a power of two, and Start/End are unsigned
+          // integers.  Let UMAX be the largest representable unsigned
+          // integer.
+          //
+          // By the preconditions of this function, we know
+          // "(Start + Stride * N) >= End", and this doesn't overflow.
+          // As a formula:
+          //
+          //   End <= (Start + Stride * N) <= UMAX
+          //
+          // Subtracting Start from all the terms:
+          //
+          //   End - Start <= Stride * N <= UMAX - Start
+          //
+          // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
+          //
+          //   End - Start <= Stride * N <= UMAX
+          //
+          // Stride * N is a multiple of Stride. Therefore,
+          //
+          //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
+          //
+          // Since Stride is a power of two, UMAX + 1 is divisible by
+          // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
+          // write:
+          //
+          //   End - Start <= Stride * N <= UMAX - Stride - 1
+          //
+          // Dropping the middle term:
+          //
+          //   End - Start <= UMAX - Stride - 1
+          //
+          // Adding Stride - 1 to both sides:
+          //
+          //   (End - Start) + (Stride - 1) <= UMAX
+          //
+          // In other words, the addition doesn't have unsigned overflow.
+          //
+          // A similar proof works if we treat Start/End as signed values.
+          // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
+          // to use signed max instead of unsigned max. Note that we're
+          // trying to prove a lack of unsigned overflow in either case.
+          return false;
         }
         if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
           // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
