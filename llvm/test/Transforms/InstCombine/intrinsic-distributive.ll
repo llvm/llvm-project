@@ -4,9 +4,8 @@
 define i8 @umin_of_umax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umin_of_umax(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[MAX1]], i8 [[MAX2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umax.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %max1 = call i8 @llvm.umax.i8(i8 %x, i8 %z)
@@ -18,9 +17,8 @@ define i8 @umin_of_umax(i8 %x, i8 %y, i8 %z) {
 define i8 @umin_of_umax_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umin_of_umax_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.umax.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.umax.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[MAX1]], i8 [[MAX2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umax.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %max1 = call i8 @llvm.umax.i8(i8 %z, i8 %x)
@@ -32,9 +30,8 @@ define i8 @umin_of_umax_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @smin_of_smax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smin_of_smax(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smin.i8(i8 [[MAX1]], i8 [[MAX2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %max1 = call i8 @llvm.smax.i8(i8 %x, i8 %z)
@@ -46,9 +43,8 @@ define i8 @smin_of_smax(i8 %x, i8 %y, i8 %z) {
 define i8 @smin_of_smax_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smin_of_smax_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smin.i8(i8 [[MAX1]], i8 [[MAX2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %max1 = call i8 @llvm.smax.i8(i8 %z, i8 %x)
@@ -60,9 +56,8 @@ define i8 @smin_of_smax_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @umax_of_umin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umax_of_umin(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MIN1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[MIN2:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[MIN1]], i8 [[MIN2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %min1 = call i8 @llvm.umin.i8(i8 %x, i8 %z)
@@ -74,9 +69,8 @@ define i8 @umax_of_umin(i8 %x, i8 %y, i8 %z) {
 define i8 @umax_of_umin_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umax_of_umin_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MIN1:%.*]] = call i8 @llvm.umin.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[MIN2:%.*]] = call i8 @llvm.umin.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[MIN1]], i8 [[MIN2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %min1 = call i8 @llvm.umin.i8(i8 %z, i8 %x)
@@ -88,9 +82,8 @@ define i8 @umax_of_umin_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @smax_of_smin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smax_of_smin(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MIN1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[MIN2:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[MIN1]], i8 [[MIN2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smin.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %min1 = call i8 @llvm.smin.i8(i8 %x, i8 %z)
@@ -102,9 +95,8 @@ define i8 @smax_of_smin(i8 %x, i8 %y, i8 %z) {
 define i8 @smax_of_smin_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smax_of_smin_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[MIN1:%.*]] = call i8 @llvm.smin.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[MIN2:%.*]] = call i8 @llvm.smin.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[MIN1]], i8 [[MIN2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smin.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %min1 = call i8 @llvm.smin.i8(i8 %z, i8 %x)
@@ -116,9 +108,8 @@ define i8 @smax_of_smin_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @umax_of_uadd_sat(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umax_of_uadd_sat(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %z)
@@ -130,9 +121,8 @@ define i8 @umax_of_uadd_sat(i8 %x, i8 %y, i8 %z) {
 define i8 @umax_of_uadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umax_of_uadd_sat_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = call i8 @llvm.uadd.sat.i8(i8 %z, i8 %x)
@@ -144,9 +134,8 @@ define i8 @umax_of_uadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @umin_of_uadd_sat(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umin_of_uadd_sat(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %z)
@@ -158,9 +147,8 @@ define i8 @umin_of_uadd_sat(i8 %x, i8 %y, i8 %z) {
 define i8 @umin_of_uadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @umin_of_uadd_sat_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = call i8 @llvm.uadd.sat.i8(i8 %z, i8 %x)
@@ -172,9 +160,8 @@ define i8 @umin_of_uadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @smax_of_sadd_sat(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smax_of_sadd_sat(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %z)
@@ -186,9 +173,8 @@ define i8 @smax_of_sadd_sat(i8 %x, i8 %y, i8 %z) {
 define i8 @smax_of_sadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smax_of_sadd_sat_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = call i8 @llvm.sadd.sat.i8(i8 %z, i8 %x)
@@ -200,9 +186,8 @@ define i8 @smax_of_sadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 define i8 @smin_of_sadd_sat(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smin_of_sadd_sat(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X]], i8 [[Z]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Y]], i8 [[Z]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smin.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %z)
@@ -214,9 +199,8 @@ define i8 @smin_of_sadd_sat(i8 %x, i8 %y, i8 %z) {
 define i8 @smin_of_sadd_sat_comm(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i8 @smin_of_sadd_sat_comm(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Z]], i8 [[X]])
-; CHECK-NEXT:    [[ADD2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Z]], i8 [[Y]])
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smin.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = call i8 @llvm.sadd.sat.i8(i8 %z, i8 %x)
