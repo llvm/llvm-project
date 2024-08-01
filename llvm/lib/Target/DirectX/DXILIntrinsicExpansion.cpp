@@ -174,8 +174,8 @@ static bool expandLengthIntrinsic(CallInst *Orig) {
   assert(Ty->isVectorTy() && size > 1 && "dx.length only works on vector type");
 
   Value *Sum = Builder.CreateFMul(Elt, Elt);
-  for (unsigned i = 1; i < size; i++) {
-    Elt = Builder.CreateExtractElement(X, i);
+  for (unsigned I = 1; I < size; I++) {
+    Elt = Builder.CreateExtractElement(X, I);
     Value *Mul = Builder.CreateFMul(Elt, Elt);
     Sum = Builder.CreateFAdd(Sum, Mul);
   }
