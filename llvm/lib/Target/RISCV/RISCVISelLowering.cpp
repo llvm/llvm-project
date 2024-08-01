@@ -8857,14 +8857,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
         I32VL = DAG.getConstant(2 * AVLInt, DL, XLenVT);
       } else if (AVLInt >= 2 * MaxVLMAX) {
         // Just set vl to VLMAX in this situation
-        RISCVII::VLMUL Lmul = RISCVTargetLowering::getLMUL(I32VT);
-        SDValue LMUL = DAG.getConstant(Lmul, DL, XLenVT);
-        unsigned Sew = RISCVVType::encodeSEW(I32VT.getScalarSizeInBits());
-        SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
-        SDValue SETVLMAX = DAG.getTargetConstant(
-            Intrinsic::riscv_vsetvlimax, DL, MVT::i32);
-        I32VL = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, SETVLMAX, SEW,
-                            LMUL);
+        I32VL = DAG.getRegister(RISCV::X0, XLenVT);
       } else {
         // For AVL between (MinVLMAX, 2 * MaxVLMAX), the actual working vl
         // is related to the hardware implementation.
