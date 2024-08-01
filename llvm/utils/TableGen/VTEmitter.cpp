@@ -79,12 +79,12 @@ static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
 void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
 
-  std::array<const Record *, 256> VTsByNumber = {};
+  std::vector<const Record *> VTsByNumber{16384};
   auto ValueTypes = Records.getAllDerivedDefinitions("ValueType");
   for (auto *VT : ValueTypes) {
     auto Number = VT->getValueAsInt("Value");
     assert(0 <= Number && Number < (int)VTsByNumber.size() &&
-           "ValueType should be uint8_t");
+           "ValueType should be uint16_t");
     assert(!VTsByNumber[Number] && "Duplicate ValueType");
     VTsByNumber[Number] = VT;
   }

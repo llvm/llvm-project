@@ -12,7 +12,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
+[[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp,
+                                  ([[maybe_unused]] __jmp_buf * buf)) {
   // If BTI branch protection is in use, the compiler will automatically insert
   // a BTI here, so we don't need to make any extra effort to do so.
 
