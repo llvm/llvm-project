@@ -2486,6 +2486,14 @@ public:
         DepType, DepLoc, ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
   }
 
+  /// Build a new OpenMP 'holds' clause.
+  OMPClause *RebuildOMPHoldsClause(Expr *A, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPHoldsClause(A, StartLoc, LParenLoc,
+                                                     EndLoc);
+  }
+
   /// Rebuild the operand to an Objective-C \@synchronized statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -10238,6 +10246,15 @@ template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFailClause(OMPFailClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPHoldsClause(OMPHoldsClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getExpr());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPHoldsClause(E.get(), C->getBeginLoc(),
+                                            C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

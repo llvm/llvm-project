@@ -14964,6 +14964,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_ompx_dyn_cgroup_mem:
     Res = ActOnOpenMPXDynCGroupMemClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_holds:
+    Res = ActOnOpenMPHoldsClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_grainsize:
   case OMPC_num_tasks:
   case OMPC_device:
@@ -23124,6 +23127,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPXAttributeClause(ArrayRef<const Attr *> Attrs,
 OMPClause *SemaOpenMP::ActOnOpenMPXBareClause(SourceLocation StartLoc,
                                               SourceLocation EndLoc) {
   return new (getASTContext()) OMPXBareClause(StartLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
+                                              SourceLocation LParenLoc,
+                                              SourceLocation EndLoc) {
+  return new (getASTContext()) OMPHoldsClause(E, StartLoc, LParenLoc, EndLoc);
 }
 
 ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(

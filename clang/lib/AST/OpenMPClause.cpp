@@ -1937,6 +1937,12 @@ void OMPClausePrinter::VisitOMPFailClause(OMPFailClause *Node) {
   }
 }
 
+void OMPClausePrinter::VisitOMPHoldsClause(OMPHoldsClause *Node) {
+  OS << "holds(";
+  Node->getExpr()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
 void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {
   OS << "seq_cst";
 }

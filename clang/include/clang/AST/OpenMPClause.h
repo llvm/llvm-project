@@ -2013,6 +2013,33 @@ public:
   }
 };
 
+/// This represents the 'holds' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume holds(<expr>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'holds' clause.
+class OMPHoldsClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_holds, OMPClause> {
+  friend class OMPClauseReader;
+
+public:
+  /// Build 'holds' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPHoldsClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPOneStmtClause(E, StartLoc, LParenLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPHoldsClause() : OMPOneStmtClause() {}
+
+  Expr *getExpr() const { return getStmtAs<Expr>(); }
+  void setExpr(Expr *E) { setStmt(E); }
+};
+
 /// This represents 'read' clause in the '#pragma omp atomic' directive.
 ///
 /// \code

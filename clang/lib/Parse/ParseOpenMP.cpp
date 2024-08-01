@@ -3206,6 +3206,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_if:
     Clause = ParseOpenMPSingleExprWithArgClause(DKind, CKind, WrongDirective);
     break;
+  case OMPC_holds:
+    Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
+    break;
   case OMPC_nowait:
   case OMPC_untied:
   case OMPC_mergeable:
@@ -3407,6 +3410,9 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
 ///
 ///    align-clause
 ///      'align' '(' positive-integer-constant ')'
+///
+///    holds-clause
+///      'holds' '(' expression ')'
 ///
 OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                                bool ParseOnly) {

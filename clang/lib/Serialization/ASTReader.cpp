@@ -10463,6 +10463,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_acq_rel:
     C = new (Context) OMPAcqRelClause();
     break;
+  case llvm::omp::OMPC_holds:
+    C = new (Context) OMPHoldsClause();
+    break;
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10861,6 +10864,11 @@ void OMPClauseReader::VisitOMPFailClause(OMPFailClause *C) {
   C->setFailParameterLoc(FailParameterLoc);
   OpenMPClauseKind CKind = Record.readEnum<OpenMPClauseKind>();
   C->setFailParameter(CKind);
+}
+
+void OMPClauseReader::VisitOMPHoldsClause(OMPHoldsClause *C) {
+  C->setExpr(Record.readExpr());
+  C->setLParenLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
