@@ -149,7 +149,8 @@ public:
     // Keep track of how many bytes we've allocated.
     BytesAllocated += Size;
 
-    uintptr_t AlignedPtr = alignAddr(CurPtr, Alignment);
+    size_t Adjustment = offsetToAlignedAddr(CurPtr, Alignment);
+    assert(Adjustment + Size >= Size && "Adjustment + Size must not overflow");
 
     size_t SizeToAllocate = Size;
 #if LLVM_ADDRESS_SANITIZER_BUILD
@@ -157,22 +158,19 @@ public:
     SizeToAllocate += RedZoneSize;
 #endif
 
-    uintptr_t AllocEndPtr = AlignedPtr + SizeToAllocate;
-    assert(AllocEndPtr >= uintptr_t(CurPtr) &&
-           "Alignment + Size must not overflow");
-
     // Check if we have enough space.
-    if (LLVM_LIKELY(AllocEndPtr <= uintptr_t(End)
+    if (LLVM_LIKELY(Adjustment + SizeToAllocate <= size_t(End - CurPtr)
                     // We can't return nullptr even for a zero-sized allocation!
                     && CurPtr != nullptr)) {
-      CurPtr = reinterpret_cast<char *>(AllocEndPtr);
+      char *AlignedPtr = CurPtr + Adjustment;
+      CurPtr = AlignedPtr + SizeToAllocate;
       // Update the allocation point of this memory block in MemorySanitizer.
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
       __msan_allocated_memory(AlignedPtr, Size);
       // Similarly, tell ASan about this space.
       __asan_unpoison_memory_region(AlignedPtr, Size);
-      return reinterpret_cast<char *>(AlignedPtr);
+      return AlignedPtr;
     }
 
     return AllocateSlow(Size, SizeToAllocate, Alignment);
