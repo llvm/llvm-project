@@ -114,7 +114,7 @@ public:
       return m_name.str().starts_with("$τ_0_");
     }
     bool IsSelf() const {
-      return m_name.str().equals("$__lldb_injected_self");
+      return m_name.str() == "$__lldb_injected_self";
     }
     bool IsPackCount() const {
       return m_name.str().starts_with("$pack_count_");

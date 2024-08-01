@@ -378,8 +378,8 @@ public:
       if (last_component.empty())
         continue;
 
-      if (m_persistent_variable_sp->GetName().GetStringRef().equals(
-              last_component)) {
+      if (m_persistent_variable_sp->GetName().GetStringRef() ==
+              last_component) {
         ExecutionContextScope *exe_scope =
             execution_unit->GetBestExecutionContextScope();
 
