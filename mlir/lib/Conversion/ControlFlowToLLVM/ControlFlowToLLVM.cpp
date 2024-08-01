@@ -273,7 +273,8 @@ struct ControlFlowToLLVMDialectInterface
 
 void mlir::cf::registerConvertControlFlowToLLVMInterface(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, cf::ControlFlowDialect *dialect) {
-    dialect->addInterfaces<ControlFlowToLLVMDialectInterface>();
-  });
+  registry.addExtension(
+      "CF_TO_LLVM", +[](MLIRContext *ctx, cf::ControlFlowDialect *dialect) {
+        dialect->addInterfaces<ControlFlowToLLVMDialectInterface>();
+      });
 }

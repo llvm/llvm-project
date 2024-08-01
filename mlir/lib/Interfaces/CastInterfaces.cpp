@@ -79,10 +79,11 @@ struct UnrealizedConversionCastOpInterface
 
 void mlir::builtin::registerCastOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
-    UnrealizedConversionCastOp::attachInterface<
-        UnrealizedConversionCastOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "BUILTIN_CAST", +[](MLIRContext *ctx, BuiltinDialect *dialect) {
+        UnrealizedConversionCastOp::attachInterface<
+            UnrealizedConversionCastOpInterface>(*ctx);
+      });
 }
 
 //===----------------------------------------------------------------------===//

@@ -201,11 +201,12 @@ struct ReifyPadOp
 
 void mlir::tensor::registerInferTypeOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
-    ExpandShapeOp::attachInterface<
-        ReifyExpandOrCollapseShapeOp<tensor::ExpandShapeOp>>(*ctx);
-    CollapseShapeOp::attachInterface<
-        ReifyExpandOrCollapseShapeOp<tensor::CollapseShapeOp>>(*ctx);
-    PadOp::attachInterface<ReifyPadOp>(*ctx);
-  });
+  registry.addExtension(
+      "TENSOR_INFER_TYPE", +[](MLIRContext *ctx, TensorDialect *dialect) {
+        ExpandShapeOp::attachInterface<
+            ReifyExpandOrCollapseShapeOp<tensor::ExpandShapeOp>>(*ctx);
+        CollapseShapeOp::attachInterface<
+            ReifyExpandOrCollapseShapeOp<tensor::CollapseShapeOp>>(*ctx);
+        PadOp::attachInterface<ReifyPadOp>(*ctx);
+      });
 }

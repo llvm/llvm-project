@@ -347,7 +347,10 @@ struct MemRefDestructurableTypeExternalModel
 //===----------------------------------------------------------------------===//
 
 void mlir::memref::registerMemorySlotExternalModels(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
-    MemRefType::attachInterface<MemRefDestructurableTypeExternalModel>(*ctx);
-  });
+  registry.addExtension(
+      "MEMREF_MEMORY_SLOT_MODELS",
+      +[](MLIRContext *ctx, BuiltinDialect *dialect) {
+        MemRefType::attachInterface<MemRefDestructurableTypeExternalModel>(
+            *ctx);
+      });
 }

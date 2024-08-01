@@ -1352,15 +1352,16 @@ struct InParallelOpInterface
 
 void mlir::scf::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
-    ConditionOp::attachInterface<ConditionOpInterface>(*ctx);
-    ExecuteRegionOp::attachInterface<ExecuteRegionOpInterface>(*ctx);
-    ForOp::attachInterface<ForOpInterface>(*ctx);
-    IfOp::attachInterface<IfOpInterface>(*ctx);
-    IndexSwitchOp::attachInterface<IndexSwitchOpInterface>(*ctx);
-    ForallOp::attachInterface<ForallOpInterface>(*ctx);
-    InParallelOp::attachInterface<InParallelOpInterface>(*ctx);
-    WhileOp::attachInterface<WhileOpInterface>(*ctx);
-    YieldOp::attachInterface<YieldOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "SCF_BUFFERIZATION", +[](MLIRContext *ctx, scf::SCFDialect *dialect) {
+        ConditionOp::attachInterface<ConditionOpInterface>(*ctx);
+        ExecuteRegionOp::attachInterface<ExecuteRegionOpInterface>(*ctx);
+        ForOp::attachInterface<ForOpInterface>(*ctx);
+        IfOp::attachInterface<IfOpInterface>(*ctx);
+        IndexSwitchOp::attachInterface<IndexSwitchOpInterface>(*ctx);
+        ForallOp::attachInterface<ForallOpInterface>(*ctx);
+        InParallelOp::attachInterface<InParallelOpInterface>(*ctx);
+        WhileOp::attachInterface<WhileOpInterface>(*ctx);
+        YieldOp::attachInterface<YieldOpInterface>(*ctx);
+      });
 }

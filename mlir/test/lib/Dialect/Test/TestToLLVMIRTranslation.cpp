@@ -140,6 +140,7 @@ void registerTestToLLVMIR() {
         registerBuiltinDialectTranslation(registry);
         registerLLVMDialectTranslation(registry);
         registry.addExtension(
+            "TEST_TO_LLVMIR",
             +[](MLIRContext *ctx, test::TestDialect *dialect) {
               dialect->addInterfaces<TestDialectLLVMIRTranslationInterface>();
             });

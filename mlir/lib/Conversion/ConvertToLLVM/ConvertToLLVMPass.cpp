@@ -15,6 +15,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 #define DEBUG_TYPE "convert-to-llvm"
@@ -54,6 +55,10 @@ public:
   std::unique_ptr<DialectExtensionBase> clone() const final {
     return std::make_unique<LoadDependentDialectExtension>(*this);
   }
+
+  /// Unique ID
+  constexpr static llvm::StringRef extensionID =
+      "CONVERT_TO_LLVM_LOAD_DEPENDENT";
 };
 
 /// This is a generic pass to convert to LLVM, it uses the

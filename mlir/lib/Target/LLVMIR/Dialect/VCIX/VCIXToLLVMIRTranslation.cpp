@@ -76,9 +76,10 @@ public:
 
 void mlir::registerVCIXDialectTranslation(DialectRegistry &registry) {
   registry.insert<vcix::VCIXDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, vcix::VCIXDialect *dialect) {
-    dialect->addInterfaces<VCIXDialectLLVMIRTranslationInterface>();
-  });
+  registry.addExtension(
+      "VCIX_TO_LLVMIR", +[](MLIRContext *ctx, vcix::VCIXDialect *dialect) {
+        dialect->addInterfaces<VCIXDialectLLVMIRTranslationInterface>();
+      });
 }
 
 void mlir::registerVCIXDialectTranslation(MLIRContext &context) {

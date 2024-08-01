@@ -44,9 +44,11 @@ public:
 
 void mlir::registerArmSVEDialectTranslation(DialectRegistry &registry) {
   registry.insert<arm_sve::ArmSVEDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, arm_sve::ArmSVEDialect *dialect) {
-    dialect->addInterfaces<ArmSVEDialectLLVMIRTranslationInterface>();
-  });
+  registry.addExtension(
+      "ARM_SVE_TO_LLVMIR",
+      +[](MLIRContext *ctx, arm_sve::ArmSVEDialect *dialect) {
+        dialect->addInterfaces<ArmSVEDialectLLVMIRTranslationInterface>();
+      });
 }
 
 void mlir::registerArmSVEDialectTranslation(MLIRContext &context) {

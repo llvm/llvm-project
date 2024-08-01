@@ -785,17 +785,20 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
 
 void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
-    tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
-    tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
-    tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
-  });
+  registry.addExtension(
+      "TENSOR_TILING", +[](MLIRContext *ctx, TensorDialect *dialect) {
+        tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+        tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
+        tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
+      });
 }
 
 void mlir::tensor::registerTilingInterfaceExternalModelsForPackUnPackOps(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
-    tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
-    tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
-  });
+  registry.addExtension(
+      "TENOR_TILING_PACK_UNPACK",
+      +[](MLIRContext *ctx, TensorDialect *dialect) {
+        tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
+        tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
+      });
 }

@@ -26,6 +26,8 @@ public:
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.cpp.inc"
         >();
   }
+
+  static constexpr llvm::StringRef extensionID = "TRANSFORM_DEBUG";
 };
 } // namespace
 

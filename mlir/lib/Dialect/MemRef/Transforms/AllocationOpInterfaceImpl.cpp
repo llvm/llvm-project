@@ -60,10 +60,11 @@ struct DefaultReallocationInterface
 
 void mlir::memref::registerAllocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
-    memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
-    memref::AllocaOp::attachInterface<
-        DefaultAutomaticAllocationHoistingInterface>(*ctx);
-    memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
-  });
+  registry.addExtension(
+      "MEMREF_ALLOC", +[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+        memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+        memref::AllocaOp::attachInterface<
+            DefaultAutomaticAllocationHoistingInterface>(*ctx);
+        memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
+      });
 }

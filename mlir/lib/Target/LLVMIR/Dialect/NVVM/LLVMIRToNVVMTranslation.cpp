@@ -81,9 +81,10 @@ public:
 
 void mlir::registerNVVMDialectImport(DialectRegistry &registry) {
   registry.insert<NVVM::NVVMDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
-    dialect->addInterfaces<NVVMDialectLLVMIRImportInterface>();
-  });
+  registry.addExtension(
+      "LLVMIR_TO_NVVM", +[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
+        dialect->addInterfaces<NVVMDialectLLVMIRImportInterface>();
+      });
 }
 
 void mlir::registerNVVMDialectImport(MLIRContext &context) {

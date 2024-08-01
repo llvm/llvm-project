@@ -44,8 +44,10 @@ struct VectorScaleOpInterface
 
 void mlir::vector::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
-    vector::VectorScaleOp::attachInterface<vector::VectorScaleOpInterface>(
-        *ctx);
-  });
+  registry.addExtension(
+      "VECTOR_VALUE_BOUNDS",
+      +[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+        vector::VectorScaleOp::attachInterface<vector::VectorScaleOpInterface>(
+            *ctx);
+      });
 }

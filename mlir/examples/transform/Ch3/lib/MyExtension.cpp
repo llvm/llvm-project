@@ -42,6 +42,9 @@ public:
   // dialect definitions. List individual operations and dependent dialects
   // here.
   void init();
+
+  // Declare a unique ID for this extension.
+  static constexpr llvm::StringRef extensionID = "CH3_TRANSFORM";
 };
 
 void MyExtension::init() {

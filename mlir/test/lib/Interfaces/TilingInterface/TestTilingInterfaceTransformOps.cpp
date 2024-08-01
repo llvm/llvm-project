@@ -399,6 +399,8 @@ public:
 #include "TestTilingInterfaceTransformOps.cpp.inc"
         >();
   }
+
+  static constexpr llvm::StringRef extensionID = "TEST_TILING_TRANSFORM";
 };
 } // namespace
 

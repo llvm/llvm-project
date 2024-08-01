@@ -281,9 +281,10 @@ public:
 
 void mlir::registerLLVMDialectImport(DialectRegistry &registry) {
   registry.insert<LLVM::LLVMDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
-    dialect->addInterfaces<LLVMDialectLLVMIRImportInterface>();
-  });
+  registry.addExtension(
+      "LLVMIR_TO_LLVM", +[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+        dialect->addInterfaces<LLVMDialectLLVMIRImportInterface>();
+      });
 }
 
 void mlir::registerLLVMDialectImport(MLIRContext &context) {

@@ -75,7 +75,8 @@ TEST(Dialect, DelayedInterfaceRegistration) {
   registry.insert<TestDialect, SecondTestDialect>();
 
   // Delayed registration of an interface for TestDialect.
-  registry.addExtension(+[](MLIRContext *ctx, TestDialect *dialect) {
+  registry.addExtension(
+      "TEST_DIALECT_DELAYED", +[](MLIRContext *ctx, TestDialect *dialect) {
     dialect->addInterfaces<TestDialectInterface>();
   });
 
@@ -100,7 +101,7 @@ TEST(Dialect, DelayedInterfaceRegistration) {
   DialectRegistry secondRegistry;
   secondRegistry.insert<SecondTestDialect>();
   secondRegistry.addExtension(
-      +[](MLIRContext *ctx, SecondTestDialect *dialect) {
+      "SECOND_TEST", +[](MLIRContext *ctx, SecondTestDialect *dialect) {
         dialect->addInterfaces<SecondTestDialectInterface>();
       });
   context.appendDialectRegistry(secondRegistry);
@@ -113,7 +114,8 @@ TEST(Dialect, RepeatedDelayedRegistration) {
   // Set up the delayed registration.
   DialectRegistry registry;
   registry.insert<TestDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, TestDialect *dialect) {
+  registry.addExtension(
+      "TEST_DIALECT", +[](MLIRContext *ctx, TestDialect *dialect) {
     dialect->addInterfaces<TestDialectInterface>();
   });
   MLIRContext context(registry);
@@ -128,7 +130,8 @@ TEST(Dialect, RepeatedDelayedRegistration) {
   // on repeated interface registration.
   DialectRegistry secondRegistry;
   secondRegistry.insert<TestDialect>();
-  secondRegistry.addExtension(+[](MLIRContext *ctx, TestDialect *dialect) {
+  secondRegistry.addExtension(
+      "TEST_DIALECT", +[](MLIRContext *ctx, TestDialect *dialect) {
     dialect->addInterfaces<TestDialectInterface>();
   });
   context.appendDialectRegistry(secondRegistry);
@@ -143,12 +146,18 @@ struct DummyExtension : DialectExtension<DummyExtension, TestDialect> {
   DummyExtension(int *counter, int numRecursive)
       : DialectExtension(), counter(counter), numRecursive(numRecursive) {}
 
+  inline static std::vector<std::string> extensionIDs;
+
   void apply(MLIRContext *ctx, TestDialect *dialect) const final {
     ++(*counter);
     DialectRegistry nestedRegistry;
-    for (int i = 0; i < numRecursive; ++i)
+    extensionIDs.reserve(extensionIDs.size() + numRecursive);
+    for (int i = 0; i < numRecursive; ++i) {
+      extensionIDs.push_back("DUMMY_" + std::to_string(i));
       nestedRegistry.addExtension(
+          extensionIDs.back(),
           std::make_unique<DummyExtension>(counter, /*numRecursive=*/0));
+    }
     // Adding additional extensions may trigger a reallocation of the
     // `extensions` vector in the dialect registry.
     ctx->appendDialectRegistry(nestedRegistry);
@@ -166,10 +175,12 @@ TEST(Dialect, NestedDialectExtension) {
 
   // Add an extension that adds 100 more extensions.
   int counter1 = 0;
-  registry.addExtension(std::make_unique<DummyExtension>(&counter1, 100));
+  registry.addExtension("DUMMY",
+                        std::make_unique<DummyExtension>(&counter1, 100));
   // Add one more extension. This should not crash.
   int counter2 = 0;
-  registry.addExtension(std::make_unique<DummyExtension>(&counter2, 0));
+  registry.addExtension("DUMMY2",
+                        std::make_unique<DummyExtension>(&counter2, 0));
 
   // Load dialect and apply extensions.
   MLIRContext context(registry);

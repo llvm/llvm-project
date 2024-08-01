@@ -76,15 +76,17 @@ static void registerElemwiseAll(MLIRContext *ctx) {
 void mlir::tosa::registerShardingInterfaceExternalModels(
     DialectRegistry &registry) {
 
-  registry.addExtension(+[](MLIRContext *ctx, TosaDialect *dialect) {
-    registerElemwiseAll<
-        ClampOp, SigmoidOp, TanhOp, AddOp, ArithmeticRightShiftOp, BitwiseAndOp,
-        BitwiseOrOp, BitwiseXorOp, IntDivOp, LogicalAndOp, LogicalLeftShiftOp,
-        LogicalRightShiftOp, LogicalOrOp, LogicalXorOp, MaximumOp, MinimumOp,
-        MulOp, PowOp, SubOp, AbsOp, BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp,
-        LogOp, LogicalNotOp, NegateOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp,
-        GreaterOp, GreaterEqualOp>(ctx);
+  registry.addExtension(
+      "TOSA_SHARDING", +[](MLIRContext *ctx, TosaDialect *dialect) {
+        registerElemwiseAll<
+            ClampOp, SigmoidOp, TanhOp, AddOp, ArithmeticRightShiftOp,
+            BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, IntDivOp, LogicalAndOp,
+            LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp, LogicalXorOp,
+            MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp, BitwiseNotOp,
+            CeilOp, ClzOp, ExpOp, FloorOp, LogOp, LogicalNotOp, NegateOp,
+            ReciprocalOp, RsqrtOp, SelectOp, EqualOp, GreaterOp,
+            GreaterEqualOp>(ctx);
 
-    MatMulOp::attachInterface<MatMulOpSharding>(*ctx);
-  });
+        MatMulOp::attachInterface<MatMulOpSharding>(*ctx);
+      });
 }

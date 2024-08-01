@@ -510,9 +510,10 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 
 void mlir::arith::registerConvertArithToLLVMInterface(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
-    dialect->addInterfaces<ArithToLLVMDialectInterface>();
-  });
+  registry.addExtension(
+      "ARITH_TO_LLVM", +[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+        dialect->addInterfaces<ArithToLLVMDialectInterface>();
+      });
 }
 
 //===----------------------------------------------------------------------===//

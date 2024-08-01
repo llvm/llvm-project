@@ -114,15 +114,18 @@ struct RankOpInterface
 
 void mlir::tensor::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
-    tensor::CastOp::attachInterface<tensor::CastOpInterface>(*ctx);
-    tensor::DimOp::attachInterface<tensor::DimOpInterface>(*ctx);
-    tensor::EmptyOp::attachInterface<tensor::EmptyOpInterface>(*ctx);
-    tensor::ExtractSliceOp::attachInterface<tensor::ExtractSliceOpInterface>(
-        *ctx);
-    tensor::PadOp::attachInterface<tensor::PadOpInterface>(*ctx);
-    tensor::RankOp::attachInterface<tensor::RankOpInterface>(*ctx);
-    // Note: ValueBoundsOpInterface implementation is not required for ops that
-    // implement `DestinationStyleOpInterface` (for querying shaped OpResults).
-  });
+  registry.addExtension(
+      "TENSOR_VALUE_BOUNDS",
+      +[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+        tensor::CastOp::attachInterface<tensor::CastOpInterface>(*ctx);
+        tensor::DimOp::attachInterface<tensor::DimOpInterface>(*ctx);
+        tensor::EmptyOp::attachInterface<tensor::EmptyOpInterface>(*ctx);
+        tensor::ExtractSliceOp::attachInterface<
+            tensor::ExtractSliceOpInterface>(*ctx);
+        tensor::PadOp::attachInterface<tensor::PadOpInterface>(*ctx);
+        tensor::RankOp::attachInterface<tensor::RankOpInterface>(*ctx);
+        // Note: ValueBoundsOpInterface implementation is not required for ops
+        // that implement `DestinationStyleOpInterface` (for querying shaped
+        // OpResults).
+      });
 }

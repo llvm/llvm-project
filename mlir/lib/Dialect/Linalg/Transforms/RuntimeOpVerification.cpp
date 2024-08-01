@@ -121,15 +121,16 @@ void attachInterface(MLIRContext *ctx) {
 
 void mlir::linalg::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, LinalgDialect *) {
-    attachInterface<
+  registry.addExtension(
+      "LINALG_RUNTIME_VERIFICATION", +[](MLIRContext *ctx, LinalgDialect *) {
+        attachInterface<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-        >(ctx);
+            >(ctx);
 
-    // Load additional dialects of which ops may get created.
-    ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,
-                     cf::ControlFlowDialect, index::IndexDialect,
-                     tensor::TensorDialect>();
-  });
+        // Load additional dialects of which ops may get created.
+        ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,
+                         cf::ControlFlowDialect, index::IndexDialect,
+                         tensor::TensorDialect>();
+      });
 }

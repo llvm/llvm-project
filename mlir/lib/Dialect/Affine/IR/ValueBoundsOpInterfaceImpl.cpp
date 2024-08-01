@@ -96,11 +96,12 @@ struct AffineMaxOpInterface
 
 void mlir::affine::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, AffineDialect *dialect) {
-    AffineApplyOp::attachInterface<AffineApplyOpInterface>(*ctx);
-    AffineMaxOp::attachInterface<AffineMaxOpInterface>(*ctx);
-    AffineMinOp::attachInterface<AffineMinOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "AFFINE_VALUE_BOUNDS", +[](MLIRContext *ctx, AffineDialect *dialect) {
+        AffineApplyOp::attachInterface<AffineApplyOpInterface>(*ctx);
+        AffineMaxOp::attachInterface<AffineMaxOpInterface>(*ctx);
+        AffineMinOp::attachInterface<AffineMinOpInterface>(*ctx);
+      });
 }
 
 FailureOr<int64_t>

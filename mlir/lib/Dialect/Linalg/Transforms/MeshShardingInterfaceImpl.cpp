@@ -347,20 +347,21 @@ static void registerAll(MLIRContext *ctx) {
 }
 
 void registerMeshShardingInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, LinalgDialect *dialect) {
-    DialectRegistry registry;
-    registry.insert<affine::AffineDialect, arith::ArithDialect, scf::SCFDialect,
-                    tensor::TensorDialect>();
-    ctx->appendDialectRegistry(registry);
-    for (StringRef name : registry.getDialectNames())
-      ctx->getOrLoadDialect(name);
+  registry.addExtension(
+      "LINALG_SHARDING", +[](MLIRContext *ctx, LinalgDialect *dialect) {
+        DialectRegistry registry;
+        registry.insert<affine::AffineDialect, arith::ArithDialect,
+                        scf::SCFDialect, tensor::TensorDialect>();
+        ctx->appendDialectRegistry(registry);
+        for (StringRef name : registry.getDialectNames())
+          ctx->getOrLoadDialect(name);
 
-    registerOne<linalg::GenericOp>(ctx);
-    registerAll<
+        registerOne<linalg::GenericOp>(ctx);
+        registerAll<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-        >(ctx);
-  });
+            >(ctx);
+      });
 }
 
 } // namespace mlir::linalg

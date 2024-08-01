@@ -86,20 +86,21 @@ struct InsertSliceLikeOpSubsetInsertionOpInterface
 
 void mlir::tensor::registerSubsetOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
-    // Note: `SubsetExtractionOpInterface` and `SubsetInsertionOpInterface`
-    // require `SubsetOpInterface`.
-    ExtractSliceOp::attachInterface<ExtractSliceOpSubsetOpInterface>(*ctx);
-    ExtractSliceOp::attachInterface<ExtractSliceOpSubsetExtractionOpInterface>(
-        *ctx);
-    InsertSliceOp::attachInterface<
-        InsertSliceLikeOpSubsetOpInterface<InsertSliceOp>>(*ctx);
-    InsertSliceOp::attachInterface<
-        InsertSliceLikeOpSubsetInsertionOpInterface<InsertSliceOp>>(*ctx);
-    ParallelInsertSliceOp::attachInterface<
-        InsertSliceLikeOpSubsetOpInterface<ParallelInsertSliceOp>>(*ctx);
-    ParallelInsertSliceOp::attachInterface<
-        InsertSliceLikeOpSubsetInsertionOpInterface<ParallelInsertSliceOp>>(
-        *ctx);
-  });
+  registry.addExtension(
+      "TENSOR_SUBSET", +[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+        // Note: `SubsetExtractionOpInterface` and `SubsetInsertionOpInterface`
+        // require `SubsetOpInterface`.
+        ExtractSliceOp::attachInterface<ExtractSliceOpSubsetOpInterface>(*ctx);
+        ExtractSliceOp::attachInterface<
+            ExtractSliceOpSubsetExtractionOpInterface>(*ctx);
+        InsertSliceOp::attachInterface<
+            InsertSliceLikeOpSubsetOpInterface<InsertSliceOp>>(*ctx);
+        InsertSliceOp::attachInterface<
+            InsertSliceLikeOpSubsetInsertionOpInterface<InsertSliceOp>>(*ctx);
+        ParallelInsertSliceOp::attachInterface<
+            InsertSliceLikeOpSubsetOpInterface<ParallelInsertSliceOp>>(*ctx);
+        ParallelInsertSliceOp::attachInterface<
+            InsertSliceLikeOpSubsetInsertionOpInterface<ParallelInsertSliceOp>>(
+            *ctx);
+      });
 }

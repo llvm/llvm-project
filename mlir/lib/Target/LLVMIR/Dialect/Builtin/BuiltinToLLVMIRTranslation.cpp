@@ -34,9 +34,10 @@ public:
 } // namespace
 
 void mlir::registerBuiltinDialectTranslation(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
-    dialect->addInterfaces<BuiltinDialectLLVMIRTranslationInterface>();
-  });
+  registry.addExtension(
+      "BUILTIN_TO_LLVMIR", +[](MLIRContext *ctx, BuiltinDialect *dialect) {
+        dialect->addInterfaces<BuiltinDialectLLVMIRTranslationInterface>();
+      });
 }
 
 void mlir::registerBuiltinDialectTranslation(MLIRContext &context) {

@@ -159,8 +159,9 @@ struct IfOpInterface
 
 void mlir::scf::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
-    scf::ForOp::attachInterface<scf::ForOpInterface>(*ctx);
-    scf::IfOp::attachInterface<scf::IfOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "SCF_VALUE_BOUNDS", +[](MLIRContext *ctx, scf::SCFDialect *dialect) {
+        scf::ForOp::attachInterface<scf::ForOpInterface>(*ctx);
+        scf::IfOp::attachInterface<scf::IfOpInterface>(*ctx);
+      });
 }

@@ -56,9 +56,10 @@ std::string getBinaryIdentifier(StringRef binaryName) {
 
 void mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, gpu::GPUDialect *dialect) {
-    SelectObjectAttr::attachInterface<SelectObjectAttrImpl>(*ctx);
-  });
+  registry.addExtension(
+      "GPU_OFFLOADING_LLVM", +[](MLIRContext *ctx, gpu::GPUDialect *dialect) {
+        SelectObjectAttr::attachInterface<SelectObjectAttrImpl>(*ctx);
+      });
 }
 
 gpu::ObjectAttr

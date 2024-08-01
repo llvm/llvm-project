@@ -79,7 +79,8 @@ struct SelectOpInterface
 
 void mlir::arith::registerBufferDeallocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, ArithDialect *dialect) {
-    SelectOp::attachInterface<SelectOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "ARITH_BUFFER_DEALLOC", +[](MLIRContext *ctx, ArithDialect *dialect) {
+        SelectOp::attachInterface<SelectOpInterface>(*ctx);
+      });
 }

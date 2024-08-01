@@ -20,6 +20,8 @@ class Extension : public TransformDialectExtension<Extension> {
 public:
   using Base::Base;
   void init() { declareGeneratedDialect<func::FuncDialect>(); }
+
+  static constexpr llvm::StringRef extensionID = "TRANSFORM_BUILD_ONLY";
 };
 } // end namespace
 

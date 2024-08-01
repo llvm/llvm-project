@@ -45,6 +45,8 @@ public:
 #include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.cpp.inc"
         >();
   }
+
+  static constexpr llvm::StringRef extensionID = "SPARSE_TENSOR_TRANSFORM";
 };
 } // namespace
 

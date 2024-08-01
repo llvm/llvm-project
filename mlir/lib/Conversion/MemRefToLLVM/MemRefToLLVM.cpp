@@ -1753,7 +1753,8 @@ struct MemRefToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 } // namespace
 
 void mlir::registerConvertMemRefToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
-    dialect->addInterfaces<MemRefToLLVMDialectInterface>();
-  });
+  registry.addExtension(
+      "MEMREF_TO_LLVM", +[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+        dialect->addInterfaces<MemRefToLLVMDialectInterface>();
+      });
 }

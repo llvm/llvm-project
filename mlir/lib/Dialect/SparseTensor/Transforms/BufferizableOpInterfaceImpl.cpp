@@ -326,22 +326,26 @@ struct ToValuesOpInterface
 
 void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx,
-                            sparse_tensor::SparseTensorDialect *dialect) {
-    sparse_tensor::ConcatenateOp::attachInterface<ConcatenateOpInterface>(*ctx);
-    sparse_tensor::ConvertOp::attachInterface<ConvertOpInterface>(*ctx);
-    sparse_tensor::LoadOp::attachInterface<LoadOpInterface>(*ctx);
-    sparse_tensor::NewOp::attachInterface<NewOpInterface>(*ctx);
-    sparse_tensor::NumberOfEntriesOp::attachInterface<
-        NumberOfEntriesOpInterface>(*ctx);
-    sparse_tensor::AssembleOp::attachInterface<AssembleOpInterface>(*ctx);
-    sparse_tensor::DisassembleOp::attachInterface<DisassembleOpInterface>(*ctx);
-    sparse_tensor::ForeachOp::attachInterface<ForeachOpInterface>(*ctx);
-    sparse_tensor::ToCoordinatesBufferOp::attachInterface<
-        ToCoordinatesBufferOpInterface>(*ctx);
-    sparse_tensor::ToCoordinatesOp::attachInterface<ToCoordinatesOpInterface>(
-        *ctx);
-    sparse_tensor::ToPositionsOp::attachInterface<ToPositionsOpInterface>(*ctx);
-    sparse_tensor::ToValuesOp::attachInterface<ToValuesOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "SPARSE_TENSOR_BUFFERIZATION",
+      +[](MLIRContext *ctx, sparse_tensor::SparseTensorDialect *dialect) {
+        sparse_tensor::ConcatenateOp::attachInterface<ConcatenateOpInterface>(
+            *ctx);
+        sparse_tensor::ConvertOp::attachInterface<ConvertOpInterface>(*ctx);
+        sparse_tensor::LoadOp::attachInterface<LoadOpInterface>(*ctx);
+        sparse_tensor::NewOp::attachInterface<NewOpInterface>(*ctx);
+        sparse_tensor::NumberOfEntriesOp::attachInterface<
+            NumberOfEntriesOpInterface>(*ctx);
+        sparse_tensor::AssembleOp::attachInterface<AssembleOpInterface>(*ctx);
+        sparse_tensor::DisassembleOp::attachInterface<DisassembleOpInterface>(
+            *ctx);
+        sparse_tensor::ForeachOp::attachInterface<ForeachOpInterface>(*ctx);
+        sparse_tensor::ToCoordinatesBufferOp::attachInterface<
+            ToCoordinatesBufferOpInterface>(*ctx);
+        sparse_tensor::ToCoordinatesOp::attachInterface<
+            ToCoordinatesOpInterface>(*ctx);
+        sparse_tensor::ToPositionsOp::attachInterface<ToPositionsOpInterface>(
+            *ctx);
+        sparse_tensor::ToValuesOp::attachInterface<ToValuesOpInterface>(*ctx);
+      });
 }

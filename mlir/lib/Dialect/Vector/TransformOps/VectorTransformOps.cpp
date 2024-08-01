@@ -220,6 +220,8 @@ public:
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.cpp.inc"
         >();
   }
+
+  static constexpr llvm::StringRef extensionID = "VECTOR_TRANSFORM";
 };
 } // namespace
 

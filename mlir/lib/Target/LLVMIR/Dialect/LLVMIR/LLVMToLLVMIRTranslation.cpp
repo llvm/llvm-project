@@ -439,9 +439,10 @@ public:
 
 void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
   registry.insert<LLVM::LLVMDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
-    dialect->addInterfaces<LLVMDialectLLVMIRTranslationInterface>();
-  });
+  registry.addExtension(
+      "LLVM_TO_LLVMIR", +[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+        dialect->addInterfaces<LLVMDialectLLVMIRTranslationInterface>();
+      });
 }
 
 void mlir::registerLLVMDialectTranslation(MLIRContext &context) {

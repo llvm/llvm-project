@@ -53,9 +53,12 @@ struct IndexOpInterface
 
 void mlir::linalg::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
-    IndexOp::attachInterface<IndexOpInterface>(*ctx);
-    // Note: ValueBoundsOpInterface implementation is not required for ops that
-    // implement `DestinationStyleOpInterface` (for querying shaped OpResults).
-  });
+  registry.addExtension(
+      "LINALG_VALUE_BOUNDS",
+      +[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
+        IndexOp::attachInterface<IndexOpInterface>(*ctx);
+        // Note: ValueBoundsOpInterface implementation is not required for ops
+        // that implement `DestinationStyleOpInterface` (for querying shaped
+        // OpResults).
+      });
 }

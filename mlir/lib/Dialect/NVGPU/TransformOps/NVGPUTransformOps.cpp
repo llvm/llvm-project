@@ -1146,6 +1146,8 @@ public:
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.cpp.inc"
         >();
   }
+
+  static constexpr llvm::StringRef extensionID = "NVGPU_TRANSFORM";
 };
 } // namespace
 

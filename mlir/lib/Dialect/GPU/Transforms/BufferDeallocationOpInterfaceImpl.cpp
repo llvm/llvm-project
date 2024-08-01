@@ -31,7 +31,8 @@ struct GPUTerminatorOpInterface
 
 void mlir::gpu::registerBufferDeallocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, GPUDialect *dialect) {
-    gpu::TerminatorOp::attachInterface<GPUTerminatorOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "GPU_BUFFER_DEALLOC", +[](MLIRContext *ctx, GPUDialect *dialect) {
+        gpu::TerminatorOp::attachInterface<GPUTerminatorOpInterface>(*ctx);
+      });
 }

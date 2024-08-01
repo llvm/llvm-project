@@ -333,16 +333,18 @@ struct ExpandShapeOpInterface
 
 void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
-    CastOp::attachInterface<CastOpInterface>(*ctx);
-    ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
-    LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
-    ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);
-    StoreOp::attachInterface<LoadStoreOpInterface<StoreOp>>(*ctx);
-    SubViewOp::attachInterface<SubViewOpInterface>(*ctx);
+  registry.addExtension(
+      "MEMREF_RUNTIME_VERIFICATION",
+      +[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+        CastOp::attachInterface<CastOpInterface>(*ctx);
+        ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
+        LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
+        ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);
+        StoreOp::attachInterface<LoadStoreOpInterface<StoreOp>>(*ctx);
+        SubViewOp::attachInterface<SubViewOpInterface>(*ctx);
 
-    // Load additional dialects of which ops may get created.
-    ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,
-                     cf::ControlFlowDialect>();
-  });
+        // Load additional dialects of which ops may get created.
+        ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,
+                         cf::ControlFlowDialect>();
+      });
 }

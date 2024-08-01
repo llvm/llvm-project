@@ -75,8 +75,9 @@ struct ReduceReturnOpInterface
 
 void mlir::scf::registerBufferDeallocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, SCFDialect *dialect) {
-    InParallelOp::attachInterface<InParallelOpInterface>(*ctx);
-    ReduceReturnOp::attachInterface<ReduceReturnOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "SCF_BUFFER_DEALLOC", +[](MLIRContext *ctx, SCFDialect *dialect) {
+        InParallelOp::attachInterface<InParallelOpInterface>(*ctx);
+        ReduceReturnOp::attachInterface<ReduceReturnOpInterface>(*ctx);
+      });
 }

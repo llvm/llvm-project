@@ -42,7 +42,9 @@ struct ReallocOpInterface
 
 void memref::registerBufferViewFlowOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
-    ReallocOp::attachInterface<ReallocOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "MEMREF_BUFFER_FLOW",
+      +[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+        ReallocOp::attachInterface<ReallocOpInterface>(*ctx);
+      });
 }

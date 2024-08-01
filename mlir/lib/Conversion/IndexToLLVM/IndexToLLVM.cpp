@@ -392,7 +392,8 @@ struct IndexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 
 void mlir::index::registerConvertIndexToLLVMInterface(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, index::IndexDialect *dialect) {
-    dialect->addInterfaces<IndexToLLVMDialectInterface>();
-  });
+  registry.addExtension(
+      "INDEX_TO_LLVM", +[](MLIRContext *ctx, index::IndexDialect *dialect) {
+        dialect->addInterfaces<IndexToLLVMDialectInterface>();
+      });
 }

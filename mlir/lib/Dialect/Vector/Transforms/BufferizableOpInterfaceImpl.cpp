@@ -317,11 +317,13 @@ struct YieldOpInterface
 
 void mlir::vector::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
-    TransferReadOp::attachInterface<TransferReadOpInterface>(*ctx);
-    TransferWriteOp::attachInterface<TransferWriteOpInterface>(*ctx);
-    GatherOp::attachInterface<GatherOpInterface>(*ctx);
-    MaskOp::attachInterface<MaskOpInterface>(*ctx);
-    YieldOp::attachInterface<YieldOpInterface>(*ctx);
-  });
+  registry.addExtension(
+      "VECTOR_BUFFERIZATION",
+      +[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+        TransferReadOp::attachInterface<TransferReadOpInterface>(*ctx);
+        TransferWriteOp::attachInterface<TransferWriteOpInterface>(*ctx);
+        GatherOp::attachInterface<GatherOpInterface>(*ctx);
+        MaskOp::attachInterface<MaskOpInterface>(*ctx);
+        YieldOp::attachInterface<YieldOpInterface>(*ctx);
+      });
 }

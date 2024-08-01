@@ -323,6 +323,8 @@ public:
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.cpp.inc"
         >();
   }
+
+  static constexpr llvm::StringRef extensionID = "MEMREF_TRANSFORM";
 };
 } // namespace
 
