@@ -1140,7 +1140,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
   if (Indices.empty())
     return nullptr;
 
-  Indices.emplace_back(Builder.getInt32(0));
+  Indices.push_back(Builder.getInt32(0));
   Res = Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
       RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
