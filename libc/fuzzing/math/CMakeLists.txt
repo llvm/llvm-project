@@ -79,3 +79,12 @@ add_libc_fuzzer(
   DEPENDS
     libc.src.math.cos
 )
+
+add_libc_fuzzer(
+  tan_fuzz
+  NEED_MPFR
+  SRCS
+    tan_fuzz.cpp
+  DEPENDS
+    libc.src.math.tan
+)
