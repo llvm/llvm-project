@@ -2432,7 +2432,70 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       MI->eraseFromParent();
       return true;
     }
+    case AMDGPU::S_ADD_I32: {
+      // TODO: Handle s_or_b32, s_and_b32.
+      MachineOperand &OtherOp = MI->getOperand(FIOperandNum == 1 ? 2 : 1);
 
+      assert(FrameReg || MFI->isBottomOfStack());
+
+      MachineOperand &DstOp = MI->getOperand(0);
+      const DebugLoc &DL = MI->getDebugLoc();
+      Register MaterializedReg = FrameReg;
+
+      // Defend against live scc, which should never happen in practice.
+      bool DeadSCC = MI->getOperand(3).isDead();
+
+      // Do an in-place scale of the wave offset to the lane offset.
+      if (FrameReg && !ST.enableFlatScratch()) {
+        BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
+            .addDef(DstOp.getReg(), RegState::Renamable)
+            .addReg(FrameReg)
+            .addImm(ST.getWavefrontSizeLog2())
+            .setOperandDead(3); // Set SCC dead
+        MaterializedReg = DstOp.getReg();
+      }
+
+      // If we can't fold the other operand, do another increment.
+      if (!OtherOp.isImm() && MaterializedReg) {
+        auto AddI32 = BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_ADD_I32))
+                          .addDef(DstOp.getReg(), RegState::Renamable)
+                          .addReg(MaterializedReg)
+                          .add(OtherOp);
+        if (DeadSCC)
+          AddI32.setOperandDead(3);
+        MaterializedReg = DstOp.getReg();
+      }
+
+      int64_t NewOffset = FrameInfo.getObjectOffset(Index);
+
+      // For the non-immediate case, we could fall through to the default
+      // handling, but we do an in-place update of the result register here to
+      // avoid scavenging another register.
+      if (OtherOp.isImm())
+        NewOffset += OtherOp.getImm();
+
+      if (NewOffset == 0 && DeadSCC) {
+        MI->eraseFromParent();
+      } else if (!MaterializedReg && OtherOp.isImm()) {
+        // In a kernel, the address should just be an immediate.
+        // SCC should really be dead, but preserve the def just in case it
+        // isn't.
+        if (DeadSCC)
+          MI->removeOperand(3);
+        else
+          MI->getOperand(3).setIsDef(true);
+
+        MI->removeOperand(2);
+        MI->getOperand(1).ChangeToImmediate(NewOffset);
+        MI->setDesc(TII->get(AMDGPU::S_MOV_B32));
+      } else {
+        if (MaterializedReg)
+          OtherOp.ChangeToRegister(MaterializedReg, false);
+        FIOp.ChangeToImmediate(NewOffset);
+      }
+
+      return true;
+    }
     default: {
       // Other access to frame index
       const DebugLoc &DL = MI->getDebugLoc();
