@@ -155,7 +155,12 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
 }
 
 def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform",
-    [AllElementTypesMatch<["filter", "output"]>]> {
+    [AllElementTypesMatch<["filter", "output"]>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
   let summary = "Winograd filter transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -189,6 +194,20 @@ def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform",
     `ins` `(` $filter `:` type($filter) `)`
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ShapedType getFilterOperandType() {
+      return cast<ShapedType>(getFilter().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getFilterOperandRank() {
+      return getFilterOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
   }];
   let hasVerifier = 1;
 }
@@ -234,6 +253,20 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
   }];
+  let extraClassDeclaration = [{
+    ShapedType getInputOperandType() {
+      return cast<ShapedType>(getInput().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getInputOperandRank() {
+      return getInputOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+  }];
   let hasVerifier = 1;
 }
 
@@ -277,6 +310,20 @@ def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
     `ins` `(` $value `:` type($value) `)`
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ShapedType getValueOperandType() {
+      return cast<ShapedType>(getValue().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getValueOperandRank() {
+      return getValueOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
   }];
   let hasVerifier = 1;
 }

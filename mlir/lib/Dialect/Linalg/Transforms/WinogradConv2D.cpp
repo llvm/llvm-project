@@ -490,8 +490,6 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
   Type elementType = inputType.getElementType();
   auto inputShape = inputType.getShape(); // N, H, W, C
   int64_t inputN = inputShape[0];
-  int64_t inputH = inputShape[1];
-  int64_t inputW = inputShape[2];
   int64_t inputC = inputShape[3];
   auto valueType = cast<ShapedType>(retValue.getType());
   auto valueShape = valueType.getShape(); // alphaH, alphaW, HTile, WTile, N, C
@@ -499,11 +497,6 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
   int64_t tileW = valueShape[3];
   int64_t alphaH = leftTransform ? m + r - 1 : 1;
   int64_t alphaW = rightTransform ? m + r - 1 : 1;
-
-  if ((inputH != (tileH * m) + (r - 1)) && inputH != 1)
-    return Value();
-  if ((inputW != (tileW * m) + (r - 1)) && inputW != 1)
-    return Value();
 
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
