@@ -13788,8 +13788,8 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
 /// one loop iteration. This tries to match:
 /// or (splat (setcc_lt (sub ptrA, ptrB), -(element_size - 1))),
 ///    (get_active_lane_mask 0, (div (sub ptrA, ptrB), element_size))
-SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
-  if (!DAG.getSubtarget<AArch64Subtarget>().hasSVE2())
+SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG, const AArch64Subtarget &Subtarget) {
+  if (!Subtarget.hasSVE2())
     return SDValue();
   SDValue LaneMask = Op.getOperand(0);
   SDValue Splat = Op.getOperand(1);
@@ -13903,7 +13903,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
                                              SelectionDAG &DAG) const {
 
-  if (SDValue SV = tryWhileWRFromOR(Op, DAG))
+  if (SDValue SV = tryWhileWRFromOR(Op, DAG, DAG.getSubtarget<AArch64Subtarget>()))
     return SV;
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable()))
