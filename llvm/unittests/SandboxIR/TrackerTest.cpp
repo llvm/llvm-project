@@ -644,6 +644,51 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Invoke->getSuccessor(1), ExceptionBB);
 }
 
+TEST_F(TrackerTest, AllocaInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  %alloca = alloca i32, align 64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Alloca = cast<sandboxir::AllocaInst>(&*It++);
+
+  // Check setAllocatedType().
+  Ctx.save();
+  auto *OrigTy = Alloca->getAllocatedType();
+  auto *NewTy = Type::getInt64Ty(C);
+  EXPECT_NE(NewTy, OrigTy);
+  Alloca->setAllocatedType(NewTy);
+  EXPECT_EQ(Alloca->getAllocatedType(), NewTy);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->getAllocatedType(), OrigTy);
+
+  // Check setAlignment().
+  Ctx.save();
+  auto OrigAlign = Alloca->getAlign();
+  Align NewAlign(128);
+  EXPECT_NE(NewAlign, OrigAlign);
+  Alloca->setAlignment(NewAlign);
+  EXPECT_EQ(Alloca->getAlign(), NewAlign);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->getAlign(), OrigAlign);
+
+  // Check setUsedWithInAlloca().
+  Ctx.save();
+  auto OrigWIA = Alloca->isUsedWithInAlloca();
+  bool NewWIA = true;
+  EXPECT_NE(NewWIA, OrigWIA);
+  Alloca->setUsedWithInAlloca(NewWIA);
+  EXPECT_EQ(Alloca->isUsedWithInAlloca(), NewWIA);
+  Ctx.revert();
+  EXPECT_EQ(Alloca->isUsedWithInAlloca(), OrigWIA);
+}
+
 TEST_F(TrackerTest, CallBrSetters) {
   parseIR(C, R"IR(
 define void @foo(i8 %arg) {
