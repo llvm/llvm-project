@@ -1998,38 +1998,36 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
   if (!RetTy || !RetTy->isScalableTy())
     return true;
 
-  VectorType *InputTy = nullptr;
-
-  auto RetScalarTy = RetTy->getScalarType();
-  if (RetScalarTy->isIntegerTy(64))
-    InputTy = VectorType::get(Type::getInt16Ty(I->getContext()), 8, RetTy->isScalableTy());
-  else if (RetScalarTy->isIntegerTy(32))
-    InputTy = VectorType::get(Type::getInt8Ty(I->getContext()), 16, RetTy->isScalableTy());
-  else
-    return true;
-
   Value *InputA;
   Value *InputB;
+  if (match(I, m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
+                   m_Value(),
+                   m_OneUse(m_Mul(m_OneUse(m_ZExtOrSExt(m_Value(InputA))),
+                                  m_OneUse(m_ZExtOrSExt(m_Value(InputB)))))))) {
+    VectorType *InputAType = dyn_cast<VectorType>(InputA->getType());
+    VectorType *InputBType = dyn_cast<VectorType>(InputB->getType());
+    if (!InputAType || !InputBType)
+      return true;
+    ElementCount ExpectedCount8 = ElementCount::get(8, RetTy->isScalableTy());
+    ElementCount ExpectedCount16 = ElementCount::get(16, RetTy->isScalableTy());
+    if ((RetTy->getScalarType()->isIntegerTy(64) &&
+         InputAType->getElementType()->isIntegerTy(16) &&
+         InputAType->getElementCount() == ExpectedCount8 &&
+         InputAType == InputBType) ||
 
-  auto Pattern = m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
-      m_Value(), m_OneUse(m_Mul(m_OneUse(m_ZExtOrSExt(m_Value(InputA))),
-                                m_OneUse(m_ZExtOrSExt(m_Value(InputB))))));
+        (RetTy->getScalarType()->isIntegerTy(32) &&
+         InputAType->getElementType()->isIntegerTy(8) &&
+         InputAType->getElementCount() == ExpectedCount16 &&
+         InputAType == InputBType)) {
+      auto *Mul = cast<Instruction>(I->getOperand(1));
+      auto *Mul0 = cast<Instruction>(Mul->getOperand(0));
+      auto *Mul1 = cast<Instruction>(Mul->getOperand(1));
+      if (Mul0->getOpcode() == Mul1->getOpcode())
+        return false;
+    }
+  }
 
-  if (!match(I, Pattern))
-    return true;
-
-  auto Mul = cast<Instruction>(I->getOperand(1));
-  auto getOpcodeOfOperand = [&](unsigned Idx) {
-    return cast<Instruction>(Mul->getOperand(Idx))->getOpcode();
-  };
-
-  if (getOpcodeOfOperand(0) != getOpcodeOfOperand(1))
-    return true;
-
-  if (InputA->getType() != InputTy || InputB->getType() != InputTy)
-    return true;
-
-  return false;
+  return true;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
