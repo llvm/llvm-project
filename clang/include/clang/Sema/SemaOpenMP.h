@@ -399,6 +399,28 @@ public:
       OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
       OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
       Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc);
+  /// Process an OpenMP informational directive.
+  ///
+  /// \param Kind The directive kind.
+  /// \param DirName Declaration name info.
+  /// \param Clauses Array of clauses for directive.
+  /// \param AStmt The associated statement.
+  /// \param StartLoc The start location.
+  /// \param EndLoc The end location.
+  StmtResult ActOnOpenMPInformationalDirective(
+      OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc);
+  /// Process an OpenMP assume directive.
+  ///
+  /// \param Clauses Array of clauses for directive.
+  /// \param AStmt The associated statement.
+  /// \param StartLoc The start location.
+  /// \param EndLoc The end location.
+  StmtResult ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
+
   /// Called on well-formed '\#pragma omp parallel' after parsing
   /// of the  associated statement.
   StmtResult ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,

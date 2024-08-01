@@ -2154,6 +2154,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPInterchangeDirective = 308,
 
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPAssumeDirective = 309,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,

@@ -2371,6 +2371,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     ParseOMPEndDeclareTargetDirective(DTCI.Kind, DKind, DTCI.Loc);
     return nullptr;
   }
+  case OMPD_assume: {
+    Diag(Tok, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(DKind);
+    break;
+  }
   case OMPD_unknown:
     Diag(Tok, diag::err_omp_unknown_directive);
     break;
@@ -2566,6 +2571,71 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
       DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc, EndLoc);
 
   // Exit scope.
+  Actions.OpenMP().EndOpenMPDSABlock(Directive.get());
+  OMPDirectiveScope.Exit();
+
+  return Directive;
+}
+
+StmtResult Parser::ParseOpenMPInformationalDirective(
+    ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
+    bool ReadDirectiveWithinMetadirective) {
+  assert(isOpenMPInformationalDirective(DKind) &&
+         "Unexpected directive category");
+
+  bool HasAssociatedStatement = true;
+  Association Assoc = getDirectiveAssociation(DKind);
+
+  SmallVector<OMPClause *, 5> Clauses;
+  llvm::SmallBitVector SeenClauses(llvm::omp::Clause_enumSize + 1);
+  DeclarationNameInfo DirName;
+  unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
+                        Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
+  ParseScope OMPDirectiveScope(this, ScopeFlags);
+
+  Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(),
+                                       Loc);
+
+  while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+    if (ReadDirectiveWithinMetadirective && Tok.is(tok::r_paren)) {
+      while (Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+      break;
+    }
+
+    OpenMPClauseKind CKind = Tok.isAnnotation()
+                                 ? OMPC_unknown
+                                 : getOpenMPClauseKind(PP.getSpelling(Tok));
+    Actions.OpenMP().StartOpenMPClause(CKind);
+    OMPClause *Clause =
+        ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
+    SeenClauses[unsigned(CKind)] = true;
+    if (Clause)
+      Clauses.push_back(Clause);
+
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+    Actions.OpenMP().EndOpenMPClause();
+  }
+
+  SourceLocation EndLoc = Tok.getLocation();
+  ConsumeAnnotationToken();
+
+  StmtResult AssociatedStmt;
+  if (HasAssociatedStatement) {
+    Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
+    ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+    {
+      Sema::CompoundScopeRAII Scope(Actions);
+      AssociatedStmt = ParseStatement();
+    }
+    AssociatedStmt =
+        Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
+  }
+
+  StmtResult Directive = Actions.OpenMP().ActOnOpenMPInformationalDirective(
+      DKind, DirName, Clauses, AssociatedStmt.get(), Loc, EndLoc);
+
   Actions.OpenMP().EndOpenMPDSABlock(Directive.get());
   OMPDirectiveScope.Exit();
 
@@ -2920,6 +2990,14 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         << 1 << getOpenMPDirectiveName(DKind);
     SkipUntil(tok::annot_pragma_openmp_end);
     break;
+  case OMPD_assume: {
+    ConsumeToken();
+    Directive = ParseOpenMPInformationalDirective(
+        StmtCtx, DKind, Loc, ReadDirectiveWithinMetadirective);
+    assert(!Directive.isUnset() &&
+           "Informational directive remains unprocessed");
+    return Directive;
+  }
   case OMPD_unknown:
   default:
     Diag(Tok, diag::err_omp_unknown_directive);
