@@ -81,8 +81,7 @@ define half @copysign_known_signmask_f16_known_positive_mag(half nofpclass(nan n
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 15, v1
-; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signmask = shl i16 %sign, 15
   %signmask.bitcast = bitcast i16 %signmask to half
@@ -94,9 +93,7 @@ define float @copysign_known_signmask_f32_known_positive_mag(float nofpclass(nan
 ; GFX9-LABEL: copysign_known_signmask_f32_known_positive_mag:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 31, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signmask = shl i32 %sign, 31
   %signmask.bitcast = bitcast i32 %signmask to float
@@ -109,8 +106,7 @@ define double @copysign_known_signmask_f64_known_positive_mag(double nofpclass(n
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 31, v2
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v1, s4, v1, v2
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signmask = shl i64 %sign, 63
   %signmask.bitcast = bitcast i64 %signmask to double
@@ -130,11 +126,9 @@ define float @copysign_known_signmask_f32_known_positive_mag__nnan_exp(float %x,
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
 ; GFX9-NEXT:    v_exp_f32_e32 v0, v0
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
-; GFX9-NEXT:    s_brev_b32 s4, -2
 ; GFX9-NEXT:    v_mul_f32_e32 v2, 0x114b4ea4, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 31, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signbit.known.zero = call nnan afn float @llvm.exp.f32(float %x)
   %signmask = shl i32 %sign, 31
@@ -155,10 +149,8 @@ define float @copysign_known_signmask_f32_known_positive_mag__nnan_exp2(float %x
 ; GFX9-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_not_b32_e32 v2, 63
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX9-NEXT:    v_ldexp_f32 v0, v0, v2
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 31, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signbit.known.zero = call nnan afn float @llvm.exp2.f32(float %x)
   %signmask = shl i32 %sign, 31
@@ -179,10 +171,8 @@ define float @copysign_known_signmask_f32_known_positive_mag__nnan_exp10(float %
 ; GFX9-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_not_b32_e32 v2, 63
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX9-NEXT:    v_ldexp_f32 v0, v0, v2
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 31, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signbit.known.zero = call nnan afn float @llvm.exp2.f32(float %x)
   %signmask = shl i32 %sign, 31
