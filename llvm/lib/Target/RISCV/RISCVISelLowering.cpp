@@ -21503,6 +21503,8 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
 
 bool RISCVTargetLowering::isStaticRoundingSupportedFor(
     const Instruction &I) const {
+  if (!Subtarget.hasStdExtFOrZfinx())
+    return false;
   if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&I)) {
     switch (CI->getIntrinsicID()) {
     default:
