@@ -101,7 +101,7 @@
 "`2936 <https://wg21.link/LWG2936>`__","Path comparison is defined in terms of the generic format","San Diego","|Complete|",""
 "`2943 <https://wg21.link/LWG2943>`__","Problematic specification of the wide version of ``basic_filebuf::open``\ ","San Diego","|Nothing To Do|",""
 "`2960 <https://wg21.link/LWG2960>`__","[fund.ts.v3] ``nonesuch``\  is insufficiently useless","San Diego","|Complete|",""
-"`2995 <https://wg21.link/LWG2995>`__","``basic_stringbuf``\  default constructor forbids it from using SSO capacity","San Diego","",""
+"`2995 <https://wg21.link/LWG2995>`__","``basic_stringbuf``\  default constructor forbids it from using SSO capacity","San Diego","|Complete|","20.0"
 "`2996 <https://wg21.link/LWG2996>`__","Missing rvalue overloads for ``shared_ptr``\  operations","San Diego","|Complete|","17.0"
 "`3008 <https://wg21.link/LWG3008>`__","``make_shared``\  (sub)object destruction semantics are not specified","San Diego","|Complete|","16.0"
 "`3022 <https://wg21.link/LWG3022>`__","``is_convertible<derived*, base*>``\  may lead to ODR","San Diego","Resolved by `P1285R0 <https://wg21.link/P1285R0>`__",""
