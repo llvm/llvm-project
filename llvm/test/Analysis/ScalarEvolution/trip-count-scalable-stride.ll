@@ -444,8 +444,6 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; The next two cases check to see if we can infer the flags on the IV
 ; of a countdown loop using vscale strides.
-; TODO: We should be able to because vscale is a power of two and these
-; are finite loops by assumption.
 
 define void @vscale_countdown_ne(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,1024) {
 ; CHECK-LABEL: 'vscale_countdown_ne'
