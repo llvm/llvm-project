@@ -47,7 +47,7 @@ void initializeDXILTranslateMetadataPass(PassRegistry &);
 ModulePass *createDXILTranslateMetadataPass();
 
 /// Initializer for DXILTranslateMetadata.
-void initializeDXILResourceWrapperPass(PassRegistry &);
+void initializeDXILResourceMDWrapperPass(PassRegistry &);
 
 /// Pass to pretty print DXIL metadata.
 ModulePass *createDXILPrettyPrinterPass(raw_ostream &OS);

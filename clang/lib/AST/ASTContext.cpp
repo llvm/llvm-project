@@ -3283,7 +3283,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     return;
 
   case Type::Builtin: {
-    const auto *BTy = T->getAs<BuiltinType>();
+    const auto *BTy = T->castAs<BuiltinType>();
     switch (BTy->getKind()) {
 #define SIGNED_TYPE(Id, SingletonId)                                           \
   case BuiltinType::Id:                                                        \
@@ -3363,9 +3363,10 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/RISCVVTypes.def"
       llvm_unreachable("not yet implemented");
     }
+    llvm_unreachable("should never get here");
   }
   case Type::Record: {
-    const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
+    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
     const IdentifierInfo *II = RD->getIdentifier();
 
     // In C++, an immediate typedef of an anonymous struct or union
@@ -3407,7 +3408,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   }
 }
 
-uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
 
@@ -3417,11 +3418,13 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
   if (T->isFunctionPointerType() || T->isFunctionReferenceType())
     T = T->getPointeeType();
 
-  if (T->isFunctionType())
+  if (T->isFunctionType()) {
     encodeTypeForFunctionPointerAuth(*this, Out, T);
-  else
-    llvm_unreachable(
-        "type discrimination of non-function type not implemented yet");
+  } else {
+    T = T.getUnqualifiedType();
+    std::unique_ptr<MangleContext> MC(createMangleContext());
+    MC->mangleCanonicalTypeName(T, Out);
+  }
 
   return llvm::getPointerAuthStableSipHash(Str);
 }

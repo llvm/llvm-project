@@ -653,22 +653,22 @@ GotSection::GotSection()
 
 void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().gotIdx = numEntries++;
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().gotIdx = numEntries++;
   if (sym.hasFlag(NEEDS_GOT_AUTH))
     authEntries.push_back({(numEntries - 1) * config->wordsize, sym.isFunc()});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().tlsDescIdx = numEntries;
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
   return true;
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().tlsGdIdx = numEntries;
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().tlsGdIdx = numEntries;
   // Global Dynamic TLS entries take two GOT slots.
   numEntries += 2;
   return true;
@@ -1014,12 +1014,12 @@ void MipsGotSection::build() {
   for (auto &p : primGot->global) {
     if (p.first->auxIdx == 0)
       p.first->allocateAux();
-    symAux.back().gotIdx = p.second;
+    ctx.symAux.back().gotIdx = p.second;
   }
   for (auto &p : primGot->relocs) {
     if (p.first->auxIdx == 0)
       p.first->allocateAux();
-    symAux.back().gotIdx = p.second;
+    ctx.symAux.back().gotIdx = p.second;
   }
 
   // Create dynamic relocations.
@@ -1188,8 +1188,8 @@ GotPltSection::GotPltSection()
 }
 
 void GotPltSection::addEntry(Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1 &&
-         symAux.back().pltIdx == entries.size());
+  assert(sym.auxIdx == ctx.symAux.size() - 1 &&
+         ctx.symAux.back().pltIdx == entries.size());
   entries.push_back(&sym);
 }
 
@@ -1234,7 +1234,7 @@ IgotPltSection::IgotPltSection()
                        target->gotEntrySize, getIgotPltName()) {}
 
 void IgotPltSection::addEntry(Symbol &sym) {
-  assert(symAux.back().pltIdx == entries.size());
+  assert(ctx.symAux.back().pltIdx == entries.size());
   entries.push_back(&sym);
 }
 
@@ -2583,8 +2583,8 @@ void PltSection::writeTo(uint8_t *buf) {
 }
 
 void PltSection::addEntry(Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().pltIdx = entries.size();
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().pltIdx = entries.size();
   entries.push_back(&sym);
 }
 
@@ -2630,8 +2630,8 @@ size_t IpltSection::getSize() const {
 }
 
 void IpltSection::addEntry(Symbol &sym) {
-  assert(sym.auxIdx == symAux.size() - 1);
-  symAux.back().pltIdx = entries.size();
+  assert(sym.auxIdx == ctx.symAux.size() - 1);
+  ctx.symAux.back().pltIdx = entries.size();
   entries.push_back(&sym);
 }
 
@@ -3220,10 +3220,10 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
 template <class ELFT>
 template <class RelTy>
 void DebugNamesSection<ELFT>::getNameRelocs(
-    InputSection *sec, ArrayRef<RelTy> rels,
-    DenseMap<uint32_t, uint32_t> &relocs) {
+    const InputFile &file, DenseMap<uint32_t, uint32_t> &relocs,
+    Relocs<RelTy> rels) {
   for (const RelTy &rel : rels) {
-    Symbol &sym = sec->file->getRelocTargetSym(rel);
+    Symbol &sym = file.getRelocTargetSym(rel);
     relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
   }
 }
@@ -3233,11 +3233,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   auto relocs = std::make_unique<DenseMap<uint32_t, uint32_t>[]>(numChunks);
   parallelFor(0, numChunks, [&](size_t i) {
     InputSection *sec = inputSections[i];
-    auto rels = sec->template relsOrRelas<ELFT>();
-    if (rels.areRelocsRel())
-      getNameRelocs(sec, rels.rels, relocs.get()[i]);
-    else
-      getNameRelocs(sec, rels.relas, relocs.get()[i]);
+    invokeOnRelocs(*sec, getNameRelocs, *sec->file, relocs.get()[i]);
 
     // Relocate CU offsets with .debug_info + X relocations.
     OutputChunk &chunk = chunks.get()[i];
@@ -4686,7 +4682,8 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
 
-  in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
+  if (config->zSectionHeader)
+    in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
   Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::programHeaders->addralign = config->wordsize;
@@ -4938,7 +4935,8 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.symTab);
   if (in.symTabShndx)
     add(*in.symTabShndx);
-  add(*in.shStrTab);
+  if (in.shStrTab)
+    add(*in.shStrTab);
   if (in.strTab)
     add(*in.strTab);
 }

@@ -293,7 +293,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!hasFP(MF)) {
     MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - 2;
+    int64_t Offset = -(int64_t)CSSize - 2;
     // Mark callee-saved pop instruction.
     // Define the current CFA rule to use the provided offset.
     while (MBBI != MBB.end()) {

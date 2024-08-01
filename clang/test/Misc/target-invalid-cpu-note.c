@@ -57,7 +57,7 @@
 
 // RUN: not %clang_cc1 -triple powerpc--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix PPC
 // PPC: error: unknown target CPU 'not-a-cpu'
-// PPC-NEXT: note: valid target CPU values are: generic, 440, 450, 601, 602, 603, 603e, 603ev, 604, 604e, 620, 630, g3, 7400, g4, 7450, g4+, 750, 8548, 970, g5, a2, e500, e500mc, e5500, power3, pwr3, power4, pwr4, power5, pwr5, power5x, pwr5x, power6, pwr6, power6x, pwr6x, power7, pwr7, power8, pwr8, power9, pwr9, power10, pwr10, powerpc, ppc, ppc32, powerpc64, ppc64, powerpc64le, ppc64le, future{{$}}
+// PPC-NEXT: note: valid target CPU values are: generic, 440, 440fp, ppc440, 450, 601, 602, 603, 603e, 603ev, 604, 604e, 620, 630, g3, 7400, g4, 7450, g4+, 750, 8548, ppc405, ppc464, ppc476, 970, ppc970, g5, a2, ppca2, ppc-cell-be, e500, e500mc, e5500, power3, pwr3, pwr4, power4, pwr5, power5, pwr5+, power5+, pwr5x, power5x, pwr6, power6, pwr6x, power6x, pwr7, power7, pwr8, power8, pwr9, power9, pwr10, power10, pwr11, power11, powerpc, ppc, ppc32, powerpc64, ppc64, powerpc64le, ppc64le, future{{$}}
 
 // RUN: not %clang_cc1 -triple mips--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix MIPS
 // MIPS: error: unknown target CPU 'not-a-cpu'

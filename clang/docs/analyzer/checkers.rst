@@ -1703,7 +1703,13 @@ are detected:
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
 The stream operations are by this checker usually split into two cases, a success
-and a failure case. However, in the case of write operations (like ``fwrite``,
+and a failure case.
+On the success case it also assumes that the current value of ``stdout``,
+``stderr``, or ``stdin`` can't be equal to the file pointer returned by ``fopen``.
+Operations performed on ``stdout``, ``stderr``, or ``stdin`` are not checked by
+this checker in contrast to the streams opened by ``fopen``.
+
+In the case of write operations (like ``fwrite``,
 ``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
 unwanted reports on projects that don't have error checks around the write
 operations, so by default the checker assumes that write operations always succeed.
@@ -1769,9 +1775,7 @@ are assumed to succeed.)
 **Limitations**
 
 The checker does not track the correspondence between integer file descriptors
-and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
-treated specially and are therefore often not recognized (because these streams
-are usually not opened explicitly by the program, and are global variables).
+and ``FILE *`` pointers.
 
 .. _osx-checkers:
 
@@ -2494,14 +2498,48 @@ Check for pointer arithmetic on locations other than array elements.
 
 alpha.core.PointerSub (C)
 """""""""""""""""""""""""
-Check for pointer subtractions on two pointers pointing to different memory chunks.
+Check for pointer subtractions on two pointers pointing to different memory
+chunks. According to the C standard §6.5.6 only subtraction of pointers that
+point into (or one past the end) the same array object is valid (for this
+purpose non-array variables are like arrays of size 1).
 
 .. code-block:: c
 
  void test() {
-   int x, y;
-   int d = &y - &x; // warn
+   int a, b, c[10], d[10];
+   int x = &c[3] - &c[1];
+   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
+   x = (&a + 1) - &a;
+   x = &b - &a; // warn: 'a' and 'b' are different variables
+   x = (&a + 2) - &a; // warn: for a variable it is only valid to have a pointer
+                      // to one past the address of it
+   x = &c[10] - &c[0];
+   x = &c[11] - &c[0]; // warn: index larger than one past the end
+   x = &c[-1] - &c[0]; // warn: negative index
  }
+
+ struct S {
+   int x[10];
+   int y[10];
+ };
+
+ void test1() {
+   struct S a[10];
+   struct S b;
+   int d = &a[4] - &a[6];
+   d = &a[0].x[3] - &a[0].x[1];
+   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
+   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
+   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
+ }
+
+There may be existing applications that use code like above for calculating
+offsets of members in a structure, using pointer subtractions. This is still
+undefined behavior according to the standard and code like this can be replaced
+with the `offsetof` macro.
+
+The checker only reports cases where stack-allocated objects are involved (no
+warnings on pointers to memory allocated by `malloc`).
 
 .. _alpha-core-StackAddressAsyncEscape:
 

@@ -2589,7 +2589,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     --pc;
 #endif
 
-#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
+#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)) &&            \
+    !defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   // In case of this is frame of signal handler, the IP saved in the signal
   // handler points to first non-executed instruction, while FDE/CIE expects IP
   // to be after the first non-executed instruction.

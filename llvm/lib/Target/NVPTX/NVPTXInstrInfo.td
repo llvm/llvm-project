@@ -268,16 +268,12 @@ multiclass ADD_SUB_INT_CARRY<string OpcStr, SDNode OpNode> {
   }
 }
 
-// Template for instructions which take three fp64 or fp32 args.  The
-// instructions are named "<OpcStr>.f<Width>" (e.g. "min.f64").
+// Template for minimum/maximum instructions.
 //
 // Also defines ftz (flush subnormal inputs and results to sign-preserving
 // zero) variants for fp32 functions.
-//
-// This multiclass should be used for nodes that cannot be folded into FMAs.
-// For nodes that can be folded into FMAs (i.e. adds and muls), use
-// F3_fma_component.
-multiclass F3<string OpcStr, SDNode OpNode> {
+multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDNode OpNode> {
+  if !not(NaN) then {
    def f64rr :
      NVPTXInst<(outs Float64Regs:$dst),
                (ins Float64Regs:$a, Float64Regs:$b),
@@ -288,6 +284,7 @@ multiclass F3<string OpcStr, SDNode OpNode> {
                (ins Float64Regs:$a, f64imm:$b),
                !strconcat(OpcStr, ".f64 \t$dst, $a, $b;"),
                [(set Float64Regs:$dst, (OpNode Float64Regs:$a, fpimm:$b))]>;
+  }
    def f32rr_ftz :
      NVPTXInst<(outs Float32Regs:$dst),
                (ins Float32Regs:$a, Float32Regs:$b),
@@ -322,45 +319,45 @@ multiclass F3<string OpcStr, SDNode OpNode> {
                (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".f16 \t$dst, $a, $b;"),
                [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
-               Requires<[useFP16Math]>;
+               Requires<[useFP16Math, hasSM<80>, hasPTX<70>]>;
 
    def f16x2rr_ftz :
      NVPTXInst<(outs Int32Regs:$dst),
                (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a, $b;"),
                [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
-               Requires<[useFP16Math, doF32FTZ]>;
+               Requires<[useFP16Math, hasSM<80>, hasPTX<70>, doF32FTZ]>;
    def f16x2rr :
      NVPTXInst<(outs Int32Regs:$dst),
                (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".f16x2 \t$dst, $a, $b;"),
                [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
-               Requires<[useFP16Math]>;
+               Requires<[useFP16Math, hasSM<80>, hasPTX<70>]>;
    def bf16rr_ftz :
      NVPTXInst<(outs Int16Regs:$dst),
                (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".ftz.bf16 \t$dst, $a, $b;"),
                [(set Int16Regs:$dst, (OpNode (bf16 Int16Regs:$a), (bf16 Int16Regs:$b)))]>,
-               Requires<[hasBF16Math, doF32FTZ]>;
+               Requires<[hasBF16Math, doF32FTZ, hasSM<80>, hasPTX<70>]>;
    def bf16rr :
      NVPTXInst<(outs Int16Regs:$dst),
                (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".bf16 \t$dst, $a, $b;"),
                [(set Int16Regs:$dst, (OpNode (bf16 Int16Regs:$a), (bf16 Int16Regs:$b)))]>,
-               Requires<[hasBF16Math]>;
+               Requires<[hasBF16Math, hasSM<80>, hasPTX<70>]>;
 
    def bf16x2rr_ftz :
      NVPTXInst<(outs Int32Regs:$dst),
                (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".ftz.bf16x2 \t$dst, $a, $b;"),
                [(set Int32Regs:$dst, (OpNode (v2bf16 Int32Regs:$a), (v2bf16 Int32Regs:$b)))]>,
-               Requires<[hasBF16Math, doF32FTZ]>;
+               Requires<[hasBF16Math, hasSM<80>, hasPTX<70>, doF32FTZ]>;
    def bf16x2rr :
      NVPTXInst<(outs Int32Regs:$dst),
                (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".bf16x2 \t$dst, $a, $b;"),
                [(set Int32Regs:$dst, (OpNode (v2bf16 Int32Regs:$a), (v2bf16 Int32Regs:$b)))]>,
-               Requires<[hasBF16Math]>;
+               Requires<[hasBF16Math, hasSM<80>, hasPTX<70>]>;
 }
 
 // Template for instructions which take three FP args.  The
@@ -1178,11 +1175,10 @@ defm FADD : F3_fma_component<"add", fadd>;
 defm FSUB : F3_fma_component<"sub", fsub>;
 defm FMUL : F3_fma_component<"mul", fmul>;
 
-defm FMIN : F3<"min", fminnum>;
-defm FMAX : F3<"max", fmaxnum>;
-// Note: min.NaN.f64 and max.NaN.f64 do not actually exist.
-defm FMINNAN : F3<"min.NaN", fminimum>;
-defm FMAXNAN : F3<"max.NaN", fmaximum>;
+defm FMIN : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminnum>;
+defm FMAX : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaxnum>;
+defm FMINNAN : FMINIMUMMAXIMUM<"min.NaN", /* NaN */ true, fminimum>;
+defm FMAXNAN : FMINIMUMMAXIMUM<"max.NaN", /* NaN */ true, fmaximum>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
@@ -2958,39 +2954,39 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 multiclass LD<NVPTXRegClass regclass> {
   def _avar : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr];", []>;
   def _areg : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr];", []>;
   def _areg_64 : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr];", []>;
   def _ari : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr+$offset];", []>;
   def _ari_64 : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr+$offset];", []>;
   def _asi : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$fromWidth, imem:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr+$offset];", []>;
 }
 
@@ -3006,39 +3002,39 @@ let mayLoad=1, hasSideEffects=0 in {
 multiclass ST<NVPTXRegClass regclass> {
   def _avar : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins regclass:$src, LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$toWidth, imem:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
     " \t[$addr], $src;", []>;
   def _areg : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, Int32Regs:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
     " \t[$addr], $src;", []>;
   def _areg_64 : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins regclass:$src, LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$toWidth, Int64Regs:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
     " \t[$addr], $src;", []>;
   def _ari : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins regclass:$src, LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$toWidth, Int32Regs:$addr, i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
     " \t[$addr+$offset], $src;", []>;
   def _ari_64 : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins regclass:$src, LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$toWidth, Int64Regs:$addr, i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
     " \t[$addr+$offset], $src;", []>;
   def _asi : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec,
+    (ins regclass:$src, LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec,
          LdStCode:$Sign, i32imm:$toWidth, imem:$addr, i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
     " \t[$addr+$offset], $src;", []>;
 }
 
@@ -3057,75 +3053,75 @@ let mayStore=1, hasSideEffects=0 in {
 multiclass LD_VEC<NVPTXRegClass regclass> {
   def _v2_avar : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v2_areg : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v2_areg_64 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v2_ari : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr+$offset];", []>;
   def _v2_ari_64 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr+$offset];", []>;
   def _v2_asi : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr+$offset];", []>;
   def _v4_avar : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
   def _v4_areg : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
   def _v4_areg_64 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
   def _v4_ari : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr+$offset];", []>;
   def _v4_ari_64 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr+$offset];", []>;
   def _v4_asi : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr, i32imm:$offset),
-    "ld${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr+$offset];", []>;
 }
 let mayLoad=1, hasSideEffects=0 in {
@@ -3140,84 +3136,84 @@ let mayLoad=1, hasSideEffects=0 in {
 multiclass ST_VEC<NVPTXRegClass regclass> {
   def _v2_avar : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth, imem:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v2_areg : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v2_areg_64 : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v2_ari : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth, Int32Regs:$addr,
          i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr+$offset], {{$src1, $src2}};", []>;
   def _v2_ari_64 : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth, Int64Regs:$addr,
          i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr+$offset], {{$src1, $src2}};", []>;
   def _v2_asi : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$isVol, LdStCode:$addsp,
+    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$addsp,
          LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth, imem:$addr,
          i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr+$offset], {{$src1, $src2}};", []>;
   def _v4_avar : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+         LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_areg : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+         LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_areg_64 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+         LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_ari : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+         LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int32Regs:$addr, i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr+$offset], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_ari_64 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+         LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, Int64Regs:$addr, i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
     "\t[$addr+$offset], {{$src1, $src2, $src3, $src4}};", []>;
   def _v4_asi : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$isVol, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+         LdStCode:$sem, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
          i32imm:$fromWidth, imem:$addr, i32imm:$offset),
-    "st${isVol:volatile}${addsp:addsp}${Vec:vec}.${Sign:sign}"
+    "st${sem:sem}${addsp:addsp}${Vec:vec}.${Sign:sign}"
     "$fromWidth \t[$addr+$offset], {{$src1, $src2, $src3, $src4}};", []>;
 }
 
@@ -3908,3 +3904,31 @@ def : Pat <
   (V2I32toI64
     (INT_NVVM_PRMT (I64toI32H Int64Regs:$a), (i32 0), (i32 0x0123)),
     (INT_NVVM_PRMT (I64toI32L Int64Regs:$a), (i32 0), (i32 0x0123)))>;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// PTX Fence instructions
+////////////////////////////////////////////////////////////////////////////////
+
+def atomic_thread_fence_seq_cst_sys :
+  NVPTXInst<(outs), (ins), "fence.sc.sys;", []>,
+  Requires<[hasPTX<60>, hasSM<70>]>;
+def atomic_thread_fence_acq_rel_sys :
+  NVPTXInst<(outs), (ins), "fence.acq_rel.sys;", []>,
+  Requires<[hasPTX<60>, hasSM<70>]>;
+
+def : Pat<(atomic_fence (i64 4), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, // acquire(4) sys(1)
+      Requires<[hasPTX<60>, hasSM<70>]>;
+def : Pat<(atomic_fence (i64 5), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, // release(5) sys(1)
+      Requires<[hasPTX<60>, hasSM<70>]>;
+def : Pat<(atomic_fence (i64 6), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, // acq_rel(6) sys(1)
+      Requires<[hasPTX<60>, hasSM<70>]>;
+def : Pat<(atomic_fence (i64 7), (i64 1)), (atomic_thread_fence_seq_cst_sys)>, // seq_cst(7) sys(1)
+      Requires<[hasPTX<60>, hasSM<70>]>;
+
+
+// If PTX<60 or SM<70, we fall back to MEMBAR:
+def : Pat<(atomic_fence (i64 4), (i64 1)), (INT_MEMBAR_SYS)>; // acquire(4) sys(1)
+def : Pat<(atomic_fence (i64 5), (i64 1)), (INT_MEMBAR_SYS)>; // release(5) sys(1)
+def : Pat<(atomic_fence (i64 6), (i64 1)), (INT_MEMBAR_SYS)>; // acq_rel(6) sys(1)
+def : Pat<(atomic_fence (i64 7), (i64 1)), (INT_MEMBAR_SYS)>; // seq_cst(7) sys(1)

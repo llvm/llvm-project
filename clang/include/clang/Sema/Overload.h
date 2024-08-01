@@ -984,7 +984,7 @@ class Sema;
     unsigned getNumParams() const {
       if (IsSurrogate) {
         QualType STy = Surrogate->getConversionType();
-        while (STy->isPointerType() || STy->isReferenceType())
+        while (STy->isPointerOrReferenceType())
           STy = STy->getPointeeType();
         return STy->castAs<FunctionProtoType>()->getNumParams();
       }
@@ -998,7 +998,9 @@ class Sema;
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
-        : IsSurrogate(false), IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
+        : IsSurrogate(false), IgnoreObjectArgument(false),
+          TookAddressOfOverload(false), IsADLCandidate(CallExpr::NotADL),
+          RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++

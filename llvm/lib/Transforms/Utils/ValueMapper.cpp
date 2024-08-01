@@ -565,9 +565,8 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
   }
 
   // Find Value operands and remap those.
-  SmallVector<Value *, 4> Vals, NewVals;
-  for (Value *Val : V.location_ops())
-    Vals.push_back(Val);
+  SmallVector<Value *, 4> Vals(V.location_ops());
+  SmallVector<Value *, 4> NewVals;
   for (Value *Val : Vals)
     NewVals.push_back(mapValue(Val));
 

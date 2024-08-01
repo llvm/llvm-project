@@ -9,11 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 
-#ifndef LIBC_COPT_ENABLE_TID_CACHE
-#define LIBC_COPT_ENABLE_TID_CACHE 1
-#endif
-
-#include "hdr/types/pid_t.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
@@ -22,6 +17,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
+// TODO: fix this unguarded linux dep
 #include <linux/param.h> // for exec_pagesize.
 
 #include <stddef.h> // For size_t
@@ -108,7 +104,7 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   uintptr_t tls;             // Address to the thread TLS memory
   uintptr_t tls_size;        // The size of area pointed to by |tls|.
   unsigned char owned_stack; // Indicates if the thread owns this stack memory
-  pid_t tid;
+  int tid;
   ThreadStyle style;
   ThreadReturnValue retval;
   ThreadAtExitCallbackMgr *atexit_callback_mgr;
@@ -233,26 +229,6 @@ struct Thread {
 
   // Return the name of the thread in |name|. Return the error number of error.
   int get_name(cpp::StringStream &name) const;
-
-  static pid_t get_uncached_tid();
-
-  LIBC_INLINE void refresh_tid(pid_t cached = -1) {
-    if (cached >= 0)
-      this->attrib->tid = cached;
-    else
-      this->attrib->tid = get_uncached_tid();
-  }
-  LIBC_INLINE void invalidate_tid() { this->attrib->tid = -1; }
-
-  LIBC_INLINE pid_t get_tid() {
-#if LIBC_COPT_ENABLE_TID_CACHE
-    if (LIBC_UNLIKELY(this->attrib->tid < 0))
-      return get_uncached_tid();
-    return this->attrib->tid;
-#else
-    return get_uncached_tid();
-#endif
-  }
 };
 
 extern LIBC_THREAD_LOCAL Thread self;

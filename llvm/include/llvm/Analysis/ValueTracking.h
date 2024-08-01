@@ -736,6 +736,10 @@ inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
 }
 
+/// Like getUnderlyingObject(), but will try harder to find a single underlying
+/// object. In particular, this function also looks through selects and phis.
+const Value *getUnderlyingObjectAggressive(const Value *V);
+
 /// This method is similar to getUnderlyingObject except that it can
 /// look through phi and select instructions and return multiple objects.
 ///
@@ -766,7 +770,7 @@ inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
 /// it shouldn't look through the phi above.
 void getUnderlyingObjects(const Value *V,
                           SmallVectorImpl<const Value *> &Objects,
-                          LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
+                          const LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
@@ -787,13 +791,6 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// Return true if the only users of this pointer are lifetime markers or
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
-
-/// Return true if speculation of the given load must be suppressed to avoid
-/// ordering or interfering with an active sanitizer.  If not suppressed,
-/// dereferenceability and alignment must be proven separately.  Note: This
-/// is only needed for raw reasoning; if you use the interface below
-/// (isSafeToSpeculativelyExecute), this is handled internally.
-bool mustSuppressSpeculation(const LoadInst &LI);
 
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.

@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
 #include "Descriptor.h"
+#include "FunctionPointer.h"
 #include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
@@ -45,7 +46,7 @@ struct IntPointer {
   uint64_t Value;
 };
 
-enum class Storage { Block, Int };
+enum class Storage { Block, Int, Fn };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -96,6 +97,10 @@ public:
     PointeeStorage.Int.Value = Address;
     PointeeStorage.Int.Desc = Desc;
   }
+  Pointer(const Function *F, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::Fn) {
+    PointeeStorage.Fn = FunctionPointer(F);
+  }
   ~Pointer();
 
   void operator=(const Pointer &P);
@@ -126,6 +131,8 @@ public:
   uint64_t getIntegerRepresentation() const {
     if (isIntegralPointer())
       return asIntPointer().Value + (Offset * elemSize());
+    if (isFunctionPointer())
+      return asFunctionPointer().getIntegerRepresentation();
     return reinterpret_cast<uint64_t>(asBlockPointer().Pointee) + Offset;
   }
 
@@ -137,6 +144,8 @@ public:
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
     if (isIntegralPointer())
       return Pointer(asIntPointer().Value, asIntPointer().Desc, Idx);
+    if (isFunctionPointer())
+      return Pointer(asFunctionPointer().getFunction(), Idx);
 
     if (asBlockPointer().Base == RootPtrMark)
       return Pointer(asBlockPointer().Pointee, RootPtrMark,
@@ -247,18 +256,20 @@ public:
   bool isZero() const {
     if (isBlockPointer())
       return asBlockPointer().Pointee == nullptr;
+    if (isFunctionPointer())
+      return asFunctionPointer().isZero();
     assert(isIntegralPointer());
     return asIntPointer().Value == 0 && Offset == 0;
   }
   /// Checks if the pointer is live.
   bool isLive() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return true;
     return asBlockPointer().Pointee && !asBlockPointer().Pointee->IsDead;
   }
   /// Checks if the item is a field in an object.
   bool isField() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return false;
 
     return !isRoot() && getFieldDesc()->asDecl();
@@ -268,6 +279,8 @@ public:
   const Descriptor *getDeclDesc() const {
     if (isIntegralPointer())
       return asIntPointer().Desc;
+    if (isFunctionPointer())
+      return nullptr;
 
     assert(isBlockPointer());
     assert(asBlockPointer().Pointee);
@@ -279,7 +292,10 @@ public:
   DeclTy getSource() const {
     if (isBlockPointer())
       return getDeclDesc()->getSource();
-
+    if (isFunctionPointer()) {
+      const Function *F = asFunctionPointer().getFunction();
+      return F ? F->getDecl() : DeclTy();
+    }
     assert(isIntegralPointer());
     return asIntPointer().Desc ? asIntPointer().Desc->getSource() : DeclTy();
   }
@@ -354,6 +370,7 @@ public:
   /// Returns the offset into an array.
   unsigned getOffset() const {
     assert(Offset != PastEndMark && "invalid offset");
+    assert(isBlockPointer());
     if (asBlockPointer().Base == RootPtrMark)
       return Offset;
 
@@ -421,8 +438,14 @@ public:
     assert(isIntegralPointer());
     return PointeeStorage.Int;
   }
+  [[nodiscard]] const FunctionPointer &asFunctionPointer() const {
+    assert(isFunctionPointer());
+    return PointeeStorage.Fn;
+  }
+
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
+  bool isFunctionPointer() const { return StorageKind == Storage::Fn; }
 
   /// Returns the record descriptor of a class.
   const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
@@ -445,7 +468,7 @@ public:
   }
   /// Checks if the storage is static.
   bool isStatic() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return true;
     assert(asBlockPointer().Pointee);
     return asBlockPointer().Pointee->isStatic();
@@ -469,7 +492,7 @@ public:
   }
 
   bool isWeak() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return false;
 
     assert(isBlockPointer());
@@ -487,6 +510,9 @@ public:
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  bool isVirtualBaseClass() const {
+    return isField() && getInlineDesc()->IsVirtualBase;
+  }
   /// Checks if the pointer points to a dummy value.
   bool isDummy() const {
     if (!isBlockPointer())
@@ -525,8 +551,8 @@ public:
 
   /// Returns the number of elements.
   unsigned getNumElems() const {
-    if (isIntegralPointer())
-      return ~unsigned(0);
+    if (!isBlockPointer())
+      return ~0u;
     return getSize() / elemSize();
   }
 
@@ -552,7 +578,7 @@ public:
 
   /// Checks if the index is one past end.
   bool isOnePastEnd() const {
-    if (isIntegralPointer())
+    if (isIntegralPointer() || isFunctionPointer())
       return false;
 
     if (!asBlockPointer().Pointee)
@@ -689,6 +715,7 @@ private:
   union {
     BlockPointer BS;
     IntPointer Int;
+    FunctionPointer Fn;
   } PointeeStorage;
   Storage StorageKind = Storage::Int;
 };

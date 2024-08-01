@@ -1986,6 +1986,9 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
     return false;
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
+  if (!Destructor)
+    return false;
+
   SemaRef.CheckDestructorAccess(Loc, Destructor,
                                 SemaRef.PDiag(diag::err_access_dtor_temp)
                                 << ElementType);

@@ -261,6 +261,13 @@ add_libc_test(
     ${use_system_file}
 )
 
+if(LIBC_CONF_SCANF_DISABLE_FLOAT)
+  list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
+  list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+endif()
+
 add_libc_test(
   sscanf_test
   SUITE
@@ -271,6 +278,22 @@ add_libc_test(
     libc.src.stdio.sscanf
   LINK_LIBRARIES
     LibcFPTestHelpers
+  COMPILE_OPTIONS
+    ${sscanf_test_copts}
+)
+
+add_libc_test(
+  vsscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vsscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.vsscanf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+  COMPILE_OPTIONS
+    ${sscanf_test_copts}
 )
 
 add_libc_test(

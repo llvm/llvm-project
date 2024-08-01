@@ -53,6 +53,7 @@
 namespace llvm::sandboxir {
 
 class BasicBlock;
+class CallBrInst;
 class Instruction;
 class Tracker;
 
@@ -96,6 +97,85 @@ public:
   void dump(raw_ostream &OS) const final {
     dumpCommon(OS);
     OS << "UseSet";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHISetIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned Idx;
+  PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
+
+public:
+  enum class What {
+    Value,
+    Block,
+  };
+  PHISetIncoming(PHINode &PHI, unsigned Idx, What What, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHIRemoveIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned RemovedIdx;
+  Value *RemovedV;
+  BasicBlock *RemovedBB;
+
+public:
+  PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHIAddIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned Idx;
+
+public:
+  PHIAddIncoming(PHINode &PHI, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+/// Tracks swapping a Use with another Use.
+class UseSwap : public IRChangeBase {
+  Use ThisUse;
+  Use OtherUse;
+
+public:
+  UseSwap(const Use &ThisUse, const Use &OtherUse, Tracker &Tracker)
+      : IRChangeBase(Tracker), ThisUse(ThisUse), OtherUse(OtherUse) {
+    assert(ThisUse.getUser() == OtherUse.getUser() && "Expected same user!");
+  }
+  void revert() final { ThisUse.swap(OtherUse); }
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "UseSwap";
   }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
@@ -154,6 +234,41 @@ public:
   }
   LLVM_DUMP_METHOD void dump() const final;
 #endif // NDEBUG
+};
+
+class CallBrInstSetDefaultDest : public IRChangeBase {
+  CallBrInst *CallBr;
+  BasicBlock *OrigDefaultDest;
+
+public:
+  CallBrInstSetDefaultDest(CallBrInst *CallBr, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CallBrInstSetDefaultDest";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class CallBrInstSetIndirectDest : public IRChangeBase {
+  CallBrInst *CallBr;
+  unsigned Idx;
+  BasicBlock *OrigIndirectDest;
+
+public:
+  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "CallBrInstSetIndirectDest";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
 };
 
 class MoveInstr : public IRChangeBase {

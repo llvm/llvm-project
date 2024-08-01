@@ -57,17 +57,6 @@ enum {
   NEEDS_GOT_AUTH = 1 << 9,
 };
 
-// Some index properties of a symbol are stored separately in this auxiliary
-// struct to decrease sizeof(SymbolUnion) in the majority of cases.
-struct SymbolAux {
-  uint32_t gotIdx = -1;
-  uint32_t pltIdx = -1;
-  uint32_t tlsDescIdx = -1;
-  uint32_t tlsGdIdx = -1;
-};
-
-LLVM_LIBRARY_VISIBILITY extern SmallVector<SymbolAux, 0> symAux;
-
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -212,10 +201,10 @@ public:
   // truncated by Symbol::parseSymbolVersion().
   const char *getVersionSuffix() const { return nameData + nameSize; }
 
-  uint32_t getGotIdx() const { return symAux[auxIdx].gotIdx; }
-  uint32_t getPltIdx() const { return symAux[auxIdx].pltIdx; }
-  uint32_t getTlsDescIdx() const { return symAux[auxIdx].tlsDescIdx; }
-  uint32_t getTlsGdIdx() const { return symAux[auxIdx].tlsGdIdx; }
+  uint32_t getGotIdx() const { return ctx.symAux[auxIdx].gotIdx; }
+  uint32_t getPltIdx() const { return ctx.symAux[auxIdx].pltIdx; }
+  uint32_t getTlsDescIdx() const { return ctx.symAux[auxIdx].tlsDescIdx; }
+  uint32_t getTlsGdIdx() const { return ctx.symAux[auxIdx].tlsGdIdx; }
 
   bool isInGot() const { return getGotIdx() != uint32_t(-1); }
   bool isInPlt() const { return getPltIdx() != uint32_t(-1); }
@@ -326,8 +315,8 @@ public:
   // entries during postScanRelocations();
   std::atomic<uint16_t> flags;
 
-  // A symAux index used to access GOT/PLT entry indexes. This is allocated in
-  // postScanRelocations().
+  // A ctx.symAux index used to access GOT/PLT entry indexes. This is allocated
+  // in postScanRelocations().
   uint32_t auxIdx;
   uint32_t dynsymIndex;
 
@@ -358,8 +347,8 @@ public:
   }
   void allocateAux() {
     assert(auxIdx == 0);
-    auxIdx = symAux.size();
-    symAux.emplace_back();
+    auxIdx = ctx.symAux.size();
+    ctx.symAux.emplace_back();
   }
 
   bool isSection() const { return type == llvm::ELF::STT_SECTION; }
