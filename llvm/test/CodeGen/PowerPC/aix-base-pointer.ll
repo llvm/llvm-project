@@ -8,7 +8,7 @@
 ; - base pointer register (r30) is saved/defined/restored.
 ; - frame pointer register (r31) is saved/defined/restored.
 ; - stack frame is allocated with correct alignment.
-; - Address of %AlignedBuffer is calculated based off offset from the frame
+; - Address of %AlignedBuffer is calculated based off offset from the stack
 ;   pointer.
 
 define float @caller(float %f) {
