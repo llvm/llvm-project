@@ -102,6 +102,64 @@ public:
 #endif
 };
 
+class PHISetIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned Idx;
+  PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
+
+public:
+  enum class What {
+    Value,
+    Block,
+  };
+  PHISetIncoming(PHINode &PHI, unsigned Idx, What What, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHIRemoveIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned RemovedIdx;
+  Value *RemovedV;
+  BasicBlock *RemovedBB;
+
+public:
+  PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class PHIAddIncoming : public IRChangeBase {
+  PHINode &PHI;
+  unsigned Idx;
+
+public:
+  PHIAddIncoming(PHINode &PHI, Tracker &Tracker);
+  void revert() final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "PHISetIncoming";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 /// Tracks swapping a Use with another Use.
 class UseSwap : public IRChangeBase {
   Use ThisUse;

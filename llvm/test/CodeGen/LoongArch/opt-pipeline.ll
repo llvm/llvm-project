@@ -53,7 +53,6 @@
 ; LAXX-NEXT:       Expand memcmp() to load/stores
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
-; LAXX-NEXT:       Lower constant intrinsics
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Post-Dominator Tree Construction

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -fms-extensions -o - | FileCheck %s
 
 class A {
 public:
@@ -42,6 +42,9 @@ void foo(int i, A *ap, B *bp) {
 
   A *newA = new B();
   delete newA;
+  [[clang::nomerge]] __builtin_trap();
+  [[clang::nomerge]] __debugbreak();
+  [[clang::nomerge]] __builtin_verbose_trap("check null", "Argument must not be null.");
 }
 
 int g(int i);
@@ -97,6 +100,9 @@ void something_else_again() {
 // CHECK: load ptr, ptr
 // CHECK: %[[AG:.*]] = load ptr, ptr
 // CHECK-NEXT: call void %[[AG]](ptr {{.*}}) #[[ATTR1]]
+// CHECK: call void @llvm.trap() #[[ATTR0]]
+// CHECK: call void @llvm.debugtrap() #[[ATTR0]]
+// CHECK: call void @llvm.trap() #[[ATTR0]]
 // CHECK: call void  @_ZN1AD1Ev(ptr {{.*}}) #[[ATTR1]]
 
 // CHECK-DAG: attributes #[[ATTR0]] = {{{.*}}nomerge{{.*}}}
