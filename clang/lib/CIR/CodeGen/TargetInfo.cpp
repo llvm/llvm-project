@@ -47,7 +47,18 @@ public:
     if (RetTy->isVoidType())
       return ABIArgInfo::getIgnore();
 
-    llvm_unreachable("Non-void return type NYI");
+    if (isAggregateTypeForABI(RetTy))
+      llvm_unreachable("NYI");
+
+    // Treat an enum type as its underlying type.
+    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
+      llvm_unreachable("NYI");
+
+    if (const auto *EIT = RetTy->getAs<BitIntType>())
+      llvm_unreachable("NYI");
+
+    return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                                 : ABIArgInfo::getDirect());
   }
 
   ABIArgInfo classifyArgumentType(QualType Ty) const {
@@ -65,11 +76,8 @@ public:
     if (const auto *EIT = Ty->getAs<BitIntType>())
       llvm_unreachable("NYI");
 
-    if (isPromotableIntegerTypeForABI(Ty)) {
-      llvm_unreachable("ArgInfo integer extend NYI");
-    } else {
-      return ABIArgInfo::getDirect();
-    }
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                              : ABIArgInfo::getDirect());
   }
 
   void computeInfo(CIRGenFunctionInfo &FI) const override {
