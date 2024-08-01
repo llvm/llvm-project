@@ -447,9 +447,9 @@ updateHalosInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
           .create<UpdateHaloOp>(
               sourceShard.getType(), // update halo keeps the source type
               mesh.getSymName(), splitMeshAxes, sourceShard,
+              sourceSharding.getDynamicHaloSizes(),
               ::mlir::DenseI64ArrayAttr::get(
-                  builder.getContext(), sourceSharding.getStaticHaloSizes()),
-              nullptr)
+                  builder.getContext(), sourceSharding.getStaticHaloSizes()))
           .getResult();
   return cast<TypedValue<ShapedType>>(res);
 }
