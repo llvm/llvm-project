@@ -3858,6 +3858,22 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   return nullptr;
 }
 
+/// Constant folding nan/nanf/nanl.
+static Value *optimizeNaN(CallInst *CI) {
+  StringRef CharSeq;
+  if (!getConstantStringInfo(CI->getArgOperand(0), CharSeq))
+    return nullptr;
+
+  llvm::APInt Fill;
+  // Treat empty strings as if they were zero.
+  if (CharSeq.empty())
+    Fill = llvm::APInt(32, 0);
+  else if (CharSeq.getAsInteger(0, Fill))
+    return nullptr;
+
+  return ConstantFP::getQNaN(CI->getType(), /*Negative=*/false, &Fill);
+}
+
 Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
                                                        LibFunc Func,
                                                        IRBuilderBase &Builder) {
@@ -3972,6 +3988,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_remquof:
   case LibFunc_remquol:
     return optimizeRemquo(CI, Builder);
+  case LibFunc_nan:
+  case LibFunc_nanf:
+  case LibFunc_nanl:
+    return optimizeNaN(CI);
   default:
     return nullptr;
   }
