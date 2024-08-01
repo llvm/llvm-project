@@ -13,6 +13,8 @@
 #include <cstdlib>
 #include <vector>
 
+static constexpr unsigned kDefaultAllocator = 0;
+
 #define MAX_ALLOCATOR 5
 
 namespace Fortran::runtime {
@@ -37,7 +39,9 @@ struct AllocatorRegistry {
   RT_API_ATTRS constexpr AllocatorRegistry()
       : allocators{{&MallocWrapper, &FreeWrapper}} {}
 #else
-  constexpr AllocatorRegistry() { allocators[0] = {&std::malloc, &std::free}; };
+  constexpr AllocatorRegistry() {
+    allocators[kDefaultAllocator] = {&std::malloc, &std::free};
+  };
 #endif
   RT_API_ATTRS void Register(int, Allocator_t);
   RT_API_ATTRS AllocFct GetAllocator(int pos);

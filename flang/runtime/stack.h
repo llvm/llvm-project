@@ -19,14 +19,14 @@
 namespace Fortran::runtime {
 // Storage for the Stack elements of type T.
 template <typename T, unsigned N> struct StackStorage {
-  void *getElement(unsigned i) {
+  RT_API_ATTRS void *getElement(unsigned i) {
     if (i < N) {
       return storage[i];
     } else {
       return nullptr;
     }
   }
-  const void *getElement(unsigned i) const {
+  RT_API_ATTRS const void *getElement(unsigned i) const {
     if (i < N) {
       return storage[i];
     } else {
@@ -43,8 +43,8 @@ private:
 
 // 0-size specialization that provides no storage.
 template <typename T> struct alignas(T) StackStorage<T, 0> {
-  void *getElement(unsigned) { return nullptr; }
-  const void *getElement(unsigned) const { return nullptr; }
+  RT_API_ATTRS void *getElement(unsigned) { return nullptr; }
+  RT_API_ATTRS const void *getElement(unsigned) const { return nullptr; }
 };
 
 template <typename T, unsigned N = 0> class Stack : public StackStorage<T, N> {
