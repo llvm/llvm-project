@@ -372,6 +372,7 @@ def IIT_V6 : IIT_Vec<6, 50>;
 def IIT_V10 : IIT_Vec<10, 51>;
 def IIT_V2048 : IIT_Vec<2048, 52>;
 def IIT_V4096 : IIT_Vec<4096, 53>;
+def IIT_BYTE : IIT_Base<54>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -412,6 +413,10 @@ class LLVMType<ValueType vt> {
     !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IIT_Vecs, iit.Number),
     !foreach(iit, IITs,     iit.Number));
+}
+
+class LLVMByteType : LLVMType<OtherVT> {
+  let Sig = [IIT_BYTE.Number];
 }
 
 class LLVMAnyType<ValueType vt> : LLVMType<vt> {
@@ -519,7 +524,7 @@ class LLVMVectorOfBitcastsToInt<int num>
   : LLVMMatchType<num, IIT_VEC_OF_BITCASTS_TO_INT>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-
+def llvm_byte_ty       : LLVMByteType;
 def llvm_any_ty        : LLVMAnyType<Any>;
 def llvm_anyint_ty     : LLVMAnyType<iAny>;
 def llvm_anyfloat_ty   : LLVMAnyType<fAny>;
@@ -1049,7 +1054,7 @@ def int_memmove : Intrinsic<[],
                              WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
                              ImmArg<ArgIndex<3>>]>;
 def int_memset  : Intrinsic<[],
-                            [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
+                            [llvm_anyptr_ty, llvm_byte_ty, llvm_anyint_ty,
                              llvm_i1_ty],
                             [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
                              IntrNoFree, IntrNoCallback,
@@ -1062,7 +1067,7 @@ def int_memset  : Intrinsic<[],
 // The third argument (specifying the size) must be a constant.
 def int_memset_inline
     : Intrinsic<[],
-      [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i1_ty],
+      [llvm_anyptr_ty, llvm_byte_ty, llvm_anyint_ty, llvm_i1_ty],
       [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
@@ -2659,7 +2664,7 @@ def int_memmove_element_unordered_atomic
 
 // @llvm.memset.element.unordered.atomic.*(dest, value, length, elementsize)
 def int_memset_element_unordered_atomic
-    : Intrinsic<[], [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty],
+    : Intrinsic<[], [llvm_anyptr_ty, llvm_byte_ty, llvm_anyint_ty, llvm_i32_ty],
                 [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoSync,
                  NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
                  ImmArg<ArgIndex<3>>]>;
