@@ -56,9 +56,9 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocate) {
   ScopedContext ctx;
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
-  a->raw().SetAllocIdx(kDeviceAllocatorPos);
-  EXPECT_EQ((int)kDeviceAllocatorPos, a->raw().GetAllocIdx());
-  EXPECT_FALSE(a->raw().HasAddendum());
+  a->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
+  EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -74,10 +74,10 @@ TEST(AllocatableCUFTest, SimplePinnedAllocate) {
   ScopedContext ctx;
   // INTEGER(4), PINNED, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Integer, 4)};
-  EXPECT_FALSE(a->raw().HasAddendum());
-  a->raw().SetAllocIdx(kPinnedAllocatorPos);
-  EXPECT_EQ((int)kPinnedAllocatorPos, a->raw().GetAllocIdx());
-  EXPECT_FALSE(a->raw().HasAddendum());
+  EXPECT_FALSE(a->HasAddendum());
+  a->SetAllocIdx(kPinnedAllocatorPos);
+  EXPECT_EQ((int)kPinnedAllocatorPos, a->GetAllocIdx());
+  EXPECT_FALSE(a->HasAddendum());
   RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
   RTNAME(AllocatableAllocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
