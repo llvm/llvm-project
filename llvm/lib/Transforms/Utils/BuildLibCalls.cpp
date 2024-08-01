@@ -1110,6 +1110,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     break;
   case LibFunc_abort:
     Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    break;
+  case LibFunc_exit:
+  case LibFunc_Exit:
+    Changed |= setNoReturn(F);
     break;
   case LibFunc_terminate:
     Changed |= setIsCold(F);

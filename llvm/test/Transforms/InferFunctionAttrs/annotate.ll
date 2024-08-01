@@ -1097,8 +1097,14 @@ declare i32 @vsscanf(ptr, ptr, ptr)
 ; CHECK: declare noundef i64 @write(i32 noundef, ptr nocapture noundef readonly, i64 noundef) [[NOFREE]]
 declare i64 @write(i32, ptr, i64)
 
-; CHECK: declare void @abort() [[NOFREE_COLD:#[0-9]+]]
+; CHECK: declare void @abort() [[NOFREE_COLD_NORETURN:#[0-9]+]]
 declare void @abort()
+
+; CHECK: declare void @exit(i32) [[NOFREE_NORETURN:#[0-9]+]]
+declare void @exit(i32)
+
+; CHECK: declare void @_Exit(i32) [[NOFREE_NORETURN:#[0-9]+]]
+declare void @_Exit(i32)
 
 ; CHECK: declare void @__cxa_throw() [[NOFREE_COLD_NORETURN:#[0-9]+]]
 declare void @__cxa_throw(ptr, ptr, ptr)
@@ -1131,7 +1137,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nofree nounwind memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[NOFREE_COLD]] = { cold nofree }
+; CHECK-DAG: attributes [[NOFREE_NORETURN]] = { nofree noreturn }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
 ; CHECK-DAG: attributes [[COLD_NORETURN]] = { cold noreturn }
 
