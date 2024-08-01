@@ -619,7 +619,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     }
     return std::move(FullComment);
   }
- 
+
   if (I.Kind == "ParagraphComment") {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
@@ -667,8 +667,8 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
     if (!CDCtx.RepositoryUrl)
       Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -716,8 +716,8 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
     if (!CDCtx.RepositoryUrl)
       Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -783,8 +783,8 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
     if (!CDCtx.RepositoryUrl)
       Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+      Out.emplace_back(
+          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;

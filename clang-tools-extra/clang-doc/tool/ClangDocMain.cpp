@@ -205,6 +205,22 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
   return getDefaultAssetFiles(Argv0, CDCtx);
 }
 
+/// Make the output of clang-doc deterministic by sorting the children of
+/// namespaces and records.
+void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>>& USRToInfo) {
+  for (auto &I : USRToInfo) {
+    auto &Info = I.second;
+    if (Info->IT == doc::InfoType::IT_namespace) {
+      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+      Namespace->Children.sort();
+    }
+    if (Info->IT == doc::InfoType::IT_record) {
+        auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+        Record->Children.sort();
+    }
+  }
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
@@ -288,13 +304,6 @@ Example usage for a project using a compile commands database:
         R.first->second.emplace_back(Value);
       });
   
-  for (auto &Entry : USRToBitcode) {
-    std::vector<llvm::StringRef> &Bitcode = Entry.second;
-    std::sort(Bitcode.begin(), Bitcode.end(),
-              [](const llvm::StringRef &A, const llvm::StringRef &B) {
-                return A < B;
-              });
-  }
   // Collects all Infos according to their unique USR value. This map is added
   // to from the thread pool below and is protected by the USRToInfoMutex.
   llvm::sys::Mutex USRToInfoMutex;
@@ -347,6 +356,8 @@ Example usage for a project using a compile commands database:
 
   if (Error)
     return 1;
+
+  sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
