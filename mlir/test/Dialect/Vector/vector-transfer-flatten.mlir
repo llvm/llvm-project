@@ -1,6 +1,8 @@
 // RUN: mlir-opt %s -test-vector-transfer-flatten-patterns -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-vector-transfer-flatten-patterns=target-vector-bitwidth=128 -split-input-file | FileCheck %s --check-prefix=CHECK-128B
 
+// TODO: Align naming and format with e.g. vector-transfer-permutation-lowering.mlir
+
 ///----------------------------------------------------------------------------------------
 /// vector.transfer_read
 /// [Pattern: FlattenContiguousRowMajorTransferReadPattern]
