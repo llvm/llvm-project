@@ -38,21 +38,62 @@ struct OmptAssertEvent {
                                        const ObserveState &Expected,
                                        int NumThreads);
 
-  static OmptAssertEvent ParallelEnd(const std::string &Name,
-                                     const std::string &Group,
-                                     const ObserveState &Expected);
+  static OmptAssertEvent ParallelEnd(
+      const std::string &Name, const std::string &Group,
+      const ObserveState &Expected,
+      ompt_data_t *ParallelData = expectedDefault(ompt_data_t *),
+      ompt_data_t *EncounteringTaskData = expectedDefault(ompt_data_t *),
+      int Flags = expectedDefault(int),
+      const void *CodeptrRA = expectedDefault(const void *));
 
-  static OmptAssertEvent TaskCreate(const std::string &Name,
-                                    const std::string &Group,
-                                    const ObserveState &Expected);
+  static OmptAssertEvent
+  Work(const std::string &Name, const std::string &Group,
+       const ObserveState &Expected, ompt_work_t WorkType,
+       ompt_scope_endpoint_t Endpoint,
+       ompt_data_t *ParallelData = expectedDefault(ompt_data_t *),
+       ompt_data_t *TaskData = expectedDefault(ompt_data_t *),
+       uint64_t Count = expectedDefault(uint64_t),
+       const void *CodeptrRA = expectedDefault(const void *));
+
+  static OmptAssertEvent
+  Dispatch(const std::string &Name, const std::string &Group,
+           const ObserveState &Expected,
+           ompt_data_t *ParallelData = expectedDefault(ompt_data_t *),
+           ompt_data_t *TaskData = expectedDefault(ompt_data_t *),
+           ompt_dispatch_t Kind = expectedDefault(ompt_dispatch_t),
+           ompt_data_t Instance = expectedDefault(ompt_data_t));
+
+  static OmptAssertEvent
+  TaskCreate(const std::string &Name, const std::string &Group,
+             const ObserveState &Expected,
+             ompt_data_t *EncounteringTaskData = expectedDefault(ompt_data_t *),
+             const ompt_frame_t *EncounteringTaskFrame =
+                 expectedDefault(ompt_frame_t *),
+             ompt_data_t *NewTaskData = expectedDefault(ompt_data_t *),
+             int Flags = expectedDefault(int),
+             int HasDependences = expectedDefault(int),
+             const void *CodeptrRA = expectedDefault(const void *));
 
   static OmptAssertEvent TaskSchedule(const std::string &Name,
                                       const std::string &Group,
                                       const ObserveState &Expected);
 
-  static OmptAssertEvent ImplicitTask(const std::string &Name,
-                                      const std::string &Group,
-                                      const ObserveState &Expected);
+  static OmptAssertEvent
+  ImplicitTask(const std::string &Name, const std::string &Group,
+               const ObserveState &Expected, ompt_scope_endpoint_t Endpoint,
+               ompt_data_t *ParallelData = expectedDefault(ompt_data_t *),
+               ompt_data_t *TaskData = expectedDefault(ompt_data_t *),
+               unsigned int ActualParallelism = expectedDefault(unsigned int),
+               unsigned int Index = expectedDefault(unsigned int),
+               int Flags = expectedDefault(int));
+
+  static OmptAssertEvent
+  SyncRegion(const std::string &Name, const std::string &Group,
+             const ObserveState &Expected, ompt_sync_region_t Kind,
+             ompt_scope_endpoint_t Endpoint,
+             ompt_data_t *ParallelData = expectedDefault(ompt_data_t *),
+             ompt_data_t *TaskData = expectedDefault(ompt_data_t *),
+             const void *CodeptrRA = expectedDefault(const void *));
 
   static OmptAssertEvent
   Target(const std::string &Name, const std::string &Group,

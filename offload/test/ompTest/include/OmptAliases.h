@@ -37,4 +37,35 @@ constexpr ompt_callbacks_t CB_TARGET = ompt_callback_target;
 constexpr ompt_callbacks_t CB_DATAOP = ompt_callback_target_data_op;
 constexpr ompt_callbacks_t CB_KERNEL = ompt_callback_target_submit;
 
+/// Aliases for enum: ompt_work_t
+constexpr ompt_work_t WORK_LOOP = ompt_work_loop;
+constexpr ompt_work_t WORK_SECT = ompt_work_sections;
+constexpr ompt_work_t WORK_EXEC = ompt_work_single_executor;
+constexpr ompt_work_t WORK_SINGLE = ompt_work_single_other;
+constexpr ompt_work_t WORK_SHARE = ompt_work_workshare;
+constexpr ompt_work_t WORK_DIST = ompt_work_distribute;
+constexpr ompt_work_t WORK_TASK = ompt_work_taskloop;
+constexpr ompt_work_t WORK_SCOPE = ompt_work_scope;
+constexpr ompt_work_t WORK_LOOP_STA = ompt_work_loop_static;
+constexpr ompt_work_t WORK_LOOP_DYN = ompt_work_loop_dynamic;
+constexpr ompt_work_t WORK_LOOP_GUI = ompt_work_loop_guided;
+constexpr ompt_work_t WORK_LOOP_OTH = ompt_work_loop_other;
+
+/// Aliases for enum: ompt_sync_region_t
+constexpr ompt_sync_region_t SR_BARRIER = ompt_sync_region_barrier;
+constexpr ompt_sync_region_t SR_BARRIER_IMPL =
+    ompt_sync_region_barrier_implicit;
+constexpr ompt_sync_region_t SR_BARRIER_EXPL =
+    ompt_sync_region_barrier_explicit;
+constexpr ompt_sync_region_t SR_BARRIER_IMPLEMENTATION =
+    ompt_sync_region_barrier_implementation;
+constexpr ompt_sync_region_t SR_TASKWAIT = ompt_sync_region_taskwait;
+constexpr ompt_sync_region_t SR_TASKGROUP = ompt_sync_region_taskgroup;
+constexpr ompt_sync_region_t SR_REDUCTION = ompt_sync_region_reduction;
+constexpr ompt_sync_region_t SR_BARRIER_IMPL_WORKSHARE =
+    ompt_sync_region_barrier_implicit_workshare;
+constexpr ompt_sync_region_t SR_BARRIER_IMPL_PARALLEL =
+    ompt_sync_region_barrier_implicit_parallel;
+constexpr ompt_sync_region_t SR_BARRIER_TEAMS = ompt_sync_region_barrier_teams;
+
 #endif

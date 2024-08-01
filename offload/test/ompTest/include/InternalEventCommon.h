@@ -21,22 +21,33 @@ enum class EventTy {
   ThreadEnd,
   ParallelBegin,
   ParallelEnd,
-  TaskCreate,
-  TaskSchedule,
-  ImplicitTask,
-  Target,
-  TargetEmi,
-  TargetDataOp,
-  TargetDataOpEmi,
-  TargetSubmit,
-  TargetSubmitEmi,
-  ControlTool,
+  Work,
+  Dispatch,
+  TaskCreate,     // TODO: Implement
+  Dependences,    // TODO: Implement
+  TaskDependence, // TODO: Implement
+  TaskSchedule,   // TODO: Implement
+  ImplicitTask,   // TODO: Implement
+  Masked,         // TODO: Implement
+  SyncRegion,
+  MutexAcquire, // TODO: Implement
+  Mutex,        // TODO: Implement
+  NestLock,     // TODO: Implement
+  Flush,        // TODO: Implement
+  Cancel,       // TODO: Implement
   DeviceInitialize,
   DeviceFinalize,
   DeviceLoad,
   DeviceUnload,
   BufferRequest,
-  BufferComplete
+  BufferComplete,
+  TargetDataOp,
+  TargetDataOpEmi,
+  Target,
+  TargetEmi,
+  TargetSubmit,
+  TargetSubmitEmi,
+  ControlTool
 };
 
 struct InternalEvent {

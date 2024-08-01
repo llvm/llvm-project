@@ -118,13 +118,16 @@ public:
   void handleBufferRecordDeallocation(ompt_buffer_t *Buffer);
 
   /// Not needed for a conforming minimal OMPT implementation
-  void handleWorkBegin(ompt_work_t work_type, ompt_scope_endpoint_t endpoint,
-                       ompt_data_t *parallel_data, ompt_data_t *task_data,
-                       uint64_t count, const void *codeptr_ra);
+  void handleWork(ompt_work_t WorkType, ompt_scope_endpoint_t Endpoint,
+                  ompt_data_t *ParallelData, ompt_data_t *TaskData,
+                  uint64_t Count, const void *CodeptrRA);
 
-  void handleWorkEnd(ompt_work_t work_type, ompt_scope_endpoint_t endpoint,
-                     ompt_data_t *parallel_data, ompt_data_t *task_data,
-                     uint64_t count, const void *codeptr_ra);
+  void handleDispatch(ompt_data_t *ParallelData, ompt_data_t *TaskData,
+                      ompt_dispatch_t Kind, ompt_data_t Instance);
+
+  void handleSyncRegion(ompt_sync_region_t Kind, ompt_scope_endpoint_t Endpoint,
+                        ompt_data_t *ParallelData, ompt_data_t *TaskData,
+                        const void *CodeptrRA);
 
 private:
   /// Wrapper around emplace_back for potential additional logging / checking or

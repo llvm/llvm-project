@@ -128,9 +128,20 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
   case EventTy::ThreadEnd:
   case EventTy::ParallelBegin:
   case EventTy::ParallelEnd:
+  case EventTy::Work:
+  case EventTy::Dispatch:
   case EventTy::TaskCreate:
+  case EventTy::Dependences:
+  case EventTy::TaskDependence:
   case EventTy::TaskSchedule:
   case EventTy::ImplicitTask:
+  case EventTy::Masked:
+  case EventTy::SyncRegion:
+  case EventTy::MutexAcquire:
+  case EventTy::Mutex:
+  case EventTy::NestLock:
+  case EventTy::Flush:
+  case EventTy::Cancel:
   case EventTy::DeviceInitialize:
   case EventTy::DeviceFinalize:
   case EventTy::DeviceLoad:

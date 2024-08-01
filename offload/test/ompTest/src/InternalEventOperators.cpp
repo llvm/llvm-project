@@ -12,9 +12,51 @@ event_class_operator_w_body(ParallelBegin,                                     \
   return Expected.NumThreads == Observed.NumThreads;                           \
 )
 event_class_operator_stub(ParallelEnd)
+event_class_operator_w_body(Work,                                              \
+  bool isSameWorkType = (Expected.WorkType == Observed.WorkType);              \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
+  bool isSameParallelData =                                                    \
+    (Expected.ParallelData == expectedDefault(ompt_data_t *)) ?                \
+        true : (Expected.ParallelData == Observed.ParallelData);               \
+  bool isSameTaskData =                                                        \
+    (Expected.TaskData == expectedDefault(ompt_data_t *)) ?                    \
+        true : (Expected.TaskData == Observed.TaskData);                       \
+  bool isSameCount = (Expected.Count == expectedDefault(uint64_t)) ?           \
+        true : (Expected.Count == Observed.Count);                             \
+  return isSameWorkType && isSameEndpoint && isSameParallelData &&             \
+         isSameTaskData && isSameCount;                                        \
+)
+event_class_operator_stub(Dispatch)
 event_class_operator_stub(TaskCreate)
+event_class_operator_stub(Dependences)
+event_class_operator_stub(TaskDependence)
 event_class_operator_stub(TaskSchedule)
-event_class_operator_stub(ImplicitTask)
+event_class_operator_w_body(ImplicitTask,                                      \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
+  bool isSameActualParallelism =                                               \
+    (Expected.ActualParallelism == expectedDefault(unsigned int)) ?            \
+        true : (Expected.ActualParallelism == Observed.ActualParallelism);     \
+  bool isSameIndex = (Expected.Index == expectedDefault(unsigned int)) ?       \
+        true : ( Expected.Index == Observed.Index);                            \
+  return isSameEndpoint && isSameActualParallelism && isSameIndex;             \
+)
+event_class_operator_stub(Masked)
+event_class_operator_w_body(SyncRegion,                                        \
+  bool isSameKind = (Expected.Kind == Observed.Kind);                          \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
+  bool isSameParallelData =                                                    \
+    (Expected.ParallelData == expectedDefault(ompt_data_t *)) ?                \
+        true : (Expected.ParallelData == Observed.ParallelData);               \
+  bool isSameTaskData =                                                        \
+    (Expected.TaskData == expectedDefault(ompt_data_t *)) ?                    \
+        true : (Expected.TaskData == Observed.TaskData);                       \
+  return isSameKind && isSameEndpoint && isSameParallelData && isSameTaskData; \
+)
+event_class_operator_stub(MutexAcquire)
+event_class_operator_stub(Mutex)
+event_class_operator_stub(NestLock)
+event_class_operator_stub(Flush)
+event_class_operator_stub(Cancel)
 event_class_operator_w_body(Target,                                            \
   bool isSameKind = (Expected.Kind == Observed.Kind);                          \
   bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
@@ -233,9 +275,20 @@ define_cast_func(ThreadBegin)
 define_cast_func(ThreadEnd)
 define_cast_func(ParallelBegin)
 define_cast_func(ParallelEnd)
+define_cast_func(Work)
+define_cast_func(Dispatch)
 define_cast_func(TaskCreate)
+define_cast_func(Dependences)
+define_cast_func(TaskDependence)
 define_cast_func(TaskSchedule)
 define_cast_func(ImplicitTask)
+define_cast_func(Masked)
+define_cast_func(SyncRegion)
+define_cast_func(MutexAcquire)
+define_cast_func(Mutex)
+define_cast_func(NestLock)
+define_cast_func(Flush)
+define_cast_func(Cancel)
 define_cast_func(Target)
 define_cast_func(TargetEmi)
 define_cast_func(TargetDataOp)
@@ -258,9 +311,20 @@ class_equals_op(ThreadBegin)
 class_equals_op(ThreadEnd)
 class_equals_op(ParallelBegin)
 class_equals_op(ParallelEnd)
+class_equals_op(Work)
+class_equals_op(Dispatch)
 class_equals_op(TaskCreate)
+class_equals_op(Dependences)
+class_equals_op(TaskDependence)
 class_equals_op(TaskSchedule)
 class_equals_op(ImplicitTask)
+class_equals_op(Masked)
+class_equals_op(SyncRegion)
+class_equals_op(MutexAcquire)
+class_equals_op(Mutex)
+class_equals_op(NestLock)
+class_equals_op(Flush)
+class_equals_op(Cancel)
 class_equals_op(Target)
 class_equals_op(TargetEmi)
 class_equals_op(TargetDataOp)

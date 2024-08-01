@@ -45,16 +45,26 @@ public:
 private:
   bool Active{true};
 
-  // For now we add event types to the set of suppressed events by default.
-  // This is necessary because AOMP currently does not handle these events.
+  // Add event types to the set of suppressed events by default.
   std::set<omptest::internal::EventTy> SuppressedEvents{
-      omptest::internal::EventTy::ParallelBegin,
-      omptest::internal::EventTy::ParallelEnd,
       omptest::internal::EventTy::ThreadBegin,
       omptest::internal::EventTy::ThreadEnd,
-      omptest::internal::EventTy::ImplicitTask,
+      omptest::internal::EventTy::ParallelBegin,
+      omptest::internal::EventTy::ParallelEnd,
+      omptest::internal::EventTy::Work,
+      omptest::internal::EventTy::Dispatch,
       omptest::internal::EventTy::TaskCreate,
-      omptest::internal::EventTy::TaskSchedule};
+      omptest::internal::EventTy::Dependences,
+      omptest::internal::EventTy::TaskDependence,
+      omptest::internal::EventTy::TaskSchedule,
+      omptest::internal::EventTy::ImplicitTask,
+      omptest::internal::EventTy::Masked,
+      omptest::internal::EventTy::SyncRegion,
+      omptest::internal::EventTy::MutexAcquire,
+      omptest::internal::EventTy::Mutex,
+      omptest::internal::EventTy::NestLock,
+      omptest::internal::EventTy::Flush,
+      omptest::internal::EventTy::Cancel};
 };
 
 /// Base class for asserting on OMPT events

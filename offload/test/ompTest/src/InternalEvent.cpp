@@ -59,6 +59,79 @@ std::string internal::ParallelEnd::toString() const {
   return S;
 }
 
+std::string internal::Work::toString() const {
+  std::string S{"OMPT Callback Work: "};
+  S.append("work_type=").append(std::to_string(WorkType));
+  S.append(" endpoint=").append(std::to_string(Endpoint));
+  S.append(" parallel_data=").append(makeHexString((uint64_t)ParallelData));
+  S.append(" task_data=").append(makeHexString((uint64_t)TaskData));
+  S.append(" count=").append(std::to_string(Count));
+  S.append(" codeptr=").append(makeHexString((uint64_t)CodeptrRA));
+  return S;
+}
+
+std::string internal::Dispatch::toString() const {
+  std::string S{"OMPT Callback Dispatch: "};
+  S.append("parallel_data=").append(makeHexString((uint64_t)ParallelData));
+  S.append(" task_data=").append(makeHexString((uint64_t)TaskData));
+  S.append(" kind=").append(std::to_string(Kind));
+  // TODO Check what to print for instance in all different cases
+  if (Kind == ompt_dispatch_iteration) {
+    S.append(" instance[it=")
+        .append(std::to_string(Instance.value))
+        .append(1, ']');
+  } else if (Kind == ompt_dispatch_section) {
+    S.append(" instance=[ptr=")
+        .append(makeHexString((uint64_t)Instance.ptr))
+        .append(1, ']');
+  } else if ((Kind == ompt_dispatch_ws_loop_chunk ||
+              Kind == ompt_dispatch_taskloop_chunk ||
+              Kind == ompt_dispatch_distribute_chunk) &&
+             Instance.ptr != nullptr) {
+    auto Chunk = static_cast<ompt_dispatch_chunk_t *>(Instance.ptr);
+    S.append(" instance=[chunk=(start=")
+        .append(std::to_string(Chunk->start))
+        .append(", iterations=")
+        .append(std::to_string(Chunk->iterations))
+        .append(")]");
+  }
+  return S;
+}
+
+std::string internal::TaskCreate::toString() const {
+  std::string S{"OMPT Callback TaskCreate: "};
+  S.append("encountering_task_data=")
+      .append(makeHexString((uint64_t)EncounteringTaskData));
+  S.append(" encountering_task_frame=")
+      .append(makeHexString((uint64_t)EncounteringTaskFrame));
+  S.append(" new_task_data=").append(makeHexString((uint64_t)NewTaskData));
+  S.append(" flags=").append(std::to_string(Flags));
+  S.append(" has_dependences=").append(std::to_string(HasDependences));
+  S.append(" codeptr=").append(makeHexString((uint64_t)CodeptrRA));
+  return S;
+}
+
+std::string internal::ImplicitTask::toString() const {
+  std::string S{"OMPT Callback ImplicitTask: "};
+  S.append("endpoint=").append(std::to_string(Endpoint));
+  S.append(" parallel_data=").append(makeHexString((uint64_t)ParallelData));
+  S.append(" task_data=").append(makeHexString((uint64_t)TaskData));
+  S.append(" actual_parallelism=").append(std::to_string(ActualParallelism));
+  S.append(" index=").append(std::to_string(Index));
+  S.append(" flags=").append(std::to_string(Flags));
+  return S;
+}
+
+std::string internal::SyncRegion::toString() const {
+  std::string S{"OMPT Callback SyncRegion: "};
+  S.append("kind=").append(std::to_string(Kind));
+  S.append(" endpoint=").append(std::to_string(Endpoint));
+  S.append(" parallel_data=").append(makeHexString((uint64_t)ParallelData));
+  S.append(" task_data=").append(makeHexString((uint64_t)TaskData));
+  S.append(" codeptr=").append(makeHexString((uint64_t)CodeptrRA));
+  return S;
+}
+
 std::string internal::Target::toString() const {
   std::string S{"Callback Target: target_id="};
   S.append(std::to_string(TargetId));
