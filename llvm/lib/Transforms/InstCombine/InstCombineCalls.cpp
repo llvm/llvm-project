@@ -89,11 +89,6 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
 
-static cl::opt<bool> SkipRetTypeVoidToNonVoidCallInst(
-    "instcombine-skip-call-ret-type-void-to-nonvoid", cl::init(false),
-    cl::desc("skip simplifying call instruction which expects a non-void "
-             "return value but the callee returns void"));
-
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
 static Type *getPromotedType(Type *Ty) {
@@ -4076,9 +4071,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       if (Callee->isDeclaration())
         return false;   // Cannot transform this return value.
 
-      if (!Caller->use_empty() &&
-          // void -> non-void is handled specially
-          (SkipRetTypeVoidToNonVoidCallInst || !NewRetTy->isVoidTy()))
+      if (!Caller->use_empty() || NewRetTy->isVoidTy())
         return false;   // Cannot transform this return value.
     }
 
@@ -4238,9 +4231,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
   AttributeSet FnAttrs = CallerPAL.getFnAttrs();
 
-  if (NewRetTy->isVoidTy())
-    Caller->setName("");   // Void type should not have a name.
-
   assert((ArgAttrs.size() == FT->getNumParams() || FT->isVarArg()) &&
          "missing argument attributes");
   AttributeList NewCallerPAL = AttributeList::get(
@@ -4269,17 +4259,14 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   Instruction *NC = NewCall;
   Value *NV = NC;
   if (OldRetTy != NV->getType() && !Caller->use_empty()) {
-    if (!NV->getType()->isVoidTy()) {
-      NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
-      NC->setDebugLoc(Caller->getDebugLoc());
+    assert(!NV->getType()->isVoidTy());
+    NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
+    NC->setDebugLoc(Caller->getDebugLoc());
 
-      auto OptInsertPt = NewCall->getInsertionPointAfterDef();
-      assert(OptInsertPt && "No place to insert cast");
-      InsertNewInstBefore(NC, *OptInsertPt);
-      Worklist.pushUsersToWorkList(*Caller);
-    } else {
-      NV = PoisonValue::get(Caller->getType());
-    }
+    auto OptInsertPt = NewCall->getInsertionPointAfterDef();
+    assert(OptInsertPt && "No place to insert cast");
+    InsertNewInstBefore(NC, *OptInsertPt);
+    Worklist.pushUsersToWorkList(*Caller);
   }
 
   if (!Caller->use_empty())
