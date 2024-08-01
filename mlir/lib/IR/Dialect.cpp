@@ -260,7 +260,7 @@ void DialectRegistry::applyExtensions(Dialect *dialect) const {
 
   // Note: Additional extensions may be added while applying an extension.
   for (int i = 0; i < static_cast<int>(extensions.size()); ++i)
-    applyExtension(*extensions[i]);
+    applyExtension(*extensions[i].second);
 }
 
 void DialectRegistry::applyExtensions(MLIRContext *ctx) const {
@@ -287,7 +287,7 @@ void DialectRegistry::applyExtensions(MLIRContext *ctx) const {
 
   // Note: Additional extensions may be added while applying an extension.
   for (int i = 0; i < static_cast<int>(extensions.size()); ++i)
-    applyExtension(*extensions[i]);
+    applyExtension(*extensions[i].second);
 }
 
 bool DialectRegistry::isSubsetOf(const DialectRegistry &rhs) const {
