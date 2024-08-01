@@ -3223,6 +3223,9 @@ public:
     if (!hasSameType(FD1->getReturnType(), FD2->getReturnType()))
       return false;
 
+    if (FD1->isVariadic() != FD2->isVariadic())
+      return false;
+
     if (FD1->getNumParams() != FD2->getNumParams())
       return false;
 
