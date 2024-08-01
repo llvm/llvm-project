@@ -265,6 +265,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   Clang->LoadRequestedPlugins();
 
   // Honor -mllvm.
+  // Additional arguments to forward to LLVM's option processing
+  // 处理额外的option并传递给LLVM
   //
   // FIXME: Remove this, one day.
   // This should happen AFTER plugins have been loaded!
@@ -278,9 +280,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
-// clang-format off
-// Cratels: 是否打开 clang 的静态代码检测功能。只到 endif 的代码都在处理静态代码检测的问题，暂时不处理
-// clang-format on
+  // clang-format off
+  // Cratels: 是否打开 clang 的静态代码检测功能。只到 endif 的代码都在处理静态代码检测的问题，暂时不处理
+  // clang-format on
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!
 
@@ -314,13 +316,17 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 #endif
 
   // If there were errors in processing arguments, don't do anything else.
+  // 处理参数是报错的话就直接退出，不做任何事情
   if (Clang->getDiagnostics().hasErrorOccurred())
     return false;
+
   // Create and execute the frontend action.
   // clang-format off
   // Cratels: Clang持有Action的信息，CreateFrontendAction会根据该action创建出正确的FrontedAction对象，然后根据该对象构建一个 unique_ptr，将其作用域交给系统。
+  // 比如这里用户传入--ast-dump的option，则这里就会创建一个打印出AST对应的Action，然后执行即可。
   // clang-format on
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
+
   if (!Act)
     return false;
 
@@ -329,6 +335,10 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // clang-format on
   bool Success = Clang->ExecuteAction(*Act);
 
+  // Disable memory freeing on exit.
+  // clang-format off
+  // Cratels: 一般情况下调用结束后系统会回收此次调用的内存，但是clang提供了一个option来保持内存不被回收，无论是否执行成功
+  // clang-format on
   if (Clang->getFrontendOpts().DisableFree)
     llvm::BuryPointer(std::move(Act));
   return Success;

@@ -317,7 +317,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   //
   // clang-format on
 
-  // Cratels: 作为 driver，完整编译器开始执行
+  // clang-format off
+  // Cratels: 作为完整编译器
+  // clang-format on
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
   bool CanonicalPrefixes = true;
@@ -363,6 +365,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                  &llvm::errs());
   }
 
+  // clang-format off
+  // Cratels: 获取当前执行clang的文件路径
+  // clang-format on
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
   llvm::outs() << Path << "\n";
 
@@ -370,6 +375,11 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // should spawn a new clang subprocess (old behavior).
   // Not having an additional process saves some execution time of Windows,
   // and makes debugging and profiling easier.
+  // clang-format off
+  // Cratels: 是在当前进程中调用 cc1 工具，还是生成一个新的 clang 子进程（旧行为）。
+  // 没有额外的进程可以节省 Windows 的一些执行时间，并使调试和剖析变得更容易。
+  // 这里是在说是否将编译器的前端和后端相对分开。
+  // clang-format on
   bool UseNewCC1Process = CLANG_SPAWN_CC1;
   for (const char *Arg : Args)
     UseNewCC1Process = llvm::StringSwitch<bool>(Arg)
@@ -398,6 +408,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
 
+  // clang-format off
+  // Cratels: Driver对象是整个编译流程的抽象表示，这里在构造这个对象的时候需要指定执行文件路径，硬件目标三元组的信息以及诊断信息引擎
+  // clang-format on
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
@@ -425,6 +438,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
 
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
+
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
     auto Level =
         llvm::StringSwitch<std::optional<Driver::ReproLevel>>(A->getValue())
@@ -440,6 +454,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     }
     ReproLevel = *Level;
   }
+
   if (!!::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     ReproLevel = Driver::ReproLevel::Always;
 

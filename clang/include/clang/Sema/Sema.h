@@ -530,6 +530,9 @@ struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
                             const FunctionEffectsRef &New);
 };
 
+// clang-format off
+// Cratels: C语言的语法分析器
+// clang-format on
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {

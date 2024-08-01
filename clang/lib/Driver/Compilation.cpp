@@ -67,7 +67,8 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
   if (!Entry) {
     SmallVector<Arg *, 4> AllocatedArgs;
     DerivedArgList *OpenMPArgs = nullptr;
-    // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
+    // Translate OpenMP toolchain arguments provided via the -Xopenmp-target
+    // flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
       bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
@@ -131,8 +132,7 @@ bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {
     // so we don't need to check again.
 
     if (IssueErrors)
-      getDriver().Diag(diag::err_drv_unable_to_remove_file)
-        << EC.message();
+      getDriver().Diag(diag::err_drv_unable_to_remove_file) << EC.message();
     return false;
   }
   return true;
@@ -141,13 +141,12 @@ bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {
 bool Compilation::CleanupFileList(const llvm::opt::ArgStringList &Files,
                                   bool IssueErrors) const {
   bool Success = true;
-  for (const auto &File: Files)
+  for (const auto &File : Files)
     Success &= CleanupFile(File, IssueErrors);
   return Success;
 }
 
-bool Compilation::CleanupFileMap(const ArgStringMap &Files,
-                                 const JobAction *JA,
+bool Compilation::CleanupFileMap(const ArgStringMap &Files, const JobAction *JA,
                                  bool IssueErrors) const {
   bool Success = true;
   for (const auto &File : Files) {
@@ -163,8 +162,8 @@ bool Compilation::CleanupFileMap(const ArgStringMap &Files,
 int Compilation::ExecuteCommand(const Command &C,
                                 const Command *&FailingCommand,
                                 bool LogOnly) const {
-  if ((getDriver().CCPrintOptions ||
-       getArgs().hasArg(options::OPT_v)) && !getDriver().CCGenDiagnostics) {
+  if ((getDriver().CCPrintOptions || getArgs().hasArg(options::OPT_v)) &&
+      !getDriver().CCGenDiagnostics) {
     raw_ostream *OS = &llvm::errs();
     std::unique_ptr<llvm::raw_fd_ostream> OwnedStream;
 
@@ -302,9 +301,7 @@ void Compilation::initCompilationForDiagnostics() {
   ForceKeepTempFiles = true;
 }
 
-StringRef Compilation::getSysRoot() const {
-  return getDriver().SysRoot;
-}
+StringRef Compilation::getSysRoot() const { return getDriver().SysRoot; }
 
 void Compilation::Redirect(ArrayRef<std::optional<StringRef>> Redirects) {
   this->Redirects = Redirects;

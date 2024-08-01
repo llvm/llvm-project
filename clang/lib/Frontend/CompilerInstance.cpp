@@ -1013,6 +1013,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   // clang-format off
   // Cratels: 执行前的准备动作
+  // 提供可能需要处理的接口，默认实现只是返回true
   // clang-format on
   if (!Act.PrepareToExecute(*this))
     return false;

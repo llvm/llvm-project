@@ -162,7 +162,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   return 0;
 }
 
-static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
+static int PrintEnabledExtensions(const TargetOptions &TargetOpts) {
   std::string Error;
   const llvm::Target *TheTarget =
       llvm::TargetRegistry::lookupTarget(TargetOpts.Triple, Error);
@@ -177,7 +177,9 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
+      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU,
+                                     FeaturesStr, BackendOptions,
+                                     std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
@@ -185,7 +187,7 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
   const std::vector<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getEnabledProcessorFeatures();
+      MCInfo->getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
   for (const llvm::SubtargetFeatureKV &feature : Features)
     EnabledFeatureNames.insert(feature.Key);
@@ -261,10 +263,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                                     Argv, Diags, Argv0);
 
   // Cratels: 解析完参数后直接使用
+  // clang-format off
+  // Cratels: 是否跟踪执行时间
+  // clang-format on
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
   }
+
+  // clang-format off
+  // Cratels: 打印出目标支持的CPU的triple
+  // clang-format on
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs) {
     llvm::outs() << Clang->getTargetOpts().Triple;
@@ -279,6 +288,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getFrontendOpts().PrintEnabledExtensions)
     return PrintEnabledExtensions(Clang->getTargetOpts());
 
+  // clang-format off
+  // Cratels: 如果编译时指定了builtin include的路径，就是用该路径。如果没有指定，就是用默认的路径。
+  // clang-format on
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
@@ -286,12 +298,18 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
         CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
+  // clang-format off
+  // Cratels: 创建诊断引擎
+  // clang-format on
   Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return 1;
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
+  // clang-format off
+  // Cratels: 设置错误处理程序，以便任何 LLVM 后端诊断都会通过我们的错误处理程序。
+  // clang-format on
   llvm::install_fatal_error_handler(
       LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 

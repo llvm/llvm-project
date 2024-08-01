@@ -1067,10 +1067,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 }
 
 llvm::Error FrontendAction::Execute() {
+
+  // clang-format off
+  // Cratels: 获取全局唯一单例的Compliance对象，它拥有本次编译的全部信息
+  // clang-format on
   CompilerInstance &CI = getCompilerInstance();
 
   // clang-format off
   // Cratels:ExecuteAction是一个纯虚方法，具体实现由各个action来实现。
+  // 此处我们可以以打印AST的Action为例进行进一步分析
   // clang-format on
   if (CI.hasFrontendTimer()) {
     llvm::TimeRegion Timer(CI.getFrontendTimer());
@@ -1080,6 +1085,9 @@ llvm::Error FrontendAction::Execute() {
 
   // If we are supposed to rebuild the global module index, do so now unless
   // there were any module-build failures.
+  // clang-format off
+  // Cratels: 如果我们应该重建全局模块索引，那么现在就重建，除非有任何模块构建失败。
+  // clang-format on
   if (CI.shouldBuildGlobalModuleIndex() && CI.hasFileManager() &&
       CI.hasPreprocessor()) {
     StringRef Cache =

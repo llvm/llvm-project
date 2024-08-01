@@ -41,14 +41,13 @@ public:
   ResetStackCleanup(llvm::CrashRecoveryContext *Context, const void *Top)
       : llvm::CrashRecoveryContextCleanupBase<ResetStackCleanup, const void>(
             Context, Top) {}
-  void recoverResources() override {
-    llvm::RestorePrettyStackState(resource);
-  }
+  void recoverResources() override { llvm::RestorePrettyStackState(resource); }
 };
 
 /// If a crash happens while the parser is active, an entry is printed for it.
 class PrettyStackTraceParserEntry : public llvm::PrettyStackTraceEntry {
   const Parser &P;
+
 public:
   PrettyStackTraceParserEntry(const Parser &p) : P(p) {}
   void print(raw_ostream &OS) const override;
@@ -87,7 +86,7 @@ void PrettyStackTraceParserEntry::print(raw_ostream &OS) const {
   }
 }
 
-}  // namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Public interface to the file
@@ -97,9 +96,8 @@ void PrettyStackTraceParserEntry::print(raw_ostream &OS) const {
 /// the file is parsed.  This inserts the parsed decls into the translation unit
 /// held by Ctx.
 ///
-void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer,
-                     ASTContext &Ctx, bool PrintStats,
-                     TranslationUnitKind TUKind,
+void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer, ASTContext &Ctx,
+                     bool PrintStats, TranslationUnitKind TUKind,
                      CodeCompleteConsumer *CompletionConsumer,
                      bool SkipFunctionBodies) {
 
@@ -138,8 +136,8 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   PrettyStackTraceParserEntry CrashInfo(P);
 
   // Recover resources if we crash before exiting this method.
-  llvm::CrashRecoveryContextCleanupRegistrar<Parser>
-    CleanupParser(ParseOP.get());
+  llvm::CrashRecoveryContextCleanupRegistrar<Parser> CleanupParser(
+      ParseOP.get());
 
   S.getPreprocessor().EnterMainSourceFile();
   ExternalASTSource *External = S.getASTContext().getExternalSource();
@@ -149,6 +147,9 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   // If a PCH through header is specified that does not have an include in
   // the source, or a PCH is being created with #pragma hdrstop with nothing
   // after the pragma, there won't be any tokens or a Lexer.
+  // clang-format off
+  // Cratels: 词法分析在预处理过程中完成
+  // clang-format on
   bool HaveLexer = S.getPreprocessor().getCurrentLexer();
 
   if (HaveLexer) {
@@ -185,7 +186,8 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   std::swap(OldCollectStats, S.CollectStats);
   if (PrintStats) {
     llvm::errs() << "\nSTATISTICS:\n";
-    if (HaveLexer) P.getActions().PrintStats();
+    if (HaveLexer)
+      P.getActions().PrintStats();
     S.getASTContext().PrintStats();
     Decl::PrintStats();
     Stmt::PrintStats();
