@@ -2958,6 +2958,14 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
       InputMapping{origInputNo, /*size=*/0, replacementValue};
 }
 
+void TypeConverter::SignatureConversion::replaceRemappedInputType(
+    unsigned origInputNo, Type type) {
+  auto inputMap = remappedInputs[origInputNo];
+  assert(inputMap && "Expected remapped input");
+  assert(inputMap->size == 1 && "Can't replace 1->N remapped input");
+  argTypes[inputMap->inputNo] = type;
+}
+
 LogicalResult TypeConverter::convertType(Type t,
                                          SmallVectorImpl<Type> &results) const {
   {

@@ -302,6 +302,40 @@ Type LLVMTypeConverter::convertFunctionSignature(
                                      isVariadic);
 }
 
+LLVM::LLVMFunctionType LLVMTypeConverter::materializePtrForByValByRefFuncArgs(
+    LLVM::LLVMFunctionType funcType,
+    ArrayRef<std::optional<NamedAttribute>> byValRefArgAttrs,
+    LLVMTypeConverter::SignatureConversion &signatureConv) const {
+  if (byValRefArgAttrs.empty())
+    return funcType;
+
+  // Replace the type of `llvm.byval` and `llvm.byref` arguments with an LLVM
+  // pointer type in the signature conversion.
+  for (int inArgIdx : llvm::seq(byValRefArgAttrs.size())) {
+    auto inAttr = byValRefArgAttrs[inArgIdx];
+    if (!inAttr)
+      continue;
+
+    StringRef inAttrName = inAttr->getName().getValue();
+    if (inAttrName != LLVM::LLVMDialect::getByValAttrName() &&
+        inAttrName != LLVM::LLVMDialect::getByRefAttrName())
+      continue;
+
+    auto mapping = signatureConv.getInputMapping(inArgIdx);
+    assert(mapping && "unexpected deletion of function argument");
+    // Replace the argument type with an LLVM pointer type. Only do so if there
+    // is a one-to-one mapping from old to new types.
+    if (mapping->size == 1) {
+      signatureConv.replaceRemappedInputType(
+          mapping->inputNo, LLVM::LLVMPointerType::get(&getContext()));
+    }
+  }
+
+  return LLVM::LLVMFunctionType::get(funcType.getReturnType(),
+                                     signatureConv.getConvertedTypes(),
+                                     funcType.isVarArg());
+}
+
 /// Converts the function type to a C-compatible format, in particular using
 /// pointers to memref descriptors for arguments.
 std::pair<LLVM::LLVMFunctionType, LLVM::LLVMStructType>
@@ -698,4 +732,25 @@ mlir::barePtrFuncArgTypeConverter(const LLVMTypeConverter &converter, Type type,
 
   result.push_back(llvmTy);
   return success();
+}
+
+void mlir::filterByValByRefArgAttributes(
+    FunctionOpInterface funcOp,
+    SmallVectorImpl<std::optional<NamedAttribute>> &result) {
+  assert(result.empty() && "Unexpected non-empty output");
+  result.resize(funcOp.getNumArguments(), std::nullopt);
+  bool hasByValByRefAttrs = false;
+  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
+    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
+      if (namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
+          namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName()) {
+        hasByValByRefAttrs = true;
+        result[argIdx] = namedAttr;
+        break;
+      }
+    }
+  }
+
+  if (!hasByValByRefAttrs)
+    result.clear();
 }

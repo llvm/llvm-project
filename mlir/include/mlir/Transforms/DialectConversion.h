@@ -96,6 +96,10 @@ public:
     /// value. This drops the original argument.
     void remapInput(unsigned origInputNo, Value replacement);
 
+    /// Replace the type of an input that has been previously remapped to a new
+    /// single input.
+    void replaceRemappedInputType(unsigned origInputNo, Type type);
+
   private:
     /// Remap an input of the original signature with a range of types in the
     /// new signature.
