@@ -134,10 +134,10 @@ void negation(void) {
 
 // cvise'd kernel code that caused problems during development due to sign
 // extension
-typedef unsigned long size_t;
+typedef unsigned long _size_t;
 int qnbytes;
 int *key_alloc_key;
-size_t key_alloc_quotalen;
+_size_t key_alloc_quotalen;
 int *key_alloc(void) {
   if (qnbytes + key_alloc_quotalen < qnbytes)
     return key_alloc_key;
