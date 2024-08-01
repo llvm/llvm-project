@@ -2068,12 +2068,6 @@ public:
     case Intrinsic::roundeven:
       ISD = ISD::FROUNDEVEN;
       break;
-    case Intrinsic::lround:
-      ISD = ISD::LROUND;
-      break;
-    case Intrinsic::llround:
-      ISD = ISD::LLROUND;
-      break;
     case Intrinsic::pow:
       ISD = ISD::FPOW;
       break;
