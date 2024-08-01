@@ -232,7 +232,12 @@ define i1 @f32_fcnan(float %a) {
 define i1 @f32_fcnan_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcnan_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = fcmp uno float [[A]], 0.000000e+00
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[I32]], 2139095040
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 2139095040
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[I32]], 8388607
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[AND2]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %i32 = bitcast float %a to i32
@@ -699,9 +704,9 @@ define i1 @isnotnan_idiom(double %x) {
 
 ; negative tests
 
-define i1 @isnan_idiom_no_implicit(double %x) noimplicitfloat {
-; CHECK-LABEL: define i1 @isnan_idiom_no_implicit(
-; CHECK-SAME: double [[X:%.*]]) #[[ATTR1]] {
+define i1 @isnan_idiom_strictfp(double %x) strictfp {
+; CHECK-LABEL: define i1 @isnan_idiom_strictfp(
+; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
 ; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405312
@@ -848,6 +853,26 @@ define i1 @isnan_idiom_invalid_bitcast(<2 x float> %x) {
   %cond1 = icmp eq i64 %mask1, 9218868437227405312
   %mask2 = and i64 %bits, 4503599627370495
   %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_ppc_fp128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_ppc_fp128(
+; CHECK-SAME: ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast ppc_fp128 [[X]] to i128
+; CHECK-NEXT:    [[MASK1:%.*]] = and i128 [[BITS]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i128 [[MASK1]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[MASK2:%.*]] = and i128 [[BITS]], 83076749736557242056487941267521535
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i128 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast ppc_fp128 %x to i128
+  %mask1 = and i128 %bits, 170058106710732674489630815774616584192
+  %cond1 = icmp eq i128 %mask1, 170058106710732674489630815774616584192
+  %mask2 = and i128 %bits, 83076749736557242056487941267521535
+  %cond2 = icmp ne i128 %mask2, 0
   %ret = and i1 %cond1, %cond2
   ret i1 %ret
 }

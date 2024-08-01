@@ -326,8 +326,8 @@ static std::optional<std::pair<unsigned, unsigned>> getMaskedTypeForICmpPair(
 /// (icmp (A & 12) != 0) & (icmp (A & 15) == 8) -> (icmp (A & 15) == 8).
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-    ICmpInst *LHS, ICmpInst *RHS, bool IsAnd, Value *A, Value *B, Value *C,
-    Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
+    ICmpInst *LHS, ICmpInst *RHS, bool IsAnd, Value *A, Value *B, Value *D,
+    Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
     InstCombiner::BuilderTy &Builder) {
   // We are given the canonical form:
   //   (icmp ne (A & B), 0) & (icmp eq (A & D), E).
@@ -340,8 +340,8 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // We currently handle the case of B, C, D, E are constant.
   //
   const APInt *BCst, *DCst, *OrigECst;
-  if (!match(B, m_APInt(BCst)) || !match(C, m_Zero()) ||
-      !match(D, m_APInt(DCst)) || !match(E, m_APInt(OrigECst)))
+  if (!match(B, m_APInt(BCst)) || !match(D, m_APInt(DCst)) ||
+      !match(E, m_APInt(OrigECst)))
     return nullptr;
 
   ICmpInst::Predicate NewCC = IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
@@ -359,29 +359,29 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   if (*BCst == 0 || *DCst == 0)
     return nullptr;
 
-  // If B and D don't intersect, ie. (B & D) == 0, no folding because we can't
-  // deduce anything from it.
-  // For example,
-  // (icmp ne (A & 12), 0) & (icmp eq (A & 3), 1) -> no folding.
-  if ((*BCst & *DCst) == 0) {
-    // Try to fold isNaN idiom:
-    // (icmp ne (A & FractionBits), 0) & (icmp eq (A & ExpBits), ExpBits) ->
-    // isNaN(A)
+  // If B and D don't intersect, ie. (B & D) == 0, try to fold isNaN idiom:
+  // (icmp ne (A & FractionBits), 0) & (icmp eq (A & ExpBits), ExpBits)
+  // -> isNaN(A)
+  // Otherwise, we cannot deduce anything from it.
+  if (!BCst->intersects(*DCst)) {
     Value *Src;
-    if (match(A, m_ElementWiseBitCast(m_Value(Src))) &&
-        Src->getType()->getScalarType()->isIEEELikeFPTy() &&
+    if (*DCst == ECst && match(A, m_ElementWiseBitCast(m_Value(Src))) &&
         !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
-            Attribute::NoImplicitFloat)) {
-      APInt ExpBits =
-          APFloat::getInf(Src->getType()->getScalarType()->getFltSemantics())
-              .bitcastToAPInt();
+            Attribute::StrictFP)) {
+      Type *Ty = Src->getType()->getScalarType();
+      if (!Ty->isIEEELikeFPTy())
+        return nullptr;
+
+      APInt ExpBits = APFloat::getInf(Ty->getFltSemantics()).bitcastToAPInt();
+      if (ECst != ExpBits)
+        return nullptr;
       APInt FractionBits = ~ExpBits;
       FractionBits.clearSignBit();
+      if (*BCst != FractionBits)
+        return nullptr;
 
-      if (*BCst == FractionBits && *DCst == ExpBits && ECst == ExpBits)
-        return Builder.CreateFCmp(IsAnd ? FCmpInst::FCMP_UNO
-                                        : FCmpInst::FCMP_ORD,
-                                  Src, ConstantFP::getZero(Src->getType()));
+      return Builder.CreateFCmp(IsAnd ? FCmpInst::FCMP_UNO : FCmpInst::FCMP_ORD,
+                                Src, ConstantFP::getZero(Src->getType()));
     }
     return nullptr;
   }
@@ -484,14 +484,12 @@ static Value *foldLogOpOfMaskedICmpsAsymmetric(
   }
   if ((LHSMask & Mask_NotAllZeros) && (RHSMask & BMask_Mixed)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            LHS, RHS, IsAnd, A, B, C, D, E,
-            PredL, PredR, Builder)) {
+            LHS, RHS, IsAnd, A, B, D, E, PredL, PredR, Builder)) {
       return V;
     }
   } else if ((LHSMask & BMask_Mixed) && (RHSMask & Mask_NotAllZeros)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            RHS, LHS, IsAnd, A, D, E, B, C,
-            PredR, PredL, Builder)) {
+            RHS, LHS, IsAnd, A, D, B, C, PredR, PredL, Builder)) {
       return V;
     }
   }
