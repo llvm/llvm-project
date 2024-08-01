@@ -2752,7 +2752,10 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
                                         mlir::Location loc, CharUnits alignment,
                                         mlir::OpBuilder::InsertPoint ip,
                                         mlir::Value arraySize) {
-  auto localVarPtrTy = mlir::cir::PointerType::get(builder.getContext(), ty);
+  // CIR uses its own alloca AS rather than follow the target data layout like
+  // original CodeGen. The data layout awareness should be done in the lowering
+  // pass instead.
+  auto localVarPtrTy = builder.getPointerTo(ty, getCIRAllocaAddressSpace());
   auto alignIntAttr = CGM.getSize(alignment);
 
   mlir::Value addr;
@@ -2977,7 +2980,9 @@ Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  if (getASTAllocaAddressSpace() != LangAS::Default) {
+  if (auto ASTAS =
+          builder.getAddrSpaceAttr(CGM.getLangTempAllocaAddressSpace());
+      getCIRAllocaAddressSpace() != ASTAS) {
     llvm_unreachable("Requires address space cast which is NYI");
   }
   return Address(V, Ty, Align);

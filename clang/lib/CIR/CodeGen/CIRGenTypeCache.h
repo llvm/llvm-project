@@ -18,6 +18,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/MissingFeatures.h"
 
 namespace cir {
@@ -108,7 +109,7 @@ struct CIRGenTypeCache {
   //     unsigned char SizeAlignInBytes;
   //   };
 
-  clang::LangAS ASTAllocaAddressSpace;
+  mlir::cir::AddressSpaceAttr CIRAllocaAddressSpace;
 
   //   clang::CharUnits getSizeSize() const {
   //     return clang::CharUnits::fromQuantity(SizeSizeInBytes);
@@ -123,13 +124,8 @@ struct CIRGenTypeCache {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
   }
 
-  clang::LangAS getASTAllocaAddressSpace() const {
-    // Address spaces are not yet fully supported, but the usage of the default
-    // alloca address space can be used for now only for comparison with the
-    // default address space.
-    assert(!MissingFeatures::addressSpace());
-    assert(ASTAllocaAddressSpace == clang::LangAS::Default);
-    return ASTAllocaAddressSpace;
+  mlir::cir::AddressSpaceAttr getCIRAllocaAddressSpace() const {
+    return CIRAllocaAddressSpace;
   }
 };
 

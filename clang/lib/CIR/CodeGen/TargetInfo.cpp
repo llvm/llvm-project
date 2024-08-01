@@ -263,6 +263,12 @@ public:
   CommonSPIRTargetCIRGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
       : TargetCIRGenInfo(std::move(ABIInfo)) {}
 
+  mlir::cir::AddressSpaceAttr getCIRAllocaAddressSpace() const override {
+    return mlir::cir::AddressSpaceAttr::get(
+        &getABIInfo().CGT.getMLIRContext(),
+        mlir::cir::AddressSpaceAttr::Kind::offload_private);
+  }
+
   unsigned getOpenCLKernelCallingConv() const override {
     return llvm::CallingConv::SPIR_KERNEL;
   }
