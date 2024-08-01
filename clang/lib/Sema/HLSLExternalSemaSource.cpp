@@ -81,6 +81,7 @@ struct BuiltinTypeDeclBuilder {
 
   BuiltinTypeDeclBuilder &
   addMemberVariable(StringRef Name, QualType Type,
+                    llvm::SmallVector<Attr *, 2> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
@@ -96,6 +97,8 @@ struct BuiltinTypeDeclBuilder {
         nullptr, false, InClassInitStyle::ICIS_NoInit);
     Field->setAccess(Access);
     Field->setImplicit(true);
+    for (Attr *A : Attrs)
+      Field->addAttr(A);
     Record->addDecl(Field);
     Fields[Name] = Field;
     return *this;
@@ -114,12 +117,12 @@ struct BuiltinTypeDeclBuilder {
             QualType(TTD->getTypeForDecl(), 0));
     }
     // add handle member
-    addMemberVariable("h", Ty, Access);
-    // add resource attributes to handle
-    auto *FD = Fields["h"];
-    FD->addAttr(HLSLResourceClassAttr::CreateImplicit(FD->getASTContext(), RC));
-    FD->addAttr(
-        HLSLResourceAttr::CreateImplicit(FD->getASTContext(), RK, IsROV));
+    llvm::SmallVector<Attr *, 2> Attrs;
+    Attrs.push_back(
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
+    Attrs.push_back(
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
+    addMemberVariable("h", Ty, Attrs, Access);
     return *this;
   }
 
