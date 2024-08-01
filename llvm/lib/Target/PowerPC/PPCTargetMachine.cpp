@@ -501,7 +501,7 @@ void PPCPassConfig::addIRPasses() {
 
 bool PPCPassConfig::addPreISel() {
   if (EnableGlobalMerge)
-    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false,
                                   true));
 
   if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)

@@ -197,12 +197,11 @@ public:
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
-                       bool MergePrivateGlobals, bool MergeConstantGlobals)
+                       bool MergeConstantGlobals)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
-    Opt.MergePrivateGlobals = MergePrivateGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
@@ -732,13 +731,10 @@ bool GlobalMergeImpl::run(Module &M) {
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
                                   bool MergeExternalByDefault,
-                                  bool MergePrivateByDefault,
                                   bool MergeConstantByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
-  bool MergeConstant = EnableGlobalMergeOnConst.getNumOccurrences() > 0
-                           ? EnableGlobalMergeOnConst
-                           : MergeConstantByDefault;
+  bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
   return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
-                         MergePrivateByDefault, MergeConstant);
+                         MergeConstant);
 }
