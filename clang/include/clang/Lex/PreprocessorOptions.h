@@ -213,7 +213,7 @@ public:
 
   /// If set, the preprocessor reports an error when processing #pragma mc_func
   /// on AIX.
-  bool ErrorOnPragmaMcfuncOnAIX = false;
+  bool ErrorOnPragmaMcfuncOnAIX = true;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
@@ -252,7 +252,7 @@ public:
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = false;
     RetainExcludedConditionalBlocks = false;
-    ErrorOnPragmaMcfuncOnAIX = false;
+    ErrorOnPragmaMcfuncOnAIX = true;
   }
 };
 
