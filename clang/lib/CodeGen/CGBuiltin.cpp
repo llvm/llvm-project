@@ -14300,13 +14300,13 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
 }
 
 Value *CodeGenFunction::EmitRISCVCpuInit() {
-  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {VoidPtrTy}, false);
   llvm::FunctionCallee Func =
       CGM.CreateRuntimeFunction(FTy, "__init_riscv_feature_bits");
   auto *CalleeGV = cast<llvm::GlobalValue>(Func.getCallee());
   CalleeGV->setDSOLocal(true);
   CalleeGV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-  return Builder.CreateCall(Func);
+  return Builder.CreateCall(Func, {llvm::ConstantPointerNull::get(VoidPtrTy)});
 }
 
 Value *CodeGenFunction::EmitX86CpuInit() {

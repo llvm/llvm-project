@@ -250,7 +250,7 @@ int test_ppc(int a) {
 // CHECK-RV32-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-RV32-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-// CHECK-RV32-NEXT:    call void @__init_riscv_feature_bits()
+// CHECK-RV32-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1
@@ -291,7 +291,7 @@ int test_ppc(int a) {
 // CHECK-RV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-RV64-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-RV64-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-// CHECK-RV64-NEXT:    call void @__init_riscv_feature_bits()
+// CHECK-RV64-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [1 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1
