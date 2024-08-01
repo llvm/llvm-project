@@ -1548,11 +1548,26 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm_unreachable("builtin functions are handled elsewhere");
 
   case CK_LValueBitCast:
-    llvm_unreachable("NYI");
   case CK_ObjCObjectLValueCast:
-    llvm_unreachable("NYI");
-  case CK_LValueToRValueBitCast:
-    llvm_unreachable("NYI");
+  case CK_LValueToRValueBitCast: {
+    LValue SourceLVal = CGF.buildLValue(E);
+    Address SourceAddr = SourceLVal.getAddress();
+
+    mlir::Type DestElemTy = CGF.convertTypeForMem(DestTy);
+    mlir::Type DestPtrTy = CGF.getBuilder().getPointerTo(DestElemTy);
+    mlir::Value DestPtr = CGF.getBuilder().createBitcast(
+        CGF.getLoc(E->getExprLoc()), SourceAddr.getPointer(), DestPtrTy);
+
+    Address DestAddr =
+        SourceAddr.withPointer(DestPtr).withElementType(DestElemTy);
+    LValue DestLVal = CGF.makeAddrLValue(DestAddr, DestTy);
+
+    if (Kind == CK_LValueToRValueBitCast)
+      assert(!MissingFeatures::tbaa());
+
+    return buildLoadOfLValue(DestLVal, CE->getExprLoc());
+  }
+
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
   case CK_AnyPointerToBlockPointerCast:

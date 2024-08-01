@@ -907,6 +907,30 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
     CGF.CGM.buildExplicitCastExprType(ECE, &CGF);
   switch (E->getCastKind()) {
+  case CK_LValueToRValueBitCast: {
+    if (Dest.isIgnored()) {
+      CGF.buildAnyExpr(E->getSubExpr(), AggValueSlot::ignored(),
+                       /*ignoreResult=*/true);
+      break;
+    }
+
+    LValue SourceLV = CGF.buildLValue(E->getSubExpr());
+    Address SourceAddress = SourceLV.getAddress();
+    Address DestAddress = Dest.getAddress();
+
+    auto Loc = CGF.getLoc(E->getExprLoc());
+    mlir::Value SrcPtr = CGF.getBuilder().createBitcast(
+        Loc, SourceAddress.getPointer(), CGF.VoidPtrTy);
+    mlir::Value DstPtr = CGF.getBuilder().createBitcast(
+        Loc, DestAddress.getPointer(), CGF.VoidPtrTy);
+
+    mlir::Value SizeVal = CGF.getBuilder().getConstInt(
+        Loc, CGF.SizeTy,
+        CGF.getContext().getTypeSizeInChars(E->getType()).getQuantity());
+    CGF.getBuilder().createMemCpy(Loc, DstPtr, SrcPtr, SizeVal);
+
+    break;
+  }
 
   case CK_LValueToRValue:
     // If we're loading from a volatile type, force the destination
