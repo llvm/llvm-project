@@ -13,8 +13,8 @@
 
 #ifdef __SSE2__
 
-#ifndef __AVX10_2_512INTRIN_H
-#define __AVX10_2_512INTRIN_H
+#ifndef __AVX10_2_512NIINTRIN_H
+#define __AVX10_2_512NIINTRIN_H
 
 /* VMPSADBW */
 #define _mm512_mpsadbw_epu8(A, B, imm)                                         \
@@ -32,4 +32,4 @@
       (__v32hi)_mm512_setzero_si512()))
 
 #endif /* __SSE2__ */
-#endif /* __AVX10_2_512INTRIN_H */
+#endif /* __AVX10_2_512NIINTRIN_H */

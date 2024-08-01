@@ -12,8 +12,8 @@
 
 #ifdef __SSE2__
 
-#ifndef __AVX10_2INTRIN_H
-#define __AVX10_2INTRIN_H
+#ifndef __AVX10_2NIINTRIN_H
+#define __AVX10_2NIINTRIN_H
 
 /* VMPSADBW */
 #define _mm_mask_mpsadbw_epu8(W, U, A, B, imm)                                 \
@@ -79,5 +79,5 @@
       (__mmask8)(U), (__v8sf)_mm256_add_round_ps((A), (B), (R)),               \
       (__v8sf)_mm256_setzero_ps()))
 
-#endif /* __AVX10_2INTRIN_H */
+#endif /* __AVX10_2NIINTRIN_H */
 #endif /* __SSE2__ */
