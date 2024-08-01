@@ -20,7 +20,7 @@ void fARefDoNotWarn(const A&) {}
 void fARefLoseConstQualifier(A&) {}
 
 void test2() {
-  // This should not warn since `fARef2(const A&)` is a better candidate
+  // This should not warn since `fARefDoNotWarn(const A&)` is a better candidate
   fARefDoNotWarn(A());
 
   const A a;
