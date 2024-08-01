@@ -359,6 +359,58 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dfmal_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dfmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.dfmal
+)
+
+add_fp_unittest(
+  dfmaf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dfmaf128_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.dfmaf128
+)
+
+add_fp_unittest(
+  dsubl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsubl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.hdr.fenv_macros
+    libc.src.math.dsubl
+)
+
+add_fp_unittest(
+  dsubf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dsubf128_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.dsubf128
+)
+
+add_fp_unittest(
   floor_test
   SUITE
     libc-math-smoke-tests
@@ -941,6 +993,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf_test
   SUITE
     libc-math-smoke-tests
@@ -953,15 +1017,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- exp_test
- SUITE
-   libc-math-smoke-tests
- SRCS
-   exp_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.src.math.exp
-   libc.src.__support.FPUtil.fp_bits
+  expf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.expf16
 )
 
 add_fp_unittest(
@@ -3642,6 +3707,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalorder_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorder_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorder
+)
+
+add_fp_unittest(
+  totalorderf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf
+)
+
+add_fp_unittest(
   totalorderf16_test
   SUITE
     libc-math-smoke-tests
@@ -3651,6 +3740,18 @@ add_fp_unittest(
     TotalOrderTest.h
   DEPENDS
     libc.src.math.totalorderf16
+)
+
+add_fp_unittest(
+  totalorderf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf128_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf128
 )
 
 add_fp_unittest(
@@ -3726,6 +3827,30 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  setpayload_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayload_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayload
+)
+
+add_fp_unittest(
+  setpayloadf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadf_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadf
+)
+
+add_fp_unittest(
   setpayloadf16_test
   SUITE
     libc-math-smoke-tests
@@ -3735,6 +3860,18 @@ add_fp_unittest(
     SetPayloadTest.h
   DEPENDS
     libc.src.math.setpayloadf16
+)
+
+add_fp_unittest(
+  setpayloadf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadf128_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadf128
 )
 
 add_fp_unittest(
@@ -3818,8 +3955,8 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16sub
 )
 
@@ -3832,8 +3969,8 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16subf
 )
 
@@ -3846,8 +3983,8 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16subl
 )
 
@@ -3860,8 +3997,8 @@ add_fp_unittest(
   HDRS
     SubTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16subf128
 )
 

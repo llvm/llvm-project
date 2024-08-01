@@ -984,7 +984,7 @@ class Sema;
     unsigned getNumParams() const {
       if (IsSurrogate) {
         QualType STy = Surrogate->getConversionType();
-        while (STy->isPointerType() || STy->isReferenceType())
+        while (STy->isPointerOrReferenceType())
           STy = STy->getPointeeType();
         return STy->castAs<FunctionProtoType>()->getNumParams();
       }

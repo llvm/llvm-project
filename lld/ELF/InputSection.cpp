@@ -154,10 +154,11 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
     if (!relSec || !cast<InputSection>(relSec)->eqClass[0]) {
       auto *sec = makeThreadLocal<InputSection>(*f, shdr, name);
       f->cacheDecodedCrel(relSecIdx, sec);
-      cast<InputSection>(sec)->eqClass[0] = SHT_RELA;
+      sec->type = SHT_RELA;
+      sec->eqClass[0] = SHT_RELA;
 
       RelocsCrel<ELFT::Is64Bits> entries(sec->content_);
-      sec->size = entries.size();
+      sec->size = entries.size() * sizeof(typename ELFT::Rela);
       auto *relas = makeThreadLocalN<typename ELFT::Rela>(entries.size());
       sec->content_ = reinterpret_cast<uint8_t *>(relas);
       for (auto [i, r] : llvm::enumerate(entries)) {
@@ -168,7 +169,7 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
     }
     ret.relas = {ArrayRef(
         reinterpret_cast<const typename ELFT::Rela *>(relSec->content_),
-        relSec->size)};
+        relSec->size / sizeof(typename ELFT::Rela))};
     return ret;
   }
 
