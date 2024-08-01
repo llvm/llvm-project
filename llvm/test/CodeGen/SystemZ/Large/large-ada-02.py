@@ -18,7 +18,7 @@ for i in range(num_calls):
 
 # This is added to force the use of register r8 to generate
 # la 8, 0(8) which generates the algfi instruction
-print("%0 = call ptr asm \" LGR $0,$1\0A\", \"=r,{r8}\"(ptr nonnull @foo)")
+print('%0 = call ptr asm " LGR $0,$1\0A", "=r,{r8}"(ptr nonnull @foo)')
 print("  call void @bar(ptr noundef %0)")
 print("ret i32 0")
 print("}")
