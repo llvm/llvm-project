@@ -23141,6 +23141,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDirectivePresenceClause(
   switch (CK) {
   case OMPC_absent:
     return OMPAbsentClause::Create(getASTContext(), DKVec, Loc, LLoc, RLoc);
+  case OMPC_contains:
+    return OMPContainsClause::Create(getASTContext(), DKVec, Loc, LLoc, RLoc);
   default:
     llvm_unreachable("Unexpected OpenMP clause");
   }

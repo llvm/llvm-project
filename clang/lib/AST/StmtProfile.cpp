@@ -588,6 +588,8 @@ void OMPClauseProfiler::VisitOMPAbsentClause(const OMPAbsentClause *) {}
 
 void OMPClauseProfiler::VisitOMPHoldsClause(const OMPHoldsClause *) {}
 
+void OMPClauseProfiler::VisitOMPContainsClause(const OMPContainsClause *) {}
+
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}

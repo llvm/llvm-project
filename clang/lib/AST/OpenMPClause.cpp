@@ -1738,6 +1738,23 @@ OMPAbsentClause *OMPAbsentClause::CreateEmpty(const ASTContext &C, unsigned K) {
   return new (Mem) OMPAbsentClause(K);
 }
 
+OMPContainsClause *OMPContainsClause::Create(
+    const ASTContext &C, ArrayRef<OpenMPDirectiveKind> DKVec,
+    SourceLocation Loc, SourceLocation LLoc, SourceLocation RLoc) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OpenMPDirectiveKind>(DKVec.size()),
+                         alignof(OMPContainsClause));
+  auto *CC = new (Mem) OMPContainsClause(Loc, LLoc, RLoc, DKVec.size());
+  CC->setDirectiveKinds(DKVec);
+  return CC;
+}
+
+OMPContainsClause *OMPContainsClause::CreateEmpty(const ASTContext &C,
+                                                  unsigned K) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OpenMPDirectiveKind>(K),
+                         alignof(OMPContainsClause));
+  return new (Mem) OMPContainsClause(K);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1970,6 +1987,18 @@ void OMPClausePrinter::VisitOMPAbsentClause(OMPAbsentClause *Node) {
 void OMPClausePrinter::VisitOMPHoldsClause(OMPHoldsClause *Node) {
   OS << "holds(";
   Node->getExpr()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPContainsClause(OMPContainsClause *Node) {
+  OS << "contains(";
+  bool First = true;
+  for (auto &D : Node->getDirectiveKinds()) {
+    if (!First)
+      OS << ", ";
+    OS << getOpenMPDirectiveName(D);
+    First = false;
+  }
   OS << ")";
 }
 

@@ -2429,6 +2429,8 @@ void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
 
 void OMPClauseEnqueue::VisitOMPHoldsClause(const OMPHoldsClause *) {}
 
+void OMPClauseEnqueue::VisitOMPContainsClause(const OMPContainsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}

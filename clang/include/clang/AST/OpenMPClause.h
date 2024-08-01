@@ -2116,6 +2116,49 @@ public:
   }
 };
 
+/// This represents the 'contains' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume contains(<directive-name list>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'contains' clause.
+class OMPContainsClause final
+    : public OMPDirectiveListClause<OMPContainsClause>,
+      private llvm::TrailingObjects<OMPContainsClause, OpenMPDirectiveKind> {
+  friend OMPDirectiveListClause;
+  friend TrailingObjects;
+
+  /// Build 'contains' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPContainsClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc, unsigned NumKinds)
+      : OMPDirectiveListClause<OMPContainsClause>(
+            llvm::omp::OMPC_contains, StartLoc, LParenLoc, EndLoc, NumKinds) {}
+
+  /// Build an empty clause.
+  OMPContainsClause(unsigned NumKinds)
+      : OMPDirectiveListClause<OMPContainsClause>(
+            llvm::omp::OMPC_contains, SourceLocation(), SourceLocation(),
+            SourceLocation(), NumKinds) {}
+
+public:
+  static OMPContainsClause *Create(const ASTContext &C,
+                                   ArrayRef<OpenMPDirectiveKind> DKVec,
+                                   SourceLocation Loc, SourceLocation LLoc,
+                                   SourceLocation RLoc);
+
+  static OMPContainsClause *CreateEmpty(const ASTContext &C, unsigned NumKinds);
+
+  static bool classof(const OMPClause *C) {
+    return C->getClauseKind() == llvm::omp::OMPC_contains;
+  }
+};
+
 /// This represents the 'holds' clause in the '#pragma omp assume'
 /// directive.
 ///

@@ -3326,7 +3326,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
           << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
     SkipUntil(tok::comma, tok::annot_pragma_openmp_end, StopBeforeMatch);
     break;
-  case OMPC_absent: {
+  case OMPC_absent:
+  case OMPC_contains: {
     SourceLocation Loc = ConsumeToken();
     SourceLocation LLoc = Tok.getLocation();
     SourceLocation RLoc;

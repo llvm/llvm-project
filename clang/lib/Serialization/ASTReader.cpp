@@ -10471,6 +10471,11 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_holds:
     C = new (Context) OMPHoldsClause();
     break;
+  case llvm::omp::OMPC_contains: {
+    unsigned NumKinds = Record.readInt();
+    C = OMPContainsClause::CreateEmpty(Context, NumKinds);
+    break;
+  }
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10885,6 +10890,17 @@ void OMPClauseReader::VisitOMPAbsentClause(OMPAbsentClause *C) {
 void OMPClauseReader::VisitOMPHoldsClause(OMPHoldsClause *C) {
   C->setExpr(Record.readExpr());
   C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPContainsClause(OMPContainsClause *C) {
+  unsigned Count = C->getDirectiveKinds().size();
+  C->setLParenLoc(Record.readSourceLocation());
+  llvm::SmallVector<OpenMPDirectiveKind, 4> DKVec;
+  DKVec.reserve(Count);
+  for (unsigned I = 0; I < Count; I++) {
+    DKVec.push_back(Record.readEnum<OpenMPDirectiveKind>());
+  }
+  C->setDirectiveKinds(DKVec);
 }
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}

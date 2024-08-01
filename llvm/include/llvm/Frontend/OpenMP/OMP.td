@@ -90,6 +90,9 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_None
   ];
 }
+def OMPC_Contains : Clause<"contains"> {
+  let clangClass = "OMPContainsClause";
+}
 def OMPC_Capture : Clause<"capture"> {
   let clangClass = "OMPCaptureClause";
 }
@@ -521,6 +524,7 @@ def OMP_Assume : Directive<"assume"> {
   let category = CA_Informational;
   let allowedOnceClauses = [
     VersionedClause<OMPC_Absent, 51>,
+    VersionedClause<OMPC_Contains, 51>,
     VersionedClause<OMPC_Holds, 51>,
   ];
 }
