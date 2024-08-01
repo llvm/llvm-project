@@ -3200,6 +3200,7 @@ void RewriteInstance::processProfileData() {
   if (opts::AggregateOnly) {
     PrintProgramStats PPS(&*BAT);
     BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*BC));
+    TimerGroup::printAll(outs());
     exit(0);
   }
 }
