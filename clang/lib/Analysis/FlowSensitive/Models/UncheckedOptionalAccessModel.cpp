@@ -38,9 +38,12 @@
 namespace clang {
 namespace dataflow {
 
+// Note: the Names appear in reverse order. E.g., to check
+// if NS is foo::bar::, call isFullyQualifiedNamespaceEqualTo(NS, "bar", "foo")
 template <class... NameTypes>
-static bool hasNestedNamespace(const NamespaceDecl &NS, llvm::StringRef Name,
-                               NameTypes... Names) {
+static bool isFullyQualifiedNamespaceEqualTo(const NamespaceDecl &NS,
+                                             llvm::StringRef Name,
+                                             NameTypes... Names) {
   if (!(NS.getDeclName().isIdentifier() && NS.getName() == Name &&
         NS.getParent() != nullptr))
     return false;
@@ -49,7 +52,7 @@ static bool hasNestedNamespace(const NamespaceDecl &NS, llvm::StringRef Name,
     if (NS.getParent()->isTranslationUnit())
       return false;
     if (const auto *NextNS = dyn_cast_or_null<NamespaceDecl>(NS.getParent()))
-      return hasNestedNamespace(*NextNS, Names...);
+      return isFullyQualifiedNamespaceEqualTo(*NextNS, Names...);
     return false;
   } else {
     return NS.getParent()->isTranslationUnit();
@@ -62,21 +65,23 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
 
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
-      return N->isStdNamespace() || hasNestedNamespace(*N, "absl") ||
-             hasNestedNamespace(*N, "bsl");
+      return N->isStdNamespace() ||
+             isFullyQualifiedNamespaceEqualTo(*N, "absl") ||
+             isFullyQualifiedNamespaceEqualTo(*N, "bsl");
     return false;
   }
 
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
-    return N != nullptr &&
-           (hasNestedNamespace(*N, "base") || hasNestedNamespace(*N, "folly"));
+    return N != nullptr && (isFullyQualifiedNamespaceEqualTo(*N, "base") ||
+                            isFullyQualifiedNamespaceEqualTo(*N, "folly"));
   }
 
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
-    return N != nullptr && hasNestedNamespace(*N, "bdlb", "BloombergLP");
+    return N != nullptr &&
+           isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
 
   return false;
@@ -817,7 +822,7 @@ auto buildTransferMatchSwitch() {
       // NullableValue::isNull
       // Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasAnyName("isNull")),
+          isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
       // optional::emplace
