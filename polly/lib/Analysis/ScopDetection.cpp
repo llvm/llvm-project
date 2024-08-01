@@ -1536,6 +1536,13 @@ Region *ScopDetection::expandRegion(Region &R) {
     }
   }
 
+  if (LastValidRegion && !isRegionExpansionProfitable(*LastValidRegion, LI)) {
+    POLLY_DEBUG(dbgs() << "Non-profitable region: "
+                       << LastValidRegion->getNameStr() << "\n");
+    removeCachedResults(*LastValidRegion.get());
+    return nullptr;
+  }
+
   POLLY_DEBUG({
     if (LastValidRegion)
       dbgs() << "\tto " << LastValidRegion->getNameStr() << "\n";
@@ -1625,12 +1632,6 @@ void ScopDetection::findScops(Region &R) {
 
     if (!ExpandedR)
       continue;
-
-    if (!isRegionExpansionProfitable(*ExpandedR, LI)) {
-      removeCachedResults(*ExpandedR);
-      delete ExpandedR;
-      continue;
-    }
 
     R.addSubRegion(ExpandedR, true);
     ValidRegions.insert(ExpandedR);
@@ -1781,8 +1782,9 @@ bool ScopDetection::isRegionExpansionProfitable(const Region &ExpandedRegion,
     return false;
   }
 
-  // Return region expansion as unprofitable, if it contains basic blocks with
-  // memory accesses not used in outermost loops of the expanded region.
+  // Return region expansion as unprofitable, if it contains trailing non-loop
+  // blocks. With the exception that if these non-loop blocks are followed by
+  // loops, then we want the expanded region to encourage loop fusion.
   for (BasicBlock *BB : ExpandedRegion.blocks()) {
     if (&BB->front() == BB->getTerminator())
       continue;
@@ -1790,46 +1792,33 @@ bool ScopDetection::isRegionExpansionProfitable(const Region &ExpandedRegion,
       continue;
 
     // Only consider the expansion blocks added in addition to the loops. Also
-    // ignore preheader blocks because they may contain loop invariant loads.
+    // ignore loop preheader blocks.
     if (llvm::any_of(OutermostLoops, [&](const Loop *L) {
           return L->contains(BB) || (BB == L->getLoopPreheader());
         }))
       continue;
 
-    // Check if a basic block has instruction that access memory, but not used
-    // in any outermost loops of the expanded region.
-    bool BBContainsUnrelatedMemAccesses =
-        llvm::any_of(*BB, [&](const Instruction &I) {
-          if (!I.mayReadOrWriteMemory())
-            return false;
-          if (I.user_empty())
-            return false;
-
-          for (const User *U : I.users()) {
-            const Instruction *UI = dyn_cast<Instruction>(U);
-            if (!UI)
-              continue;
-
-            if (llvm::none_of(OutermostLoops,
-                              [&](const Loop *L) { return L->contains(UI); }))
-              return true;
-          }
-          return false;
-        });
-
-    if (!BBContainsUnrelatedMemAccesses)
-      continue;
-
-    // A basic block containing unrelated memory accesses is unprofitable.
-    // Check if there are loops following for potential loop fusion. If not,
-    // reject the expanded region.
-    if (llvm::none_of(OutermostLoops, [&](const Loop *L) {
-          return DT.dominates(BB, L->getHeader());
-        })) {
+    const Region *BBRegion = RI.getRegionFor(BB);
+    if (!ExpandedRegion.contains(BBRegion)) {
       POLLY_DEBUG(dbgs() << "Unprofitable expanded region:\n";
                   dbgs() << "\tBasicBlock: " << BB->getName() << "\n";
-                  dbgs() << "\tcontains memory accesses, but not used in "
-                            "outermost loops of expanded region.\n\n");
+                  dbgs() << "\tis a non-loop block.\n\n");
+      return false;
+    }
+
+    // Allow non-loop block if its Region contains any loop.
+    if (llvm::any_of(OutermostLoops,
+                     [&](const Loop *L) { return BBRegion->contains(L); }))
+      continue;
+
+    // Reject if non-loop block has no following loops.
+    if (llvm::none_of(OutermostLoops, [&](const Loop *L) {
+          return DT.dominates(BBRegion->getExit(), L->getHeader());
+        })) {
+      POLLY_DEBUG(
+          dbgs() << "Unprofitable expanded region:\n";
+          dbgs() << "\tBasicBlock: " << BB->getName() << "\n";
+          dbgs() << "\tis a non-loop block with no following loop.\n\n");
       return false;
     }
   }

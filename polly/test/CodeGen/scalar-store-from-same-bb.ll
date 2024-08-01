@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly \
+; RUN: opt %loadNPMPolly -polly-region-expansion-profitability-check=0 \
 ; RUN: -passes=polly-codegen -S < %s | FileCheck %s
 
 ; This test ensures that the expression N + 1 that is stored in the phi-node

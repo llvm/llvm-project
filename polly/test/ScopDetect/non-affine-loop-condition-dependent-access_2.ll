@@ -1,6 +1,15 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                        '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                         '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches \
+; RUN: -polly-region-expansion-profitability-check=0 -polly-allow-nonaffine-loops=false \
+; RUN: '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s \
+; RUN: --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches \
+; RUN: -polly-region-expansion-profitability-check=0 -polly-allow-nonaffine-loops=true \
+; RUN: '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s \
+; RUN: --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine-branches \
+; RUN: -polly-region-expansion-profitability-check=0 -polly-allow-nonaffine-loops=true \
+; RUN: -polly-allow-nonaffine '-passes=print<polly-detect>' -disable-output < %s \
+; RUN: 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
 ;
 ; Here we have a non-affine loop (in the context of the loop nest)
 ; and also a non-affine access (A[k]). While we can always detect the
