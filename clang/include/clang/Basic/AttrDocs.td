@@ -978,7 +978,7 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
 def DiagnoseSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-``[[clang::diagnose_specializations]]`` can be appied to class or variable
+``[[clang::diagnose_specializations]]`` can be applied to class or variable
 templates which should not be specialized by users. This is primarily used to
 diagnose user specializations of standard library type traits.
   }];
