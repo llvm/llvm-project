@@ -293,6 +293,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
+    libc.src.math.getpayload
+    libc.src.math.getpayloadf
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
