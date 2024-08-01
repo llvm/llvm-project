@@ -85,6 +85,7 @@ static uint64_t getAddend(InputSectionBase &sec,
   return rel.r_addend;
 }
 
+// Currently, we assume all input CREL relocations have an explicit addend.
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Crel &rel) {
