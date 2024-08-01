@@ -66,5 +66,15 @@ define double @nan_null() {
   ret double %res
 }
 
+define double @nan_non_constant(ptr %x) {
+; CHECK-LABEL: define double @nan_non_constant(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call double @nan(ptr [[X]])
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = call double @nan(ptr %x)
+  ret double %res
+}
+
 declare float @nanf(ptr)
 declare double @nan(ptr)
