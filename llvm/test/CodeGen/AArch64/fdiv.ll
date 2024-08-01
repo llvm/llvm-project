@@ -188,33 +188,25 @@ define <7 x half> @fdiv_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov h6, v1.h[4]
-; CHECK-GI-NOFP16-NEXT:    mov h7, v1.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[6]
+; CHECK-GI-NOFP16-NEXT:    mov v4.h[0], v0.h[4]
 ; CHECK-GI-NOFP16-NEXT:    fdiv v2.4s, v2.4s, v3.4s
-; CHECK-GI-NOFP16-NEXT:    mov v4.h[1], v5.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v6.h[1], v7.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v0.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v6.h[2], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v4.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v6.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
-; CHECK-GI-NOFP16-NEXT:    fdiv v1.4s, v1.4s, v3.4s
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[2]
-; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[3]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v3.h[0], v1.h[4]
+; CHECK-GI-NOFP16-NEXT:    mov v4.h[1], v0.h[5]
+; CHECK-GI-NOFP16-NEXT:    mov v3.h[1], v1.h[5]
+; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v0.h[6]
+; CHECK-GI-NOFP16-NEXT:    mov v3.h[2], v1.h[6]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v4.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v3.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtn v2.4h, v2.4s
+; CHECK-GI-NOFP16-NEXT:    fdiv v1.4s, v0.4s, v1.4s
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v2.h[2]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v4.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov h2, v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v2.h[3]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[4], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[2]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v1.h[1]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v1.h[2]
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fdiv_v7f16:

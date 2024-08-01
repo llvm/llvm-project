@@ -261,9 +261,9 @@ define <3 x float> @fptrunc_v3f64_v3f32(<3 x double> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    fcvt s2, d2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -363,9 +363,9 @@ define <2 x half> @fptrunc_v2f32_v2f16(<2 x float> %a) {
 ; CHECK-GI-LABEL: fptrunc_v2f32_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0

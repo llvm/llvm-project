@@ -1048,6 +1048,45 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Intend to match the last part of
+// AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG)
+bool matchLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+         "Expected G_BUILD_VECTOR instruction");
+  bool isConstant = true;
+
+  // Check if the values are the same
+  for (unsigned i = 1; i < MI.getNumOperands(); i++) {
+    auto ConstVal =
+        getAnyConstantVRegValWithLookThrough(MI.getOperand(i).getReg(), MRI);
+    if (!ConstVal.has_value()) {
+      isConstant = false;
+    }
+  }
+
+  if (isConstant)
+    return false;
+
+  return true;
+}
+
+void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  Register DstReg = B.buildUndef(DstTy).getReg(0);
+
+  for (unsigned i = 1; i < MI.getNumOperands(); i++) {
+    Register SrcReg = MI.getOperand(i).getReg();
+    if (MRI.getVRegDef(SrcReg)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+      continue;
+    Register IdxReg = B.buildConstant(LLT::scalar(64), i - 1).getReg(0);
+    DstReg =
+        B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
+  }
+  B.buildCopy(MI.getOperand(0).getReg(), DstReg);
+  MI.eraseFromParent();
+}
+
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);

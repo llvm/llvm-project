@@ -290,6 +290,13 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def lower_build_insert_vec_elt : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+        [{ return matchLowerBuildToInsertVecElt(*${root}, MRI); }]),
+  (apply [{ applyLowerBuildToInsertVecElt(*${root}, MRI, B); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -300,7 +307,8 @@ def AArch64PostLegalizerLowering
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mull,
-                        vector_unmerge_lowering, insertelt_nonconst]> {
+                        vector_unmerge_lowering, insertelt_nonconst,
+                        lower_build_insert_vec_elt]> {
 }
 
 // Post-legalization combines which are primarily optimizations.

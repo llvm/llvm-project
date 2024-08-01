@@ -3302,6 +3302,10 @@ defm LDRSW  : Load32RO<0b10, 0, 0b10, GPR64, "ldrsw", i64, sextloadi32>;
 // Pre-fetch.
 defm PRFM : PrefetchRO<0b11, 0, 0b10, "prfm">;
 
+def vec_ins_or_scal_vec : PatFrags<(ops node:$src),
+                          [(vector_insert undef, node:$src, (i64 0)),
+                           (scalar_to_vector node:$src)]>;
+
 // For regular load, we do not have any alignment requirement.
 // Thus, it is safe to directly map the vector loads with interesting
 // addressing modes.
@@ -3310,13 +3314,13 @@ multiclass ScalToVecROLoadPat<ROAddrMode ro, SDPatternOperator loadop,
                               ValueType ScalTy, ValueType VecTy,
                               Instruction LOADW, Instruction LOADX,
                               SubRegIndex sub> {
-  def : Pat<(VecTy (scalar_to_vector (ScalTy
+  def : Pat<(VecTy (vec_ins_or_scal_vec (ScalTy
               (loadop (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$offset))))),
             (INSERT_SUBREG (VecTy (IMPLICIT_DEF)),
                            (LOADW GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$offset),
                            sub)>;
 
-  def : Pat<(VecTy (scalar_to_vector (ScalTy
+  def : Pat<(VecTy (vec_ins_or_scal_vec (ScalTy
               (loadop (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$offset))))),
             (INSERT_SUBREG (VecTy (IMPLICIT_DEF)),
                            (LOADX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$offset),
@@ -3344,12 +3348,12 @@ defm : ScalToVecROLoadPat<ro64, load,       i64, v2i64, LDRDroW, LDRDroX, dsub>;
 defm : ScalToVecROLoadPat<ro64, load,       f64, v2f64, LDRDroW, LDRDroX, dsub>;
 
 
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (vec_ins_or_scal_vec (i64
                       (load (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
                                            ro_Wextend64:$extend))))),
            (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
 
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (vec_ins_or_scal_vec (i64
                       (load (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
                                            ro_Xextend64:$extend))))),
            (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
@@ -3482,34 +3486,34 @@ def : Pat <(bf16 (load (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))),
 // Thus, it is safe to directly map the vector loads with interesting
 // addressing modes.
 // FIXME: We could do the same for bitconvert to floating point vectors.
-def : Pat <(v8i8 (scalar_to_vector (i32
+def : Pat <(v8i8 (vec_ins_or_scal_vec (i32
                (extloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
            (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
                           (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
-def : Pat <(v16i8 (scalar_to_vector (i32
+def : Pat <(v16i8 (vec_ins_or_scal_vec (i32
                (extloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
                           (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
-def : Pat <(v4i16 (scalar_to_vector (i32
+def : Pat <(v4i16 (vec_ins_or_scal_vec (i32
                (extloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
            (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
                           (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
-def : Pat <(v8i16 (scalar_to_vector (i32
+def : Pat <(v8i16 (vec_ins_or_scal_vec (i32
                (extloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
            (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
                           (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
-def : Pat <(v2i32 (scalar_to_vector (i32
+def : Pat <(v2i32 (vec_ins_or_scal_vec (i32
                (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
            (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
                           (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
-def : Pat <(v4i32 (scalar_to_vector (i32
+def : Pat <(v4i32 (vec_ins_or_scal_vec (i32
                (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
            (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
                           (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (vec_ins_or_scal_vec (i64
                (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat <(v2i64 (scalar_to_vector (i64
+def : Pat <(v2i64 (vec_ins_or_scal_vec (i64
                (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
                           (LDRDui GPR64sp:$Rn, uimm12s8:$offset), dsub)>;
@@ -6824,10 +6828,10 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
 
 defm INS : SIMDIns;
 
-def : Pat<(v16i8 (scalar_to_vector GPR32:$Rn)),
+def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
-def : Pat<(v8i8 (scalar_to_vector GPR32:$Rn)),
+def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 
@@ -6835,50 +6839,49 @@ def : Pat<(v8i8 (scalar_to_vector GPR32:$Rn)),
 def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
           (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
 
-def : Pat<(v8i16 (scalar_to_vector GPR32:$Rn)),
+def : Pat<(v8i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
-def : Pat<(v4i16 (scalar_to_vector GPR32:$Rn)),
+def : Pat<(v4i16 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 
-def : Pat<(v4f16 (scalar_to_vector (f16 FPR16:$Rn))),
+def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-def : Pat<(v8f16 (scalar_to_vector (f16 FPR16:$Rn))),
+def : Pat<(v8f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 
-def : Pat<(v4bf16 (scalar_to_vector (bf16 FPR16:$Rn))),
+def : Pat<(v4bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v4bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-def : Pat<(v8bf16 (scalar_to_vector (bf16 FPR16:$Rn))),
+def : Pat<(v8bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v8bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 
-def : Pat<(v2i32 (scalar_to_vector (i32 FPR32:$Rn))),
+def : Pat<(v2i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
             (v2i32 (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
                                   (i32 FPR32:$Rn), ssub))>;
-def : Pat<(v4i32 (scalar_to_vector (i32 FPR32:$Rn))),
+def : Pat<(v4i32 (vec_ins_or_scal_vec (i32 FPR32:$Rn))),
             (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
                                   (i32 FPR32:$Rn), ssub))>;
-
-def : Pat<(v2i64 (scalar_to_vector (i64 FPR64:$Rn))),
+def : Pat<(v2i64 (vec_ins_or_scal_vec (i64 FPR64:$Rn))),
             (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
                                   (i64 FPR64:$Rn), dsub))>;
 
-def : Pat<(v4f16 (scalar_to_vector (f16 FPR16:$Rn))),
+def : Pat<(v4f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-def : Pat<(v8f16 (scalar_to_vector (f16 FPR16:$Rn))),
+def : Pat<(v8f16 (vec_ins_or_scal_vec (f16 FPR16:$Rn))),
           (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 
-def : Pat<(v4bf16 (scalar_to_vector (bf16 FPR16:$Rn))),
+def : Pat<(v4bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v4bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
-def : Pat<(v8bf16 (scalar_to_vector (bf16 FPR16:$Rn))),
+def : Pat<(v8bf16 (vec_ins_or_scal_vec (bf16 FPR16:$Rn))),
           (INSERT_SUBREG (v8bf16 (IMPLICIT_DEF)), FPR16:$Rn, hsub)>;
 
-def : Pat<(v4f32 (scalar_to_vector (f32 FPR32:$Rn))),
+def : Pat<(v4f32 (vec_ins_or_scal_vec (f32 FPR32:$Rn))),
           (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), FPR32:$Rn, ssub)>;
-def : Pat<(v2f32 (scalar_to_vector (f32 FPR32:$Rn))),
+def : Pat<(v2f32 (vec_ins_or_scal_vec (f32 FPR32:$Rn))),
           (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)), FPR32:$Rn, ssub)>;
 
-def : Pat<(v2f64 (scalar_to_vector (f64 FPR64:$Rn))),
+def : Pat<(v2f64 (vec_ins_or_scal_vec (f64 FPR64:$Rn))),
           (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FPR64:$Rn, dsub)>;
 
 def : Pat<(v4f16 (vector_insert (v4f16 V64:$Rn),
@@ -8550,7 +8553,7 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 let Predicates = [HasNEON] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
                           SDPatternOperator ExtLoad, Instruction LD1>
-    : Pat<(ResultTy (scalar_to_vector (i32 (ExtLoad GPR64sp:$Rn)))),
+    : Pat<(ResultTy (vec_ins_or_scal_vec (i32 (ExtLoad GPR64sp:$Rn)))),
             (ResultTy (EXTRACT_SUBREG
               (LD1 (VecTy (IMPLICIT_DEF)), 0, GPR64sp:$Rn), dsub))>;
 
@@ -8983,11 +8986,11 @@ def : Pat<(v1i64 (bitconvert GPR64:$Xn)), (COPY_TO_REGCLASS GPR64:$Xn, FPR64)>;
 def : Pat<(v1f64 (bitconvert GPR64:$Xn)), (COPY_TO_REGCLASS GPR64:$Xn, FPR64)>;
 def : Pat<(i64 (bitconvert (v1i64 V64:$Vn))),
           (COPY_TO_REGCLASS V64:$Vn, GPR64)>;
-def : Pat<(v1i64 (scalar_to_vector GPR64:$Xn)),
+def : Pat<(v1i64 (vec_ins_or_scal_vec GPR64:$Xn)),
           (COPY_TO_REGCLASS GPR64:$Xn, FPR64)>;
-def : Pat<(v1f64 (scalar_to_vector GPR64:$Xn)),
+def : Pat<(v1f64 (vec_ins_or_scal_vec GPR64:$Xn)),
           (COPY_TO_REGCLASS GPR64:$Xn, FPR64)>;
-def : Pat<(v1f64 (scalar_to_vector (f64 FPR64:$Xn))), (v1f64 FPR64:$Xn)>;
+def : Pat<(v1f64 (vec_ins_or_scal_vec (f64 FPR64:$Xn))), (v1f64 FPR64:$Xn)>;
 
 def : Pat<(f32 (bitconvert (i32 GPR32:$Xn))),
           (COPY_TO_REGCLASS GPR32:$Xn, FPR32)>;
