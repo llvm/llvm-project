@@ -329,6 +329,9 @@ def Builtin_Index : Builtin_Type<"Index", "index"> {
 //===----------------------------------------------------------------------===//
 // IntegerType
 //===----------------------------------------------------------------------===//
+// clang-format off
+// Cratels: 内置类型 Integer 的定义
+// clang-format on
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer"> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
