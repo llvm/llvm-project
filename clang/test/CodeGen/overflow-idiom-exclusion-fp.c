@@ -52,17 +52,17 @@ void close_but_not_quite(void) {
 }
 
 // cvise'd kernel code that caused problems during development
-typedef unsigned size_t;
+typedef unsigned _size_t;
 typedef enum { FSE_repeat_none } FSE_repeat;
 typedef enum { ZSTD_defaultAllowed } ZSTD_defaultPolicy_e;
 FSE_repeat ZSTD_selectEncodingType_repeatMode;
 ZSTD_defaultPolicy_e ZSTD_selectEncodingType_isDefaultAllowed;
-size_t ZSTD_NCountCost(void);
+_size_t ZSTD_NCountCost(void);
 
 // CHECK-LABEL: ZSTD_selectEncodingType
 // CHECK: br i1{{.*}}handler
 void ZSTD_selectEncodingType(void) {
-  size_t basicCost =
+  _size_t basicCost =
              ZSTD_selectEncodingType_isDefaultAllowed ? ZSTD_NCountCost() : 0,
          compressedCost = 3 + ZSTD_NCountCost();
   if (basicCost <= compressedCost)
