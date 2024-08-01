@@ -1241,9 +1241,10 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     descriptor =
         insertField(rewriter, loc, descriptor, {kAttributePosInBox},
                     this->genI32Constant(loc, rewriter, getCFIAttr(boxTy)));
+
     const bool hasAddendum = fir::boxHasAddendum(boxTy);
     descriptor =
-        insertField(rewriter, loc, descriptor, {kF18AddendumPosInBox},
+        insertField(rewriter, loc, descriptor, {kExtraPosInBox},
                     this->genI32Constant(loc, rewriter, hasAddendum ? 1 : 0));
 
     if (hasAddendum) {
