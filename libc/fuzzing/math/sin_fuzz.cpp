@@ -11,17 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sin.h"
-#include <cmath>
+#include <math.h>
 #include <mpfr.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const double x) {
   // remove NaN and inf as preconditions
-  if (std::isnan(x))
+  if (isnan(x))
     return 0;
-  if (std::isinf(x))
+  if (isinf(x))
     return 0;
   // signed zeros already tested in unit tests
-  if (std::signbit(x) && x == 0.0)
+  if (signbit(x) && x == 0.0)
     return 0;
   mpfr_t input;
   mpfr_init2(input, 53);
