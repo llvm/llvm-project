@@ -130,6 +130,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  dfmaf128
+  SRCS
+    dfmaf128.cpp
+  HDRS
+    ../dfmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.properties.types
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  dfmal
+  SRCS
+    dfmal.cpp
+  HDRS
+    ../dfmal.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   dsqrtl
   SRCS
     dsqrtl.cpp
@@ -150,6 +175,32 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+
+add_entrypoint_object(
+  dsubf128
+  SRCS
+    dsubf128.cpp
+  HDRS
+    ../dsubf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.types
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  dsubl
+  SRCS
+    dsubl.cpp
+  HDRS
+    ../dsubl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )
@@ -1236,11 +1287,12 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS

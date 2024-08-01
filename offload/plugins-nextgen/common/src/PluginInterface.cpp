@@ -1609,6 +1609,18 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
 
+  {
+    std::string StackTrace;
+    if (OMPX_TrackNumKernelLaunches) {
+      llvm::raw_string_ostream OS(StackTrace);
+      llvm::sys::PrintStackTrace(OS);
+    }
+
+    auto KernelTraceInfoRecord = KernelLaunchTraces.getExclusiveAccessor();
+    (*KernelTraceInfoRecord)
+        .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
+  }
+
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
                                   AsyncInfoWrapper);
 

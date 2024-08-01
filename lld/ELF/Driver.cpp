@@ -447,6 +447,8 @@ static void checkOptions() {
       error("-r and --export-dynamic may not be used together");
     if (config->debugNames)
       error("-r and --debug-names may not be used together");
+    if (!config->zSectionHeader)
+      error("-r and -z nosectionheader may not be used together");
   }
 
   if (config->executeOnly) {
@@ -836,6 +838,8 @@ static ICFLevel getICF(opt::InputArgList &args) {
 static StripPolicy getStrip(opt::InputArgList &args) {
   if (args.hasArg(OPT_relocatable))
     return StripPolicy::None;
+  if (!config->zSectionHeader)
+    return StripPolicy::All;
 
   auto *arg = args.getLastArg(OPT_strip_all, OPT_strip_debug);
   if (!arg)
@@ -1411,7 +1415,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->soName = args.getLastArgValue(OPT_soname);
   config->sortSection = getSortSection(args);
   config->splitStackAdjustSize = args::getInteger(args, OPT_split_stack_adjust_size, 16384);
-  config->strip = getStrip(args);
+  config->zSectionHeader =
+      getZFlag(args, "sectionheader", "nosectionheader", true);
+  config->strip = getStrip(args); // needs zSectionHeader
   config->sysroot = args.getLastArgValue(OPT_sysroot);
   config->target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
   config->target2 = getTarget2(args);
