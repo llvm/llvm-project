@@ -109,10 +109,6 @@
 // CHECK-V6M-LIBCXX-USR-SAME: "-lc++" "-lc++abi" "-lunwind"
 // CHECK-V6M-LIBCXX-USR-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a"
 
-// RUN: %clangxx --target=arm-none-eabi -nostartfiles -v 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-NOSTARTFILES
-// CHECK-NOSTARTFILES-NOT: "crt0.o"
-
 // RUN: %clangxx --target=arm-none-eabi -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL
 // CHECK-THREAD-MODEL: Thread model: posix
@@ -124,6 +120,10 @@
 // RUN: %clangxx --target=arm-none-eabi -mthread-model posix -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-POSIX
 // CHECK-THREAD-MODEL-POSIX: Thread model: posix
+
+// RUN: %clangxx -### --target=arm-none-eabi -nostartfiles -v %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NOSTARTFILES
+// CHECK-NOSTARTFILES-NOT: "crt0.o"
 
 // RUN: %clang -### --target=arm-none-eabi -rtlib=libgcc -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
