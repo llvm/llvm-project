@@ -5198,11 +5198,6 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
 
   if (ImportsEnd > Symbols)
     return malformedError("bad chained fixups: imports end " +
-                          Twine(ImportsEndOffset) + " extends past end " +
-                          Twine(DyldChainedFixups.datasize));
-
-  if (ImportsEnd > Symbols)
-    return malformedError("bad chained fixups: imports end " +
                           Twine(ImportsEndOffset) + " overlaps with symbols");
 
   // We use bit manipulation to extract data from the bitfields. This is correct
