@@ -1075,7 +1075,6 @@ def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 
-/// Represents "vec_type_hint" values
 def LLVM_VecTypeHintAttr : LLVM_Attr<"VecTypeHint", "vec_type_hint"> {
   let summary = "Explicit vectorization compiler hint";
   let description = [{

@@ -1271,11 +1271,10 @@ static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
   return llvm::MDNode::get(context, {typeMD, isSignedMD});
 }
 
-/// Return an MDNode with a tuple given by the values in the input integer array
-/// attribute.
+/// Return an MDNode with a tuple given by the values in `values`.
 static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
                                                  ArrayRef<int32_t> values) {
-  llvm::SmallVector<llvm::Metadata *> mds;
+  SmallVector<llvm::Metadata *> mds;
   llvm::transform(values, std::back_inserter(mds), [&context](int32_t value) {
     return convertIntegerToMetadata(context, llvm::APInt(32, value));
   });
@@ -1484,36 +1483,35 @@ static void convertFunctionAttributes(LLVMFuncOp func,
 }
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
-template <typename TypeConverter>
 static void convertFunctionKernelAttributes(LLVMFuncOp func,
                                             llvm::Function *llvmFunc,
-                                            TypeConverter convertType) {
+                                            ModuleTranslation &translation) {
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
 
   if (auto vecTypeHint = func.getVecTypeHint()) {
     Type type = vecTypeHint->getHint().getValue();
-    llvm::Type *llvmType = convertType(type);
+    llvm::Type *llvmType = translation.convertType(type);
     bool isSigned = vecTypeHint->getIsSigned();
     llvmFunc->setMetadata(
-        "vec_type_hint",
+        func.getVecTypeHintAttrName(),
         convertVecTypeHintToMDNode(llvmContext, llvmType, isSigned));
   }
 
   if (auto workGroupSizeHint = func.getWorkGroupSizeHint()) {
     llvmFunc->setMetadata(
-        "work_group_size_hint",
+        func.getWorkGroupSizeHintAttrName(),
         convertIntegerArrayToMDNode(llvmContext, *workGroupSizeHint));
   }
 
   if (auto reqdWorkGroupSize = func.getReqdWorkGroupSize()) {
     llvmFunc->setMetadata(
-        "reqd_work_group_size",
+        func.getReqdWorkGroupSizeAttrName(),
         convertIntegerArrayToMDNode(llvmContext, *reqdWorkGroupSize));
   }
 
   if (auto intelReqdSubGroupSize = func.getIntelReqdSubGroupSize()) {
     llvmFunc->setMetadata(
-        "intel_reqd_sub_group_size",
+        func.getIntelReqdSubGroupSizeAttrName(),
         convertIntegerToMDNode(llvmContext,
                                llvm::APInt(32, *intelReqdSubGroupSize)));
   }
@@ -1563,9 +1561,8 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     // Convert function attributes.
     convertFunctionAttributes(function, llvmFunc);
 
-    // Convert function kernel attributes to metadata
-    convertFunctionKernelAttributes(
-        function, llvmFunc, [this](Type type) { return convertType(type); });
+    // Convert function kernel attributes to metadata.
+    convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
     if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())

@@ -32,12 +32,10 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
-static constexpr StringLiteral vecTypeHintAttrName = "vec_type_hint";
-static constexpr StringLiteral workGroupSizeHintAttrName =
-    "work_group_size_hint";
-static constexpr StringLiteral reqdWorkGroupSizeAttrName =
-    "reqd_work_group_size";
-static constexpr StringLiteral intelReqdSubGroupSizeAttrName =
+static constexpr StringLiteral vecTypeHintMDName = "vec_type_hint";
+static constexpr StringLiteral workGroupSizeHintMDName = "work_group_size_hint";
+static constexpr StringLiteral reqdWorkGroupSizeMDName = "reqd_work_group_size";
+static constexpr StringLiteral intelReqdSubGroupSizeMDName =
     "intel_reqd_sub_group_size";
 
 /// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect
@@ -86,10 +84,10 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_loop,
       llvm::LLVMContext::MD_noalias,
       llvm::LLVMContext::MD_alias_scope,
-      context.getMDKindID(vecTypeHintAttrName),
-      context.getMDKindID(workGroupSizeHintAttrName),
-      context.getMDKindID(reqdWorkGroupSizeAttrName),
-      context.getMDKindID(intelReqdSubGroupSizeAttrName)};
+      context.getMDKindID(vecTypeHintMDName),
+      context.getMDKindID(workGroupSizeHintMDName),
+      context.getMDKindID(reqdWorkGroupSizeMDName),
+      context.getMDKindID(intelReqdSubGroupSizeMDName)};
   return convertibleMetadata;
 }
 
@@ -241,21 +239,22 @@ static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
   return success();
 }
 
-/// Extract constant integer value from metadata if this is constant. Return
-/// `std::nullopt` otherwise.
+/// Extracts an integer from the provided metadata `md` if possible. Returns
+/// nullopt otherwise.
 static std::optional<int32_t> parseIntegerMD(llvm::Metadata *md) {
-  auto *c = llvm::dyn_cast_or_null<llvm::ConstantAsMetadata>(md);
-  if (!c)
+  auto *constant = dyn_cast_if_present<llvm::ConstantAsMetadata>(md);
+  if (!constant)
     return {};
 
-  auto *ci = dyn_cast<llvm::ConstantInt>(c->getValue());
-  if (!ci)
+  auto *intConstant = dyn_cast<llvm::ConstantInt>(constant->getValue());
+  if (!intConstant)
     return {};
 
-  return ci->getValue().getSExtValue();
+  return intConstant->getValue().getSExtValue();
 }
 
-/// Convert an `MDNode` to an LLVM dialect `VecTypeHintAttr` if possible.
+/// Converts the provided metadata node `md` to an LLVM dialect VecTypeHintAttr
+/// if possible.
 static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *md,
                                           ModuleImport &moduleImport) {
   if (!md || md->getNumOperands() != 2)
@@ -299,69 +298,62 @@ static IntegerAttr convertIntegerMD(Builder builder, llvm::MDNode *md) {
   return builder.getI32IntegerAttr(*val);
 }
 
-template <typename Encoder, typename Setter>
-static LogicalResult setFuncAttr(Builder &builder, llvm::MDNode *node,
-                                 Operation *op, Encoder encode, Setter set) {
+static LogicalResult setVecTypeHintAttr(Builder &builder, llvm::MDNode *node,
+                                        Operation *op,
+                                        LLVM::ModuleImport &moduleImport) {
   auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
   if (!funcOp)
     return failure();
 
-  auto attr = encode(node);
+  VecTypeHintAttr attr = convertVecTypeHint(builder, node, moduleImport);
   if (!attr)
     return failure();
 
-  set(funcOp, attr);
+  funcOp.setVecTypeHintAttr(attr);
   return success();
-}
-
-static LogicalResult setVecTypeHintAttr(Builder &builder, llvm::MDNode *node,
-                                        Operation *op,
-                                        LLVM::ModuleImport &moduleImport) {
-  return setFuncAttr(
-      builder, node, op,
-      [&builder, &moduleImport](llvm::MDNode *node) {
-        return convertVecTypeHint(builder, node, moduleImport);
-      },
-      [](LLVM::LLVMFuncOp funcOp, VecTypeHintAttr attr) {
-        funcOp.setVecTypeHintAttr(attr);
-      });
 }
 
 static LogicalResult
 setWorkGroupSizeHintAttr(Builder &builder, llvm::MDNode *node, Operation *op) {
-  return setFuncAttr(
-      builder, node, op,
-      [&builder](llvm::MDNode *node) {
-        return convertDenseI32Array(builder, node);
-      },
-      [](LLVM::LLVMFuncOp funcOp, DenseI32ArrayAttr attr) {
-        funcOp.setWorkGroupSizeHintAttr(attr);
-      });
+  auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
+  if (!funcOp)
+    return failure();
+
+  DenseI32ArrayAttr attr = convertDenseI32Array(builder, node);
+  if (!attr)
+    return failure();
+
+  funcOp.setWorkGroupSizeHintAttr(attr);
+  return success();
 }
 
 static LogicalResult
 setReqdWorkGroupSizeAttr(Builder &builder, llvm::MDNode *node, Operation *op) {
-  return setFuncAttr(
-      builder, node, op,
-      [&builder](llvm::MDNode *node) {
-        return convertDenseI32Array(builder, node);
-      },
-      [](LLVM::LLVMFuncOp funcOp, DenseI32ArrayAttr attr) {
-        funcOp.setReqdWorkGroupSizeAttr(attr);
-      });
+  auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
+  if (!funcOp)
+    return failure();
+
+  DenseI32ArrayAttr attr = convertDenseI32Array(builder, node);
+  if (!attr)
+    return failure();
+
+  funcOp.setReqdWorkGroupSizeAttr(attr);
+  return success();
 }
 
 static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
                                                   llvm::MDNode *node,
                                                   Operation *op) {
-  return setFuncAttr(
-      builder, node, op,
-      [&builder](llvm::MDNode *node) {
-        return convertIntegerMD(builder, node);
-      },
-      [](LLVM::LLVMFuncOp funcOp, IntegerAttr attr) {
-        funcOp.setIntelReqdSubGroupSizeAttr(attr);
-      });
+  auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op);
+  if (!funcOp)
+    return failure();
+
+  IntegerAttr attr = convertIntegerMD(builder, node);
+  if (!attr)
+    return failure();
+
+  funcOp.setIntelReqdSubGroupSizeAttr(attr);
+  return success();
 }
 
 namespace {
@@ -400,13 +392,13 @@ public:
       return setNoaliasScopesAttr(node, op, moduleImport);
 
     llvm::LLVMContext &context = node->getContext();
-    if (kind == context.getMDKindID(vecTypeHintAttrName))
+    if (kind == context.getMDKindID(vecTypeHintMDName))
       return setVecTypeHintAttr(builder, node, op, moduleImport);
-    if (kind == context.getMDKindID(workGroupSizeHintAttrName))
+    if (kind == context.getMDKindID(workGroupSizeHintMDName))
       return setWorkGroupSizeHintAttr(builder, node, op);
-    if (kind == context.getMDKindID(reqdWorkGroupSizeAttrName))
+    if (kind == context.getMDKindID(reqdWorkGroupSizeMDName))
       return setReqdWorkGroupSizeAttr(builder, node, op);
-    if (kind == context.getMDKindID(intelReqdSubGroupSizeAttrName))
+    if (kind == context.getMDKindID(intelReqdSubGroupSizeMDName))
       return setIntelReqdSubGroupSizeAttr(builder, node, op);
 
     // A handler for a supported metadata kind is missing.
