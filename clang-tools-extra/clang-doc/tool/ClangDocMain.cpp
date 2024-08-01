@@ -207,7 +207,7 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
 
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
-void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>>& USRToInfo) {
+void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
