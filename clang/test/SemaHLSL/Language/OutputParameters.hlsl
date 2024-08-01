@@ -5,7 +5,7 @@ void InOutVecFn(inout float3) {}
 
 // Case 1: Calling out and inout parameters with types that cannot be
 // back-converted. In HLSL 2021 and earlier this only occurs when passing scalar
-// arguments to vector parameters because scalar->vector converison is implicit,
+// arguments to vector parameters because scalar->vector conversion is implicit,
 // but vector->scalar is not.
 void case1() {
   float f;
