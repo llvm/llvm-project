@@ -16,7 +16,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/MapVector.h"
 
 #include <map>
 #include <tuple>
@@ -187,8 +187,8 @@ public:
                          nameAndRegistrationIt.second.second);
     // Merge the extensions.
     for (const auto &extension : extensions)
-      destination.extensions.emplace_back(extension.first,
-                                          extension.second->clone());
+      destination.extensions.try_emplace(extension.first,
+                                         extension.second->clone());
   }
 
   /// Return the names of dialects known to this registry.
@@ -207,9 +207,9 @@ public:
   void applyExtensions(MLIRContext *ctx) const;
 
   /// Add the given extension to the registry.
-  void addExtension(TypeID extensionID,
+  bool addExtension(TypeID extensionID,
                     std::unique_ptr<DialectExtensionBase> extension) {
-    extensions.emplace_back(extensionID, std::move(extension));
+    return extensions.try_emplace(extensionID, std::move(extension)).second;
   }
 
   /// Add the given extensions to the registry.
@@ -230,7 +230,7 @@ public:
   ///     [](MLIRContext *ctx, MyDialect *dialect){ ... }
   ///  )
   template <typename... DialectsT>
-  void addExtension(void (*extensionFn)(MLIRContext *, DialectsT *...)) {
+  bool addExtension(void (*extensionFn)(MLIRContext *, DialectsT *...)) {
     using ExtensionFnT = void (*)(MLIRContext *, DialectsT *...);
 
     struct Extension : public DialectExtension<Extension, DialectsT...> {
@@ -245,9 +245,9 @@ public:
       }
       ExtensionFnT extensionFn;
     };
-    addExtension(TypeID::getFromOpaquePointer(
-                     reinterpret_cast<const void *>(extensionFn)),
-                 std::make_unique<Extension>(extensionFn));
+    return addExtension(TypeID::getFromOpaquePointer(
+                            reinterpret_cast<const void *>(extensionFn)),
+                        std::make_unique<Extension>(extensionFn));
   }
 
   /// Returns true if the current registry is a subset of 'rhs', i.e. if 'rhs'
@@ -256,9 +256,7 @@ public:
 
 private:
   MapTy registry;
-  using KeyExtensionPair =
-      std::pair<TypeID, std::unique_ptr<DialectExtensionBase>>;
-  llvm::SmallVector<KeyExtensionPair> extensions;
+  llvm::MapVector<TypeID, std::unique_ptr<DialectExtensionBase>> extensions;
 };
 
 } // namespace mlir

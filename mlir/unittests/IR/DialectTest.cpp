@@ -178,7 +178,7 @@ TEST(Dialect, NestedDialectExtension) {
                         std::make_unique<DummyExtension>(&counter1, 100));
   // Add one more extension. This should not crash.
   int counter2 = 0;
-  registry.addExtension(TypeID::get<DummyExtension>(),
+  registry.addExtension(TypeID::getFromOpaquePointer(&counter2),
                         std::make_unique<DummyExtension>(&counter2, 0));
 
   // Load dialect and apply extensions.
