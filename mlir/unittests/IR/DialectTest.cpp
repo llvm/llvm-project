@@ -77,8 +77,8 @@ TEST(Dialect, DelayedInterfaceRegistration) {
   // Delayed registration of an interface for TestDialect.
   registry.addExtension(
       "TEST_DIALECT_DELAYED", +[](MLIRContext *ctx, TestDialect *dialect) {
-    dialect->addInterfaces<TestDialectInterface>();
-  });
+        dialect->addInterfaces<TestDialectInterface>();
+      });
 
   MLIRContext context(registry);
 
@@ -116,8 +116,8 @@ TEST(Dialect, RepeatedDelayedRegistration) {
   registry.insert<TestDialect>();
   registry.addExtension(
       "TEST_DIALECT", +[](MLIRContext *ctx, TestDialect *dialect) {
-    dialect->addInterfaces<TestDialectInterface>();
-  });
+        dialect->addInterfaces<TestDialectInterface>();
+      });
   MLIRContext context(registry);
 
   // Load the TestDialect and check that the interface got registered for it.
@@ -132,8 +132,8 @@ TEST(Dialect, RepeatedDelayedRegistration) {
   secondRegistry.insert<TestDialect>();
   secondRegistry.addExtension(
       "TEST_DIALECT", +[](MLIRContext *ctx, TestDialect *dialect) {
-    dialect->addInterfaces<TestDialectInterface>();
-  });
+        dialect->addInterfaces<TestDialectInterface>();
+      });
   context.appendDialectRegistry(secondRegistry);
   testDialectInterface = dyn_cast<TestDialectInterfaceBase>(testDialect);
   EXPECT_TRUE(testDialectInterface != nullptr);
@@ -191,6 +191,31 @@ TEST(Dialect, NestedDialectExtension) {
   // extension was applied at least once.
   EXPECT_GE(counter1, 101);
   EXPECT_GE(counter2, 1);
+}
+
+TEST(Dialect, SubsetWithExtensions) {
+  DialectRegistry registry1, registry2;
+  registry1.insert<TestDialect>();
+  registry2.insert<TestDialect>();
+
+  // Validate that the registries are equivalent.
+  ASSERT_TRUE(registry1.isSubsetOf(registry2));
+  ASSERT_TRUE(registry2.isSubsetOf(registry1));
+
+  // Add extensions to registry2.
+  int counter;
+  registry2.addExtension("EXT", std::make_unique<DummyExtension>(&counter, 0));
+
+  // Expect that (1) is a subset of (2) but not the other way around.
+  ASSERT_TRUE(registry1.isSubsetOf(registry2));
+  ASSERT_FALSE(registry2.isSubsetOf(registry1));
+
+  // Add extensions to registry1.
+  registry1.addExtension("EXT", std::make_unique<DummyExtension>(&counter, 0));
+
+  // Expect that (1) and (2) are equivalent.
+  ASSERT_TRUE(registry1.isSubsetOf(registry2));
+  ASSERT_TRUE(registry2.isSubsetOf(registry1));
 }
 
 } // namespace

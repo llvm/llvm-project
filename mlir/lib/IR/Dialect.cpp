@@ -291,9 +291,19 @@ void DialectRegistry::applyExtensions(MLIRContext *ctx) const {
 }
 
 bool DialectRegistry::isSubsetOf(const DialectRegistry &rhs) const {
-  // Treat any extensions conservatively.
-  if (!extensions.empty())
+  // Check that all extension keys are present in 'rhs'.
+  llvm::DenseSet<llvm::StringRef> rhsExtensionKeys;
+  {
+    auto rhsKeys = llvm::map_range(rhs.extensions,
+                                   [](const auto &item) { return item.first; });
+    rhsExtensionKeys.insert(rhsKeys.begin(), rhsKeys.end());
+  }
+
+  if (!llvm::all_of(extensions, [&rhsExtensionKeys](const auto &extension) {
+        return rhsExtensionKeys.contains(extension.first);
+      }))
     return false;
+
   // Check that the current dialects fully overlap with the dialects in 'rhs'.
   return llvm::all_of(
       registry, [&](const auto &it) { return rhs.registry.count(it.first); });
