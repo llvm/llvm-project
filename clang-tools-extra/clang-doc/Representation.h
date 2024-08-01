@@ -321,9 +321,13 @@ struct SymbolInfo : public Info {
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
 
   bool operator<(const SymbolInfo &Other) const {
-    assert(Loc.size() > 0 && Other.Loc.size() > 0 &&
-           "SymbolInfo must have at least one location");
-    return Loc[0] < Other.Loc[0];
+    if (DefLoc && Other.DefLoc) {
+      return *DefLoc < *Other.DefLoc;
+    }
+    if (Loc.size() > 0 && Other.Loc.size() > 0) {
+      return Loc[0] < Other.Loc[0];
+    }
+    return llvm::toStringRef(USR) < llvm::toStringRef(Other.USR);
   }
 };
 
