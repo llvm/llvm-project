@@ -129,7 +129,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (!mangled_name && name) {
-    if (name.GetStringRef().equals("$swift.fixedbuffer")) {
+    if (name.GetStringRef() == "$swift.fixedbuffer") {
       if (auto wrapped_type = get_type(die.GetFirstChild())) {
         // Create a unique pointer for the type + fixed buffer flag.
         type_sp = wrapped_type->GetSymbolFile()->CopyType(wrapped_type);

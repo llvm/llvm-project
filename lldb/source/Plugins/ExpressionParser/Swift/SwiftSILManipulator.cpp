@@ -70,7 +70,7 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
 
   for (swift::Decl *member : unsafe_mutable_pointer_struct_decl->getMembers()) {
     if (swift::VarDecl *member_var = llvm::dyn_cast<swift::VarDecl>(member)) {
-      if (member_var->getName().str().equals("_rawValue")) {
+      if (member_var->getName().str() == "_rawValue") {
         value_member_decl = member_var;
         break;
       }

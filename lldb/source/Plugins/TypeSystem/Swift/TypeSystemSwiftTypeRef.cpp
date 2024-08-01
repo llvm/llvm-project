@@ -397,7 +397,7 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
   llvm::StringRef clang_name = clang_type.GetTypeName().GetStringRef();
 #define MAP_TYPE(C_TYPE_NAME, C_TYPE_KIND, C_TYPE_BITWIDTH, SWIFT_MODULE_NAME, \
                  SWIFT_TYPE_NAME, CAN_BE_MISSING, C_NAME_MAPPING)              \
-  if (clang_name.equals(C_TYPE_NAME)) {                                        \
+  if (clang_name == C_TYPE_NAME) {                                             \
     module_name = (SWIFT_MODULE_NAME);                                         \
     swift_name = (SWIFT_TYPE_NAME);                                            \
   } else
@@ -2271,7 +2271,7 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
     return true;
 
   // SwiftASTContext hardcodes some less-precise types.
-  if (rhs.GetStringRef().equals("$sBpD"))
+  if (rhs.GetStringRef() == "$sBpD")
     return true;
 
   // If the type is a Clang-imported type ignore mismatches. Since we
@@ -2307,7 +2307,7 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
       return true;
 
     // If the new variant supports something the old one didn't, accept it.
-    if (r.IsEmpty() || r.GetStringRef().equals("<invalid>") ||
+    if (r.IsEmpty() || r.GetStringRef() == "<invalid>" ||
         r.GetStringRef().contains("__ObjC.") ||
         r.GetStringRef().contains(" -> ()"))
       return true;
