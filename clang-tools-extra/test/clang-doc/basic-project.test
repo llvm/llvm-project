@@ -73,12 +73,12 @@
 // HTML-CALC:  <h3 id="{{([0-9A-F]{40})}}">add</h3>
 // HTML-CALC:  <p>public int add(int a, int b)</p>
 // HTML-CALC:  <p>Defined at line 3 of file {{.*}}Calculator.cpp</p>
-// HTML-CALC:  <h3 id="{{([0-9A-F]{40})}}">subtract</h3>
-// HTML-CALC:  <p>public int subtract(int a, int b)</p>
-// HTML-CALC:  <p>Defined at line 7 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC:  <h3 id="{{([0-9A-F]{40})}}">multiply</h3>
 // HTML-CALC:  <p>public int multiply(int a, int b)</p>
 // HTML-CALC:  <p>Defined at line 11 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC:  <h3 id="{{([0-9A-F]{40})}}">subtract</h3>
+// HTML-CALC:  <p>public int subtract(int a, int b)</p>
+// HTML-CALC:  <p>Defined at line 7 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC:  <h3 id="{{([0-9A-F]{40})}}">divide</h3>
 // HTML-CALC:  <p>public double divide(int a, int b)</p>
 // HTML-CALC:  <p>Defined at line 15 of file {{.*}}Calculator.cpp</p>
@@ -114,15 +114,15 @@
 // HTML-CIRCLE: <h2 id="Members">Members</h2>
 // HTML-CIRCLE: <li>private double radius_</li>
 // HTML-CIRCLE: <h2 id="Functions">Functions</h2>
-// HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
-// HTML-CIRCLE: <p>public void Circle(double radius)</p>
-// HTML-CIRCLE: <p>Defined at line 3 of file {{.*}}Circle.cpp</p>
 // HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">area</h3>
 // HTML-CIRCLE: <p>public double area()</p>
 // HTML-CIRCLE: <p>Defined at line 5 of file {{.*}}Circle.cpp</p>
 // HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
 // HTML-CIRCLE: <p>public double perimeter()</p>
 // HTML-CIRCLE: <p>Defined at line 9 of file {{.*}}Circle.cpp</p>
+// HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
+// HTML-CIRCLE: <p>public void Circle(double radius)</p>
+// HTML-CIRCLE: <p>Defined at line 3 of file {{.*}}Circle.cpp</p>
 
 // MD-CALC: # class Calculator
 // MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
