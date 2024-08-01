@@ -79,6 +79,7 @@ public:
   /// \param thread The thread to remove.
   /// \return True if the thread was removed, false if it was not in the list.
   bool RemoveThread(lldb::SBThread thread);
+  SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
   /// Reset all options.
   void Clear();

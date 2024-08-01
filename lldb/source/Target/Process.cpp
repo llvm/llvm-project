@@ -473,13 +473,11 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_currently_handling_do_on_removals(false),
-      m_resume_requested(false), m_interrupt_tid(LLDB_INVALID_THREAD_ID),
-      m_finalizing(false), m_destructing(false),
+      m_resume_requested(false), m_finalizing(false), m_destructing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
-      m_can_jit(eCanJITDontKnow),
-      m_crash_info_dict_sp(new StructuredData::Dictionary()) {
+      m_can_jit(eCanJITDontKnow) {
   CheckInWithManager();
 
   Log *log = GetLog(LLDBLog::Object);
@@ -896,7 +894,6 @@ bool Process::HandleProcessStateChangedEvent(
             case eStopReasonThreadExiting:
             case eStopReasonInstrumentation:
             case eStopReasonProcessorTrace:
-            case eStopReasonInterrupt:
               if (!other_thread)
                 other_thread = thread;
               break;
@@ -3266,10 +3263,6 @@ Status Process::PrivateResume() {
   // If signals handing status changed we might want to update our signal
   // filters before resuming.
   UpdateAutomaticSignalFiltering();
-  // Clear any crash info we accumulated for this stop, but don't do so if we
-  // are running functions; we don't want to wipe out the real stop's info.
-  if (!GetModID().IsLastResumeForUserExpression())
-    ResetExtendedCrashInfoDict();
 
   Status error(WillResume());
   // Tell the process it is about to resume before the thread list
@@ -3875,11 +3868,7 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
   }
 }
 
-void Process::SendAsyncInterrupt(Thread *thread) {
-  if (thread != nullptr)
-    m_interrupt_tid = thread->GetProtocolID();
-  else
-    m_interrupt_tid = LLDB_INVALID_THREAD_ID;
+void Process::SendAsyncInterrupt() {
   if (PrivateStateThreadIsValid())
     m_private_state_broadcaster.BroadcastEvent(Process::eBroadcastBitInterrupt,
                                                nullptr);
@@ -4105,14 +4094,9 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
 
       if (interrupt_requested) {
         if (StateIsStoppedState(internal_state, true)) {
-          // Only mark interrupt event if it is not thread specific async
-          // interrupt.
-          if (m_interrupt_tid == LLDB_INVALID_THREAD_ID) {
-            // We requested the interrupt, so mark this as such in the stop
-            // event so clients can tell an interrupted process from a natural
-            // stop
-            ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
-          }
+          // We requested the interrupt, so mark this as such in the stop event
+          // so clients can tell an interrupted process from a natural stop
+          ProcessEventData::SetInterruptedInEvent(event_sp.get(), true);
           interrupt_requested = false;
         } else if (log) {
           LLDB_LOGF(log,
@@ -6535,7 +6519,7 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // will be added to \a ranges, else the entire range will be added to \a
 // ranges.
 static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
-                      Process::CoreFileMemoryRanges &ranges) {
+                      Process::CoreFileMemoryRanges &ranges, const SaveCoreOptions &options) {
   // Don't add empty ranges.
   if (region.GetRange().GetByteSize() == 0)
     return;
@@ -6544,13 +6528,14 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
     return;
   if (try_dirty_pages && AddDirtyPages(region, ranges))
     return;
+  if (!options.ShouldSaveRegion(region))
+    return;
   ranges.push_back(CreateCoreFileMemoryRange(region));
 }
 
 static void SaveOffRegionsWithStackPointers(
-    Process &process, const SaveCoreOptions &core_options,
-    const MemoryRegionInfos &regions, Process::CoreFileMemoryRanges &ranges,
-    std::set<addr_t> &stack_ends) {
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends, const SaveCoreOptions &options) {
   const bool try_dirty_pages = true;
 
   // Before we take any dump, we want to save off the used portions of the
@@ -6572,16 +6557,10 @@ static void SaveOffRegionsWithStackPointers(
     if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
       const size_t stack_head = (sp - red_zone);
       const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
-      // Even if the SaveCoreOption doesn't want us to save the stack
-      // we still need to populate the stack_ends set so it doesn't get saved
-      // off in other calls
       sp_region.GetRange().SetRangeBase(stack_head);
       sp_region.GetRange().SetByteSize(stack_size);
       stack_ends.insert(sp_region.GetRange().GetRangeEnd());
-      // This will return true if the threadlist the user specified is empty,
-      // or contains the thread id from thread_sp.
-      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
-        AddRegion(sp_region, try_dirty_pages, ranges);
+      AddRegion(sp_region, try_dirty_pages, ranges, options);
     }
   }
 }
@@ -6591,13 +6570,14 @@ static void SaveOffRegionsWithStackPointers(
 static void GetCoreFileSaveRangesFull(Process &process,
                                       const MemoryRegionInfos &regions,
                                       Process::CoreFileMemoryRanges &ranges,
-                                      std::set<addr_t> &stack_ends) {
+                                      std::set<addr_t> &stack_ends,
+                                      const SaveCoreOptions &options) {
 
   // Don't add only dirty pages, add full regions.
 const bool try_dirty_pages = false;
   for (const auto &region : regions)
     if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
-      AddRegion(region, try_dirty_pages, ranges);
+      AddRegion(region, try_dirty_pages, ranges, options);
 }
 
 // Save only the dirty pages to the core file. Make sure the process has at
@@ -6606,7 +6586,8 @@ const bool try_dirty_pages = false;
 // page information fall back to saving out all ranges with write permissions.
 static void GetCoreFileSaveRangesDirtyOnly(
     Process &process, const MemoryRegionInfos &regions,
-    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends,
+    const SaveCoreOptions &options) {
 
   // Iterate over the regions and find all dirty pages.
   bool have_dirty_page_info = false;
@@ -6623,7 +6604,7 @@ static void GetCoreFileSaveRangesDirtyOnly(
     for (const auto &region : regions)
       if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
           region.GetWritable() == MemoryRegionInfo::eYes)
-        AddRegion(region, try_dirty_pages, ranges);
+        AddRegion(region, try_dirty_pages, ranges, options);
   }
 }
 
@@ -6637,7 +6618,8 @@ static void GetCoreFileSaveRangesDirtyOnly(
 // stack region.
 static void GetCoreFileSaveRangesStackOnly(
     Process &process, const MemoryRegionInfos &regions,
-    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends,
+    const SaveCoreOptions &options) {
   const bool try_dirty_pages = true;
   // Some platforms support annotating the region information that tell us that
   // it comes from a thread stack. So look for those regions first.
@@ -6646,12 +6628,12 @@ static void GetCoreFileSaveRangesStackOnly(
     // Save all the stack memory ranges not associated with a stack pointer.
     if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
         region.IsStackMemory() == MemoryRegionInfo::eYes)
-      AddRegion(region, try_dirty_pages, ranges);
+      AddRegion(region, try_dirty_pages, ranges, options);
   }
 }
 
-Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
-                                            CoreFileMemoryRanges &ranges) {
+Status Process::CalculateCoreFileSaveRanges(CoreFileMemoryRanges &ranges,
+                                            const SaveCoreOptions &options) {
   lldb_private::MemoryRegionInfos regions;
   Status err = GetMemoryRegions(regions);
   SaveCoreStyle core_style = options.GetStyle();
@@ -6664,22 +6646,22 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
                   "eSaveCoreUnspecified");
 
   std::set<addr_t> stack_ends;
-  SaveOffRegionsWithStackPointers(*this, options, regions, ranges, stack_ends);
+  SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends, options);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
     break;
 
   case eSaveCoreFull:
-    GetCoreFileSaveRangesFull(*this, regions, ranges, stack_ends);
+    GetCoreFileSaveRangesFull(*this, regions, ranges, stack_ends, options);
     break;
 
   case eSaveCoreDirtyOnly:
-    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges, stack_ends);
+    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges, stack_ends, options);
     break;
 
   case eSaveCoreStackOnly:
-    GetCoreFileSaveRangesStackOnly(*this, regions, ranges, stack_ends);
+    GetCoreFileSaveRangesStackOnly(*this, regions, ranges, stack_ends, options);
     break;
   }
 
@@ -6690,18 +6672,6 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
     return Status("no valid address ranges found for core style");
 
   return Status(); // Success!
-}
-
-std::vector<ThreadSP>
-Process::CalculateCoreFileThreadList(const SaveCoreOptions &core_options) {
-  std::vector<ThreadSP> thread_list;
-  for (const lldb::ThreadSP &thread_sp : m_thread_list.Threads()) {
-    if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
-      thread_list.push_back(thread_sp);
-    }
-  }
-
-  return thread_list;
 }
 
 void Process::SetAddressableBitMasks(AddressableBits bit_masks) {

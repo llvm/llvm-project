@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSaveCoreOptions.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -88,6 +91,12 @@ SBError SBSaveCoreOptions::AddThread(lldb::SBThread thread) {
 bool SBSaveCoreOptions::RemoveThread(lldb::SBThread thread) {
   LLDB_INSTRUMENT_VA(this, thread);
   return m_opaque_up->RemoveThread(thread.GetSP());
+}
+
+lldb::SBError SBSaveCoreOptions::AddMemoryRegionToSave(const SBMemoryRegionInfo &region) {
+  LLDB_INSTRUMENT_VA(this, region);
+  lldb_private::Status error = m_opaque_up->AddMemoryRegionToSave(region.ref());
+  return SBError(error);
 }
 
 void SBSaveCoreOptions::Clear() {

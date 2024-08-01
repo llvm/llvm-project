@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -16,6 +17,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <set>
 
 namespace lldb_private {
 
@@ -40,6 +42,9 @@ public:
   bool ShouldThreadBeSaved(lldb::tid_t tid) const;
 
   Status EnsureValidConfiguration(lldb::ProcessSP process_sp) const;
+  Status AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
+
+  bool ShouldSaveRegion(const lldb_private::MemoryRegionInfo &region) const;
 
   void Clear();
 
@@ -51,6 +56,7 @@ private:
   std::optional<lldb::SaveCoreStyle> m_style;
   lldb::ProcessSP m_process_sp;
   std::unordered_set<lldb::tid_t> m_threads_to_save;
+  std::set<lldb::addr_t> m_regions_to_save;
 };
 } // namespace lldb_private
 
