@@ -101,8 +101,9 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  BuiltinTypeDeclBuilder &
-  addHandleMember(AccessSpecifier Access = AccessSpecifier::AS_private) {
+  BuiltinTypeDeclBuilder &addHandleMember(
+      ResourceClass RC, ResourceKind RK,
+      bool IsROV, AccessSpecifier Access = AccessSpecifier::AS_private) {
     if (Record->isCompleteDefinition())
       return *this;
     QualType Ty = Record->getASTContext().VoidPtrTy;
@@ -112,17 +113,13 @@ struct BuiltinTypeDeclBuilder {
         Ty = Record->getASTContext().getPointerType(
             QualType(TTD->getTypeForDecl(), 0));
     }
-    return addMemberVariable("h", Ty, Access);
-  }
-
-  BuiltinTypeDeclBuilder &annotateHLSLResource(ResourceClass RC,
-                                               ResourceKind RK, bool IsROV) {
-    if (Record->isCompleteDefinition())
-      return *this;
-    Record->addAttr(
-        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
-    Record->addAttr(
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
+    // add handle member
+    addMemberVariable("h", Ty, Access);
+    // add resource attributes to handle
+    auto *FD = Fields["h"];
+    FD->addAttr(HLSLResourceClassAttr::CreateImplicit(FD->getASTContext(), RC));
+    FD->addAttr(
+        HLSLResourceAttr::CreateImplicit(FD->getASTContext(), RK, IsROV));
     return *this;
   }
 
@@ -489,9 +486,8 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, ResourceKind RK,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
-      .addHandleMember()
-      .addDefaultHandleConstructor(S, RC)
-      .annotateHLSLResource(RC, RK, IsROV);
+      .addHandleMember(RC, RK, IsROV)
+      .addDefaultHandleConstructor(S, RC);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
