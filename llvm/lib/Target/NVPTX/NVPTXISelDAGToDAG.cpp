@@ -845,26 +845,26 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
       (CodeAddrSpace == NVPTX::PTXLdStInstCode::GENERIC ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
+  if (!AddrGenericOrGlobalOrShared)
+    return NVPTX::Ordering::NotAtomic;
+
   bool UseRelaxedMMIO =
       HasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
 
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
-    return N->isVolatile() && AddrGenericOrGlobalOrShared
-               ? NVPTX::Ordering::Volatile
-               : NVPTX::Ordering::NotAtomic;
+    return N->isVolatile() ? NVPTX::Ordering::Volatile
+                           : NVPTX::Ordering::NotAtomic;
   case AtomicOrdering::Unordered:
     // We lower unordered in the exact same way as 'monotonic' to respect
     // LLVM IR atomicity requirements.
   case AtomicOrdering::Monotonic:
     if (N->isVolatile())
-      return UseRelaxedMMIO                ? NVPTX::Ordering::RelaxedMMIO
-             : AddrGenericOrGlobalOrShared ? NVPTX::Ordering::Volatile
-                                           : NVPTX::Ordering::NotAtomic;
+      return UseRelaxedMMIO ? NVPTX::Ordering::RelaxedMMIO
+                            : NVPTX::Ordering::Volatile;
     else
-      return HasMemoryOrdering             ? NVPTX::Ordering::Relaxed
-             : AddrGenericOrGlobalOrShared ? NVPTX::Ordering::Volatile
-                                           : NVPTX::Ordering::NotAtomic;
+      return HasMemoryOrdering ? NVPTX::Ordering::Relaxed
+                               : NVPTX::Ordering::Volatile;
   // case AtomicOrdering::Consume: // If LLVM ever provides this, lower it to
   // Acquire.
   case AtomicOrdering::Acquire:
@@ -872,15 +872,13 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
       report_fatal_error(
           formatv("PTX only supports Acquire Ordering on reads: {}",
                   N->getOperationName()));
-    return AddrGenericOrGlobalOrShared ? NVPTX::Ordering::Acquire
-                                       : NVPTX::Ordering::NotAtomic;
+    return NVPTX::Ordering::Acquire;
   case AtomicOrdering::Release:
     if (!N->writeMem())
       report_fatal_error(
           formatv("PTX only supports Release Ordering on writes: {}",
                   N->getOperationName()));
-    return AddrGenericOrGlobalOrShared ? NVPTX::Ordering::Release
-                                       : NVPTX::Ordering::NotAtomic;
+    return NVPTX::Ordering::Release;
   case AtomicOrdering::AcquireRelease: {
     report_fatal_error(
         formatv("NVPTX does not support AcquireRelease Ordering on "
@@ -906,10 +904,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
           formatv("NVPTX does not support SequentiallyConsistent Ordering on "
                   "read-modify-writes yet: {}",
                   N->getOperationName()));
-    return AddrGenericOrGlobalOrShared
-               ? OperationOrderings(InstrOrder,
-                                    NVPTX::Ordering::SequentiallyConsistent)
-               : OperationOrderings(NVPTX::Ordering::NotAtomic);
+    return OperationOrderings(InstrOrder,
+                              NVPTX::Ordering::SequentiallyConsistent);
   }
   }
   report_fatal_error(
