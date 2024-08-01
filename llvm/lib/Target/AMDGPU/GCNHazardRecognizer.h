@@ -111,6 +111,7 @@ private:
   bool fixRequiredExportPriority(MachineInstr *MI);
   void computeVALUHazardSGPRs(MachineFunction *MMF);
   bool fixVALUReadSGPRHazard(MachineInstr *MI);
+  bool fixCvtScaleForwardingHazard(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);

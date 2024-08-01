@@ -1120,6 +1120,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
   fixVALUReadSGPRHazard(MI);
+  if (ST.hasCvtScaleForwardingHazard())
+    fixCvtScaleForwardingHazard(MI);
   if (ST.requiresWaitIdleBeforeGetReg())
     fixGetRegWaitIdle(MI);
 }
@@ -1802,6 +1804,39 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
 
   return true;
+}
+
+bool GCNHazardRecognizer::fixCvtScaleForwardingHazard(MachineInstr *MI) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  auto IsHazardFn = [MI, TII, TRI, this](const MachineInstr &I) {
+    if (!AMDGPU::isCvtScaleF32_F32F16ToF8F4(I.getOpcode()))
+      return false;
+
+    const Register CvtScaleDstReg =
+        TII->getNamedOperand(I, AMDGPU::OpName::vdst)->getReg();
+
+    for (auto &Operand : MI->operands()) {
+      if (Operand.isReg() &&
+          TRI->regsOverlap(CvtScaleDstReg, Operand.getReg())) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  auto IsExpiredFn = [](const MachineInstr &I, int) {
+    return SIInstrInfo::isVALU(I);
+  };
+
+  if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
+      std::numeric_limits<int>::max())
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
+
+  return false;
 }
 
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {

@@ -2294,12 +2294,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_Shift(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_CMP(SDNode *N) {
-  SDValue LHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(0))
-                    : SExtPromotedInteger(N->getOperand(0));
-  SDValue RHS = N->getOpcode() == ISD::UCMP
-                    ? ZExtPromotedInteger(N->getOperand(1))
-                    : SExtPromotedInteger(N->getOperand(1));
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (N->getOpcode() == ISD::SCMP) {
+    LHS = SExtPromotedInteger(LHS);
+    RHS = SExtPromotedInteger(RHS);
+  } else {
+    SExtOrZExtPromotedOperands(LHS, RHS);
+  }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS), 0);
 }
