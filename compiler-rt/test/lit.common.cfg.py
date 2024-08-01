@@ -675,15 +675,15 @@ if config.host_os == "Linux":
         ver = LooseVersion(ver_string)
         any_glibc = False
         for required in [
-             "2.19",
-             "2.27",
-             "2.30",
-             "2.33",
-             "2.34",
-             "2.37",
-             "2.38",
-             "2.40",
-         ]:
+            "2.19",
+            "2.27",
+            "2.30",
+            "2.33",
+            "2.34",
+            "2.37",
+            "2.38",
+            "2.40",
+        ]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
