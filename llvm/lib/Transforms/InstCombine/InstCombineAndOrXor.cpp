@@ -339,8 +339,8 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   //
   // We currently handle the case of B, C, D, E are constant.
   //
-  const APInt *BCst, *CCst, *DCst, *OrigECst;
-  if (!match(B, m_APInt(BCst)) || !match(C, m_APInt(CCst)) ||
+  const APInt *BCst, *DCst, *OrigECst;
+  if (!match(B, m_APInt(BCst)) || !match(C, m_Zero()) ||
       !match(D, m_APInt(DCst)) || !match(E, m_APInt(OrigECst)))
     return nullptr;
 
@@ -363,8 +363,28 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // deduce anything from it.
   // For example,
   // (icmp ne (A & 12), 0) & (icmp eq (A & 3), 1) -> no folding.
-  if ((*BCst & *DCst) == 0)
+  if ((*BCst & *DCst) == 0) {
+    // Try to fold isNaN idiom:
+    // (icmp ne (A & FractionBits), 0) & (icmp eq (A & ExpBits), ExpBits) ->
+    // isNaN(A)
+    Value *Src;
+    if (match(A, m_ElementWiseBitCast(m_Value(Src))) &&
+        Src->getType()->getScalarType()->isIEEELikeFPTy() &&
+        !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
+            Attribute::NoImplicitFloat)) {
+      APInt ExpBits =
+          APFloat::getInf(Src->getType()->getScalarType()->getFltSemantics())
+              .bitcastToAPInt();
+      APInt FractionBits = ~ExpBits;
+      FractionBits.clearSignBit();
+
+      if (*BCst == FractionBits && *DCst == ExpBits && ECst == ExpBits)
+        return Builder.CreateFCmp(IsAnd ? FCmpInst::FCMP_UNO
+                                        : FCmpInst::FCMP_ORD,
+                                  Src, ConstantFP::getZero(Src->getType()));
+    }
     return nullptr;
+  }
 
   // If the following two conditions are met:
   //
