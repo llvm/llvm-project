@@ -27,14 +27,14 @@ def ConflictingInference : GICombineRule<
   (apply (G_MERGE_VALUES $dst, GIVariadic<3, 6>:$args))>;
 
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse operand type: minimum number of arguments must be greater than zero in GIVariadic
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_BUILD_VECTOR ?:$dst, anonymous_8021:$a)'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_BUILD_VECTOR ?:$dst, anonymous_{{[0-9]+}}:$a)'
 def InvalidBounds0 : GICombineRule<
   (defs root:$dst),
   (match (G_BUILD_VECTOR $dst, GIVariadic<0>:$a)),
   (apply [{ APPLY }])>;
 
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot parse operand type: maximum number of arguments (1) must be zero, or greater than the minimum number of arguments (1) in GIVariadic
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_BUILD_VECTOR ?:$dst, anonymous_8022:$a)'
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_BUILD_VECTOR ?:$dst, anonymous_{{[0-9]+}}:$a)'
 def InvalidBounds1 : GICombineRule<
   (defs root:$dst),
   (match (G_BUILD_VECTOR $dst, GIVariadic<1,1>:$a)),
