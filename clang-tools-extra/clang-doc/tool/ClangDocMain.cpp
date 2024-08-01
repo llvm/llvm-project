@@ -287,7 +287,14 @@ Example usage for a project using a compile commands database:
         auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
         R.first->second.emplace_back(Value);
       });
-
+  
+  for (auto &Entry : USRToBitcode) {
+    std::vector<llvm::StringRef> &Bitcode = Entry.second;
+    std::sort(Bitcode.begin(), Bitcode.end(),
+              [](const llvm::StringRef &A, const llvm::StringRef &B) {
+                return A < B;
+              });
+  }
   // Collects all Infos according to their unique USR value. This map is added
   // to from the thread pool below and is protected by the USRToInfoMutex.
   llvm::sys::Mutex USRToInfoMutex;
