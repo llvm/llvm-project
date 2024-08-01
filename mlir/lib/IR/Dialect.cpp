@@ -203,10 +203,8 @@ void applyExtensionsFn(
     const auto subset =
         llvm::map_to_vector(llvm::make_range(startIt, endIt), extractExtension);
 
-    // Apply!
-    for (const auto *ext : subset) {
+    for (const auto *ext : subset)
       applyExtension(*ext);
-    }
 
     // Book-keep for the next iteration.
     startIt = extensions.begin() + count;
