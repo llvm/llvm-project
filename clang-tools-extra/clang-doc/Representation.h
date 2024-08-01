@@ -248,6 +248,11 @@ struct Location {
            std::tie(Other.LineNumber, Other.Filename);
   }
 
+  bool operator!=(const Location &Other) const {
+    return std::tie(LineNumber, Filename) !=
+           std::tie(Other.LineNumber, Other.Filename);
+  }
+
   // This operator is used to sort a vector of Locations.
   // No specific order (attributes more important than others) is required. Any
   // sort is enough, the order is only needed to call std::unique after sorting
@@ -319,12 +324,16 @@ struct SymbolInfo : public Info {
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
 
   bool operator<(const SymbolInfo &Other) const {
-    if (DefLoc && Other.DefLoc) {
-      return *DefLoc < *Other.DefLoc;
-    }
-    if (Loc.size() > 0 && Other.Loc.size() > 0) {
+    // Sort by declaration location since we want the doc to be
+    // generated in the order of the source code.
+    // If the declaration location is the same, or not present
+    // we sort by defined location otherwise fallback to the extracted name
+    if (Loc.size() > 0 && Other.Loc.size() > 0 && Loc[0] != Other.Loc[0])
       return Loc[0] < Other.Loc[0];
-    }
+
+    if (DefLoc && Other.DefLoc && *DefLoc != *Other.DefLoc)
+      return *DefLoc < *Other.DefLoc;
+
     return extractName() < Other.extractName();
   }
 };
