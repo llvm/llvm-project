@@ -1,6 +1,5 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
-// TODO: Replace %arg0 with %vec and
 // TODO: Align naming with e.g. vector-transfer-flatten.mlir
 // TODO: Replace %arg0 with %vec
 // TODO: Replace index args as %idx
