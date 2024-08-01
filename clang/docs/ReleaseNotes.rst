@@ -160,9 +160,6 @@ Bug Fixes in This Version
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``__is_layout_compatible`` no longer requires the empty bases to be the same in two
-  standard-layout classes. It now only compares non-static data members.
-
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
