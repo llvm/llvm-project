@@ -332,11 +332,14 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
 
 Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
+  #if 0
   if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
     Result.addOuterTemplateArguments(
         const_cast<FunctionTemplateDecl *>(FTD),
         const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
         /*Final=*/false);
+
+
 
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
 
@@ -381,6 +384,21 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
   }
 
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
+  #else
+  if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
+    Result.addOuterTemplateArguments(
+        const_cast<FunctionTemplateDecl *>(FTD),
+        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
+        /*Final=*/false);
+  }
+
+  if (FTD->isMemberSpecialization())
+    return Response::Done();
+
+  if (FTD->getFriendObjectKind())
+    return Response::ChangeDecl(FTD->getLexicalDeclContext());
+  return Response::UseNextDecl(FTD);
+  #endif
 }
 
 Response HandleRecordDecl(Sema &SemaRef, const CXXRecordDecl *Rec,

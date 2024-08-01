@@ -809,8 +809,8 @@ protected:
   };
 
   /// Pointer to the common data shared by all declarations of this
-  /// template.
-  mutable CommonBase *Common = nullptr;
+  /// template, and a flag indicating if the template is a member specialization.
+  mutable llvm::PointerIntPair<CommonBase *, 1, bool> Common;
 
   /// Retrieves the "common" pointer shared by all (re-)declarations of
   /// the same template. Calling this routine may implicitly allocate memory
@@ -858,14 +858,12 @@ public:
   /// struct X<int>::Inner { /* ... */ };
   /// \endcode
   bool isMemberSpecialization() const {
-    return getCommonPtr()->InstantiatedFromMember.getInt();
+    return Common.getInt();
   }
 
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
-    assert(getCommonPtr()->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
-    getCommonPtr()->InstantiatedFromMember.setInt(true);
+    Common.setInt(true);
   }
 
   /// Retrieve the member template from which this template was
@@ -2187,17 +2185,12 @@ public:
   /// struct X<int>::Inner<T*> { /* ... */ };
   /// \endcode
   bool isMemberSpecialization() const {
-    const auto *First =
-        cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
-    return First->InstantiatedFromMember.getInt();
+    return InstantiatedFromMember.getInt();
   }
 
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
-    auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
-    assert(First->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
-    return First->InstantiatedFromMember.setInt(true);
+    return InstantiatedFromMember.setInt(true);
   }
 
   /// Retrieves the injected specialization type for this partial
@@ -2269,7 +2262,7 @@ protected:
   }
 
   void setCommonPtr(Common *C) {
-    RedeclarableTemplateDecl::Common = C;
+    RedeclarableTemplateDecl::Common.setPointer(C);
   }
 
 public:
@@ -2949,17 +2942,12 @@ public:
   /// U* X<int>::Inner<T*> = (T*)(0) + 1;
   /// \endcode
   bool isMemberSpecialization() const {
-    const auto *First =
-        cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
-    return First->InstantiatedFromMember.getInt();
+    return InstantiatedFromMember.getInt();
   }
 
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
-    auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
-    assert(First->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
-    return First->InstantiatedFromMember.setInt(true);
+    return InstantiatedFromMember.setInt(true);
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;

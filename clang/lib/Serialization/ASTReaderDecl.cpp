@@ -2416,11 +2416,13 @@ ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   // Make sure we've allocated the Common pointer first. We do this before
   // VisitTemplateDecl so that getCommonPtr() can be used during initialization.
   RedeclarableTemplateDecl *CanonD = D->getCanonicalDecl();
-  if (!CanonD->Common) {
-    CanonD->Common = CanonD->newCommon(Reader.getContext());
+  if (!CanonD->Common.getPointer()) {
+    CanonD->Common.setPointer(CanonD->newCommon(Reader.getContext()));
     Reader.PendingDefinitions.insert(CanonD);
   }
-  D->Common = CanonD->Common;
+  D->Common.setPointer(CanonD->Common.getPointer());
+  if (Record.readInt())
+    D->setMemberSpecialization();
 
   // If this is the first declaration of the template, fill in the information
   // for the 'common' pointer.
@@ -2429,8 +2431,6 @@ ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
       assert(RTD->getKind() == D->getKind() &&
              "InstantiatedFromMemberTemplate kind mismatch");
       D->setInstantiatedFromMemberTemplate(RTD);
-      if (Record.readInt())
-        D->setMemberSpecialization();
     }
   }
 
@@ -2562,12 +2562,12 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   D->TemplateParams = Params;
 
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
+  D->InstantiatedFromMember.setInt(Record.readInt());
 
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
       readDeclAs<ClassTemplatePartialSpecializationDecl>());
-    D->InstantiatedFromMember.setInt(Record.readInt());
   }
 }
 
@@ -2660,12 +2660,12 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
   D->TemplateParams = Params;
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
+    D->InstantiatedFromMember.setInt(Record.readInt());
 
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
         readDeclAs<VarTemplatePartialSpecializationDecl>());
-    D->InstantiatedFromMember.setInt(Record.readInt());
   }
 }
 
