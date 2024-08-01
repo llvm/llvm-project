@@ -16,10 +16,15 @@ struct {
 
 #define RISCV_VENDOR_FEATURE_BITS_LENGTH 1
 struct {
-  unsigned vendorID;
   unsigned length;
   unsigned long long features[RISCV_VENDOR_FEATURE_BITS_LENGTH];
 } __riscv_vendor_feature_bits __attribute__((visibility("hidden"), nocommon));
+
+struct {
+  unsigned mVendorID;
+  unsigned mArchID;
+  unsigned mImplID;
+} __riscv__cpu_model __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td
 // TODO: Maybe generate a header from tablegen then include it.
@@ -208,8 +213,10 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // will be cleared to -1, and its value set to 0.
   // This unsets all extension bitmask bits.
 
-  // Init vendor extension
-  __riscv_vendor_feature_bits.vendorID = Hwprobes[2].value;
+  // Init VendorID, ArchID, ImplID
+  __riscv__cpu_model.mVendorID = Hwprobes[2].value;
+  __riscv__cpu_model.mArchID = Hwprobes[3].value;
+  __riscv__cpu_model.mImplID = Hwprobes[4].value;
 
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
@@ -297,9 +304,9 @@ void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits() {
 
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
-      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0},
-      {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
-      {RISCV_HWPROBE_KEY_MVENDORID, 0},
+      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0}, {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
+      {RISCV_HWPROBE_KEY_MVENDORID, 0},     {RISCV_HWPROBE_KEY_MARCHID, 0},
+      {RISCV_HWPROBE_KEY_MIMPID, 0},
   };
   if (initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0])))
     return;
