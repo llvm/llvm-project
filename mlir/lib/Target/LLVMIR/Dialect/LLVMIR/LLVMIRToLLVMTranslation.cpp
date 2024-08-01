@@ -253,19 +253,20 @@ static std::optional<int32_t> parseIntegerMD(llvm::Metadata *md) {
   return intConstant->getValue().getSExtValue();
 }
 
-/// Converts the provided metadata node `md` to an LLVM dialect VecTypeHintAttr
-/// if possible.
-static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *md,
+/// Converts the provided metadata node `node` to an LLVM dialect
+/// VecTypeHintAttr if possible.
+static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *node,
                                           ModuleImport &moduleImport) {
-  if (!md || md->getNumOperands() != 2)
+  if (!node || node->getNumOperands() != 2)
     return {};
 
-  auto *hintMD = dyn_cast<llvm::ValueAsMetadata>(md->getOperand(0).get());
+  auto *hintMD = dyn_cast<llvm::ValueAsMetadata>(node->getOperand(0).get());
   if (!hintMD)
     return {};
   TypeAttr hint = TypeAttr::get(moduleImport.convertType(hintMD->getType()));
 
-  std::optional<int32_t> optIsSigned = parseIntegerMD(md->getOperand(1).get());
+  std::optional<int32_t> optIsSigned =
+      parseIntegerMD(node->getOperand(1).get());
   if (!optIsSigned)
     return {};
   bool isSigned = *optIsSigned != 0;
@@ -273,13 +274,14 @@ static VecTypeHintAttr convertVecTypeHint(Builder builder, llvm::MDNode *md,
   return builder.getAttr<VecTypeHintAttr>(hint, isSigned);
 }
 
-/// Convert an `MDNode` to an MLIR `DenseI32ArrayAttr` if possible.
+/// Converts the provided metadata node `node` to an MLIR DenseI32ArrayAttr if
+/// possible.
 static DenseI32ArrayAttr convertDenseI32Array(Builder builder,
-                                              llvm::MDNode *md) {
-  if (!md)
+                                              llvm::MDNode *node) {
+  if (!node)
     return {};
   SmallVector<int32_t> vals;
-  for (const llvm::MDOperand &op : md->operands()) {
+  for (const llvm::MDOperand &op : node->operands()) {
     std::optional<int32_t> mdValue = parseIntegerMD(op.get());
     if (!mdValue)
       return {};
@@ -289,10 +291,10 @@ static DenseI32ArrayAttr convertDenseI32Array(Builder builder,
 }
 
 /// Convert an `MDNode` to an MLIR `IntegerAttr` if possible.
-static IntegerAttr convertIntegerMD(Builder builder, llvm::MDNode *md) {
-  if (!md || md->getNumOperands() != 1)
+static IntegerAttr convertIntegerMD(Builder builder, llvm::MDNode *node) {
+  if (!node || node->getNumOperands() != 1)
     return {};
-  std::optional<int32_t> val = parseIntegerMD(md->getOperand(0));
+  std::optional<int32_t> val = parseIntegerMD(node->getOperand(0));
   if (!val)
     return {};
   return builder.getI32IntegerAttr(*val);
@@ -341,6 +343,9 @@ setReqdWorkGroupSizeAttr(Builder &builder, llvm::MDNode *node, Operation *op) {
   return success();
 }
 
+/// Converts the given intel required subgroup size metadata node to an MLIR
+/// attribute and attaches it to the imported operation if the translation
+/// succeeds. Returns failure otherwise.
 static LogicalResult setIntelReqdSubGroupSizeAttr(Builder &builder,
                                                   llvm::MDNode *node,
                                                   Operation *op) {

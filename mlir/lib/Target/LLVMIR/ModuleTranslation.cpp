@@ -1274,11 +1274,12 @@ static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
 /// Return an MDNode with a tuple given by the values in `values`.
 static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
                                                  ArrayRef<int32_t> values) {
-  SmallVector<llvm::Metadata *> mds;
-  llvm::transform(values, std::back_inserter(mds), [&context](int32_t value) {
-    return convertIntegerToMetadata(context, llvm::APInt(32, value));
-  });
-  return llvm::MDNode::get(context, mds);
+  SmallVector<llvm::Metadata *> mdValues;
+  llvm::transform(
+      values, std::back_inserter(mdValues), [&context](int32_t value) {
+        return convertIntegerToMetadata(context, llvm::APInt(32, value));
+      });
+  return llvm::MDNode::get(context, mdValues);
 }
 
 /// Attaches the attributes listed in the given array attribute to `llvmFunc`.
@@ -1488,28 +1489,31 @@ static void convertFunctionKernelAttributes(LLVMFuncOp func,
                                             ModuleTranslation &translation) {
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
 
-  if (auto vecTypeHint = func.getVecTypeHint()) {
-    Type type = vecTypeHint->getHint().getValue();
+  if (VecTypeHintAttr vecTypeHint = func.getVecTypeHintAttr()) {
+    Type type = vecTypeHint.getHint().getValue();
     llvm::Type *llvmType = translation.convertType(type);
-    bool isSigned = vecTypeHint->getIsSigned();
+    bool isSigned = vecTypeHint.getIsSigned();
     llvmFunc->setMetadata(
         func.getVecTypeHintAttrName(),
         convertVecTypeHintToMDNode(llvmContext, llvmType, isSigned));
   }
 
-  if (auto workGroupSizeHint = func.getWorkGroupSizeHint()) {
+  if (std::optional<ArrayRef<int32_t>> workGroupSizeHint =
+          func.getWorkGroupSizeHint()) {
     llvmFunc->setMetadata(
         func.getWorkGroupSizeHintAttrName(),
         convertIntegerArrayToMDNode(llvmContext, *workGroupSizeHint));
   }
 
-  if (auto reqdWorkGroupSize = func.getReqdWorkGroupSize()) {
+  if (std::optional<ArrayRef<int32_t>> reqdWorkGroupSize =
+          func.getReqdWorkGroupSize()) {
     llvmFunc->setMetadata(
         func.getReqdWorkGroupSizeAttrName(),
         convertIntegerArrayToMDNode(llvmContext, *reqdWorkGroupSize));
   }
 
-  if (auto intelReqdSubGroupSize = func.getIntelReqdSubGroupSize()) {
+  if (std::optional<uint32_t> intelReqdSubGroupSize =
+          func.getIntelReqdSubGroupSize()) {
     llvmFunc->setMetadata(
         func.getIntelReqdSubGroupSizeAttrName(),
         convertIntegerToMDNode(llvmContext,
