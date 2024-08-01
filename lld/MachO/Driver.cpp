@@ -1042,20 +1042,36 @@ static bool shouldAdhocSignByDefault(Architecture arch, PlatformType platform) {
          platform == PLATFORM_XROS_SIMULATOR;
 }
 
-static bool dataConstDefault(const InputArgList &args) {
-  static const std::array<std::pair<PlatformType, VersionTuple>, 6> minVersion =
-      {{{PLATFORM_MACOS, VersionTuple(10, 15)},
-        {PLATFORM_IOS, VersionTuple(13, 0)},
-        {PLATFORM_TVOS, VersionTuple(13, 0)},
-        {PLATFORM_WATCHOS, VersionTuple(6, 0)},
-        {PLATFORM_XROS, VersionTuple(1, 0)},
-        {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
-  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
-  auto it = llvm::find_if(minVersion,
+template <unsigned long N>
+using MinVersions = std::array<std::pair<PlatformType, VersionTuple>, N>;
+
+/// Returns true if the platform is greater than the min version.
+/// Returns false if the platform does not exist.
+template <unsigned long N>
+static bool greaterEqMinVersion(const MinVersions<N> &minVersions,
+                                bool ignoreSimulator) {
+  PlatformType platform = config->platformInfo.target.Platform;
+  if (ignoreSimulator)
+    platform = removeSimulator(platform);
+  auto it = llvm::find_if(minVersions,
                           [&](const auto &p) { return p.first == platform; });
-  if (it != minVersion.end())
-    if (config->platformInfo.target.MinDeployment < it->second)
-      return false;
+  if (it != minVersions.end())
+    if (config->platformInfo.target.MinDeployment >= it->second)
+      return true;
+  return false;
+}
+
+static bool dataConstDefault(const InputArgList &args) {
+  static const MinVersions<6> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(10, 15)},
+      {PLATFORM_IOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(4, 0)},
+  }};
+  if (!greaterEqMinVersion(minVersion, true))
+    return false;
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -1106,30 +1122,18 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   if (requested)
     return true;
 
-  static const std::array<std::pair<PlatformType, VersionTuple>, 9> minVersion =
-      {{
-          {PLATFORM_IOS, VersionTuple(13, 4)},
-          {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
-          {PLATFORM_MACOS, VersionTuple(13, 0)},
-          {PLATFORM_TVOS, VersionTuple(14, 0)},
-          {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
-          {PLATFORM_WATCHOS, VersionTuple(7, 0)},
-          {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
-          {PLATFORM_XROS, VersionTuple(1, 0)},
-          {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
-      }};
-  PlatformType platform = config->platformInfo.target.Platform;
-  auto it = llvm::find_if(minVersion,
-                          [&](const auto &p) { return p.first == platform; });
-
-  // We don't know the versions for other platforms, so default to disabled.
-  if (it == minVersion.end())
-    return false;
-
-  if (it->second > config->platformInfo.target.MinDeployment)
-    return false;
-
-  return true;
+  static const MinVersions<9> minVersion = {{
+      {PLATFORM_IOS, VersionTuple(13, 4)},
+      {PLATFORM_IOSSIMULATOR, VersionTuple(16, 0)},
+      {PLATFORM_MACOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(14, 0)},
+      {PLATFORM_TVOSSIMULATOR, VersionTuple(15, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(8, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, false);
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
@@ -1140,20 +1144,20 @@ static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
   if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
     return false;
 
-  // If no flag is specified:
-  //   - default true  on   >=  ios14/macos11
-  //   - default false on everything else
-  switch (config->platformInfo.target.Platform) {
-  case PLATFORM_IOS:
-  case PLATFORM_IOSSIMULATOR:
-    return config->platformInfo.target.MinDeployment >= VersionTuple(14, 0);
-  case PLATFORM_MACOS:
-    return config->platformInfo.target.MinDeployment >= VersionTuple(11, 0);
-  default:
-    return false;
-  };
-  llvm_unreachable("RelativeMethodList should default to false, control flow "
-                   "should not reach here");
+  // If no flag is specified, enable this on newer versions by default.
+  // The min versions is taken from
+  // ld64(https://github.com/apple-oss-distributions/ld64/blob/47f477cb721755419018f7530038b272e9d0cdea/src/ld/ld.hpp#L310)
+  // to mimic to operation of ld64
+  // [here](https://github.com/apple-oss-distributions/ld64/blob/47f477cb721755419018f7530038b272e9d0cdea/src/ld/Options.cpp#L6085-L6101)
+  static const MinVersions<6> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(10, 16)},
+      {PLATFORM_IOS, VersionTuple(14, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(7, 0)},
+      {PLATFORM_TVOS, VersionTuple(14, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(5, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, true);
 }
 
 void SymbolPatterns::clear() {

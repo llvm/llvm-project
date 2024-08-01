@@ -2,8 +2,8 @@
 # UNSUPPORTED: target=arm{{.*}}-unknown-linux-gnueabihf
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
-## Compile a64_rel_dylib.o with MacOS 11
-# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11 -o a64_rel_dylib.o a64_simple_class.s
+## Compile a64_rel_dylib.o
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos10.15 -o a64_rel_dylib.o a64_simple_class.s
 
 ## Test arm64 + relative method lists
 # RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64
@@ -17,19 +17,16 @@
 # RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -no_objc_relative_method_lists
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_NO_REL
 
-## Compile a64_rel_dylib.o with MacOS 10
-# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos10 -o a64_rel_dylib.o a64_simple_class.s
-
 ## Test arm64 + relative method lists by explicitly adding `-objc_relative_method_lists`.
-# RUN: %lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -platform_version macOS 10.0 10.0 -objc_relative_method_lists
+# RUN: %lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -platform_version macOS 10.15 10.15 -objc_relative_method_lists
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_REL
 
 ## Test arm64 + no relative method lists by default.
-# RUN: %lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -platform_version macOS 10.0 10.0
+# RUN: %lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -platform_version macOS 10.15 10.15
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_NO_REL
 
 
-CHK_REL:       Contents of (__DATA{{(_CONST)?}},__objc_classlist) section
+CHK_REL:       Contents of (__DATA_CONST,__objc_classlist) section
 CHK_REL-NEXT:  _OBJC_CLASS_$_MyClass
 CHK_REL:       baseMethods
 CHK_REL-NEXT:  entsize 12 (relative)
@@ -62,7 +59,7 @@ CHK_REL-NEXT:    imp 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}})  +[MyClass class_method_0
 
 CHK_NO_REL-NOT: (relative)
 
-CHK_NO_REL:           Contents of (__DATA{{(_CONST)?}},__objc_classlist) section
+CHK_NO_REL:           Contents of (__DATA_CONST,__objc_classlist) section
 CHK_NO_REL-NEXT:      _OBJC_CLASS_$_MyClass
 
 CHK_NO_REL:            baseMethods 0x{{[0-9a-f]*}} (struct method_list_t *)
@@ -136,7 +133,7 @@ CHK_NO_REL-NEXT:		       imp +[MyClass class_method_02]
 .include "objc-macros.s"
 
 .section	__TEXT,__text,regular,pure_instructions
-.build_version macos, 10, 0
+.build_version macos, 10, 15
 
 .objc_selector_def "-[MyClass instance_method_00]"
 .objc_selector_def "-[MyClass instance_method_01]"

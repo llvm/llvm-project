@@ -7,7 +7,7 @@
 ############ Test merging multiple categories into a single category ############
 ## Create a dylib to link against(a64_file1.dylib) and merge categories in the main binary (file2_merge_a64.exe)
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file1.o a64_file1.s
-# RUN: %lld -no_objc_relative_method_lists -arch arm64 a64_file1.o -o a64_file1.dylib -dylib
+# RUN: %lld -arch arm64 a64_file1.o -o a64_file1.dylib -dylib
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o a64_file2.o a64_file2.s
 # RUN: %lld -no_objc_relative_method_lists -arch arm64 -o a64_file2_no_merge.exe a64_file1.dylib a64_file2.o
