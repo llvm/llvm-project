@@ -2295,6 +2295,45 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fsub_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsub_test.cpp
+  HDRS
+  SubTest.h
+  DEPENDS
+    libc.src.math.fsub
+)
+
+add_fp_unittest(
+  fsubl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsubl_test.cpp
+  HDRS
+  SubTest.h
+  DEPENDS
+    libc.src.math.fsubl
+)
+
+add_fp_unittest(
+  fsubf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fsubf128_test.cpp
+  HDRS
+  SubTest.h
+  DEPENDS
+    libc.src.math.fsubf128
+)
+
+add_fp_unittest(
   dsqrtl_test
   NEED_MPFR
   SUITE

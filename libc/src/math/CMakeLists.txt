@@ -260,6 +260,10 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(fsub)
+add_math_entrypoint_object(fsubl)
+add_math_entrypoint_object(fsubf128)
+
 add_math_entrypoint_object(getpayload)
 add_math_entrypoint_object(getpayloadf)
 add_math_entrypoint_object(getpayloadf16)

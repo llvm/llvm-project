@@ -2824,6 +2824,43 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fsub
+  SRCS
+    fsub.cpp
+  HDRS
+    ../fsub.h
+  DEPENDS
+   libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsubl
+  SRCS
+    fsubl.cpp
+  HDRS
+    ../fsubl.h
+  DEPENDS
+   libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fsubf128
+  SRCS
+    fsubf128.cpp
+  HDRS
+    ../fsubf128.h
+  DEPENDS
+   libc.src.__support.macros.properties.types
+   libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sqrt
   SRCS
     sqrt.cpp
