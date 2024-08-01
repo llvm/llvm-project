@@ -24,7 +24,7 @@ extern "C" int LLVMFuzzerTestOneInput(const double x) {
   if (std::signbit(x) && x == 0.0)
     return 0;
   mpfr_t input;
-  mpfr_init2(input, 64);
+  mpfr_init2(input, 53);
   mpfr_set_d(input, x, MPFR_RNDN);
   int output = mpfr_sin(input, input, MPFR_RNDN);
   mpfr_subnormalize(input, output, MPFR_RNDN);
