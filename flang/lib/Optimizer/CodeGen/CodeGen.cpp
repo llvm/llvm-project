@@ -1253,8 +1253,9 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     desc.SetAllocIdx(allocatorIdx);
     if (hasAddendum)
       desc.SetHasAddendum();
-    descriptor = insertField(rewriter, loc, descriptor, {kExtraPosInBox},
-                             this->genI32Constant(loc, rewriter, desc.raw().extra));
+    descriptor =
+        insertField(rewriter, loc, descriptor, {kExtraPosInBox},
+                    this->genI32Constant(loc, rewriter, desc.raw().extra));
 
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
