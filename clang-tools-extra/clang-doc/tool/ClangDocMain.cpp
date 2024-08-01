@@ -215,8 +215,8 @@ void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>>& USRToInfo) {
       Namespace->Children.sort();
     }
     if (Info->IT == doc::InfoType::IT_record) {
-        auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
-        Record->Children.sort();
+      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+      Record->Children.sort();
     }
   }
 }
