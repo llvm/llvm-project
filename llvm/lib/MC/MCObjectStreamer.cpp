@@ -467,12 +467,14 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
-                                             MCSymbol *LastLabel) {
+                                             MCSymbol *LastLabel,
+                                             MCSymbol *EndLabel) {
   // Emit a DW_LNE_end_sequence for the end of the section.
   // Use the section end label to compute the address delta and use INT64_MAX
   // as the line delta which is the signal that this is actually a
   // DW_LNE_end_sequence.
-  MCSymbol *SectionEnd = endSection(Section);
+  if (!EndLabel)
+    EndLabel = endSection(Section);
 
   // Switch back the dwarf line section, in case endSection had to switch the
   // section.
@@ -480,7 +482,7 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
   switchSection(Ctx.getObjectFileInfo()->getDwarfLineSection());
 
   const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
-  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
+  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
                            AsmInfo->getCodePointerSize());
 }
 

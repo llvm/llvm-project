@@ -194,7 +194,8 @@ void MCDwarfLineTable::emitOne(
 
     if (LineEntry.LineStreamLabel) {
       if (!IsAtStartSeq) {
-        MCOS->emitDwarfLineEndEntry(Section, LastLabel);
+        MCOS->emitDwarfLineEndEntry(Section, LastLabel,
+                                    /*EndLabel =*/LastLabel);
         init();
       }
       MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
@@ -273,6 +274,7 @@ void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
   auto &ctx = MCOS->getContext();
   auto *LineStreamLabel = ctx.getOrCreateSymbol(Name);
   auto *LineSym = ctx.createTempSymbol();
+  MCOS->emitLabel(LineSym);
   const MCDwarfLoc &DwarfLoc = ctx.getCurrentDwarfLoc();
 
   // Create a 'fake' line entry by having LineStreamLabel be non-null. This

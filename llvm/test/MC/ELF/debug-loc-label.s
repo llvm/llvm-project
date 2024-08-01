@@ -13,42 +13,39 @@
 # CHECK-LINE-TABLE-NEXT: 0x0000002a: 00 DW_LNE_set_address (0x0000000000000000)
 # CHECK-LINE-TABLE-NEXT: 0x00000035: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000000      1      1      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x00000036: 02 DW_LNS_advance_pc (addr += 33, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x00000038: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000021      1      1      1   0             0       0  is_stmt end_sequence
-# CHECK-LINE-TABLE-NEXT: 0x0000003b: 05 DW_LNS_set_column (2)
-# CHECK-LINE-TABLE-NEXT: 0x0000003d: 00 DW_LNE_set_address (0x0000000000000008)
-# CHECK-LINE-TABLE-NEXT: 0x00000048: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000036: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000000      1      1      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x00000039: 05 DW_LNS_set_column (2)
+# CHECK-LINE-TABLE-NEXT: 0x0000003b: 00 DW_LNE_set_address (0x0000000000000008)
+# CHECK-LINE-TABLE-NEXT: 0x00000046: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000008      1      2      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x00000049: 02 DW_LNS_advance_pc (addr += 25, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x0000004b: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000021      1      2      1   0             0       0  is_stmt end_sequence
-# CHECK-LINE-TABLE-NEXT: 0x0000004e: 05 DW_LNS_set_column (3)
-# CHECK-LINE-TABLE-NEXT: 0x00000050: 00 DW_LNE_set_address (0x0000000000000010)
-# CHECK-LINE-TABLE-NEXT: 0x0000005b: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000047: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000008      1      2      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000004a: 05 DW_LNS_set_column (3)
+# CHECK-LINE-TABLE-NEXT: 0x0000004c: 00 DW_LNE_set_address (0x0000000000000010)
+# CHECK-LINE-TABLE-NEXT: 0x00000057: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000010      1      3      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x0000005c: 08 DW_LNS_const_add_pc (addr += 0x0000000000000011, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x0000005d: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000021      1      3      1   0             0       0  is_stmt end_sequence
-# CHECK-LINE-TABLE-NEXT: 0x00000060: 05 DW_LNS_set_column (4)
-# CHECK-LINE-TABLE-NEXT: 0x00000062: 00 DW_LNE_set_address (0x0000000000000018)
-# CHECK-LINE-TABLE-NEXT: 0x0000006d: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000058: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000010      1      3      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000005b: 05 DW_LNS_set_column (4)
+# CHECK-LINE-TABLE-NEXT: 0x0000005d: 00 DW_LNE_set_address (0x0000000000000018)
+# CHECK-LINE-TABLE-NEXT: 0x00000068: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      4      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x0000006e: 05 DW_LNS_set_column (5)
-# CHECK-LINE-TABLE-NEXT: 0x00000070: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000069: 05 DW_LNS_set_column (5)
+# CHECK-LINE-TABLE-NEXT: 0x0000006b: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      5      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x00000071: 02 DW_LNS_advance_pc (addr += 9, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x00000073: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000006c: 02 DW_LNS_advance_pc (addr += 9, op-index += 0)
+# CHECK-LINE-TABLE-NEXT: 0x0000006e: 00 DW_LNE_end_sequence
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000021      1      5      1   0             0       0  is_stmt end_sequence
 
 # CHECK-SECTIONS: Contents of section .offset_02:
-# CHECK-SECTIONS-NEXT: 0000 3b000000
+# CHECK-SECTIONS-NEXT: 0000 39000000
 
 # CHECK-SECTIONS: Contents of section .offset_03:
-# CHECK-SECTIONS-NEXT: 0000 4e000000
+# CHECK-SECTIONS-NEXT: 0000 4a000000
 
 # CHECK-SECTIONS: Contents of section .offset_05:
-# CHECK-SECTIONS-NEXT: 0000 60000000
+# CHECK-SECTIONS-NEXT: 0000 5b000000
 	.text
 	.file	"test.c"
 	.globl	foo
