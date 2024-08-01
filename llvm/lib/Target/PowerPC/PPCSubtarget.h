@@ -303,7 +303,7 @@ public:
     if (is64BitELFABI())
       return 1;
     if (isAIXABI())
-      return 2;
+      return IsPPC64 ? 3 : 2;
     return 0;
   }
 
