@@ -689,6 +689,7 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::copysign:
+  case Intrinsic::canonicalize:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
   case Intrinsic::uadd_sat:
@@ -742,13 +743,21 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
+  case Intrinsic::canonicalize: {
+    InstRate =
+        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
+    break;
+  }
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
-  case Intrinsic::ssub_sat:
+  case Intrinsic::ssub_sat: {
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
     if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
       NElts = 1;
+    break;
+  }
+  default:
     break;
   }
 
