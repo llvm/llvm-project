@@ -3864,10 +3864,10 @@ static Value *optimizeNaN(CallInst *CI) {
   if (!getConstantStringInfo(CI->getArgOperand(0), CharSeq))
     return nullptr;
 
-  llvm::APInt Fill;
+  APInt Fill;
   // Treat empty strings as if they were zero.
   if (CharSeq.empty())
-    Fill = llvm::APInt(32, 0);
+    Fill = APInt(32, 0);
   else if (CharSeq.getAsInteger(0, Fill))
     return nullptr;
 
