@@ -4006,24 +4006,8 @@ public:
                                       NumExpansions);
   }
 
-  void RebuildLambdaExprImpl(SourceLocation StartLoc, SourceLocation EndLoc,
-                             LambdaScopeInfo *LSI) {}
-
   ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                LambdaScopeInfo *LSI) {
-    CXXRecordDecl *Class = LSI->Lambda;
-    CXXMethodDecl *CallOperator = LSI->CallOperator;
-    CallOperator->setLexicalDeclContext(Class);
-    Decl *TemplateOrNonTemplateCallOperatorDecl =
-        CallOperator->getDescribedFunctionTemplate()
-            ? CallOperator->getDescribedFunctionTemplate()
-            : cast<Decl>(CallOperator);
-    // FIXME: Is this really the best choice? Keeping the lexical decl context
-    // set as CurContext seems more faithful to the source.
-    TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
-
-    getDerived().RebuildLambdaExprImpl(StartLoc, EndLoc, LSI);
-
     // Default arguments might contain unexpanded packs that would expand later.
     for (ParmVarDecl *PVD : LSI->CallOperator->parameters()) {
       if (Expr *Init = PVD->getInit())
@@ -14442,7 +14426,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   CXXMethodDecl *NewCallOperator =
       getSema().CreateLambdaCallOperator(E->getIntroducerRange(), Class);
-  NewCallOperator->setLexicalDeclContext(getSema().CurContext);
 
   // Enter the scope of the lambda.
   getSema().buildLambdaScope(LSI, NewCallOperator, E->getIntroducerRange(),
@@ -14757,7 +14740,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   Class->setTypeForDecl(nullptr);
   getSema().Context.getTypeDeclType(Class);
 
-  return RebuildLambdaExpr(E->getBeginLoc(), Body.get()->getEndLoc(), &LSICopy);
+  return getDerived().RebuildLambdaExpr(E->getBeginLoc(),
+                                        Body.get()->getEndLoc(), &LSICopy);
 }
 
 template<typename Derived>

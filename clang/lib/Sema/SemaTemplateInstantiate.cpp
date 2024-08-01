@@ -1660,8 +1660,8 @@ namespace {
       return inherited::TransformLambdaExpr(E);
     }
 
-    void RebuildLambdaExprImpl(SourceLocation StartLoc, SourceLocation EndLoc,
-                               LambdaScopeInfo *LSI) {
+    ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
+                                 LambdaScopeInfo *LSI) {
       CXXMethodDecl *MD = LSI->CallOperator;
       for (ParmVarDecl *PVD : MD->parameters()) {
         assert(PVD && "null in a parameter list");
@@ -1681,6 +1681,7 @@ namespace {
             PVD->setDefaultArg(ErrorResult.get());
         }
       }
+      return inherited::RebuildLambdaExpr(StartLoc, EndLoc, LSI);
     }
 
     StmtResult TransformLambdaBody(LambdaExpr *E, Stmt *Body) {
