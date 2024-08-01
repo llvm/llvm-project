@@ -207,10 +207,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.rename
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
+    libc.src.stdio.asprintf
     #libc.src.stdio.scanf
     #libc.src.stdio.sscanf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
+    libc.src.stdio.vasprintf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise

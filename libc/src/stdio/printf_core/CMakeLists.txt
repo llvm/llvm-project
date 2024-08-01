@@ -132,3 +132,15 @@ add_header_library(
     libc.src.stdio.printf_core.writer
   ${use_system_file}
 )
+
+add_header_library(
+  vasprintf_internal
+  HDRS
+    vasprintf_internal.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdlib.malloc
+    libc.src.stdlib.realloc
+)

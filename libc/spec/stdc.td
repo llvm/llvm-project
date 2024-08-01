@@ -972,6 +972,13 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<VarArgType>]
           >,
           FunctionSpec<
+              "asprintf",
+              RetValSpec<IntType>,
+              [ArgSpec<CharRestrictedPtrPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VarArgType>]
+          >,
+          FunctionSpec<
               "vsprintf",
               RetValSpec<IntType>,
               [ArgSpec<CharRestrictedPtr>,
@@ -1003,6 +1010,13 @@ def StdC : StandardSpec<"stdc"> {
               "ungetc",
               RetValSpec<IntType>,
               [ArgSpec<IntType>, ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "vasprintf",
+              RetValSpec<IntType>,
+              [ArgSpec<CharRestrictedPtrPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VaListType>]
           >,
       ],
       [
