@@ -145,7 +145,7 @@ public:
     public:
       Memory64Iterator(size_t Count, uint64_t BaseRVA,
                        const Memory64ListFacade *Parent)
-          : Parent(Parent), BaseRVA(BaseRVA), Count(Count){};
+          : Parent(Parent), BaseRVA(BaseRVA), Count(Count) {};
 
       const std::pair<minidump::MemoryDescriptor_64, ArrayRef<uint8_t>>
       operator*() {
