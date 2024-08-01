@@ -49,6 +49,7 @@ STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
 STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
 STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
 STATISTIC(NumCold, "Number of functions inferred as cold");
+STATISTIC(NumNoReturn, "Number of functions inferred as no return");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
@@ -63,6 +64,14 @@ static bool setIsCold(Function &F) {
     return false;
   F.addFnAttr(Attribute::Cold);
   ++NumCold;
+  return true;
+}
+
+static bool setNoReturn(Function &F) {
+  if (F.hasFnAttribute(Attribute::NoReturn))
+    return false;
+  F.addFnAttr(Attribute::NoReturn);
+  ++NumNoReturn;
   return true;
 }
 
@@ -1102,6 +1111,15 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_abort:
     Changed |= setIsCold(F);
     break;
+  case LibFunc_terminate:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    break;
+  case LibFunc_cxa_throw:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    // Don't add `nofree` on `__cxa_throw`
+    return Changed;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:
     Changed |= setRetAndArgsNoUndef(F);
