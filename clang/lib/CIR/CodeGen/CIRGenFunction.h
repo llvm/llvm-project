@@ -900,6 +900,9 @@ public:
   RValue buildCoawaitExpr(const CoawaitExpr &E,
                           AggValueSlot aggSlot = AggValueSlot::ignored(),
                           bool ignoreResult = false);
+  RValue buildCoyieldExpr(const CoyieldExpr &E,
+                          AggValueSlot aggSlot = AggValueSlot::ignored(),
+                          bool ignoreResult = false);
   RValue buildCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
   RValue buildCoroutineFrame();
 

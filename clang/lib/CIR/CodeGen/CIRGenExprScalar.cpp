@@ -160,7 +160,9 @@ public:
   mlir::Value VisitCoawaitExpr(CoawaitExpr *S) {
     return CGF.buildCoawaitExpr(*S).getScalarVal();
   }
-  mlir::Value VisitCoyieldExpr(CoyieldExpr *S) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCoyieldExpr(CoyieldExpr *S) {
+    return CGF.buildCoyieldExpr(*S).getScalarVal();
+  }
   mlir::Value VisitUnaryCoawait(const UnaryOperator *E) {
     llvm_unreachable("NYI");
   }
