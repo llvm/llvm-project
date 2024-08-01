@@ -3976,6 +3976,9 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
              << IsPartialSpecialization;
   }
 
+  if (VarTemplate->hasAttr<DiagnoseSpecializationsAttr>())
+    Diag(TemplateNameLoc, diag::warn_diag_specialization);
+
   // Check for unexpanded parameter packs in any of the template arguments.
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     if (DiagnoseUnexpandedParameterPack(TemplateArgs[I],
@@ -8084,6 +8087,9 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
           isa<TemplateTemplateParmDecl>(Name.getAsTemplateDecl()));
     return true;
   }
+
+  if (ClassTemplate->hasAttr<DiagnoseSpecializationsAttr>())
+    Diag(TemplateNameLoc, diag::warn_diag_specialization);
 
   bool isMemberSpecialization = false;
   bool isPartialSpecialization = false;

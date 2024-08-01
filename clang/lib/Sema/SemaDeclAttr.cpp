@@ -1215,6 +1215,12 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
         << TT->getDecl();
 }
 
+static void handleDiagnoseSpecializations(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  D->getDescribedTemplate()->addAttr(
+      DiagnoseSpecializationsAttr::Create(S.Context, AL));
+}
+
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
   if (RefOkay) {
     if (T->isReferenceType())
@@ -6699,6 +6705,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_PreferredName:
     handlePreferredName(S, D, AL);
+    break;
+  case ParsedAttr::AT_DiagnoseSpecializations:
+    handleDiagnoseSpecializations(S, D, AL);
     break;
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);

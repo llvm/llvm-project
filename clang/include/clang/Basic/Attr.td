@@ -103,6 +103,9 @@ def NonParmVar : SubsetSubject<Var,
 def NonLocalVar : SubsetSubject<Var,
                                 [{!S->hasLocalStorage()}],
                                 "variables with non-local storage">;
+def VarTmpl : SubsetSubject<Var, [{S->getDescribedVarTemplate()}],
+                            "variable template">;
+
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
@@ -3327,6 +3330,14 @@ def DiagnoseIf : InheritableAttr {
   let Documentation = [DiagnoseIfDocs];
 }
 
+def DiagnoseSpecializations : InheritableAttr {
+  let Spellings = [Clang<"diagnose_specializations", /*AllowInC*/0>];
+  let Subjects = SubjectList<[ClassTmpl, VarTmpl]>;
+  let Documentation = [DiagnoseSpecializationsDocs];
+  let MeaningfulToClassTemplateDefinition = 1;
+  let TemplateDependent = 1;
+}
+
 def ArcWeakrefUnavailable : InheritableAttr {
   let Spellings = [Clang<"objc_arc_weak_reference_unavailable">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
@@ -4581,7 +4592,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [    
+  let Args = [
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,

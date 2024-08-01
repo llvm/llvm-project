@@ -975,6 +975,15 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 
+def DiagnoseSpecializationsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+``clang::diagnose_specializations`` can be appied to class templates which
+should not be specialized by users. This is primarily used to diagnose user
+specializations of standard library type traits.
+  }];
+}
+
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
   let Heading = "pass_object_size, pass_dynamic_object_size";
@@ -7388,10 +7397,10 @@ def HLSLLoopHintDocs : Documentation {
   let Content = [{
 The ``[loop]`` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows unrolling to
-be disabled and is not compatible with [unroll(x)]. 
+be disabled and is not compatible with [unroll(x)].
 
 Specifying the parameter, ``[loop]``, directs the
-unroller to not unroll the loop. 
+unroller to not unroll the loop.
 
 .. code-block:: hlsl
 
@@ -8306,4 +8315,3 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
-
