@@ -4,6 +4,8 @@ target_include_directories(gpu_loader PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${LIBC_SOURCE_DIR}/include
   ${LIBC_SOURCE_DIR}
+  ${LLVM_MAIN_INCLUDE_DIR}
+  ${LLVM_BINARY_DIR}/include)
 )
 
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
