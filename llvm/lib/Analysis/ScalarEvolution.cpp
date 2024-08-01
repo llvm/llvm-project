@@ -10861,11 +10861,7 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
   auto *Mul = dyn_cast<SCEVMulExpr>(S);
   if (!Mul)
     return false;
-  return all_of(Mul->operands(), NonRecursive) &&
-         (OrZero || isKnownNonZero(S)) &&
-         (!OrNegative || llvm::count_if(Mul->operands(), [this](const SCEV *S) {
-                           return isKnownNegative(S);
-                         }) <= 1);
+  return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
 std::pair<const SCEV *, const SCEV *>
