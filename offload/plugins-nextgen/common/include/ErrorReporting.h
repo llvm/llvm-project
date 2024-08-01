@@ -14,6 +14,7 @@
 #include "PluginInterface.h"
 #include "Shared/EnvironmentVar.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -215,6 +216,90 @@ public:
                        getAllocTyName(Kind).data(),
                        getAllocTyName(ATI->Kind).data(), DevicePtr);
 #undef DEALLOCATION_ERROR
+  }
+
+  /// Report that a kernel encountered a trap instruction.
+  static void reportTrapInKernel(
+      GenericDeviceTy &Device, KernelTraceInfoRecordTy &KTIR,
+      std::function<bool(__tgt_async_info &)> AsyncInfoWrapperMatcher) {
+    assert(AsyncInfoWrapperMatcher && "A matcher is required");
+
+    uint32_t Idx = 0;
+    for (uint32_t I = 0, E = KTIR.size(); I < E; ++I) {
+      auto KTI = KTIR.getKernelTraceInfo(I);
+      if (KTI.Kernel == nullptr)
+        break;
+      // Skip kernels issued in other queues.
+      if (KTI.AsyncInfo && !(AsyncInfoWrapperMatcher(*KTI.AsyncInfo)))
+        continue;
+      Idx = I;
+      break;
+    }
+
+    auto KTI = KTIR.getKernelTraceInfo(Idx);
+    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo)))
+      reportError("Kernel '%s'", KTI.Kernel->getName());
+    reportError("execution interrupted by hardware trap instruction");
+    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo))) {
+      if (!KTI.LaunchTrace.empty())
+        reportStackTrace(KTI.LaunchTrace);
+      else
+        print(Yellow, "Use '%s=1' to show the stack trace of the kernel\n",
+              Device.OMPX_TrackNumKernelLaunches.getName().data());
+    }
+    abort();
+  }
+
+  /// Report the kernel traces taken from \p KTIR, up to
+  /// OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES many.
+  static void reportKernelTraces(GenericDeviceTy &Device,
+                                 KernelTraceInfoRecordTy &KTIR) {
+    uint32_t NumKTIs = 0;
+    for (uint32_t I = 0, E = KTIR.size(); I < E; ++I) {
+      auto KTI = KTIR.getKernelTraceInfo(I);
+      if (KTI.Kernel == nullptr)
+        break;
+      ++NumKTIs;
+    }
+    if (NumKTIs == 0) {
+      print(BoldRed, "No kernel launches known\n");
+      return;
+    }
+
+    uint32_t TracesToShow =
+        std::min(Device.OMPX_TrackNumKernelLaunches.get(), NumKTIs);
+    if (TracesToShow == 0) {
+      if (NumKTIs == 1)
+        print(BoldLightPurple, "Display only launched kernel:\n");
+      else
+        print(BoldLightPurple, "Display last %u kernels launched:\n", NumKTIs);
+    } else {
+      if (NumKTIs == 1)
+        print(BoldLightPurple, "Display kernel launch trace:\n");
+      else
+        print(BoldLightPurple,
+              "Display %u of the %u last kernel launch traces:\n", TracesToShow,
+              NumKTIs);
+    }
+
+    for (uint32_t Idx = 0, I = 0; I < NumKTIs; ++Idx) {
+      auto KTI = KTIR.getKernelTraceInfo(Idx);
+      if (NumKTIs == 1)
+        print(BoldLightPurple, "Kernel '%s'\n", KTI.Kernel->getName());
+      else
+        print(BoldLightPurple, "Kernel %d: '%s'\n", I, KTI.Kernel->getName());
+      reportStackTrace(KTI.LaunchTrace);
+      ++I;
+    }
+
+    if (NumKTIs != 1) {
+      print(Yellow,
+            "Use '%s=<num>' to adjust the number of shown stack traces (%u "
+            "now, up to %zu)\n",
+            Device.OMPX_TrackNumKernelLaunches.getName().data(),
+            Device.OMPX_TrackNumKernelLaunches.get(), KTIR.size());
+    }
+    // TODO: Let users know how to serialize kernels
   }
 };
 

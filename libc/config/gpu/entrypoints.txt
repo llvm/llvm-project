@@ -188,6 +188,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.vsscanf
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
@@ -282,6 +283,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodf
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.getpayload
+    libc.src.math.getpayloadf
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb

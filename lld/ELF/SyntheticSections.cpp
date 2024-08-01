@@ -4665,7 +4665,8 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
 
-  in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
+  if (config->zSectionHeader)
+    in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
   Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::programHeaders->addralign = config->wordsize;
@@ -4917,7 +4918,8 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.symTab);
   if (in.symTabShndx)
     add(*in.symTabShndx);
-  add(*in.shStrTab);
+  if (in.shStrTab)
+    add(*in.shStrTab);
   if (in.strTab)
     add(*in.strTab);
 }
