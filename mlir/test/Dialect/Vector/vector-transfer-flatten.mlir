@@ -153,17 +153,17 @@ func.func @transfer_read_leading_dynamic_dims(
 }
 
 // CHECK-LABEL: func @transfer_read_leading_dynamic_dims
-// CHECK-SAME:    %[[MEM:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[ARG1:.+]]: index, %[[ARG2:.+]]: index
+// CHECK-SAME:    %[[MEM:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[IDX_1:.+]]: index, %[[IDX_2:.+]]: index
 // CHECK:         %[[C0_I8:.+]] = arith.constant 0 : i8
 // CHECK:         %[[C0:.+]] = arith.constant 0 : index
 // CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]] {{\[}}[0], [1], [2, 3]{{\]}}
 // CHECK-SAME:      : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
 // CHECK:         %[[VEC1D:.+]] = vector.transfer_read %[[COLLAPSED]]
-// CHECK-SAME:    [%[[ARG1]], %[[ARG2]], %[[C0]]], %[[C0_I8]]
+// CHECK-SAME:    [%[[IDX_1]], %[[IDX_2]], %[[C0]]], %[[C0_I8]]
 // CHECK-SAME:    {in_bounds = [true]}
 // CHECK-SAME:      : memref<?x?x32xi8, {{.+}}>, vector<32xi8>
-// CHECK:         %[[VEC2D:.+]] = vector.shape_cast %[[VEC1D]] : vector<32xi8> to vector<8x4xi8>
-// CHECK:         return %[[VEC2D]] : vector<8x4xi8>
+// CHECK:         %[[RES:.+]] = vector.shape_cast %[[VEC1D]] : vector<32xi8> to vector<8x4xi8>
+// CHECK:         return %[[RES]] : vector<8x4xi8>
 
 // CHECK-128B-LABEL: func @transfer_read_leading_dynamic_dims
 //       CHECK-128B:   memref.collapse_shape
@@ -179,10 +179,10 @@ func.func @negative_transfer_read_dynamic_dim_to_flatten(
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
-  %v = vector.transfer_read %mem[%c0, %idx_1, %idx_2, %c0], %c0_i32 {
+  %res = vector.transfer_read %mem[%c0, %idx_1, %idx_2, %c0], %c0_i32 {
     in_bounds = [true, true, true]
   } : memref<1x?x4x6xi32>, vector<1x2x6xi32>
-  return %v : vector<1x2x6xi32>
+  return %res : vector<1x2x6xi32>
 }
 
 // CHECK-LABEL: func.func @negative_transfer_read_dynamic_dim_to_flatten
@@ -202,9 +202,9 @@ func.func @transfer_read_dims_mismatch_non_contiguous_slice(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
     memref<5x4x3x2xi8>, vector<2x1x2x2xi8>
-  return %v : vector<2x1x2x2xi8>
+  return %res : vector<2x1x2x2xi8>
 }
 
 // CHECK-LABEL: func.func @transfer_read_dims_mismatch_non_contiguous_slice(
@@ -220,8 +220,8 @@ func.func @transfer_read_0d(
     %mem : memref<i8>) -> vector<i8> {
 
   %cst = arith.constant 0 : i8
-  %0 = vector.transfer_read %mem[], %cst : memref<i8>, vector<i8>
-  return %0 : vector<i8>
+  %res = vector.transfer_read %mem[], %cst : memref<i8>, vector<i8>
+  return %res : vector<i8>
 }
 
 // CHECK-LABEL: func.func @transfer_read_0d
@@ -241,9 +241,9 @@ func.func @transfer_read_non_contiguous_src(
 
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst :
     memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
-  return %v : vector<5x4x3x2xi8>
+  return %res : vector<5x4x3x2xi8>
 }
 
 // CHECK-LABEL: func.func @transfer_read_non_contiguous_src
@@ -507,9 +507,9 @@ func.func @transfer_write_non_contiguous_src(
 /// TODO: Move to a dedicated file - there's no "flattening" in the following tests
 ///----------------------------------------------------------------------------------------
 
-func.func @fold_unit_dim_add_basic(%vec_0 : vector<1x8xi32>) -> vector<1x8xi32> {
-   %add = arith.addi %vec_0, %vec_0 : vector<1x8xi32>
-   return %add : vector<1x8xi32>
+func.func @fold_unit_dim_add_basic(%vec : vector<1x8xi32>) -> vector<1x8xi32> {
+   %res = arith.addi %vec, %vec : vector<1x8xi32>
+   return %res : vector<1x8xi32>
 }
 // CHECK-LABEL:   func.func @fold_unit_dim_add_basic(
 // CHECK-SAME:      %[[VAL_0:.*]]: vector<1x8xi32>) -> vector<1x8xi32> {
@@ -524,9 +524,9 @@ func.func @fold_unit_dim_add_basic(%vec_0 : vector<1x8xi32>) -> vector<1x8xi32> 
 
 // -----
 
-func.func @fold_unit_dim_add_leading_and_trailing(%vec_0 : vector<1x8x1xi32>) -> vector<1x8x1xi32> {
-   %add = arith.addi %vec_0, %vec_0 : vector<1x8x1xi32>
-   return %add : vector<1x8x1xi32>
+func.func @fold_unit_dim_add_leading_and_trailing(%vec : vector<1x8x1xi32>) -> vector<1x8x1xi32> {
+   %res = arith.addi %vec, %vec : vector<1x8x1xi32>
+   return %res : vector<1x8x1xi32>
 }
 // CHECK-LABEL:   func.func @fold_unit_dim_add_leading_and_trailing(
 // CHECK-SAME:      %[[VAL_0:.*]]: vector<1x8x1xi32>) -> vector<1x8x1xi32> {
@@ -583,8 +583,8 @@ func.func @fold_unit_dim_mulf(%vec_0 : vector<8x[2]x1xf32>,
 
 // -----
 
-func.func @fold_unit_dim_sitofp(%vec_0 : vector<8x[2]x1xi8>) -> vector<8x[2]xf32> {
-   %sc_vec_0 = vector.shape_cast %vec_0 : vector<8x[2]x1xi8> to vector<1x8x[2]xi8>
+func.func @fold_unit_dim_sitofp(%vec : vector<8x[2]x1xi8>) -> vector<8x[2]xf32> {
+   %sc_vec_0 = vector.shape_cast %vec : vector<8x[2]x1xi8> to vector<1x8x[2]xi8>
    %add = arith.sitofp %sc_vec_0 : vector<1x8x[2]xi8> to vector<1x8x[2]xf32>
    %res = vector.shape_cast %add : vector<1x8x[2]xf32> to vector<8x[2]xf32>
    return %res : vector<8x[2]xf32>
@@ -628,7 +628,7 @@ func.func @fold_unit_dims_entirely(%vec_0 : vector<8xi32>,
 // -----
 
 func.func @fold_inner_unit_dim(%vec_0 : vector<8x1x3xf128>,
-                              %vec_1 : vector<1x8x3xf128>) -> vector<8x3xf128> {
+                               %vec_1 : vector<1x8x3xf128>) -> vector<8x3xf128> {
    %sc_vec_1 = vector.shape_cast %vec_1 : vector<1x8x3xf128> to vector<8x1x3xf128>
    %mul = arith.mulf %vec_0, %sc_vec_1 : vector<8x1x3xf128>
    %res = vector.shape_cast %mul : vector<8x1x3xf128> to vector<8x3xf128>
@@ -646,7 +646,7 @@ func.func @fold_inner_unit_dim(%vec_0 : vector<8x1x3xf128>,
 // -----
 
 func.func @fold_inner_unit_dim_scalable(%vec_0 : vector<8x1x[1]x3xf128>,
-                              %vec_1 : vector<1x8x[1]x3xf128>) -> vector<8x[1]x3xf128> {
+                                        %vec_1 : vector<1x8x[1]x3xf128>) -> vector<8x[1]x3xf128> {
    %sc_vec_1 = vector.shape_cast %vec_1 : vector<1x8x[1]x3xf128> to vector<8x1x[1]x3xf128>
    %mul = arith.mulf %vec_0, %sc_vec_1 : vector<8x1x[1]x3xf128>
    %res = vector.shape_cast %mul : vector<8x1x[1]x3xf128> to vector<8x[1]x3xf128>
@@ -663,8 +663,8 @@ func.func @fold_inner_unit_dim_scalable(%vec_0 : vector<8x1x[1]x3xf128>,
 
 // -----
 
-func.func @fold_all_unit_dims(%vec_0: vector<1x1xf32>) -> vector<1xf32> {
-  %0 = arith.mulf %vec_0, %vec_0 : vector<1x1xf32>
+func.func @fold_all_unit_dims(%vec: vector<1x1xf32>) -> vector<1xf32> {
+  %0 = arith.mulf %vec, %vec : vector<1x1xf32>
   %res = vector.shape_cast %0 : vector<1x1xf32> to vector<1xf32>
   return %res : vector<1xf32>
 }
@@ -682,9 +682,9 @@ func.func @negative_out_of_bound_transfer_read(
     %mem : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0 : i8
-  %v = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst {in_bounds = [false, true, true, true]} :
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst {in_bounds = [false, true, true, true]} :
     memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
-  return %v : vector<5x4x3x2xi8>
+  return %res : vector<5x4x3x2xi8>
 }
 // CHECK:     func.func @negative_out_of_bound_transfer_read
 // CHECK-NOT:   memref.collapse_shape
