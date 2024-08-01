@@ -88,8 +88,7 @@ namespace {
       (void) llvm::createLoopExtractorPass();
       (void) llvm::createLoopSimplifyPass();
       (void) llvm::createLoopStrengthReducePass();
-      (void) llvm::createLoopUnrollPass();
-      (void) llvm::createLowerConstantIntrinsicsPass();
+      (void)llvm::createLoopUnrollPass();
       (void) llvm::createLowerGlobalDtorsLegacyPass();
       (void) llvm::createLowerInvokePass();
       (void) llvm::createLowerSwitchPass();
