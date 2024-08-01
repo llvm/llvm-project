@@ -16,6 +16,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -106,8 +107,7 @@ enum LoadStore {
   isStoreShift = 6
 };
 
-// Extends LLVM AtomicOrdering with PTX Orderings.
-// Values match LLVM AtomicOrdering for common orderings.
+// Extends LLVM AtomicOrdering with PTX Orderings:
 using OrderingUnderlyingType = unsigned int;
 enum Ordering : OrderingUnderlyingType {
   NotAtomic = 0, // PTX calls these: "Weak"
@@ -122,6 +122,12 @@ enum Ordering : OrderingUnderlyingType {
   RelaxedMMIO = 9,
   LAST = RelaxedMMIO
 };
+// Values match LLVM AtomicOrdering for common orderings:
+static_assert(Ordering::NotAtomic == (unsigned)AtomicOrdering::NotAtomic);
+static_assert(Ordering::Relaxed == (unsigned)AtomicOrdering::Monotonic);
+static_assert(Ordering::Acquire == (unsigned)AtomicOrdering::Acquire);
+static_assert(Ordering::Release == (unsigned)AtomicOrdering::Release);
+static_assert(Ordering::SequentiallyConsistent == (unsigned)AtomicOrdering::SequentiallyConsistent);        
 
 namespace PTXLdStInstCode {
 enum AddressSpace {

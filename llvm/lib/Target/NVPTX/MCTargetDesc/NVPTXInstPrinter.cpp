@@ -252,7 +252,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       default:
         report_fatal_error(formatv(
             "NVPTX LdStCode Printer does not support \"{}\" sem modifier.",
-            toCString(Ordering)));
+            OrderingToCString(Ordering)));
       }
     } else if (!strcmp(Modifier, "addsp")) {
       switch (Imm) {

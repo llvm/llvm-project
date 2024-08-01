@@ -86,7 +86,7 @@ bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
 
-inline char const *toCString(Ordering Order) {
+inline std::string_view OrderingToCString(Ordering Order) {
   switch (Order) {
   case Ordering::NotAtomic:
     return "NotAtomic";
@@ -108,7 +108,7 @@ inline char const *toCString(Ordering Order) {
 }
 
 inline raw_ostream &operator<<(raw_ostream &O, Ordering Order) {
-  O << toCString(Order);
+  O << OrderingToCString(Order);
   return O;
 }
 

@@ -979,7 +979,7 @@ NVPTX::Ordering NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL,
   }
   default:
     report_fatal_error(formatv("Unexpected fence ordering: \"{}\".",
-                               toCString(NVPTX::Ordering(FenceOrdering))));
+                               OrderingToCString(NVPTX::Ordering(FenceOrdering))));
   }
 
   return InstructionOrdering;
@@ -1199,8 +1199,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_avar, NVPTX::LD_f64_avar);
     if (!Opcode)
       return false;
-    Ops.push_back(Addr);
-    Ops.push_back(Chain);
+    Ops.append({Addr, Chain});
   } else if (PointerSize == 64 ? SelectADDRsi64(N1.getNode(), N1, Base, Offset)
                                : SelectADDRsi(N1.getNode(), N1, Base, Offset)) {
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_i8_asi, NVPTX::LD_i16_asi,
@@ -1208,9 +1207,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
     if (!Opcode)
       return false;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-    Ops.push_back(Chain);
+    Ops.append({Base, Offset, Chain});
   } else if (PointerSize == 64 ? SelectADDRri64(N1.getNode(), N1, Base, Offset)
                                : SelectADDRri(N1.getNode(), N1, Base, Offset)) {
     if (PointerSize == 64)
@@ -1224,9 +1221,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
     if (!Opcode)
       return false;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-    Ops.push_back(Chain);
+    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64)
       Opcode =
@@ -1239,8 +1234,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_areg, NVPTX::LD_f64_areg);
     if (!Opcode)
       return false;
-    Ops.push_back(N1);
-    Ops.push_back(Chain);
+    Ops.append({N1, Chain});
   }
 
   SDNode *NVPTXLD =
@@ -1348,8 +1342,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    Ops.push_back(Addr);
-    Ops.push_back(Chain);
+    Ops.append({Addr, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRsi64(Op1.getNode(), Op1, Base, Offset)
                  : SelectADDRsi(Op1.getNode(), Op1, Base, Offset)) {
@@ -1371,9 +1364,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-    Ops.push_back(Chain);
+    Ops.append({Base, Offset, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
                  : SelectADDRri(Op1.getNode(), Op1, Base, Offset)) {
@@ -1415,9 +1406,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-    Ops.push_back(Chain);
+    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64) {
       switch (N->getOpcode()) {
@@ -1458,8 +1447,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    Ops.push_back(Op1);
-    Ops.push_back(Chain);
+    Ops.append({Op1, Chain});
   }
   LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
 
@@ -1945,8 +1933,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                              NVPTX::ST_f32_avar, NVPTX::ST_f64_avar);
     if (!Opcode)
       return false;
-    Ops.push_back(Addr);
-    Ops.push_back(Chain);
+    Ops.append({Addr, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRsi64(BasePtr.getNode(), BasePtr, Base, Offset)
                  : SelectADDRsi(BasePtr.getNode(), BasePtr, Base, Offset)) {
@@ -1955,9 +1942,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                              NVPTX::ST_f32_asi, NVPTX::ST_f64_asi);
     if (!Opcode)
       return false;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-    Ops.push_back(Chain);
+    Ops.append({Base, Offset, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRri64(BasePtr.getNode(), BasePtr, Base, Offset)
                  : SelectADDRri(BasePtr.getNode(), BasePtr, Base, Offset)) {
@@ -1972,9 +1957,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                                NVPTX::ST_f32_ari, NVPTX::ST_f64_ari);
     if (!Opcode)
       return false;
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
-    Ops.push_back(Chain);
+    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64)
       Opcode =
@@ -1987,8 +1970,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                                NVPTX::ST_f32_areg, NVPTX::ST_f64_areg);
     if (!Opcode)
       return false;
-    Ops.push_back(BasePtr);
-    Ops.push_back(Chain);
+    Ops.append({BasePtr, Chain});
   }
 
   SDNode *NVPTXST = NVPTXST =
@@ -2039,16 +2021,12 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   switch (N->getOpcode()) {
   case NVPTXISD::StoreV2:
     VecType = NVPTX::PTXLdStInstCode::V2;
-    Ops.push_back(N->getOperand(1));
-    Ops.push_back(N->getOperand(2));
+    Ops.append({N->getOperand(1), N->getOperand(2)});
     N2 = N->getOperand(3);
     break;
   case NVPTXISD::StoreV4:
     VecType = NVPTX::PTXLdStInstCode::V4;
-    Ops.push_back(N->getOperand(1));
-    Ops.push_back(N->getOperand(2));
-    Ops.push_back(N->getOperand(3));
-    Ops.push_back(N->getOperand(4));
+    Ops.append({N->getOperand(1), N->getOperand(2), N->getOperand(3), N->getOperand(4)});
     N2 = N->getOperand(5);
     break;
   default:
@@ -2065,11 +2043,12 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
-  Ops.push_back(getI32Imm(InstructionOrdering, DL));
-  Ops.push_back(getI32Imm(CodeAddrSpace, DL));
-  Ops.push_back(getI32Imm(VecType, DL));
-  Ops.push_back(getI32Imm(ToType, DL));
-  Ops.push_back(getI32Imm(ToTypeWidth, DL));
+  Ops.append({
+      getI32Imm(InstructionOrdering, DL),
+      getI32Imm(CodeAddrSpace, DL),
+      getI32Imm(VecType, DL),
+      getI32Imm(ToType, DL),
+      getI32Imm(ToTypeWidth, DL)});
 
   if (SelectDirectAddr(N2, Addr)) {
     switch (N->getOpcode()) {
@@ -2107,8 +2086,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                           std::nullopt, NVPTX::STV_f32_v4_asi, std::nullopt);
       break;
     }
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
+    Ops.append({Base, Offset});
   } else if (PointerSize == 64 ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
                                : SelectADDRri(N2.getNode(), N2, Base, Offset)) {
     if (PointerSize == 64) {
@@ -2147,8 +2125,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
         break;
       }
     }
-    Ops.push_back(Base);
-    Ops.push_back(Offset);
+    Ops.append({Base, Offset});
   } else {
     if (PointerSize == 64) {
       switch (N->getOpcode()) {
@@ -2303,8 +2280,7 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   SmallVector<SDValue, 6> Ops;
   for (unsigned i = 0; i < NumElts; ++i)
     Ops.push_back(N->getOperand(i + 2));
-  Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
-  Ops.push_back(Chain);
+  Ops.append({CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain});
 
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in
@@ -2484,10 +2460,10 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   SmallVector<SDValue, 8> Ops;
   for (unsigned i = 0; i < NumElts; ++i)
     Ops.push_back(N->getOperand(i + 3));
-  Ops.push_back(CurDAG->getTargetConstant(ParamVal, DL, MVT::i32));
-  Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
-  Ops.push_back(Chain);
-  Ops.push_back(Glue);
+  Ops.append({CurDAG->getTargetConstant(ParamVal, DL, MVT::i32),
+      CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32),
+      Chain,
+      Glue});
 
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in
