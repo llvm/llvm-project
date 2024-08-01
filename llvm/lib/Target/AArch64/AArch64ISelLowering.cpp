@@ -13900,9 +13900,9 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG, const AArch64Subtarget &
 
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
                                              SelectionDAG &DAG) const {
-
   if (SDValue SV = tryWhileWRFromOR(Op, DAG, DAG.getSubtarget<AArch64Subtarget>()))
     return SV;
+
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
