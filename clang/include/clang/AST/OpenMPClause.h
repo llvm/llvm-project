@@ -2186,6 +2186,27 @@ public:
   void setExpr(Expr *E) { setStmt(E); }
 };
 
+/// This represents the 'no_openmp' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_openmp
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp' clause.
+class OMPNoOpenMPClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp> {
+public:
+  /// Build 'no_openmp' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPClause() : OMPNoChildClause() {}
+};
+
 /// This represents 'read' clause in the '#pragma omp atomic' directive.
 ///
 /// \code

@@ -590,6 +590,8 @@ void OMPClauseProfiler::VisitOMPHoldsClause(const OMPHoldsClause *) {}
 
 void OMPClauseProfiler::VisitOMPContainsClause(const OMPContainsClause *) {}
 
+void OMPClauseProfiler::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
+
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}

@@ -3356,6 +3356,17 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
         CKind, DKVec, Loc, LLoc, RLoc);
     break;
   }
+  case OMPC_no_openmp: {
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+    SourceLocation Loc = ConsumeToken();
+    Clause = Actions.OpenMP().ActOnOpenMPNullaryAssumptionClause(
+        CKind, Loc, Tok.getLocation());
+    break;
+  }
   case OMPC_ompx_attribute:
     Clause = ParseOpenMPOMPXAttributesClause(WrongDirective);
     break;

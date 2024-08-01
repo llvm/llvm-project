@@ -10476,6 +10476,9 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPContainsClause::CreateEmpty(Context, NumKinds);
     break;
   }
+  case llvm::omp::OMPC_no_openmp:
+    C = new (Context) OMPNoOpenMPClause();
+    break;
   case llvm::omp::OMPC_acquire:
     C = new (Context) OMPAcquireClause();
     break;
@@ -10902,6 +10905,8 @@ void OMPClauseReader::VisitOMPContainsClause(OMPContainsClause *C) {
   }
   C->setDirectiveKinds(DKVec);
 }
+
+void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 

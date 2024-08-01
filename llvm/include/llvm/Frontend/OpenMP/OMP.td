@@ -269,6 +269,9 @@ def OMPC_Mergeable : Clause<"mergeable"> {
 def OMPC_Message : Clause<"message"> {
   let clangClass = "OMPMessageClause";
 }
+def OMPC_NoOpenMP : Clause<"no_openmp"> {
+  let clangClass = "OMPNoOpenMPClause";
+}
 def OMPC_Nocontext : Clause<"nocontext"> {
   let clangClass = "OMPNocontextClause";
   let flangClass = "ScalarLogicalExpr";
@@ -526,6 +529,7 @@ def OMP_Assume : Directive<"assume"> {
     VersionedClause<OMPC_Absent, 51>,
     VersionedClause<OMPC_Contains, 51>,
     VersionedClause<OMPC_Holds, 51>,
+    VersionedClause<OMPC_NoOpenMP, 51>,
   ];
 }
 def OMP_Atomic : Directive<"atomic"> {

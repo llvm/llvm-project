@@ -948,6 +948,9 @@ public:
   OMPClause *ActOnOpenMPDirectivePresenceClause(
       OpenMPClauseKind CK, llvm::ArrayRef<OpenMPDirectiveKind> DKVec,
       SourceLocation Loc, SourceLocation LLoc, SourceLocation RLoc);
+  OMPClause *ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
+                                                SourceLocation Loc,
+                                                SourceLocation RLoc);
 
   OMPClause *ActOnOpenMPSingleExprWithArgClause(
       OpenMPClauseKind Kind, ArrayRef<unsigned> Arguments, Expr *Expr,

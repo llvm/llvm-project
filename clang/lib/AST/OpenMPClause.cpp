@@ -2002,6 +2002,10 @@ void OMPClausePrinter::VisitOMPContainsClause(OMPContainsClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
+  OS << "no_openmp";
+}
+
 void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {
   OS << "seq_cst";
 }

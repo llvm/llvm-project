@@ -23148,6 +23148,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPDirectivePresenceClause(
   }
 }
 
+OMPClause *SemaOpenMP::ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
+                                                          SourceLocation Loc,
+                                                          SourceLocation RLoc) {
+  switch (CK) {
+  case OMPC_no_openmp:
+    return new (getASTContext()) OMPNoOpenMPClause(Loc, RLoc);
+  default:
+    llvm_unreachable("Unexpected OpenMP clause");
+  }
+}
+
 ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
     Expr *Base, SourceLocation LBLoc, Expr *LowerBound,
     SourceLocation ColonLocFirst, SourceLocation ColonLocSecond, Expr *Length,
