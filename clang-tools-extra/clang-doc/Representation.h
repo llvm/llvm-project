@@ -104,9 +104,7 @@ struct Reference {
 
   bool mergeable(const Reference &Other);
   void merge(Reference &&I);
-  bool operator<(const Reference &Other) const {
-    return llvm::toStringRef(USR) < llvm::toStringRef(Other.USR);
-  }
+  bool operator<(const Reference &Other) const { return Name < Other.Name; }
 
   /// Returns the path for this Reference relative to CurrentPath.
   llvm::SmallString<64> getRelativeFilePath(const StringRef &CurrentPath) const;
@@ -327,7 +325,7 @@ struct SymbolInfo : public Info {
     if (Loc.size() > 0 && Other.Loc.size() > 0) {
       return Loc[0] < Other.Loc[0];
     }
-    return llvm::toStringRef(USR) < llvm::toStringRef(Other.USR);
+    return extractName() < Other.extractName();
   }
 };
 
