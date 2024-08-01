@@ -1100,7 +1100,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
     assert(!MissingFeatures::addressSpace());
-    auto AAS = builder.getAddrSpaceAttr(getASTAllocaAddressSpace());
+    auto AAS = getCIRAllocaAddressSpace();
     auto EAS = builder.getAddrSpaceAttr(
         E->getType()->getPointeeType().getAddressSpace());
     if (EAS != AAS) {

@@ -159,7 +159,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   AllocaInt8PtrTy = UInt8PtrTy;
   // TODO: GlobalsInt8PtrTy
   // TODO: ConstGlobalsPtrTy
-  ASTAllocaAddressSpace = getTargetCIRGenInfo().getASTAllocaAddressSpace();
+  CIRAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
 
   PtrDiffTy = ::mlir::cir::IntType::get(
       builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
@@ -1401,6 +1401,16 @@ LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
     return LangAS::sycl_global;
   if (auto AS = getTarget().getConstantAddressSpace())
     return AS.value();
+  return LangAS::Default;
+}
+
+// TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
+LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
+  if (getLangOpts().OpenCL)
+    return LangAS::opencl_private;
+  if (getLangOpts().SYCLIsDevice || getLangOpts().CUDAIsDevice ||
+    (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
+    llvm_unreachable("NYI");
   return LangAS::Default;
 }
 

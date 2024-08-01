@@ -999,7 +999,8 @@ public:
                   typeConverter->convertType(rewriter.getIndexType()),
                   rewriter.getIntegerAttr(rewriter.getIndexType(), 1));
     auto elementTy = getTypeConverter()->convertType(op.getAllocaType());
-    auto resultTy = mlir::LLVM::LLVMPointerType::get(getContext());
+    auto resultTy = getTypeConverter()->convertType(op.getResult().getType());
+    // TODO: Verification between the CIR alloca AS and the one from data layout
     rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(
         op, resultTy, elementTy, size, op.getAlignmentAttr().getInt());
     return mlir::success();
