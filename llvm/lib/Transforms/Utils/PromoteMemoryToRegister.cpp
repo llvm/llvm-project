@@ -741,8 +741,6 @@ void PromoteMem2Reg::run() {
   AllocaDbgUsers.resize(Allocas.size());
   AllocaATInfo.resize(Allocas.size());
   AllocaDPUsers.resize(Allocas.size());
-  BBNumPreds.resize(F.getMaxBlockNumber());
-  Visited.resize(F.getMaxBlockNumber());
 
   AllocaInfo Info;
   LargeBlockInfo LBI;
@@ -794,6 +792,10 @@ void PromoteMem2Reg::run() {
       RemoveFromAllocasList(AllocaNum);
       continue;
     }
+
+    // Initialize BBNumPreds lazily
+    if (BBNumPreds.empty())
+      BBNumPreds.resize(F.getMaxBlockNumber());
 
     // Remember the dbg.declare intrinsic describing this alloca, if any.
     if (!Info.DbgUsers.empty())
@@ -849,6 +851,9 @@ void PromoteMem2Reg::run() {
   // locations until proven otherwise.
   RenamePassData::LocationVector Locations(Allocas.size());
 
+  // The renamer uses the Visited set to avoid infinite loops.
+  Visited.resize(F.getMaxBlockNumber());
+
   // Walks all basic blocks in the function performing the SSA rename algorithm
   // and inserting the phi nodes we marked as necessary
   std::vector<RenamePassData> RenamePassWorkList;
@@ -860,9 +865,6 @@ void PromoteMem2Reg::run() {
     // RenamePass may add new worklist entries.
     RenamePass(RPD.BB, RPD.Pred, RPD.Values, RPD.Locations, RenamePassWorkList);
   } while (!RenamePassWorkList.empty());
-
-  // The renamer uses the Visited set to avoid infinite loops.  Clear it now.
-  Visited.clear();
 
   // Remove the allocas themselves from the function.
   for (Instruction *A : Allocas) {
