@@ -506,11 +506,10 @@ static void registerAll(MLIRContext *ctx) {
 
 void mlir::linalg::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "LINALG_TILING", +[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
-        registerOne<linalg::GenericOp>(ctx);
-        registerAll<
+  registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
+    registerOne<linalg::GenericOp>(ctx);
+    registerAll<
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-            >(ctx);
-      });
+        >(ctx);
+  });
 }

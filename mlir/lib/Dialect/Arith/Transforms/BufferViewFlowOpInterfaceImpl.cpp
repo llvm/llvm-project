@@ -38,8 +38,7 @@ struct SelectOpInterface
 
 void arith::registerBufferViewFlowOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "ARITH_BUFFER_FLOW", +[](MLIRContext *ctx, arith::ArithDialect *dialect) {
-        SelectOp::attachInterface<SelectOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    SelectOp::attachInterface<SelectOpInterface>(*ctx);
+  });
 }

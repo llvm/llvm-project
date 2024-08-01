@@ -46,7 +46,6 @@ public:
 void mlir::registerX86VectorDialectTranslation(DialectRegistry &registry) {
   registry.insert<x86vector::X86VectorDialect>();
   registry.addExtension(
-      "X86_TO_LLVMIR",
       +[](MLIRContext *ctx, x86vector::X86VectorDialect *dialect) {
         dialect->addInterfaces<X86VectorDialectLLVMIRTranslationInterface>();
       });

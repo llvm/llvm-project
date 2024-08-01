@@ -26,8 +26,6 @@ public:
 #include "mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "TRANSFORM_LOOP";
 };
 } // namespace
 

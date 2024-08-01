@@ -14,12 +14,11 @@
 namespace mlir::func {
 
 void registerShardingInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addExtension(
-      "FUNC_SHARDING", +[](MLIRContext *ctx, FuncDialect *dialect) {
-        ReturnOp::attachInterface<
-            mesh::IndependentParallelIteratorDomainShardingInterface<ReturnOp>>(
-            *ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, FuncDialect *dialect) {
+    ReturnOp::attachInterface<
+        mesh::IndependentParallelIteratorDomainShardingInterface<ReturnOp>>(
+        *ctx);
+  });
 }
 
 } // namespace mlir::func

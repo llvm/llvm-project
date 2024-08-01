@@ -103,11 +103,9 @@ TEST(InterfaceAttachment, TypeDelayedContextConstruct) {
   // Put the interface in the registry.
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
-  registry.addExtension(
-      "TYPE_DELAYED_CONSTRUCT",
-      +[](MLIRContext *ctx, test::TestDialect *dialect) {
-        test::TestType::attachInterface<TestTypeModel>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, test::TestDialect *dialect) {
+    test::TestType::attachInterface<TestTypeModel>(*ctx);
+  });
 
   // Check that when a context is constructed with the given registry, the type
   // interface gets registered.
@@ -124,10 +122,9 @@ TEST(InterfaceAttachment, TypeDelayedContextAppend) {
   // Put the interface in the registry.
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
-  registry.addExtension(
-      "TYPE_DELAYED_APPEND", +[](MLIRContext *ctx, test::TestDialect *dialect) {
-        test::TestType::attachInterface<TestTypeModel>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, test::TestDialect *dialect) {
+    test::TestType::attachInterface<TestTypeModel>(*ctx);
+  });
 
   // Check that when the registry gets appended to the context, the interface
   // becomes available for objects in loaded dialects.
@@ -141,10 +138,9 @@ TEST(InterfaceAttachment, TypeDelayedContextAppend) {
 
 TEST(InterfaceAttachment, RepeatedRegistration) {
   DialectRegistry registry;
-  registry.addExtension(
-      "REPEATED", +[](MLIRContext *ctx, BuiltinDialect *dialect) {
-        IntegerType::attachInterface<Model>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
+    IntegerType::attachInterface<Model>(*ctx);
+  });
   MLIRContext context(registry);
 
   // Should't fail on repeated registration through the dialect registry.
@@ -155,10 +151,9 @@ TEST(InterfaceAttachment, TypeBuiltinDelayed) {
   // Builtin dialect needs to registration or loading, but delayed interface
   // registration must still work.
   DialectRegistry registry;
-  registry.addExtension(
-      "BUILTIN_DELAYED", +[](MLIRContext *ctx, BuiltinDialect *dialect) {
-        IntegerType::attachInterface<Model>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
+    IntegerType::attachInterface<Model>(*ctx);
+  });
 
   MLIRContext context(registry);
   IntegerType i16 = IntegerType::get(&context, 16);
@@ -251,10 +246,9 @@ TEST(InterfaceAttachmentTest, AttributeDelayed) {
   // that the delayed registration work for attributes.
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
-  registry.addExtension(
-      "ATTRIBUTE_DELAYED", +[](MLIRContext *ctx, test::TestDialect *dialect) {
-        test::SimpleAAttr::attachInterface<TestExternalSimpleAAttrModel>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, test::TestDialect *dialect) {
+    test::SimpleAAttr::attachInterface<TestExternalSimpleAAttrModel>(*ctx);
+  });
 
   MLIRContext context(registry);
   context.loadDialect<test::TestDialect>();
@@ -358,17 +352,13 @@ struct TestExternalTestOpModel
 TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
-  registry.addExtension(
-      "OPERATION_DELAYED_BUILTIN",
-      +[](MLIRContext *ctx, BuiltinDialect *dialect) {
-        ModuleOp::attachInterface<TestExternalOpModel>(*ctx);
-      });
-  registry.addExtension(
-      "OPERATION_DELAYED_TEST",
-      +[](MLIRContext *ctx, test::TestDialect *dialect) {
-        test::OpJ::attachInterface<TestExternalTestOpModel<test::OpJ>>(*ctx);
-        test::OpH::attachInterface<TestExternalTestOpModel<test::OpH>>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
+    ModuleOp::attachInterface<TestExternalOpModel>(*ctx);
+  });
+  registry.addExtension(+[](MLIRContext *ctx, test::TestDialect *dialect) {
+    test::OpJ::attachInterface<TestExternalTestOpModel<test::OpJ>>(*ctx);
+    test::OpH::attachInterface<TestExternalTestOpModel<test::OpH>>(*ctx);
+  });
 
   // Construct the context directly from a registry. The interfaces are
   // expected to be readily available on operations.
@@ -393,17 +383,13 @@ TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
 TEST(InterfaceAttachment, OperationDelayedContextAppend) {
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
-  registry.addExtension(
-      "OPERATION_DELAYED_BUILTIN",
-      +[](MLIRContext *ctx, BuiltinDialect *dialect) {
-        ModuleOp::attachInterface<TestExternalOpModel>(*ctx);
-      });
-  registry.addExtension(
-      "OPERATION_DELAYED_TEST",
-      +[](MLIRContext *ctx, test::TestDialect *dialect) {
-        test::OpJ::attachInterface<TestExternalTestOpModel<test::OpJ>>(*ctx);
-        test::OpH::attachInterface<TestExternalTestOpModel<test::OpH>>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
+    ModuleOp::attachInterface<TestExternalOpModel>(*ctx);
+  });
+  registry.addExtension(+[](MLIRContext *ctx, test::TestDialect *dialect) {
+    test::OpJ::attachInterface<TestExternalTestOpModel<test::OpJ>>(*ctx);
+    test::OpH::attachInterface<TestExternalTestOpModel<test::OpH>>(*ctx);
+  });
 
   // Construct the context, create ops, and only then append the registry. The
   // interfaces are expected to be available after appending the registry.

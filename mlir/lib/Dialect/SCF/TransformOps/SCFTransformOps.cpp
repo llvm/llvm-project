@@ -624,8 +624,6 @@ public:
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "SCF_TRANSFORM";
 };
 } // namespace
 

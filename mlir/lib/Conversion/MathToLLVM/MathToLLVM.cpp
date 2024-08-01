@@ -356,8 +356,7 @@ struct MathToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 } // namespace
 
 void mlir::registerConvertMathToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(
-      "MATH_TO_LLVM", +[](MLIRContext *ctx, math::MathDialect *dialect) {
-        dialect->addInterfaces<MathToLLVMDialectInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, math::MathDialect *dialect) {
+    dialect->addInterfaces<MathToLLVMDialectInterface>();
+  });
 }

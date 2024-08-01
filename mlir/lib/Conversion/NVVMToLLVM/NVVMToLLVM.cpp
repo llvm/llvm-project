@@ -113,8 +113,7 @@ void mlir::populateNVVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
 }
 
 void mlir::registerConvertNVVMToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(
-      "NVVM_TO_LLVM", +[](MLIRContext *ctx, NVVMDialect *dialect) {
-        dialect->addInterfaces<NVVMToLLVMDialectInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, NVVMDialect *dialect) {
+    dialect->addInterfaces<NVVMToLLVMDialectInterface>();
+  });
 }

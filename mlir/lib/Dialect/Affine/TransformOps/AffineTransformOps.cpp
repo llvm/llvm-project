@@ -167,8 +167,6 @@ public:
 #include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "AFFINE_TRANSFORM";
 };
 } // namespace
 

@@ -532,10 +532,9 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
 
 void mlir::registerOpenACCDialectTranslation(DialectRegistry &registry) {
   registry.insert<acc::OpenACCDialect>();
-  registry.addExtension(
-      "OPENACC_TO_LLVMIR", +[](MLIRContext *ctx, acc::OpenACCDialect *dialect) {
-        dialect->addInterfaces<OpenACCDialectLLVMIRTranslationInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, acc::OpenACCDialect *dialect) {
+    dialect->addInterfaces<OpenACCDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerOpenACCDialectTranslation(MLIRContext &context) {

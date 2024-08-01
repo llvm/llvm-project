@@ -61,8 +61,6 @@ public:
           PDLOperationTypeTransformHandleTypeInterfaceImpl>(*context);
     });
   }
-
-  static constexpr llvm::StringRef extensionID = "TRANSFORM_PDL";
 };
 } // namespace
 

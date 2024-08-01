@@ -150,13 +150,11 @@ struct SelectOpInterface
 
 void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "ARITH_VALUE_BOUNDS",
-      +[](MLIRContext *ctx, arith::ArithDialect *dialect) {
-        arith::AddIOp::attachInterface<arith::AddIOpInterface>(*ctx);
-        arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
-        arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
-        arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
-        arith::SelectOp::attachInterface<arith::SelectOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    arith::AddIOp::attachInterface<arith::AddIOpInterface>(*ctx);
+    arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
+    arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
+    arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
+    arith::SelectOp::attachInterface<arith::SelectOpInterface>(*ctx);
+  });
 }

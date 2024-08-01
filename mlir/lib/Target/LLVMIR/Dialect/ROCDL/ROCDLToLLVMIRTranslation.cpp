@@ -190,10 +190,9 @@ public:
 
 void mlir::registerROCDLDialectTranslation(DialectRegistry &registry) {
   registry.insert<ROCDL::ROCDLDialect>();
-  registry.addExtension(
-      "ROCDL_TO_LLVMIR", +[](MLIRContext *ctx, ROCDL::ROCDLDialect *dialect) {
-        dialect->addInterfaces<ROCDLDialectLLVMIRTranslationInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, ROCDL::ROCDLDialect *dialect) {
+    dialect->addInterfaces<ROCDLDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerROCDLDialectTranslation(MLIRContext &context) {

@@ -119,8 +119,7 @@ struct UBToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 } // namespace
 
 void mlir::ub::registerConvertUBToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(
-      "UB_TO_LLVM", +[](MLIRContext *ctx, ub::UBDialect *dialect) {
-        dialect->addInterfaces<UBToLLVMDialectInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, ub::UBDialect *dialect) {
+    dialect->addInterfaces<UBToLLVMDialectInterface>();
+  });
 }

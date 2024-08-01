@@ -74,7 +74,7 @@ void fir::FIROpsDialect::initialize() {
 // Register the FIRInlinerInterface to FIROpsDialect
 void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
   registry.addExtension(
-      "FIR_INLINER", +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
+      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
         dialect->addInterface<FIRInlinerInterface>();
       });
 }
@@ -90,7 +90,6 @@ void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
 // when more sophisticated translation is required.
 void fir::addFIRToLLVMIRExtension(mlir::DialectRegistry &registry) {
   registry.addExtension(
-      "FIR_LLVM_TRANSLATION",
       +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
         dialect->addInterface<mlir::LLVMTranslationDialectInterface>();
       });

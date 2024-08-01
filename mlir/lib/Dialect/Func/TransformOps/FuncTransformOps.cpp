@@ -246,8 +246,6 @@ public:
 #include "mlir/Dialect/Func/TransformOps/FuncTransformOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "FUNC_TRANSFORM";
 };
 } // namespace
 

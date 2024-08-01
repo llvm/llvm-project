@@ -786,8 +786,7 @@ struct FuncToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 } // namespace
 
 void mlir::registerConvertFuncToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(
-      "FUNC_TO_LLVM", +[](MLIRContext *ctx, func::FuncDialect *dialect) {
-        dialect->addInterfaces<FuncToLLVMDialectInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    dialect->addInterfaces<FuncToLLVMDialectInterface>();
+  });
 }

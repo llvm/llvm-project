@@ -115,18 +115,15 @@ struct SubViewOpInterface
 
 void mlir::memref::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "MEMREF_VALUE_BOUNDS",
-      +[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
-        memref::AllocOp::attachInterface<
-            memref::AllocOpInterface<memref::AllocOp>>(*ctx);
-        memref::AllocaOp::attachInterface<
-            memref::AllocOpInterface<memref::AllocaOp>>(*ctx);
-        memref::CastOp::attachInterface<memref::CastOpInterface>(*ctx);
-        memref::DimOp::attachInterface<memref::DimOpInterface>(*ctx);
-        memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(
-            *ctx);
-        memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
-        memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    memref::AllocOp::attachInterface<memref::AllocOpInterface<memref::AllocOp>>(
+        *ctx);
+    memref::AllocaOp::attachInterface<
+        memref::AllocOpInterface<memref::AllocaOp>>(*ctx);
+    memref::CastOp::attachInterface<memref::CastOpInterface>(*ctx);
+    memref::DimOp::attachInterface<memref::DimOpInterface>(*ctx);
+    memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(*ctx);
+    memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
+    memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
+  });
 }

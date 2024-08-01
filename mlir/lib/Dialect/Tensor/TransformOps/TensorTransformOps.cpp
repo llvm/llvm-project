@@ -70,18 +70,15 @@ struct ReassociativeReshapeOpReplacementInterface
 
 void tensor::registerFindPayloadReplacementOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "TENSOR_PAYLOAD_REPLACEMENT",
-      +[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
-        CollapseShapeOp::attachInterface<
-            ReassociativeReshapeOpReplacementInterface<CollapseShapeOp>>(*ctx);
-        ExpandShapeOp::attachInterface<
-            ReassociativeReshapeOpReplacementInterface<ExpandShapeOp>>(*ctx);
-        ExtractSliceOp::attachInterface<ExtractSliceOpReplacementInterface>(
-            *ctx);
-        InsertSliceOp::attachInterface<InsertSliceOpReplacementInterface>(*ctx);
-        ReshapeOp::attachInterface<ReshapeOpReplacementInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+    CollapseShapeOp::attachInterface<
+        ReassociativeReshapeOpReplacementInterface<CollapseShapeOp>>(*ctx);
+    ExpandShapeOp::attachInterface<
+        ReassociativeReshapeOpReplacementInterface<ExpandShapeOp>>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpReplacementInterface>(*ctx);
+    InsertSliceOp::attachInterface<InsertSliceOpReplacementInterface>(*ctx);
+    ReshapeOp::attachInterface<ReshapeOpReplacementInterface>(*ctx);
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -250,8 +247,6 @@ public:
 #include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "TENSOR_TRANSFORM";
 };
 } // namespace
 

@@ -149,12 +149,11 @@ struct GlobalStoreOpInterface
 } // namespace
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addExtension(
-      "MLPROGRAM_BUFFERIZATION", +[](MLIRContext *ctx, MLProgramDialect *) {
-        GlobalOp::attachInterface<GlobalOpInterface>(*ctx);
-        GlobalLoadOp::attachInterface<GlobalLoadOpInterface>(*ctx);
-        GlobalStoreOp::attachInterface<GlobalStoreOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, MLProgramDialect *) {
+    GlobalOp::attachInterface<GlobalOpInterface>(*ctx);
+    GlobalLoadOp::attachInterface<GlobalLoadOpInterface>(*ctx);
+    GlobalStoreOp::attachInterface<GlobalStoreOpInterface>(*ctx);
+  });
 }
 } // namespace ml_program
 } // namespace mlir

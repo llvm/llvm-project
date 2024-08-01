@@ -161,8 +161,6 @@ public:
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "BUFFERIZATION_TRANSFORM";
 };
 } // namespace
 

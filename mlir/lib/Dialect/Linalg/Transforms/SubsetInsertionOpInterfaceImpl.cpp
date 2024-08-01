@@ -74,9 +74,8 @@ struct LinalgCopyOpInterface
 
 void mlir::linalg::registerSubsetOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "LINALG_SUBSET", +[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
-        linalg::CopyOp::attachInterface<LinalgCopyOpSubsetOpInterface>(*ctx);
-        linalg::CopyOp::attachInterface<LinalgCopyOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
+    linalg::CopyOp::attachInterface<LinalgCopyOpSubsetOpInterface>(*ctx);
+    linalg::CopyOp::attachInterface<LinalgCopyOpInterface>(*ctx);
+  });
 }

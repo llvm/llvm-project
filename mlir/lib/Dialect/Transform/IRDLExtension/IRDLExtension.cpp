@@ -26,8 +26,6 @@ public:
 
     declareDependentDialect<irdl::IRDLDialect>();
   }
-
-  static constexpr llvm::StringRef extensionID = "IRDL_TRANSFORM";
 };
 } // namespace
 

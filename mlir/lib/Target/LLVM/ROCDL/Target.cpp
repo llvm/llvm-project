@@ -68,10 +68,9 @@ public:
 // Register the ROCDL dialect, the ROCDL translation and the target interface.
 void mlir::ROCDL::registerROCDLTargetInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "ROCDL_TARGET", +[](MLIRContext *ctx, ROCDL::ROCDLDialect *dialect) {
-        ROCDLTargetAttr::attachInterface<ROCDLTargetAttrImpl>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, ROCDL::ROCDLDialect *dialect) {
+    ROCDLTargetAttr::attachInterface<ROCDLTargetAttrImpl>(*ctx);
+  });
 }
 
 void mlir::ROCDL::registerROCDLTargetInterfaceExternalModels(

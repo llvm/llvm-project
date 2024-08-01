@@ -137,10 +137,8 @@ struct AssumingYieldOpInterface
 
 void mlir::shape::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "SHAPE_BUFFERIZATION",
-      +[](MLIRContext *ctx, shape::ShapeDialect *dialect) {
-        shape::AssumingOp::attachInterface<AssumingOpInterface>(*ctx);
-        shape::AssumingYieldOp::attachInterface<AssumingYieldOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, shape::ShapeDialect *dialect) {
+    shape::AssumingOp::attachInterface<AssumingOpInterface>(*ctx);
+    shape::AssumingYieldOp::attachInterface<AssumingYieldOpInterface>(*ctx);
+  });
 }

@@ -80,11 +80,10 @@ struct FuncInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void mlir::func::registerInlinerExtension(DialectRegistry &registry) {
-  registry.addExtension(
-      "FUNC_INLINER", +[](MLIRContext *ctx, func::FuncDialect *dialect) {
-        dialect->addInterfaces<FuncInlinerInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    dialect->addInterfaces<FuncInlinerInterface>();
 
-        // The inliner extension relies on the ControlFlow dialect.
-        ctx->getOrLoadDialect<cf::ControlFlowDialect>();
-      });
+    // The inliner extension relies on the ControlFlow dialect.
+    ctx->getOrLoadDialect<cf::ControlFlowDialect>();
+  });
 }

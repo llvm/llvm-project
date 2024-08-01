@@ -905,8 +905,6 @@ public:
           hooks.mergeInPDLMatchHooks(std::move(constraints));
         });
   }
-
-  static constexpr llvm::StringRef extensionID = "TEST_TRANSFORM";
 };
 } // namespace
 

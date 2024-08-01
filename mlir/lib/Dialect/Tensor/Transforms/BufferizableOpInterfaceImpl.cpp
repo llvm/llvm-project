@@ -1055,30 +1055,28 @@ struct SplatOpInterface
 
 void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "TENSOR_BUFFERIZATION",
-      +[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
-        CastOp::attachInterface<CastOpInterface>(*ctx);
-        CollapseShapeOp::attachInterface<CollapseShapeOpInterface>(*ctx);
-        DimOp::attachInterface<DimOpInterface>(*ctx);
-        EmptyOp::attachInterface<EmptyOpInterface>(*ctx);
-        ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
-        ExtractSliceOp::attachInterface<ExtractSliceOpInterface>(*ctx);
-        ExtractOp::attachInterface<ExtractOpInterface>(*ctx);
-        FromElementsOp::attachInterface<FromElementsOpInterface>(*ctx);
-        GenerateOp::attachInterface<GenerateOpInterface>(*ctx);
-        InsertOp::attachInterface<InsertOpInterface>(*ctx);
-        InsertSliceOp::attachInterface<InsertSliceOpInterface>(*ctx);
-        PadOp::attachInterface<PadOpInterface>(*ctx);
-        ParallelInsertSliceOp::attachInterface<ParallelInsertSliceOpInterface>(
-            *ctx);
-        RankOp::attachInterface<RankOpInterface>(*ctx);
-        ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
-        SplatOp::attachInterface<SplatOpInterface>(*ctx);
+  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+    CastOp::attachInterface<CastOpInterface>(*ctx);
+    CollapseShapeOp::attachInterface<CollapseShapeOpInterface>(*ctx);
+    DimOp::attachInterface<DimOpInterface>(*ctx);
+    EmptyOp::attachInterface<EmptyOpInterface>(*ctx);
+    ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpInterface>(*ctx);
+    ExtractOp::attachInterface<ExtractOpInterface>(*ctx);
+    FromElementsOp::attachInterface<FromElementsOpInterface>(*ctx);
+    GenerateOp::attachInterface<GenerateOpInterface>(*ctx);
+    InsertOp::attachInterface<InsertOpInterface>(*ctx);
+    InsertSliceOp::attachInterface<InsertSliceOpInterface>(*ctx);
+    PadOp::attachInterface<PadOpInterface>(*ctx);
+    ParallelInsertSliceOp::attachInterface<ParallelInsertSliceOpInterface>(
+        *ctx);
+    RankOp::attachInterface<RankOpInterface>(*ctx);
+    ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
+    SplatOp::attachInterface<SplatOpInterface>(*ctx);
 
-        // Load additional dialects of which ops may get created.
-        ctx->loadDialect<arith::ArithDialect, linalg::LinalgDialect>();
-      });
+    // Load additional dialects of which ops may get created.
+    ctx->loadDialect<arith::ArithDialect, linalg::LinalgDialect>();
+  });
 
   // Bufferization requires SubsetInsertionOpInterface models. Make sure that
   // they are registered.

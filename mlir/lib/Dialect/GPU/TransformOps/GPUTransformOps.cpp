@@ -933,8 +933,6 @@ public:
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "GPU_TRANSFORM";
 };
 } // namespace
 

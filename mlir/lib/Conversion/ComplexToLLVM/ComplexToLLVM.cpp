@@ -385,7 +385,6 @@ struct ComplexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 
 void mlir::registerConvertComplexToLLVMInterface(DialectRegistry &registry) {
   registry.addExtension(
-      "COMPLEX_TO_LLVM",
       +[](MLIRContext *ctx, complex::ComplexDialect *dialect) {
         dialect->addInterfaces<ComplexToLLVMDialectInterface>();
       });

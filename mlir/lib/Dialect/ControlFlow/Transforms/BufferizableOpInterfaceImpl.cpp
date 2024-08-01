@@ -63,10 +63,8 @@ struct CondBranchOpInterface
 
 void mlir::cf::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "CF_BUFFERIZATION",
-      +[](MLIRContext *ctx, cf::ControlFlowDialect *dialect) {
-        cf::BranchOp::attachInterface<BranchOpInterface>(*ctx);
-        cf::CondBranchOp::attachInterface<CondBranchOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, cf::ControlFlowDialect *dialect) {
+    cf::BranchOp::attachInterface<BranchOpInterface>(*ctx);
+    cf::CondBranchOp::attachInterface<CondBranchOpInterface>(*ctx);
+  });
 }

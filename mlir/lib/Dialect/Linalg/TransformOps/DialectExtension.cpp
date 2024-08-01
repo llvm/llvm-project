@@ -52,8 +52,6 @@ public:
 #include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.cpp.inc"
         >();
   }
-
-  static constexpr llvm::StringRef extensionID = "LINALG_TRANSFORM";
 };
 } // namespace
 

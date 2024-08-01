@@ -69,15 +69,14 @@ struct TransferWriteOpSubsetInsertionOpInterface
 
 void mlir::vector::registerSubsetOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "VECTOR_SUBSET", +[](MLIRContext *ctx, vector::VectorDialect *dialect) {
-        TransferReadOp::attachInterface<
-            XferOpSubsetOpInterface<TransferReadOp>>(*ctx);
-        TransferReadOp::attachInterface<
-            TransferReadOpSubsetExtractionOpInterface>(*ctx);
-        TransferWriteOp::attachInterface<
-            XferOpSubsetOpInterface<TransferWriteOp>>(*ctx);
-        TransferWriteOp::attachInterface<
-            TransferWriteOpSubsetInsertionOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    TransferReadOp::attachInterface<XferOpSubsetOpInterface<TransferReadOp>>(
+        *ctx);
+    TransferReadOp::attachInterface<TransferReadOpSubsetExtractionOpInterface>(
+        *ctx);
+    TransferWriteOp::attachInterface<XferOpSubsetOpInterface<TransferWriteOp>>(
+        *ctx);
+    TransferWriteOp::attachInterface<TransferWriteOpSubsetInsertionOpInterface>(
+        *ctx);
+  });
 }

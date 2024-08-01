@@ -104,7 +104,6 @@ void registerTestFromLLVMIR() {
         registry.insert<test::TestDialect>();
         registerLLVMDialectImport(registry);
         registry.addExtension(
-            "TEST_FROM_LLVMIR",
             +[](MLIRContext *ctx, test::TestDialect *dialect) {
               dialect->addInterfaces<TestDialectLLVMImportDialectInterface>();
             });

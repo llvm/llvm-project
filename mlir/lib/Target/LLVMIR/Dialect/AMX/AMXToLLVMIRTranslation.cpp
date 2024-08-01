@@ -44,10 +44,9 @@ public:
 
 void mlir::registerAMXDialectTranslation(DialectRegistry &registry) {
   registry.insert<amx::AMXDialect>();
-  registry.addExtension(
-      "AMX_TO_LLVMIR", +[](MLIRContext *ctx, amx::AMXDialect *dialect) {
-        dialect->addInterfaces<AMXDialectLLVMIRTranslationInterface>();
-      });
+  registry.addExtension(+[](MLIRContext *ctx, amx::AMXDialect *dialect) {
+    dialect->addInterfaces<AMXDialectLLVMIRTranslationInterface>();
+  });
 }
 
 void mlir::registerAMXDialectTranslation(MLIRContext &context) {

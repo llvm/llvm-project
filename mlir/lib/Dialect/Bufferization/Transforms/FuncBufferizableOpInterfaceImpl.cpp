@@ -82,8 +82,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
+  SymbolRefAttr sym = llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<FuncOp>(
@@ -490,10 +489,9 @@ struct FuncOpInterface
 
 void mlir::bufferization::func_ext::
     registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addExtension(
-      "FUNC_BUFFERIZATION", +[](MLIRContext *ctx, func::FuncDialect *dialect) {
-        func::CallOp::attachInterface<func_ext::CallOpInterface>(*ctx);
-        func::FuncOp::attachInterface<func_ext::FuncOpInterface>(*ctx);
-        func::ReturnOp::attachInterface<func_ext::ReturnOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    func::CallOp::attachInterface<func_ext::CallOpInterface>(*ctx);
+    func::FuncOp::attachInterface<func_ext::FuncOpInterface>(*ctx);
+    func::ReturnOp::attachInterface<func_ext::ReturnOpInterface>(*ctx);
+  });
 }

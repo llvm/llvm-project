@@ -43,10 +43,9 @@ public:
 // Register the SPIR-V dialect, the SPIR-V translation & the target interface.
 void mlir::spirv::registerSPIRVTargetInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "SPIRV_TARGET", +[](MLIRContext *ctx, spirv::SPIRVDialect *dialect) {
-        spirv::TargetEnvAttr::attachInterface<SPIRVTargetAttrImpl>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, spirv::SPIRVDialect *dialect) {
+    spirv::TargetEnvAttr::attachInterface<SPIRVTargetAttrImpl>(*ctx);
+  });
 }
 
 void mlir::spirv::registerSPIRVTargetInterfaceExternalModels(

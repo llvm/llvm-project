@@ -157,8 +157,7 @@ struct CondBranchOpInterface
 
 void mlir::cf::registerBufferDeallocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "CF_BUFFER_DEALLOC", +[](MLIRContext *ctx, ControlFlowDialect *dialect) {
-        CondBranchOp::attachInterface<CondBranchOpInterface>(*ctx);
-      });
+  registry.addExtension(+[](MLIRContext *ctx, ControlFlowDialect *dialect) {
+    CondBranchOp::attachInterface<CondBranchOpInterface>(*ctx);
+  });
 }

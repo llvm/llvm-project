@@ -195,18 +195,15 @@ struct SoftmaxOpInterface
 
 void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addExtension(
-      "LINALG_BUFFERIZATION",
-      +[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
-        // Register all Linalg structured ops. `LinalgOp` is an interface and it
-        // is not possible to attach an external interface to an existing
-        // interface. Therefore, attach the `BufferizableOpInterface` to all ops
-        // one-by-one.
-        LinalgOpInterfaceHelper<
+  registry.addExtension(+[](MLIRContext *ctx, linalg::LinalgDialect *dialect) {
+    // Register all Linalg structured ops. `LinalgOp` is an interface and it is
+    // not possible to attach an external interface to an existing interface.
+    // Therefore, attach the `BufferizableOpInterface` to all ops one-by-one.
+    LinalgOpInterfaceHelper<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-            >::registerOpInterface(ctx);
+        >::registerOpInterface(ctx);
 
-        SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);
-      });
+    SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);
+  });
 }
