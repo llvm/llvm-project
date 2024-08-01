@@ -1203,6 +1203,8 @@ Arm and AArch64 Support
     * Arm Neoverse-N3 (neoverse-n3).
     * Arm Neoverse-V3 (neoverse-v3).
     * Arm Neoverse-V3AE (neoverse-v3ae).
+- The C23 ``_BitInt`` implementation was brought into compliance with AAPCS32
+  and AAPCS64
 
 Android Support
 ^^^^^^^^^^^^^^^
