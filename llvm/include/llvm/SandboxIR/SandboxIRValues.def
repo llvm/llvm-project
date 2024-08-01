@@ -23,14 +23,44 @@ DEF_USER(Constant, Constant)
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
 #endif
-//       ClassID, Opcode(s),  Class
-DEF_INSTR(Opaque, OP(Opaque), OpaqueInst)
-DEF_INSTR(Select, OP(Select), SelectInst)
-DEF_INSTR(Br, OP(Br), BranchInst)
-DEF_INSTR(Load, OP(Load), LoadInst)
-DEF_INSTR(Store, OP(Store), StoreInst)
-DEF_INSTR(Ret, OP(Ret), ReturnInst)
 
+#ifndef OP
+#define OP(OPCODE)
+#endif
+
+#ifndef OPCODES
+#define OPCODES(...)
+#endif
+// clang-format off
+//       ClassID,        Opcode(s),         Class
+DEF_INSTR(Opaque,        OP(Opaque),        OpaqueInst)
+DEF_INSTR(Select,        OP(Select),        SelectInst)
+DEF_INSTR(Br,            OP(Br),            BranchInst)
+DEF_INSTR(Load,          OP(Load),          LoadInst)
+DEF_INSTR(Store,         OP(Store),         StoreInst)
+DEF_INSTR(Ret,           OP(Ret),           ReturnInst)
+DEF_INSTR(Call,          OP(Call),          CallInst)
+DEF_INSTR(Invoke,        OP(Invoke),        InvokeInst)
+DEF_INSTR(CallBr,        OP(CallBr),        CallBrInst)
+DEF_INSTR(GetElementPtr, OP(GetElementPtr), GetElementPtrInst)
+DEF_INSTR(Cast,  OPCODES(\
+                         OP(ZExt)          \
+                         OP(SExt)          \
+                         OP(FPToUI)        \
+                         OP(FPToSI)        \
+                         OP(FPExt)         \
+                         OP(PtrToInt)      \
+                         OP(IntToPtr)      \
+                         OP(SIToFP)        \
+                         OP(UIToFP)        \
+                         OP(Trunc)         \
+                         OP(FPTrunc)       \
+                         OP(BitCast)       \
+                         OP(AddrSpaceCast) \
+                         ),                 CastInst)
+DEF_INSTR(PHI,           OP(PHI),           PHINode)
+  
+// clang-format on
 #ifdef DEF_VALUE
 #undef DEF_VALUE
 #endif
@@ -42,4 +72,7 @@ DEF_INSTR(Ret, OP(Ret), ReturnInst)
 #endif
 #ifdef OP
 #undef OP
+#endif
+#ifdef OPCODES
+#undef OPCODES
 #endif

@@ -71,16 +71,6 @@
       "doc": "Default number of spins before blocking if a rwlock is in contention (default to 100)."
     }
   },
-  "unistd": {
-    "LIBC_CONF_ENABLE_TID_CACHE": {
-      "value": true,
-      "doc": "Enable caching mechanism for gettid to avoid syscall (only effective in fullbuild mode, default to true). Please refer to Undefined Behavior documentation for implications."
-    },
-    "LIBC_CONF_ENABLE_PID_CACHE": {
-      "value": true,
-      "doc": "Enable caching mechanism for getpid to avoid syscall (default to true). Please refer to Undefined Behavior documentation for implications."
-    }
-  },
   "math": {
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
       "value": 0,
@@ -91,6 +81,12 @@
     "LIBC_CONF_QSORT_IMPL": {
       "value": "LIBC_QSORT_QUICK_SORT",
       "doc": "Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT."
+    }
+  },
+  "setjmp": {
+    "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
+      "value": true,
+      "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
     }
   }
 }
