@@ -552,6 +552,10 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       mlir::Value cloneAddr = symTable->shallowLookupSymbol(*sym).getAddr();
       mlir::Type cloneType = cloneAddr.getType();
 
+      // A `convert` op is required for variables that are storage associated
+      // via `equivalence`. The problem is that these variables are declared as
+      // `fir.ptr`s while their privatized storage is declared as `fir.ref`,
+      // therefore we convert to proper symbol type.
       mlir::Value yieldedValue =
           (symType == cloneType) ? cloneAddr
                                  : firOpBuilder.createConvert(
