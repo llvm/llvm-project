@@ -3147,12 +3147,13 @@ def TryCallOp : CIR_CallOp<"try_call",
 
 def AK_Initial : I32EnumAttrCase<"init", 1>;
 def AK_User    : I32EnumAttrCase<"user", 2>;
-def AK_Final   : I32EnumAttrCase<"final", 3>;
+def AK_Yield   : I32EnumAttrCase<"yield", 3>;
+def AK_Final   : I32EnumAttrCase<"final", 4>;
 
 def AwaitKind : I32EnumAttr<
     "AwaitKind",
     "await kind",
-    [AK_Initial, AK_User, AK_Final]> {
+    [AK_Initial, AK_User, AK_Yield, AK_Final]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -3186,9 +3187,10 @@ def AwaitOp : CIR_Op<"await",
     of CIR, e.g. LLVM, should use the `suspend` region to track more
     lower level codegen (e.g. intrinsic emission for coro.save/coro.suspend).
 
-    There are also 3 flavors of `cir.await` available:
+    There are also 4 flavors of `cir.await` available:
     - `init`: compiler generated initial suspend via implicit `co_await`.
     - `user`: also known as normal, representing user written co_await's.
+    - `yield`: user written `co_yield` expressions.
     - `final`: compiler generated final suspend via implicit `co_await`.
 
     From the C++ snippet we get:

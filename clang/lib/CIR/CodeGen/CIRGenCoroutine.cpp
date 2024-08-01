@@ -492,11 +492,12 @@ buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
   return awaitRes;
 }
 
-RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
-                                        AggValueSlot aggSlot,
-                                        bool ignoreResult) {
+static RValue buildSuspendExpr(CIRGenFunction &CGF,
+                               const CoroutineSuspendExpr &E,
+                               mlir::cir::AwaitKind kind, AggValueSlot aggSlot,
+                               bool ignoreResult) {
   RValue rval;
-  auto scopeLoc = getLoc(E.getSourceRange());
+  auto scopeLoc = CGF.getLoc(E.getSourceRange());
 
   // Since we model suspend / resume as an inner region, we must store
   // resume scalar results in a tmp alloca, and load it after we build the
@@ -504,13 +505,12 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
   // every region return a value when promise.return_value() is used, but
   // it's a bit awkward given that resume is the only region that actually
   // returns a value.
-  mlir::Block *currEntryBlock = currLexScope->getEntryBlock();
+  mlir::Block *currEntryBlock = CGF.currLexScope->getEntryBlock();
   [[maybe_unused]] mlir::Value tmpResumeRValAddr;
 
   // No need to explicitly wrap this into a scope since the AST already uses a
   // ExprWithCleanups, which will wrap this into a cir.scope anyways.
-  rval = buildSuspendExpression(*this, *CurCoro.Data, E,
-                                CurCoro.Data->CurrentAwaitKind, aggSlot,
+  rval = buildSuspendExpression(CGF, *CGF.CurCoro.Data, E, kind, aggSlot,
                                 ignoreResult, currEntryBlock, tmpResumeRValAddr,
                                 /*forLValue*/ false)
              .RV;
@@ -519,7 +519,7 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
     return rval;
 
   if (rval.isScalar()) {
-    rval = RValue::get(builder.create<mlir::cir::LoadOp>(
+    rval = RValue::get(CGF.getBuilder().create<mlir::cir::LoadOp>(
         scopeLoc, rval.getScalarVal().getType(), tmpResumeRValAddr));
   } else if (rval.isAggregate()) {
     // This is probably already handled via AggSlot, remove this assertion
@@ -529,6 +529,20 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
     llvm_unreachable("NYI");
   }
   return rval;
+}
+
+RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
+                                        AggValueSlot aggSlot,
+                                        bool ignoreResult) {
+  return buildSuspendExpr(*this, E, CurCoro.Data->CurrentAwaitKind, aggSlot,
+                          ignoreResult);
+}
+
+RValue CIRGenFunction::buildCoyieldExpr(const CoyieldExpr &E,
+                                        AggValueSlot aggSlot,
+                                        bool ignoreResult) {
+  return buildSuspendExpr(*this, E, mlir::cir::AwaitKind::yield, aggSlot,
+                          ignoreResult);
 }
 
 mlir::LogicalResult CIRGenFunction::buildCoreturnStmt(CoreturnStmt const &S) {
