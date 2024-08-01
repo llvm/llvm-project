@@ -7,8 +7,8 @@ subroutine sub1()
   integer :: i, j
   integer, parameter :: n = 100
   integer(8) :: istream
-  real :: a(n), b(n)
-  real :: c(n,n), d(n,n)
+  real, device :: a(n), b(n)
+  real, device :: c(n,n), d(n,n)
 
 ! CHECK-LABEL: func.func @_QPsub1()
 ! CHECK: %[[IV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
