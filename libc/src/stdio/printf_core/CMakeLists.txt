@@ -99,7 +99,6 @@ add_object_library(
     libc.src.__support.uint128
 )
 
-
 add_object_library(
   printf_main
   SRCS
@@ -112,6 +111,18 @@ add_object_library(
     .writer
     .core_structs
     libc.src.__support.arg_list
+)
+
+add_header_library(
+  vasprintf_internal
+  HDRS
+    vasprintf_internal.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdlib.malloc
+    libc.src.stdlib.realloc
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
@@ -131,16 +142,4 @@ add_header_library(
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
   ${use_system_file}
-)
-
-add_header_library(
-  vasprintf_internal
-  HDRS
-    vasprintf_internal.h
-  DEPENDS
-    libc.src.__support.arg_list
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdlib.malloc
-    libc.src.stdlib.realloc
 )
