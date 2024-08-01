@@ -443,14 +443,23 @@ if(LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       .${LIBC_TARGET_OS}.free
   )
-  add_entrypoint_external(
-    calloc
-  )
-  add_entrypoint_external(
+  add_entrypoint_object(
     realloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.realloc
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
+    calloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.calloc
+  )
+  add_entrypoint_object(
     aligned_alloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.aligned_alloc
   )
 endif()
 

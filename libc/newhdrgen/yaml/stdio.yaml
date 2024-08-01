@@ -97,6 +97,22 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: va_list
+  - name: asprintf  
+    standards: 
+      - GNUExtensions  
+    return_type: int  
+    arguments:  
+      - type: char **__restrict  
+      - type: const char *__restrict  
+      - type: ...  
+  - name: vasprintf  
+    standards: 
+      - GNUExtensions  
+    return_type: int  
+    arguments:  
+      - type: char **__restrict  
+      - type: const char *__restrict  
+      - type: va_list 
   - name: sscanf
     standards: 
       - stdc
@@ -105,6 +121,14 @@ functions:
       - type: const char *__restrict
       - type: const char *__restrict
       - type: ...
+  - name: vsscanf
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: va_list
   - name: scanf
     standards: 
       - stdc

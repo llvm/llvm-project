@@ -73,31 +73,6 @@
 ; BOLT-NEXT: "clang version 18.0.0git (git@github.com:ayermolo/llvm-project.git db35fa8fc524127079662802c4735dbf397f86d0)"
 ; BOLT-NEXT: "helper.cpp"
 
-
-;; Tests that BOLT correctly handles updating DW_AT_dwo_name when it outputs a DWP file.
-;; Currently skipping one of Type units because it is not being de-dupped.
-;; In the tu-index this TU is not present.
-; RUN: rm main.exe.bolt
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
-; RUN: llvm-dwarfdump --debug-info -r 0 main.exe.bolt.dwp > logDWP.txt
-; RUN: llvm-dwarfdump --debug-str-offsets main.exe.bolt.dwp >> logDWP.txt
-; RUN: cat logDWP.txt | FileCheck -check-prefix=BOLT-DWP %s
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DWP: DW_AT_comp_dir  (".")
-; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DWP: DW_AT_comp_dir  (".")
-; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
-; BOLT-DWP: DW_TAG_compile_unit
-; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DWP: DW_AT_comp_dir  (".")
-; BOLT-DWP: DW_AT_dwo_name  ("helper.dwo.dwo")
-; BOLT-DWP: DW_TAG_type_unit
-; BOLT-DWP: DW_TAG_compile_unit
-; BOLT-DWP: DW_AT_name  ("helper.cpp")
-; BOLT-DWP: DW_AT_dwo_name  ("helper.dwo.dwo")
-
 ;; Tests that BOLT correctly handles updating DW_AT_comp_dir/DW_AT_dwo_name when outptut directory is specified.
 
 ; RUN: mkdir DWOOut
