@@ -325,6 +325,16 @@ def Abs :  DXILOp<6, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def Saturate :  DXILOp<7, unary> {
+  let Doc = "Clamps a single or double precision floating point value to [0.0f...1.0f].";
+  let LLVMIntrinsic = int_dx_saturate;
+  let arguments = [overloadTy];
+  let result = overloadTy;
+  let overloads = [Overloads<DXIL1_0, [halfTy, floatTy, doubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IsInf :  DXILOp<9, isSpecialFloat> {
   let Doc = "Determines if the specified value is infinite.";
   let LLVMIntrinsic = int_dx_isinf;
