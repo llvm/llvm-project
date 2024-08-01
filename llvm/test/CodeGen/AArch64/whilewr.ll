@@ -207,7 +207,7 @@ entry:
   ret <vscale x 1 x i1> %active.lane.mask.alias
 }
 
-define dso_local void @whilewr_loop_8(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_8(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -301,7 +301,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_16(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -394,7 +394,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_32(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -489,7 +489,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_64(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -584,7 +584,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_multiple_8(ptr %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_multiple_8(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_multiple_8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -696,7 +696,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_multiple_16(ptr %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_multiple_16(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_multiple_16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -814,7 +814,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_multiple_32(ptr %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_multiple_32(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_multiple_32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
@@ -936,7 +936,7 @@ for.cond.cleanup:
   ret void
 }
 
-define dso_local void @whilewr_loop_multiple_64(ptr %a, ptr %b, ptr %c, i32 %n) {
+define void @whilewr_loop_multiple_64(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-LABEL: whilewr_loop_multiple_64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w3, #1
