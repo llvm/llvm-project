@@ -22,7 +22,8 @@ Instructions
 ------------
 
 Required Versions:
-  - Python Version: 3.11.8
+  - Python Version: 3.8
+  - PyYAML Version: 5.1
 
 1. Keep full-build mode on when building, otherwise headers will not be
    generated.

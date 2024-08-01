@@ -61,3 +61,21 @@ add_libc_fuzzer(
     libc.src.math.nextafterf
     libc.src.math.nextafterl
 )
+
+add_libc_fuzzer(
+  sin_fuzz
+  NEED_MPFR
+  SRCS
+    sin_fuzz.cpp
+  DEPENDS
+    libc.src.math.sin
+)
+
+add_libc_fuzzer(
+  cos_fuzz
+  NEED_MPFR
+  SRCS
+    cos_fuzz.cpp
+  DEPENDS
+    libc.src.math.cos
+)

@@ -215,8 +215,9 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
       }
     }
 
-    unsigned Size = getSizeInBits(Reg, MRI, TRI);
-    const ValueMapping *ValMapping = &getValueMapping(0, Size, *CurRegBank);
+    TypeSize Size = getSizeInBits(Reg, MRI, TRI);
+    const ValueMapping *ValMapping =
+        &getValueMapping(0, Size.getKnownMinValue(), *CurRegBank);
     if (IsCopyLike) {
       if (!OperandsMapping[0]) {
         if (MI.isRegSequence()) {

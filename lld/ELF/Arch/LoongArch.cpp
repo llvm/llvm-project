@@ -511,6 +511,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     return R_TLSDESC;
   case R_LARCH_TLS_DESC_CALL:
     return R_TLSDESC_CALL;
+  case R_LARCH_TLS_LD_PCREL20_S2:
+    return R_TLSLD_PC;
+  case R_LARCH_TLS_GD_PCREL20_S2:
+    return R_TLSGD_PC;
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    return R_TLSDESC_PC;
 
   // Other known relocs that are explicitly unimplemented:
   //
@@ -557,7 +563,11 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, val);
     return;
 
+  // Relocs intended for `pcaddi`.
   case R_LARCH_PCREL20_S2:
+  case R_LARCH_TLS_LD_PCREL20_S2:
+  case R_LARCH_TLS_GD_PCREL20_S2:
+  case R_LARCH_TLS_DESC_PCREL20_S2:
     checkInt(loc, val, 22, rel);
     checkAlignment(loc, val, 4, rel);
     write32le(loc, setJ20(read32le(loc), val >> 2));

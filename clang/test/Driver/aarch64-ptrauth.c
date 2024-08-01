@@ -21,16 +21,16 @@
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
 // PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
 // PAUTHABI1-SAME: "-target-abi" "pauthtest"
-// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
+// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini"
 
 // RUN: %clang -### -c --target=aarch64 -mabi=pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// RUN:   -fno-ptrauth-indirect-gotos -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
 // RUN: %clang -### -c --target=aarch64-pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// RUN:   -fno-ptrauth-indirect-gotos -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
 // PAUTHABI2:     "-cc1"
 // PAUTHABI2-NOT: "-fptrauth-
 
@@ -49,14 +49,14 @@
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'
 
 //// Only support PAuth ABI for Linux as for now.
-// RUN: not %clang -c --target=aarch64-unknown -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR2
-// RUN: not %clang -c --target=aarch64-unknown-pauthtest       %s 2>&1 | FileCheck %s --check-prefix=ERR2
+// RUN: not %clang -o /dev/null -c --target=aarch64-unknown -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR2
+// RUN: not %clang -o /dev/null -c --target=aarch64-unknown-pauthtest       %s 2>&1 | FileCheck %s --check-prefix=ERR2
 // ERR2: error: ABI 'pauthtest' is not supported for 'aarch64-unknown-unknown-pauthtest'
 
 //// PAuth ABI is encoded as environment part of the triple, so don't allow to explicitly set other environments.
-// RUN: not %clang -c --target=aarch64-linux-gnu -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR3
+// RUN: not %clang -### -c --target=aarch64-linux-gnu -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR3
 // ERR3: error: unsupported option '-mabi=pauthtest' for target 'aarch64-unknown-linux-gnu'
-// RUN: %clang -c --target=aarch64-linux-pauthtest -mabi=pauthtest %s
+// RUN: %clang -### -c --target=aarch64-linux-pauthtest -mabi=pauthtest %s
 
 //// The only branch protection option compatible with PAuthABI is BTI.
 // RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=pac-ret %s 2>&1 | \

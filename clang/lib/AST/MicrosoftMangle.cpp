@@ -1015,6 +1015,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E5M2FNUZ:
   case APFloat::S_Float8E4M3FNUZ:
   case APFloat::S_Float8E4M3B11FNUZ:
+  case APFloat::S_Float8E3M4:
   case APFloat::S_FloatTF32:
   case APFloat::S_Float6E3M2FN:
   case APFloat::S_Float6E2M3FN:

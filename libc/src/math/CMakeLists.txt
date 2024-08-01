@@ -86,17 +86,27 @@ add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
 add_math_entrypoint_object(cospif)
 
+add_math_entrypoint_object(daddl)
+add_math_entrypoint_object(daddf128)
+add_math_entrypoint_object(ddivf128)
 add_math_entrypoint_object(dmull)
 add_math_entrypoint_object(dmulf128)
 
+add_math_entrypoint_object(dfmal)
+add_math_entrypoint_object(dfmaf128)
+
 add_math_entrypoint_object(dsqrtl)
 add_math_entrypoint_object(dsqrtf128)
+
+add_math_entrypoint_object(dsubl)
+add_math_entrypoint_object(dsubf128)
 
 add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
 
 add_math_entrypoint_object(exp)
 add_math_entrypoint_object(expf)
+add_math_entrypoint_object(expf16)
 
 add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
@@ -253,7 +263,10 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(getpayload)
+add_math_entrypoint_object(getpayloadf)
 add_math_entrypoint_object(getpayloadf16)
+add_math_entrypoint_object(getpayloadf128)
 
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
@@ -405,7 +418,10 @@ add_math_entrypoint_object(scalbnl)
 add_math_entrypoint_object(scalbnf16)
 add_math_entrypoint_object(scalbnf128)
 
+add_math_entrypoint_object(setpayload)
+add_math_entrypoint_object(setpayloadf)
 add_math_entrypoint_object(setpayloadf16)
+add_math_entrypoint_object(setpayloadf128)
 
 add_math_entrypoint_object(setpayloadsigf16)
 
@@ -433,9 +449,16 @@ add_math_entrypoint_object(tanhf)
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
 
+add_math_entrypoint_object(totalorder)
+add_math_entrypoint_object(totalorderf)
 add_math_entrypoint_object(totalorderf16)
+add_math_entrypoint_object(totalorderf128)
 
+add_math_entrypoint_object(totalordermag)
+add_math_entrypoint_object(totalordermagf)
+add_math_entrypoint_object(totalordermagl)
 add_math_entrypoint_object(totalordermagf16)
+add_math_entrypoint_object(totalordermagf128)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)
