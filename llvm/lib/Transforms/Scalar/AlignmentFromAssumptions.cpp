@@ -268,8 +268,6 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
       for (auto &U : J->uses()) {
         if (U->getType()->isPointerTy()) {
           Instruction *K = cast<Instruction>(U.getUser());
-          if (K->getFunction() != ACall->getFunction())
-            continue;
           StoreInst *SI = dyn_cast<StoreInst>(K);
           if (SI && SI->getPointerOperandIndex() != U.getOperandNo())
             continue;
