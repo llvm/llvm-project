@@ -1596,6 +1596,7 @@ def HWREG {
   int FLAT_SCR_HI = 21;
   int XNACK_MASK = 22;
   int POPS_PACKER = 25;
+  int SCHED_MODE = 26;
   int SHADER_CYCLES = 29;
 }
 
