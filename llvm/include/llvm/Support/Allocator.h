@@ -158,7 +158,8 @@ public:
 #endif
 
     uintptr_t AllocEndPtr = AlignedPtr + SizeToAllocate;
-    assert(AllocEndPtr >= uintptr_t(CurPtr) && "Alignment + Size must not overflow");
+    assert(AllocEndPtr >= uintptr_t(CurPtr) &&
+           "Alignment + Size must not overflow");
 
     // Check if we have enough space.
     if (LLVM_LIKELY(AllocEndPtr <= uintptr_t(End)
