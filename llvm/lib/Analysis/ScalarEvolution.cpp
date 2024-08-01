@@ -9159,7 +9159,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS);
         AR && !AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
         isKnownToBeAPowerOfTwo(AR->getStepRecurrence(*this), /*OrZero=*/true,
-                               /*OrNegative*/ true)) {
+                               /*OrNegative=*/true)) {
       auto Flags = AR->getNoWrapFlags();
       Flags = setFlags(Flags, SCEV::FlagNW);
       SmallVector<const SCEV *> Operands{AR->operands()};
