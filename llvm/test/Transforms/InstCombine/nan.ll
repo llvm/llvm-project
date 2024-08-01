@@ -37,5 +37,34 @@ define float @nanf_empty() {
   ret float %res
 }
 
+; nagative tests
+
+define double @nan_poison() {
+; CHECK-LABEL: define double @nan_poison() {
+; CHECK-NEXT:    [[RES:%.*]] = call double @nan(ptr poison)
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = call double @nan(ptr poison)
+  ret double %res
+}
+
+define double @nan_undef() {
+; CHECK-LABEL: define double @nan_undef() {
+; CHECK-NEXT:    [[RES:%.*]] = call double @nan(ptr undef)
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = call double @nan(ptr undef)
+  ret double %res
+}
+
+define double @nan_null() {
+; CHECK-LABEL: define double @nan_null() {
+; CHECK-NEXT:    [[RES:%.*]] = call double @nan(ptr null)
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = call double @nan(ptr null)
+  ret double %res
+}
+
 declare float @nanf(ptr)
 declare double @nan(ptr)
