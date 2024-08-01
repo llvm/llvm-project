@@ -12383,6 +12383,13 @@ def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call : Warning<
+  "function %0 introduces unsafe buffer access">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def note_unsafe_buffer_printf_call : Note<
+  "%select{| change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
+          "| use 'std::string::c_str' or string literal as string pointer to guarantee null-termination"
+          "| do not use va_list that cannot be checked at compile-time for bounds safety}0">;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
