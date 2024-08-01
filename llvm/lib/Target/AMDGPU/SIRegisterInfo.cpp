@@ -2571,12 +2571,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 assert(Offset > 0 &&
                        isUInt<24>(2 * ST.getMaxWaveScratchSize()) &&
                        "offset is unsafe for v_mad_u32_u24");
-                if (AMDGPU::isInlinableLiteral32(Offset,
-                                                 ST.hasInv2PiInlineImm()))
-                  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
-                          TmpResultReg)
-                      .addImm(ST.getWavefrontSizeLog2())
-                      .addReg(FrameReg);
 
                 // We start with a frame pointer with a wave space value, and
                 // an offset in lane-space. We are materializing a lane space
@@ -2590,10 +2584,14 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                           .addReg(TmpResultReg, RegState::Kill);
 
                 if (AMDGPU::isInlinableLiteral32(Offset,
-                                                 ST.hasInv2PiInlineImm()))
+                                                 ST.hasInv2PiInlineImm())) {
+                  BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64),
+                          TmpResultReg)
+                      .addImm(ST.getWavefrontSizeLog2())
+                      .addReg(FrameReg);
                   // We fold the offset into mad itself if its inlinable.
                   Add.addImm(1).addImm(Offset).addImm(0);
-                else {
+                } else {
                   Add.addImm(ST.getWavefrontSize()).addReg(FrameReg).addImm(0);
                   BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::V_MOV_B32_e32),
                           TmpResultReg)
