@@ -1,6 +1,6 @@
 // REQUIRES: system-linux, native
 
-// This test verifies that loading and ELF file from memory works and the new
+// This test verifies that loading an ELF file from memory works and the new
 // features that were added when loading from memory work like:
 // - Loading the .dynamic section from the PT_DYNAMIC since ELF files loaded
 //   from memory don't have the section headers available.
